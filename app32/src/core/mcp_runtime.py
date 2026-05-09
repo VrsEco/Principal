@@ -38,6 +38,22 @@ def extract_mcp_payload(args: tuple[Any, ...], kwargs: Mapping[str, Any]) -> dic
     return {}
 
 
+
+
+def _resolve_requested_company_id(raw_payload: Mapping[str, Any], http_request_context: Mapping[str, Any]) -> tuple[int | None, str | None]:
+    candidates = (
+        (raw_payload.get("company_id"), "payload.company_id"),
+        (raw_payload.get("active_company_id"), "payload.active_company_id"),
+        (raw_payload.get("_selected_company_id"), "payload._selected_company_id"),
+        (raw_payload.get("_summary_company_id"), "payload._summary_company_id"),
+        (http_request_context.get("company_id"), "http.company_id"),
+    )
+    for value, source in candidates:
+        normalized = _coerce_optional_int(value)
+        if normalized is not None:
+            return normalized, source
+    return None, None
+
 def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
     if raw_permissions is None:
         return ()
@@ -70,12 +86,7 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         or os.environ.get("APP32_MCP_USER_ID")
         or os.environ.get("ACTIVE_USER_ID")
     )
-    env_company_id = _coerce_optional_int(
-        http_request_context.get("company_id")
-        or os.environ.get("APP32_MCP_COMPANY_ID")
-        or os.environ.get("ACTIVE_COMPANY_ID")
-    )
-    requested_company_id = _coerce_optional_int(raw_payload.get("company_id")) or env_company_id
+    requested_company_id, requested_company_source = _resolve_requested_company_id(raw_payload, http_request_context)
     channel = (
         str(
             raw_payload.get("channel")
@@ -104,6 +115,10 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         for company_id in (runtime_identity.get("accessible_company_ids") or ())
         if _coerce_optional_int(company_id) is not None
     )
+    company_resolution_source = requested_company_source
+    if resolved_company_id is None and len(accessible_company_ids) == 1:
+        resolved_company_id = int(accessible_company_ids[0])
+        company_resolution_source = "runtime_identity.single_accessible_company_id"
     fallback_role = str(
         http_request_context.get("fallback_role")
         or os.environ.get("APP32_MCP_FALLBACK_ROLE")
@@ -120,6 +135,7 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         "client": str(
             http_request_context.get("client") or os.environ.get("APP32_MCP_CLIENT") or "claude_code"
         ).strip().lower(),
+        "company_resolution_source": company_resolution_source,
     }
 
     return MCPExecutionContext(

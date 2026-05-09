@@ -15,11 +15,12 @@ function Require-Env([string]$Name) {
 }
 
 $userId = Require-Env "APP32_MCP_USER_ID"
-$companyId = Require-Env "APP32_MCP_COMPANY_ID"
 $fallbackRole = [Environment]::GetEnvironmentVariable("APP32_MCP_FALLBACK_ROLE")
 if ([string]::IsNullOrWhiteSpace($fallbackRole)) {
     $fallbackRole = "colaborador"
 }
+
+$companyId = [Environment]::GetEnvironmentVariable("APP32_MCP_COMPANY_ID")
 
 $sshKeyPath = [Environment]::GetEnvironmentVariable("APP32_MCP_SSH_KEY_PATH")
 if ([string]::IsNullOrWhiteSpace($sshKeyPath)) {
@@ -65,13 +66,19 @@ $remoteCommand = @(
     "cd $remoteAppDir",
     "APP32_MCP_SURFACE='$Surface'",
     "APP32_MCP_USER_ID='$userId'",
-    "APP32_MCP_COMPANY_ID='$companyId'",
     "APP32_MCP_FALLBACK_ROLE='$fallbackRole'",
     "APP32_MCP_CLIENT='claude_code'",
     "APP32_MCP_CHANNEL='claude_code'",
     "PYTHONIOENCODING='utf-8'",
     "$remotePython -c ""$escapedSnippet"""
 ) -join " && "
+
+if (-not [string]::IsNullOrWhiteSpace($companyId)) {
+    $remoteCommand = $remoteCommand.Replace(
+        "APP32_MCP_FALLBACK_ROLE='$fallbackRole'",
+        "APP32_MCP_COMPANY_ID='$companyId' && APP32_MCP_FALLBACK_ROLE='$fallbackRole'"
+    )
+}
 
 $sshExe = "C:\Windows\System32\OpenSSH\ssh.exe"
 if (-not (Test-Path $sshExe)) {

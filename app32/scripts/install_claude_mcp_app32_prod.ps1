@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$InstallRoot = (Join-Path $HOME ".app32-mcp"),
-    [string]$ServerPrefix = "app32-prod",
+    [string]$ServerPrefix = "sapiens-prod",
     [string]$SshKeyPath,
     [string]$McpUserId,
     [string]$McpCompanyId,
@@ -77,7 +77,7 @@ function Add-McpServer(
     & $script:ClaudeExe @args
 }
 
-Write-Host "== APP32 MCP / Claude Code installer ==" -ForegroundColor Cyan
+Write-Host "== Sapiens MCP / Claude Code installer ==" -ForegroundColor Cyan
 
 $script:ClaudeExe = Require-Command "claude"
 $script:PwshExe = Require-Command "pwsh"
@@ -106,7 +106,7 @@ function Require-Env([string]$Name) {
 }
 
 $userId = Require-Env "APP32_MCP_USER_ID"
-$companyId = Require-Env "APP32_MCP_COMPANY_ID"
+$companyId = [Environment]::GetEnvironmentVariable("APP32_MCP_COMPANY_ID")
 
 $fallbackRole = [Environment]::GetEnvironmentVariable("APP32_MCP_FALLBACK_ROLE")
 if ([string]::IsNullOrWhiteSpace($fallbackRole)) {
@@ -154,13 +154,19 @@ $remoteCommand = @(
     "cd $remoteAppDir",
     "APP32_MCP_SURFACE='$Surface'",
     "APP32_MCP_USER_ID='$userId'",
-    "APP32_MCP_COMPANY_ID='$companyId'",
     "APP32_MCP_FALLBACK_ROLE='$fallbackRole'",
     "APP32_MCP_CLIENT='claude_code'",
     "APP32_MCP_CHANNEL='claude_code'",
     "PYTHONIOENCODING='utf-8'",
     "$remotePython -c ""$escapedSnippet"""
 ) -join " && "
+
+if (-not [string]::IsNullOrWhiteSpace($companyId)) {
+    $remoteCommand = $remoteCommand.Replace(
+        "APP32_MCP_FALLBACK_ROLE='$fallbackRole'",
+        "APP32_MCP_COMPANY_ID='$companyId' && APP32_MCP_FALLBACK_ROLE='$fallbackRole'"
+    )
+}
 
 $sshExe = "C:\Windows\System32\OpenSSH\ssh.exe"
 if (-not (Test-Path $sshExe)) {
@@ -183,7 +189,7 @@ Set-Content -LiteralPath $launcherPath -Value $launcherContent -Encoding UTF8
 
 $readmePath = Join-Path $InstallRoot "README_APP32_MCP.txt"
 $readme = @"
-APP32 MCP para Claude Code
+Sapiens MCP para Claude Code
 ==========================
 
 Launcher instalado em:
@@ -196,8 +202,10 @@ Servidores registrados:
 
 Se você não usou -PersistUserEnv, defina estas variáveis antes de abrir o Claude Code:
   `$env:APP32_MCP_USER_ID=""SEU_USER_ID""
-  `$env:APP32_MCP_COMPANY_ID=""SUA_COMPANY_ID""
   `$env:APP32_MCP_FALLBACK_ROLE=""$FallbackRole""
+
+`APP32_MCP_COMPANY_ID` é opcional e só deve ser usada quando você quiser pinar uma única empresa
+de forma consciente. O padrão recomendado é deixar a empresa ser resolvida por request/payload.
 
 Depois rode:
   claude
@@ -212,11 +220,16 @@ if (-not [string]::IsNullOrWhiteSpace($SshKeyPath) -and -not (Test-Path -Literal
 }
 
 if ($PersistUserEnv) {
-    if ([string]::IsNullOrWhiteSpace($McpUserId) -or [string]::IsNullOrWhiteSpace($McpCompanyId)) {
-        throw "Para usar -PersistUserEnv, informe também -McpUserId e -McpCompanyId."
+    if ([string]::IsNullOrWhiteSpace($McpUserId)) {
+        throw "Para usar -PersistUserEnv, informe pelo menos -McpUserId."
     }
     Set-UserEnvironmentVariable -Name "APP32_MCP_USER_ID" -Value $McpUserId
-    Set-UserEnvironmentVariable -Name "APP32_MCP_COMPANY_ID" -Value $McpCompanyId
+    if ([string]::IsNullOrWhiteSpace($McpCompanyId)) {
+        [Environment]::SetEnvironmentVariable("APP32_MCP_COMPANY_ID", $null, "User")
+    }
+    else {
+        Set-UserEnvironmentVariable -Name "APP32_MCP_COMPANY_ID" -Value $McpCompanyId
+    }
     Set-UserEnvironmentVariable -Name "APP32_MCP_FALLBACK_ROLE" -Value $FallbackRole
     if (-not [string]::IsNullOrWhiteSpace($SshKeyPath)) {
         Set-UserEnvironmentVariable -Name "APP32_MCP_SSH_KEY_PATH" -Value $SshKeyPath
@@ -250,8 +263,8 @@ if ($PersistUserEnv) {
 else {
     Write-Host "Antes de abrir o Claude Code, defina na sessão atual:" -ForegroundColor Yellow
     Write-Host "  `$env:APP32_MCP_USER_ID=""SEU_USER_ID"""
-    Write-Host "  `$env:APP32_MCP_COMPANY_ID=""SUA_COMPANY_ID"""
     Write-Host "  `$env:APP32_MCP_FALLBACK_ROLE=""$FallbackRole"""
+    Write-Host "  # Opcional: `$env:APP32_MCP_COMPANY_ID=""SUA_COMPANY_ID""" -ForegroundColor DarkYellow
     if ([string]::IsNullOrWhiteSpace($SshKeyPath)) {
         Write-Host "  `$env:APP32_MCP_SSH_KEY_PATH=""C:\caminho\para\sua_chave"""
     }
