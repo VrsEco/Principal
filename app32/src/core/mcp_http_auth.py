@@ -40,6 +40,8 @@ HTTP_CONTEXT_HEADER_MAP = {
     "company_id": "x-app32-company-id",
     "fallback_role": "x-app32-fallback-role",
     "thread_id": "x-app32-thread-id",
+    "runtime_profile": "x-app32-runtime-profile",
+    "actor_type": "x-app32-actor-type",
 }
 
 McpSurface = str
@@ -338,6 +340,12 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
     thread_id = _coerce_str(
         _resolve_override_value(request, query_param="thread_id", header_name=HTTP_CONTEXT_HEADER_MAP["thread_id"])
     )
+    runtime_profile = _coerce_str(
+        _resolve_override_value(request, query_param="runtime_profile", header_name=HTTP_CONTEXT_HEADER_MAP["runtime_profile"])
+    )
+    actor_type = _coerce_str(
+        _resolve_override_value(request, query_param="actor_type", header_name=HTTP_CONTEXT_HEADER_MAP["actor_type"])
+    )
 
     return {
         "user_id": identity.user_id,
@@ -347,6 +355,9 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
         "transport": "streamable_http",
         "client": "claude_remote_connector",
         "thread_id": thread_id,
+        "runtime_profile": runtime_profile,
+        "actor_type": actor_type,
+        "client_id": identity.client_id,
         "token_subject": identity.metadata.get("subject"),
     }
 

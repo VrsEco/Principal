@@ -16,6 +16,7 @@ from types import SimpleNamespace
 from typing import Callable, Iterable, List, Sequence
 
 from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
+from src.core.mcp_http_auth import get_http_request_context, get_http_request_identity
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
 from src.core.mcp_runtime import wrap_mcp_callable
@@ -91,8 +92,30 @@ class ToolCatalog:
             elif isinstance(raw, (list, tuple)) and raw and isinstance(raw[0], dict):
                 payload = dict(raw[0])
 
-            context: dict[str, object] = {}
-            for key in ("company_id", "user_id", "thread_id", "request_id", "trace_id"):
+            http_context = dict(get_http_request_context() or {})
+            http_identity = get_http_request_identity()
+
+            context: dict[str, object] = dict(http_context)
+            if http_identity is not None:
+                context.setdefault("client_id", getattr(http_identity, "client_id", None))
+                context.setdefault("user_id", getattr(http_identity, "user_id", None))
+                context.setdefault("company_id", getattr(http_identity, "company_id", None))
+                context.setdefault("fallback_role", getattr(http_identity, "fallback_role", None))
+            for key in (
+                "company_id",
+                "user_id",
+                "thread_id",
+                "request_id",
+                "trace_id",
+                "fallback_role",
+                "surface",
+                "transport",
+                "client",
+                "runtime_profile",
+                "actor_type",
+                "client_id",
+                "token_subject",
+            ):
                 if payload.get(key) is not None:
                     context[key] = payload.get(key)
             return context
@@ -119,6 +142,14 @@ class ToolCatalog:
                 "risk": getattr(capability, "risk", None).value if getattr(capability, "risk", None) else None,
                 "error_type": error.__class__.__name__ if error else None,
                 "error_message": str(error) if error else None,
+                "actor_role": str((payload or {}).get("fallback_role") or "").strip().lower() or None,
+                "surface": str((payload or {}).get("surface") or "").strip().lower() or None,
+                "transport": str((payload or {}).get("transport") or "").strip().lower() or None,
+                "client": str((payload or {}).get("client") or "").strip().lower() or None,
+                "runtime_profile": str((payload or {}).get("runtime_profile") or "").strip().lower() or None,
+                "actor_type": str((payload or {}).get("actor_type") or "").strip().lower() or None,
+                "client_id": str((payload or {}).get("client_id") or "").strip() or None,
+                "token_subject": str((payload or {}).get("token_subject") or "").strip() or None,
             }
             record = build_ai_execution_audit_record(
                 event_type=f"mcp.{tool_name}.{status}",

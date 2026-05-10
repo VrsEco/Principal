@@ -241,3 +241,31 @@ def test_ai_mcp_console_service_exposes_assisted_usage_and_maturity_model():
     assert payload["assisted_usage"]["phases"][0]["key"] == "conducao_forte"
     assert "consultor_versus" in payload["maturity_model"]["signals"]
     assert "usuario_cliente" in payload["maturity_model"]["signals"]
+
+
+def test_ai_mcp_console_service_exposes_governance_telemetry(monkeypatch):
+    from services.ai_mcp_console_service import AIMCPConsoleService
+
+    monkeypatch.setattr(
+        "services.operational_audit_service.OperationalAuditService.build_panel",
+        lambda **kwargs: (
+            {
+                "summary": {"total": 3, "by_source": {"ai_mcp_runtime": 3}, "by_status": {"success": 2, "blocked": 1}},
+                "analytics": {
+                    "by_runtime": {"mcp": 3},
+                    "by_actor_role": {"administrador": 2},
+                    "by_surface": {"admin": 3},
+                    "by_runtime_profile": {"squad_versus": 2},
+                    "top_tools": [{"name": "list_app32_capabilities", "count": 2}],
+                },
+            },
+            None,
+        ),
+    )
+
+    active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    payload = AIMCPConsoleService.build_frontend_state(active_company)
+
+    assert payload["governance_telemetry"]["enabled"] is True
+    assert payload["governance_telemetry"]["summary"]["total"] == 3
+    assert payload["governance_telemetry"]["analytics"]["by_runtime_profile"]["squad_versus"] == 2

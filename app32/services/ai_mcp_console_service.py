@@ -572,6 +572,7 @@ class AIMCPConsoleService:
             "contextual_help": contextual_help,
             "assisted_usage": assisted_usage,
             "maturity_model": maturity_model,
+            "governance_telemetry": cls._build_governance_telemetry(active_company),
             "connection_generator": connection_generator,
             "external_runtime_profiles": cls._build_external_runtime_profiles(active_company),
             "documentation_bootstrap": documentation_bootstrap,
@@ -688,3 +689,51 @@ class AIMCPConsoleService:
             "endpoint": "/api/configs/ai/mcp/bootstrap-session",
             "summary": summary,
         }
+
+    @classmethod
+    def _build_governance_telemetry(cls, active_company: Any | None = None) -> dict[str, Any]:
+        company_id = getattr(active_company, "id", None)
+        baseline = {
+            "enabled": False,
+            "company_id": company_id,
+            "summary": {"total": 0, "by_source": {}, "by_status": {}},
+            "analytics": {
+                "by_runtime": {},
+                "by_actor_role": {},
+                "by_surface": {},
+                "by_runtime_profile": {},
+                "top_tools": [],
+            },
+            "required_dimensions": ["company_id", "runtime", "actor_role", "surface", "capability", "status"],
+        }
+        if not company_id:
+            return baseline
+
+        try:
+            from services.operational_audit_service import OperationalAuditService
+
+            panel, error = OperationalAuditService.build_panel(
+                company_id=int(company_id),
+                allowed_company_ids=[int(company_id)],
+                source="ai_mcp_runtime",
+                limit=50,
+            )
+            if error or not panel:
+                return baseline
+            analytics = panel.get("analytics") or {}
+            summary = panel.get("summary") or {}
+            return {
+                "enabled": True,
+                "company_id": company_id,
+                "summary": summary,
+                "analytics": {
+                    "by_runtime": dict(analytics.get("by_runtime") or {}),
+                    "by_actor_role": dict(analytics.get("by_actor_role") or {}),
+                    "by_surface": dict(analytics.get("by_surface") or {}),
+                    "by_runtime_profile": dict(analytics.get("by_runtime_profile") or {}),
+                    "top_tools": list(analytics.get("top_tools") or []),
+                },
+                "required_dimensions": ["company_id", "runtime", "actor_role", "surface", "capability", "status"],
+            }
+        except Exception:
+            return baseline

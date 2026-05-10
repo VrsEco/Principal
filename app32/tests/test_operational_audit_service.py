@@ -142,6 +142,9 @@ def test_build_panel_aggregates_operational_sources_with_company_scope(monkeypat
                 "runtime": "sapiens",
                 "tool_name": "register_system_user",
                 "domain": "identity_admin",
+                "actor_role": "administrador",
+                "surface": "admin",
+                "runtime_profile": "squad_versus",
                 "created_at": "2026-04-09T12:04:00",
                 "raw": {"id": 401},
             }
@@ -203,6 +206,9 @@ def test_build_panel_aggregates_operational_sources_with_company_scope(monkeypat
     assert result["summary"]["by_source"]["agent_action"] == 1
     assert result["events"][0]["source"] == "ai_mcp_runtime"
     assert result["analytics"]["top_tools"][0]["name"] == "register_system_user"
+    assert result["analytics"]["by_actor_role"]["administrador"] == 1
+    assert result["analytics"]["by_surface"]["admin"] == 1
+    assert result["analytics"]["by_runtime_profile"]["squad_versus"] == 1
     assert all(event["source"] in {"ai_mcp_runtime", "human_review", "sapiens_workflow", "agent_action"} for event in result["events"])
 
 

@@ -120,3 +120,33 @@ def test_request_identity_supports_db_backed_user_token(monkeypatch):
     assert response.status_code == 200
     assert response.json() == {"user_id": 7, "company_id": 12, "client_id": "app32-mcp-user-token"}
 
+
+def test_request_context_payload_includes_runtime_profile_and_actor_type(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="9",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+        APP32_MCP_HTTP_ALLOW_CONTEXT_OVERRIDE="1",
+    )
+
+    async def endpoint(request: Request):
+        payload = module.resolve_request_context_payload(request, surface="admin")
+        return JSONResponse(payload)
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    client = TestClient(app)
+
+    response = client.get(
+        "/?thread_id=abc&runtime_profile=squad_versus&actor_type=versus_agent",
+        headers={"Authorization": "Bearer token-123"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["runtime_profile"] == "squad_versus"
+    assert payload["actor_type"] == "versus_agent"
+    assert payload["client_id"] == "app32-mcp-internal"
+

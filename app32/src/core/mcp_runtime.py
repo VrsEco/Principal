@@ -136,6 +136,10 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
             http_request_context.get("client") or os.environ.get("APP32_MCP_CLIENT") or "claude_code"
         ).strip().lower(),
         "company_resolution_source": company_resolution_source,
+        "runtime_profile": str(http_request_context.get("runtime_profile") or "").strip().lower() or None,
+        "actor_type": str(http_request_context.get("actor_type") or "").strip().lower() or None,
+        "client_id": str(http_request_context.get("client_id") or "").strip() or None,
+        "token_subject": str(http_request_context.get("token_subject") or "").strip() or None,
     }
 
     return MCPExecutionContext(

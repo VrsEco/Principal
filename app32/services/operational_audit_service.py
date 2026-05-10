@@ -129,17 +129,29 @@ class OperationalAuditService:
         by_domain = Counter()
         by_runtime = Counter()
         by_status = Counter()
+        by_actor_role = Counter()
+        by_surface = Counter()
+        by_runtime_profile = Counter()
         for event in events:
             runtime = str(event.get("runtime") or event.get("source") or "unknown")
             status = str(event.get("status") or "unknown")
             tool_name = str(event.get("tool_name") or "").strip()
             domain = str(event.get("domain") or "").strip()
+            actor_role = str(event.get("actor_role") or "").strip().lower()
+            surface = str(event.get("surface") or "").strip().lower()
+            runtime_profile = str(event.get("runtime_profile") or "").strip().lower()
             by_runtime[runtime] += 1
             by_status[status] += 1
             if tool_name:
                 by_tool[tool_name] += 1
             if domain:
                 by_domain[domain] += 1
+            if actor_role:
+                by_actor_role[actor_role] += 1
+            if surface:
+                by_surface[surface] += 1
+            if runtime_profile:
+                by_runtime_profile[runtime_profile] += 1
 
         pending_approvals = sum(1 for item in approvals if (item.get("approval") or {}).get("approval_status") == "pending")
         tool_gate_pending = sum(
@@ -154,6 +166,9 @@ class OperationalAuditService:
             "top_domains": [{"name": name, "count": count} for name, count in by_domain.most_common(8)],
             "by_runtime": dict(by_runtime),
             "by_status": dict(by_status),
+            "by_actor_role": dict(by_actor_role),
+            "by_surface": dict(by_surface),
+            "by_runtime_profile": dict(by_runtime_profile),
             "cards": [
                 {"id": "events_total", "label": "Eventos auditados", "value": len(events), "hint": "Linha do tempo consolidada"},
                 {"id": "human_gate_pending", "label": "Approvals pendentes", "value": pending_approvals, "hint": "Fila operacional aberta"},
@@ -230,6 +245,13 @@ class OperationalAuditService:
                     "thread_id": row.get("thread_id"),
                     "trace_id": row.get("trace_id"),
                     "request_id": row.get("request_id"),
+                    "actor_role": metadata.get("actor_role"),
+                    "surface": metadata.get("surface"),
+                    "transport": metadata.get("transport"),
+                    "client": metadata.get("client"),
+                    "runtime_profile": metadata.get("runtime_profile"),
+                    "actor_type": metadata.get("actor_type"),
+                    "client_id": metadata.get("client_id"),
                     "metadata_preview": metadata,
                 }
             )
