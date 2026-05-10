@@ -110,7 +110,27 @@ if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
     chmod +x "$APP/scripts/start_mcp_http.sh"
 
     set +e
-    pkill -TERM -f "APP32_MCP_HTTP_PORT=8101|start_mcp_http.sh|src.core.mcp_http_server"
+    MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
+    if [ -n "$MCP_OLD_PIDS" ]; then
+        echo "   - Encerrando listener MCP HTTP atual na porta 8101: $MCP_OLD_PIDS"
+        kill -TERM $MCP_OLD_PIDS
+        for i in {1..10}; do
+            sleep 1
+            MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
+            if [ -z "$MCP_OLD_PIDS" ]; then
+                break
+            fi
+        done
+    fi
+
+    MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
+    if [ -n "$MCP_OLD_PIDS" ]; then
+        echo "   - Listener MCP HTTP ainda ativo após SIGTERM; forçando parada: $MCP_OLD_PIDS"
+        kill -KILL $MCP_OLD_PIDS
+        sleep 1
+    fi
+
+    pkill -TERM -f "start_mcp_http.sh|src.core.mcp_http_server" >/dev/null 2>&1
     set -e
 
     nohup env \

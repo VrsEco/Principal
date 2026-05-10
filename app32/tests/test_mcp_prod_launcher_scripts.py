@@ -24,5 +24,8 @@ def test_deploy_script_forces_mcp_http_restart_after_publish():
     script = (_REPO_ROOT / "scripts" / "deploy_configr.sh").read_text(encoding="utf-8")
 
     assert 'Reiniciando runtime MCP HTTP remoto para refletir o código recém-publicado' in script
-    assert 'pkill -TERM -f "APP32_MCP_HTTP_PORT=8101|start_mcp_http.sh|src.core.mcp_http_server"' in script
+    assert 'lsof -tiTCP:8101 -sTCP:LISTEN' in script
+    assert 'kill -TERM $MCP_OLD_PIDS' in script
+    assert 'kill -KILL $MCP_OLD_PIDS' in script
+    assert 'pkill -TERM -f "start_mcp_http.sh|src.core.mcp_http_server"' in script
     assert 'MCP HTTP remoto ativo em 127.0.0.1:8101 com código atualizado.' in script
