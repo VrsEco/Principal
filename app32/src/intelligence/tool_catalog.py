@@ -23,9 +23,7 @@ from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_example_tools import register_domain_example_tools
 from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
 from src.core.mcp_external_ai_onboarding_tools import register_external_ai_onboarding_tools
-from src.core.mcp_feature_catalog_tools import register_feature_catalog_tools
 from src.core.mcp_external_llm_factory_tools import register_external_llm_factory_tools
-from src.core.mcp_implantation_persona_profile_tools import register_implantation_persona_profile_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
@@ -39,6 +37,16 @@ from src.core.mcp_usage_dashboard_tools import register_usage_dashboard_tools
 from src.core.mcp_work_journey_tools import register_work_journey_tools
 from src.intelligence.tooling.registry import ToolCapabilityRegistry
 from src.intelligence.tooling.capabilities import ToolScope
+
+try:
+    from src.core.mcp_feature_catalog_tools import register_feature_catalog_tools
+except ModuleNotFoundError:  # pragma: no cover - compatibilidade com deploy parcial
+    register_feature_catalog_tools = None
+
+try:
+    from src.core.mcp_implantation_persona_profile_tools import register_implantation_persona_profile_tools
+except ModuleNotFoundError:  # pragma: no cover - compatibilidade com deploy parcial
+    register_implantation_persona_profile_tools = None
 
 
 McpRegistrar = Callable[[object], None]
@@ -249,7 +257,9 @@ _legacy_tool_registry = ToolCapabilityRegistry.from_tools(
 
 catalog = ToolCatalog(
     langchain_tools=tuple(legacy_langchain_tools),
-    mcp_registrars=(
+    mcp_registrars=tuple(
+        registrar
+        for registrar in (
         register_analysis_catalog_tools,
         register_crud_contract_tools,
         register_domain_example_tools,
@@ -269,6 +279,8 @@ catalog = ToolCatalog(
         register_tool_freeze_tools,
         register_usage_dashboard_tools,
         register_work_journey_tools,
+        )
+        if registrar is not None
     ),
     capability_registry=_legacy_tool_registry,
 )
