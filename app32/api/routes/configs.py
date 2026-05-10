@@ -31,6 +31,12 @@ from schemas.ai_capabilities import (
 from utils.company_access import get_accessible_company_ids
 from utils.permissions import permission_required, has_company_full_access, is_platform_admin
 
+try:
+    from services.mcp_feature_catalog_service import MCPDocumentationContext, MCPFeatureCatalogService
+except ModuleNotFoundError:  # pragma: no cover - compatibilidade com deploy parcial
+    MCPDocumentationContext = None
+    MCPFeatureCatalogService = None
+
 configs_bp = Blueprint('configs', __name__)
 
 
@@ -625,6 +631,39 @@ def get_ai_mcp_frontend_state():
     return jsonify({
         "success": True,
         "console": AIMCPConsoleService.build_frontend_state(active_company),
+    })
+
+
+@configs_bp.route('/api/configs/ai/mcp/bootstrap-session', methods=['GET'])
+@login_required
+def get_ai_mcp_bootstrap_session():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao bootstrap documental IA/MCP."}), 403
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para bootstrap documental."}), 400
+    if MCPDocumentationContext is None or MCPFeatureCatalogService is None:
+        return jsonify({"success": False, "error": "Bootstrap documental MCP indisponível neste runtime."}), 503
+
+    requested_surface = (request.args.get('surface') or AIMCPConsoleService.DOCUMENTATION_BOOTSTRAP_SURFACE).strip().lower()
+    context = MCPDocumentationContext(
+        company_id=int(company_id),
+        user_id=int(getattr(current_user, 'id', 0) or 0) or None,
+        role='administrador' if is_platform_admin() else 'colaborador',
+        surface=requested_surface,
+        client='ai_mcp_console',
+        transport='web',
+    )
+
+    try:
+        bootstrap = MCPFeatureCatalogService().bootstrap_context(context)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({
+        "success": True,
+        "bootstrap": bootstrap,
     })
 
 

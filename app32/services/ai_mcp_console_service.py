@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from typing import Any
 
 from src.core.mcp_surface_registry import get_surface_manifest
@@ -14,9 +15,22 @@ from src.intelligence.mcp_contracts.release_checklist import APP32_RELEASE_CHECK
 from src.intelligence.mcp_contracts.tool_freeze import APP32_TOOL_FREEZE_MANIFEST
 from src.intelligence.mcp_contracts.usage_dashboard import APP32_USAGE_DASHBOARD_MANIFEST
 from src.intelligence.tool_catalog import catalog
-from services.mcp_feature_catalog_service import MCPDocumentationContext, MCPFeatureCatalogService
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.tool_first_catalog_service import ToolFirstCatalogService
+
+try:
+    from services.mcp_feature_catalog_service import MCPDocumentationContext, MCPFeatureCatalogService
+except ModuleNotFoundError:  # pragma: no cover - compatibilidade com deploy parcial
+    @dataclass
+    class MCPDocumentationContext:  # type: ignore[override]
+        company_id: int | None = None
+        user_id: int | None = None
+        role: str = "colaborador"
+        surface: str = "user"
+        client: str = "ai_mcp_console"
+        transport: str = "web"
+
+    MCPFeatureCatalogService = None
 
 
 class AIMCPConsoleService:
@@ -558,14 +572,14 @@ class AIMCPConsoleService:
     @classmethod
     def _build_documentation_bootstrap(cls, active_company: Any | None = None) -> dict[str, Any]:
         company_id = getattr(active_company, "id", None)
-        service = MCPFeatureCatalogService()
         summary = {
             "catalog_version": None,
             "features_total": 0,
             "domains": [],
         }
 
-        if company_id:
+        if company_id and MCPFeatureCatalogService is not None:
+            service = MCPFeatureCatalogService()
             context = MCPDocumentationContext(
                 company_id=company_id,
                 user_id=None,
