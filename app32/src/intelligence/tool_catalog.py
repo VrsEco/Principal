@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 from functools import wraps
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 from typing import Callable, Iterable, List, Sequence
 
 from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
@@ -22,7 +23,9 @@ from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_example_tools import register_domain_example_tools
 from src.core.mcp_domain_playbook_tools import register_domain_playbook_tools
 from src.core.mcp_external_ai_onboarding_tools import register_external_ai_onboarding_tools
+from src.core.mcp_feature_catalog_tools import register_feature_catalog_tools
 from src.core.mcp_external_llm_factory_tools import register_external_llm_factory_tools
+from src.core.mcp_implantation_persona_profile_tools import register_implantation_persona_profile_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
@@ -197,7 +200,52 @@ class ToolCatalog:
             return manifest
 
 
-_legacy_tool_registry = ToolCapabilityRegistry.from_tools(legacy_langchain_tools)
+_supplemental_mcp_tools = (
+    SimpleNamespace(
+        name="get_work_journey_board_tool",
+        description="Retorna o quadro operacional da jornada por blocos de um colaborador.",
+    ),
+    SimpleNamespace(
+        name="list_work_journey_blocks_tool",
+        description="Lista os blocos de jornada de um colaborador.",
+    ),
+    SimpleNamespace(
+        name="save_work_journey_block_tool",
+        description="Cria ou atualiza um bloco da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="list_work_journey_rules_tool",
+        description="Lista as obrigações recorrentes configuradas para a jornada do colaborador.",
+    ),
+    SimpleNamespace(
+        name="save_work_journey_rule_tool",
+        description="Cria ou atualiza uma obrigação recorrente da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="update_work_journey_item_tool",
+        description="Atualiza status, bloco ou esforço real de uma tarefa da jornada.",
+    ),
+    SimpleNamespace(
+        name="list_work_journey_manual_tasks_tool",
+        description="Lista tarefas avulsas da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="create_work_journey_manual_task_tool",
+        description="Cria uma tarefa avulsa diretamente na agenda do colaborador.",
+    ),
+    SimpleNamespace(
+        name="get_work_journey_agenda_tool",
+        description="Retorna a agenda materializada da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="move_work_journey_agenda_item_tool",
+        description="Move item da agenda materializada dentro da jornada operacional.",
+    ),
+)
+
+_legacy_tool_registry = ToolCapabilityRegistry.from_tools(
+    tuple(legacy_langchain_tools) + _supplemental_mcp_tools
+)
 
 catalog = ToolCatalog(
     langchain_tools=tuple(legacy_langchain_tools),
@@ -207,7 +255,9 @@ catalog = ToolCatalog(
         register_domain_example_tools,
         register_domain_playbook_tools,
         register_external_ai_onboarding_tools,
+        register_feature_catalog_tools,
         register_external_llm_factory_tools,
+        register_implantation_persona_profile_tools,
         register_incentive_tools,
         register_integration_request_tools,
         register_operational_readiness_tools,
