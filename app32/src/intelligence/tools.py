@@ -385,16 +385,44 @@ def create_macro_process(
     description: str = None,
     order_index: int = 1,
     company_id: int = None,
+    responsible: str = None,
 ):
     """
     Cria um novo Macroprocesso vinculado a uma Área de Processo.
     :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
+    :param responsible: Opcional. Alias MCP para o dono do macroprocesso.
     """
     return process_ops_domain.create_macro_process(
         area_id=area_id,
         name=name,
         description=description,
         order_index=order_index,
+        company_id=company_id,
+        responsible=responsible,
+    )
+
+
+@tool
+def update_macro_process(
+    macro_id: int,
+    name: str = None,
+    responsible: str = None,
+    description: str = None,
+    order_index: int = None,
+    area_id: int = None,
+    company_id: int = None,
+):
+    """
+    Atualiza um macroprocesso existente com suporte aos campos responsible, description e order_index.
+    :param company_id: Obrigatório quando o canal não tiver contexto tenant autenticado.
+    """
+    return process_ops_domain.update_macro_process(
+        macro_id=macro_id,
+        name=name,
+        responsible=responsible,
+        description=description,
+        order_index=order_index,
+        area_id=area_id,
         company_id=company_id,
     )
 
@@ -890,6 +918,7 @@ tools = [
     # Fase 1 — Process Management
     create_process_area,
     create_macro_process,
+    update_macro_process,
     create_process,
     update_company_status,
     list_process_hierarchy,

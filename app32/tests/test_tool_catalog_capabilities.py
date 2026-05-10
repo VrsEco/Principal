@@ -16,6 +16,7 @@ def test_catalog_exposes_known_capability_metadata():
     self_service_capability = catalog.get_tool_capability("list_my_companies")
     admin_identity_capability = catalog.get_tool_capability("list_system_users")
     engineering_suggestion_capability = catalog.get_tool_capability("request_engineering_suggestion")
+    update_macro_capability = catalog.get_tool_capability("update_macro_process")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -30,6 +31,8 @@ def test_catalog_exposes_known_capability_metadata():
     assert engineering_suggestion_capability is not None
     assert engineering_suggestion_capability.domain == "operations"
     assert ToolScope.MCP_USER.value in engineering_suggestion_capability.scopes
+    assert update_macro_capability is not None
+    assert update_macro_capability.domain == "processes"
 
 
 def test_catalog_manifest_filters_by_scope():
@@ -52,6 +55,7 @@ def test_catalog_manifest_filters_by_scope():
     assert "request_engineering_suggestion" in admin_tool_names
     assert "request_engineering_suggestion" in user_tool_names
     assert "list_my_engineering_suggestions" in user_tool_names
+    assert "update_macro_process" in user_tool_names
 
 
 def test_catalog_manifest_supports_legacy_identity_domain_alias():

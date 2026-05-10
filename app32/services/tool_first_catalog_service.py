@@ -108,7 +108,7 @@ class ToolFirstCatalogService:
             "mcp_contracts": [
                 {"name": "list_app32_capabilities", "status": "ready", "notes": "Discovery por domínio/escopo."},
             ],
-            "tool_names": ("create_process_area", "create_macro_process", "create_process", "list_process_hierarchy"),
+            "tool_names": ("create_process_area", "create_macro_process", "update_macro_process", "create_process", "list_process_hierarchy"),
             "planned_tools": ("list_processes", "map_process", "analyze_process_bottlenecks"),
             "governance": [
                 "Criação de processo com impacto operacional deve manter human gate.",

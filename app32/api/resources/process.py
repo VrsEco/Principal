@@ -90,7 +90,7 @@ def _normalize_macro_owner_from_employee(data: dict, company_id: int | None, *, 
     if not isinstance(data, dict):
         return "Payload inválido."
 
-    owner = str(data.get('owner') or '').strip()
+    owner = str(data.get('owner') or data.get('responsible') or '').strip()
     if not owner:
         return "Selecione um colaborador para Dono do Processo." if required else None
 
@@ -111,6 +111,7 @@ def _normalize_macro_owner_from_employee(data: dict, company_id: int | None, *, 
         return "Dono do Processo deve ser um colaborador ativo cadastrado nesta empresa."
 
     data['owner'] = employee.name
+    data['responsible'] = employee.name
     return None
 
 
@@ -1460,7 +1461,7 @@ class MacroProcessResource(Resource):
         macro = MacroProcess.query.get_or_404(macro_id)
         try:
             data = request.get_json()
-            if data and 'owner' in data:
+            if data and ('owner' in data or 'responsible' in data):
                 owner_error = _normalize_macro_owner_from_employee(
                     data, data.get('company_id') or macro.company_id, required=True
                 )

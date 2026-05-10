@@ -39,6 +39,35 @@ def _build_scope_reconciliation(company_id: int) -> str:
     )
 
 
+def _normalize_macro_owner_payload(
+    *,
+    company_id: int,
+    owner: str | None = None,
+    responsible: str | None = None,
+    required: bool = False,
+) -> tuple[str | None, str | None]:
+    from models.employee import Employee
+
+    owner_name = str(owner or responsible or "").strip()
+    if not owner_name:
+        if required:
+            return None, "Selecione um colaborador para Dono do Processo."
+        return None, None
+
+    employee = (
+        Employee.query.filter(
+            Employee.company_id == int(company_id),
+            Employee.name == owner_name,
+        )
+        .order_by(Employee.name.asc())
+        .first()
+    )
+    if not employee:
+        return None, "Dono do Processo deve ser um colaborador ativo cadastrado nesta empresa."
+
+    return employee.name, None
+
+
 def create_process_area(name: str, description: str = None, code: str = None, company_id: int | None = None):
     """
     Cria uma nova Área de Processo no sistema.
@@ -84,6 +113,7 @@ def create_macro_process(
     description: str = None,
     order_index: int = 1,
     company_id: int | None = None,
+    responsible: str | None = None,
 ):
     """
     Cria um novo Macroprocesso vinculado a uma Área de Processo.
@@ -101,10 +131,19 @@ def create_macro_process(
 
         from api.resources.process import generate_macro_code
 
+        owner_name, owner_error = _normalize_macro_owner_payload(
+            company_id=company_id,
+            responsible=responsible,
+            required=False,
+        )
+        if owner_error:
+            return owner_error
+
         macro = MacroProcess(
             company_id=company_id,
             area_id=area_id,
             name=name,
+            owner=owner_name,
             description=description,
             order_index=order_index,
         )
@@ -124,6 +163,68 @@ def create_macro_process(
     except Exception as e:
         db.session.rollback()
         return f"Erro ao criar macroprocesso: {str(e)}"
+
+
+def update_macro_process(
+    macro_id: int,
+    *,
+    name: str | None = None,
+    responsible: str | None = None,
+    description: str | None = None,
+    order_index: int | None = None,
+    area_id: int | None = None,
+    company_id: int | None = None,
+):
+    """
+    Atualiza um macroprocesso existente da empresa ativa, com suporte ao alias responsible -> owner.
+    """
+    from models.process import MacroProcess, ProcessArea
+
+    company_id, error = _resolve_effective_company_id(company_id)
+    if error:
+        return error
+
+    try:
+        macro = MacroProcess.query.filter_by(id=macro_id, company_id=int(company_id)).first()
+        if not macro:
+            return "Erro: Macroprocesso não encontrado na empresa ativa."
+
+        if area_id is not None:
+            area = ProcessArea.query.filter_by(id=area_id, company_id=int(company_id)).first()
+            if not area:
+                return "Erro: Área de processo não encontrada na empresa ativa."
+            macro.area_id = int(area_id)
+
+        if responsible is not None:
+            owner_name, owner_error = _normalize_macro_owner_payload(
+                company_id=company_id,
+                responsible=responsible,
+                required=True,
+            )
+            if owner_error:
+                return owner_error
+            macro.owner = owner_name
+
+        if name is not None:
+            macro.name = name
+        if description is not None:
+            macro.description = description
+        if order_index is not None:
+            macro.order_index = int(order_index)
+
+        if order_index is not None or area_id is not None:
+            from api.resources.process import generate_macro_code
+
+            macro.code = generate_macro_code(macro.area_id, macro.order_index)
+
+        db.session.commit()
+        return (
+            f"Macroprocesso '{macro.name}' atualizado com sucesso. "
+            f"ID: {macro.id}, Código: {macro.code}. {_build_scope_reconciliation(company_id)}"
+        )
+    except Exception as exc:
+        db.session.rollback()
+        return f"Erro ao atualizar macroprocesso: {str(exc)}"
 
 
 def create_process(

@@ -1,4 +1,4 @@
-from marshmallow import fields
+from marshmallow import fields, pre_load
 from . import ma
 from marshmallow import fields, EXCLUDE
 from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceExecution, ProcessActivityExecutionContract
@@ -63,10 +63,20 @@ class MacroProcessSchema(ma.SQLAlchemyAutoSchema):
     
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
+    responsible = fields.Method("get_responsible", dump_only=True)
     
     # Evitar aninhamento recursivo pesado (área -> macros -> processos -> rotinas)
     # CHANGED: Removed exclude=("macros",) because ProcessAreaSchema does not have macros field by default
     area = fields.Nested("ProcessAreaSchema", dump_only=True)
+
+    @pre_load
+    def map_responsible_to_owner(self, data, **kwargs):
+        if isinstance(data, dict) and "responsible" in data and "owner" not in data:
+            data["owner"] = data.get("responsible")
+        return data
+
+    def get_responsible(self, obj):
+        return getattr(obj, "owner", None)
 
 class ProcessAreaSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
