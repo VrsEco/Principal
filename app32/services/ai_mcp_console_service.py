@@ -14,6 +14,8 @@ from src.intelligence.mcp_contracts.release_checklist import APP32_RELEASE_CHECK
 from src.intelligence.mcp_contracts.tool_freeze import APP32_TOOL_FREEZE_MANIFEST
 from src.intelligence.mcp_contracts.usage_dashboard import APP32_USAGE_DASHBOARD_MANIFEST
 from src.intelligence.tool_catalog import catalog
+from services.mcp_feature_catalog_service import MCPDocumentationContext, MCPFeatureCatalogService
+from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.tool_first_catalog_service import ToolFirstCatalogService
 
 
@@ -21,6 +23,7 @@ class AIMCPConsoleService:
     """Monta o estado consultivo do console operacional IA/MCP."""
 
     SURFACES = ("user", "admin", "analytics", "ops")
+    DOCUMENTATION_BOOTSTRAP_SURFACE = "user"
 
     @classmethod
     def build_frontend_state(cls, active_company: Any | None = None) -> dict[str, Any]:
@@ -56,6 +59,7 @@ class AIMCPConsoleService:
 
         risk_counter = Counter(tool.get("risk") for tool in capability_tools if tool.get("risk"))
         domain_counter = Counter(tool.get("domain") for tool in capability_tools if tool.get("domain"))
+        context_counter = Counter(tuple(tool.get("required_context") or ()) for tool in capability_tools)
 
         readiness_by_phase = []
         for phase in ("contracts", "release", "onboarding", "operations", "go_live"):
@@ -400,7 +404,24 @@ class AIMCPConsoleService:
                 "default_company": "Sem empresa padrão",
                 "url": "https://app.gestaoversus.com.br/mcp/user",
                 "auth_type": "bearer",
+                "profile": "sapiens_default",
             },
+            "profiles": [
+                {
+                    "key": "sapiens_default",
+                    "title": "Sapiens User",
+                    "description": "Perfil base para ativação assistida do Sapiens na surface user.",
+                    "default_url": "https://app.gestaoversus.com.br/mcp/user",
+                    "surface": "user",
+                },
+                {
+                    "key": "squad_versus",
+                    "title": "Squad Versus",
+                    "description": "Perfil consultivo da Versus para runtime externo com foco em governança, discovery e operações privilegiadas controladas.",
+                    "default_url": "https://app.gestaoversus.com.br/mcp/admin",
+                    "surface": "admin",
+                },
+            ],
             "modes": [
                 {
                     "key": "ai_prompt",
@@ -416,6 +437,8 @@ class AIMCPConsoleService:
                 },
             ],
         }
+
+        documentation_bootstrap = cls._build_documentation_bootstrap(active_company)
 
         return {
             "active_company": {
@@ -437,6 +460,9 @@ class AIMCPConsoleService:
                 "onboarding_steps": len(onboarding["steps"]),
                 "readiness_gates": len(readiness["gates"]),
                 "dashboard_panels": len(dashboard["panels"]),
+                "tools_user_only": context_counter.get(("user",), 0),
+                "tools_company_only": context_counter.get(("company",), 0),
+                "tools_user_and_company": context_counter.get(("user", "company"), 0),
             },
             "profiles": profiles,
             "surfaces": surfaces,
@@ -445,6 +471,12 @@ class AIMCPConsoleService:
             "catalog": {
                 "manifest_version": capability_manifest.get("version"),
                 "tools": capability_tools,
+                "context_requirements": {
+                    "user_only": context_counter.get(("user",), 0),
+                    "company_only": context_counter.get(("company",), 0),
+                    "user_and_company": context_counter.get(("user", "company"), 0),
+                    "no_explicit_context": context_counter.get((), 0),
+                },
                 "domain_distribution": [
                     {"domain": domain, "count": count}
                     for domain, count in sorted(domain_counter.items(), key=lambda item: (-item[1], item[0]))
@@ -470,4 +502,99 @@ class AIMCPConsoleService:
             "quick_assistant": quick_assistant,
             "contextual_help": contextual_help,
             "connection_generator": connection_generator,
+            "external_runtime_profiles": cls._build_external_runtime_profiles(active_company),
+            "documentation_bootstrap": documentation_bootstrap,
+            "runtime_context": {
+                "required_contract_dimensions": ["user", "company"],
+                "resolved": {
+                    "company_id": getattr(active_company, "id", None),
+                    "company_name": getattr(active_company, "name", None),
+                    "company_code": getattr(active_company, "client_code", None),
+                },
+                "resolution": {
+                    "company": "active_company" if getattr(active_company, "id", None) is not None else None,
+                },
+            },
+        }
+
+    @classmethod
+    def _build_external_runtime_profiles(cls, active_company: Any | None = None) -> list[dict[str, Any]]:
+        company_id = getattr(active_company, "id", None)
+        company_name = getattr(active_company, "name", None)
+        return [
+            {
+                "key": "sapiens_default",
+                "title": "Sapiens User",
+                "owner": "APP32 / front door",
+                "surface": "user",
+                "default_company_id": company_id,
+                "default_company_name": company_name,
+                "startup_tools": ["bootstrap_session_context"],
+                "primary_goal": "Ativação guiada e uso assistido do Sapiens para operação cotidiana.",
+            },
+            {
+                "key": "squad_versus",
+                "title": "Squad Versus",
+                "owner": "Consultor Versus em runtime externo",
+                "surface": "admin",
+                "default_company_id": company_id,
+                "default_company_name": company_name,
+                "startup_tools": list(MCPConnectionSnippetService.RUNTIME_PROFILES["squad_versus"]["startup_tools"]),
+                "primary_goal": "Discovery, governança e intervenção consultiva controlada via MCP externo.",
+                "required_contracts": [
+                    "profiles",
+                    "surface_playbooks",
+                    "domain_playbooks",
+                    "permission_matrix",
+                ],
+                "guardrails": [
+                    "Usar company_id explícito em surfaces privilegiadas.",
+                    "Começar por discovery antes de mutações.",
+                    "Registrar trilha auditável por ator, runtime e capability.",
+                ],
+            },
+        ]
+
+    @classmethod
+    def _build_documentation_bootstrap(cls, active_company: Any | None = None) -> dict[str, Any]:
+        company_id = getattr(active_company, "id", None)
+        service = MCPFeatureCatalogService()
+        summary = {
+            "catalog_version": None,
+            "features_total": 0,
+            "domains": [],
+        }
+
+        if company_id:
+            context = MCPDocumentationContext(
+                company_id=company_id,
+                user_id=None,
+                role="colaborador",
+                surface=cls.DOCUMENTATION_BOOTSTRAP_SURFACE,
+                client="ai_mcp_console",
+                transport="web",
+            )
+            try:
+                bootstrap = service.bootstrap_context(context)
+                summary = {
+                    "catalog_version": bootstrap.get("catalog_version"),
+                    "features_total": len(bootstrap.get("features") or []),
+                    "domains": list(bootstrap.get("domains") or []),
+                    "context_summary": dict(bootstrap.get("context_summary") or {}),
+                    "current_context": dict(bootstrap.get("current_context") or {}),
+                }
+            except Exception:
+                summary = {
+                    "catalog_version": None,
+                    "features_total": 0,
+                    "domains": [],
+                    "context_summary": {},
+                    "current_context": {},
+                }
+
+        return {
+            "auto_load": True,
+            "default_surface": cls.DOCUMENTATION_BOOTSTRAP_SURFACE,
+            "endpoint": "/api/configs/ai/mcp/bootstrap-session",
+            "summary": summary,
         }

@@ -49,7 +49,7 @@ def test_ai_tools_route_redirects_to_integrations_tools(monkeypatch):
 def test_ai_mcp_console_frontend_state_api_returns_payload(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
-    fake_console = {"summary": {"catalog_tools": 21}, "profiles": [], "surfaces": [], "domains": [], "permissions": [], "catalog": {"tools": []}, "configuration_links": [], "registration_links": [], "operational_links": [], "onboarding": {"steps": []}, "release": {"checklist": [], "smokes": []}, "freeze": {"triggers": []}, "dashboard": {"panels": []}, "readiness": {"gates": [], "opening_criteria": [], "blocking_conditions": []}, "readiness_by_phase": [], "connection_generator": {"defaults": {}, "modes": []}}
+    fake_console = {"summary": {"catalog_tools": 21}, "profiles": [], "surfaces": [], "domains": [], "permissions": [], "catalog": {"tools": [], "context_requirements": {"company_only": 2}}, "configuration_links": [], "registration_links": [], "operational_links": [], "onboarding": {"steps": []}, "release": {"checklist": [], "smokes": []}, "freeze": {"triggers": []}, "dashboard": {"panels": []}, "readiness": {"gates": [], "opening_criteria": [], "blocking_conditions": []}, "readiness_by_phase": [], "connection_generator": {"defaults": {}, "modes": []}, "documentation_bootstrap": {"endpoint": "/api/configs/ai/mcp/bootstrap-session", "default_surface": "user", "auto_load": True, "summary": {"catalog_version": "2026-05-08.1", "features_total": 2, "domains": ["routine"], "context_summary": {"company_only": 2}, "current_context": {"required": ["company"]}}}, "runtime_context": {"resolved": {"company_id": 9}, "resolution": {"company": "active_company"}}}
 
     monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
     monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
@@ -61,6 +61,47 @@ def test_ai_mcp_console_frontend_state_api_returns_payload(monkeypatch):
     payload = response.get_json()
     assert payload["success"] is True
     assert payload["console"]["summary"]["catalog_tools"] == 21
+    assert payload["console"]["catalog"]["context_requirements"]["company_only"] == 2
+    assert payload["console"]["runtime_context"]["resolved"]["company_id"] == 9
+
+
+def test_ai_mcp_bootstrap_session_api_returns_payload(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=31, name="Empresa MCP", client_code="MCP")
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
+    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
+
+    class _FakeUser:
+        id = 7
+
+    monkeypatch.setattr(configs_route, "current_user", _FakeUser())
+
+    class _FakeService:
+        def bootstrap_context(self, context, domain=None, search=None):
+            return {
+                "company_id": context.company_id,
+                "user_id": context.user_id,
+                "surface": context.surface,
+                "catalog_version": "2026-05-08.1",
+                "domains": ["routine"],
+                "features": [{"id": "rotina_tarefas", "nome": "Tarefas da Rotina", "required_context": ["company"]}],
+                "current_context": {"required": ["company"], "resolved": {"company_id": context.company_id}},
+                "context_summary": {"company_only": 1},
+            }
+
+    monkeypatch.setattr(configs_route, "MCPFeatureCatalogService", _FakeService, raising=False)
+
+    response = app.test_client().get("/api/configs/ai/mcp/bootstrap-session?surface=user")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["bootstrap"]["company_id"] == 31
+    assert payload["bootstrap"]["surface"] == "user"
+    assert payload["bootstrap"]["features"][0]["id"] == "rotina_tarefas"
+    assert payload["bootstrap"]["current_context"]["resolved"]["company_id"] == 31
+    assert payload["bootstrap"]["context_summary"]["company_only"] == 1
 
 
 def test_ai_mcp_tool_first_catalog_api_returns_filtered_payload(monkeypatch):
@@ -149,3 +190,29 @@ def test_ai_mcp_connection_snippet_api_validates_missing_token(monkeypatch):
     payload = response.get_json()
     assert payload["success"] is False
     assert "Token Bearer" in payload["error"]
+
+
+def test_ai_mcp_console_service_exposes_context_requirements_and_runtime_context():
+    from services.ai_mcp_console_service import AIMCPConsoleService
+
+    active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    payload = AIMCPConsoleService.build_frontend_state(active_company)
+
+    assert "context_requirements" in payload["catalog"]
+    assert payload["runtime_context"]["resolved"]["company_id"] == 9
+    assert payload["runtime_context"]["resolution"]["company"] == "active_company"
+
+
+def test_ai_mcp_console_service_exposes_squad_versus_runtime_profile():
+    from services.ai_mcp_console_service import AIMCPConsoleService
+
+    active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    payload = AIMCPConsoleService.build_frontend_state(active_company)
+
+    runtime_profiles = {item["key"]: item for item in payload["external_runtime_profiles"]}
+    squad_versus = runtime_profiles["squad_versus"]
+
+    assert squad_versus["surface"] == "admin"
+    assert "profiles" in squad_versus["required_contracts"]
+    assert "list_app32_capabilities" in squad_versus["startup_tools"]
+    assert payload["connection_generator"]["defaults"]["profile"] == "sapiens_default"

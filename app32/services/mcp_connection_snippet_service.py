@@ -8,19 +8,47 @@ from typing import Any
 class MCPConnectionSnippetService:
     """Gera saídas prontas para copiar de uma conexão MCP remota."""
 
+    RUNTIME_PROFILES = {
+        "sapiens_default": {
+            "label": "Sapiens User",
+            "activation_subject": "ative o Sapiens neste cliente usando a conexão MCP abaixo.",
+            "url": "https://app.gestaoversus.com.br/mcp/user",
+            "surface": "user",
+            "startup_tools": ["bootstrap_session_context"],
+            "routing_note": "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
+        },
+        "squad_versus": {
+            "label": "Squad Versus",
+            "activation_subject": "ative o Squad Versus neste cliente usando a conexão MCP abaixo.",
+            "url": "https://app.gestaoversus.com.br/mcp/admin",
+            "surface": "admin",
+            "startup_tools": [
+                "list_app32_capabilities",
+                "describe_app32_profile_contracts_tool",
+                "describe_app32_surface_playbooks_tool",
+                "describe_app32_domain_playbooks_tool",
+            ],
+            "routing_note": "O Squad Versus deve operar como consultoria e governança: começar por discovery, respeitar company_id explícito nas surfaces privilegiadas e evitar mutações sem necessidade e sem trilha.",
+        },
+    }
+
     @classmethod
     def build_prompt(cls, payload: dict[str, Any]) -> str:
         normalized = cls._normalize(payload)
         source_json = cls._build_source_json(normalized)
+        profile = cls.RUNTIME_PROFILES[normalized["profile"]]
+        startup_tools = ", ".join(profile["startup_tools"])
 
         lines = [
-            "Quero que você ative o Sapiens neste cliente usando a conexão MCP abaixo.",
+            f"Quero que você {profile['activation_subject']}",
             "",
             "Dados da conexão:",
             f"- Nome: {normalized['name']}",
             f"- Empresa padrão: {normalized['default_company']}",
             f"- URL: {normalized['url']}",
             f"- Autenticação: {normalized['auth_label']}",
+            f"- Perfil de runtime: {profile['label']}",
+            f"- Surface alvo: {profile['surface']}",
             f"- Token: {normalized['token']}",
             "",
             "JSON:",
@@ -30,7 +58,7 @@ class MCPConnectionSnippetService:
             "1. Verifique se este cliente suporta configuração MCP automática.",
             "2. Se suportar, faça a configuração.",
             "3. Se este cliente permitir criar atalho, comando, agente ou persona, crie um atalho chamado Sapiens.",
-            "4. Assim que a conexão MCP estiver ativa, faça automaticamente uma chamada de discovery inicial com a tool bootstrap_session_context para carregar o catálogo resumido permitido.",
+            f"4. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
             "5. Ao ativar, use esta mensagem inicial:",
             "",
             "◆ SAPIENS · Gestão Versus ● ativo",
@@ -39,7 +67,7 @@ class MCPConnectionSnippetService:
             "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
             "",
             "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
-            "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
+            profile["routing_note"],
             "",
             "6. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
             "- Este cliente não suporta ativação automática do Sapiens.",
@@ -60,11 +88,22 @@ class MCPConnectionSnippetService:
     @classmethod
     def build_raw_config(cls, payload: dict[str, Any]) -> str:
         normalized = cls._normalize(payload)
+        profile = cls.RUNTIME_PROFILES[normalized["profile"]]
         config = OrderedDict(
             [
                 ("name", normalized["name"]),
                 ("transport", "http"),
                 ("url", normalized["url"]),
+                (
+                    "metadata",
+                    OrderedDict(
+                        [
+                            ("profile", normalized["profile"]),
+                            ("profile_label", profile["label"]),
+                            ("surface", profile["surface"]),
+                        ]
+                    ),
+                ),
                 (
                     "headers",
                     OrderedDict(
@@ -84,10 +123,13 @@ class MCPConnectionSnippetService:
 
     @classmethod
     def _build_source_json(cls, normalized: dict[str, str]) -> str:
+        profile = cls.RUNTIME_PROFILES[normalized["profile"]]
         source = OrderedDict(
             [
                 ("auth_type", "bearer"),
                 ("name", normalized["name"]),
+                ("profile", normalized["profile"]),
+                ("surface", profile["surface"]),
                 ("token", normalized["token"]),
                 ("url", normalized["url"]),
             ]
@@ -101,6 +143,16 @@ class MCPConnectionSnippetService:
         url = str(payload.get("url") or "").strip()
         auth_type = str(payload.get("auth_type") or "bearer").strip().lower()
         token = str(payload.get("token") or "").strip()
+        profile = str(payload.get("profile") or "sapiens_default").strip().lower()
+
+        if profile not in cls.RUNTIME_PROFILES:
+            raise ValueError("Perfil de runtime MCP inválido.")
+
+        profile_defaults = cls.RUNTIME_PROFILES[profile]
+        if not name:
+            name = str(profile_defaults["label"]).strip()
+        if not url:
+            url = str(profile_defaults["url"]).strip()
 
         if not name:
             raise ValueError("Nome da conexão é obrigatório.")
@@ -120,4 +172,5 @@ class MCPConnectionSnippetService:
             "auth_type": auth_type,
             "auth_label": "Bearer Token",
             "token": token,
+            "profile": profile,
         }
