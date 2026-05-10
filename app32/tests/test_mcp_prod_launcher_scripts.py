@@ -18,3 +18,11 @@ def test_prod_installer_documents_company_pin_as_optional():
     assert 'throw "Para usar -PersistUserEnv, informe pelo menos -McpUserId."' in script
     assert '`APP32_MCP_COMPANY_ID` é opcional' in script
     assert 'Write-Host "  # Opcional: `$env:APP32_MCP_COMPANY_ID=' in script
+
+
+def test_deploy_script_forces_mcp_http_restart_after_publish():
+    script = (_REPO_ROOT / "scripts" / "deploy_configr.sh").read_text(encoding="utf-8")
+
+    assert 'Reiniciando runtime MCP HTTP remoto para refletir o código recém-publicado' in script
+    assert 'pkill -TERM -f "APP32_MCP_HTTP_PORT=8101|start_mcp_http.sh|src.core.mcp_http_server"' in script
+    assert 'MCP HTTP remoto ativo em 127.0.0.1:8101 com código atualizado.' in script
