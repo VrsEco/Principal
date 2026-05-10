@@ -230,3 +230,14 @@ def test_ai_mcp_console_service_exposes_squad_cliente_runtime_profile():
     assert squad_cliente["surface"] == "user"
     assert "surface_playbooks" in squad_cliente["required_contracts"]
     assert "bootstrap_session_context" in squad_cliente["startup_tools"]
+
+
+def test_ai_mcp_console_service_exposes_assisted_usage_and_maturity_model():
+    from services.ai_mcp_console_service import AIMCPConsoleService
+
+    active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    payload = AIMCPConsoleService.build_frontend_state(active_company)
+
+    assert payload["assisted_usage"]["phases"][0]["key"] == "conducao_forte"
+    assert "consultor_versus" in payload["maturity_model"]["signals"]
+    assert "usuario_cliente" in payload["maturity_model"]["signals"]

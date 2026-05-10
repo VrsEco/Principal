@@ -410,6 +410,54 @@ class AIMCPConsoleService:
             },
         ]
 
+        assisted_usage = {
+            "title": "Modo de Utilização Assistida",
+            "objective": "Aumentar autonomia sem cair em paternalismo, combinando onboarding, coprodução e progressão de maturidade.",
+            "phases": [
+                {
+                    "key": "conducao_forte",
+                    "title": "Condução forte",
+                    "description": "O squad guia o usuário, explica a ferramenta e organiza o próximo passo.",
+                    "recommended_for": ["início de implantação", "primeiro uso do APP32", "primeiro uso dos squads"],
+                },
+                {
+                    "key": "coproducao_orientada",
+                    "title": "Coprodução orientada",
+                    "description": "Humano e squad trabalham juntos; o sistema estrutura, alerta e acelera.",
+                    "recommended_for": ["rotina já iniciada", "times em ganho de hábito", "fluxos assistidos recorrentes"],
+                },
+                {
+                    "key": "autonomia_assistida",
+                    "title": "Autonomia assistida",
+                    "description": "O usuário conduz mais, recebe menos tutoria e opera com apoio contextual sob demanda.",
+                    "recommended_for": ["usuários maduros", "consultores experientes", "operações estáveis"],
+                },
+            ],
+            "anti_patterns": [
+                "usar o squad como substituto permanente do raciocínio humano",
+                "premiar volume de uso em vez de qualidade de uso",
+                "manter tutoria máxima para usuários já maduros",
+            ],
+        }
+
+        maturity_model = {
+            "title": "Sinais iniciais de Maturidade Assistida",
+            "levels": ["assistido", "orientado", "copiloto", "autonomo", "multiplicador"],
+            "signals": {
+                "consultor_versus": [
+                    "usa discovery antes de operar",
+                    "explicita company_id e surface correta",
+                    "forma autonomia no cliente sem centralizar tudo",
+                ],
+                "usuario_cliente": [
+                    "formula pedidos com mais clareza",
+                    "usa o APP32 sem depender de navegação manual excessiva",
+                    "executa com o squad sem tentar contornar guardrails",
+                ],
+            },
+            "rule": "maturidade deve aumentar autonomia com responsabilidade, nunca premiar dependência",
+        }
+
         connection_generator = {
             "title": "Conectar em outro cliente",
             "description": "Cole os dados da conexão e gere o texto pronto para configurar com IA ou copiar a configuração técnica.",
@@ -522,6 +570,8 @@ class AIMCPConsoleService:
             "guided_actions": guided_actions,
             "quick_assistant": quick_assistant,
             "contextual_help": contextual_help,
+            "assisted_usage": assisted_usage,
+            "maturity_model": maturity_model,
             "connection_generator": connection_generator,
             "external_runtime_profiles": cls._build_external_runtime_profiles(active_company),
             "documentation_bootstrap": documentation_bootstrap,
