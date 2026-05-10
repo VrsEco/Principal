@@ -435,6 +435,13 @@ class AIMCPConsoleService:
                     "default_url": "https://app.gestaoversus.com.br/mcp/admin",
                     "surface": "admin",
                 },
+                {
+                    "key": "squad_cliente",
+                    "title": "Squad Cliente",
+                    "description": "Perfil operacional assistido do cliente em runtime externo, com menor privilégio e foco na execução do dia a dia.",
+                    "default_url": "https://app.gestaoversus.com.br/mcp/user",
+                    "surface": "user",
+                },
             ],
             "modes": [
                 {
@@ -565,6 +572,25 @@ class AIMCPConsoleService:
                     "Usar company_id explícito em surfaces privilegiadas.",
                     "Começar por discovery antes de mutações.",
                     "Registrar trilha auditável por ator, runtime e capability.",
+                ],
+            },
+            {
+                "key": "squad_cliente",
+                "title": "Squad Cliente",
+                "owner": "Usuário da empresa cliente em runtime externo",
+                "surface": "user",
+                "default_company_id": company_id,
+                "default_company_name": company_name,
+                "startup_tools": list(MCPConnectionSnippetService.RUNTIME_PROFILES["squad_cliente"]["startup_tools"]),
+                "primary_goal": "Operação assistida e interação direta com os pares humanos do cliente.",
+                "required_contracts": [
+                    "surface_playbooks",
+                    "profile_contracts",
+                ],
+                "guardrails": [
+                    "Operar com menor privilégio.",
+                    "Usar company_id do tenant ativo.",
+                    "Não acessar admin, analytics ou ops.",
                 ],
             },
         ]

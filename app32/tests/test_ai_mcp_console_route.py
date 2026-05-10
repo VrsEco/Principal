@@ -216,3 +216,17 @@ def test_ai_mcp_console_service_exposes_squad_versus_runtime_profile():
     assert "profiles" in squad_versus["required_contracts"]
     assert "list_app32_capabilities" in squad_versus["startup_tools"]
     assert payload["connection_generator"]["defaults"]["profile"] == "sapiens_default"
+
+
+def test_ai_mcp_console_service_exposes_squad_cliente_runtime_profile():
+    from services.ai_mcp_console_service import AIMCPConsoleService
+
+    active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    payload = AIMCPConsoleService.build_frontend_state(active_company)
+
+    runtime_profiles = {item["key"]: item for item in payload["external_runtime_profiles"]}
+    squad_cliente = runtime_profiles["squad_cliente"]
+
+    assert squad_cliente["surface"] == "user"
+    assert "surface_playbooks" in squad_cliente["required_contracts"]
+    assert "bootstrap_session_context" in squad_cliente["startup_tools"]

@@ -30,6 +30,18 @@ class MCPConnectionSnippetService:
             ],
             "routing_note": "O Squad Versus deve operar como consultoria e governança: começar por discovery, respeitar company_id explícito nas surfaces privilegiadas e evitar mutações sem necessidade e sem trilha.",
         },
+        "squad_cliente": {
+            "label": "Squad Cliente",
+            "activation_subject": "ative o Squad Cliente neste cliente usando a conexão MCP abaixo.",
+            "url": "https://app.gestaoversus.com.br/mcp/user",
+            "surface": "user",
+            "startup_tools": [
+                "bootstrap_session_context",
+                "list_user_app32_capabilities",
+                "describe_app32_surface_playbooks_tool",
+            ],
+            "routing_note": "O Squad Cliente deve operar em menor privilégio, com utilização assistida, foco operacional e sem tentar contornar restrições de admin, analytics ou ops.",
+        },
     }
 
     @classmethod

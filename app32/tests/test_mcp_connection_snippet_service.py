@@ -36,6 +36,22 @@ def test_build_prompt_supports_squad_versus_profile():
     assert "https://app.gestaoversus.com.br/mcp/admin" in content
 
 
+def test_build_prompt_supports_squad_cliente_profile():
+    content = MCPConnectionSnippetService.build_prompt(
+        {
+            "profile": "squad_cliente",
+            "default_company": "Cliente XP",
+            "auth_type": "bearer",
+            "token": "token-cli",
+        }
+    )
+
+    assert "ative o Squad Cliente" in content
+    assert "Surface alvo: user" in content
+    assert "bootstrap_session_context" in content
+    assert "https://app.gestaoversus.com.br/mcp/user" in content
+
+
 def test_build_raw_config_includes_bearer_header():
     content = MCPConnectionSnippetService.build_raw_config(
         {
