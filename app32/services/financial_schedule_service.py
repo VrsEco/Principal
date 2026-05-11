@@ -4,9 +4,10 @@ import calendar
 import logging
 import os
 import uuid
+from collections import Counter
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Counter as CounterType, Dict, List, Optional, Sequence, Tuple
 
 from financial_domain import (
     FINANCIAL_OPERATIONAL_GLOSSARY,
@@ -657,12 +658,25 @@ class FinancialScheduleService:
             fallback_domain_source_id=merged_metadata_json.get("domain_source_id"),
             fallback_domain_label=merged_metadata_json.get("domain_label"),
         )
+        legacy_domain_allowance = FinancialScheduleService._build_legacy_domain_allowance(
+            company_id=company_id,
+            template_amount=schedule.template_amount,
+            due_date=schedule.next_due_date or schedule.first_due_date,
+            metadata_json=schedule.metadata_json,
+            fallback_chart_account_id=schedule.chart_account_id,
+            fallback_cost_center_id=schedule.cost_center_id,
+            fallback_domain_type=dict(schedule.metadata_json or {}).get("domain_type"),
+            fallback_domain_source_kind=dict(schedule.metadata_json or {}).get("domain_source_kind"),
+            fallback_domain_source_id=dict(schedule.metadata_json or {}).get("domain_source_id"),
+            fallback_domain_label=dict(schedule.metadata_json or {}).get("domain_label"),
+        )
 
         allocation_error = FinancialScheduleService._validate_schedule_allocations(
             company_id=company_id,
             template_amount=merged.get("template_amount", schedule.template_amount),
             due_date=merged.get("next_due_date", merged.get("first_due_date", schedule.next_due_date or schedule.first_due_date)),
             metadata_json=merged_metadata_json,
+            legacy_domain_allowance=legacy_domain_allowance,
         )
         if allocation_error:
             return None, allocation_error
@@ -1369,15 +1383,21 @@ class FinancialScheduleService:
                 "adjustment_kind": None,
                 "adjustment_label": None,
             }
+            row["chart_account_id"] = row.get("chart_account_id") or fallback_chart_account_id
+            row["cost_center_id"] = row.get("cost_center_id") or fallback_cost_center_id
             row["allocation_type"] = str(
                 row.get("allocation_type")
                 or ("amount" if row.get("allocated_amount") not in ("", None) else "percentage")
             ).strip().lower() or "percentage"
             row["domain_type"] = row.get("domain_type") or fallback_domain_type
-            row["domain_source_kind"] = FinancialScheduleService._normalize_domain_source_kind(
-                row.get("domain_source_kind") or fallback_domain_source_kind
-            )
             row["domain_source_id"] = row.get("domain_source_id") or fallback_domain_source_id
+            row["domain_source_kind"] = (
+                FinancialScheduleService._normalize_domain_source_kind(
+                    row.get("domain_source_kind") or fallback_domain_source_kind
+                )
+                if row.get("domain_type") and row.get("domain_source_id") not in ("", None)
+                else None
+            )
             row["domain_label"] = row.get("domain_label") or fallback_domain_label
             row["domain_value"] = FinancialScheduleService._build_domain_value(
                 row.get("domain_type"),
@@ -1387,6 +1407,55 @@ class FinancialScheduleService:
             normalized_allocations.append(row)
 
         return normalized_allocations
+
+    @staticmethod
+    def _build_allocation_domain_key(item: Optional[Dict[str, Any]]) -> Optional[Tuple[str, str, int]]:
+        row = dict(item or {})
+        domain_type = str(row.get("domain_type") or "").strip().lower()
+        domain_source_id = row.get("domain_source_id")
+        if not domain_type or domain_source_id in ("", None):
+            return None
+        try:
+            normalized_source_id = int(domain_source_id)
+        except (TypeError, ValueError):
+            return None
+        domain_source_kind = FinancialScheduleService._normalize_domain_source_kind(
+            row.get("domain_source_kind")
+        )
+        return (domain_source_kind, domain_type, normalized_source_id)
+
+    @staticmethod
+    def _build_legacy_domain_allowance(
+        *,
+        company_id: int,
+        template_amount: Any,
+        due_date: Optional[date],
+        metadata_json: Optional[Dict[str, Any]],
+        fallback_chart_account_id: Optional[int] = None,
+        fallback_cost_center_id: Optional[int] = None,
+        fallback_domain_type: Optional[str] = None,
+        fallback_domain_source_kind: Optional[str] = None,
+        fallback_domain_source_id: Optional[int] = None,
+        fallback_domain_label: Optional[str] = None,
+    ) -> CounterType[Tuple[str, str, int]]:
+        counter: CounterType[Tuple[str, str, int]] = Counter()
+        allocations = FinancialScheduleService._normalize_schedule_allocations(
+            company_id=company_id,
+            template_amount=template_amount,
+            due_date=due_date,
+            metadata_json=metadata_json,
+            fallback_chart_account_id=fallback_chart_account_id,
+            fallback_cost_center_id=fallback_cost_center_id,
+            fallback_domain_type=fallback_domain_type,
+            fallback_domain_source_kind=fallback_domain_source_kind,
+            fallback_domain_source_id=fallback_domain_source_id,
+            fallback_domain_label=fallback_domain_label,
+        )
+        for item in allocations:
+            key = FinancialScheduleService._build_allocation_domain_key(item)
+            if key:
+                counter[key] += 1
+        return counter
 
     @staticmethod
     def _validate_schedule_links(
@@ -1424,6 +1493,7 @@ class FinancialScheduleService:
         template_amount: Any,
         due_date: Optional[date],
         metadata_json: Optional[Dict[str, Any]],
+        legacy_domain_allowance: Optional[CounterType[Tuple[str, str, int]]] = None,
     ) -> Optional[str]:
         allocations = list((metadata_json or {}).get("allocations") or [])
         if not allocations:
@@ -1491,6 +1561,13 @@ class FinancialScheduleService:
             domain_source_id = item.get("domain_source_id")
             domain_source_kind = item.get("domain_source_kind") or "routine"
             if domain_type and domain_source_id:
+                domain_key = FinancialScheduleService._build_allocation_domain_key(
+                    {
+                        "domain_type": domain_type,
+                        "domain_source_id": domain_source_id,
+                        "domain_source_kind": domain_source_kind,
+                    }
+                )
                 _, domain_error = FinancialDomainEnablementService._load_source(
                     company_id,
                     domain_type,
@@ -1498,7 +1575,10 @@ class FinancialScheduleService:
                     source_kind=domain_source_kind,
                 )
                 if domain_error:
-                    return f"Linha {index} do rateio: {domain_error}"
+                    if domain_key and legacy_domain_allowance and legacy_domain_allowance.get(domain_key, 0) > 0:
+                        legacy_domain_allowance[domain_key] -= 1
+                    else:
+                        return f"Linha {index} do rateio: {domain_error}"
 
             percentage_value = item.get("percentage")
             allocated_amount_value = item.get("allocated_amount")

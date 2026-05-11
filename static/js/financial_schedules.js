@@ -628,9 +628,18 @@
 
   function createAllocationRow(defaults = {}) {
     const suggestions = defaultSuggestions();
-    const domainSourceKind = defaults.domain_source_kind || suggestions.domain_source_kind || 'routine';
-    const domainType = defaults.domain_type || suggestions.domain_type || null;
-    const domainSourceId = defaults.domain_source_id || suggestions.domain_source_id || null;
+    const hasExplicitDomainKind = Object.prototype.hasOwnProperty.call(defaults, 'domain_source_kind');
+    const hasExplicitDomainType = Object.prototype.hasOwnProperty.call(defaults, 'domain_type');
+    const hasExplicitDomainSourceId = Object.prototype.hasOwnProperty.call(defaults, 'domain_source_id');
+    const domainSourceKind = hasExplicitDomainKind
+      ? (defaults.domain_source_kind || null)
+      : (suggestions.domain_source_kind || 'routine');
+    const domainType = hasExplicitDomainType
+      ? (defaults.domain_type || null)
+      : (suggestions.domain_type || null);
+    const domainSourceId = hasExplicitDomainSourceId
+      ? (defaults.domain_source_id || null)
+      : (suggestions.domain_source_id || null);
     return {
       chart_account_id: defaults.chart_account_id || '',
       cost_center_id: asOptionValue(defaults.cost_center_id || suggestions.cost_center_id || ''),
@@ -646,7 +655,7 @@
       domain_type: domainType,
       domain_source_id: domainSourceId,
       domain_label: defaults.domain_label || suggestions.domain_label || null,
-      domain_value: domainType && domainSourceId ? `${domainSourceKind}:${domainType}:${domainSourceId}` : '',
+      domain_value: domainType && domainSourceId && domainSourceKind ? `${domainSourceKind}:${domainType}:${domainSourceId}` : '',
       adjustment_kind: defaults.adjustment_kind || null,
       adjustment_label: defaults.adjustment_label || null,
       percentage: defaults.percentage ?? '100',
