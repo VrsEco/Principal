@@ -220,7 +220,21 @@ Este card é considerado atendido quando:
 
 ---
 
-## 11. Próximo passo
+## 11. Modelo de instalação seguro
+O modelo preferencial de instalação deve ser:
+
+- APP32 gera o token e o contexto
+- o usuário executa um instalador do runtime
+- o token é informado no momento da instalação, de forma segura
+- o segredo não é embutido no pacote nem no repositório
+
+Referência operacional:
+- `C:\GestaoVersus\app32\app32\docs\specifications\instalacao_segura_harnesses_via_app32_v1.md`
+- `C:\GestaoVersus\app32\app32\scripts\installers\install-codex-laboratorio.ps1`
+
+---
+
+## 12. Próximo passo
 Com este documento, o próximo passo do projeto é o `AA.J.16.3`:
 - estruturar o MCP, perfis, tools e liberações por squad
 - validar se o catálogo atual já suporta os harnesses definidos
