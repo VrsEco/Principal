@@ -400,6 +400,7 @@ function setupFormListeners() {
 async function handleFormSubmit(e, endpoint) {
     e.preventDefault();
     const form = e.target;
+    const formId = form.getAttribute('id') || '';
 
     if (!state.companyId || state.companyId === 'null') {
         console.warn("Company ID not found in JS state. Proceeding and letting backend attempt session fallback.");
@@ -407,7 +408,7 @@ async function handleFormSubmit(e, endpoint) {
 
     const formData = new FormData(form);
     const rawData = Object.fromEntries(formData.entries());
-    const allowedFields = FORM_ALLOWED_FIELDS[form.id] || [];
+    const allowedFields = FORM_ALLOWED_FIELDS[formId] || [];
     const data = Object.fromEntries(
         Object.entries(rawData).filter(([key]) => allowedFields.includes(key))
     );
@@ -428,7 +429,7 @@ async function handleFormSubmit(e, endpoint) {
     // Convert numeric fields to integers
     if (data.order_index) data.order_index = parseInt(data.order_index, 10);
     // For Area, code is currently used as the sequence (like in app31)
-    if (form.id === 'formArea' && data.code) {
+    if (formId === 'formArea' && data.code) {
         data.order_index = parseInt(data.code, 10);
     }
     if (data.area_id) data.area_id = parseInt(data.area_id, 10);
@@ -449,7 +450,6 @@ async function handleFormSubmit(e, endpoint) {
             // Revert button text
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
-                const formId = form.getAttribute('id') || '';
                 const type = formId.replace('form', '').toLowerCase();
                 submitBtn.textContent = `Salvar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
             }
