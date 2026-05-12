@@ -230,7 +230,7 @@ function renderMapMP2(container) {
             }).join('')}
                                     ${macroProcesses.length === 0 ? '<div style="grid-column: 1/-1; text-align:center; font-size:0.6rem; color:var(--text-tertiary)">Sem processos</div>' : ''}
                                 </div>
-                                <div class="macro-footer" style="font-size: 0.6rem;">${macro.owner || '-'}</div>
+                                <div class="macro-footer">Dono: ${macro.owner || '-'}</div>
                             </div>
                         `;
         }).join('')}

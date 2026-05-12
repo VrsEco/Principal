@@ -51,13 +51,11 @@
         <!-- Legenda (Visível no Mapa) - Versão Compacta & Responsiva -->
         <div class="map-legend p-2"
             style="background: var(--surface-secondary); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1rem;">
-            <div
-                style="display: flex; gap: 1rem; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 0.7rem;">
+            <div class="process-map-legend-row">
                 <!-- Modelagem -->
-                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                    <span
-                        style="font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; font-size: 0.65rem;">Modelagem:</span>
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <div class="process-map-legend-group">
+                    <span class="process-map-legend-title">Modelagem:</span>
+                    <div class="process-map-legend-items">
                         <span class="indicator-stage" style="background: #cbd5e1; width: 8px; height: 8px;"></span> Fora
                         <span class="indicator-stage" style="background: #93c5fd; width: 8px; height: 8px;"></span>
                         Desenho
@@ -73,10 +71,9 @@
                 <div class="legend-sep" style="width: 1px; height: 12px; background: var(--border);"></div>
 
                 <!-- Desempenho -->
-                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                    <span
-                        style="font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; font-size: 0.65rem;">Desempenho:</span>
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <div class="process-map-legend-group">
+                    <span class="process-map-legend-title">Desempenho:</span>
+                    <div class="process-map-legend-items">
                         <span class="indicator-perf" style="background: #ef4444; width: 8px; height: 8px;"></span>
                         Crítico
                         <span class="indicator-perf" style="background: #f59e0b; width: 8px; height: 8px;"></span>
@@ -89,9 +86,9 @@
                 <div class="legend-sep" style="width: 1px; height: 12px; background: var(--border);"></div>
 
                 <!-- Incentivo -->
-                <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                    <span style="font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; font-size: 0.65rem;">Incentivo:</span>
-                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <div class="process-map-legend-group">
+                    <span class="process-map-legend-title">Incentivo:</span>
+                    <div class="process-map-legend-items">
                         <span style="font-size: 0.8rem;">🏆</span> Plano de Incentivo Ativo
                     </div>
                 </div>
@@ -488,6 +485,40 @@
         gap: 0.75rem;
     }
 
+    .process-map-legend-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        font-size: clamp(0.52rem, 0.82vw, 0.85rem);
+    }
+
+    .process-map-legend-group {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    .process-map-legend-title {
+        font-weight: 700;
+        color: var(--text-tertiary);
+        text-transform: uppercase;
+        font-size: 1em;
+    }
+
+    .process-map-legend-items {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: nowrap;
+        font-size: 1em;
+        font-weight: 700;
+    }
+
     .macro-title {
         font-size: 0.85rem;
         font-weight: 700;
@@ -570,14 +601,14 @@
     }
 
     .macro-footer {
-        font-size: 0.7rem;
+        font-size: 0.85rem;
+        font-weight: 700;
         color: var(--text-tertiary);
         text-align: center;
         padding-top: 0.5rem;
         margin-top: auto;
         /* Empurra para o rodapé do bloco */
         border-top: 1px solid var(--border);
-        font-style: italic;
     }
 
     /* MP-2 View Styles */
@@ -642,6 +673,10 @@
         text-align: center;
         border-bottom: 1px solid var(--border);
         padding-bottom: 0.4rem;
+    }
+
+    .mp2-macro-box .macro-footer {
+        font-size: 0.75rem;
     }
 
     .mp2-processes-list {
