@@ -132,11 +132,15 @@ Não deve conter:
 - profile: `engineering`
 - surface: `ops`
 - `company_id`: `10`
+- instalador de referência:
+  - `C:\GestaoVersus\app32\app32\scripts\installers\install-codex-laboratorio.ps1`
 
 ### Claude / Squad Cliente
 - profile: `squad_cliente`
 - surface: `user`
 - `company_id`: `10`
+- instalador de referência:
+  - `C:\GestaoVersus\app32\app32\scripts\installers\install-claude-laboratorio.ps1`
 
 ### Antigravity / Squad Versus
 - profile: `squad_versus`
