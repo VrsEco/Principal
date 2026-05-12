@@ -146,6 +146,8 @@ Não deve conter:
 - profile: `squad_versus`
 - surface: `admin`
 - `company_id`: `10`
+- instalador de referência:
+  - `C:\GestaoVersus\app32\app32\scripts\installers\install-antigravity-laboratorio.ps1`
 
 ---
 
