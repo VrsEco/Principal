@@ -412,9 +412,17 @@ async function handleFormSubmit(e, endpoint) {
         Object.entries(rawData).filter(([key]) => allowedFields.includes(key))
     );
 
-    // Only send company_id if it's valid, otherwise let backend fetch from session
-    if (state.companyId && state.companyId !== 'null' && state.companyId !== 'undefined') {
+    const id = data.id;
+    if (!id) delete data.id;
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${endpoint}/${id}` : endpoint;
+
+    // Only send company_id on create; on update let backend trust the record company
+    if (method === 'POST' && state.companyId && state.companyId !== 'null' && state.companyId !== 'undefined') {
         data.company_id = state.companyId;
+    } else {
+        delete data.company_id;
     }
 
     // Convert numeric fields to integers
@@ -425,12 +433,6 @@ async function handleFormSubmit(e, endpoint) {
     }
     if (data.area_id) data.area_id = parseInt(data.area_id, 10);
     if (data.macro_id) data.macro_id = parseInt(data.macro_id, 10);
-
-    const id = data.id;
-    if (!id) delete data.id;
-
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `${endpoint}/${id}` : endpoint;
 
     try {
         const res = await fetch(url, {
