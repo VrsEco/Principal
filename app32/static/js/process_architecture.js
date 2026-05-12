@@ -413,11 +413,15 @@ async function handleFormSubmit(e, endpoint) {
         Object.entries(rawData).filter(([key]) => allowedFields.includes(key))
     );
 
-    const id = data.id;
-    if (!id) delete data.id;
+    const recordId = (form.querySelector('input[name="id"]')?.value || '').trim();
+    if (!recordId) {
+        delete data.id;
+    } else {
+        data.id = recordId;
+    }
 
-    const method = id ? 'PUT' : 'POST';
-    const url = id ? `${endpoint}/${id}` : endpoint;
+    const method = recordId ? 'PUT' : 'POST';
+    const url = recordId ? `${endpoint}/${recordId}` : endpoint;
 
     // Only send company_id on create; on update let backend trust the record company
     if (method === 'POST' && state.companyId && state.companyId !== 'null' && state.companyId !== 'undefined') {
