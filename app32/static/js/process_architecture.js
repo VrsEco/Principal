@@ -20,6 +20,12 @@ const state = {
     viewType: localStorage.getItem('arch_view_type') || 'classic'
 };
 
+const FORM_ALLOWED_FIELDS = {
+    formArea: ['id', 'code', 'name', 'color', 'description'],
+    formMacro: ['id', 'area_id', 'order_index', 'owner', 'name', 'description'],
+    formProcess: ['id', 'macro_id', 'order_index', 'responsible', 'name', 'performance_level', 'description']
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     initArchitecture();
     setupFormListeners();
@@ -400,7 +406,11 @@ async function handleFormSubmit(e, endpoint) {
     }
 
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+    const rawData = Object.fromEntries(formData.entries());
+    const allowedFields = FORM_ALLOWED_FIELDS[form.id] || [];
+    const data = Object.fromEntries(
+        Object.entries(rawData).filter(([key]) => allowedFields.includes(key))
+    );
 
     // Only send company_id if it's valid, otherwise let backend fetch from session
     if (state.companyId && state.companyId !== 'null' && state.companyId !== 'undefined') {
