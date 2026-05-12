@@ -111,7 +111,7 @@ def _normalize_macro_owner_from_employee(data: dict, company_id: int | None, *, 
         return "Dono do Processo deve ser um colaborador ativo cadastrado nesta empresa."
 
     data['owner'] = employee.name
-    data['responsible'] = employee.name
+    data.pop('responsible', None)
     return None
 
 
