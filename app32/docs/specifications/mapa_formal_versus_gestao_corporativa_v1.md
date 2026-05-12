@@ -210,6 +210,10 @@ A camada de Agentes é composta por três conjuntos:
 - `Squad Cliente`
 - `Squad de Engenharia`
 
+A implementação operacional desses conjuntos deve separar:
+- **agente** como papel funcional
+- **harness** como invólucro operacional governado
+
 ### 6.3 Squad Versus
 #### Missão
 Atuar como núcleo consultivo, metodológico e governante.
@@ -363,6 +367,26 @@ A integração preferencial é:
 - `Runtime Cliente → MCP/APP32`
 
 Não se deve depender de acoplamento direto entre CLIs como desenho principal.
+
+### 9.4 Regra de implantação de harness
+- o **harness do Squad Versus** roda prioritariamente no runtime externo da Versus
+- o **harness do Squad Cliente** roda prioritariamente no runtime externo do cliente
+- o APP32 publica contratos, snippets, profiles e governança, mas não deve ser o runtime principal desses harnesses
+
+### 9.5 Regra de proteção do modelo de negócio
+O harness distribuído ao cliente deve ser **thin** e operacional.
+
+Ele pode conter:
+- instrução operacional
+- startup
+- regras de segurança
+- formato de interação
+- escalonamento
+
+Ele não deve conter, de forma aberta e completa:
+- o núcleo proprietário da metodologia Versus
+- heurísticas consultivas profundas
+- protocolos estratégicos avançados de revisão e governança
 
 ---
 

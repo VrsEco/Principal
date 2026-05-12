@@ -26,4 +26,5 @@ def test_create_http_app_mounts_expected_surfaces(monkeypatch):
     assert "/mcp/user" in paths
     assert "/mcp/admin" in paths
     assert "/mcp/analytics" in paths
+    assert "/mcp/ops" in paths
 

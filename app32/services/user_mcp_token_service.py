@@ -420,7 +420,10 @@ class UserMcpTokenService:
         company_id: int | None,
         client_name: str | None,
     ) -> UserMcpResolvedContext | None:
-        normalized_surface = cls._normalize_surface(surface)
+        try:
+            normalized_surface = cls._normalize_surface(surface)
+        except ValueError:
+            return None
         token_hash = cls._hash_token(token)
         with cls._ensure_app_context():
             record = (

@@ -32,7 +32,7 @@ def test_build_prompt_supports_squad_versus_profile():
 
     assert "ative o Squad Versus" in content
     assert "Surface alvo: admin" in content
-    assert "list_app32_capabilities" in content
+    assert "list_admin_app32_capabilities" in content
     assert "https://app.gestaoversus.com.br/mcp/admin" in content
 
 
@@ -48,7 +48,8 @@ def test_build_prompt_supports_squad_cliente_profile():
 
     assert "ative o Squad Cliente" in content
     assert "Surface alvo: user" in content
-    assert "bootstrap_session_context" in content
+    assert "list_user_app32_capabilities" in content
+    assert "describe_app32_profile_contracts_tool" in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content
 
 

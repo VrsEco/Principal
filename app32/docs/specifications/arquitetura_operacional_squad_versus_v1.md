@@ -14,7 +14,7 @@ O **Squad Versus** opera inicialmente como runtime externo consultivo na **surfa
 
 ## Startup obrigatório
 Antes de operar, o runtime deve executar:
-1. `list_app32_capabilities`
+1. `list_admin_app32_capabilities`
 2. `describe_app32_profile_contracts_tool`
 3. `describe_app32_surface_playbooks_tool`
 4. `describe_app32_domain_playbooks_tool`

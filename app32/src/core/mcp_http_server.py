@@ -40,6 +40,7 @@ from src.core.mcp_http_auth import (  # noqa: E402
 from src.core.mcp_surface_registry import (  # noqa: E402
     build_admin_mcp_server,
     build_analytics_mcp_server,
+    build_ops_mcp_server,
     build_user_mcp_server,
 )
 
@@ -56,6 +57,8 @@ DEFAULT_PUBLIC_BASE_URL = os.environ.get("APP32_MCP_PUBLIC_BASE_URL", "https://a
 
 def _surface_mount_path(surface: str) -> str:
     return f"/mcp/{surface}"
+
+
 def build_surface_http_app(surface: str):
     """
     Constrói uma app Starlette montável em `/mcp/<surface>`.
@@ -69,6 +72,8 @@ def build_surface_http_app(surface: str):
         mcp = build_admin_mcp_server(name="GestaoVersus Admin Remote MCP")
     elif surface == "analytics":
         mcp = build_analytics_mcp_server(name="GestaoVersus Analytics Remote MCP")
+    elif surface == "ops":
+        mcp = build_ops_mcp_server(name="GestaoVersus Ops Remote MCP")
     else:  # pragma: no cover - proteção defensiva
         raise ValueError(f"Surface HTTP MCP inválida: {surface!r}")
 
@@ -98,6 +103,7 @@ async def _healthz(_: Request) -> JSONResponse:
                 "user": _surface_mount_path("user"),
                 "admin": _surface_mount_path("admin"),
                 "analytics": _surface_mount_path("analytics"),
+                "ops": _surface_mount_path("ops"),
             },
             "auth_mode": {
                 "mvp_token_registry_loaded": len(load_http_token_registry()),
@@ -119,6 +125,7 @@ async def _index(_: Request) -> JSONResponse:
                 "user": f"{base}{_surface_mount_path('user')}",
                 "admin": f"{base}{_surface_mount_path('admin')}",
                 "analytics": f"{base}{_surface_mount_path('analytics')}",
+                "ops": f"{base}{_surface_mount_path('ops')}",
             },
             "requirements": {
                 "authorization": "Bearer token (MVP interno) / OAuth (preparação de arquitetura).",
@@ -132,11 +139,12 @@ def create_http_app() -> Starlette:
     user_app = build_surface_http_app("user")
     admin_app = build_surface_http_app("admin")
     analytics_app = build_surface_http_app("analytics")
+    ops_app = build_surface_http_app("ops")
 
     @asynccontextmanager
     async def lifespan(app: Starlette):
         async with AsyncExitStack() as stack:
-            for surface_app in (user_app, admin_app, analytics_app):
+            for surface_app in (user_app, admin_app, analytics_app, ops_app):
                 await stack.enter_async_context(surface_app.router.lifespan_context(surface_app))
             yield
 
@@ -146,6 +154,7 @@ def create_http_app() -> Starlette:
         Mount(_surface_mount_path("user"), app=user_app),
         Mount(_surface_mount_path("admin"), app=admin_app),
         Mount(_surface_mount_path("analytics"), app=analytics_app),
+        Mount(_surface_mount_path("ops"), app=ops_app),
     ]
     return Starlette(debug=False, routes=routes, lifespan=lifespan)
 

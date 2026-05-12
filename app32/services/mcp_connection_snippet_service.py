@@ -14,7 +14,10 @@ class MCPConnectionSnippetService:
             "activation_subject": "ative o Sapiens neste cliente usando a conexão MCP abaixo.",
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
-            "startup_tools": ["bootstrap_session_context"],
+            "startup_tools": [
+                "list_user_app32_capabilities",
+                "describe_app32_surface_playbooks_tool",
+            ],
             "routing_note": "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
         },
         "squad_versus": {
@@ -23,7 +26,7 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/admin",
             "surface": "admin",
             "startup_tools": [
-                "list_app32_capabilities",
+                "list_admin_app32_capabilities",
                 "describe_app32_profile_contracts_tool",
                 "describe_app32_surface_playbooks_tool",
                 "describe_app32_domain_playbooks_tool",
@@ -36,8 +39,8 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
             "startup_tools": [
-                "bootstrap_session_context",
                 "list_user_app32_capabilities",
+                "describe_app32_profile_contracts_tool",
                 "describe_app32_surface_playbooks_tool",
             ],
             "routing_note": "O Squad Cliente deve operar em menor privilégio, com utilização assistida, foco operacional e sem tentar contornar restrições de admin, analytics ou ops.",
@@ -85,7 +88,7 @@ class MCPConnectionSnippetService:
             "- Este cliente não suporta ativação automática do Sapiens.",
             "- A conexão técnica está pronta, mas precisa ser configurada manualmente.",
             "- Se quiser, eu posso te mostrar o passo a passo manual para este cliente.",
-            "7. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa, execute o bootstrap_session_context e informe ao usuário como chamar o Sapiens de forma simples na conversa.",
+            "7. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa, execute a sequência de startup informada e explique ao usuário como chamar o Sapiens de forma simples na conversa.",
             "8. Não invente valores. Use exatamente os dados fornecidos.",
             "",
             "Formato da resposta:",

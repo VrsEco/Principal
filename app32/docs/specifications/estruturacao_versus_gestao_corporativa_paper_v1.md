@@ -1170,6 +1170,90 @@ E não em modo de execução técnica direta.
 
 ---
 
+## 22.1 Decisão complementar — agentes como papéis e harnesses
+A partir do amadurecimento do projeto, fica definido que a Versus deve separar:
+
+- **agente** como papel de negócio
+- **harness** como invólucro operacional do papel
+
+### Papel do agente
+Representa:
+- missão funcional
+- responsabilidade no negócio
+- fronteiras de atuação
+- relação com outros agentes e humanos
+
+### Papel do harness
+Representa:
+- runtime de execução
+- prompt-base
+- startup sequence
+- tools permitidas e proibidas
+- surface MCP
+- política de escalonamento
+- formato de saída
+- evidência e telemetria esperadas
+
+### Decisão
+A arquitetura oficial deve manter a linguagem de **agentes** no nível de negócio e **harnesses** no nível de implantação e operação.
+
+---
+
+## 22.2 Decisão complementar — distribuição de harness no cliente
+O harness do **Squad Cliente** deve rodar prioritariamente no **CLI/runtime do cliente**, e não no APP32 como runtime principal.
+
+### APP32 permanece responsável por
+- domínio
+- dados
+- services
+- governança
+- MCP
+- surfaces
+- capability registry
+- trilha e auditoria
+
+### CLI/runtime do cliente permanece responsável por
+- harness do Squad Cliente
+- reasoning local
+- sessão do usuário
+- orquestração local do squad
+- consumo do MCP do APP32
+
+### Exceção aceita
+O APP32 pode publicar:
+- snippets de conexão
+- catálogos de harness
+- contratos de startup
+- playbooks resumidos
+- profiles MCP
+
+Mas isso não o transforma em runtime principal do harness.
+
+---
+
+## 22.3 Decisão complementar — proteção do modelo de negócio no harness
+A Versus não deve distribuir no harness do cliente o coração completo de sua metodologia consultiva.
+
+### Pode ir para o harness do cliente
+- instrução operacional
+- guardrails
+- startup MCP
+- limites de atuação
+- formato de resposta
+- protocolo de escalonamento
+
+### Deve permanecer protegido
+- metodologia Versus completa
+- heurísticas consultivas profundas
+- lógica proprietária de diagnóstico
+- critérios internos avançados de priorização e revisão estratégica
+- protocolos de controladoria e governança que sejam diferencial competitivo
+
+### Regra
+O **Squad Cliente** deve receber capacidade operacional assistida, e não o segredo completo do modelo de negócio da Versus.
+
+---
+
 ## 23. Resultado esperado deste paper
 Ao final do amadurecimento, este documento deve permitir:
 

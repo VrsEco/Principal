@@ -60,3 +60,16 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert "◆ SAPIENS · Gestão Versus ● ativo" in config["activation_prompt"]
     assert "Este cliente não suporta ativação automática do Sapiens." in config["activation_prompt"]
     assert '"token": "mcpu_token_real"' in config["technical_config_text"]
+
+
+def test_resolve_for_http_request_returns_none_for_unsupported_surface():
+    service = token_service_module.user_mcp_token_service
+
+    resolved = service.resolve_for_http_request(
+        token="mcpu_fake",
+        surface="admin",
+        company_id=10,
+        client_name="laboratorio",
+    )
+
+    assert resolved is None

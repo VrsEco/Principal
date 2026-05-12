@@ -14,8 +14,8 @@ O **Squad Cliente** opera inicialmente na **surface `user`**, conectado ao tenan
 
 ## Startup obrigatório
 Antes de operar, o runtime deve executar:
-1. `bootstrap_session_context`
-2. `list_user_app32_capabilities`
+1. `list_user_app32_capabilities`
+2. `describe_app32_profile_contracts_tool`
 3. `describe_app32_surface_playbooks_tool`
 
 ## Guardrails
