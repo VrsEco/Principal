@@ -399,7 +399,7 @@ function setupFormListeners() {
 
 async function handleFormSubmit(e, endpoint) {
     e.preventDefault();
-    const form = e.target;
+    const form = e.currentTarget || e.target;
     const formId = form.getAttribute('id') || '';
 
     if (!state.companyId || state.companyId === 'null') {
