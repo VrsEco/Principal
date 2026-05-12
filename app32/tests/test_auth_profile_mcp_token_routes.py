@@ -58,6 +58,13 @@ class _FakeUserMcpTokenService:
             "json": {"company_id": kwargs.get("company_id")},
             "technical_config_text": "config tecnica",
             "activation_prompt": "prompt ativar sapiens",
+            "runtime_label": "Claude",
+            "squad_label": "Squad Cliente",
+            "resolved_profile": "squad_cliente",
+            "resolved_surface": "user",
+            "availability_label": "Auto instalação",
+            "install_command": ".\\app32\\scripts\\installers\\install-claude-laboratorio.ps1",
+            "instruction_text": "rode o instalador",
         }
 
 
@@ -103,7 +110,7 @@ def test_profile_mcp_token_generate_route(monkeypatch):
 
     response = app.test_client().post(
         '/profile/mcp-token/generate',
-        json={'company_id': 12, 'surface': 'user', 'client_name': 'Antigravity'},
+        json={'company_id': 12, 'surface': 'user', 'client_name': 'Antigravity', 'runtime': 'claude', 'squad': 'squad_cliente'},
     )
 
     assert response.status_code == 200
@@ -113,6 +120,8 @@ def test_profile_mcp_token_generate_route(monkeypatch):
     generate_call = next(call for call in fake_service.calls if call[0] == 'generate')
     assert generate_call[1]['company_id'] == 12
     assert generate_call[1]['client_name'] == 'Antigravity'
+    assert generate_call[1]['runtime'] == 'claude'
+    assert generate_call[1]['squad'] == 'squad_cliente'
 
 
 def test_profile_mcp_token_revoke_route(monkeypatch):
@@ -137,7 +146,7 @@ def test_profile_mcp_token_config_route(monkeypatch):
 
     response = app.test_client().post(
         '/profile/mcp-token/config',
-        json={'company_id': 12, 'surface': 'user', 'client_name': 'Claude Code'},
+        json={'company_id': 12, 'surface': 'user', 'client_name': 'Claude Code', 'runtime': 'claude', 'squad': 'squad_cliente'},
     )
 
     assert response.status_code == 200
@@ -146,3 +155,5 @@ def test_profile_mcp_token_config_route(monkeypatch):
     config_call = next(call for call in fake_service.calls if call[0] == 'config')
     assert config_call[1]['company_id'] == 12
     assert config_call[1]['client_name'] == 'Claude Code'
+    assert config_call[1]['runtime'] == 'claude'
+    assert config_call[1]['squad'] == 'squad_cliente'

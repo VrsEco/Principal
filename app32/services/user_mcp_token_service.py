@@ -31,6 +31,22 @@ PROFILE_TO_FALLBACK_ROLE = {
     "client": "cliente",
     "collaborator": "colaborador",
 }
+RUNTIME_INSTALLER_COMMANDS = {
+    "claude": ".\\app32\\scripts\\installers\\install-claude-laboratorio.ps1",
+    "codex": ".\\app32\\scripts\\installers\\install-codex-laboratorio.ps1",
+    "antigravity": ".\\app32\\scripts\\installers\\install-antigravity-laboratorio.ps1",
+}
+RUNTIME_LABELS = {
+    "claude": "Claude",
+    "codex": "Codex",
+    "antigravity": "Antigravity",
+    "other": "Outro cliente MCP",
+}
+SQUAD_LABELS = {
+    "squad_cliente": "Squad Cliente",
+    "squad_versus": "Squad Versus",
+    "engineering": "Squad de Engenharia",
+}
 
 
 @dataclass(frozen=True)
@@ -68,6 +84,105 @@ class UserMcpTokenService:
         if normalized not in ALLOWED_SURFACES:
             raise ValueError("Surface MCP inválida para token pessoal.")
         return normalized
+
+    @staticmethod
+    def _normalize_runtime(runtime: str | None) -> str:
+        normalized = str(runtime or "claude").strip().lower()
+        allowed = {"codex", "claude", "antigravity", "other"}
+        return normalized if normalized in allowed else "claude"
+
+    @staticmethod
+    def _normalize_squad(squad: str | None) -> str:
+        normalized = str(squad or "squad_cliente").strip().lower()
+        allowed = {"engineering", "squad_cliente", "squad_versus"}
+        return normalized if normalized in allowed else "squad_cliente"
+
+    @classmethod
+    def _resolve_runtime_installation(
+        cls,
+        *,
+        runtime: str | None,
+        squad: str | None,
+        company_id: int | None,
+    ) -> dict[str, Any]:
+        normalized_runtime = cls._normalize_runtime(runtime)
+        normalized_squad = cls._normalize_squad(squad)
+        runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
+        squad_label = SQUAD_LABELS.get(normalized_squad, normalized_squad)
+
+        resolved_profile = "squad_cliente"
+        resolved_surface = "user"
+        install_mode = "manual"
+        availability_label = "Manual"
+        install_command = None
+        company_arg = f" -CompanyId {company_id}" if company_id else ""
+        instruction_text = (
+            "Use a configuração técnica abaixo para ligar um cliente MCP manualmente com o seu token pessoal."
+        )
+
+        if normalized_squad == "squad_cliente":
+            resolved_profile = "squad_cliente"
+            resolved_surface = "user"
+            if normalized_runtime == "claude":
+                install_mode = "self_service"
+                availability_label = "Auto instalação"
+                install_command = (
+                    f"powershell -ExecutionPolicy Bypass -File "
+                    f"\"{RUNTIME_INSTALLER_COMMANDS['claude']}\"{company_arg}"
+                )
+                instruction_text = (
+                    "Copie o comando de instalação, rode no workspace com o repositório do APP32 e informe o token MCP quando o script pedir."
+                )
+            elif normalized_runtime == "other":
+                instruction_text = (
+                    "Este runtime usa o mesmo token pessoal do MCP user. Se ele não suportar instalador PowerShell, use a configuração técnica manual."
+                )
+            else:
+                install_mode = "manual"
+                availability_label = "Manual"
+                instruction_text = (
+                    "Para este runtime, o caminho oficial desta fase é a configuração manual usando o MCP user."
+                )
+        elif normalized_squad == "engineering":
+            resolved_profile = "engineering"
+            resolved_surface = "ops"
+            install_mode = "controlled"
+            availability_label = "Controlado"
+            install_command = (
+                f"powershell -ExecutionPolicy Bypass -File "
+                f"\"{RUNTIME_INSTALLER_COMMANDS.get(normalized_runtime, RUNTIME_INSTALLER_COMMANDS['codex'])}\""
+                f"{company_arg}"
+            )
+            instruction_text = (
+                "O Squad de Engenharia é operado em ambiente técnico controlado. Use o instalador apenas em rollout autorizado pela Versus."
+            )
+        elif normalized_squad == "squad_versus":
+            resolved_profile = "squad_versus"
+            resolved_surface = "admin"
+            install_mode = "controlled"
+            availability_label = "Controlado"
+            install_command = (
+                f"powershell -ExecutionPolicy Bypass -File "
+                f"\"{RUNTIME_INSTALLER_COMMANDS.get(normalized_runtime, RUNTIME_INSTALLER_COMMANDS['antigravity'])}\""
+                f"{company_arg}"
+            )
+            instruction_text = (
+                "O Squad Versus usa surface administrativa e fica sob rollout controlado. Gere o comando apenas para instalação assistida pela Versus."
+            )
+
+        return {
+            "runtime": normalized_runtime,
+            "runtime_label": runtime_label,
+            "squad": normalized_squad,
+            "squad_label": squad_label,
+            "resolved_profile": resolved_profile,
+            "resolved_surface": resolved_surface,
+            "install_mode": install_mode,
+            "availability_label": availability_label,
+            "install_command": install_command,
+            "instruction_text": instruction_text,
+            "supports_personal_token": resolved_surface == "user",
+        }
 
     @staticmethod
     def _generate_plaintext_token() -> str:
@@ -242,6 +357,8 @@ class UserMcpTokenService:
         company_id: int | None = None,
         surface: str = "user",
         client_name: str | None = None,
+        runtime: str | None = None,
+        squad: str | None = None,
     ) -> dict[str, Any]:
         with cls._ensure_app_context():
             user = User.query.get(user_id)
@@ -274,6 +391,8 @@ class UserMcpTokenService:
                 company_id=resolved_company_id,
                 surface=normalized_surface,
                 client_name=client_name,
+                runtime=runtime,
+                squad=squad,
             )
             return {"token": plaintext, "status": status, "config": config}
 
@@ -286,6 +405,8 @@ class UserMcpTokenService:
         company_id: int | None = None,
         surface: str = "user",
         client_name: str | None = None,
+        runtime: str | None = None,
+        squad: str | None = None,
     ) -> dict[str, Any]:
         return cls.generate_token(
             user_id=user_id,
@@ -293,6 +414,8 @@ class UserMcpTokenService:
             company_id=company_id,
             surface=surface,
             client_name=client_name,
+            runtime=runtime,
+            squad=squad,
         )
 
     @classmethod
@@ -324,6 +447,8 @@ class UserMcpTokenService:
         company_id: int | None = None,
         surface: str = "user",
         client_name: str | None = None,
+        runtime: str | None = None,
+        squad: str | None = None,
     ) -> dict[str, Any]:
         with cls._ensure_app_context():
             user = User.query.get(user_id)
@@ -340,6 +465,11 @@ class UserMcpTokenService:
                 url = f"{url}?company_id={resolved_company_id}"
             display_name = selected_company["label"] if selected_company else "Sem empresa padrão"
             token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
+            runtime_config = cls._resolve_runtime_installation(
+                runtime=runtime,
+                squad=squad,
+                company_id=resolved_company_id,
+            )
             config_json = {
                 "auth_type": "bearer",
                 "name": f"Sapiens {normalized_surface.title()}",
@@ -357,6 +487,19 @@ class UserMcpTokenService:
                 f"{config_text}\n\n"
                 f"JSON:\n{json.dumps(config_json, ensure_ascii=False, indent=2)}"
             )
+            installation_command = runtime_config["install_command"]
+            installation_instruction = runtime_config["instruction_text"]
+            if installation_command and runtime_config["install_mode"] == "self_service":
+                installation_instruction = (
+                    f"{installation_instruction}\n\n"
+                    f"Comando sugerido:\n{installation_command}\n\n"
+                    f"Quando o instalador abrir, informe o e-mail do usuário APP32 e cole o token MCP gerado nesta tela."
+                )
+            elif installation_command:
+                installation_instruction = (
+                    f"{installation_instruction}\n\n"
+                    f"Comando de referência:\n{installation_command}"
+                )
             activation_prompt = "\n".join([
                 "Quero que você ative o Sapiens neste cliente usando a conexão MCP abaixo.",
                 "",
@@ -404,6 +547,17 @@ class UserMcpTokenService:
                 "company_id": resolved_company_id,
                 "company_label": display_name,
                 "url": url,
+                "runtime": runtime_config["runtime"],
+                "runtime_label": runtime_config["runtime_label"],
+                "squad": runtime_config["squad"],
+                "squad_label": runtime_config["squad_label"],
+                "resolved_profile": runtime_config["resolved_profile"],
+                "resolved_surface": runtime_config["resolved_surface"],
+                "install_mode": runtime_config["install_mode"],
+                "availability_label": runtime_config["availability_label"],
+                "install_command": installation_command,
+                "instruction_text": installation_instruction,
+                "supports_personal_token": runtime_config["supports_personal_token"],
                 "text": config_text,
                 "json": config_json,
                 "technical_config_text": technical_config_text,

@@ -147,6 +147,8 @@ class UserMcpTokenConfigSchema(BaseModel):
     company_id: Optional[int] = None
     surface: str = Field("user", pattern="^(user)$")
     client_name: Optional[str] = Field(None, max_length=120)
+    runtime: Optional[str] = Field("claude", pattern="^(codex|claude|antigravity|other)$")
+    squad: Optional[str] = Field("squad_cliente", pattern="^(engineering|squad_cliente|squad_versus)$")
 
     @field_validator('company_id', mode='before')
     @classmethod
@@ -164,4 +166,12 @@ class UserMcpTokenConfigSchema(BaseModel):
         if value is None:
             return None
         normalized = str(value).strip()
+        return normalized or None
+
+    @field_validator('runtime', 'squad', mode='before')
+    @classmethod
+    def normalize_optional_choice(cls, value):
+        if value is None:
+            return None
+        normalized = str(value).strip().lower()
         return normalized or None

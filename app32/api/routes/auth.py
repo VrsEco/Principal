@@ -402,6 +402,8 @@ def generate_profile_mcp_token():
             company_id=validated.company_id,
             surface=validated.surface,
             client_name=validated.client_name,
+            runtime=validated.runtime,
+            squad=validated.squad,
         )
         return jsonify({"success": True, "message": "Token MCP gerado com sucesso.", "data": result})
     except ValidationError as exc:
@@ -431,6 +433,8 @@ def renew_profile_mcp_token():
             company_id=validated.company_id,
             surface=validated.surface,
             client_name=validated.client_name,
+            runtime=validated.runtime,
+            squad=validated.squad,
         )
         return jsonify({"success": True, "message": "Token MCP renovado com sucesso.", "data": result})
     except ValidationError as exc:
@@ -478,6 +482,8 @@ def profile_mcp_token_config():
             company_id=validated.company_id,
             surface=validated.surface,
             client_name=validated.client_name,
+            runtime=validated.runtime,
+            squad=validated.squad,
         )
         return jsonify({"success": True, "data": config})
     except ValidationError as exc:
