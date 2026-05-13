@@ -1,0 +1,7 @@
+2026/01/30-10:36:03.659 6728 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_all.accor.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/01/30-10:36:03.666 6728 Recovering log #3
+2026/01/30-10:36:03.667 6728 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_all.accor.com_0.indexeddb.leveldb/000003.log 
+2026/01/30-10:36:06.042 1130 Level-0 table #5: started
+2026/01/30-10:36:06.697 1130 Level-0 table #5: 8393 bytes OK
+2026/01/30-10:36:07.030 1130 Delete type=0 #3
+2026/01/30-10:36:07.053 1130 Manual compaction at level-0 from (begin) .. (end); will stop at (end)

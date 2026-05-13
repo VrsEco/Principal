@@ -1,0 +1,109 @@
+version: "2026-05-08.1"
+owner: "sapiens-mcp"
+description: "Catálogo resumido e seguro para bootstrap do MCP Sapiens."
+bootstrap:
+  auto_load: true
+  detail_strategy: "on_demand"
+  filters_required:
+    - company_id
+    - surface
+    - role
+  deny_by_default: true
+policies:
+  principles:
+    - "least_privilege"
+    - "progressive_disclosure"
+    - "tenant_isolation"
+    - "mcp_first"
+  never_expose_in_catalog:
+    - "detalhes de implementação"
+    - "payloads administrativos sensíveis"
+    - "estrutura de banco de dados"
+    - "regras internas profundas de autorização"
+domains:
+  - id: "routine"
+    nome: "Gestão da Rotina"
+    descricao: "Operações do dia a dia, tarefas e acompanhamento operacional."
+  - id: "processes"
+    nome: "Processos"
+    descricao: "Consultas e acompanhamento de processos operacionais estruturados."
+  - id: "finance"
+    nome: "Financeiro"
+    descricao: "Consultas executivas e operacionais financeiras conforme surface."
+features:
+  - id: "rotina_tarefas"
+    nome: "Tarefas da Rotina"
+    dominio: "routine"
+    objetivo: "Consultar e orientar a execução de tarefas operacionais."
+    quando_usar:
+      - "listar tarefas do dia"
+      - "acompanhar status da rotina"
+      - "orientar execução operacional"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "data_referencia"
+        - "responsavel_id"
+        - "status"
+    saidas:
+      - "lista_de_tarefas"
+      - "status"
+      - "resumo_operacional"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: true
+    guia_ref: "features/rotina_tarefas.md"
+
+  - id: "processos_acompanhamento"
+    nome: "Acompanhamento de Processos"
+    dominio: "processes"
+    objetivo: "Consultar andamento, responsáveis e próximos passos de processos."
+    quando_usar:
+      - "ver status de processo"
+      - "orientar acompanhamento"
+      - "identificar próximos passos"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "processo_id"
+        - "periodo"
+        - "responsavel_id"
+    saidas:
+      - "status_do_processo"
+      - "proximos_passos"
+      - "responsaveis"
+    surfaces:
+      - "user"
+      - "admin"
+      - "ops"
+    detalhe_disponivel: true
+    guia_ref: "features/processos_acompanhamento.md"
+
+  - id: "financeiro_fluxo_caixa"
+    nome: "Fluxo de Caixa"
+    dominio: "finance"
+    objetivo: "Consultar visão de fluxo de caixa conforme perfil e surface autorizada."
+    quando_usar:
+      - "consultar posição financeira"
+      - "analisar entradas e saídas"
+      - "obter resumo executivo"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "periodo"
+        - "conta"
+        - "centro_resultado"
+    saidas:
+      - "resumo_financeiro"
+      - "entradas"
+      - "saidas"
+      - "saldo"
+    surfaces:
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: true
+    guia_ref: "features/financeiro_fluxo_caixa.md"

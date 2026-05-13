@@ -60,6 +60,28 @@
                 <strong>{{ console.summary.readiness_gates }}</strong>
                 <small>gates oficiais de abertura controlada</small>
             </article>
+            <article class="ai-mcp-stat-card">
+                <span>Bootstrap catálogo MCP</span>
+                <strong id="aiMcpBootstrapStatus">{{ console.documentation_bootstrap.summary.features_total }}</strong>
+                <small id="aiMcpBootstrapMeta">{{ console.documentation_bootstrap.summary.catalog_version or 'aguardando leitura automática' }}</small>
+            </article>
+            <article class="ai-mcp-stat-card ai-mcp-stat-card--context">
+                <span>Contexto operacional</span>
+                <strong id="aiMcpRuntimeContextSummary">
+                    {{ console.runtime_context.resolved.company_code or console.runtime_context.resolved.company_id or 'Sem empresa resolvida' }}
+                </strong>
+                <small id="aiMcpRuntimeContextMeta">
+                    {{ console.runtime_context.resolved.company_name or 'Feature com empresa exige contexto explícito ou pinado.' }}
+                </small>
+                <div class="ai-mcp-inline-list" id="aiMcpRuntimeContextBadges">
+                    <span class="ai-mcp-chip">user-only: {{ console.catalog.context_requirements.user_only }}</span>
+                    <span class="ai-mcp-chip">company-only: {{ console.catalog.context_requirements.company_only }}</span>
+                    <span class="ai-mcp-chip">user+company: {{ console.catalog.context_requirements.user_and_company }}</span>
+                </div>
+                <small id="aiMcpRuntimeContextSource">
+                    Origem: {{ console.runtime_context.resolution.company or 'não resolvida' }}
+                </small>
+            </article>
         </div>
     </section>
 
@@ -222,6 +244,79 @@
 
         <div class="ai-mcp-content">
             <section class="ai-mcp-wizard" data-searchable="wizard assistente ajuda primeiro acesso onboarding configuração uso">
+                <article
+                    class="ai-mcp-card ai-mcp-bootstrap-card"
+                    id="aiMcpDocumentationBootstrap"
+                    data-endpoint="{{ console.documentation_bootstrap.endpoint }}"
+                    data-default-surface="{{ console.documentation_bootstrap.default_surface }}"
+                    data-auto-load="{{ 'true' if console.documentation_bootstrap.auto_load else 'false' }}"
+                    data-searchable="bootstrap catálogo feature guide mcp documentação conexão automática"
+                >
+                    <header>
+                        <div>
+                            <span class="ai-mcp-eyebrow">Bootstrap automático</span>
+                            <h2>Leitura automática do catálogo MCP</h2>
+                            <p>Ao abrir este console, o cliente executa automaticamente o bootstrap_session_context para carregar o catálogo resumido da surface padrão.</p>
+                        </div>
+                    </header>
+                    <div class="ai-mcp-bootstrap-card__content">
+                        <div class="ai-mcp-bootstrap-card__summary">
+                            <strong id="aiMcpBootstrapResultTitle">Aguardando bootstrap</strong>
+                            <p id="aiMcpBootstrapResultText">Surface padrão: <code>{{ console.documentation_bootstrap.default_surface }}</code>.</p>
+                            <small id="aiMcpBootstrapResultMeta">Versão inicial: {{ console.documentation_bootstrap.summary.catalog_version or 'indisponível' }}</small>
+                        </div>
+                        <div class="ai-mcp-context-grid">
+                            <article class="ai-mcp-context-card">
+                                <span class="ai-mcp-context-card__label">Contexto exigido</span>
+                                <div class="ai-mcp-context-card__chips" id="aiMcpBootstrapContextRequired">
+                                    {% for item in console.documentation_bootstrap.summary.current_context.required or [] %}
+                                    <span class="ai-mcp-chip">{{ item }}</span>
+                                    {% endfor %}
+                                </div>
+                            </article>
+                            <article class="ai-mcp-context-card">
+                                <span class="ai-mcp-context-card__label">Contexto resolvido</span>
+                                <ul class="ai-mcp-context-list" id="aiMcpBootstrapContextResolved">
+                                    {% if console.documentation_bootstrap.summary.current_context.resolved %}
+                                        {% for key, value in console.documentation_bootstrap.summary.current_context.resolved.items() %}
+                                        <li><strong>{{ key }}</strong><span>{{ value }}</span></li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li><strong>status</strong><span>aguardando bootstrap automático</span></li>
+                                    {% endif %}
+                                </ul>
+                            </article>
+                            <article class="ai-mcp-context-card">
+                                <span class="ai-mcp-context-card__label">Origem da resolução</span>
+                                <ul class="ai-mcp-context-list" id="aiMcpBootstrapContextResolution">
+                                    {% if console.documentation_bootstrap.summary.current_context.resolution %}
+                                        {% for key, value in console.documentation_bootstrap.summary.current_context.resolution.items() %}
+                                        <li><strong>{{ key }}</strong><span>{{ value }}</span></li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li><strong>company</strong><span>aguardando releitura</span></li>
+                                    {% endif %}
+                                </ul>
+                            </article>
+                            <article class="ai-mcp-context-card">
+                                <span class="ai-mcp-context-card__label">Resumo por contrato</span>
+                                <ul class="ai-mcp-context-list" id="aiMcpBootstrapContextSummary">
+                                    {% for key, value in (console.documentation_bootstrap.summary.context_summary or {}).items() %}
+                                    <li><strong>{{ key }}</strong><span>{{ value }}</span></li>
+                                    {% endfor %}
+                                </ul>
+                            </article>
+                        </div>
+                        <div class="ai-mcp-bootstrap-card__features">
+                            <ul class="ai-mcp-bullet-list" id="aiMcpBootstrapFeatureList">
+                                {% for domain in console.documentation_bootstrap.summary.domains %}
+                                <li>{{ domain }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </article>
+
                 <article class="ai-mcp-card ai-mcp-card--wizard">
                     <header class="ai-mcp-wizard__header">
                         <div>

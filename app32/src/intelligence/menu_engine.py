@@ -2288,6 +2288,33 @@ def _prepare_company_selection_flow_if_needed(
     )
 
 
+def _pin_session_company_if_needed(session: AgentMenuSession, company_id: Optional[int]) -> bool:
+    if not company_id:
+        return False
+    try:
+        normalized_company_id = int(company_id)
+    except (TypeError, ValueError):
+        return False
+    if getattr(session, "company_id", None) == normalized_company_id:
+        return False
+    session.company_id = normalized_company_id
+    return True
+
+
+def _resolve_thread_pinned_company_id(candidate_company_ids: List[Optional[int]]) -> Optional[int]:
+    normalized = []
+    for item in candidate_company_ids or []:
+        try:
+            company_id = int(item) if item is not None else None
+        except (TypeError, ValueError):
+            company_id = None
+        if company_id is not None and company_id not in normalized:
+            normalized.append(company_id)
+    if len(normalized) == 1:
+        return normalized[0]
+    return None
+
+
 def _handle_operation_company_state(
     session: AgentMenuSession,
     text: str,
@@ -2329,6 +2356,7 @@ def _handle_operation_company_state(
         )
 
     payload = dict(decision.payload or {})
+    _pin_session_company_if_needed(session, payload.get("_selected_company_id"))
     selection_flow = _prepare_selection_flow_if_applicable(
         session=session,
         option=option,
@@ -4463,6 +4491,7 @@ def _execute_option_with_payload(
         fallback_company_id=session.company_id,
         user_id=session.user_id,
     )
+    _pin_session_company_if_needed(session, effective_company_id)
     direct_execution = _try_execute_direct_option_result(
         option=option,
         payload=normalized_payload,
@@ -5920,14 +5949,21 @@ def _get_or_create_session(
     if session:
         return session
 
-    if normalized_channel != "web":
-        fallback_session = AgentMenuSession.query.filter(
-            AgentMenuSession.user_id == user_id,
-            AgentMenuSession.channel == normalized_channel,
-            AgentMenuSession.thread_id == thread_id,
-        ).order_by(AgentMenuSession.updated_at.desc(), AgentMenuSession.id.desc()).first()
-        if fallback_session:
-            return fallback_session
+    thread_sessions = AgentMenuSession.query.filter(
+        AgentMenuSession.user_id == user_id,
+        AgentMenuSession.channel == normalized_channel,
+        AgentMenuSession.thread_id == thread_id,
+    ).order_by(AgentMenuSession.updated_at.desc(), AgentMenuSession.id.desc()).all()
+
+    if company_id is None:
+        pinned_company_id = _resolve_thread_pinned_company_id([getattr(item, "company_id", None) for item in thread_sessions])
+        if pinned_company_id is not None:
+            for candidate in thread_sessions:
+                if getattr(candidate, "company_id", None) == pinned_company_id:
+                    return candidate
+
+    if normalized_channel != "web" and thread_sessions:
+        return thread_sessions[0]
 
     session = AgentMenuSession(
         user_id=user_id,

@@ -9,6 +9,8 @@ from services.ai_capability_backlog_service import AICapabilityBacklogService
 from services.ai_capabilities_central_service import AICapabilitiesCentralService
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
+from services.mcp_feature_catalog_service import MCPDocumentationContext, MCPFeatureCatalogService
+from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
 from services.monitoring_audit_request_service import MonitoringAuditRequestService
 from services.operational_audit_service import OperationalAuditService
@@ -545,6 +547,66 @@ def get_ai_mcp_frontend_state():
     return jsonify({
         "success": True,
         "console": AIMCPConsoleService.build_frontend_state(active_company),
+    })
+
+
+@configs_bp.route('/api/configs/ai/mcp/bootstrap-session', methods=['GET'])
+@login_required
+def get_ai_mcp_bootstrap_session():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao bootstrap documental IA/MCP."}), 403
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para bootstrap documental."}), 400
+
+    requested_surface = (request.args.get('surface') or AIMCPConsoleService.DOCUMENTATION_BOOTSTRAP_SURFACE).strip().lower()
+    context = MCPDocumentationContext(
+        company_id=int(company_id),
+        user_id=int(getattr(current_user, 'id', 0) or 0) or None,
+        role='administrador' if is_platform_admin() else 'colaborador',
+        surface=requested_surface,
+        client='ai_mcp_console',
+        transport='web',
+    )
+
+    try:
+        bootstrap = MCPFeatureCatalogService().bootstrap_context(context)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({
+        "success": True,
+        "bootstrap": bootstrap,
+    })
+
+
+@configs_bp.route('/api/configs/ai/mcp/connection-snippet', methods=['POST'])
+@login_required
+def generate_ai_mcp_connection_snippet():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({"success": False, "error": "Acesso negado ao console operacional IA/MCP."}), 403
+
+    payload = request.get_json(silent=True) or {}
+    mode = str(payload.get("mode") or "ai_prompt").strip().lower()
+
+    try:
+        source_json = MCPConnectionSnippetService.build_source_json(payload)
+        if mode == "raw_config":
+            content = MCPConnectionSnippetService.build_raw_config(payload)
+        else:
+            mode = "ai_prompt"
+            content = MCPConnectionSnippetService.build_prompt(payload)
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    return jsonify({
+        "success": True,
+        "mode": mode,
+        "content": content,
+        "source_json": source_json,
     })
 
 

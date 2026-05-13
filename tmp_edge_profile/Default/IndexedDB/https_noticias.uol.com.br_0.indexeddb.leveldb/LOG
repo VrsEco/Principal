@@ -1,0 +1,9 @@
+2026/04/23-08:32:03.809 2c98 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_noticias.uol.com.br_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/23-08:32:03.811 2c98 Recovering log #70
+2026/04/23-08:32:03.813 2c98 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_noticias.uol.com.br_0.indexeddb.leveldb/000070.log 
+2026/04/23-08:32:04.112 7380 Compacting 1@1 + 1@2 files
+2026/04/23-08:32:04.222 7380 Generated table #73@1: 720 keys, 211566 bytes
+2026/04/23-08:32:04.222 7380 Compacted 1@1 + 1@2 files => 211566 bytes
+2026/04/23-08:32:04.247 7380 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/04/23-08:32:04.282 7380 Delete type=2 #68
+2026/04/23-08:32:04.283 7380 Delete type=2 #71

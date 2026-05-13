@@ -1,0 +1,109 @@
+{
+  "mcpServers": {
+    "app32-user": {
+      "type": "stdio",
+      "command": "${APP32_PYTHON_EXE:-C:/GestaoVersus/app32/.venv/Scripts/python.exe}",
+      "args": [
+        "${APP32_MCP_ENTRYPOINT:-C:/GestaoVersus/app32/app32/src/core/mcp_server.py}"
+      ],
+      "env": {
+        "APP32_MCP_CLIENT": "claude_code",
+        "APP32_MCP_CHANNEL": "claude_code",
+        "APP32_MCP_SURFACE": "user",
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "FLASK_ENV": "${FLASK_ENV:-production}"
+      }
+    },
+    "sapiens-prod-user": {
+      "type": "stdio",
+      "command": "C:/Program Files/PowerShell/7/pwsh.exe",
+      "args": [
+        "-File",
+        "C:/GestaoVersus/app32/app32/scripts/start_mcp_prod_ssh.ps1",
+        "-Surface",
+        "user"
+      ],
+      "env": {
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "APP32_MCP_SSH_KEY_PATH": "${APP32_MCP_SSH_KEY_PATH:-C:/GestaoVersus/app32/deploy_key_SECRETA.txt}",
+        "APP32_MCP_PROD_HOST": "${APP32_MCP_PROD_HOST:-69.164.205.75}",
+        "APP32_MCP_PROD_USER": "${APP32_MCP_PROD_USER:-app}",
+        "APP32_MCP_PROD_PORT": "${APP32_MCP_PROD_PORT:-22122}",
+        "APP32_MCP_PROD_APP_DIR": "${APP32_MCP_PROD_APP_DIR:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32}",
+        "APP32_MCP_PROD_PYTHON": "${APP32_MCP_PROD_PYTHON:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python}"
+      }
+    },
+    "app32-admin": {
+      "type": "stdio",
+      "command": "${APP32_PYTHON_EXE:-C:/GestaoVersus/app32/.venv/Scripts/python.exe}",
+      "args": [
+        "${APP32_MCP_ENTRYPOINT:-C:/GestaoVersus/app32/app32/src/core/mcp_server.py}"
+      ],
+      "env": {
+        "APP32_MCP_CLIENT": "claude_code",
+        "APP32_MCP_CHANNEL": "claude_code",
+        "APP32_MCP_SURFACE": "admin",
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "FLASK_ENV": "${FLASK_ENV:-production}"
+      }
+    },
+    "sapiens-prod-admin": {
+      "type": "stdio",
+      "command": "C:/Program Files/PowerShell/7/pwsh.exe",
+      "args": [
+        "-File",
+        "C:/GestaoVersus/app32/app32/scripts/start_mcp_prod_ssh.ps1",
+        "-Surface",
+        "admin"
+      ],
+      "env": {
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "APP32_MCP_SSH_KEY_PATH": "${APP32_MCP_SSH_KEY_PATH:-C:/GestaoVersus/app32/deploy_key_SECRETA.txt}",
+        "APP32_MCP_PROD_HOST": "${APP32_MCP_PROD_HOST:-69.164.205.75}",
+        "APP32_MCP_PROD_USER": "${APP32_MCP_PROD_USER:-app}",
+        "APP32_MCP_PROD_PORT": "${APP32_MCP_PROD_PORT:-22122}",
+        "APP32_MCP_PROD_APP_DIR": "${APP32_MCP_PROD_APP_DIR:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32}",
+        "APP32_MCP_PROD_PYTHON": "${APP32_MCP_PROD_PYTHON:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python}"
+      }
+    },
+    "app32-analytics": {
+      "type": "stdio",
+      "command": "${APP32_PYTHON_EXE:-C:/GestaoVersus/app32/.venv/Scripts/python.exe}",
+      "args": [
+        "${APP32_MCP_ENTRYPOINT:-C:/GestaoVersus/app32/app32/src/core/mcp_server.py}"
+      ],
+      "env": {
+        "APP32_MCP_CLIENT": "claude_code",
+        "APP32_MCP_CHANNEL": "claude_code",
+        "APP32_MCP_SURFACE": "analytics",
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "FLASK_ENV": "${FLASK_ENV:-production}"
+      }
+    },
+    "sapiens-prod-analytics": {
+      "type": "stdio",
+      "command": "C:/Program Files/PowerShell/7/pwsh.exe",
+      "args": [
+        "-File",
+        "C:/GestaoVersus/app32/app32/scripts/start_mcp_prod_ssh.ps1",
+        "-Surface",
+        "analytics"
+      ],
+      "env": {
+        "APP32_MCP_USER_ID": "${APP32_MCP_USER_ID}",
+        "APP32_MCP_FALLBACK_ROLE": "${APP32_MCP_FALLBACK_ROLE:-colaborador}",
+        "APP32_MCP_SSH_KEY_PATH": "${APP32_MCP_SSH_KEY_PATH:-C:/GestaoVersus/app32/deploy_key_SECRETA.txt}",
+        "APP32_MCP_PROD_HOST": "${APP32_MCP_PROD_HOST:-69.164.205.75}",
+        "APP32_MCP_PROD_USER": "${APP32_MCP_PROD_USER:-app}",
+        "APP32_MCP_PROD_PORT": "${APP32_MCP_PROD_PORT:-22122}",
+        "APP32_MCP_PROD_APP_DIR": "${APP32_MCP_PROD_APP_DIR:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32}",
+        "APP32_MCP_PROD_PYTHON": "${APP32_MCP_PROD_PYTHON:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python}"
+      }
+    }
+  }
+}

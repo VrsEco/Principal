@@ -1,0 +1,6 @@
+2026/02/22-16:03:02.642 4454 Creating DB C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_web.telegram.org_0.indexeddb.leveldb since it was missing.
+2026/02/22-16:03:02.667 4454 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_web.telegram.org_0.indexeddb.leveldb/MANIFEST-000001
+2026/02/22-16:16:17.817 5408 Level-0 table #5: started
+2026/02/22-16:16:17.828 5408 Level-0 table #5: 191377 bytes OK
+2026/02/22-16:16:17.839 5408 Delete type=0 #3
+2026/02/22-16:16:17.842 5408 Manual compaction at level-0 from (begin) .. (end); will stop at (end)

@@ -1,6 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const root = document.getElementById('aiMcpConsolePage');
     if (!root) return;
+    const consoleState = (() => {
+        try {
+            return JSON.parse(root.dataset.console || '{}');
+        } catch (_error) {
+            return {};
+        }
+    })();
 
     const tabs = Array.from(root.querySelectorAll('[data-console-tab]'));
     const panels = Array.from(root.querySelectorAll('[data-console-panel]'));
@@ -27,6 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const wizardStages = Array.from(root.querySelectorAll('[data-wizard-stage]'));
     const stageToggles = Array.from(root.querySelectorAll('[data-stage-toggle]'));
     const connectionGenerator = document.getElementById('aiMcpConnectionGenerator');
+    const documentationBootstrap = document.getElementById('aiMcpDocumentationBootstrap');
+    const bootstrapStatus = document.getElementById('aiMcpBootstrapStatus');
+    const bootstrapMeta = document.getElementById('aiMcpBootstrapMeta');
+    const bootstrapResultTitle = document.getElementById('aiMcpBootstrapResultTitle');
+    const bootstrapResultText = document.getElementById('aiMcpBootstrapResultText');
+    const bootstrapResultMeta = document.getElementById('aiMcpBootstrapResultMeta');
+    const bootstrapFeatureList = document.getElementById('aiMcpBootstrapFeatureList');
+    const bootstrapContextRequired = document.getElementById('aiMcpBootstrapContextRequired');
+    const bootstrapContextResolved = document.getElementById('aiMcpBootstrapContextResolved');
+    const bootstrapContextResolution = document.getElementById('aiMcpBootstrapContextResolution');
+    const bootstrapContextSummary = document.getElementById('aiMcpBootstrapContextSummary');
+    const runtimeContextSummary = document.getElementById('aiMcpRuntimeContextSummary');
+    const runtimeContextMeta = document.getElementById('aiMcpRuntimeContextMeta');
+    const runtimeContextSource = document.getElementById('aiMcpRuntimeContextSource');
+    const runtimeContextBadges = document.getElementById('aiMcpRuntimeContextBadges');
     const connectionModeButtons = Array.from(root.querySelectorAll('[data-connection-mode]'));
     const connectionFeedback = document.getElementById('aiMcpConnectionFeedback');
     const connectionResult = document.getElementById('aiMcpConnectionResult');
@@ -124,6 +146,174 @@ document.addEventListener('DOMContentLoaded', () => {
         mode: null,
         content: '',
     };
+
+    function formatContextLabel(value) {
+        const normalized = normalize(value);
+        if (normalized === 'user') return 'Usuário';
+        if (normalized === 'company') return 'Empresa';
+        if (normalized === 'user_and_company' || normalized === 'usercompany') return 'Usuário + Empresa';
+        if (normalized === 'company_only') return 'Somente empresa';
+        if (normalized === 'user_only') return 'Somente usuário';
+        if (normalized === 'no_explicit_context') return 'Sem contexto explícito';
+        return String(value || 'Indefinido');
+    }
+
+    function replaceChildren(node, items) {
+        if (!node) return;
+        node.innerHTML = '';
+        items.forEach((item) => node.appendChild(item));
+    }
+
+    function renderChipCollection(node, items, emptyLabel = 'Sem contexto explícito') {
+        if (!node) return;
+        const values = Array.isArray(items) ? items.filter(Boolean) : [];
+        const chips = (values.length ? values : [emptyLabel]).map((item) => {
+            const chip = document.createElement('span');
+            chip.className = 'ai-mcp-chip';
+            chip.textContent = formatContextLabel(item);
+            return chip;
+        });
+        replaceChildren(node, chips);
+    }
+
+    function renderKeyValueCollection(node, values, emptyKey = 'status', emptyValue = 'Sem dados') {
+        if (!node) return;
+        const entries = Object.entries(values || {}).filter(([, value]) => value !== undefined && value !== null && value !== '');
+        const rows = (entries.length ? entries : [[emptyKey, emptyValue]]).map(([key, value]) => {
+            const item = document.createElement('li');
+            const title = document.createElement('strong');
+            const content = document.createElement('span');
+            title.textContent = String(key);
+            content.textContent = String(value);
+            item.appendChild(title);
+            item.appendChild(content);
+            return item;
+        });
+        replaceChildren(node, rows);
+    }
+
+    function renderContextSummaryCollection(node, values) {
+        if (!node) return;
+        const entries = Object.entries(values || {}).filter(([, value]) => Number(value) > 0);
+        const rows = (entries.length ? entries : [['no_explicit_context', 0]]).map(([key, value]) => {
+            const item = document.createElement('li');
+            const title = document.createElement('strong');
+            const content = document.createElement('span');
+            title.textContent = formatContextLabel(key);
+            content.textContent = `${value} feature${Number(value) === 1 ? '' : 's'}`;
+            item.appendChild(title);
+            item.appendChild(content);
+            return item;
+        });
+        replaceChildren(node, rows);
+    }
+
+    function renderBootstrapContext(payload) {
+        const currentContext = payload?.current_context || {};
+        renderChipCollection(bootstrapContextRequired, currentContext.required, 'Sem requisito explícito');
+        renderKeyValueCollection(
+            bootstrapContextResolved,
+            currentContext.resolved,
+            'status',
+            'aguardando bootstrap automático',
+        );
+        renderKeyValueCollection(
+            bootstrapContextResolution,
+            currentContext.resolution,
+            'company',
+            'aguardando releitura',
+        );
+        renderContextSummaryCollection(bootstrapContextSummary, payload?.context_summary);
+    }
+
+    function renderRuntimeContext(payload) {
+        const runtimeContext = payload?.runtime_context || {};
+        const resolved = runtimeContext.resolved || {};
+        const resolution = runtimeContext.resolution || {};
+        const contextRequirements = payload?.catalog?.context_requirements || {};
+        if (runtimeContextSummary) {
+            runtimeContextSummary.textContent = resolved.company_code
+                || resolved.company_id
+                || 'Sem empresa resolvida';
+        }
+        if (runtimeContextMeta) {
+            runtimeContextMeta.textContent = resolved.company_name
+                || 'Feature com empresa exige contexto explícito ou pinado.';
+        }
+        if (runtimeContextSource) {
+            runtimeContextSource.textContent = `Origem: ${resolution.company || 'não resolvida'}`;
+        }
+        if (runtimeContextBadges) {
+            renderChipCollection(runtimeContextBadges, [
+                `user-only: ${contextRequirements.user_only || 0}`,
+                `company-only: ${contextRequirements.company_only || 0}`,
+                `user+company: ${contextRequirements.user_and_company || 0}`,
+            ]);
+        }
+    }
+
+    function renderBootstrapResult(payload, tone = 'success') {
+        const bootstrap = payload?.bootstrap || payload || {};
+        const features = Array.isArray(bootstrap.features) ? bootstrap.features : [];
+        const domains = Array.isArray(bootstrap.domains) ? bootstrap.domains : [];
+        const version = bootstrap.catalog_version || 'sem versão';
+        const surface = bootstrap.surface || documentationBootstrap?.dataset.defaultSurface || 'user';
+
+        if (bootstrapStatus) bootstrapStatus.textContent = String(features.length);
+        if (bootstrapMeta) bootstrapMeta.textContent = `${version} · ${surface}`;
+        if (bootstrapResultTitle) bootstrapResultTitle.textContent = tone === 'success'
+            ? 'Bootstrap executado automaticamente'
+            : 'Falha ao executar bootstrap';
+        if (bootstrapResultText) bootstrapResultText.textContent = tone === 'success'
+            ? `Foram carregadas ${features.length} features resumidas para a surface ${surface}.`
+            : (payload?.error || 'Não foi possível carregar o catálogo MCP automaticamente.');
+        if (bootstrapResultMeta) bootstrapResultMeta.textContent = tone === 'success'
+            ? `Domínios disponíveis: ${domains.join(', ') || 'nenhum domínio liberado'}.`
+            : 'Revise contexto, empresa ativa e permissões da surface.';
+        renderBootstrapContext(bootstrap);
+        if (bootstrapFeatureList) {
+            bootstrapFeatureList.innerHTML = '';
+            const items = tone === 'success'
+                ? features.slice(0, 5).map((feature) => feature.nome || feature.id)
+                : [];
+            items.forEach((label) => {
+                const item = document.createElement('li');
+                item.textContent = label;
+                bootstrapFeatureList.appendChild(item);
+            });
+            if (!items.length) {
+                const fallback = document.createElement('li');
+                fallback.textContent = tone === 'success'
+                    ? 'Nenhuma feature disponível para a surface atual.'
+                    : 'Bootstrap automático indisponível no momento.';
+                bootstrapFeatureList.appendChild(fallback);
+            }
+        }
+    }
+
+    async function autoBootstrapDocumentationCatalog() {
+        if (!documentationBootstrap) return;
+        const endpoint = documentationBootstrap.dataset.endpoint;
+        const autoLoad = documentationBootstrap.dataset.autoLoad === 'true';
+        const defaultSurface = documentationBootstrap.dataset.defaultSurface || 'user';
+        if (!endpoint || !autoLoad) return;
+
+        try {
+            const response = await fetch(`${endpoint}?surface=${encodeURIComponent(defaultSurface)}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Falha ao carregar bootstrap documental.');
+            }
+            renderBootstrapResult(payload.bootstrap, 'success');
+        } catch (error) {
+            renderBootstrapResult({ error: error.message || 'Falha ao carregar bootstrap documental.' }, 'error');
+        }
+    }
 
 
 
@@ -494,6 +684,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupCollapsibleCards();
     wizardReset?.addEventListener('click', resetWizard);
+    renderRuntimeContext(consoleState);
+    renderBootstrapContext(consoleState?.documentation_bootstrap?.summary || {});
     activateTab(root.dataset.defaultTab || tabs[0]?.dataset.consoleTab || 'overview');
     resetWizard();
+    autoBootstrapDocumentationCatalog();
 });

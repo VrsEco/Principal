@@ -1,0 +1,15 @@
+2026/04/10-17:59:37.560 58f8 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_www.zapimoveis.com.br_0.indexeddb.leveldb/MANIFEST-000001
+2026/04/10-17:59:37.568 58f8 Recovering log #4
+2026/04/10-17:59:37.570 58f8 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_www.zapimoveis.com.br_0.indexeddb.leveldb/000004.log 
+2026/04/10-17:59:39.631 5f4c Level-0 table #8: started
+2026/04/10-17:59:39.633 5f4c Level-0 table #8: 7855 bytes OK
+2026/04/10-17:59:39.636 5f4c Delete type=0 #4
+2026/04/10-17:59:39.636 5f4c Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2026/04/10-17:59:39.637 5f4c Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x03\x01\x02\x03\x00\x00\x00\x00\x00\x00\xf0?' @ 940 : 1
+2026/04/10-17:59:39.637 5f4c Compacting 1@1 + 1@2 files
+2026/04/10-17:59:39.639 5f4c Generated table #9@1: 184 keys, 3482 bytes
+2026/04/10-17:59:39.639 5f4c Compacted 1@1 + 1@2 files => 3482 bytes
+2026/04/10-17:59:39.640 5f4c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/04/10-17:59:39.641 5f4c Delete type=2 #5
+2026/04/10-17:59:39.641 5f4c Delete type=2 #8
+2026/04/10-17:59:39.642 5f4c Manual compaction at level-1 from '\x00\x03\x01\x02\x03\x00\x00\x00\x00\x00\x00\xf0?' @ 940 : 1 .. (end); will stop at (end)

@@ -245,6 +245,25 @@ Ele deve ser validado contra o contexto do usuário e contra a tabela `employees
 - `cancel_project`
 - `bulk_update_project_tasks`
 
+## Catálogo inicial adicional para processos/BPMS
+
+### Leitura
+
+- `processes.bpms.get_runtime_packet`
+- `processes.bpms.get_activity_contract`
+- `processes.bpms.get_activity_evidence`
+
+### Execução
+
+- `processes.bpms.execute_activity`
+- `processes.bpms.complete_human_gate`
+
+Regra:
+
+> Essas tools não podem operar por payload livre de chat.  
+> Elas devem consumir o runtime packet canônico descrito em  
+> `C:\GestaoVersus\app32\app32\docs\architecture\SAPIENS_MCP_BPMS_RUNTIME_CONTRACT.md`.
+
 ---
 
 ## Schemas propostos

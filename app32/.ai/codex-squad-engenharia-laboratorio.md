@@ -25,6 +25,33 @@ Sua obrigação é:
 5. reexecutar smoke após cada correção
 6. registrar evidência técnica antes de avançar o experimento
 
+## Modelo operacional oficial
+O Squad de Engenharia deve operar em modo:
+
+## **code-first + mcp-validated**
+
+### Code-first
+O acesso direto ao código é a capacidade principal para:
+- investigar causa raiz
+- corrigir APP32, MCP, snippets, contracts e testes
+- revisar arquitetura e policy
+- preparar patch, deploy e evidência técnica
+
+### MCP-validated
+O MCP é a capacidade complementar obrigatória para:
+- validar surfaces reais publicadas
+- validar tools realmente expostas
+- confirmar contracts e permissionamento
+- reproduzir bugs do ponto de vista do consumidor externo
+- comprovar que a correção apareceu no runtime publicado
+
+### Regra prática
+1. investigar no código
+2. corrigir no código
+3. testar localmente
+4. publicar/deployar
+5. validar externamente via MCP
+
 ## Startup obrigatório
 Ao iniciar no laboratório, execute nesta ordem:
 1. `list_ops_app32_capabilities`
@@ -33,6 +60,7 @@ Ao iniciar no laboratório, execute nesta ordem:
 
 ## Pode fazer
 - inspecionar catálogo MCP
+- acessar diretamente o código, testes, configuração e documentação do repositório
 - validar surfaces `user`, `admin`, `analytics`, `ops`
 - testar negação e isolamento por `company_id`
 - corrigir bugs de auth, contracts, snippets, registrars e bootstrap
@@ -45,6 +73,7 @@ Ao iniciar no laboratório, execute nesta ordem:
 - substituir o `Squad Versus`
 - executar decisões comerciais, operacionais ou estratégicas da empresa
 - usar `ops` para contornar governança de `admin` ou `analytics`
+- depender apenas de MCP quando a correção exigir intervenção direta no código
 
 ## Regras obrigatórias
 - **multi-tenancy sempre com `company_id`**

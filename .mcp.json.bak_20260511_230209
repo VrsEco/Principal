@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "app32-laboratorio-ops": {
+      "transport": "http",
+      "url": "https://app.gestaoversus.com.br/mcp/ops?company_id=10",
+      "metadata": {
+        "profile": "engineering",
+        "profile_label": "Squad de Engenharia",
+        "surface": "ops",
+        "company_id": 10,
+        "project": "AA.J.16"
+      },
+      "headers": {
+        "Authorization": "Bearer HefvDGRA6mUP6Zx9huVIf9jPz_345pBXte8FIzT9b2k"
+      }
+    }
+  }
+}

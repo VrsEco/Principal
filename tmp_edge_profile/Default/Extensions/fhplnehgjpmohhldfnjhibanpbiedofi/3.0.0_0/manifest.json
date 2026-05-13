@@ -1,0 +1,33 @@
+{
+   "background": {
+      "service_worker": "background.js"
+   },
+   "chrome_settings_overrides": {
+      "search_provider": {
+         "encoding": "UTF-8",
+         "favicon_url": "https://you.com/favicon/favicon.ico",
+         "is_default": true,
+         "keyword": "You.com",
+         "name": "You.com",
+         "search_url": "https://you.com/search?q={searchTerms}&fromExtension=true",
+         "suggest_url": "https://you.com/api/ac?q={searchTerms}"
+      }
+   },
+   "content_scripts": [ {
+      "js": [ "./static/js/content.js" ],
+      "matches": [ "\u003Call_urls>" ]
+   } ],
+   "description": "Personalized AI that makes you more productive, creative, and extraordinary",
+   "externally_connectable": {
+      "matches": [ "*://localhost/*", "*://you.com/*", "*://*.you.com/*" ]
+   },
+   "host_permissions": [ "*://*/*" ],
+   "icons": {
+      "180": "icons/favicon-180x180.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyxTtr9TsQgUj871PR/dzJrw2BHn7Xx26WCuc1bblhwpZfPZ9UBxiukqhTu0Ce36BFm8JFCA+HVEGHX0P56Xj/ex2gX0nKjMLhFxTN258epMSLKmulM5egvDXXRxfjIT+oZAw+sfiiQwxjOhzB/CnlexDbcoL3Vtts5OaeVrnGWwvj1cPhtBFeFGA/pP20qoRhF0DuINmOTNc3qtDclFCyNhGQTVGHw6xheBcbVZhPlqKo8SleMeeshVDn8/bdlU86hOwVjeEJGw1iDXrPcw77XiPhcJ8A+1Bzo8cXE9xYGXwY3di9v9NI51H6jfSwupePSxM+2N8W4TjnTX/Sqk6ewIDAQAB",
+   "manifest_version": 3,
+   "name": "You.com: Default AI Search & Chat",
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "3.0.0"
+}

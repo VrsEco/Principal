@@ -15,6 +15,8 @@
 .ai-mcp-stat-card { padding: 1rem; background: rgba(255,255,255,.76); border-color: rgba(255,255,255,.58); backdrop-filter: blur(10px); }
 .ai-mcp-stat-card span, .ai-mcp-stat-card small, .ai-mcp-kpi-card span, .ai-mcp-kpi-card small, .ai-mcp-link-card span, .ai-mcp-entity-card small, .ai-mcp-tool-card small, .ai-mcp-phase-card small, .ai-mcp-surface-card small { color: var(--text-secondary); display: block; }
 .ai-mcp-stat-card strong, .ai-mcp-kpi-card strong { display: block; font-size: 1.2rem; margin: .25rem 0; }
+.ai-mcp-stat-card--context { gap: .7rem; }
+.ai-mcp-stat-card--context .ai-mcp-inline-list { margin: .15rem 0; }
 
 .ai-mcp-wizard-stages {
   display: grid;
@@ -311,6 +313,80 @@
   display: grid;
   gap: 1rem;
 }
+
+.ai-mcp-bootstrap-card__content {
+  display: grid;
+  gap: 1rem;
+}
+
+.ai-mcp-bootstrap-card__summary {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ai-mcp-context-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.ai-mcp-context-card {
+  display: grid;
+  gap: .65rem;
+  padding: .95rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(37,99,235,.05), rgba(255,255,255,.02));
+}
+
+.ai-mcp-context-card__label {
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.ai-mcp-context-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.ai-mcp-context-list {
+  display: grid;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-mcp-context-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: .85rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px dashed rgba(148,163,184,.28);
+}
+
+.ai-mcp-context-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ai-mcp-context-list strong {
+  color: var(--text-primary);
+}
+
+.ai-mcp-context-list span {
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.ai-mcp-bootstrap-card__features {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
 .ai-mcp-connection-generator__form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -418,7 +494,7 @@
   .ai-mcp-tabs--stacked { flex-direction: row; flex-wrap: wrap; }
 }
 @media (max-width: 980px) {
-  .ai-mcp-hero, .ai-mcp-columns, .ai-mcp-section-grid, .ai-mcp-phase-grid, .ai-mcp-surface-grid { grid-template-columns: 1fr; }
+  .ai-mcp-hero, .ai-mcp-columns, .ai-mcp-section-grid, .ai-mcp-phase-grid, .ai-mcp-surface-grid, .ai-mcp-context-grid { grid-template-columns: 1fr; }
   .ai-mcp-decision-grid { grid-template-columns: 1fr; }
   .ai-mcp-wizard-options { grid-template-columns: 1fr; }
   .ai-mcp-connection-generator__form { grid-template-columns: 1fr; }

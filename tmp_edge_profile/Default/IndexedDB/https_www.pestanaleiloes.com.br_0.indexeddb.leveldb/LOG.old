@@ -1,0 +1,7 @@
+2026/03/27-20:05:05.191 1954 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_www.pestanaleiloes.com.br_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/27-20:05:05.192 1954 Recovering log #3
+2026/03/27-20:05:05.192 1954 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_www.pestanaleiloes.com.br_0.indexeddb.leveldb/000003.log 
+2026/03/27-20:05:07.199 592c Level-0 table #5: started
+2026/03/27-20:05:07.202 592c Level-0 table #5: 905 bytes OK
+2026/03/27-20:05:07.205 592c Delete type=0 #3
+2026/03/27-20:05:07.206 592c Manual compaction at level-0 from (begin) .. (end); will stop at (end)

@@ -59,6 +59,51 @@ Regra central:
 > O elemento BPMN não deve apontar diretamente para uma rota hardcoded.  
 > Ele deve resolver um **contrato de execução** e o runtime decide como executar.
 
+### 2.2. MCP/IA como operador de instância quando possível
+
+No runtime BPMS, a MCP/IA deve assumir o papel do operador manual sempre que a activity estiver suficientemente estruturada e autorizada.
+
+Princípio operacional:
+
+```text
+instância em execução
+→ runtime identifica fase e etapa corrente
+→ lê BPMN publicado
+→ lê POP oficial da etapa
+→ lê POP para IA / contrato operacional
+→ resolve o modo de execução no BPMS
+→ decide entre:
+   - executar pela IA/MCP
+   - acionar automação
+   - solicitar intervenção do usuário
+```
+
+Regra mandatória:
+
+> A IA não escolhe livremente o próximo passo do processo.  
+> O próximo passo válido vem do BPMN publicado e do estado da instância no motor BPMS.
+
+Papéis esperados da MCP/IA na shell:
+
+- operar atividades manuais delegáveis;
+- disparar atividades automáticas configuradas;
+- acompanhar retorno de integrações REST/MCP;
+- registrar evidências, outputs e logs estruturados;
+- pedir ação humana quando a etapa for manual obrigatória, sensível ou ambígua.
+
+Situações típicas de intervenção humana obrigatória:
+
+- aprovação formal;
+- exceção fora do caminho previsto;
+- divergência entre evidência e critério de aceite;
+- necessidade de ação física, autenticação humana ou decisão discricionária;
+- etapa sem POP/POP para IA suficiente para execução segura.
+
+Complemento contratual:
+
+> O payload canônico da execução MCP/IA, o envelope de contexto e o response contract da activity devem seguir o documento  
+> `C:\GestaoVersus\app32\app32\docs\architecture\SAPIENS_MCP_BPMS_RUNTIME_CONTRACT.md`.
+
 ### 2.1. Esteira oficial de descoberta e execução
 
 A evolução correta do APP32 não começa pela criação direta de tela, automação ou módulo a partir de uma activity isolada.
@@ -665,6 +710,75 @@ runtime entra na activity
 ```
 
 Esse modo é obrigatório para preservar aderência aos processos não digitalizados no APP32.
+
+## 7.6. `manual_ai_assisted`
+
+Usado quando a etapa era originalmente manual, mas já possui estrutura suficiente para a IA/MCP atuar como operador principal ou copiloto forte.
+
+Pré-condições:
+
+- BPMN publicado com elemento vinculado;
+- POP oficial da etapa;
+- POP para IA ou contrato operacional equivalente;
+- capability/tela/tool resolvida;
+- política de autonomia e escalonamento definida.
+
+Fluxo esperado:
+
+```text
+activity entra em execução
+→ shell entrega contexto para MCP
+→ MCP interpreta etapa pelo contrato oficial
+→ executa a ação permitida
+→ registra evidência e resultado
+→ conclui ou pede intervenção humana
+```
+
+Guardrail:
+
+> `manual_ai_assisted` não é “modo livre da IA”.  
+> É execução guiada pelo processo oficial, com autonomia restrita ao contrato da etapa.
+
+## 7.7. Consumo obrigatório do POP para IA
+
+Para qualquer activity executada por IA/MCP, o runtime deve preferir o **POP para IA** como instrução operacional primária da etapa.
+
+O POP para IA deve conter, no mínimo:
+
+- objetivo da etapa;
+- precondições;
+- entradas esperadas;
+- dados, telas ou tools necessárias;
+- validações;
+- evidências requeridas;
+- critérios de aceite;
+- exceções conhecidas;
+- condição de escalonamento humano;
+- condição de conclusão automática.
+
+Se esse conteúdo não existir ou estiver insuficiente, a activity não deve ser promovida automaticamente para execução autônoma pela IA.
+
+## 7.8. Runtime packet obrigatório para MCP/IA
+
+Antes de qualquer execução agentic, o BPMS deve montar um **runtime packet canônico** contendo:
+
+- contexto da instância;
+- fase atual;
+- etapa atual;
+- contrato operacional;
+- POP oficial;
+- POP para IA;
+- evidências requeridas e já existentes;
+- policy de escalonamento;
+- regra de conclusão da etapa.
+
+Regra:
+
+> Sem runtime packet completo, a activity pode ser visualizada, mas não deve ser executada autonomamente pela IA.
+
+Contrato técnico de referência:
+
+- `C:\GestaoVersus\app32\app32\docs\architecture\SAPIENS_MCP_BPMS_RUNTIME_CONTRACT.md`
 
 ---
 

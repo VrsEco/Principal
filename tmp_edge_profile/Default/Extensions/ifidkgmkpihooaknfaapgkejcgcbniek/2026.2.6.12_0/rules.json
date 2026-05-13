@@ -1,0 +1,63 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "resourceTypes": ["script", "xmlhttprequest", "image", "ping", "sub_frame"],
+      "requestDomains": [
+        "google-analytics.com",
+        "googletagservices.com",
+        "googlesyndication.com",
+        "doubleclick.net",
+        "scorecardresearch.com",
+        "quantserve.com",
+        "chartbeat.com",
+        "yandex.ru"
+      ],
+      "excludedInitiatorDomains": [
+        "docs.google.com", "drive.google.com", "sheets.google.com", "slides.google.com",
+        "gemini.google.com", "chatgpt.com", "slack.com", "office.com", 
+        "microsoft365.com", "outlook.live.com", "mail.google.com", "youtube.com", "google.com"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "resourceTypes": ["script", "xmlhttprequest", "image", "sub_frame"],
+      "requestDomains": [
+        "amazon-adsystem.com", "adnxs.com", "taboola.com", "outbrain.com", 
+        "criteo.com", "pubmatic.com", "rubiconproject.com", "openx.net", 
+        "adroll.com", "smartadserver.com", "moatads.com"
+      ],
+      "excludedInitiatorDomains": ["amazon.com", "twitch.tv"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "resourceTypes": ["script", "xmlhttprequest", "image"],
+      "requestDomains": ["facebook.com", "connect.facebook.net"],
+      "urlFilter": "||facebook.com/tr/",
+      "excludedInitiatorDomains": ["facebook.com", "instagram.com", "whatsapp.com"]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "resourceTypes": ["script", "xmlhttprequest", "websocket"],
+      "requestDomains": [
+        "hotjar.com", "mouseflow.com", "luckyorange.com", 
+        "crazyegg.com"
+      ],
+      "excludedInitiatorDomains": ["bing.com", "microsoft.com"]
+    }
+  }
+]

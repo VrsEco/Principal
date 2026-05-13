@@ -1,0 +1,21 @@
+2026/05/07-09:29:10.333 2d38 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\Local Extension Settings\fhamhppabjaafimidmelnmpfangjdnhj/MANIFEST-000001
+2026/05/07-09:29:10.335 2d38 Recovering log #5659
+2026/05/07-09:29:10.337 2d38 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\Local Extension Settings\fhamhppabjaafimidmelnmpfangjdnhj/005659.log 
+2026/05/07-09:29:14.238 c40 Level-0 table #5663: started
+2026/05/07-09:29:14.287 c40 Level-0 table #5663: 4133325 bytes OK
+2026/05/07-09:29:14.291 c40 Delete type=0 #5659
+2026/05/07-09:29:14.545 c40 Level-0 table #5665: started
+2026/05/07-09:29:14.595 c40 Level-0 table #5665: 4094094 bytes OK
+2026/05/07-09:29:14.599 c40 Delete type=0 #5662
+2026/05/07-09:29:14.602 5f70 Compacting 4@0 + 1@1 files
+2026/05/07-09:29:14.725 5f70 Generated table #5666@0: 5 keys, 4113465 bytes
+2026/05/07-09:29:14.734 5f70 Compacted 4@0 + 1@1 files => 4113465 bytes
+2026/05/07-09:29:14.735 5f70 compacted to: files[ 0 1 2 0 0 0 0 ]
+2026/05/07-09:29:14.737 5f70 Delete type=2 #5656
+2026/05/07-09:29:14.737 5f70 Delete type=2 #5658
+2026/05/07-09:29:14.737 5f70 Delete type=2 #5660
+2026/05/07-09:29:14.737 5f70 Delete type=2 #5663
+2026/05/07-09:29:14.737 5f70 Delete type=2 #5665
+2026/05/07-09:29:14.947 12e4 Level-0 table #5668: started
+2026/05/07-09:29:15.003 12e4 Level-0 table #5668: 4094094 bytes OK
+2026/05/07-09:29:15.010 12e4 Delete type=0 #5664

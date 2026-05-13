@@ -6,8 +6,13 @@ echo ==================================================
 echo.
 cd /d "%~dp0"
 python scripts\download_backups.py
+set EXIT_CODE=%ERRORLEVEL%
 echo.
 echo ==================================================
-echo   Operacao finalizada. Pressione qualquer tecla.
+if %EXIT_CODE% EQU 0 (
+    echo   Operacao finalizada com sucesso.
+) else (
+    echo   Operacao finalizada com erro ^(codigo %EXIT_CODE%^).
+)
 echo ==================================================
-pause > nul
+exit /b %EXIT_CODE%

@@ -858,3 +858,35 @@ def test_resolve_employee_scope_for_my_work_payload_keeps_self_restriction_witho
     assert employee_ids is None
     assert collaborator_label is None
     assert error == "Voce nao possui acesso ao colaborador 'Márcio Simões' neste recorte."
+
+
+def test_resolve_thread_pinned_company_id_returns_unique_company():
+    assert menu_engine._resolve_thread_pinned_company_id([None, 12, 12]) == 12
+
+
+def test_resolve_thread_pinned_company_id_returns_none_for_multiple_companies():
+    assert menu_engine._resolve_thread_pinned_company_id([12, 15]) is None
+
+
+def test_pin_session_company_if_needed_updates_session_company_id():
+    class DummySession:
+        company_id = None
+
+    session = DummySession()
+
+    changed = menu_engine._pin_session_company_if_needed(session, 12)
+
+    assert changed is True
+    assert session.company_id == 12
+
+
+def test_pin_session_company_if_needed_ignores_invalid_values():
+    class DummySession:
+        company_id = None
+
+    session = DummySession()
+
+    changed = menu_engine._pin_session_company_if_needed(session, "abc")
+
+    assert changed is False
+    assert session.company_id is None

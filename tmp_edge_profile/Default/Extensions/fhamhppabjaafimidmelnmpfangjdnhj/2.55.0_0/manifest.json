@@ -1,0 +1,44 @@
+{
+   "action": {
+      "default_popup": "index.html",
+      "default_title": "Reclame AQUI"
+   },
+   "background": {
+      "service_worker": "background.js"
+   },
+   "content_scripts": [ {
+      "js": [ "pinComponent.js" ],
+      "matches": [ "\u003Call_urls>" ]
+   }, {
+      "js": [ "extensionTour.js" ],
+      "matches": [ "https://*.reclameaqui.com.br/*", "https://reclameaqui-mais.obviostaging.com.br/*", "http://local.reclameaqui.com.br:3000/*" ]
+   }, {
+      "js": [ "webExtensionIntegrationAuth.js" ],
+      "matches": [ "https://*.reclameaqui.com.br/*", "https://reclameaqui-mais.obviostaging.com.br/*", "http://local.reclameaqui.com.br:3000/*" ]
+   } ],
+   "description": "O Reclame AQUI te dá reputação, indicadores de marcas, cupons de desconto e reviews verdadeiros para tornar sua compra mais segura!",
+   "differential_fingerprint": "1.0f035cd9fc971c2534bd22fa29f89d2bae06bb00bbbfab5bea9a6cfebeca6f65",
+   "externally_connectable": {
+      "matches": [ "https://*.reclameaqui.com.br/*", "https://reclameaqui-mais.obviostaging.com.br/*", "http://local.reclameaqui.com.br:3000/*" ]
+   },
+   "host_permissions": [ "http://*/", "https://*/" ],
+   "icons": {
+      "128": "icons/pin-128.png",
+      "192": "icons/pin-192.png",
+      "32": "icons/pin-32.png",
+      "512": "icons/pin-512.png",
+      "64": "icons/pin-64.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhbccapcWaZH1B2qXQWz5tNUUlIOfdzm732NnvOhNzK2d8l91bZ5ZfUA5X++I91V3OtH7EFCfugEq83sIiD070Nx+V5/SZ7/8d31lEEri8Gm6a69bDz9ABP4XgCyKGwHyVRbq8Eg17eCQ/R1gwVmCiS3Jh4i8YwZ0+ImLSAgohKyW+bW9DRLYu4mOa6gX1M3JMWQCjIzzNwjFsynGcZbJCcrsqtIwQILkp48J1lDvOFv58MPl10f1HuobcudvHy2fycne1Mt5Yq9pObPwJH/zus23I+OScoyLXX5p9bCOi07OKfO6NlmkW/pf52/mR/2AVPUlpwuEpuLUp5CkIeSAlwIDAQAB",
+   "manifest_version": 3,
+   "name": "Reclame AQUI",
+   "optional_permissions": [  ],
+   "permissions": [ "storage", "unlimitedStorage", "cookies" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "2.55.0",
+   "web_accessible_resources": [ {
+      "matches": [ "\u003Call_urls>" ],
+      "resources": [ "index.html", "favicon.ico" ],
+      "use_dynamic_url": true
+   } ]
+}

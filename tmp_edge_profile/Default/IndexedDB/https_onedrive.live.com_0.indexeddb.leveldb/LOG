@@ -1,0 +1,43 @@
+2026/05/04-08:34:39.622 1fd4 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_onedrive.live.com_0.indexeddb.leveldb/MANIFEST-007094
+2026/05/04-08:34:39.625 1fd4 Recovering log #7505
+2026/05/04-08:34:39.651 1fd4 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_onedrive.live.com_0.indexeddb.leveldb/007505.log 
+2026/05/04-08:34:57.591 1fd4 Level-0 table #7518: started
+2026/05/04-08:34:57.613 1fd4 Level-0 table #7518: 1190600 bytes OK
+2026/05/04-08:34:57.617 1fd4 Delete type=0 #7505
+2026/05/04-08:34:57.621 1fd4 Compacting 1@0 + 0@1 files
+2026/05/04-08:34:57.634 1fd4 Generated table #7519@0: 5395 keys, 178921 bytes
+2026/05/04-08:34:57.638 1fd4 Generated table #7520@0: 118 keys, 25426 bytes
+2026/05/04-08:34:57.639 1fd4 Compacted 1@0 + 0@1 files => 204347 bytes
+2026/05/04-08:34:57.640 1fd4 compacted to: files[ 0 2 17 0 0 0 0 ]
+2026/05/04-08:34:57.644 1fd4 Compacting 1@1 + 5@2 files
+2026/05/04-08:34:57.702 1fd4 Level-0 table #7523: started
+2026/05/04-08:34:57.726 1fd4 Level-0 table #7523: 2005826 bytes OK
+2026/05/04-08:34:57.729 1fd4 Delete type=0 #7517
+2026/05/04-08:34:57.729 1fd4 Delete type=2 #7518
+2026/05/04-08:34:57.750 1fd4 Generated table #7521@1: 15558 keys, 2377770 bytes
+2026/05/04-08:34:57.818 1fd4 Generated table #7524@1: 15534 keys, 2377503 bytes
+2026/05/04-08:34:57.882 1fd4 Generated table #7525@1: 15528 keys, 2379036 bytes
+2026/05/04-08:34:57.942 1fd4 Generated table #7526@1: 15528 keys, 2378440 bytes
+2026/05/04-08:34:57.972 1fd4 Generated table #7527@1: 7478 keys, 1834957 bytes
+2026/05/04-08:34:57.972 1fd4 Compacted 1@1 + 5@2 files => 11347706 bytes
+2026/05/04-08:34:57.973 1fd4 compacted to: files[ 1 1 17 0 0 0 0 ]
+2026/05/04-08:34:57.975 1fd4 Delete type=2 #7511
+2026/05/04-08:34:57.975 1fd4 Delete type=2 #7512
+2026/05/04-08:34:57.975 1fd4 Delete type=2 #7513
+2026/05/04-08:34:57.975 1fd4 Delete type=2 #7514
+2026/05/04-08:34:57.975 1fd4 Delete type=2 #7515
+2026/05/04-08:34:57.975 1fd4 Delete type=2 #7520
+2026/05/04-08:34:58.784 1fd4 Compacting 1@0 + 1@1 files
+2026/05/04-08:34:58.796 1fd4 Generated table #7528@0: 8203 keys, 189878 bytes
+2026/05/04-08:34:58.812 1fd4 Generated table #7529@0: 2108 keys, 990888 bytes
+2026/05/04-08:34:58.812 1fd4 Compacted 1@0 + 1@1 files => 1180766 bytes
+2026/05/04-08:34:58.813 1fd4 compacted to: files[ 0 2 17 0 0 0 0 ]
+2026/05/04-08:34:58.815 1fd4 Delete type=2 #7519
+2026/05/04-08:34:58.815 1fd4 Delete type=2 #7523
+2026/05/04-08:34:58.959 5cbc Compacting 1@1 + 1@2 files
+2026/05/04-08:34:59.015 5cbc Generated table #7530@1: 23007 keys, 2307555 bytes
+2026/05/04-08:34:59.019 5cbc Generated table #7531@1: 279 keys, 43367 bytes
+2026/05/04-08:34:59.019 5cbc Compacted 1@1 + 1@2 files => 2350922 bytes
+2026/05/04-08:34:59.020 5cbc compacted to: files[ 0 1 18 0 0 0 0 ]
+2026/05/04-08:34:59.021 5cbc Delete type=2 #7509
+2026/05/04-08:34:59.021 5cbc Delete type=2 #7528

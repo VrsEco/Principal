@@ -2,7 +2,7 @@
 
 **Status:** paper de evolução arquitetural — atualizado com MVP operacional implementado
 **Data:** 25/04/2026
-**Última atualização:** 25/04/2026
+**Última atualização:** 07/05/2026
 **Especialista líder:** @ARQUITETO
 **Apoios naturais:** @FRONTEND, @BACKEND_API, @BACKEND_SERVICE, @DBA, @AI_ENGINEER, @QA_AUTOMATION
 
@@ -258,6 +258,62 @@ As rotas Flask devem apenas validar, autenticar, autorizar e delegar. A lógica 
 ### 4.6 MCP First
 
 Quando agentes precisarem consultar processos, POPs, rotinas, indicadores ou manifestos, a leitura operacional deve ser exposta por tools MCP tenant-safe.
+
+### 4.7 BPMN, POP para IA e BPMS como contrato canônico de execução
+
+Quando existir processo formalizado no APP32, a MCP não deve operar por inferência livre sobre texto solto, print isolado ou interpretação ad hoc da LLM.
+
+Ela deve consumir, nesta ordem lógica:
+
+1. **BPMN publicado** como fluxo oficial da instância;
+2. **POP oficial**, com atenção especial ao **POP para IA**, como instrução operacional por etapa;
+3. **motor BPMS** como fonte de fases, etapas, contratos de activity, modos de execução, estados e transições;
+4. **services e integrações** vinculados à activity para efetivar a execução;
+5. **LLM** apenas para interpretação assistida, nunca para redefinir fluxo, etapa ou critério oficial.
+
+Regra mandatória:
+
+> Onde houver processo definido, o MCP deve se comportar como operador de processo guiado pelo BPMN/BPMS oficial e não como agente autônomo que decide o fluxo por conta própria.
+
+Consequência arquitetural:
+
+```text
+BPMN publicado
+→ define ordem, gateways, eventos, papéis e caminhos válidos
+POP humano / POP para IA
+→ define como executar corretamente cada etapa
+BPMS runtime
+→ define fase atual, etapa corrente, estado, SLA, contratos e transições
+MCP / IA
+→ executa o que for possível
+→ aciona automações configuradas
+→ solicita intervenção humana quando a etapa exigir
+```
+
+Classificação operacional esperada por activity:
+
+- **manual delegável para IA/MCP**: a IA assume o lugar do operador manual quando houver contrato, contexto e permissão suficientes;
+- **automática**: o runtime executa sem intervenção humana;
+- **humana assistida**: a IA prepara, valida, orienta e pede confirmação;
+- **humana obrigatória**: o shell exige intervenção do usuário;
+- **externa**: a etapa depende de sistema, portal, documento ou executor fora do núcleo.
+
+Critérios mínimos para a IA substituir o operador manual:
+
+- etapa vinculada a elemento BPMN publicado;
+- POP da etapa existente e versionado;
+- POP para IA ou contrato operacional com entradas, saídas, evidências e critérios de aceite;
+- capability REST/MCP/tela interna claramente resolvida;
+- permissão tenant-safe com `company_id`;
+- política explícita de quando concluir sozinha e quando escalar para humano.
+
+Critérios mínimos para escalonamento ao usuário:
+
+- ausência de contrato suficiente;
+- ambiguidade material na decisão;
+- risco financeiro, jurídico, fiscal ou reputacional;
+- necessidade de aprovação, autenticação forte ou evidência humana;
+- divergência entre BPMN, POP, contrato BPMS e estado real da instância.
 
 ---
 

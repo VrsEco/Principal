@@ -19,11 +19,18 @@ def test_ai_mcp_console_template_declares_expected_sections():
         "Perfis & Permissões",
         "Onboarding & Cadastros",
         "Ativar Sapiens em outro cliente",
+        "Leitura automática do catálogo MCP",
         "Ativar Sapiens",
         "Configuração técnica",
         "Release & Freeze",
         "Dashboard & Readiness",
         "Governança",
+        "Contexto operacional",
+        "aiMcpRuntimeContextSummary",
+        "aiMcpBootstrapContextRequired",
+        "aiMcpBootstrapContextResolved",
+        "aiMcpBootstrapContextResolution",
+        "aiMcpBootstrapContextSummary",
     ]:
         assert expected in template
 
@@ -34,10 +41,19 @@ def test_ai_mcp_console_assets_declare_interaction_contract():
 
     assert ".ai-mcp-console-page" in css
     assert ".ai-mcp-connection-generator" in css
+    assert ".ai-mcp-bootstrap-card__content" in css
+    assert ".ai-mcp-context-grid" in css
+    assert ".ai-mcp-context-card" in css
+    assert ".ai-mcp-context-list" in css
     assert ".ai-mcp-tab" in css
     assert ".ai-mcp-panel" in css
     assert "aiMcpConsolePage" in script
     assert "aiMcpConnectionGenerator" in script
+    assert "aiMcpDocumentationBootstrap" in script
+    assert "aiMcpRuntimeContextSummary" in script
+    assert "renderRuntimeContext" in script
+    assert "renderBootstrapContext" in script
+    assert "autoBootstrapDocumentationCatalog" in script
     assert "Comando Ativar Sapiens pronto para copiar" in script
     assert "aiMcpConsoleSearch" in script
     assert "data-console-tab" in script

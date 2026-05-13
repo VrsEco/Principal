@@ -1,0 +1,1 @@
+{"net":{"http_server_properties":{"servers":[{"anonymization":["FAAAAA8AAABodHRwczovL21zbi5jb20A",false,0],"network_stats":{"srtt":44332},"server":"https://ntp.msn.com"},{"anonymization":["FAAAABAAAABodHRwczovL2JpbmcuY29t",false,0],"network_stats":{"srtt":40445},"server":"https://www.bing.com"}],"version":5},"network_qualities":{}}}

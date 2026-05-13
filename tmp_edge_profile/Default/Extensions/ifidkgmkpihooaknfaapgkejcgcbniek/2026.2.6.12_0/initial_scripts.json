@@ -1,0 +1,33 @@
+{
+  "allowlist": [
+    "docs.google.com", "drive.google.com", "gemini.google.com", "chatgpt.com", 
+    "slack.com", "office.com", "microsoft365.com", "youtube.com", "netflix.com", 
+    "github.com", "stackoverflow.com"
+  ],
+
+  "default": "css:iframe[src*='ads'], iframe[id*='google_ads'], .adsbygoogle, [id^='div-gpt-ad'], [class*='sponsored'], .ad-container, div[id*='taboola'], div[id*='outbrain']",
+  
+  "LV0default": "css:.adsbygoogle, .ad-banner, [id^='div-gpt-ad'], [class*='sponsored']",
+
+  "reddit": "css:shreddit-ad-post, shreddit-dynamic-ad-link, [id^='ad-chunk-'], .promotedlink",
+  "twitter": "css:[data-testid='placementTracking'], [data-testid='trendAd'], [data-testid='tweet']:has(span:contains('Ad'))",
+  "x": "css:[data-testid='placementTracking'], [data-testid='trendAd']",
+  "quora": "css:.q-box.qu-pt--medium.qu-pb--medium, [id*='_ad_']",
+  "facebook": "css:div[role='feed'] span:has(a[href='#']):contains('Sponsored')",
+  "instagram": "css:article:has(span:contains('Sponsored'))",
+  "twitch": "css:.video-player__overlay[data-a-target='player-overlay-ad']",
+  "fandom": "css:.global-navigation__bottom, #WikiaBar, .top-ads-container, .ad-slot",
+  "ign": "css:.ad-container, .display-ad, .advertisement",
+  "imdb": "css:#top_ad_wrapper, .ipc-page-section--baseAlt",
+  "forbes": "css:fbs-ad, .top-ad-container",
+  "cnn": "css:.ad-container, [id^='ad_']",
+  "foxnews": "css:.ad-container, .advertisement",
+  "nytimes": "css:#dfp-ad-top, .ad, .place-ad",
+  "dailymail": "css:#mpu_puff_1, .billboard, .mpu",
+  "yts": "css:.hidden-xs.hidden-sm.bottom-xs, #allow_notifications",
+  "rarbg": "css:iframe, a[href*='vpn'], a[href*='dating']",
+  "dodi-repacks": "css:.widget_text.advertising, img[src*='donate'], .content-sidebar-wrap > aside",
+  
+  "fitgirl-repacks": "(() => { window.canRunAds=true; const s=document.createElement('style'); s.textContent='.fc-ab-root, .adh-billboard, #sbar_widget { display:none!important; }'; document.head.appendChild(s); })();",
+  "1337x": "(() => { const s=document.createElement('style');s.textContent='.in-pop, .mgbox {display:none!important}';document.head.appendChild(s); window.open=function(){return null}; })();"
+}

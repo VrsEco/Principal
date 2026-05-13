@@ -1,0 +1,15 @@
+2026/05/04-16:55:29.468 6804 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_chatgpt.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/05/04-16:55:29.469 6804 Recovering log #150
+2026/05/04-16:55:29.470 6804 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_chatgpt.com_0.indexeddb.leveldb/000150.log 
+2026/05/04-16:55:31.802 7b3c Level-0 table #155: started
+2026/05/04-16:55:31.804 7b3c Level-0 table #155: 226 bytes OK
+2026/05/04-16:55:31.807 7b3c Delete type=0 #150
+2026/05/04-16:55:31.807 7b3c Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2026/05/04-16:55:31.807 7b3c Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x00\x00\x00\x06' @ 820 : 1
+2026/05/04-16:55:31.808 7b3c Compacting 1@1 + 1@2 files
+2026/05/04-16:55:31.809 7b3c Generated table #156@1: 22 keys, 1231 bytes
+2026/05/04-16:55:31.809 7b3c Compacted 1@1 + 1@2 files => 1231 bytes
+2026/05/04-16:55:31.810 7b3c compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/05/04-16:55:31.811 7b3c Delete type=2 #152
+2026/05/04-16:55:31.811 7b3c Delete type=2 #155
+2026/05/04-16:55:31.812 7b3c Manual compaction at level-1 from '\x00\x00\x00\x00\x06' @ 820 : 1 .. (end); will stop at (end)

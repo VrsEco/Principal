@@ -20,6 +20,7 @@
   let viewer = null;
   let appliedMarkers = [];
   let routinesByElementId = new Map();
+  let latestRuntime = null;
 
   const markerMap = {
     completed: 'is-completed',
@@ -145,11 +146,15 @@
   function renderCurrentActivity(runtime) {
     if (!runtimeCurrentActivity) return;
     const overlay = runtime.overlay || {};
-    const currentId = overlay.current_bpmn_element_id;
-    const execution = (overlay.elements || []).find((item) => item.bpmn_element_id === currentId)
+    const payload = runtime.current_activity || {};
+    const currentId = payload.element_id || overlay.current_bpmn_element_id;
+    const execution = payload.execution || (overlay.elements || []).find((item) => item.bpmn_element_id === currentId)
       || (overlay.elements || []).find((item) => item.status === 'in_progress')
       || null;
-    const routine = currentId ? routinesByElementId.get(currentId) : null;
+    const routine = payload.routine || (currentId ? routinesByElementId.get(currentId) : null);
+    const contract = payload.contract || null;
+    const action = payload.action || {};
+    const nextCandidates = Array.isArray(payload.next_candidates) ? payload.next_candidates : [];
 
     if (!currentId && !execution && !routine) {
       runtimeCurrentActivity.innerHTML = `
@@ -161,11 +166,39 @@
       return;
     }
 
+    const actionButtons = [];
+    if (action.internal_url) {
+      actionButtons.push(`<a class="btn btn-primary btn-sm" href="${escapeHtml(action.internal_url)}">${escapeHtml(action.action_label || 'Abrir tela')}</a>`);
+    } else if (action.external_url) {
+      actionButtons.push(`<a class="btn btn-primary btn-sm" href="${escapeHtml(action.external_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(action.action_label || 'Abrir link externo')}</a>`);
+    }
+    if (action.can_start) {
+      actionButtons.push(`<button type="button" class="btn btn-secondary btn-sm" data-runtime-action="start">Iniciar atividade</button>`);
+    }
+    if (action.can_mark_waiting) {
+      actionButtons.push(`<button type="button" class="btn btn-outline btn-sm" data-runtime-action="waiting">Aguardar externo</button>`);
+    }
+    if (action.can_complete) {
+      actionButtons.push(`<button type="button" class="btn btn-secondary btn-sm" data-runtime-action="complete">Concluir</button>`);
+    }
+    if (action.can_fail) {
+      actionButtons.push(`<button type="button" class="btn btn-outline btn-sm" data-runtime-action="fail">Marcar falha</button>`);
+    }
+
+    const nextHtml = nextCandidates.length
+      ? nextCandidates.map((candidate) => `
+          <div class="runtime-next-item">
+            <strong>${escapeHtml(candidate.element_name || candidate.element_id || 'Próxima etapa')}</strong>
+            <span>${escapeHtml(candidate.element_type || 'BPMN')}</span>
+          </div>
+        `).join('')
+      : '<div class="runtime-next-item runtime-next-item--empty"><strong>Próxima etapa ainda não inferida</strong><span>O shell continuará controlando a execução pela atividade corrente.</span></div>';
+
     runtimeCurrentActivity.innerHTML = `
       <div class="runtime-activity-card">
         <div class="runtime-activity-head">
           <div>
-            <strong>${escapeHtml((execution && execution.bpmn_element_name) || (routine && routine.name) || currentId)}</strong>
+            <strong>${escapeHtml(payload.element_name || (execution && execution.bpmn_element_name) || (routine && routine.name) || currentId)}</strong>
             <div class="runtime-activity-sub">${escapeHtml(currentId || 'Sem identificador')}</div>
           </div>
           <span class="badge runtime-badge status-${escapeHtml((execution && execution.status) || overlay.status || 'pending')}">
@@ -173,13 +206,36 @@
           </span>
         </div>
         <div class="runtime-activity-body">
-          <div><span>Modo:</span><strong>${escapeHtml((execution && execution.execution_mode) || 'human_task')}</strong></div>
+          <div><span>Modo:</span><strong>${escapeHtml(action.execution_mode_label || (execution && execution.execution_mode) || 'human_task')}</strong></div>
           <div><span>Início:</span><strong>${escapeHtml(formatDateTime(execution && execution.started_at))}</strong></div>
           <div><span>Conclusão:</span><strong>${escapeHtml(formatDateTime(execution && execution.completed_at))}</strong></div>
         </div>
         ${(routine && routine.description) ? `<p class="runtime-activity-description">${escapeHtml(routine.description)}</p>` : ''}
+        ${action.instruction ? `<div class="runtime-activity-callout"><strong>Como executar</strong><p>${escapeHtml(action.instruction)}</p></div>` : ''}
+        <div class="runtime-contract-grid">
+          <div><span>Capability</span><strong>${escapeHtml(action.capability_key || 'Não configurada')}</strong></div>
+          <div><span>Contrato BPMS</span><strong>${escapeHtml(contract ? `#${contract.id}` : 'Não configurado')}</strong></div>
+          <div><span>SLA</span><strong>${escapeHtml(action.sla_minutes ? `${action.sla_minutes} min` : 'Não definido')}</strong></div>
+          <div><span>Gate humano</span><strong>${action.requires_human_gate ? 'Sim' : 'Não'}</strong></div>
+        </div>
+        ${actionButtons.length ? `<div class="runtime-action-row">${actionButtons.join('')}</div>` : ''}
+        <div class="runtime-next-stack">
+          <h4>Próximas etapas possíveis</h4>
+          ${nextHtml}
+        </div>
       </div>
     `;
+
+    runtimeCurrentActivity.querySelectorAll('[data-runtime-action]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        try {
+          await handleExecutionAction(button.dataset.runtimeAction, payload, execution, action);
+        } catch (error) {
+          console.error('[process-instance-runtime] action error', error);
+          window.alert(error.message || 'Erro ao executar ação BPMS.');
+        }
+      });
+    });
   }
 
   function renderTimeline(runtime) {
@@ -221,6 +277,7 @@
 
   async function refreshRuntime() {
     const [runtime, routines] = await Promise.all([fetchRuntime(), fetchRoutines()]);
+    latestRuntime = runtime;
     routinesByElementId = new Map(
       (routines || [])
         .filter((item) => item && item.bpmn_element_id)
@@ -240,6 +297,71 @@
     }
 
     return runtime;
+  }
+
+  async function createExecution(payload) {
+    const res = await fetch(`/api/process-instances/${instanceId}/executions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Falha ao criar execução (${res.status})`);
+    }
+    return res.json();
+  }
+
+  async function updateExecution(executionId, payload) {
+    const res = await fetch(`/api/process-instances/${instanceId}/executions/${executionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Falha ao atualizar execução (${res.status})`);
+    }
+    return res.json();
+  }
+
+  async function handleExecutionAction(actionName, currentPayload, execution, actionMeta) {
+    const payload = currentPayload || {};
+    const executionPayload = {
+      bpmn_element_id: payload.element_id,
+      bpmn_element_name: payload.element_name,
+      bpmn_element_type: payload.element_type,
+      execution_mode: actionMeta.execution_mode || 'human_task',
+      interaction_mode: actionMeta.interaction_mode || null,
+      capability_key: actionMeta.capability_key || null,
+      handler_key: actionMeta.handler_key || null
+    };
+
+    if (actionName === 'start') {
+      await createExecution({
+        ...executionPayload,
+        status: 'in_progress'
+      });
+    } else {
+      if (!execution || !execution.id) {
+        throw new Error('Nenhuma execução ativa encontrada para esta atividade.');
+      }
+      const statusMap = {
+        waiting: 'waiting_external',
+        complete: 'completed',
+        fail: 'failed'
+      };
+      await updateExecution(execution.id, {
+        status: statusMap[actionName] || execution.status
+      });
+    }
+    await refreshRuntime();
   }
 
   async function postAction(url, payload) {

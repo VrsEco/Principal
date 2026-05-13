@@ -1,0 +1,8 @@
+2026/03/16-19:06:31.099 710c Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_noticias.uol.com.br_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/16-19:06:31.101 710c Recovering log #65
+2026/03/16-19:06:31.111 710c Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_noticias.uol.com.br_0.indexeddb.leveldb/000065.log 
+2026/03/16-19:06:31.112 710c Delete type=2 #64
+2026/03/16-19:06:31.112 710c Delete type=2 #66
+2026/03/16-19:06:36.751 73b4 Level-0 table #71: started
+2026/03/16-19:06:36.766 73b4 Level-0 table #71: 3391431 bytes OK
+2026/03/16-19:06:36.771 73b4 Delete type=0 #65

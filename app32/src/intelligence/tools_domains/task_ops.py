@@ -16,6 +16,7 @@ from src.intelligence.security.mcp_mutation_guard import (
 )
 from src.intelligence.security.runtime_identity import resolve_runtime_identity
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
+from src.intelligence.tooling.capabilities import TOOL_CONTEXT_COMPANY, TOOL_CONTEXT_USER
 from src.intelligence.tools_support import (
     get_active_company_id,
     get_active_user,
@@ -83,6 +84,7 @@ def _authorize_project_task_mcp(
             accessible_company_ids=tuple(principal.get("accessible_company_ids") or ()),
             required_permissions=required_permissions,
             confirmed_mutation=confirmed_mutation,
+            required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
         ),
     )
     return principal, decision

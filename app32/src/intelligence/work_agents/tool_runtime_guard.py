@@ -5,6 +5,8 @@ import json
 import logging
 from typing import Any
 
+from src.intelligence.tooling.capabilities import TOOL_CONTEXT_COMPANY
+
 from flask import has_app_context
 from langchain_core.messages import ToolMessage
 
@@ -56,6 +58,129 @@ def _infer_action(tool_name: str, capability: Any) -> str:
     return "read"
 
 
+def _normalize_optional_int(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+    return None
+
+
+def _company_candidates_from_metadata(metadata: Any) -> list[int]:
+    if not isinstance(metadata, dict):
+        return []
+
+    candidates: list[int] = []
+
+    def _append(candidate: Any) -> None:
+        normalized = _normalize_optional_int(candidate)
+        if normalized is not None and normalized not in candidates:
+            candidates.append(normalized)
+
+    security = metadata.get("security") if isinstance(metadata.get("security"), dict) else {}
+    session_data = metadata.get("session") if isinstance(metadata.get("session"), dict) else {}
+    workflow_data = metadata.get("workflow") if isinstance(metadata.get("workflow"), dict) else {}
+    payload_data = workflow_data.get("payload") if isinstance(workflow_data.get("payload"), dict) else {}
+
+    for source in (
+        metadata.get("company_id"),
+        metadata.get("active_company_id"),
+        metadata.get("selected_company_id"),
+        metadata.get("pinned_company_id"),
+        security.get("company_id"),
+        security.get("active_company_id"),
+        session_data.get("company_id"),
+        session_data.get("active_company_id"),
+        session_data.get("selected_company_id"),
+        session_data.get("pinned_company_id"),
+        workflow_data.get("company_id"),
+        workflow_data.get("active_company_id"),
+        workflow_data.get("selected_company_id"),
+        workflow_data.get("pinned_company_id"),
+        payload_data.get("_selected_company_id"),
+        payload_data.get("_summary_company_id"),
+    ):
+        _append(source)
+
+    return candidates
+
+
+def _resolve_company_for_tool_call(tool_name: str, args: dict[str, Any], identity: Any) -> tuple[int | None, str | None]:
+    explicit_company_id = _normalize_optional_int(args.get("company_id"))
+    if explicit_company_id is not None:
+        return explicit_company_id, "tool_args.company_id"
+
+    if _normalize_optional_int(getattr(identity, "company_id", None)) is not None:
+        return _normalize_optional_int(getattr(identity, "company_id", None)), "identity.company_id"
+
+    metadata_candidates = _company_candidates_from_metadata(getattr(identity, "metadata", None))
+    if metadata_candidates:
+        return metadata_candidates[0], "metadata.company_id"
+
+    metadata = getattr(identity, "metadata", None) or {}
+    security = metadata.get("security", {}) if isinstance(metadata, dict) else {}
+    accessible_company_ids = []
+    for item in tuple(security.get("accessible_company_ids") or ()):
+        normalized = _normalize_optional_int(item)
+        if normalized is not None and normalized not in accessible_company_ids:
+            accessible_company_ids.append(normalized)
+    if len(accessible_company_ids) == 1:
+        return accessible_company_ids[0], "security.single_accessible_company_id"
+
+    return None, None
+
+
+def resolve_state_tool_context(state: dict[str, Any]) -> dict[str, Any]:
+    messages = state.get("messages") or []
+    if not messages:
+        return state
+
+    last_message = messages[-1]
+    tool_calls = getattr(last_message, "tool_calls", None) or []
+    if not tool_calls:
+        return state
+
+    identity = get_sapiens_context()
+    resolved_company_id = _normalize_optional_int(state.get("company_id"))
+    resolution_source: str | None = None
+
+    for tool_call in tool_calls:
+        tool_name = str(tool_call.get("name") or "").strip()
+        capability = catalog.get_tool_capability(tool_name)
+        required_context = tuple(getattr(capability, "required_context", ()) or ())
+        if TOOL_CONTEXT_COMPANY not in required_context:
+            continue
+
+        args = tool_call.get("args") if isinstance(tool_call.get("args"), dict) else {}
+        if not isinstance(args, dict):
+            args = {}
+            tool_call["args"] = args
+
+        candidate_company_id, candidate_source = _resolve_company_for_tool_call(tool_name, args, identity)
+        if candidate_company_id is None:
+            continue
+
+        if _normalize_optional_int(args.get("company_id")) is None:
+            args["company_id"] = candidate_company_id
+        if resolved_company_id is None:
+            resolved_company_id = candidate_company_id
+            resolution_source = candidate_source
+
+    if resolved_company_id is None:
+        return state
+
+    state["company_id"] = resolved_company_id
+    if resolution_source:
+        context_data = dict(state.get("context_data") or {})
+        context_data.setdefault("tool_context_resolution", {})["company_id_source"] = resolution_source
+        state["context_data"] = context_data
+    return state
+
+
 def _build_policy_request(tool_name: str, args: dict[str, Any], identity: Any) -> ToolPolicyRequest:
     capability = catalog.get_tool_capability(tool_name)
     metadata = identity.metadata or {}
@@ -73,6 +198,7 @@ def _build_policy_request(tool_name: str, args: dict[str, Any], identity: Any) -
         accessible_company_ids=tuple(security.get("accessible_company_ids") or ()),
         required_permissions=tuple(getattr(capability, "permissions", ()) or ()),
         confirmed_mutation=bool(confirmations.get(tool_name) or confirmations.get("*")),
+        required_context=tuple(getattr(capability, "required_context", ()) or ()),
         metadata={"tool_args_keys": sorted(str(key) for key in args.keys())},
     )
 

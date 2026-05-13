@@ -1,0 +1,157 @@
+{
+  "version": "2026-05-08.1",
+  "description": "Contrato conceitual das tools MCP para bootstrap e leitura progressiva do catálogo.",
+  "principles": [
+    "multi_tenancy_required",
+    "least_privilege",
+    "progressive_disclosure",
+    "deny_by_default",
+    "mcp_first"
+  ],
+  "tools": [
+    {
+      "name": "bootstrap_session_context",
+      "purpose": "Resolver contexto inicial da sessão e retornar catálogo resumido filtrado.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "auth_token": { "type": "string" },
+          "requested_surface": {
+            "type": "string",
+            "enum": ["user", "admin", "analytics", "ops"]
+          }
+        },
+        "required": ["auth_token"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "user_id": { "type": "integer" },
+          "company_id": { "type": "integer" },
+          "surface": { "type": "string" },
+          "role": { "type": "string" },
+          "catalog_version": { "type": "string" },
+          "domains": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "nome": { "type": "string" },
+                "objetivo": { "type": "string" },
+                "entradas": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "saidas": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              },
+              "required": ["id", "nome", "objetivo"]
+            }
+          }
+        },
+        "required": [
+          "company_id",
+          "surface",
+          "catalog_version",
+          "features"
+        ]
+      }
+    },
+    {
+      "name": "list_feature_catalog",
+      "purpose": "Listar catálogo resumido já filtrado pelo contexto da sessão.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "domain": { "type": "string" },
+          "search": { "type": "string" }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "type": "array",
+            "items": { "type": "object" }
+          }
+        },
+        "required": ["features"]
+      }
+    },
+    {
+      "name": "get_feature_guide",
+      "purpose": "Retornar guia operacional da feature solicitada, filtrado pela surface atual.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "feature_id": { "type": "string" }
+        },
+        "required": ["feature_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "feature_id": { "type": "string" },
+          "guide_markdown": { "type": "string" },
+          "sensitivity": { "type": "string" }
+        },
+        "required": ["feature_id", "guide_markdown"]
+      }
+    },
+    {
+      "name": "get_feature_examples",
+      "purpose": "Retornar exemplos de uso autorizados para a feature.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "feature_id": { "type": "string" }
+        },
+        "required": ["feature_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "examples": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["examples"]
+      }
+    },
+    {
+      "name": "get_feature_constraints",
+      "purpose": "Retornar restrições funcionais e de segurança da feature.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "feature_id": { "type": "string" }
+        },
+        "required": ["feature_id"]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "requires_company_id": { "type": "boolean" },
+          "allowed_surfaces": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "confirmation_required": { "type": "boolean" },
+          "notes": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["requires_company_id", "allowed_surfaces"]
+      }
+    }
+  ]
+}

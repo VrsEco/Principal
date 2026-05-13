@@ -205,3 +205,54 @@ def test_tool_policy_normalizes_legacy_work_alias_into_routine() -> None:
     )
 
     assert decision.allowed is True
+
+
+def test_tool_policy_allows_user_only_feature_without_company_context() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 12, "company_id": None, "role": "colaborador"},
+        ToolPolicyRequest(
+            tool_name="get_my_work",
+            surface="user",
+            domain="routine",
+            action="read",
+            required_context=("user",),
+        ),
+    )
+
+    assert decision.allowed is True
+    assert decision.resolved_company_id is None
+    assert "tenant_scope_not_required" in decision.checks
+
+
+def test_tool_policy_blocks_company_required_feature_without_company_context() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 12, "company_id": None, "role": "administrador"},
+        ToolPolicyRequest(
+            tool_name="list_process_hierarchy",
+            surface="user",
+            domain="processes",
+            action="read",
+            required_context=("company",),
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "feature exige company_id" in decision.reason
+    assert "missing_required_company_context" in decision.checks
+
+
+def test_tool_policy_allows_company_only_feature_without_user_context() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": None, "company_id": 7, "role": "administrador"},
+        ToolPolicyRequest(
+            tool_name="get_financial_results",
+            surface="admin",
+            domain="finance",
+            action="read",
+            requested_company_id=7,
+            required_context=("company",),
+        ),
+    )
+
+    assert decision.allowed is True
+    assert decision.resolved_company_id == 7

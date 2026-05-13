@@ -198,7 +198,7 @@ R$ {{ (value|default(0))|format_currency_br }}
                 <strong>{{ segments|sum(attribute='persona_count') if segments else 0 }}</strong>
             </div>
             <div class="metric-card">
-                <span>Receita projetada de portfólio</span>
+                <span>Receita Mensal Projetada de Portfólio</span>
                 <strong>{{ money(products|sum(attribute='expected_monthly_revenue') if products else 0) }}</strong>
             </div>
             <div class="metric-card">

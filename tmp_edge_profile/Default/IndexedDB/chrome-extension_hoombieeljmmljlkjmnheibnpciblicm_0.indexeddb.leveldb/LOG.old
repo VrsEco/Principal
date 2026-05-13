@@ -1,0 +1,14 @@
+2026/05/07-09:29:10.211 2d38 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\chrome-extension_hoombieeljmmljlkjmnheibnpciblicm_0.indexeddb.leveldb/MANIFEST-000001
+2026/05/07-09:29:10.216 2d38 Recovering log #18275
+2026/05/07-09:29:10.217 2d38 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\chrome-extension_hoombieeljmmljlkjmnheibnpciblicm_0.indexeddb.leveldb/018275.log 
+2026/05/07-09:29:10.218 2d38 Delete type=2 #18273
+2026/05/07-09:29:10.253 c40 Level-0 table #18280: started
+2026/05/07-09:29:10.255 c40 Level-0 table #18280: 3122 bytes OK
+2026/05/07-09:29:10.259 c40 Delete type=0 #18275
+2026/05/07-09:29:10.260 2d38 Manual compaction at level-0 from ' A\x12\x00\x00\x00' @ 72057594037927935 : 1 .. ' B\x12\x00\x00\x00' @ 0 : 0; will stop at ' A\x12\x00\x00\x05' @ 170245 : 1
+2026/05/07-09:29:10.262 2d38 Compacting 1@0 + 1@1 files
+2026/05/07-09:29:10.264 2d38 Generated table #18281@0: 21 keys, 1703 bytes
+2026/05/07-09:29:10.264 2d38 Compacted 1@0 + 1@1 files => 1703 bytes
+2026/05/07-09:29:10.265 2d38 compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/05/07-09:29:10.266 2d38 Delete type=2 #18280
+2026/05/07-09:29:10.266 2d38 Manual compaction at level-0 from ' A\x12\x00\x00\x05' @ 170245 : 1 .. ' B\x12\x00\x00\x00' @ 0 : 0; will stop at (end)

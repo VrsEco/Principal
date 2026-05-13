@@ -1,7 +1,9 @@
-import paramiko
 import os
-from scp import SCPClient
+import sys
 from datetime import datetime
+
+import paramiko
+from scp import SCPClient
 
 # --- CONFIGURAÇÕES ---
 HOST = "ip-69-164-205-75.cloudezapp.io"
@@ -19,6 +21,17 @@ LOCAL_BACKUP_DIR = r"C:\Users\mff20\OneDrive\Versus\Versus Participações\Versu
 
 # Configuração de retenção
 KEEP_LAST_N_BACKUPS = 3
+
+
+def configure_stdout():
+    """Evita quebra de encoding no console padrão do Windows."""
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
 
 def create_local_structure():
     """Cria a estrutura de pastas local"""
@@ -199,6 +212,7 @@ def sync_uploads(ssh, scp):
         print(f"  ❌ Erro ao sincronizar uploads: {e}")
 
 def main():
+    configure_stdout()
     print("=" * 60)
     print("  BACKUP COMPLETO: CONFIGR → LOCAL (OneDrive)")
     print("=" * 60)

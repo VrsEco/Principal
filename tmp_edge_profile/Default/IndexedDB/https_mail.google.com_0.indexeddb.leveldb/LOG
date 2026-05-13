@@ -1,0 +1,18 @@
+2025/07/24-20:29:39.283 4f8c Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_mail.google.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/24-20:29:39.284 4f8c Recovering log #1095
+2025/07/24-20:29:39.295 4f8c Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_mail.google.com_0.indexeddb.leveldb/001095.log 
+2025/07/24-20:29:41.714 1810 Compacting 1@1 + 1@2 files
+2025/07/24-20:29:41.740 1810 Generated table #1098@1: 346 keys, 904636 bytes
+2025/07/24-20:29:41.741 1810 Compacted 1@1 + 1@2 files => 904636 bytes
+2025/07/24-20:29:41.748 1810 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/24-20:29:41.753 1810 Delete type=2 #1093
+2025/07/24-20:29:41.754 1810 Delete type=2 #1096
+2025/07/24-20:29:43.542 355c Level-0 table #1100: started
+2025/07/24-20:29:43.580 355c Level-0 table #1100: 3097927 bytes OK
+2025/07/24-20:29:43.583 355c Delete type=0 #1095
+2025/07/24-20:29:57.461 1810 Compacting 1@1 + 1@2 files
+2025/07/24-20:29:57.472 1810 Generated table #1101@1: 237 keys, 518623 bytes
+2025/07/24-20:29:57.472 1810 Compacted 1@1 + 1@2 files => 518623 bytes
+2025/07/24-20:29:57.473 1810 compacted to: files[ 0 0 1 0 0 0 0 ]
+2025/07/24-20:29:57.473 1810 Delete type=2 #1098
+2025/07/24-20:29:57.474 1810 Delete type=2 #1100

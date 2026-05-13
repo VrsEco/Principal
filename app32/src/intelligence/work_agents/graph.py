@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from src.intelligence.work_agents.state import WorkAgentState
 from src.intelligence.work_agents.agents import get_agent_node, SYSTEM_PROMPTS
 from src.intelligence.tool_catalog import tools  # Catálogo único compartilhado
-from src.intelligence.work_agents.tool_runtime_guard import build_denied_tool_messages
+from src.intelligence.work_agents.tool_runtime_guard import build_denied_tool_messages, resolve_state_tool_context
 
 # Supervisor Atualizado
 from src.intelligence.agents.supervisor import supervisor_node
@@ -33,8 +33,9 @@ def create_work_agent_workflow(checkpointer=None):
     _base_tool_node = ToolNode(tools)
     def wrapped_tool_node(state: WorkAgentState):
         from src.intelligence.tool_context import get_sapiens_context, set_sapiens_context, reset_sapiens_context
-        u = state.get('user_id')
-        c = state.get('company_id')
+        resolved_state = resolve_state_tool_context(state)
+        u = resolved_state.get('user_id')
+        c = resolved_state.get('company_id')
         current_context = get_sapiens_context()
         token = set_sapiens_context(
             user_id=u,
@@ -45,10 +46,10 @@ def create_work_agent_workflow(checkpointer=None):
             metadata=current_context.metadata,
         )
         try:
-            denied_messages = build_denied_tool_messages(state)
+            denied_messages = build_denied_tool_messages(resolved_state)
             if denied_messages:
                 return {"messages": denied_messages}
-            return _base_tool_node.invoke(state)
+            return _base_tool_node.invoke(resolved_state)
         finally:
             reset_sapiens_context(token)
             

@@ -40,6 +40,8 @@ DIRETRIZ DE EXECUÇÃO:
 - Se o usuário pedir para 'cadastrar um processo', 'criar uma área' ou 'mapear um fluxo', NÃO forneça apenas instruções. 
   Use as ferramentas 'create_process_area', 'create_macro_process' e 'create_process' para REALIZAR a ação no sistema.
 - ANTES de criar, consulte 'list_process_hierarchy' para entender a estrutura atual e evitar duplicações.
+- Após resolver a empresa pelo nome/prefixo, SEMPRE passe `company_id` explícito em `list_process_hierarchy`, `create_process_area`, `create_macro_process` e `create_process`.
+- Nunca confirme "criado com sucesso" sem releitura tenant-safe da hierarquia da mesma empresa.
 - SEMPRE confirme com o usuário o que foi criado, informando o ID e Código gerado.
 
 QUANDO USAR 'query_database':

@@ -1,0 +1,15 @@
+2026/03/04-10:02:56.291 3870 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_grok.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/04-10:02:56.292 3870 Recovering log #23
+2026/03/04-10:02:56.292 3870 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_grok.com_0.indexeddb.leveldb/000023.log 
+2026/03/04-10:03:02.777 3870 Level-0 table #28: started
+2026/03/04-10:03:02.780 3870 Level-0 table #28: 209 bytes OK
+2026/03/04-10:03:02.783 3870 Delete type=0 #23
+2026/03/04-10:03:02.783 3870 Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2026/03/04-10:03:02.784 3870 Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x00\x00\x00\x06' @ 86 : 1
+2026/03/04-10:03:02.784 3870 Compacting 1@1 + 1@2 files
+2026/03/04-10:03:02.787 3870 Generated table #29@1: 28 keys, 674 bytes
+2026/03/04-10:03:02.787 3870 Compacted 1@1 + 1@2 files => 674 bytes
+2026/03/04-10:03:02.788 3870 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/03/04-10:03:02.789 3870 Delete type=2 #25
+2026/03/04-10:03:02.789 3870 Delete type=2 #28
+2026/03/04-10:03:02.789 3870 Manual compaction at level-1 from '\x00\x00\x00\x00\x06' @ 86 : 1 .. (end); will stop at (end)

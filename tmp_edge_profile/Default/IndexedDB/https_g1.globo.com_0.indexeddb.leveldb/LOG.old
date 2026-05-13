@@ -1,0 +1,15 @@
+2024/10/30-08:54:33.579 5ff0 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_g1.globo.com_0.indexeddb.leveldb/MANIFEST-000001
+2024/10/30-08:54:33.580 5ff0 Recovering log #4
+2024/10/30-08:54:33.582 5ff0 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_g1.globo.com_0.indexeddb.leveldb/000004.log 
+2024/10/30-09:00:29.069 5ff0 Level-0 table #8: started
+2024/10/30-09:00:29.073 5ff0 Level-0 table #8: 180211 bytes OK
+2024/10/30-09:00:29.076 5ff0 Delete type=0 #4
+2024/10/30-09:00:29.076 5ff0 Manual compaction at level-0 from (begin) .. (end); will stop at (end)
+2024/10/30-09:00:29.076 5ff0 Manual compaction at level-1 from (begin) .. (end); will stop at '\x00\x05\x02\x02\x01\x12\x00c\x00o\x00r\x00e\x00_\x00s\x00e\x00r\x00v\x00i\x00c\x00e\x00_\x00s\x00t\x00a\x00t\x00e' @ 1577 : 1
+2024/10/30-09:00:29.077 5ff0 Compacting 1@1 + 1@2 files
+2024/10/30-09:00:29.080 5ff0 Generated table #9@1: 183 keys, 45586 bytes
+2024/10/30-09:00:29.081 5ff0 Compacted 1@1 + 1@2 files => 45586 bytes
+2024/10/30-09:00:29.082 5ff0 compacted to: files[ 0 0 1 0 0 0 0 ]
+2024/10/30-09:00:29.083 5ff0 Delete type=2 #5
+2024/10/30-09:00:29.083 5ff0 Delete type=2 #8
+2024/10/30-09:00:29.083 5ff0 Manual compaction at level-1 from '\x00\x05\x02\x02\x01\x12\x00c\x00o\x00r\x00e\x00_\x00s\x00e\x00r\x00v\x00i\x00c\x00e\x00_\x00s\x00t\x00a\x00t\x00e' @ 1577 : 1 .. (end); will stop at (end)

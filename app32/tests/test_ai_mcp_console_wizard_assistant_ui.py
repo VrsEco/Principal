@@ -112,6 +112,27 @@ def _fake_console_state():
         "configuration_links": [],
         "registration_links": [],
         "operational_links": [],
+        "connection_generator": {
+            "title": "Conectar em outro cliente",
+            "description": "Cole os dados da conexão e gere o texto pronto para configurar com IA ou copiar a configuração técnica.",
+            "defaults": {
+                "name": "Sapiens User",
+                "default_company": "Sem empresa padrão",
+                "url": "https://app.gestaoversus.com.br/mcp/user",
+                "auth_type": "bearer",
+            },
+            "modes": [],
+        },
+        "documentation_bootstrap": {
+            "auto_load": True,
+            "default_surface": "user",
+            "endpoint": "/api/configs/ai/mcp/bootstrap-session",
+            "summary": {
+                "catalog_version": "2026-05-08.1",
+                "features_total": 2,
+                "domains": ["routine", "processes"],
+            },
+        },
         "wizard_steps": [
             {
                 "step": 1,
@@ -304,6 +325,8 @@ def test_ai_mcp_console_template_renders_wizard_steps_ctas_and_contextual_help()
     assert 'data-target-tab="dashboard"' in html
 
     assert "Ajuda contextual" in html
+    assert "Leitura automática do catálogo MCP" in html
+    assert "/api/configs/ai/mcp/bootstrap-session" in html
     assert "Se você está começando agora" in html
     assert "Use o wizard no topo." in html
     assert "Se precisa só configurar" in html
