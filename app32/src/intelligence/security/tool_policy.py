@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence
 
+from src.intelligence.tooling.capabilities import TOOL_CONTEXT_COMPANY, TOOL_CONTEXT_USER
+
 from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
+from .mcp_channel_gate import McpChannelGateRequest, evaluate_mcp_channel_gate
 from .tenant_rbac import (
     ADMIN_ROLES,
     PrincipalContext,
@@ -54,6 +57,7 @@ class ToolPolicyRequest:
     accessible_company_ids: tuple[int, ...] = ()
     required_permissions: tuple[str, ...] = ()
     confirmed_mutation: bool = False
+    required_context: tuple[str, ...] = ()
     metadata: Optional[Mapping[str, Any]] = None
 
 
@@ -77,6 +81,7 @@ class ToolPolicyDecision:
             "action": self.request.action,
             "risk": self.resolved_risk,
             "company_id": self.resolved_company_id,
+            "required_context": list(self.request.required_context),
             "principal": {
                 "user_id": self.principal.user_id,
                 "employee_id": self.principal.employee_id,
@@ -108,6 +113,62 @@ def _allow(request: ToolPolicyRequest, principal: PrincipalContext, surface: str
     return ToolPolicyDecision(True, request, principal, surface, risk, company_id, "ok", tuple(checks))
 
 
+def _normalize_required_context(required_context: Sequence[str] | None) -> tuple[str, ...]:
+    normalized: list[str] = []
+    for item in required_context or ():
+        value = str(item or "").strip().lower()
+        if value in {TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY} and value not in normalized:
+            normalized.append(value)
+    return tuple(normalized)
+
+
+def _validate_required_context(
+    principal: PrincipalContext,
+    request: ToolPolicyRequest,
+    *,
+    checks: Sequence[str],
+) -> ToolPolicyDecision | None:
+    required_context = _normalize_required_context(request.required_context)
+    requested_company_id = request.requested_company_id
+
+    if TOOL_CONTEXT_USER in required_context and principal.user_id is None:
+        return _deny(
+            request,
+            principal,
+            _normalize_surface(request.surface),
+            _normalize_risk(request.risk),
+            _coerce_optional_company_id(requested_company_id, principal.company_id),
+            "feature exige user_id no contexto antes da execução",
+            (*checks, "missing_required_user_context"),
+        )
+
+    if TOOL_CONTEXT_COMPANY in required_context and _coerce_optional_company_id(requested_company_id, principal.company_id) is None:
+        return _deny(
+            request,
+            principal,
+            _normalize_surface(request.surface),
+            _normalize_risk(request.risk),
+            None,
+            "feature exige company_id no contexto antes da execução",
+            (*checks, "missing_required_company_context"),
+        )
+
+    return None
+
+
+def _coerce_optional_company_id(*values: Any) -> Optional[int]:
+    for value in values:
+        if value is None or isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.isdigit():
+                return int(stripped)
+    return None
+
+
 def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyDecision:
     """Avalia autorização de tool por tenant, RBAC, surface e risco operacional."""
 
@@ -127,15 +188,60 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
     if not request.tool_name.strip():
         return _deny(request, principal, surface, risk, None, "tool_name ausente", (*checks, "missing_tool_name"))
 
-    tenant_decision: TenantScopeDecision = validate_company_id(
-        principal,
-        request.requested_company_id,
-        accessible_company_ids=request.accessible_company_ids,
+    metadata = dict(principal.metadata or {})
+    metadata.update(dict(request.metadata or {}))
+    channel_gate = evaluate_mcp_channel_gate(
+        McpChannelGateRequest(
+            surface=surface,
+            runtime_profile=str(metadata.get("runtime_profile") or "").strip() or None,
+            actor_type=str(metadata.get("actor_type") or "").strip() or None,
+            mcp_enabled=bool(metadata.get("mcp_enabled", True)),
+            training_completed=bool(metadata.get("training_completed", True)),
+        )
     )
-    checks.append("tenant_scope")
+    checks.append("mcp_channel_gate")
+    if not channel_gate.allowed:
+        return _deny(
+            request,
+            principal,
+            surface,
+            risk,
+            None,
+            channel_gate.reason,
+            (*checks, *channel_gate.checks),
+        )
 
-    if not tenant_decision.allowed:
-        return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, tenant_decision.reason, (*checks, *tenant_decision.checks))
+    context_decision = _validate_required_context(principal, request, checks=(*checks, "required_context"))
+    if context_decision is not None:
+        return context_decision
+
+    normalized_required_context = _normalize_required_context(request.required_context)
+    should_validate_tenant = bool(
+        TOOL_CONTEXT_COMPANY in normalized_required_context
+        or _coerce_optional_company_id(request.requested_company_id, principal.company_id) is not None
+        or tuple(request.accessible_company_ids or ())
+    )
+
+    if should_validate_tenant:
+        tenant_decision: TenantScopeDecision = validate_company_id(
+            principal,
+            request.requested_company_id,
+            accessible_company_ids=request.accessible_company_ids,
+        )
+        checks.append("tenant_scope")
+
+        if not tenant_decision.allowed:
+            return _deny(request, principal, surface, risk, tenant_decision.resolved_company_id, tenant_decision.reason, (*checks, *tenant_decision.checks))
+    else:
+        tenant_decision = TenantScopeDecision(
+            allowed=True,
+            principal=principal,
+            requested_company_id=request.requested_company_id,
+            resolved_company_id=None,
+            reason="ok",
+            checks=("tenant_scope_not_required",),
+        )
+        checks.append("tenant_scope_not_required")
 
     if surface not in profile_contract.allowed_surfaces:
         return _deny(

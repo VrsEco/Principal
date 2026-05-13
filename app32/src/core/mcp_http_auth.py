@@ -34,6 +34,9 @@ except ImportError:  # pragma: no cover
     OAuthAuthorizationServerProvider = object  # type: ignore[assignment]
     TokenVerifier = object  # type: ignore[assignment]
 
+from src.intelligence.security.mcp_channel_gate import McpChannelGateRequest, evaluate_mcp_channel_gate
+from src.intelligence.security.runtime_profiles import get_runtime_profile_spec, normalize_runtime_profile
+
 
 HTTP_CONTEXT_HEADER_MAP = {
     "user_id": "x-app32-user-id",
@@ -196,11 +199,13 @@ def load_http_token_registry() -> dict[str, App32McpHttpIdentity]:
             allowed_surfaces=allowed_surfaces,
             scopes=scopes,
             client_id=_coerce_str(config.get("client_id")) or "app32-mcp-internal",
-            metadata={
-                "subject": _coerce_str(config.get("subject")),
-                "description": _coerce_str(config.get("description")),
-            },
-        )
+        metadata={
+            "subject": _coerce_str(config.get("subject")),
+            "description": _coerce_str(config.get("description")),
+            "mcp_enabled": True,
+            "training_completed": True,
+        },
+    )
     return registry
 
 
@@ -248,6 +253,10 @@ def _resolve_db_backed_identity(
             "subject": resolved.subject,
             "client_name": resolved.client_name,
             "user_mcp_token_id": resolved.token_record_id,
+            "runtime_profile": getattr(resolved, "runtime_profile", None),
+            "actor_type": getattr(resolved, "actor_type", None),
+            "mcp_enabled": getattr(resolved, "mcp_enabled", True),
+            "training_completed": getattr(resolved, "training_completed", True),
         },
     )
 
@@ -346,6 +355,12 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
     actor_type = _coerce_str(
         _resolve_override_value(request, query_param="actor_type", header_name=HTTP_CONTEXT_HEADER_MAP["actor_type"])
     )
+    if runtime_profile is None:
+        runtime_profile = _coerce_str(identity.metadata.get("runtime_profile"))
+    normalized_runtime_profile = normalize_runtime_profile(runtime_profile)
+    runtime_spec = get_runtime_profile_spec(normalized_runtime_profile)
+    if actor_type is None:
+        actor_type = _coerce_str(identity.metadata.get("actor_type")) or (runtime_spec.actor_type if runtime_spec else None)
 
     return {
         "user_id": identity.user_id,
@@ -355,10 +370,12 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
         "transport": "streamable_http",
         "client": "claude_remote_connector",
         "thread_id": thread_id,
-        "runtime_profile": runtime_profile,
+        "runtime_profile": normalized_runtime_profile,
         "actor_type": actor_type,
         "client_id": identity.client_id,
         "token_subject": identity.metadata.get("subject"),
+        "mcp_enabled": bool(identity.metadata.get("mcp_enabled", True)),
+        "training_completed": bool(identity.metadata.get("training_completed", True)),
     }
 
 
@@ -382,6 +399,24 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
             )
 
         payload = resolve_request_context_payload(request, surface=self.surface)
+        channel_gate = evaluate_mcp_channel_gate(
+            McpChannelGateRequest(
+                surface=self.surface,
+                runtime_profile=_coerce_str(payload.get("runtime_profile")),
+                actor_type=_coerce_str(payload.get("actor_type")),
+                mcp_enabled=bool(payload.get("mcp_enabled", True)),
+                training_completed=bool(payload.get("training_completed", True)),
+            )
+        )
+        if not channel_gate.allowed:
+            return JSONResponse(
+                {
+                    "error": "mcp_channel_denied",
+                    "detail": channel_gate.reason,
+                    "checks": list(channel_gate.checks),
+                },
+                status_code=403,
+            )
         tokens = set_http_request_context(identity, payload)
         try:
             return await call_next(request)

@@ -39,6 +39,10 @@ class SimulatedAgentScenario:
     confirmed_mutation: bool = False
     channel: str = "simulated"
     thread_id: str = "simulated-harness"
+    runtime_profile: str | None = None
+    actor_type: str | None = None
+    mcp_enabled: bool = True
+    training_completed: bool = True
     metadata: Mapping[str, Any] | None = None
 
 
@@ -66,6 +70,8 @@ class SimulatedAgentHarnessResult:
             "tool_name": self.scenario.tool_name,
             "domain": self.scenario.domain,
             "action": self.scenario.action,
+            "runtime_profile": self.scenario.runtime_profile,
+            "actor_type": self.scenario.actor_type,
             "tool_in_surface_manifest": self.tool_in_surface_manifest,
             "profile_contract_found": self.profile_contract_found,
             "surface_playbook_found": self.surface_playbook_found,
@@ -132,6 +138,10 @@ def evaluate_simulated_agent_scenario(
             "thread_id": scenario.thread_id,
             "permissions": scenario.permissions,
             "metadata": dict(scenario.metadata or {}),
+            "runtime_profile": scenario.runtime_profile,
+            "actor_type": scenario.actor_type,
+            "mcp_enabled": scenario.mcp_enabled,
+            "training_completed": scenario.training_completed,
         },
         ToolPolicyRequest(
             tool_name=scenario.tool_name,
@@ -143,7 +153,13 @@ def evaluate_simulated_agent_scenario(
             accessible_company_ids=runtime_security.accessible_company_ids,
             required_permissions=tuple(resolved_permissions),
             confirmed_mutation=scenario.confirmed_mutation,
-            metadata=scenario.metadata,
+            metadata={
+                **dict(scenario.metadata or {}),
+                "runtime_profile": scenario.runtime_profile,
+                "actor_type": scenario.actor_type,
+                "mcp_enabled": scenario.mcp_enabled,
+                "training_completed": scenario.training_completed,
+            },
         ),
     )
     checks.append("tool_policy")

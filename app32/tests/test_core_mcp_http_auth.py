@@ -150,3 +150,71 @@ def test_request_context_payload_includes_runtime_profile_and_actor_type(monkeyp
     assert payload["actor_type"] == "versus_agent"
     assert payload["client_id"] == "app32-mcp-internal"
 
+
+def test_request_context_middleware_blocks_runtime_profile_surface_mismatch(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="9",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+        APP32_MCP_HTTP_ALLOW_CONTEXT_OVERRIDE="1",
+    )
+
+    async def endpoint(_: Request):
+        return JSONResponse({"ok": True})
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user")
+    client = TestClient(app)
+
+    response = client.get(
+        "/?runtime_profile=squad_versus",
+        headers={"Authorization": "Bearer token-123"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "mcp_channel_denied"
+
+
+def test_request_context_middleware_blocks_when_training_missing(monkeypatch):
+    module = _reload_auth(monkeypatch)
+
+    class _FakeUserMcpTokenService:
+        def resolve_for_http_request(self, **kwargs):
+            return SimpleNamespace(
+                token_record_id=55,
+                user_id=7,
+                company_id=12,
+                fallback_role="cliente",
+                allowed_surfaces=("user",),
+                subject="ana@empresa.com",
+                client_name="Claude",
+                runtime_profile="squad_cliente",
+                actor_type="human_user",
+                mcp_enabled=True,
+                training_completed=False,
+            )
+
+    from types import SimpleNamespace
+    import services.user_mcp_token_service as token_service_module
+
+    monkeypatch.setattr(token_service_module, "user_mcp_token_service", _FakeUserMcpTokenService())
+
+    async def endpoint(_: Request):
+        return JSONResponse({"ok": True})
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user")
+    client = TestClient(app)
+
+    response = client.get(
+        "/?company_id=12",
+        headers={"Authorization": "Bearer token-db"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"] == "mcp_channel_denied"
+

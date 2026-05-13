@@ -15,6 +15,7 @@ from models import Company, Employee, User, UserMcpToken, db
 from services.email_service import email_service
 from services.log_service import log_service
 from services.whatsapp_service import whatsapp_service
+from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 from utils.permissions import (
     can_access_company,
     get_access_profile,
@@ -58,6 +59,10 @@ class UserMcpResolvedContext:
     allowed_surfaces: tuple[str, ...]
     subject: str | None
     client_name: str | None
+    runtime_profile: str | None = None
+    actor_type: str | None = None
+    mcp_enabled: bool = True
+    training_completed: bool = True
 
 
 class UserMcpTokenService:
@@ -109,6 +114,7 @@ class UserMcpTokenService:
         normalized_squad = cls._normalize_squad(squad)
         runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
         squad_label = SQUAD_LABELS.get(normalized_squad, normalized_squad)
+        runtime_profile_spec = get_runtime_profile_spec(normalized_squad)
 
         resolved_profile = "squad_cliente"
         resolved_surface = "user"
@@ -175,6 +181,9 @@ class UserMcpTokenService:
             "runtime_label": runtime_label,
             "squad": normalized_squad,
             "squad_label": squad_label,
+            "runtime_profile": runtime_profile_spec.key if runtime_profile_spec else normalized_squad,
+            "actor_type": runtime_profile_spec.actor_type if runtime_profile_spec else "human_user",
+            "requires_training": runtime_profile_spec.requires_training if runtime_profile_spec else True,
             "resolved_profile": resolved_profile,
             "resolved_surface": resolved_surface,
             "install_mode": install_mode,
@@ -551,6 +560,9 @@ class UserMcpTokenService:
                 "runtime_label": runtime_config["runtime_label"],
                 "squad": runtime_config["squad"],
                 "squad_label": runtime_config["squad_label"],
+                "runtime_profile": runtime_config["runtime_profile"],
+                "actor_type": runtime_config["actor_type"],
+                "requires_training": runtime_config["requires_training"],
                 "resolved_profile": runtime_config["resolved_profile"],
                 "resolved_surface": runtime_config["resolved_surface"],
                 "install_mode": runtime_config["install_mode"],
@@ -613,6 +625,10 @@ class UserMcpTokenService:
                 allowed_surfaces=ALLOWED_SURFACES,
                 subject=user.email,
                 client_name=record.last_client_name,
+                runtime_profile="squad_cliente",
+                actor_type="human_user",
+                mcp_enabled=True,
+                training_completed=True,
             )
 
     @classmethod

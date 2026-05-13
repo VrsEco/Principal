@@ -187,6 +187,50 @@ def test_simulated_agent_allows_identity_self_service_on_user_surface():
     assert result.reason == "ok"
 
 
+def test_simulated_agent_blocks_runtime_profile_surface_mismatch():
+    result = evaluate_simulated_agent_scenario(
+        SimulatedAgentScenario(
+            scenario_id="runtime-profile-surface-mismatch",
+            user_id=20,
+            role="administrador",
+            surface="user",
+            tool_name="list_plans",
+            domain="strategy",
+            action="read",
+            requested_company_id=21,
+            accessible_company_ids=(21,),
+            runtime_profile="squad_versus",
+        )
+    )
+
+    assert result.allowed is False
+    assert result.reason == "runtime_profile squad_versus exige surface admin"
+    assert "runtime_profile_surface_mismatch" in result.checks
+
+
+def test_simulated_agent_blocks_when_training_not_completed():
+    result = evaluate_simulated_agent_scenario(
+        SimulatedAgentScenario(
+            scenario_id="runtime-profile-training-required",
+            user_id=21,
+            role="cliente",
+            surface="user",
+            tool_name="list_my_companies",
+            domain="identity_self_service",
+            action="read",
+            requested_company_id=21,
+            accessible_company_ids=(21,),
+            runtime_profile="squad_cliente",
+            mcp_enabled=True,
+            training_completed=False,
+        )
+    )
+
+    assert result.allowed is False
+    assert result.reason == "usuário MCP ainda não concluiu habilitação/treinamento obrigatório"
+    assert "runtime_profile_training_required" in result.checks
+
+
 def test_simulated_agent_blocks_identity_admin_on_user_surface():
     result = evaluate_simulated_agent_scenario(
         SimulatedAgentScenario(
