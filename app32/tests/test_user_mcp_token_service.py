@@ -83,6 +83,9 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
     assert config["install_mode"] == "self_service"
+    assert config["actor_type"] == "client_agent"
+    assert config["harness_key"] == "harness_coordenador_cliente_v1"
+    assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert "install-claude-laboratorio.ps1" in config["install_command"]
 
 
@@ -120,3 +123,24 @@ def test_resolve_for_http_request_returns_none_for_unsupported_surface():
     )
 
     assert resolved is None
+
+
+def test_build_client_config_exposes_squad_cliente_harness_catalog(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: SimpleNamespace(id=7, is_active=True))))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_normalize_surface", staticmethod(lambda surface: "user"))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_resolve_explicit_company_id_for_user", staticmethod(lambda user, company_id: 10))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "list_accessible_companies", staticmethod(lambda user: [{"id": 10, "label": "M1 - Empresa Laboratorio"}]))
+    monkeypatch.setenv("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
+
+    config = service.build_client_config(
+        user_id=7,
+        plaintext_token="mcpu_token_real",
+        company_id=10,
+        runtime="claude",
+        squad="squad_cliente",
+    )
+
+    assert any(item["key"] == "harness_comercial_cliente_v1" for item in config["available_harnesses"])
+    assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["activation_prompt"]

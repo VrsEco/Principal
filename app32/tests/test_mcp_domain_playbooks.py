@@ -68,14 +68,17 @@ def test_domain_playbook_security_boundaries():
     assert finance is not None
     assert set(finance.allowed_profiles) <= {"administrador", "admin_tecnico"}
     assert "user" not in finance.allowed_surfaces
+    assert "finance_versus" in finance.allowed_role_overlays
     assert analytics is not None
     assert "analytics" in analytics.allowed_surfaces
     assert any("não gerar sql livre" in shortcut.lower() for shortcut in analytics.forbidden_shortcuts)
     assert operations is not None
     assert operations.allowed_profiles == ["admin_tecnico"]
+    assert "coordenador_engenharia" in operations.allowed_role_overlays
     assert identity_self_service is not None
     assert "user" in identity_self_service.allowed_surfaces
     assert "cliente" in identity_self_service.allowed_profiles
+    assert "coordenador_cliente" in identity_self_service.allowed_role_overlays
     assert identity_admin is not None
     assert "user" not in identity_admin.allowed_surfaces
     assert set(identity_admin.allowed_profiles) == {"administrador", "admin_tecnico"}
@@ -137,3 +140,16 @@ def test_domain_playbook_forbids_extra_fields_and_sql_freeform():
             sql_freeform_allowed=True,
             unexpected="blocked",  # type: ignore[arg-type]
         )
+
+
+def test_domain_playbooks_expose_versus_and_engineering_overlays_by_domain():
+    strategy = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("strategy")
+    analytics = APP32_DOMAIN_PLAYBOOKS_MANIFEST.get_domain("analytics")
+
+    assert strategy is not None
+    assert "strategist_versus" in strategy.allowed_role_overlays
+    assert "backend_api_engenharia" in strategy.allowed_role_overlays
+
+    assert analytics is not None
+    assert "auditor_versus" in analytics.allowed_role_overlays
+    assert "dba_engenharia" in analytics.allowed_role_overlays

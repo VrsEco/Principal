@@ -14,6 +14,7 @@ from src.intelligence.mcp_contracts.profiles import APP32_PROFILE_CONTRACTS_MANI
 from src.intelligence.mcp_contracts.release_checklist import APP32_RELEASE_CHECKLIST_MANIFEST
 from src.intelligence.mcp_contracts.tool_freeze import APP32_TOOL_FREEZE_MANIFEST
 from src.intelligence.mcp_contracts.usage_dashboard import APP32_USAGE_DASHBOARD_MANIFEST
+from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 from src.intelligence.tool_catalog import catalog
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.tool_first_catalog_service import ToolFirstCatalogService
@@ -479,16 +480,32 @@ class AIMCPConsoleService:
                 {
                     "key": "squad_versus",
                     "title": "Squad Versus",
-                    "description": "Perfil consultivo da Versus para runtime externo com foco em governança, discovery e operações privilegiadas controladas.",
+                    "description": "Família consultiva da Versus para runtime externo. A entrada recomendada é o Harness Coordenador, com roteamento posterior para estratégia, PMO, operações, finanças e auditoria.",
                     "default_url": "https://app.gestaoversus.com.br/mcp/admin",
                     "surface": "admin",
+                    "default_harness_key": "harness_coordenador_versus_v1",
+                    "default_harness_label": "Harness Coordenador do Squad Versus",
+                    "harnesses": cls._serialize_runtime_harnesses("squad_versus"),
                 },
                 {
                     "key": "squad_cliente",
                     "title": "Squad Cliente",
-                    "description": "Perfil operacional assistido do cliente em runtime externo, com menor privilégio e foco na execução do dia a dia.",
+                    "description": "Família de copilotos do cliente em runtime externo. A entrada recomendada é o Harness Coordenador, com roteamento posterior para Comercial, Operacional e Adm/Financeiro.",
                     "default_url": "https://app.gestaoversus.com.br/mcp/user",
                     "surface": "user",
+                    "default_harness_key": "harness_coordenador_cliente_v1",
+                    "default_harness_label": "Harness Coordenador do Squad Cliente",
+                    "harnesses": cls._serialize_runtime_harnesses("squad_cliente"),
+                },
+                {
+                    "key": "engineering",
+                    "title": "Squad de Engenharia",
+                    "description": "Família técnica da engenharia em runtime externo. A entrada recomendada é o Harness Coordenador, com roteamento posterior para Arquiteto, Frontend, Backend API, Backend Service, AI Engineer, DBA e QA.",
+                    "default_url": "https://app.gestaoversus.com.br/mcp/ops",
+                    "surface": "ops",
+                    "default_harness_key": "harness_coordenador_engenharia_v1",
+                    "default_harness_label": "Harness Coordenador do Squad de Engenharia",
+                    "harnesses": cls._serialize_runtime_harnesses("engineering"),
                 },
             ],
             "modes": [
@@ -607,12 +624,15 @@ class AIMCPConsoleService:
             {
                 "key": "squad_versus",
                 "title": "Squad Versus",
-                "owner": "Consultor Versus em runtime externo",
+                "owner": "Família consultiva da Versus em runtime externo",
                 "surface": "admin",
                 "default_company_id": company_id,
                 "default_company_name": company_name,
                 "startup_tools": list(MCPConnectionSnippetService.RUNTIME_PROFILES["squad_versus"]["startup_tools"]),
-                "primary_goal": "Discovery, governança e intervenção consultiva controlada via MCP externo.",
+                "primary_goal": "Consultoria, governança e intervenção controlada com entrada pelo coordenador e especialização metodológica por harness.",
+                "default_harness_key": "harness_coordenador_versus_v1",
+                "default_harness_label": "Harness Coordenador do Squad Versus",
+                "harnesses": cls._serialize_runtime_harnesses("squad_versus"),
                 "required_contracts": [
                     "profiles",
                     "surface_playbooks",
@@ -622,18 +642,22 @@ class AIMCPConsoleService:
                 "guardrails": [
                     "Usar company_id explícito em surfaces privilegiadas.",
                     "Começar por discovery antes de mutações.",
+                    "Tratar Squad Versus como família de harnesses, e não como um agente único.",
                     "Registrar trilha auditável por ator, runtime e capability.",
                 ],
             },
             {
                 "key": "squad_cliente",
                 "title": "Squad Cliente",
-                "owner": "Usuário da empresa cliente em runtime externo",
+                "owner": "Família de copilotos da empresa cliente em runtime externo",
                 "surface": "user",
                 "default_company_id": company_id,
                 "default_company_name": company_name,
                 "startup_tools": list(MCPConnectionSnippetService.RUNTIME_PROFILES["squad_cliente"]["startup_tools"]),
-                "primary_goal": "Operação assistida e interação direta com os pares humanos do cliente.",
+                "primary_goal": "Coprodução operacional do cliente com entrada pelo coordenador e especialização por domínio.",
+                "default_harness_key": "harness_coordenador_cliente_v1",
+                "default_harness_label": "Harness Coordenador do Squad Cliente",
+                "harnesses": cls._serialize_runtime_harnesses("squad_cliente"),
                 "required_contracts": [
                     "surface_playbooks",
                     "profile_contracts",
@@ -642,8 +666,48 @@ class AIMCPConsoleService:
                     "Operar com menor privilégio.",
                     "Usar company_id do tenant ativo.",
                     "Não acessar admin, analytics ou ops.",
+                    "Tratar Squad Cliente como família de copilotos, e não como um harness único.",
                 ],
             },
+            {
+                "key": "engineering",
+                "title": "Squad de Engenharia",
+                "owner": "Família técnica de engenharia em runtime externo",
+                "surface": "ops",
+                "default_company_id": company_id,
+                "default_company_name": company_name,
+                "startup_tools": list(MCPConnectionSnippetService.RUNTIME_PROFILES["engineering"]["startup_tools"]),
+                "primary_goal": "Triagem técnica, diagnóstico e execução disciplinada com entrada pelo coordenador e roteamento para especialidades de engenharia.",
+                "default_harness_key": "harness_coordenador_engenharia_v1",
+                "default_harness_label": "Harness Coordenador do Squad de Engenharia",
+                "harnesses": cls._serialize_runtime_harnesses("engineering"),
+                "required_contracts": [
+                    "profiles",
+                    "surface_playbooks",
+                    "domain_playbooks",
+                    "permission_matrix",
+                ],
+                "guardrails": [
+                    "Operar somente em surfaces técnicas autorizadas.",
+                    "Começar por discovery e evidência antes de intervenção.",
+                    "Tratar Squad de Engenharia como família de harnesses, e não como um agente único.",
+                    "Registrar trilha auditável por ator, runtime, rollout e validação.",
+                ],
+            },
+        ]
+
+    @staticmethod
+    def _serialize_runtime_harnesses(runtime_profile: str) -> list[dict[str, Any]]:
+        spec = get_runtime_profile_spec(runtime_profile)
+        if spec is None:
+            return []
+        return [
+            {
+                "key": harness.key,
+                "label": harness.label,
+                "business_role": harness.business_role,
+            }
+            for harness in spec.harnesses
         ]
 
     @classmethod

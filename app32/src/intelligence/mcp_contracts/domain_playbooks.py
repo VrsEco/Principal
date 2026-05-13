@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from .base import MCPSuccessEnvelope, _StrictModel
-from .profiles import MCPAllowedSurface, MCPProfileName
+from .profiles import MCPAllowedSurface, MCPOverlayName, MCPProfileName
 
 
 DomainPlaybookName = Literal[
@@ -41,6 +41,7 @@ class DomainPlaybook(_StrictModel):
     objective: str = Field(min_length=16, max_length=500)
     allowed_surfaces: list[MCPAllowedSurface] = Field(default_factory=list, min_length=1)
     allowed_profiles: list[MCPProfileName] = Field(default_factory=list, min_length=1)
+    allowed_role_overlays: list[MCPOverlayName] = Field(default_factory=list)
     canonical_tools: list[str] = Field(default_factory=list, min_length=1)
     canonical_artifacts: list[str] = Field(default_factory=list, min_length=1)
     discovery_sequence: list[str] = Field(default_factory=list, min_length=2)
@@ -61,6 +62,8 @@ class DomainPlaybook(_StrictModel):
             raise ValueError("Playbook de domínio MCP deve exigir company_id.")
         if self.domain == "finance" and not set(self.allowed_profiles).issubset({"administrador", "admin_tecnico"}):
             raise ValueError("Playbook financeiro fica restrito a perfis administrativos.")
+        if self.domain == "finance" and any(overlay.endswith("_cliente") for overlay in self.allowed_role_overlays):
+            raise ValueError("Playbook financeiro não deve anunciar overlays do Squad Cliente.")
         if self.domain == "analytics" and "analytics" not in self.allowed_surfaces:
             raise ValueError("Playbook analytics deve permitir a surface analytics.")
         if self.domain == "operations" and self.allowed_profiles != ["admin_tecnico"]:
@@ -119,6 +122,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Guiar agentes em processos, rotinas recorrentes e tarefas operacionais do dia a dia.",
                 allowed_surfaces=["user", "admin", "ops"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_cliente", "comercial_cliente", "operacional_cliente", "pessoas_capacidade_cliente", "coordenador_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "followup_collector_versus", "coordenador_engenharia", "frontend_engenharia", "backend_service_engenharia", "qa_automation_engenharia"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "list_app32_capabilities"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.crud_domains", "src.intelligence.tool_catalog"],
                 discovery_sequence=["list_app32_capabilities", "describe_app32_crud_contracts_tool", "executar tool operacional permitida"],
@@ -137,6 +141,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Orientar execução e consulta de processos com contrato explícito e rastreabilidade por empresa.",
                 allowed_surfaces=["user", "admin", "ops"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_cliente", "operacional_cliente", "coordenador_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "coordenador_engenharia", "backend_service_engenharia", "qa_automation_engenharia"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "list_app32_capabilities"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.crud_domains", "src.intelligence.tooling.capabilities"],
                 discovery_sequence=["list_app32_capabilities", "describe_app32_crud_contracts_tool", "validar escopo do processo"],
@@ -154,6 +159,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Orientar CRUD e análises de projetos, atividades, prazos, responsáveis e riscos de execução.",
                 allowed_surfaces=["user", "admin", "analytics", "ops"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_cliente", "comercial_cliente", "operacional_cliente", "estrategico_cliente", "pessoas_capacidade_cliente", "coordenador_versus", "strategist_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "performance_analyst_versus", "coordenador_engenharia", "frontend_engenharia", "backend_service_engenharia", "qa_automation_engenharia"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "get_projects_execution_risk_read_model"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.crud_domains", "services.analytics_read_model_service"],
                 discovery_sequence=["list_app32_capabilities", "describe_app32_crud_contracts_tool", "get_projects_execution_risk_read_model quando for análise"],
@@ -171,6 +177,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Guiar agentes em pauta, registro, encaminhamentos e acompanhamento de reuniões.",
                 allowed_surfaces=["user", "admin", "ops"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_cliente", "comercial_cliente", "operacional_cliente", "admfin_cliente", "estrategico_cliente", "pessoas_capacidade_cliente", "coordenador_versus", "strategist_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "followup_collector_versus", "finance_versus"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "list_app32_capabilities"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.crud_domains"],
                 discovery_sequence=["list_app32_capabilities", "describe_app32_crud_contracts_tool", "validar reunião e participantes"],
@@ -188,6 +195,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Orientar leitura e evolução de planos, seções, diagnósticos e indicadores estratégicos.",
                 allowed_surfaces=["user", "admin", "analytics"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_cliente", "comercial_cliente", "admfin_cliente", "estrategico_cliente", "coordenador_versus", "strategist_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "performance_analyst_versus", "finance_versus", "auditor_versus", "coordenador_engenharia", "arquiteto_engenharia", "backend_api_engenharia", "ai_engineer_engenharia", "dba_engenharia"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "get_plan_diagnostics_read_model"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.analysis_catalog", "services.analytics_read_model_service"],
                 discovery_sequence=["describe_app32_allowed_analyses_tool", "get_plan_diagnostics_read_model", "se houver mutação, redirecionar para contrato CRUD"],
@@ -205,6 +213,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Guiar leituras e ações financeiras com privilégio elevado, rastreabilidade e mínimo escopo.",
                 allowed_surfaces=["admin", "analytics"],
                 allowed_profiles=["administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_versus", "strategist_versus", "pmo_controller_versus", "finance_versus", "auditor_versus"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "describe_app32_allowed_analyses_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.analysis_catalog", "src.intelligence.security.tool_policy"],
                 discovery_sequence=["describe_app32_profile_contracts_tool", "describe_app32_allowed_analyses_tool", "validar risco financeiro e gate humano"],
@@ -222,6 +231,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Padronizar análises por read models whitelisted e envelopes com grounding.",
                 allowed_surfaces=["analytics", "ops"],
                 allowed_profiles=["administrador", "admin_tecnico"],
+                allowed_role_overlays=["performance_analyst_versus", "auditor_versus", "arquiteto_engenharia", "backend_api_engenharia", "ai_engineer_engenharia", "dba_engenharia"],
                 canonical_tools=["describe_app32_allowed_analyses_tool", "get_plan_diagnostics_read_model"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.analysis_envelopes", "services.analytics_read_model_service"],
                 discovery_sequence=["describe_app32_allowed_analyses_tool", "executar read model whitelisted", "responder com envelope/grounding"],
@@ -257,6 +267,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Guiar incidentes, suporte técnico e intervenções com rastreabilidade operacional.",
                 allowed_surfaces=["ops"],
                 allowed_profiles=["admin_tecnico"],
+                allowed_role_overlays=["coordenador_engenharia", "frontend_engenharia", "backend_service_engenharia", "qa_automation_engenharia"],
                 canonical_tools=["list_ops_app32_capabilities", "describe_app32_surface_playbooks_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.playbooks", "src.intelligence.audit"],
                 discovery_sequence=["list_ops_app32_capabilities", "describe_app32_surface_playbooks_tool", "registrar intervenção quando aplicável"],
@@ -275,6 +286,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Padronizar leitura e atualização de dados próprios do usuário sem promover acesso administrativo.",
                 allowed_surfaces=["user", "admin"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_cliente", "comercial_cliente", "operacional_cliente", "admfin_cliente", "estrategico_cliente", "pessoas_capacidade_cliente"],
                 canonical_tools=["list_user_app32_capabilities", "describe_app32_profile_contracts_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.profiles", "src.intelligence.security.tool_policy"],
                 discovery_sequence=["describe_app32_profile_contracts_tool", "list_user_app32_capabilities", "validar self-service do próprio usuário"],
@@ -293,6 +305,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Padronizar leitura e mutação administrativa de perfis, permissões e acesso de usuários do sistema.",
                 allowed_surfaces=["admin"],
                 allowed_profiles=["administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_versus", "strategist_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "finance_versus", "arquiteto_engenharia", "backend_api_engenharia", "ai_engineer_engenharia"],
                 canonical_tools=["describe_app32_profile_contracts_tool", "list_admin_app32_capabilities"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.profiles", "src.intelligence.security.tool_policy"],
                 discovery_sequence=["describe_app32_profile_contracts_tool", "list_admin_app32_capabilities", "validar menor privilégio administrativo"],
@@ -311,6 +324,7 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 objective="Consolidar políticas, perfis, surfaces, permissões e critérios de auditoria para agentes externos.",
                 allowed_surfaces=["admin", "analytics", "ops"],
                 allowed_profiles=["administrador", "admin_tecnico"],
+                allowed_role_overlays=["coordenador_versus", "strategist_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "performance_analyst_versus", "finance_versus", "auditor_versus", "coordenador_engenharia", "arquiteto_engenharia", "backend_api_engenharia", "backend_service_engenharia", "ai_engineer_engenharia", "dba_engenharia", "qa_automation_engenharia"],
                 canonical_tools=["describe_app32_profile_contracts_tool", "describe_app32_surface_playbooks_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.profiles", "src.intelligence.mcp_contracts.playbooks"],
                 discovery_sequence=["describe_app32_profile_contracts_tool", "describe_app32_surface_playbooks_tool", "confrontar contrato de domínio"],

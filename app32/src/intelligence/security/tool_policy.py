@@ -211,6 +211,51 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
             (*checks, *channel_gate.checks),
         )
 
+    overlay_key = str(metadata.get("squad_overlay") or metadata.get("harness_key") or "").strip().lower() or None
+    overlay_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay(overlay_key) if overlay_key else None
+    if overlay_contract is not None:
+        checks.append("runtime_overlay_contract")
+        if principal.role not in set(overlay_contract.compatible_profiles):
+            return _deny(
+                request,
+                principal,
+                surface,
+                risk,
+                None,
+                f"overlay {overlay_contract.overlay} não é compatível com o perfil base {principal.role}",
+                (*checks, "runtime_overlay_incompatible_profile"),
+            )
+        if surface != overlay_contract.surface:
+            return _deny(
+                request,
+                principal,
+                surface,
+                risk,
+                None,
+                f"overlay {overlay_contract.overlay} exige surface {overlay_contract.surface}",
+                (*checks, "runtime_overlay_surface_mismatch"),
+            )
+        if domain and domain not in set(overlay_contract.allowed_domains):
+            return _deny(
+                request,
+                principal,
+                surface,
+                risk,
+                None,
+                f"overlay {overlay_contract.overlay} não permite o domínio {domain}",
+                (*checks, "runtime_overlay_domain_blocked"),
+            )
+        if action and action not in set(overlay_contract.allowed_actions):
+            return _deny(
+                request,
+                principal,
+                surface,
+                risk,
+                None,
+                f"overlay {overlay_contract.overlay} não permite a ação {action}",
+                (*checks, "runtime_overlay_action_blocked"),
+            )
+
     context_decision = _validate_required_context(principal, request, checks=(*checks, "required_context"))
     if context_decision is not None:
         return context_decision

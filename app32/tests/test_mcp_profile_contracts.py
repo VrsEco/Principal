@@ -22,6 +22,32 @@ class _FakeMCP:
 def test_profile_contracts_cover_all_supported_profiles():
     profiles = {profile.profile for profile in APP32_PROFILE_CONTRACTS_MANIFEST.profiles}
     assert profiles == {"colaborador", "cliente", "administrador", "admin_tecnico"}
+    overlays = {overlay.overlay for overlay in APP32_PROFILE_CONTRACTS_MANIFEST.role_overlays}
+    assert {
+        "coordenador_cliente",
+        "comercial_cliente",
+        "operacional_cliente",
+        "admfin_cliente",
+        "estrategico_cliente",
+        "pessoas_capacidade_cliente",
+        "coordenador_versus",
+        "strategist_versus",
+        "pmo_controller_versus",
+        "business_architect_versus",
+        "operations_versus",
+        "followup_collector_versus",
+        "performance_analyst_versus",
+        "finance_versus",
+        "auditor_versus",
+        "coordenador_engenharia",
+        "arquiteto_engenharia",
+        "frontend_engenharia",
+        "backend_api_engenharia",
+        "backend_service_engenharia",
+        "ai_engineer_engenharia",
+        "dba_engenharia",
+        "qa_automation_engenharia",
+    } == overlays
 
 
 def test_cliente_is_restricted_to_user_read_or_limited_actions():
@@ -63,12 +89,16 @@ def test_profile_contract_tool_returns_manifest_and_profile():
 
     manifest = tool()
     profile = tool("administrador_tecnico")
+    overlay = tool(overlay_role="operacional_cliente")
     invalid = tool("foo")
 
     assert manifest["success"] is True
     assert len(manifest["data"]["profiles"]) == 4
+    assert len(manifest["data"]["role_overlays"]) == 23
     assert profile["success"] is True
     assert profile["data"]["profile"] == "admin_tecnico"
+    assert overlay["success"] is True
+    assert overlay["data"]["overlay"] == "operacional_cliente"
     assert invalid["success"] is False
     assert invalid["error"]["code"] == "profile_contract_not_found"
 
@@ -99,3 +129,30 @@ def test_tool_policy_enforces_surface_by_profile_contract():
     assert "surface analytics não permitida" in blocked.reason
     assert "surface_not_allowed_for_profile" in blocked.checks
     assert allowed.allowed is True
+
+
+def test_cliente_overlay_contracts_keep_finance_blocked_and_user_surface_only():
+    overlay = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay("admfin_cliente")
+
+    assert overlay is not None
+    assert overlay.runtime_profile == "squad_cliente"
+    assert overlay.surface == "user"
+    assert "finance" in overlay.blocked_domains
+    assert "finance" not in overlay.allowed_domains
+
+
+def test_versus_and_engineering_overlay_contracts_reflect_family_and_surface():
+    versus = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay("finance_versus")
+    engineering = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay("backend_service_engenharia")
+
+    assert versus is not None
+    assert versus.runtime_profile == "squad_versus"
+    assert versus.surface == "admin"
+    assert "finance" in versus.allowed_domains
+    assert "update" in versus.allowed_actions
+
+    assert engineering is not None
+    assert engineering.runtime_profile == "engineering"
+    assert engineering.surface == "ops"
+    assert "processes" in engineering.allowed_domains
+    assert "update" in engineering.allowed_actions

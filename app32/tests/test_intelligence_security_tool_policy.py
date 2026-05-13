@@ -256,3 +256,49 @@ def test_tool_policy_allows_company_only_feature_without_user_context() -> None:
 
     assert decision.allowed is True
     assert decision.resolved_company_id == 7
+
+
+def test_tool_policy_blocks_domain_outside_squad_cliente_overlay() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 20,
+            "company_id": 7,
+            "role": "colaborador",
+            "metadata": {"harness_key": "harness_comercial_cliente_v1"},
+        },
+        ToolPolicyRequest(
+            tool_name="list_process_hierarchy",
+            surface="user",
+            domain="processes",
+            action="read",
+            requested_company_id=7,
+            metadata={"harness_key": "harness_comercial_cliente_v1"},
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "overlay comercial_cliente não permite o domínio processes" == decision.reason
+    assert "runtime_overlay_domain_blocked" in decision.checks
+
+
+def test_tool_policy_blocks_action_outside_squad_cliente_overlay() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 21,
+            "company_id": 7,
+            "role": "administrador",
+            "metadata": {"harness_key": "harness_admfin_cliente_v1"},
+        },
+        ToolPolicyRequest(
+            tool_name="create_project_task",
+            surface="user",
+            domain="projects",
+            action="create",
+            requested_company_id=7,
+            metadata={"harness_key": "harness_admfin_cliente_v1"},
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "overlay admfin_cliente não permite a ação create" == decision.reason
+    assert "runtime_overlay_action_blocked" in decision.checks

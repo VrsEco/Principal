@@ -148,7 +148,51 @@ def test_request_context_payload_includes_runtime_profile_and_actor_type(monkeyp
     payload = response.json()
     assert payload["runtime_profile"] == "squad_versus"
     assert payload["actor_type"] == "versus_agent"
+    assert payload["runtime_family"] == "squad_versus"
     assert payload["client_id"] == "app32-mcp-internal"
+
+
+def test_request_context_payload_exposes_default_harness_for_squad_cliente(monkeypatch):
+    module = _reload_auth(monkeypatch)
+
+    class _FakeUserMcpTokenService:
+        def resolve_for_http_request(self, **kwargs):
+            return SimpleNamespace(
+                token_record_id=55,
+                user_id=7,
+                company_id=12,
+                fallback_role="cliente",
+                allowed_surfaces=("user",),
+                subject="ana@empresa.com",
+                client_name="Claude",
+                runtime_profile="squad_cliente",
+                actor_type="client_agent",
+                harness_key="harness_coordenador_cliente_v1",
+                harness_label="Harness Coordenador do Squad Cliente",
+                mcp_enabled=True,
+                training_completed=True,
+            )
+
+    from types import SimpleNamespace
+    import services.user_mcp_token_service as token_service_module
+
+    monkeypatch.setattr(token_service_module, "user_mcp_token_service", _FakeUserMcpTokenService())
+
+    async def endpoint(request: Request):
+        payload = module.resolve_request_context_payload(request, surface="user")
+        return JSONResponse(payload)
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    client = TestClient(app)
+
+    response = client.get("/?company_id=12", headers={"Authorization": "Bearer token-db"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["runtime_family"] == "squad_cliente"
+    assert payload["harness_key"] == "harness_coordenador_cliente_v1"
+    assert payload["harness_label"] == "Harness Coordenador do Squad Cliente"
 
 
 def test_request_context_middleware_blocks_runtime_profile_surface_mismatch(monkeypatch):
@@ -192,7 +236,7 @@ def test_request_context_middleware_blocks_when_training_missing(monkeypatch):
                 subject="ana@empresa.com",
                 client_name="Claude",
                 runtime_profile="squad_cliente",
-                actor_type="human_user",
+                actor_type="client_agent",
                 mcp_enabled=True,
                 training_completed=False,
             )

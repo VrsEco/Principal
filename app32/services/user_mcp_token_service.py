@@ -61,6 +61,8 @@ class UserMcpResolvedContext:
     client_name: str | None
     runtime_profile: str | None = None
     actor_type: str | None = None
+    harness_key: str | None = None
+    harness_label: str | None = None
     mcp_enabled: bool = True
     training_completed: bool = True
 
@@ -182,7 +184,19 @@ class UserMcpTokenService:
             "squad": normalized_squad,
             "squad_label": squad_label,
             "runtime_profile": runtime_profile_spec.key if runtime_profile_spec else normalized_squad,
-            "actor_type": runtime_profile_spec.actor_type if runtime_profile_spec else "human_user",
+            "actor_type": runtime_profile_spec.actor_type if runtime_profile_spec else "client_agent",
+            "runtime_family": runtime_profile_spec.family_key if runtime_profile_spec else normalized_squad,
+            "runtime_family_label": runtime_profile_spec.family_label if runtime_profile_spec else squad_label,
+            "harness_key": runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
+            "harness_label": runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
+            "available_harnesses": [
+                {
+                    "key": harness.key,
+                    "label": harness.label,
+                    "business_role": harness.business_role,
+                }
+                for harness in (runtime_profile_spec.harnesses if runtime_profile_spec else ())
+            ],
             "requires_training": runtime_profile_spec.requires_training if runtime_profile_spec else True,
             "resolved_profile": resolved_profile,
             "resolved_surface": resolved_surface,
@@ -484,13 +498,18 @@ class UserMcpTokenService:
                 "name": f"Sapiens {normalized_surface.title()}",
                 "token": token_value,
                 "url": url,
+                "profile": runtime_config["runtime_profile"],
+                "harness_key": runtime_config["harness_key"],
+                "harness_label": runtime_config["harness_label"],
             }
             config_text = (
                 f"Nome: Sapiens {normalized_surface.title()}\n"
                 f"Empresa: {display_name}\n"
                 f"URL: {url}\n"
                 f"Autenticação: Bearer Token\n"
-                f"Token: {token_value}"
+                f"Token: {token_value}\n"
+                f"Perfil de runtime: {runtime_config['runtime_profile']}\n"
+                f"Harness inicial: {runtime_config['harness_label'] or '-'}"
             )
             technical_config_text = (
                 f"{config_text}\n\n"
@@ -518,6 +537,8 @@ class UserMcpTokenService:
                 f"- URL: {url}",
                 "- Autenticação: Bearer Token",
                 f"- Token: {token_value}",
+                f"- Perfil de runtime: {runtime_config['runtime_profile']}",
+                f"- Harness inicial: {runtime_config['harness_label'] or '-'}",
                 "",
                 "JSON:",
                 json.dumps(config_json, ensure_ascii=False, indent=2),
@@ -562,6 +583,11 @@ class UserMcpTokenService:
                 "squad_label": runtime_config["squad_label"],
                 "runtime_profile": runtime_config["runtime_profile"],
                 "actor_type": runtime_config["actor_type"],
+                "runtime_family": runtime_config["runtime_family"],
+                "runtime_family_label": runtime_config["runtime_family_label"],
+                "harness_key": runtime_config["harness_key"],
+                "harness_label": runtime_config["harness_label"],
+                "available_harnesses": runtime_config["available_harnesses"],
                 "requires_training": runtime_config["requires_training"],
                 "resolved_profile": runtime_config["resolved_profile"],
                 "resolved_surface": runtime_config["resolved_surface"],
@@ -626,7 +652,9 @@ class UserMcpTokenService:
                 subject=user.email,
                 client_name=record.last_client_name,
                 runtime_profile="squad_cliente",
-                actor_type="human_user",
+                actor_type="client_agent",
+                harness_key="harness_coordenador_cliente_v1",
+                harness_label="Harness Coordenador do Squad Cliente",
                 mcp_enabled=True,
                 training_completed=True,
             )

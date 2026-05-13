@@ -6,7 +6,7 @@ from pydantic import Field, model_validator
 
 from .base import MCPSuccessEnvelope, _StrictModel
 from .playbooks import APP32_SURFACE_PLAYBOOKS_MANIFEST, PlaybookSurface
-from .profiles import APP32_PROFILE_CONTRACTS_MANIFEST, MCPMutationRisk, MCPProfileName
+from .profiles import APP32_PROFILE_CONTRACTS_MANIFEST, MCPMutationRisk, MCPOverlayName, MCPProfileName
 
 
 PermissionAction = Literal["discover", "read", "create", "update", "delete", "analyze", "audit"]
@@ -21,6 +21,8 @@ PermissionDomain = Literal[
     "analytics",
     "workload",
     "operations",
+    "identity_self_service",
+    "identity_admin",
 ]
 
 
@@ -107,9 +109,51 @@ class ProfilePermissionSurfaceMatrix(_StrictModel):
         return self
 
 
+class OverlayPermissionSurfaceMatrix(_StrictModel):
+    overlay: MCPOverlayName
+    runtime_profile: str = Field(min_length=3, max_length=80)
+    surface: PlaybookSurface
+    title: str = Field(min_length=8, max_length=160)
+    summary: str = Field(min_length=16, max_length=360)
+    compatible_profiles: list[MCPProfileName] = Field(default_factory=list, min_length=1)
+    harness_keys: list[str] = Field(default_factory=list, min_length=1)
+    domains: list[PermissionDomainRule] = Field(default_factory=list, min_length=1)
+    default_scope: Literal["active_company", "explicit_company_id"] = "active_company"
+    tenant_scope_required: bool = True
+
+    @model_validator(mode="after")
+    def _validate_overlay_matrix(self):
+        if not self.tenant_scope_required:
+            raise ValueError("Overlay matrix exige tenant_scope_required=True.")
+        playbook = APP32_SURFACE_PLAYBOOKS_MANIFEST.get_surface(self.surface)
+        if playbook is None:
+            raise ValueError(f"Surface playbook ausente para {self.surface}.")
+        if self.default_scope != playbook.default_scope:
+            raise ValueError("default_scope do overlay matrix deve seguir o playbook da surface.")
+        overlay_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay(self.overlay)
+        if overlay_contract is None:
+            raise ValueError(f"Overlay não suportado na matriz: {self.overlay}.")
+        if self.runtime_profile != overlay_contract.runtime_profile:
+            raise ValueError("runtime_profile do overlay matrix deve seguir o contrato do overlay.")
+        if self.surface != overlay_contract.surface:
+            raise ValueError("surface do overlay matrix deve seguir o contrato do overlay.")
+        if set(self.compatible_profiles) != set(overlay_contract.compatible_profiles):
+            raise ValueError("compatible_profiles do overlay matrix deve seguir o contrato do overlay.")
+        if set(self.harness_keys) != {overlay_contract.harness_key}:
+            raise ValueError("harness_keys do overlay matrix deve seguir o contrato do overlay.")
+        matrix_domains = {rule.domain for rule in self.domains}
+        if matrix_domains != set(overlay_contract.allowed_domains):
+            raise ValueError("Domínios do overlay matrix devem refletir exatamente os domínios permitidos no contrato do overlay.")
+        for rule in self.domains:
+            if any(action not in set(overlay_contract.allowed_actions) for action in rule.allowed_actions):
+                raise ValueError("Overlay matrix não pode liberar ação fora do contrato do overlay.")
+        return self
+
+
 class PermissionMatrixManifest(_StrictModel):
     version: str = Field(default="app32.ai-mcp.permission-matrix.v1", min_length=1, max_length=80)
     matrices: list[ProfilePermissionSurfaceMatrix] = Field(default_factory=list, min_length=1)
+    overlay_matrices: list[OverlayPermissionSurfaceMatrix] = Field(default_factory=list)
 
     def get_profile(self, profile: MCPProfileName | str) -> list[ProfilePermissionSurfaceMatrix]:
         normalized = str(profile or "").strip().lower()
@@ -119,6 +163,10 @@ class PermissionMatrixManifest(_StrictModel):
     def get_surface(self, surface: PlaybookSurface | str) -> list[ProfilePermissionSurfaceMatrix]:
         normalized = str(surface or "").strip().lower()
         return [matrix for matrix in self.matrices if matrix.surface == normalized]
+
+    def get_overlay(self, overlay: MCPOverlayName | str) -> list[OverlayPermissionSurfaceMatrix]:
+        normalized = str(overlay or "").strip().lower()
+        return [matrix for matrix in self.overlay_matrices if matrix.overlay == normalized or normalized in set(matrix.harness_keys)]
 
 
 PermissionMatrixEnvelope = MCPSuccessEnvelope[
@@ -149,6 +197,396 @@ def _rule(
 
 def build_permission_matrix_manifest() -> PermissionMatrixManifest:
     return PermissionMatrixManifest(
+        overlay_matrices=[
+            OverlayPermissionSurfaceMatrix(
+                overlay="coordenador_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — Coordenador do Squad Versus",
+                summary="Discovery consultivo e roteamento metodológico com leitura ampla e atualização controlada.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_coordenador_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("routine", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Leitura consultiva de rotina."]),
+                    _rule("processes", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Estruturação de processos e intervenção consultiva."]),
+                    _rule("projects", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Projetos em modo consultivo."]),
+                    _rule("meetings", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Reuniões e follow-up executivo."]),
+                    _rule("strategy", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Estratégia com mutação consultiva controlada."]),
+                    _rule("governance", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Governança consultiva."]),
+                    _rule("finance", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Finanças com leitura controlada e update sob gate."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="strategist_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — Strategist Versus",
+                summary="Especialista de estratégia e crescimento com foco em análise e evolução controlada de planos.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_strategist_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("strategy", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Planos e indicadores em modo consultivo."]),
+                    _rule("projects", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Projetos como evidência estratégica."]),
+                    _rule("meetings", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Reuniões estratégicas e follow-up executivo."]),
+                    _rule("governance", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Governança em leitura crítica."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="pmo_controller_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — PMO Controller Versus",
+                summary="Cadência, governança de execução e cobrança estruturada de andamento.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_pmo_controller_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("routine", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Cadência operacional."]),
+                    _rule("processes", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Acompanhamento de execução de processos."]),
+                    _rule("projects", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["PMO sobre projetos e tarefas."]),
+                    _rule("meetings", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Ritos executivos e follow-up."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Leitura de direção estratégica."]),
+                    _rule("governance", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Governança de execução."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="business_architect_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — Business Architect Versus",
+                summary="Desenho operacional, processos e coerência entre método, workflow e capability.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_business_architect_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("routine", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Rotina como insumo arquitetural."]),
+                    _rule("processes", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Processos e desenho operacional."]),
+                    _rule("projects", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Projetos como evidência de execução."]),
+                    _rule("meetings", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Reuniões como fonte de contexto."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Estratégia como norte de desenho."]),
+                    _rule("governance", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Governança estrutural."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="operations_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — Operations Versus",
+                summary="Leitura crítica da operação com orientação consultiva e ajustes controlados.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_operations_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("routine", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Rotina operacional."]),
+                    _rule("processes", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Processos operacionais."]),
+                    _rule("projects", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Projetos de execução."]),
+                    _rule("meetings", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Reuniões de operação."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Leitura de alinhamento estratégico."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="followup_collector_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — Follow-up Collector Versus",
+                summary="Cobrança estruturada, fechamento de pendências e manutenção da cadência consultiva.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_followup_collector_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("routine", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Pendências e follow-up de rotina."]),
+                    _rule("projects", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Pendências de projeto."]),
+                    _rule("meetings", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, notes=["Pendências de reunião."]),
+                    _rule("governance", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Governança da cadência."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="performance_analyst_versus",
+                runtime_profile="squad_versus",
+                surface="analytics",
+                title="Overlay Matrix — Performance Analyst Versus",
+                summary="Análise executiva de performance e indicadores em modo estritamente read-only.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_performance_analyst_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("analytics", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Read-only analítico."]),
+                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Indicadores e planos."]),
+                    _rule("workload", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], requires_explicit_company_id=True, notes=["Capacidade e sinais executivos."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="finance_versus",
+                runtime_profile="squad_versus",
+                surface="admin",
+                title="Overlay Matrix — Finance Versus",
+                summary="Controladoria e crítica econômico-financeira com leitura forte e update controlado.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_finance_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("finance", ["discover", "read", "analyze", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Finanças com gate em mutação."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Estratégia econômico-financeira."]),
+                    _rule("governance", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Governança de controladoria."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="auditor_versus",
+                runtime_profile="squad_versus",
+                surface="analytics",
+                title="Overlay Matrix — Auditor Versus",
+                summary="Auditoria em modo read-only com foco em conformidade, finanças e execução.",
+                compatible_profiles=["administrador"],
+                harness_keys=["harness_auditor_versus_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("analytics", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Read-only auditável."]),
+                    _rule("finance", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, human_gate_for_actions=["analyze"], notes=["Leitura financeira auditável."]),
+                    _rule("strategy", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Leitura estratégica auditável."]),
+                    _rule("governance", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Conformidade e governança."]),
+                    _rule("workload", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Capacidade em leitura auditável."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="coordenador_engenharia",
+                runtime_profile="engineering",
+                surface="ops",
+                title="Overlay Matrix — Coordenador do Squad de Engenharia",
+                summary="Triagem técnica e roteamento disciplinado em ops com visão transversal de intervenção.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_coordenador_engenharia_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("operations", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Coordenação de incidente/intervenção."]),
+                    _rule("routine", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Rotina em contexto técnico."]),
+                    _rule("processes", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Processos em contexto técnico."]),
+                    _rule("projects", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Projetos em contexto técnico."]),
+                    _rule("meetings", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Reuniões em contexto técnico."]),
+                    _rule("workload", ["discover", "read", "analyze"], notes=["Capacidade técnica."]),
+                    _rule("governance", ["discover", "read", "analyze", "audit"], notes=["Governança técnica."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="arquiteto_engenharia",
+                runtime_profile="engineering",
+                surface="admin",
+                title="Overlay Matrix — Arquiteto de Engenharia",
+                summary="Boundary, segurança, arquitetura e coerência estrutural.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_arquiteto_engenharia_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("governance", ["discover", "read", "analyze", "audit", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Governança e boundary."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Estratégia técnica."]),
+                    _rule("identity_admin", ["discover", "read", "analyze", "audit", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Admin técnico de identidade."]),
+                    _rule("analytics", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Diagnóstico complementar."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="frontend_engenharia",
+                runtime_profile="engineering",
+                surface="ops",
+                title="Overlay Matrix — Frontend de Engenharia",
+                summary="Diagnóstico e ajuste técnico de interface, UX e templates.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_frontend_engenharia_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("operations", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Incidente/ajuste de interface."]),
+                    _rule("routine", ["discover", "read", "analyze", "audit", "update"], notes=["Fluxos operacionais em UI."]),
+                    _rule("projects", ["discover", "read", "analyze", "audit", "update"], notes=["Projetos/telas."]),
+                    _rule("meetings", ["discover", "read", "analyze", "audit", "update"], notes=["Reuniões/telas."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="backend_api_engenharia",
+                runtime_profile="engineering",
+                surface="admin",
+                title="Overlay Matrix — Backend API de Engenharia",
+                summary="Contratos, surfaces, schemas e publicação coerente de capabilities.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_backend_api_engenharia_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("governance", ["discover", "read", "analyze", "audit", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Governança de contracts/surfaces."]),
+                    _rule("identity_admin", ["discover", "read", "analyze", "audit", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Identity admin técnico."]),
+                    _rule("analytics", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Diagnóstico complementar."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Readiness técnica."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="backend_service_engenharia",
+                runtime_profile="engineering",
+                surface="ops",
+                title="Overlay Matrix — Backend Service de Engenharia",
+                summary="Regra de negócio determinística e services reutilizáveis em contexto de intervenção técnica.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_backend_service_engenharia_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("operations", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Intervenção service-side."]),
+                    _rule("routine", ["discover", "read", "analyze", "audit", "update"], notes=["Rotina em contexto técnico."]),
+                    _rule("processes", ["discover", "read", "analyze", "audit", "update"], notes=["Processos em contexto técnico."]),
+                    _rule("projects", ["discover", "read", "analyze", "audit", "update"], notes=["Projetos em contexto técnico."]),
+                    _rule("meetings", ["discover", "read", "analyze", "audit", "update"], notes=["Meetings em contexto técnico."]),
+                    _rule("governance", ["discover", "read", "analyze", "audit"], notes=["Coerência de service."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="ai_engineer_engenharia",
+                runtime_profile="engineering",
+                surface="admin",
+                title="Overlay Matrix — AI Engineer de Engenharia",
+                summary="Agentes, MCP, LangGraph, RAG e orquestração inteligente com governança.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_ai_engineer_engenharia_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("governance", ["discover", "read", "analyze", "audit", "update"], requires_explicit_company_id=True, human_gate_for_actions=["update"], notes=["Governança agentic/MCP."]),
+                    _rule("analytics", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Diagnóstico de telemetria e uso."]),
+                    _rule("strategy", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Evolução de capabilities."]),
+                    _rule("identity_admin", ["discover", "read", "analyze"], requires_explicit_company_id=True, notes=["Identidade técnica quando estritamente necessário."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="dba_engenharia",
+                runtime_profile="engineering",
+                surface="analytics",
+                title="Overlay Matrix — DBA de Engenharia",
+                summary="Diagnóstico de dados, performance e integridade em modo read-only e auditável.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_dba_engenharia_v1"],
+                default_scope="explicit_company_id",
+                domains=[
+                    _rule("analytics", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Diagnóstico de dados read-only."]),
+                    _rule("workload", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Capacidade e performance."]),
+                    _rule("governance", ["discover", "read", "analyze", "audit"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Governança de dados."]),
+                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Readiness técnica."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="qa_automation_engenharia",
+                runtime_profile="engineering",
+                surface="ops",
+                title="Overlay Matrix — QA Automation de Engenharia",
+                summary="Smoke, regressão, evidência e validação disciplinada em contexto técnico.",
+                compatible_profiles=["admin_tecnico"],
+                harness_keys=["harness_qa_automation_engenharia_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("operations", ["discover", "read", "analyze", "audit", "update"], human_gate_for_actions=["update"], notes=["Validação técnica em incidente/intervenção."]),
+                    _rule("routine", ["discover", "read", "analyze", "audit", "update"], notes=["Smoke de fluxos operacionais."]),
+                    _rule("processes", ["discover", "read", "analyze", "audit", "update"], notes=["Regressão de processos."]),
+                    _rule("projects", ["discover", "read", "analyze", "audit", "update"], notes=["Regressão de projetos/tarefas."]),
+                    _rule("meetings", ["discover", "read", "analyze", "audit", "update"], notes=["Regressão de reuniões."]),
+                    _rule("workload", ["discover", "read", "analyze"], notes=["Indicadores de capacidade técnica."]),
+                    _rule("governance", ["discover", "read", "analyze", "audit"], notes=["Evidência e critérios de aceite."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="coordenador_cliente",
+                runtime_profile="squad_cliente",
+                surface="user",
+                title="Overlay Matrix — Coordenador do Squad Cliente",
+                summary="Roteamento inicial e visão transversal do Squad Cliente, com criação/atualização operacional e bloqueio de domínios sensíveis.",
+                compatible_profiles=["cliente", "colaborador", "administrador"],
+                harness_keys=["harness_coordenador_cliente_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordenação operacional do dia a dia."]),
+                    _rule("processes", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Pode estruturar execução de processos na surface user."]),
+                    _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordena tarefas e projetos do cliente."]),
+                    _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordena reuniões e follow-up do cliente."]),
+                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Estratégia em leitura/análise guiada."]),
+                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Self-service só para contexto do próprio usuário."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="comercial_cliente",
+                runtime_profile="squad_cliente",
+                surface="user",
+                title="Overlay Matrix — Comercial do Squad Cliente",
+                summary="Foco comercial e de crescimento com atuação em rotina, projetos, reuniões e estratégia em menor privilégio.",
+                compatible_profiles=["cliente", "colaborador", "administrador"],
+                harness_keys=["harness_comercial_cliente_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Cadência comercial e tarefas do relacionamento."]),
+                    _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Pipeline e iniciativas comerciais assistidas."]),
+                    _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Reuniões comerciais e follow-up."]),
+                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Leitura estratégica comercial, sem mutação estrutural."]),
+                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="operacional_cliente",
+                runtime_profile="squad_cliente",
+                surface="user",
+                title="Overlay Matrix — Operacional do Squad Cliente",
+                summary="Foco na execução operacional diária com permissão para criação/atualização em rotina, processos, projetos e reuniões.",
+                compatible_profiles=["cliente", "colaborador", "administrador"],
+                harness_keys=["harness_operacional_cliente_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Execução operacional do dia a dia."]),
+                    _rule("processes", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Condução de processos operacionais."]),
+                    _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Acompanhamento e ajuste de tarefas."]),
+                    _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordenação operacional de reuniões."]),
+                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="admfin_cliente",
+                runtime_profile="squad_cliente",
+                surface="user",
+                title="Overlay Matrix — Adm/Financeiro do Squad Cliente",
+                summary="Organiza contexto administrativo/financeiro em leitura assistida, mantendo finanças sensíveis fora da surface user.",
+                compatible_profiles=["cliente", "colaborador", "administrador"],
+                harness_keys=["harness_admfin_cliente_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("routine", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Consulta operacional administrativa."]),
+                    _rule("projects", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Projetos em leitura contextual."]),
+                    _rule("meetings", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Reuniões em leitura contextual."]),
+                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Estratégia em leitura analítica sem finanças sensíveis."]),
+                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="estrategico_cliente",
+                runtime_profile="squad_cliente",
+                surface="user",
+                title="Overlay Matrix — Estratégico do Squad Cliente",
+                summary="Prioriza planos e sinais executivos em leitura/análise, sem mutação estrutural na surface user.",
+                compatible_profiles=["cliente", "colaborador", "administrador"],
+                harness_keys=["harness_estrategico_cliente_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Diagnóstico e síntese estratégica assistida."]),
+                    _rule("projects", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Projetos como evidência de execução."]),
+                    _rule("meetings", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Reuniões estratégicas em leitura."]),
+                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),
+                ],
+            ),
+            OverlayPermissionSurfaceMatrix(
+                overlay="pessoas_capacidade_cliente",
+                runtime_profile="squad_cliente",
+                surface="user",
+                title="Overlay Matrix — Pessoas/Capacidade do Squad Cliente",
+                summary="Coordena pessoas e capacidade no plano operacional sem abrir analytics/workload privilegiado na surface user.",
+                compatible_profiles=["cliente", "colaborador", "administrador"],
+                harness_keys=["harness_pessoas_capacidade_cliente_v1"],
+                default_scope="active_company",
+                domains=[
+                    _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Rotinas e tarefas da equipe."]),
+                    _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Projetos e distribuição operacional do trabalho."]),
+                    _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Ritos e acompanhamentos da equipe."]),
+                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),
+                ],
+            ),
+        ],
         matrices=[
             ProfilePermissionSurfaceMatrix(
                 profile="colaborador",
@@ -263,6 +701,7 @@ __all__ = [
     "PermissionDomainRule",
     "PermissionMatrixEnvelope",
     "PermissionMatrixManifest",
+    "OverlayPermissionSurfaceMatrix",
     "ProfilePermissionSurfaceMatrix",
     "build_permission_matrix_manifest",
 ]

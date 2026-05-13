@@ -38,6 +38,7 @@ def test_permission_matrix_manifest_covers_main_profiles_and_surfaces():
     assert {"colaborador", "cliente", "administrador", "admin_tecnico"} <= profiles
     assert surfaces == {"user", "admin", "analytics", "ops"}
     assert len(manifest.matrices) == 7
+    assert len(manifest.overlay_matrices) == 23
 
 
 def test_permission_matrix_boundaries_for_cliente_and_finance():
@@ -82,6 +83,7 @@ def test_permission_matrix_tool_returns_manifest_and_filters():
     profile_payload = tool(profile="administrador")
     surface_payload = tool(surface="analytics")
     single_payload = tool(profile="admin_tecnico", surface="ops")
+    overlay_payload = tool(overlay_role="operacional_cliente")
     missing_payload = tool(profile="foo")
 
     assert manifest_payload["success"] is True
@@ -93,6 +95,8 @@ def test_permission_matrix_tool_returns_manifest_and_filters():
     assert single_payload["success"] is True
     assert single_payload["data"]["surface"] == "ops"
     assert single_payload["data"]["profile"] == "admin_tecnico"
+    assert overlay_payload["success"] is True
+    assert overlay_payload["data"]["overlay"] == "operacional_cliente"
     assert missing_payload["success"] is False
     assert missing_payload["error"]["code"] == "permission_matrix_not_found"
 
@@ -163,3 +167,31 @@ def test_permission_matrix_contract_rejects_invalid_cliente_and_ops_rules():
                 ),
             ]
         )
+
+
+def test_overlay_permission_matrix_for_admfin_cliente_keeps_finance_outside_user_surface():
+    matrices = APP32_PERMISSION_MATRIX_MANIFEST.get_overlay("admfin_cliente")
+
+    assert len(matrices) == 1
+    matrix = matrices[0]
+    assert matrix.surface == "user"
+    assert all(rule.domain != "finance" for rule in matrix.domains)
+    assert all(
+        not any(action in rule.allowed_actions for action in {"create", "update", "delete"})
+        for rule in matrix.domains
+    )
+
+
+def test_overlay_permission_matrix_supports_versus_and_engineering_families():
+    versus = APP32_PERMISSION_MATRIX_MANIFEST.get_overlay("auditor_versus")
+    engineering = APP32_PERMISSION_MATRIX_MANIFEST.get_overlay("coordenador_engenharia")
+
+    assert len(versus) == 1
+    assert versus[0].surface == "analytics"
+    assert any(rule.domain == "finance" for rule in versus[0].domains)
+    assert all("update" not in rule.allowed_actions for rule in versus[0].domains)
+
+    assert len(engineering) == 1
+    assert engineering[0].surface == "ops"
+    assert any(rule.domain == "operations" for rule in engineering[0].domains)
+    assert any("update" in rule.allowed_actions for rule in engineering[0].domains)

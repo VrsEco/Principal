@@ -40,15 +40,33 @@ def register_profile_contract_tools(mcp: Any) -> None:
     """Registra tools MCP de descoberta dos contratos por perfil."""
 
     @mcp.tool()
-    def describe_app32_profile_contracts_tool(profile: Optional[str] = None) -> dict[str, Any]:
+    def describe_app32_profile_contracts_tool(
+        profile: Optional[str] = None,
+        overlay_role: Optional[str] = None,
+    ) -> dict[str, Any]:
         """
         Descreve os contratos MCP por perfil:
         colaborador, cliente, administrador e admin_tecnico.
         """
-        if not profile:
+        if not profile and not overlay_role:
             return _success(
                 "profile_contracts.describe",
                 APP32_PROFILE_CONTRACTS_MANIFEST.model_dump(mode="json"),
+            )
+
+        if overlay_role:
+            normalized_overlay = overlay_role.strip().lower()
+            overlay = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay(normalized_overlay)
+            if overlay is None:
+                return _error(
+                    "profile_contracts.describe",
+                    f"Overlay MCP inválido ou não encontrado: {overlay_role}.",
+                    profile=normalized_overlay or None,
+                )
+            return _success(
+                "profile_contracts.describe",
+                overlay.model_dump(mode="json"),
+                profile=overlay.overlay,
             )
 
         normalized = profile.strip().lower()

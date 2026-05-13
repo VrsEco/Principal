@@ -13,6 +13,8 @@ def test_user_playbook_profiles_are_restricted_to_operational_roles():
     assert set(playbook.actor_roles) == {"colaborador", "cliente", "administrador"}
     assert "admin_tecnico" not in playbook.actor_roles
     assert "finance" not in playbook.allowed_domains
+    assert any(item.overlay == "coordenador_cliente" for item in playbook.role_overlays)
+    assert any(item.overlay == "admfin_cliente" for item in playbook.role_overlays)
 
 
 def test_admin_analytics_and_ops_playbooks_are_restricted_to_admin_profiles():

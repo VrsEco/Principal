@@ -255,6 +255,8 @@ def _resolve_db_backed_identity(
             "user_mcp_token_id": resolved.token_record_id,
             "runtime_profile": getattr(resolved, "runtime_profile", None),
             "actor_type": getattr(resolved, "actor_type", None),
+            "harness_key": getattr(resolved, "harness_key", None),
+            "harness_label": getattr(resolved, "harness_label", None),
             "mcp_enabled": getattr(resolved, "mcp_enabled", True),
             "training_completed": getattr(resolved, "training_completed", True),
         },
@@ -361,6 +363,8 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
     runtime_spec = get_runtime_profile_spec(normalized_runtime_profile)
     if actor_type is None:
         actor_type = _coerce_str(identity.metadata.get("actor_type")) or (runtime_spec.actor_type if runtime_spec else None)
+    harness_key = _coerce_str(identity.metadata.get("harness_key")) or (runtime_spec.default_harness_key if runtime_spec else None)
+    harness_label = _coerce_str(identity.metadata.get("harness_label")) or (runtime_spec.default_harness_label if runtime_spec else None)
 
     return {
         "user_id": identity.user_id,
@@ -372,6 +376,10 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
         "thread_id": thread_id,
         "runtime_profile": normalized_runtime_profile,
         "actor_type": actor_type,
+        "runtime_family": runtime_spec.family_key if runtime_spec else normalized_runtime_profile,
+        "runtime_family_label": runtime_spec.family_label if runtime_spec else normalized_runtime_profile,
+        "harness_key": harness_key,
+        "harness_label": harness_label,
         "client_id": identity.client_id,
         "token_subject": identity.metadata.get("subject"),
         "mcp_enabled": bool(identity.metadata.get("mcp_enabled", True)),

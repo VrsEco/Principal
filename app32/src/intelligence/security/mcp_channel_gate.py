@@ -72,9 +72,14 @@ def evaluate_mcp_channel_gate(request: McpChannelGateRequest) -> McpChannelGateD
     resolved_actor_type = str(request.actor_type or "").strip().lower() or None
     if spec is not None:
         checks.append("runtime_profile_spec")
-        if normalized_surface != spec.default_surface:
+        allowed_surfaces = tuple(spec.allowed_surfaces or (spec.default_surface,))
+        if normalized_surface not in allowed_surfaces:
+            if len(allowed_surfaces) == 1:
+                reason = f"runtime_profile {spec.key} exige surface {allowed_surfaces[0]}"
+            else:
+                reason = f"runtime_profile {spec.key} não permite surface {normalized_surface}"
             return _deny(
-                f"runtime_profile {spec.key} exige surface {spec.default_surface}",
+                reason,
                 (*checks, "runtime_profile_surface_mismatch"),
                 runtime_profile=spec.key,
                 actor_type=resolved_actor_type or spec.actor_type,

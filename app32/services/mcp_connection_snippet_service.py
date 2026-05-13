@@ -4,6 +4,8 @@ import json
 from collections import OrderedDict
 from typing import Any
 
+from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
+
 
 class MCPConnectionSnippetService:
     """Gera saídas prontas para copiar de uma conexão MCP remota."""
@@ -45,6 +47,19 @@ class MCPConnectionSnippetService:
             ],
             "routing_note": "O Squad Cliente deve operar em menor privilégio, com utilização assistida, foco operacional e sem tentar contornar restrições de admin, analytics ou ops.",
         },
+        "engineering": {
+            "label": "Squad de Engenharia",
+            "activation_subject": "ative o Squad de Engenharia neste ambiente usando a conexão MCP abaixo.",
+            "url": "https://app.gestaoversus.com.br/mcp/ops",
+            "surface": "ops",
+            "startup_tools": [
+                "list_ops_app32_capabilities",
+                "describe_app32_profile_contracts_tool",
+                "describe_app32_surface_playbooks_tool",
+                "describe_app32_domain_playbooks_tool",
+            ],
+            "routing_note": "O Squad de Engenharia deve operar com disciplina técnica: triagem via coordenador, discovery antes de intervenção, company_id explícito quando aplicável e trilha auditável em ops/admin/analytics.",
+        },
     }
 
     @classmethod
@@ -52,7 +67,11 @@ class MCPConnectionSnippetService:
         normalized = cls._normalize(payload)
         source_json = cls._build_source_json(normalized)
         profile = cls.RUNTIME_PROFILES[normalized["profile"]]
+        runtime_spec = get_runtime_profile_spec(normalized["profile"])
         startup_tools = ", ".join(profile["startup_tools"])
+        harness_label = normalized.get("harness_label") or (
+            runtime_spec.default_harness_label if runtime_spec is not None else None
+        )
 
         lines = [
             f"Quero que você {profile['activation_subject']}",
@@ -65,39 +84,45 @@ class MCPConnectionSnippetService:
             f"- Perfil de runtime: {profile['label']}",
             f"- Surface alvo: {profile['surface']}",
             f"- Token: {normalized['token']}",
-            "",
-            "JSON:",
-            source_json,
-            "",
-            "Sua tarefa:",
-            "1. Verifique se este cliente suporta configuração MCP automática.",
-            "2. Se suportar, faça a configuração.",
-            "3. Se este cliente permitir criar atalho, comando, agente ou persona, crie um atalho chamado Sapiens.",
-            f"4. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
-            "5. Ao ativar, use esta mensagem inicial:",
-            "",
-            "◆ SAPIENS · Gestão Versus ● ativo",
-            "",
-            "Olá! Sou o Sapiens, assistente virtual da Versus.",
-            "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
-            "",
-            "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
-            profile["routing_note"],
-            "",
-            "6. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
-            "- Este cliente não suporta ativação automática do Sapiens.",
-            "- A conexão técnica está pronta, mas precisa ser configurada manualmente.",
-            "- Se quiser, eu posso te mostrar o passo a passo manual para este cliente.",
-            "7. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa, execute a sequência de startup informada e explique ao usuário como chamar o Sapiens de forma simples na conversa.",
-            "8. Não invente valores. Use exatamente os dados fornecidos.",
-            "",
-            "Formato da resposta:",
-            "1. Diagnóstico",
-            "2. Ação executada",
-            "3. Resultado final",
-            "4. Como usar o Sapiens neste cliente",
-            "5. Se não suportar, mostrar a resposta padrão",
         ]
+        if harness_label:
+            lines.append(f"- Harness inicial: {harness_label}")
+        lines.extend(
+            [
+                "",
+                "JSON:",
+                source_json,
+                "",
+                "Sua tarefa:",
+                "1. Verifique se este cliente suporta configuração MCP automática.",
+                "2. Se suportar, faça a configuração.",
+                "3. Se este cliente permitir criar atalho, comando, agente ou persona, crie um atalho chamado Sapiens.",
+                f"4. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
+                "5. Ao ativar, use esta mensagem inicial:",
+                "",
+                "◆ SAPIENS · Gestão Versus ● ativo",
+                "",
+                "Olá! Sou o Sapiens, assistente virtual da Versus.",
+                "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
+                "",
+                "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
+                profile["routing_note"],
+                "",
+                "6. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
+                "- Este cliente não suporta ativação automática do Sapiens.",
+                "- A conexão técnica está pronta, mas precisa ser configurada manualmente.",
+                "- Se quiser, eu posso te mostrar o passo a passo manual para este cliente.",
+                "7. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa, execute a sequência de startup informada e explique ao usuário como chamar o Sapiens de forma simples na conversa.",
+                "8. Não invente valores. Use exatamente os dados fornecidos.",
+                "",
+                "Formato da resposta:",
+                "1. Diagnóstico",
+                "2. Ação executada",
+                "3. Resultado final",
+                "4. Como usar o Sapiens neste cliente",
+                "5. Se não suportar, mostrar a resposta padrão",
+            ]
+        )
         return "\n".join(lines)
 
     @classmethod
@@ -116,6 +141,8 @@ class MCPConnectionSnippetService:
                             ("profile", normalized["profile"]),
                             ("profile_label", profile["label"]),
                             ("surface", profile["surface"]),
+                            ("harness_key", normalized.get("harness_key")),
+                            ("harness_label", normalized.get("harness_label")),
                         ]
                     ),
                 ),
@@ -145,6 +172,8 @@ class MCPConnectionSnippetService:
                 ("name", normalized["name"]),
                 ("profile", normalized["profile"]),
                 ("surface", profile["surface"]),
+                ("harness_key", normalized.get("harness_key")),
+                ("harness_label", normalized.get("harness_label")),
                 ("token", normalized["token"]),
                 ("url", normalized["url"]),
             ]
@@ -159,15 +188,24 @@ class MCPConnectionSnippetService:
         auth_type = str(payload.get("auth_type") or "bearer").strip().lower()
         token = str(payload.get("token") or "").strip()
         profile = str(payload.get("profile") or "sapiens_default").strip().lower()
+        harness_key = str(payload.get("harness_key") or "").strip()
 
         if profile not in cls.RUNTIME_PROFILES:
             raise ValueError("Perfil de runtime MCP inválido.")
 
         profile_defaults = cls.RUNTIME_PROFILES[profile]
+        runtime_spec = get_runtime_profile_spec(profile)
         if not name:
             name = str(profile_defaults["label"]).strip()
         if not url:
             url = str(profile_defaults["url"]).strip()
+        if not harness_key and runtime_spec is not None:
+            harness_key = runtime_spec.default_harness_key or ""
+        harness_label = None
+        if runtime_spec is not None and harness_key:
+            harness = next((item for item in runtime_spec.harnesses if item.key == harness_key), None)
+            if harness is not None:
+                harness_label = harness.label
 
         if not name:
             raise ValueError("Nome da conexão é obrigatório.")
@@ -188,4 +226,6 @@ class MCPConnectionSnippetService:
             "auth_label": "Bearer Token",
             "token": token,
             "profile": profile,
+            "harness_key": harness_key or None,
+            "harness_label": harness_label,
         }

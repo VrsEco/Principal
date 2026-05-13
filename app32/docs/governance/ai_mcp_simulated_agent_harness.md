@@ -64,7 +64,7 @@ Retorna:
 - O harness **não executa** tools reais.
 - O harness **não chama** LLM.
 - O harness **não depende** do grafo LangGraph para decidir escopo.
-- O harness trata o **Harness Squad Cliente** como metadata operacional do runtime, não como substituto do papel/permissão real do usuário.
+- O harness trata o **Squad Cliente** como família de runtime e o harness específico como metadata operacional, não como substituto do papel/permissão real do usuário.
 - O harness só permite cenário quando:
   - o tenant é válido;
   - o papel/permissão do usuário é suportado;

@@ -204,7 +204,7 @@ def test_simulated_agent_blocks_runtime_profile_surface_mismatch():
     )
 
     assert result.allowed is False
-    assert result.reason == "runtime_profile squad_versus exige surface admin"
+    assert result.reason == "runtime_profile squad_versus não permite surface user"
     assert "runtime_profile_surface_mismatch" in result.checks
 
 

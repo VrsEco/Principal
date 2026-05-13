@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from .base import MCPSuccessEnvelope, _StrictModel
+from .profiles import MCPOverlayName
 
 
 PlaybookSurface = Literal["user", "admin", "analytics", "ops"]
@@ -21,6 +22,15 @@ class SurfaceExampleFlow(_StrictModel):
     steps: list[str] = Field(default_factory=list, min_length=1)
 
 
+class SurfaceRoleOverlayGuide(_StrictModel):
+    overlay: MCPOverlayName
+    title: str = Field(min_length=8, max_length=160)
+    harness_key: str = Field(min_length=8, max_length=120)
+    primary_domains: list[str] = Field(default_factory=list, min_length=1)
+    recommended_actions: list[str] = Field(default_factory=list, min_length=1)
+    escalation_rules: list[str] = Field(default_factory=list, min_length=1)
+
+
 class SurfacePlaybook(_StrictModel):
     """Playbook canônico de interação de agentes por surface MCP."""
 
@@ -35,6 +45,7 @@ class SurfacePlaybook(_StrictModel):
     interaction_rules: list[SurfaceInteractionRule] = Field(default_factory=list, min_length=2)
     forbidden_actions: list[str] = Field(default_factory=list, min_length=1)
     example_flows: list[SurfaceExampleFlow] = Field(default_factory=list, min_length=1)
+    role_overlays: list[SurfaceRoleOverlayGuide] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _validate_surface_rules(self):
@@ -42,6 +53,15 @@ class SurfacePlaybook(_StrictModel):
             raise ValueError("Surface analytics deve operar com escopo explícito ou empresa ativa.")
         if self.surface == "user" and "finance" in self.allowed_domains:
             raise ValueError("Surface user não deve expor domínio financeiro sensível.")
+        for overlay in self.role_overlays:
+            if self.surface == "user" and not overlay.overlay.endswith("_cliente"):
+                raise ValueError("Surface user deve expor apenas overlays do Squad Cliente.")
+            if self.surface == "admin" and not (overlay.overlay.endswith("_versus") or overlay.overlay.endswith("_engenharia")):
+                raise ValueError("Surface admin deve expor overlays de Squad Versus ou Engenharia.")
+            if self.surface == "analytics" and not (overlay.overlay.endswith("_versus") or overlay.overlay.endswith("_engenharia")):
+                raise ValueError("Surface analytics deve expor overlays de Squad Versus ou Engenharia.")
+            if self.surface == "ops" and not overlay.overlay.endswith("_engenharia"):
+                raise ValueError("Surface ops deve expor apenas overlays de Engenharia.")
         if self.surface == "analytics":
             forbidden = "nunca mutar dados"
             if not any(forbidden in action.lower() for action in self.forbidden_actions):
@@ -104,6 +124,56 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                         ],
                     )
                 ],
+                role_overlays=[
+                    SurfaceRoleOverlayGuide(
+                        overlay="coordenador_cliente",
+                        title="Coordenador do Squad Cliente",
+                        harness_key="harness_coordenador_cliente_v1",
+                        primary_domains=["routine", "projects", "processes", "meetings", "strategy"],
+                        recommended_actions=["discover", "read", "create", "update", "analyze"],
+                        escalation_rules=["Acionar harness especializado quando a intenção sair do roteamento inicial.", "Escalar finanças sensíveis para admin/analytics."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="comercial_cliente",
+                        title="Comercial do Squad Cliente",
+                        harness_key="harness_comercial_cliente_v1",
+                        primary_domains=["routine", "projects", "meetings", "strategy"],
+                        recommended_actions=["discover", "read", "create", "update", "analyze"],
+                        escalation_rules=["Escalar modelagem financeira para Adm/Financeiro ou admin.", "Escalar operação técnica para o overlay operacional."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="operacional_cliente",
+                        title="Operacional do Squad Cliente",
+                        harness_key="harness_operacional_cliente_v1",
+                        primary_domains=["routine", "projects", "processes", "meetings"],
+                        recommended_actions=["discover", "read", "create", "update"],
+                        escalation_rules=["Escalar incidente técnico para ops.", "Escalar consolidação estratégica para coordenador/estratégico."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="admfin_cliente",
+                        title="Adm/Financeiro do Squad Cliente",
+                        harness_key="harness_admfin_cliente_v1",
+                        primary_domains=["routine", "projects", "meetings", "strategy"],
+                        recommended_actions=["discover", "read", "analyze"],
+                        escalation_rules=["Não mutar finanças pela surface user.", "Encaminhar leitura financeira privilegiada para analytics/admin."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="estrategico_cliente",
+                        title="Estratégico do Squad Cliente",
+                        harness_key="harness_estrategico_cliente_v1",
+                        primary_domains=["strategy", "projects", "meetings"],
+                        recommended_actions=["discover", "read", "analyze"],
+                        escalation_rules=["Escalar mutação estrutural de plano para admin.", "Usar analytics quando o caso exigir read model executivo."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="pessoas_capacidade_cliente",
+                        title="Pessoas/Capacidade do Squad Cliente",
+                        harness_key="harness_pessoas_capacidade_cliente_v1",
+                        primary_domains=["routine", "projects", "meetings"],
+                        recommended_actions=["discover", "read", "create", "update"],
+                        escalation_rules=["Não abrir workload analítico privilegiado na surface user.", "Escalar gestão de acesso para admin."],
+                    ),
+                ],
             ),
             SurfacePlaybook(
                 surface="admin",
@@ -141,6 +211,88 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                             "Solicitar confirmação humana quando exigido e só então executar.",
                         ],
                     )
+                ],
+                role_overlays=[
+                    SurfaceRoleOverlayGuide(
+                        overlay="coordenador_versus",
+                        title="Coordenador do Squad Versus",
+                        harness_key="harness_coordenador_versus_v1",
+                        primary_domains=["routine", "projects", "processes", "meetings", "strategy", "governance", "finance"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Começar por discovery antes de qualquer mutação.", "Escalar incidentes de plataforma para o Squad de Engenharia."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="strategist_versus",
+                        title="Strategist Versus",
+                        harness_key="harness_strategist_versus_v1",
+                        primary_domains=["strategy", "projects", "meetings", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Escalar finanças para finance_versus.", "Escalar execução/cadência para pmo_controller_versus."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="pmo_controller_versus",
+                        title="PMO Controller Versus",
+                        harness_key="harness_pmo_controller_versus_v1",
+                        primary_domains=["routine", "projects", "processes", "meetings", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Escalar estratégia para strategist_versus.", "Escalar incidentes para Engenharia."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="business_architect_versus",
+                        title="Business Architect Versus",
+                        harness_key="harness_business_architect_versus_v1",
+                        primary_domains=["processes", "routine", "projects", "strategy", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Escalar boundary técnico para Arquiteto de Engenharia.", "Escalar controladoria para finance_versus."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="operations_versus",
+                        title="Operations Versus",
+                        harness_key="harness_operations_versus_v1",
+                        primary_domains=["routine", "projects", "processes", "meetings"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Não usar ops como atalho.", "Escalar plataforma para Engenharia."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="followup_collector_versus",
+                        title="Follow-up Collector Versus",
+                        harness_key="harness_followup_collector_versus_v1",
+                        primary_domains=["routine", "projects", "meetings", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Escalar estratégia para Strategist/PMO.", "Escalar financeiro para Finance Versus."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="finance_versus",
+                        title="Finance Versus",
+                        harness_key="harness_finance_versus_v1",
+                        primary_domains=["finance", "strategy", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "update"],
+                        escalation_rules=["Manter gate humano em mutações financeiras.", "Escalar auditoria independente para auditor_versus."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="arquiteto_engenharia",
+                        title="Arquiteto de Engenharia",
+                        harness_key="harness_arquiteto_engenharia_v1",
+                        primary_domains=["governance", "identity_admin", "analytics", "strategy"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Escalar intervenção runtime para ops.", "Manter foco em boundary e segurança."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="backend_api_engenharia",
+                        title="Backend API de Engenharia",
+                        harness_key="harness_backend_api_engenharia_v1",
+                        primary_domains=["governance", "identity_admin", "analytics", "strategy"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Escalar regras de negócio para Backend Service.", "Escalar auth/OAuth crítico para Arquiteto."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="ai_engineer_engenharia",
+                        title="AI Engineer de Engenharia",
+                        harness_key="harness_ai_engineer_engenharia_v1",
+                        primary_domains=["governance", "analytics", "strategy", "identity_admin"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Escalar boundary para Arquiteto.", "Escalar incidente runtime para Coordenador/ops."],
+                    ),
                 ],
             ),
             SurfacePlaybook(
@@ -180,6 +332,32 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                         ],
                     )
                 ],
+                role_overlays=[
+                    SurfaceRoleOverlayGuide(
+                        overlay="performance_analyst_versus",
+                        title="Performance Analyst Versus",
+                        harness_key="harness_performance_analyst_versus_v1",
+                        primary_domains=["analytics", "strategy", "workload"],
+                        recommended_actions=["discover", "read", "analyze"],
+                        escalation_rules=["Escalar mutação para Strategist/Coordenador Versus.", "Escalar finanças para Finance Versus."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="auditor_versus",
+                        title="Auditor Versus",
+                        harness_key="harness_auditor_versus_v1",
+                        primary_domains=["analytics", "finance", "strategy", "governance", "workload"],
+                        recommended_actions=["discover", "read", "analyze", "audit"],
+                        escalation_rules=["Não mutar; apenas recomendar correções.", "Escalar correção para Versus ou Engenharia conforme o achado."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="dba_engenharia",
+                        title="DBA de Engenharia",
+                        harness_key="harness_dba_engenharia_v1",
+                        primary_domains=["analytics", "workload", "governance", "strategy"],
+                        recommended_actions=["discover", "read", "analyze", "audit"],
+                        escalation_rules=["Não usar SQL livre fora do contrato.", "Escalar mudança estrutural para Coordenador/Arquiteto."],
+                    ),
+                ],
             ),
             SurfacePlaybook(
                 surface="ops",
@@ -218,6 +396,40 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                         ],
                     )
                 ],
+                role_overlays=[
+                    SurfaceRoleOverlayGuide(
+                        overlay="coordenador_engenharia",
+                        title="Coordenador do Squad de Engenharia",
+                        harness_key="harness_coordenador_engenharia_v1",
+                        primary_domains=["operations", "routine", "processes", "projects", "meetings", "workload", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Roteia para especialista técnico adequado.", "Não operar o negócio como cliente/consultoria."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="frontend_engenharia",
+                        title="Frontend de Engenharia",
+                        harness_key="harness_frontend_engenharia_v1",
+                        primary_domains=["operations", "routine", "projects", "meetings"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Escalar contracts para Backend API.", "Escalar boundary para Arquiteto."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="backend_service_engenharia",
+                        title="Backend Service de Engenharia",
+                        harness_key="harness_backend_service_engenharia_v1",
+                        primary_domains=["operations", "routine", "processes", "projects", "meetings", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Escalar performance SQL para DBA.", "Escalar contracts para Backend API."],
+                    ),
+                    SurfaceRoleOverlayGuide(
+                        overlay="qa_automation_engenharia",
+                        title="QA Automation de Engenharia",
+                        harness_key="harness_qa_automation_engenharia_v1",
+                        primary_domains=["operations", "routine", "processes", "projects", "meetings", "workload", "governance"],
+                        recommended_actions=["discover", "read", "analyze", "audit", "update"],
+                        escalation_rules=["Escalar correção ao especialista apropriado.", "Usar analytics/admin apenas quando o caso exigir investigação complementar."],
+                    ),
+                ],
             ),
         ]
     )
@@ -232,6 +444,7 @@ __all__ = [
     "PlaybookSurface",
     "SurfaceExampleFlow",
     "SurfaceInteractionRule",
+    "SurfaceRoleOverlayGuide",
     "SurfacePlaybook",
     "SurfacePlaybooksEnvelope",
     "SurfacePlaybooksManifest",

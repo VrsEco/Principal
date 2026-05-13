@@ -231,6 +231,8 @@ def test_ai_mcp_console_service_exposes_squad_cliente_runtime_profile():
     assert "surface_playbooks" in squad_cliente["required_contracts"]
     assert "list_user_app32_capabilities" in squad_cliente["startup_tools"]
     assert "describe_app32_profile_contracts_tool" in squad_cliente["startup_tools"]
+    assert squad_cliente["default_harness_key"] == "harness_coordenador_cliente_v1"
+    assert any(item["key"] == "harness_admfin_cliente_v1" for item in squad_cliente["harnesses"])
 
 
 def test_ai_mcp_console_service_exposes_assisted_usage_and_maturity_model():
@@ -270,3 +272,24 @@ def test_ai_mcp_console_service_exposes_governance_telemetry(monkeypatch):
     assert payload["governance_telemetry"]["enabled"] is True
     assert payload["governance_telemetry"]["summary"]["total"] == 3
     assert payload["governance_telemetry"]["analytics"]["by_runtime_profile"]["squad_versus"] == 2
+
+
+def test_ai_mcp_console_service_exposes_versus_and_engineering_harness_families():
+    from services.ai_mcp_console_service import AIMCPConsoleService
+
+    active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    payload = AIMCPConsoleService.build_frontend_state(active_company)
+
+    runtime_profiles = {item["key"]: item for item in payload["external_runtime_profiles"]}
+    squad_versus = runtime_profiles["squad_versus"]
+    engineering = runtime_profiles["engineering"]
+
+    assert squad_versus["default_harness_key"] == "harness_coordenador_versus_v1"
+    assert any(item["key"] == "harness_finance_versus_v1" for item in squad_versus["harnesses"])
+    assert engineering["surface"] == "ops"
+    assert engineering["default_harness_key"] == "harness_coordenador_engenharia_v1"
+    assert any(item["key"] == "harness_backend_api_engenharia_v1" for item in engineering["harnesses"])
+
+    connection_profiles = {item["key"]: item for item in payload["connection_generator"]["profiles"]}
+    assert connection_profiles["squad_versus"]["default_harness_key"] == "harness_coordenador_versus_v1"
+    assert connection_profiles["engineering"]["surface"] == "ops"

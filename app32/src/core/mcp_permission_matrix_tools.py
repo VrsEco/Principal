@@ -48,15 +48,45 @@ def register_permission_matrix_tools(mcp: Any) -> None:
     def describe_app32_permission_matrix_tool(
         profile: Optional[str] = None,
         surface: Optional[str] = None,
+        overlay_role: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Descreve a matriz canônica de permissões do APP32 por perfil e surface:
         colaborador, cliente, administrador e admin_tecnico.
         """
-        if not profile and not surface:
+        if not profile and not surface and not overlay_role:
             return _success(
                 "permission_matrix.describe",
                 APP32_PERMISSION_MATRIX_MANIFEST.model_dump(mode="json"),
+            )
+
+        if overlay_role:
+            normalized_overlay = overlay_role.strip().lower()
+            overlay_matrices = APP32_PERMISSION_MATRIX_MANIFEST.get_overlay(normalized_overlay)
+            normalized_surface = surface.strip().lower() if surface else None
+            if normalized_surface:
+                overlay_matrices = [matrix for matrix in overlay_matrices if matrix.surface == normalized_surface]
+            if not overlay_matrices:
+                return _error(
+                    "permission_matrix.describe",
+                    "permission_matrix_not_found",
+                    "Nenhuma matriz de permissão encontrada para os filtros informados.",
+                    profile=normalized_overlay,
+                    surface=normalized_surface,
+                )
+            if len(overlay_matrices) == 1:
+                matrix = overlay_matrices[0]
+                return _success(
+                    "permission_matrix.describe",
+                    matrix.model_dump(mode="json"),
+                    profile=matrix.overlay,
+                    surface=matrix.surface,
+                )
+            return _success(
+                "permission_matrix.describe",
+                [matrix.model_dump(mode="json") for matrix in overlay_matrices],
+                profile=normalized_overlay,
+                surface=normalized_surface,
             )
 
         matrices = APP32_PERMISSION_MATRIX_MANIFEST.matrices

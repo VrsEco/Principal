@@ -48,6 +48,7 @@ def test_build_prompt_supports_squad_cliente_profile():
 
     assert "ative o Squad Cliente" in content
     assert "Surface alvo: user" in content
+    assert "Harness inicial: Harness Coordenador do Squad Cliente" in content
     assert "list_user_app32_capabilities" in content
     assert "describe_app32_profile_contracts_tool" in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content
@@ -81,6 +82,19 @@ def test_build_raw_config_includes_runtime_profile_metadata():
     assert '"surface": "admin"' in content
 
 
+def test_build_raw_config_includes_harness_metadata_for_squad_cliente():
+    content = MCPConnectionSnippetService.build_raw_config(
+        {
+            "profile": "squad_cliente",
+            "auth_type": "bearer",
+            "token": "token-123",
+        }
+    )
+
+    assert '"harness_key": "harness_coordenador_cliente_v1"' in content
+    assert '"harness_label": "Harness Coordenador do Squad Cliente"' in content
+
+
 def test_build_prompt_rejects_invalid_url():
     with pytest.raises(ValueError, match="URL inválida"):
         MCPConnectionSnippetService.build_prompt(
@@ -92,3 +106,34 @@ def test_build_prompt_rejects_invalid_url():
                 "token": "token-123",
             }
         )
+
+
+def test_build_prompt_supports_engineering_profile():
+    content = MCPConnectionSnippetService.build_prompt(
+        {
+            "profile": "engineering",
+            "default_company": "App32",
+            "auth_type": "bearer",
+            "token": "token-eng",
+        }
+    )
+
+    assert "ative o Squad de Engenharia" in content
+    assert "Surface alvo: ops" in content
+    assert "Harness inicial: Harness Coordenador do Squad de Engenharia" in content
+    assert "list_ops_app32_capabilities" in content
+    assert "https://app.gestaoversus.com.br/mcp/ops" in content
+
+
+def test_build_raw_config_includes_harness_metadata_for_engineering():
+    content = MCPConnectionSnippetService.build_raw_config(
+        {
+            "profile": "engineering",
+            "auth_type": "bearer",
+            "token": "token-123",
+        }
+    )
+
+    assert '"profile": "engineering"' in content
+    assert '"surface": "ops"' in content
+    assert '"harness_key": "harness_coordenador_engenharia_v1"' in content
