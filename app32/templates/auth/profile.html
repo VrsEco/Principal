@@ -146,112 +146,154 @@
                 <div class="card-body" style="display: grid; gap: 1rem;">
                     <div>
                         <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Instalação guiada de squads</h2>
-                        <p style="color: var(--text-tertiary); margin: 0;">Escolha onde você vai instalar, confirme qual versão do Sapiens será publicada e gere o código guiado para a IA fazer a configuração. O modo avançado fica disponível só quando necessário.</p>
+                        <p style="color: var(--text-tertiary); margin: 0;">Organizamos o fluxo em duas etapas: primeiro você configura o MCP do cliente de IA, depois instala o squad com o contexto certo para o uso diário.</p>
                     </div>
 
                     <div id="mcp-token-alert-container"></div>
 
-                    <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
-                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo a passo recomendado</div>
-                        <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
-                            <li>Escolha o squad e qual cliente de IA você vai usar.</li>
-                            <li>Se quiser, defina a empresa padrão e o nome desta instalação.</li>
-                            <li>Gere ou renove o token no final desta tela.</li>
-                            <li>Clique em <strong>Gerar código para IA</strong>, copie e cole no cliente escolhido.</li>
-                            <li>Peça para a IA criar a entrada com o nome visível do Sapiens correspondente.</li>
-                        </ol>
+                    <div class="profile-tabs" role="tablist" aria-label="Etapas da instalação do squad" style="margin-top: 0;">
+                        <button type="button" class="profile-tab mcp-step-tab is-active" data-mcp-step-target="mcp-step-config-panel">1. Configurar MCP</button>
+                        <button type="button" class="profile-tab mcp-step-tab" data-mcp-step-target="mcp-step-squad-panel">2. Instalar Squad</button>
                     </div>
 
-                    <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Squad que será instalado</h3>
-                        <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Escolha primeiro qual versão do Sapiens você quer publicar. A tela será ajustada automaticamente conforme o squad escolhido.</p>
-                    </div>
-
-                    <div class="filter-field">
-                        {% if can_install_all_squads %}
-                            <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                    <strong>Sapiens Cliente</strong>
-                                    <span>Squad Cliente com coordenador e roteamento automático.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
-                                    <strong>Sapiens Consultor</strong>
-                                    <span>Squad Versus para uso consultivo e rollout assistido.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="engineering">
-                                    <strong>Sapiens Engenharia</strong>
-                                    <span>Squad de Engenharia para uso técnico e diagnóstico controlado.</span>
-                                </button>
-                            </div>
-                            <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente, Sapiens Consultor e Sapiens Engenharia.</small>
-                        {% elif role_key == 'consultant' %}
-                            <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                    <strong>Sapiens Cliente</strong>
-                                    <span>Squad Cliente com menor privilégio e operação assistida.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
-                                    <strong>Sapiens Consultor</strong>
-                                    <span>Squad Versus com governança consultiva e rollout assistido.</span>
-                                </button>
-                            </div>
-                            <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente e Sapiens Consultor. Sapiens Engenharia fica restrito à administração.</small>
-                        {% else %}
-                            <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                    <strong>Sapiens Cliente</strong>
-                                    <span>Disponível para o seu perfil, com menor privilégio e entrada pelo coordenador.</span>
-                                </button>
-                            </div>
-                            <small style="color: var(--text-tertiary);">Seu perfil atual instala apenas o Sapiens Cliente. Sapiens Consultor e Sapiens Engenharia ficam disponíveis somente para perfis autorizados.</small>
-                        {% endif %}
-                    </div>
-
-                    <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Qual Cliente de IA você irá usar?</h3>
-                        <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Todos os clientes de IA abaixo seguem fluxo guiado. O APP32 ajusta automaticamente nome visível, profile, surface, agente de entrada e instruções conforme a combinação escolhida.</p>
-                    </div>
-
-                    <div class="filter-field">
-                        <div class="mcp-choice-grid" id="mcpRuntimeChoices">
-                            <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
-                                <strong>Claude (recomendado)</strong>
-                                <span>Experiência principal para o cliente.</span>
-                            </button>
-                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
-                                <strong>Codex</strong>
-                                <span>Instalação guiada em ambiente técnico.</span>
-                            </button>
-                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
-                                <strong>Antigravity</strong>
-                                <span>Instalação guiada para uso consultivo.</span>
-                            </button>
-                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
-                                <strong>Outro cliente MCP</strong>
-                                <span>Fluxo guiado com fallback para modo avançado.</span>
-                            </button>
+                    <section id="mcp-step-config-panel" class="mcp-step-panel is-active" style="display:grid; gap:1rem;">
+                        <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo 1 — Configurar MCP</div>
+                            <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
+                                <li>Escolha qual cliente de IA você vai usar.</li>
+                                <li>Gere ou renove o token MCP no final desta etapa.</li>
+                                <li>Use as instruções desta tela para conectar o APP32 ao cliente escolhido.</li>
+                            </ol>
                         </div>
-                    </div>
 
-                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                        <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
-                        <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
-                            Você está configurando o Sapiens Cliente para uso no Claude. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Qual Cliente de IA você irá usar?</h3>
+                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Escolha primeiro o cliente onde a conexão MCP será feita. O APP32 ajusta automaticamente o modo de instalação, as instruções e o tipo de configuração esperada.</p>
                         </div>
-                    </div>
 
-                    <div class="filter-field">
-                        <label>Empresa padrão (opcional)</label>
-                        <select id="mcpCompanyId" class="form-control"></select>
-                        <small style="color: var(--text-tertiary);">Se você escolher uma empresa, a instalação já sai apontando para ela. Se deixar em branco, você escolhe a empresa depois, durante o uso.</small>
-                    </div>
+                        <div class="filter-field">
+                            <div class="mcp-choice-grid" id="mcpRuntimeChoices">
+                                <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
+                                    <strong>Claude (recomendado)</strong>
+                                    <span>Experiência principal para o cliente.</span>
+                                </button>
+                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
+                                    <strong>Codex</strong>
+                                    <span>Instalação guiada em ambiente técnico.</span>
+                                </button>
+                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
+                                    <strong>Antigravity</strong>
+                                    <span>Instalação guiada para uso consultivo.</span>
+                                </button>
+                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
+                                    <strong>Outro cliente MCP</strong>
+                                    <span>Fluxo guiado com fallback para modo avançado.</span>
+                                </button>
+                            </div>
+                        </div>
 
-                    <div class="filter-field">
-                        <label>Nome desta instalação (opcional)</label>
-                        <input type="text" class="form-control" id="mcpClientName" placeholder="Ex.: Claude do notebook comercial">
-                    </div>
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
+                            <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
+                                Você está configurando o Sapiens Cliente para uso no Claude. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.
+                            </div>
+                        </div>
 
-                    <div class="mcp-summary-grid">
+                        <div class="card" style="border-radius: 24px;">
+                            <div class="card-body" style="display: grid; gap: 1rem;">
+                                <div>
+                                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Token de acesso MCP</h3>
+                                    <p id="mcpTokenHelpText" style="color: var(--text-tertiary); margin: 0;">Gere o token no final, depois copie o código acima e siga a instalação. O token será solicitado durante a instalação do squad.</p>
+                                </div>
+
+                                <div style="display:grid; gap:0.75rem;">
+                                    <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
+                                        <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Status do token</div>
+                                        <div id="mcpTokenStatusText" style="font-size: 0.92rem; color: var(--text-secondary);">Carregando status...</div>
+                                    </div>
+                                    <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
+                                        <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Último uso</div>
+                                        <div id="mcpTokenLastUsageText" style="font-size: 0.92rem; color: var(--text-secondary);">Aguardando leitura do token.</div>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                                    <button type="button" class="btn btn-primary" id="generateMcpTokenButton">Gerar token</button>
+                                    <button type="button" class="btn btn-secondary" id="renewMcpTokenButton">Renovar token</button>
+                                    <button type="button" class="btn btn-danger" id="revokeMcpTokenButton">Revogar token</button>
+                                </div>
+                                <small id="mcpTokenFootnoteText" style="color: var(--text-tertiary); margin-top:-0.25rem;">O token é pessoal. Ele não fica preso a uma empresa específica e não será mostrado novamente depois que a janela de cópia for fechada.</small>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="mcp-step-squad-panel" class="mcp-step-panel" style="display:grid; gap:1rem;">
+                        <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo 2 — Instalar Squad</div>
+                            <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
+                                <li>Escolha qual squad você vai publicar.</li>
+                                <li>Se quiser, defina empresa padrão e nome desta instalação.</li>
+                                <li>Gere o conteúdo guiado e conclua a instalação no cliente de IA escolhido.</li>
+                            </ol>
+                        </div>
+
+                        <div>
+                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Squad que será instalado</h3>
+                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Escolha qual versão do Sapiens será publicada. A instalação final será personalizada conforme o squad e o cliente de IA selecionados.</p>
+                        </div>
+
+                        <div class="filter-field">
+                            {% if can_install_all_squads %}
+                                <div class="mcp-choice-grid" id="mcpSquadChoices">
+                                    <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                                        <strong>Sapiens Cliente</strong>
+                                        <span>Squad Cliente com coordenador e roteamento automático.</span>
+                                    </button>
+                                    <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
+                                        <strong>Sapiens Consultor</strong>
+                                        <span>Squad Versus para uso consultivo e rollout assistido.</span>
+                                    </button>
+                                    <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="engineering">
+                                        <strong>Sapiens Engenharia</strong>
+                                        <span>Squad de Engenharia para uso técnico e diagnóstico controlado.</span>
+                                    </button>
+                                </div>
+                                <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente, Sapiens Consultor e Sapiens Engenharia.</small>
+                            {% elif role_key == 'consultant' %}
+                                <div class="mcp-choice-grid" id="mcpSquadChoices">
+                                    <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                                        <strong>Sapiens Cliente</strong>
+                                        <span>Squad Cliente com menor privilégio e operação assistida.</span>
+                                    </button>
+                                    <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
+                                        <strong>Sapiens Consultor</strong>
+                                        <span>Squad Versus com governança consultiva e rollout assistido.</span>
+                                    </button>
+                                </div>
+                                <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente e Sapiens Consultor. Sapiens Engenharia fica restrito à administração.</small>
+                            {% else %}
+                                <div class="mcp-choice-grid" id="mcpSquadChoices">
+                                    <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                                        <strong>Sapiens Cliente</strong>
+                                        <span>Disponível para o seu perfil, com menor privilégio e entrada pelo coordenador.</span>
+                                    </button>
+                                </div>
+                                <small style="color: var(--text-tertiary);">Seu perfil atual instala apenas o Sapiens Cliente. Sapiens Consultor e Sapiens Engenharia ficam disponíveis somente para perfis autorizados.</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="filter-field">
+                            <label>Empresa padrão (opcional)</label>
+                            <select id="mcpCompanyId" class="form-control"></select>
+                            <small style="color: var(--text-tertiary);">Se você escolher uma empresa, a instalação já sai apontando para ela. Se deixar em branco, você escolhe a empresa depois, durante o uso.</small>
+                        </div>
+
+                        <div class="filter-field">
+                            <label>Nome desta instalação (opcional)</label>
+                            <input type="text" class="form-control" id="mcpClientName" placeholder="Ex.: Claude do notebook comercial">
+                        </div>
+
+                        <div class="mcp-summary-grid">
                         <div class="mcp-summary-card">
                             <div class="mcp-summary-label">Cliente / CLI</div>
                             <div class="mcp-summary-value" id="mcpResolvedRuntime">Claude</div>
@@ -284,97 +326,72 @@
                             <div class="mcp-summary-label">Agente de entrada</div>
                             <div class="mcp-summary-value" id="mcpResolvedEntryAgent">Harness Coordenador do Squad Cliente</div>
                         </div>
-                    </div>
-
-                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                        <div id="mcpOfficialCompositionTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
-                        <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
-                            Entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.
                         </div>
-                        <div id="mcpOfficialAgentsList" style="display: grid; gap: 0.45rem;">
-                            <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main);">Agente Coordenador</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">porta de entrada, triagem e roteamento econômico</div>
+
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div id="mcpOfficialCompositionTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
+                            <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
+                                Entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.
+                            </div>
+                            <div id="mcpOfficialAgentsList" style="display: grid; gap: 0.45rem;">
+                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main);">Agente Coordenador</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">porta de entrada, triagem e roteamento econômico</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                        <div id="mcpAudienceTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quem vai te atender no Sapiens Cliente</div>
-                        <div id="mcpAudienceIntro" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.75rem;">
-                            Você instala uma única entrada chamada <strong>Sapiens Cliente</strong>. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.
-                        </div>
-                        <div id="mcpAudienceFlow" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.65rem;">
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Coordenador</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entende seu pedido, organiza o atendimento e chama o especialista certo.</div>
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div id="mcpAudienceTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quem vai te atender no Sapiens Cliente</div>
+                            <div id="mcpAudienceIntro" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.75rem;">
+                                Você instala uma única entrada chamada <strong>Sapiens Cliente</strong>. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.
                             </div>
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Comercial</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com clientes, propostas, negociação, preço e oportunidades.</div>
+                            <div id="mcpAudienceFlow" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.65rem;">
+                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Coordenador</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entende seu pedido, organiza o atendimento e chama o especialista certo.</div>
+                                </div>
+                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Comercial</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com clientes, propostas, negociação, preço e oportunidades.</div>
+                                </div>
+                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Operacional</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com tarefas, prioridades, rotina, organização e execução.</div>
+                                </div>
+                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Administrativo/Financeiro</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.</div>
+                                </div>
                             </div>
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Operacional</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com tarefas, prioridades, rotina, organização e execução.</div>
+                        </div>
+
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como a instalação funciona</div>
+                            <div style="font-size: 0.92rem; line-height: 1.55;">
+                                A instalação publica uma entrada do <strong>Sapiens</strong> no seu cliente/CLI. Essa entrada começa pelo <strong>agente coordenador</strong> do squad e usa o <strong>harness inicial</strong> resolvido automaticamente pelo APP32. Depois disso, o próprio Sapiens pode rotear a conversa para especialistas internos quando necessário.
                             </div>
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Administrativo/Financeiro</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.</div>
-                            </div>
+                            <ol style="margin: 0.75rem 0 0; padding-left: 1rem; display: grid; gap: 0.35rem; font-size: 0.9rem;">
+                                <li>Você instala apenas o <strong>Sapiens Cliente</strong>.</li>
+                                <li>O atendimento sempre começa pelo <strong>Coordenador</strong>.</li>
+                                <li>Se necessário, o Coordenador chama <strong>Comercial</strong>, <strong>Operacional</strong> ou <strong>Administrativo/Financeiro</strong>.</li>
+                                <li>Para você, continua sendo uma única conversa, simples e contínua.</li>
+                            </ol>
+                        </div>
+
+                        <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Gerar código para IA</button>
+                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar</button>
+                            <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Modo avançado</button>
+                        </div>
+
+                        <div class="filter-field" style="margin-top:-0.25rem;">
+                            <label>Conteúdo pronto</label>
+                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token na etapa Configurar MCP, use Gerar código para IA e copie o conteúdo exibido."></textarea>
+                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">A experiência principal é gerar o código guiado e colar no cliente/CLI escolhido. O conteúdo já explica o nome visível do Sapiens, o agente coordenador e o uso do harness inicial. Use o modo avançado apenas quando necessário.</small>
                         </div>
                     </div>
-
-                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como a instalação funciona</div>
-                        <div style="font-size: 0.92rem; line-height: 1.55;">
-                            A instalação publica uma entrada do <strong>Sapiens</strong> no seu cliente/CLI. Essa entrada começa pelo <strong>agente coordenador</strong> do squad e usa o <strong>harness inicial</strong> resolvido automaticamente pelo APP32. Depois disso, o próprio Sapiens pode rotear a conversa para especialistas internos quando necessário.
-                        </div>
-                        <ol style="margin: 0.75rem 0 0; padding-left: 1rem; display: grid; gap: 0.35rem; font-size: 0.9rem;">
-                            <li>Você instala apenas o <strong>Sapiens Cliente</strong>.</li>
-                            <li>O atendimento sempre começa pelo <strong>Coordenador</strong>.</li>
-                            <li>Se necessário, o Coordenador chama <strong>Comercial</strong>, <strong>Operacional</strong> ou <strong>Administrativo/Financeiro</strong>.</li>
-                            <li>Para você, continua sendo uma única conversa, simples e contínua.</li>
-                        </ol>
-                    </div>
-
-                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Gerar código para IA</button>
-                        <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar</button>
-                        <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Modo avançado</button>
-                    </div>
-
-                    <div class="filter-field" style="margin-top:-0.25rem;">
-                        <label>Conteúdo pronto</label>
-                        <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token no final da página, use Gerar código para IA e copie o conteúdo exibido."></textarea>
-                        <small id="mcpInstructionText" style="color: var(--text-tertiary);">A experiência principal é gerar o código guiado e colar no cliente/CLI escolhido. O conteúdo já explica o nome visível do Sapiens, o agente coordenador e o uso do harness inicial. Use o modo avançado apenas quando necessário.</small>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card" style="border-radius: 24px;">
-                <div class="card-body" style="display: grid; gap: 1rem;">
-                    <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Token de acesso MCP</h3>
-                        <p id="mcpTokenHelpText" style="color: var(--text-tertiary); margin: 0;">Gere o token no final, depois copie o código acima e siga a instalação. O token será solicitado durante a instalação do squad.</p>
-                    </div>
-
-                    <div style="display:grid; gap:0.75rem;">
-                        <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
-                            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Status do token</div>
-                            <div id="mcpTokenStatusText" style="font-size: 0.92rem; color: var(--text-secondary);">Carregando status...</div>
-                        </div>
-                        <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
-                            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Último uso</div>
-                            <div id="mcpTokenLastUsageText" style="font-size: 0.92rem; color: var(--text-secondary);">Aguardando leitura do token.</div>
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-primary" id="generateMcpTokenButton">Gerar token</button>
-                        <button type="button" class="btn btn-secondary" id="renewMcpTokenButton">Renovar token</button>
-                        <button type="button" class="btn btn-danger" id="revokeMcpTokenButton">Revogar token</button>
-                    </div>
-                    <small id="mcpTokenFootnoteText" style="color: var(--text-tertiary); margin-top:-0.25rem;">O token é pessoal. Ele não fica preso a uma empresa específica e não será mostrado novamente depois que a janela de cópia for fechada.</small>
+                    </section>
                 </div>
             </div>
         </div>
@@ -492,6 +509,14 @@
 
     .profile-tab-panel.is-active {
         display: block;
+    }
+
+    .mcp-step-panel {
+        display: none !important;
+    }
+
+    .mcp-step-panel.is-active {
+        display: grid !important;
     }
 
     .password-toggle {
@@ -790,10 +815,12 @@
     function getSquadUiCopy(resolvedConfig) {
         const squad = resolvedConfig && resolvedConfig.squad ? resolvedConfig.squad : 'squad_cliente';
         const runtimeLabel = resolvedConfig && resolvedConfig.runtime_label ? resolvedConfig.runtime_label : 'o cliente de IA escolhido';
+        const runtime = resolvedConfig && resolvedConfig.runtime ? resolvedConfig.runtime : 'claude';
+        const isClaudeCowork = runtime === 'claude';
         if (squad === 'squad_versus') {
             return {
                 guideTitle: 'Como essa combinação vai funcionar',
-                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Consultor'} para uso no ${runtimeLabel}. Esta instalação é voltada para trabalho consultivo, governança e rollout assistido, com uso controlado pela Versus.`,
+                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Consultor'} para uso no ${runtimeLabel}. Esta instalação é voltada para trabalho consultivo, governança e rollout assistido, com uso controlado pela Versus.${isClaudeCowork ? ' No Claude/Cowork, a conexão MCP também é concluída manualmente na interface do cliente.' : ''}`,
                 compositionTitle: 'Composição oficial do Sapiens Consultor',
                 phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação consultiva com especialistas de estratégia, operação, performance, finanças e auditoria conforme o caso.`,
                 audienceTitle: 'Quem opera no Sapiens Consultor',
@@ -808,7 +835,7 @@
         if (squad === 'engineering') {
             return {
                 guideTitle: 'Como essa combinação vai funcionar',
-                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Engenharia'} para uso no ${runtimeLabel}. Esta instalação é técnica e controlada, pensada para diagnóstico, arquitetura, implementação e suporte avançado.`,
+                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Engenharia'} para uso no ${runtimeLabel}. Esta instalação é técnica e controlada, pensada para diagnóstico, arquitetura, implementação e suporte avançado.${isClaudeCowork ? ' No Claude/Cowork, a conexão MCP também é concluída manualmente na interface do cliente.' : ''}`,
                 compositionTitle: 'Composição oficial do Sapiens Engenharia',
                 phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação técnica com roteamento para arquitetura, backend, AI engineering, dados e QA conforme a necessidade.`,
                 audienceTitle: 'Quem opera no Sapiens Engenharia',
@@ -822,7 +849,9 @@
         }
         return {
             guideTitle: 'Como essa combinação vai funcionar',
-            guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.`,
+            guideText: isClaudeCowork
+                ? `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. Neste cliente, a conexão MCP é manual guiada: o APP32 prepara a URL, o token e o conteúdo para copiar, e você conclui a conexão na interface do Claude/Cowork.`
+                : `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.`,
             compositionTitle: 'Família inicial oficial do Squad Cliente',
             phaseText: resolvedConfig.official_phase_label
                 ? `${resolvedConfig.official_phase_label}: entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.`
@@ -986,6 +1015,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
 
     function activateProfileTab(targetId) {
         document.querySelectorAll('.profile-tab').forEach((button) => {
+            if (button.hasAttribute('data-mcp-step-target')) return;
             button.classList.toggle('is-active', button.getAttribute('data-tab-target') === targetId);
         });
         document.querySelectorAll('.profile-tab-panel').forEach((panel) => {
@@ -994,9 +1024,26 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
     }
 
     document.querySelectorAll('.profile-tab').forEach((button) => {
+        if (button.hasAttribute('data-mcp-step-target')) return;
         button.addEventListener('click', () => {
             const targetId = button.getAttribute('data-tab-target');
             activateProfileTab(targetId);
+        });
+    });
+
+    function activateMcpStep(targetId) {
+        document.querySelectorAll('.mcp-step-tab').forEach((button) => {
+            button.classList.toggle('is-active', button.getAttribute('data-mcp-step-target') === targetId);
+        });
+        document.querySelectorAll('.mcp-step-panel').forEach((panel) => {
+            panel.classList.toggle('is-active', panel.id === targetId);
+        });
+    }
+
+    document.querySelectorAll('.mcp-step-tab').forEach((button) => {
+        button.addEventListener('click', () => {
+            const targetId = button.getAttribute('data-mcp-step-target');
+            activateMcpStep(targetId);
         });
     });
 

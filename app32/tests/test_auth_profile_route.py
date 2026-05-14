@@ -149,6 +149,8 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert 'Instalar Squad' in html
+    assert '1. Configurar MCP' in html
+    assert '2. Instalar Squad' in html
     assert 'Squad que será instalado' in html
     assert 'Qual Cliente de IA você irá usar?' in html
     assert 'Sapiens Cliente' in html

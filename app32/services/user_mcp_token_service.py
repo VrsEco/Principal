@@ -239,18 +239,28 @@ class UserMcpTokenService:
         if normalized_squad == "squad_cliente":
             resolved_profile = "squad_cliente"
             resolved_surface = "user"
-            if normalized_runtime in {"claude", "codex", "antigravity"}:
+            if normalized_runtime in {"codex", "antigravity"}:
                 install_mode = "self_service"
                 availability_label = "Instalação automática guiada"
                 install_command = cls._build_squad_cliente_install_command(
                     runtime_key=normalized_runtime,
                     company_id=company_id,
                 )
+            elif normalized_runtime == "claude":
+                install_mode = "guided_manual"
+                availability_label = "Instalação manual guiada"
+                install_command = None
             instruction_text = (
                 f"Você está preparando o {experience_label} para uso no {runtime_label}. "
                 "Gere o código para IA conforme as configurações escolhidas e siga o passo a passo orientado pelo APP32. "
                 "A instalação entra pelo Coordenador e depois pode chamar Comercial, Operacional e Administrativo/Financeiro quando necessário."
             )
+            if normalized_runtime == "claude":
+                instruction_text = (
+                    f"Você está preparando o {experience_label} para uso no {runtime_label}. "
+                    "Neste cliente, a conexão MCP é concluída manualmente na interface do Claude/Cowork. "
+                    "O APP32 vai te entregar o token, a URL e o conteúdo pronto para copiar, mas a criação da conexão é feita por você."
+                )
             if normalized_runtime == "other":
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso em outro cliente de IA. "
@@ -643,8 +653,8 @@ class UserMcpTokenService:
             installation_instruction = runtime_config["instruction_text"]
             if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
-                    "Experiência recomendada: instalar o Sapiens Cliente no Claude. "
-                    "Gere ou renove o token, copie o código para IA e cole no cliente escolhido para concluir a configuração guiada."
+                    "Experiência recomendada: instalar o Sapiens Cliente no Claude/Cowork. "
+                    "Gere ou renove o token, abra a área de conectores do Claude, crie a conexão manualmente e cole ali a URL e o Bearer Token gerados no APP32."
                 )
             if runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (

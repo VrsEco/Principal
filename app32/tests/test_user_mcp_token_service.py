@@ -87,13 +87,15 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["runtime"] == "claude"
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
-    assert config["install_mode"] == "self_service"
+    assert config["install_mode"] == "guided_manual"
+    assert config["availability_label"] == "Instalação manual guiada"
     assert config["actor_type"] == "client_agent"
     assert config["experience_label"] == "Sapiens Cliente"
     assert config["command_alias"] == "sapiens cliente on"
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
-    assert "install-sapiens-cliente.ps1" in config["install_command"]
+    assert config["install_command"] is None
+    assert "Claude/Cowork" in config["instruction_text"]
 
 
 def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
