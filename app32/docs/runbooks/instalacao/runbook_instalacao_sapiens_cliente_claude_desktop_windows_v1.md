@@ -175,10 +175,46 @@ Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.
 
 ---
 
-## 11. Observações importantes
+## 11. Comandos oficiais de ativação
+
+Além da conexão MCP, o Claude Desktop/Code pode receber comandos slash oficiais para ativação:
+
+- `/sapiens-cliente-on`
+- `/sapiens-on`
+
+Quando houver mais de um Squad instalado na mesma máquina, o comando genérico `/sapiens-on` deve pedir confirmação do usuário antes de ativar o Squad correto.
+
+### Instalação dos comandos slash
+
+Script canônico versionado no APP32:
+
+- `C:\GestaoVersus\app32\app32\scripts\installers\install-claude-sapiens-slash-commands.ps1`
+
+Exemplo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ".\app32\scripts\installers\install-claude-sapiens-slash-commands.ps1" -AvailableSquads squad_cliente,squad_versus
+```
+
+### Regra importante
+
+Ativação oficial usa barra inicial.
+
+Correto:
+
+- `/sapiens-cliente-on`
+- `/sapiens-on`
+
+Não tratar texto livre como comando instalado:
+
+- `sapiens on`
+- `sapiens cliente on`
+
+---
+
+## 12. Observações importantes
 
 - a configuração do `claude_desktop_config.json` vale para o usuário Windows local
 - o token é pessoal do APP32; cada pessoa deve usar o seu
 - se aparecer erro com `C:\Program`, o caminho do `npx` usado está com espaço
 - o pacote correto é `mcp-remote`, sem prefixo `@anthropic/`
-

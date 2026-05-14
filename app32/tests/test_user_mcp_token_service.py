@@ -68,6 +68,9 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert any(field["label"] == "Arquivo do Claude Desktop" for field in config["guided_connection_fields"])
     assert config["guided_install_steps"][0].startswith("No Windows, confirme que Node.js")
     assert config["validation_prompt"] == "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
+    assert any(item["command"] == "/sapiens-cliente-on" for item in config["activation_commands"])
+    assert any(item["command"] == "/sapiens-on" for item in config["activation_commands"])
+    assert "install-claude-sapiens-slash-commands.ps1" in config["activation_commands_install_command"]
 
 
 def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch):
@@ -101,6 +104,8 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["install_command"] is None
     assert "Claude Desktop (Windows)" in config["instruction_text"]
     assert "mcp-remote" in config["instruction_text"]
+    assert "/sapiens-cliente-on" in config["activation_prompt"]
+    assert "/sapiens-on" in config["activation_prompt"]
 
 
 def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):

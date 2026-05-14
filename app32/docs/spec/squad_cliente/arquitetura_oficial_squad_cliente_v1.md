@@ -85,6 +85,14 @@ O `Squad Cliente` é oficialmente compatível com `Claude Desktop (Windows)` qua
 Nesta variante, o Claude Desktop consome o APP32 por proxy local STDIO → MCP remoto HTTP.
 Não tratar este fluxo como conector remoto OAuth puro do Claude.
 
+### Ativação oficial
+Quando a experiência usar `Claude Desktop / Claude Code`, a ativação oficial deve preferir comandos slash instalados localmente, por exemplo:
+
+- `/sapiens-cliente-on`
+- `/sapiens-on`
+
+Texto livre como `sapiens on` não constitui comando oficial instalado.
+
 ---
 
 ## 5. Surface oficial

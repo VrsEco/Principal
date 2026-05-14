@@ -159,6 +159,8 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     assert 'Como criar a conexão MCP neste cliente' in html
     assert 'Dados para preencher na conexão' in html
     assert 'Teste inicial recomendado' in html
+    assert 'Comandos oficiais de ativação' in html
+    assert '/sapiens-cliente-on' in html
     assert 'Família inicial oficial do Squad Cliente' in html
     assert 'Quem vai te atender no Sapiens Cliente' in html
     assert 'Ajuda com clientes, propostas, negociação, preço e oportunidades.' in html

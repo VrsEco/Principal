@@ -60,6 +60,7 @@ SQUAD_COMMAND_ALIASES = {
     "squad_versus": "sapiens consultor on",
     "engineering": "sapiens engenharia on",
 }
+CLAUDE_SLASH_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-claude-sapiens-slash-commands.ps1"
 ROLE_ALLOWED_SQUADS = {
     "admin": ("squad_cliente", "squad_versus", "engineering"),
     "administrator": ("squad_cliente", "squad_versus", "engineering"),
@@ -240,6 +241,64 @@ class UserMcpTokenService:
         if runtime_config.get("harness_label"):
             fields.append({"label": "Agente de entrada", "value": runtime_config["harness_label"]})
         return fields
+
+    @classmethod
+    def _build_activation_commands(
+        cls,
+        allowed_squads: list[str],
+    ) -> list[dict[str, str]]:
+        normalized = [cls._normalize_squad(item) for item in allowed_squads if item]
+        commands: list[dict[str, str]] = []
+        if "squad_cliente" in normalized:
+            commands.append(
+                {
+                    "command": "/sapiens-cliente-on",
+                    "summary": "Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente.",
+                }
+            )
+        if "squad_versus" in normalized:
+            commands.append(
+                {
+                    "command": "/sapiens-consultor-on",
+                    "summary": "Ativa o Sapiens Consultor e carrega o bootstrap oficial do Squad Versus.",
+                }
+            )
+        if "engineering" in normalized:
+            commands.append(
+                {
+                    "command": "/sapiens-engenharia-on",
+                    "summary": "Ativa o Sapiens Engenharia e carrega o bootstrap oficial do Squad de Engenharia.",
+                }
+            )
+        if normalized:
+            if len(normalized) == 1:
+                commands.append(
+                    {
+                        "command": "/sapiens-on",
+                        "summary": "Ativa automaticamente o único Squad Sapiens disponível nesta máquina.",
+                    }
+                )
+            else:
+                commands.append(
+                    {
+                        "command": "/sapiens-on",
+                        "summary": "Pergunta qual Squad Sapiens deve ser ativado quando houver mais de um disponível.",
+                    }
+                )
+        return commands
+
+    @classmethod
+    def _build_claude_activation_install_command(
+        cls,
+        allowed_squads: list[str],
+    ) -> str:
+        normalized = [cls._normalize_squad(item) for item in allowed_squads if item]
+        squad_args = ",".join(normalized) if normalized else "squad_cliente"
+        return (
+            "powershell -ExecutionPolicy Bypass -File "
+            f"\"{CLAUDE_SLASH_INSTALLER_COMMAND}\" "
+            f"-AvailableSquads {squad_args}"
+        )
 
     @classmethod
     def _build_guided_install_steps(
@@ -782,6 +841,7 @@ class UserMcpTokenService:
             user = User.query.get(user_id)
             if not user:
                 raise ValueError("Usuário inválido para configuração MCP.")
+            allowed_squads = list(cls._resolve_allowed_squads_for_user(user))
             authorized_squad = cls._resolve_authorized_squad_for_user(user, squad)
             resolved_company_id = cls._resolve_explicit_company_id_for_user(user, company_id)
             companies = cls.list_accessible_companies(user)
@@ -830,6 +890,12 @@ class UserMcpTokenService:
                 url=url,
                 token_value=token_value,
             )
+            activation_commands = cls._build_activation_commands(allowed_squads)
+            activation_commands_install_command = (
+                cls._build_claude_activation_install_command(allowed_squads)
+                if runtime_config["runtime"] == "claude"
+                else None
+            )
             config_text = (
                 f"Conexão: {connection_name}\n"
                 f"Família canônica: {runtime_config['squad_label']}\n"
@@ -875,7 +941,17 @@ class UserMcpTokenService:
                     f"Comando de referência:\n{installation_command}"
                 )
             if runtime_config["runtime"] == "claude":
-                activation_prompt = guided_install_text
+                activation_prompt = (
+                    f"{guided_install_text}\n\n"
+                    "Comandos oficiais de ativação no Claude Desktop/Code:\n"
+                    + "\n".join([f"- {item['command']}: {item['summary']}" for item in activation_commands])
+                    + (
+                        f"\n\nPara instalar esses comandos slash automaticamente nesta máquina, use:\n{activation_commands_install_command}"
+                        if activation_commands_install_command
+                        else ""
+                    )
+                    + "\n\nImportante: comandos oficiais usam barra inicial. Exemplo: /sapiens-cliente-on. Texto livre como 'sapiens on' não vira comando por si só."
+                )
             return {
                 "client_name": (client_name or "").strip() or None,
                 "surface": resolved_surface,
@@ -909,12 +985,14 @@ class UserMcpTokenService:
                 "guided_connection_fields": guided_fields,
                 "guided_install_text": guided_install_text,
                 "validation_prompt": "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
+                "activation_commands": activation_commands,
+                "activation_commands_install_command": activation_commands_install_command,
                 "text": config_text,
                 "json": config_json,
                 "technical_config_text": technical_config_text,
                 "activation_prompt": activation_prompt,
                 "companies": companies,
-                "allowed_squads": list(cls._resolve_allowed_squads_for_user(user)),
+                "allowed_squads": allowed_squads,
             }
 
     @classmethod

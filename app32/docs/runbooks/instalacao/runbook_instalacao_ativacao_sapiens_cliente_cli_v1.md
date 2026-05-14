@@ -241,6 +241,13 @@ Uma vez ativa, a experiência deve iniciar no:
 - `Squad Cliente`
 - com entrada pelo `Harness Coordenador do Squad Cliente`
 
+### Caso Claude Desktop / Claude Code
+A ativação oficial usa slash commands, por exemplo:
+- `/sapiens-cliente-on`
+- `/sapiens-on`
+
+Texto livre como `sapiens on` não deve ser tratado como comando oficial instalado.
+
 ### Sequência inicial esperada
 As primeiras tools esperadas são:
 - `describe_app32_squad_runtime_tool`
