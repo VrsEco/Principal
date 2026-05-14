@@ -73,6 +73,18 @@ Toda operação do `Squad Cliente` deve respeitar:
 - isolamento tenant a tenant
 - escopo de usuário compatível com o perfil autenticado
 
+## 4.4 Compatibilidade oficial com Claude Desktop (Windows)
+O `Squad Cliente` é oficialmente compatível com `Claude Desktop (Windows)` quando a conexão MCP for instalada localmente com:
+
+- `npx.cmd`
+- pacote `mcp-remote`
+- arquivo `claude_desktop_config.json`
+- Bearer Token pessoal do APP32
+
+### Regra
+Nesta variante, o Claude Desktop consome o APP32 por proxy local STDIO → MCP remoto HTTP.
+Não tratar este fluxo como conector remoto OAuth puro do Claude.
+
 ---
 
 ## 5. Surface oficial

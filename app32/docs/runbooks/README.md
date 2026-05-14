@@ -6,3 +6,4 @@ Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_
 
 ## Instalação
 - `C:\GestaoVersus\app32\app32\docs\runbooks\instalacao\runbook_instalacao_ativacao_sapiens_cliente_cli_v1.md`
+- `C:\GestaoVersus\app32\app32\docs\runbooks\instalacao\runbook_instalacao_sapiens_cliente_claude_desktop_windows_v1.md`

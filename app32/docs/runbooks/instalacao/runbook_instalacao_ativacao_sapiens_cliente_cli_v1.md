@@ -83,7 +83,7 @@ Na interface, deve entrar na aba:
 ## 5.2 Escolher o cliente
 
 Na tela, o usuário deve selecionar o cliente alvo:
-- Claude
+- Claude Desktop (Windows)
 - Codex
 - Antigravity
 - Outro cliente MCP
@@ -153,6 +153,20 @@ Também podem existir:
 ---
 
 ## 6. Fluxo guiado no cliente MCP
+
+## 6.0 Caso validado para Claude Desktop (Windows)
+
+Quando o cliente escolhido for `Claude Desktop (Windows)`, o fluxo oficial não usa conector remoto puro.
+
+Ele usa:
+- `npx.cmd`
+- pacote `mcp-remote`
+- arquivo local `claude_desktop_config.json`
+- Bearer Token pessoal do APP32
+
+### Runbook específico
+Ver:
+- `C:\GestaoVersus\app32\app32\docs\runbooks\instalacao\runbook_instalacao_sapiens_cliente_claude_desktop_windows_v1.md`
 
 ## 6.1 Colar o código para IA
 
