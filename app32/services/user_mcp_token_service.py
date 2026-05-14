@@ -63,6 +63,34 @@ ROLE_ALLOWED_SQUADS = {
     "client": ("squad_cliente",),
     "user": ("squad_cliente",),
 }
+OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS = (
+    "harness_coordenador_cliente_v1",
+    "harness_comercial_cliente_v1",
+    "harness_operacional_cliente_v1",
+    "harness_admfin_cliente_v1",
+)
+OFFICIAL_SQUAD_CLIENTE_AGENTS = (
+    {
+        "key": "SC-COORD",
+        "label": "Agente Coordenador",
+        "summary": "porta de entrada, triagem e roteamento econômico",
+    },
+    {
+        "key": "SC-COM",
+        "label": "Agente Comercial",
+        "summary": "mercado, carteira, proposta, negociação e preço",
+    },
+    {
+        "key": "SC-OPS",
+        "label": "Agente Operacional",
+        "summary": "rotina, backlog, tarefas, projetos e execução assistida",
+    },
+    {
+        "key": "SC-ADM",
+        "label": "Agente Adm/Financeiro",
+        "summary": "alertas, vencimentos, inadimplência e contexto seguro",
+    },
+)
 
 
 @dataclass(frozen=True)
@@ -133,6 +161,30 @@ class UserMcpTokenService:
         if normalized in allowed_squads:
             return normalized
         return allowed_squads[0] if allowed_squads else "squad_cliente"
+
+    @classmethod
+    def _resolve_exposed_harnesses(
+        cls,
+        runtime_profile_key: str,
+        runtime_profile_spec: Any | None,
+    ) -> list[dict[str, Any]]:
+        harnesses = list(runtime_profile_spec.harnesses if runtime_profile_spec else ())
+        if runtime_profile_key == "squad_cliente":
+            allowed_keys = set(OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS)
+            harnesses = [harness for harness in harnesses if harness.key in allowed_keys]
+            harnesses.sort(
+                key=lambda harness: OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS.index(harness.key)
+                if harness.key in OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS
+                else 999
+            )
+        return [
+            {
+                "key": harness.key,
+                "label": harness.label,
+                "business_role": harness.business_role,
+            }
+            for harness in harnesses
+        ]
 
     @classmethod
     def _build_generic_install_command(
@@ -264,14 +316,12 @@ class UserMcpTokenService:
             "runtime_family_label": runtime_profile_spec.family_label if runtime_profile_spec else squad_label,
             "harness_key": runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
             "harness_label": runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
-            "available_harnesses": [
-                {
-                    "key": harness.key,
-                    "label": harness.label,
-                    "business_role": harness.business_role,
-                }
-                for harness in (runtime_profile_spec.harnesses if runtime_profile_spec else ())
-            ],
+            "available_harnesses": cls._resolve_exposed_harnesses(
+                normalized_squad,
+                runtime_profile_spec,
+            ),
+            "official_agents": list(OFFICIAL_SQUAD_CLIENTE_AGENTS) if normalized_squad == "squad_cliente" else [],
+            "official_phase_label": "Fase 1 oficial" if normalized_squad == "squad_cliente" else None,
             "requires_training": runtime_profile_spec.requires_training if runtime_profile_spec else True,
             "resolved_profile": resolved_profile,
             "resolved_surface": resolved_surface,
@@ -599,6 +649,12 @@ class UserMcpTokenService:
                     "Experiência recomendada: instalar o Sapiens Cliente no Claude. "
                     "Gere ou renove o token, copie o código para IA e cole no cliente escolhido para concluir a configuração guiada."
                 )
+            if runtime_config["squad"] == "squad_cliente":
+                installation_instruction = (
+                    f"{installation_instruction}\n\n"
+                    "A instalação publica o Sapiens Cliente com entrada pelo Agente Coordenador. "
+                    "A família inicial oficial do Squad Cliente é composta por Comercial, Operacional e Adm/Financeiro."
+                )
             if runtime_config["supports_personal_token"]:
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
@@ -639,6 +695,8 @@ class UserMcpTokenService:
                 "harness_key": runtime_config["harness_key"],
                 "harness_label": runtime_config["harness_label"],
                 "available_harnesses": runtime_config["available_harnesses"],
+                "official_agents": runtime_config["official_agents"],
+                "official_phase_label": runtime_config["official_phase_label"],
                 "requires_training": runtime_config["requires_training"],
                 "resolved_profile": runtime_config["resolved_profile"],
                 "resolved_surface": runtime_config["resolved_surface"],

@@ -161,6 +161,19 @@
                         </ol>
                     </div>
 
+                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
+                        <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
+                            Entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.
+                        </div>
+                        <div id="mcpOfficialAgentsList" style="display: grid; gap: 0.45rem;">
+                            <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                <div style="font-weight: 700; color: var(--text-main);">Agente Coordenador</div>
+                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">porta de entrada, triagem e roteamento econômico</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Como você quer instalar</h3>
                         <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Todos os clientes/CLIs abaixo seguem fluxo guiado. O APP32 resolve nome visível, profile, surface, agente coordenador e harness inicial automaticamente.</p>
@@ -268,6 +281,10 @@
                         <div class="mcp-summary-card">
                             <div class="mcp-summary-label">Comando sugerido</div>
                             <div class="mcp-summary-value" id="mcpResolvedCommand">sapiens cliente on</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Agente de entrada</div>
+                            <div class="mcp-summary-value" id="mcpResolvedEntryAgent">Harness Coordenador do Squad Cliente</div>
                         </div>
                     </div>
 
@@ -625,6 +642,9 @@
     const mcpResolvedSurface = document.getElementById('mcpResolvedSurface');
     const mcpInstallAvailability = document.getElementById('mcpInstallAvailability');
     const mcpResolvedCommand = document.getElementById('mcpResolvedCommand');
+    const mcpResolvedEntryAgent = document.getElementById('mcpResolvedEntryAgent');
+    const mcpOfficialPhaseText = document.getElementById('mcpOfficialPhaseText');
+    const mcpOfficialAgentsList = document.getElementById('mcpOfficialAgentsList');
     const mcpTokenHelpText = document.getElementById('mcpTokenHelpText');
     const mcpTokenFootnoteText = document.getElementById('mcpTokenFootnoteText');
     const mcpTokenModal = document.getElementById('mcpTokenModal');
@@ -733,6 +753,31 @@
         if (mcpResolvedSurface) mcpResolvedSurface.textContent = resolvedConfig.resolved_surface || '-';
         if (mcpInstallAvailability) mcpInstallAvailability.textContent = resolvedConfig.availability_label || '-';
         if (mcpResolvedCommand) mcpResolvedCommand.textContent = resolvedConfig.command_alias || '-';
+        if (mcpResolvedEntryAgent) mcpResolvedEntryAgent.textContent = resolvedConfig.harness_label || 'Harness inicial não resolvido';
+        if (mcpOfficialPhaseText) {
+            mcpOfficialPhaseText.textContent = resolvedConfig.official_phase_label
+                ? `${resolvedConfig.official_phase_label}: entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.`
+                : 'A instalação publica a entrada padrão do squad com o harness inicial resolvido automaticamente pelo APP32.';
+        }
+        if (mcpOfficialAgentsList) {
+            const officialAgents = Array.isArray(resolvedConfig.official_agents) ? resolvedConfig.official_agents : [];
+            const harnesses = Array.isArray(resolvedConfig.available_harnesses) ? resolvedConfig.available_harnesses : [];
+            if (officialAgents.length) {
+                mcpOfficialAgentsList.innerHTML = officialAgents.map((agent) => `
+                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                        <div style="font-weight: 700; color: var(--text-main);">${agent.label}</div>
+                        <div style="font-size: 0.86rem; color: var(--text-tertiary);">${agent.summary}</div>
+                    </div>
+                `).join('');
+            } else {
+                mcpOfficialAgentsList.innerHTML = harnesses.map((harness) => `
+                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                        <div style="font-weight: 700; color: var(--text-main);">${harness.label}</div>
+                        <div style="font-size: 0.86rem; color: var(--text-tertiary);">${harness.business_role || ''}</div>
+                    </div>
+                `).join('');
+            }
+        }
         if (generateMcpTokenButton) generateMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
         if (renewMcpTokenButton) renewMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
         if (revokeMcpTokenButton) revokeMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;

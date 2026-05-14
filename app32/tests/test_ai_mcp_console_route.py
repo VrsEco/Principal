@@ -232,7 +232,19 @@ def test_ai_mcp_console_service_exposes_squad_cliente_runtime_profile():
     assert "list_user_app32_capabilities" in squad_cliente["startup_tools"]
     assert "describe_app32_profile_contracts_tool" in squad_cliente["startup_tools"]
     assert squad_cliente["default_harness_key"] == "harness_coordenador_cliente_v1"
-    assert any(item["key"] == "harness_admfin_cliente_v1" for item in squad_cliente["harnesses"])
+    assert squad_cliente["official_phase_label"] == "Fase 1 oficial"
+    assert [item["key"] for item in squad_cliente["official_agents"]] == [
+        "SC-COORD",
+        "SC-COM",
+        "SC-OPS",
+        "SC-ADM",
+    ]
+    assert [item["key"] for item in squad_cliente["harnesses"]] == [
+        "harness_coordenador_cliente_v1",
+        "harness_comercial_cliente_v1",
+        "harness_operacional_cliente_v1",
+        "harness_admfin_cliente_v1",
+    ]
 
 
 def test_ai_mcp_console_service_exposes_assisted_usage_and_maturity_model():
@@ -293,3 +305,4 @@ def test_ai_mcp_console_service_exposes_versus_and_engineering_harness_families(
     connection_profiles = {item["key"]: item for item in payload["connection_generator"]["profiles"]}
     assert connection_profiles["squad_versus"]["default_harness_key"] == "harness_coordenador_versus_v1"
     assert connection_profiles["engineering"]["surface"] == "ops"
+    assert connection_profiles["squad_cliente"]["official_phase_label"] == "Fase 1 oficial"

@@ -84,6 +84,7 @@ def test_permission_matrix_tool_returns_manifest_and_filters():
     surface_payload = tool(surface="analytics")
     single_payload = tool(profile="admin_tecnico", surface="ops")
     overlay_payload = tool(overlay_role="operacional_cliente")
+    runtime_family = tool(runtime_profile="squad_cliente")
     missing_payload = tool(profile="foo")
 
     assert manifest_payload["success"] is True
@@ -97,6 +98,15 @@ def test_permission_matrix_tool_returns_manifest_and_filters():
     assert single_payload["data"]["profile"] == "admin_tecnico"
     assert overlay_payload["success"] is True
     assert overlay_payload["data"]["overlay"] == "operacional_cliente"
+    assert runtime_family["success"] is True
+    assert runtime_family["data"]["runtime_profile"] == "squad_cliente"
+    assert runtime_family["data"]["official_phase_label"] == "Fase 1 oficial"
+    assert [item["overlay"] for item in runtime_family["data"]["overlay_matrices"]] == [
+        "coordenador_cliente",
+        "comercial_cliente",
+        "operacional_cliente",
+        "admfin_cliente",
+    ]
     assert missing_payload["success"] is False
     assert missing_payload["error"]["code"] == "permission_matrix_not_found"
 

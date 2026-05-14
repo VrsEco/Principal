@@ -10,6 +10,13 @@ from src.intelligence.mcp_contracts import (
     MCPSuccessEnvelope,
 )
 
+_OFFICIAL_SQUAD_CLIENTE_OVERLAYS = (
+    "coordenador_cliente",
+    "comercial_cliente",
+    "operacional_cliente",
+    "admfin_cliente",
+)
+
 
 def _meta(operation: str, profile: str | None = None) -> MCPResponseMeta:
     return MCPResponseMeta(
@@ -43,11 +50,50 @@ def register_profile_contract_tools(mcp: Any) -> None:
     def describe_app32_profile_contracts_tool(
         profile: Optional[str] = None,
         overlay_role: Optional[str] = None,
+        runtime_profile: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Descreve os contratos MCP por perfil:
         colaborador, cliente, administrador e admin_tecnico.
         """
+        if runtime_profile:
+            normalized_runtime = runtime_profile.strip().lower()
+            overlays = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlays_for_profile("cliente")
+            if normalized_runtime == "squad_cliente":
+                official_overlays = [
+                    overlay.model_dump(mode="json")
+                    for overlay in overlays
+                    if overlay.overlay in _OFFICIAL_SQUAD_CLIENTE_OVERLAYS
+                ]
+                return _success(
+                    "profile_contracts.describe",
+                    {
+                        "runtime_profile": "squad_cliente",
+                        "official_phase_label": "Fase 1 oficial",
+                        "official_overlays": official_overlays,
+                    },
+                    profile="squad_cliente",
+                )
+            runtime_overlays = [
+                overlay.model_dump(mode="json")
+                for overlay in APP32_PROFILE_CONTRACTS_MANIFEST.role_overlays
+                if overlay.runtime_profile == normalized_runtime
+            ]
+            if not runtime_overlays:
+                return _error(
+                    "profile_contracts.describe",
+                    f"Runtime profile MCP inválido ou não encontrado: {runtime_profile}.",
+                    profile=normalized_runtime or None,
+                )
+            return _success(
+                "profile_contracts.describe",
+                {
+                    "runtime_profile": normalized_runtime,
+                    "overlays": runtime_overlays,
+                },
+                profile=normalized_runtime,
+            )
+
         if not profile and not overlay_role:
             return _success(
                 "profile_contracts.describe",

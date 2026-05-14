@@ -115,6 +115,7 @@ class MCPConnectionSnippetService:
                 f"3. Se este cliente permitir criar atalho, comando, agente ou persona, crie a entrada visível chamada {experience_label}.",
                 f"4. Se este cliente permitir alias textual, configure também o comando simples `{cli_command}`.",
                 "5. Explique que a entrada começa pelo agente coordenador do squad e pode rotear internamente para especialistas conforme a necessidade.",
+                "5.1. Se o profile for `squad_cliente`, explique também que a família inicial oficial é composta por Coordenador, Comercial, Operacional e Adm/Financeiro, com economia de tokens por padrão.",
                 f"6. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
                 f"7. Ao ativar, use esta mensagem inicial do {experience_label}:",
                 "",

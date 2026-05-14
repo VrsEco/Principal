@@ -150,6 +150,8 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     assert response.status_code == 200
     assert 'Instalar Squad' in html
     assert 'Sapiens Cliente' in html
+    assert 'Família inicial oficial do Squad Cliente' in html
+    assert 'Agente Coordenador' in html
     assert 'Seu perfil atual instala apenas o Sapiens Cliente' in html
     assert 'data-choice-value="squad_versus"' not in html
     assert 'data-choice-value="engineering"' not in html

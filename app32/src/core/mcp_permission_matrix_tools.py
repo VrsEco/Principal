@@ -10,6 +10,13 @@ from src.intelligence.mcp_contracts import (
     MCPSuccessEnvelope,
 )
 
+_OFFICIAL_SQUAD_CLIENTE_OVERLAYS = (
+    "coordenador_cliente",
+    "comercial_cliente",
+    "operacional_cliente",
+    "admfin_cliente",
+)
+
 
 def _meta(operation: str, *, profile: str | None = None, surface: str | None = None) -> MCPResponseMeta:
     tags = ["permission_matrix"]
@@ -49,11 +56,55 @@ def register_permission_matrix_tools(mcp: Any) -> None:
         profile: Optional[str] = None,
         surface: Optional[str] = None,
         overlay_role: Optional[str] = None,
+        runtime_profile: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Descreve a matriz canônica de permissões do APP32 por perfil e surface:
         colaborador, cliente, administrador e admin_tecnico.
         """
+        if runtime_profile:
+            normalized_runtime = runtime_profile.strip().lower()
+            normalized_surface = surface.strip().lower() if surface else None
+            if normalized_runtime == "squad_cliente":
+                matrices = []
+                for overlay_name in _OFFICIAL_SQUAD_CLIENTE_OVERLAYS:
+                    matrices.extend(APP32_PERMISSION_MATRIX_MANIFEST.get_overlay(overlay_name))
+                if normalized_surface:
+                    matrices = [matrix for matrix in matrices if matrix.surface == normalized_surface]
+                return _success(
+                    "permission_matrix.describe",
+                    {
+                        "runtime_profile": "squad_cliente",
+                        "official_phase_label": "Fase 1 oficial",
+                        "overlay_matrices": [matrix.model_dump(mode="json") for matrix in matrices],
+                    },
+                    profile="squad_cliente",
+                    surface=normalized_surface,
+                )
+            matrices = [
+                matrix for matrix in APP32_PERMISSION_MATRIX_MANIFEST.overlay_matrices
+                if matrix.runtime_profile == normalized_runtime
+            ]
+            if normalized_surface:
+                matrices = [matrix for matrix in matrices if matrix.surface == normalized_surface]
+            if not matrices:
+                return _error(
+                    "permission_matrix.describe",
+                    "permission_matrix_not_found",
+                    "Nenhuma matriz de permissão encontrada para os filtros informados.",
+                    profile=normalized_runtime,
+                    surface=normalized_surface,
+                )
+            return _success(
+                "permission_matrix.describe",
+                {
+                    "runtime_profile": normalized_runtime,
+                    "overlay_matrices": [matrix.model_dump(mode="json") for matrix in matrices],
+                },
+                profile=normalized_runtime,
+                surface=normalized_surface,
+            )
+
         if not profile and not surface and not overlay_role:
             return _success(
                 "permission_matrix.describe",

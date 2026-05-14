@@ -39,6 +39,34 @@ class AIMCPConsoleService:
 
     SURFACES = ("user", "admin", "analytics", "ops")
     DOCUMENTATION_BOOTSTRAP_SURFACE = "user"
+    OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS = (
+        "harness_coordenador_cliente_v1",
+        "harness_comercial_cliente_v1",
+        "harness_operacional_cliente_v1",
+        "harness_admfin_cliente_v1",
+    )
+    OFFICIAL_SQUAD_CLIENTE_AGENTS = (
+        {
+            "key": "SC-COORD",
+            "label": "Agente Coordenador",
+            "summary": "Entrada oficial, triagem e roteamento econômico do Squad Cliente.",
+        },
+        {
+            "key": "SC-COM",
+            "label": "Agente Comercial",
+            "summary": "Mercado, carteira, proposta, negociação e preço com ação comercial útil.",
+        },
+        {
+            "key": "SC-OPS",
+            "label": "Agente Operacional",
+            "summary": "Rotina, backlog, tarefas, projetos e execução assistida com objetividade.",
+        },
+        {
+            "key": "SC-ADM",
+            "label": "Agente Adm/Financeiro",
+            "summary": "Alertas, vencimentos, inadimplência e contexto administrativo seguro.",
+        },
+    )
 
     @classmethod
     def build_frontend_state(cls, active_company: Any | None = None) -> dict[str, Any]:
@@ -496,6 +524,8 @@ class AIMCPConsoleService:
                     "default_harness_key": "harness_coordenador_cliente_v1",
                     "default_harness_label": "Harness Coordenador do Squad Cliente",
                     "harnesses": cls._serialize_runtime_harnesses("squad_cliente"),
+                    "official_phase_label": "Fase 1 oficial",
+                    "official_agents": [dict(item) for item in cls.OFFICIAL_SQUAD_CLIENTE_AGENTS],
                 },
                 {
                     "key": "engineering",
@@ -658,6 +688,8 @@ class AIMCPConsoleService:
                 "default_harness_key": "harness_coordenador_cliente_v1",
                 "default_harness_label": "Harness Coordenador do Squad Cliente",
                 "harnesses": cls._serialize_runtime_harnesses("squad_cliente"),
+                "official_phase_label": "Fase 1 oficial",
+                "official_agents": [dict(item) for item in cls.OFFICIAL_SQUAD_CLIENTE_AGENTS],
                 "required_contracts": [
                     "surface_playbooks",
                     "profile_contracts",
@@ -701,13 +733,17 @@ class AIMCPConsoleService:
         spec = get_runtime_profile_spec(runtime_profile)
         if spec is None:
             return []
+        harnesses = list(spec.harnesses)
+        if runtime_profile == "squad_cliente":
+            allowed = set(AIMCPConsoleService.OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS)
+            harnesses = [harness for harness in harnesses if harness.key in allowed]
         return [
             {
                 "key": harness.key,
                 "label": harness.label,
                 "business_role": harness.business_role,
             }
-            for harness in spec.harnesses
+            for harness in harnesses
         ]
 
     @classmethod

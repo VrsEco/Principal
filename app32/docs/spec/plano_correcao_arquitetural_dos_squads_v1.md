@@ -237,6 +237,7 @@ Formalizar:
 - autonomia
 - coprodução humano + agente
 - auditoria `read-only`
+- amadurecimento do `Modo Conselho` como protocolo especial do Agente Líder antes de congelar em SPEC
 
 ### Etapa C
 Consolidar:

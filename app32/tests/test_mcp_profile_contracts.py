@@ -90,6 +90,7 @@ def test_profile_contract_tool_returns_manifest_and_profile():
     manifest = tool()
     profile = tool("administrador_tecnico")
     overlay = tool(overlay_role="operacional_cliente")
+    runtime_family = tool(runtime_profile="squad_cliente")
     invalid = tool("foo")
 
     assert manifest["success"] is True
@@ -99,6 +100,15 @@ def test_profile_contract_tool_returns_manifest_and_profile():
     assert profile["data"]["profile"] == "admin_tecnico"
     assert overlay["success"] is True
     assert overlay["data"]["overlay"] == "operacional_cliente"
+    assert runtime_family["success"] is True
+    assert runtime_family["data"]["runtime_profile"] == "squad_cliente"
+    assert runtime_family["data"]["official_phase_label"] == "Fase 1 oficial"
+    assert [item["overlay"] for item in runtime_family["data"]["official_overlays"]] == [
+        "coordenador_cliente",
+        "comercial_cliente",
+        "operacional_cliente",
+        "admfin_cliente",
+    ]
     assert invalid["success"] is False
     assert invalid["error"]["code"] == "profile_contract_not_found"
 

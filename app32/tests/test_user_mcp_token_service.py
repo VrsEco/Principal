@@ -58,6 +58,7 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     assert "ative o Sapiens Cliente" in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
+    assert "Coordenador, Comercial, Operacional e Adm/Financeiro" in config["activation_prompt"]
     assert "sapiens cliente on" in config["activation_prompt"]
     assert "◆ SAPIENS · Gestão Versus ● ativo" in config["activation_prompt"]
     assert '"transport": "http"' in config["technical_config_text"]
@@ -149,7 +150,14 @@ def test_build_client_config_exposes_squad_cliente_harness_catalog(monkeypatch):
         squad="squad_cliente",
     )
 
-    assert any(item["key"] == "harness_comercial_cliente_v1" for item in config["available_harnesses"])
+    assert [item["key"] for item in config["available_harnesses"]] == [
+        "harness_coordenador_cliente_v1",
+        "harness_comercial_cliente_v1",
+        "harness_operacional_cliente_v1",
+        "harness_admfin_cliente_v1",
+    ]
+    assert [item["key"] for item in config["official_agents"]] == ["SC-COORD", "SC-COM", "SC-OPS", "SC-ADM"]
+    assert config["official_phase_label"] == "Fase 1 oficial"
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["activation_prompt"]
 
 
