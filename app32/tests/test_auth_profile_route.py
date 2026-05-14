@@ -160,6 +160,8 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     assert 'Ajuda com clientes, propostas, negociação, preço e oportunidades.' in html
     assert 'Para você, continua sendo uma única conversa, simples e contínua.' in html
     assert 'Agente Coordenador' in html
+    assert 'Copie seu token agora' in html
+    assert '.mcp-token-modal__dialog' in html
     assert 'Seu perfil atual instala apenas o Sapiens Cliente' in html
     assert 'data-choice-value="squad_versus"' not in html
     assert 'data-choice-value="engineering"' not in html

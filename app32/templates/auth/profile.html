@@ -519,6 +519,37 @@
         display: grid !important;
     }
 
+    .mcp-token-modal[hidden] {
+        display: none !important;
+    }
+
+    .mcp-token-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        display: grid;
+        place-items: center;
+        padding: 1.25rem;
+    }
+
+    .mcp-token-modal__backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.56);
+        backdrop-filter: blur(2px);
+    }
+
+    .mcp-token-modal__dialog {
+        position: relative;
+        z-index: 1;
+        width: min(100%, 640px);
+        padding: 1.25rem;
+        border-radius: 20px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        background: var(--card-bg, #fff);
+        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2);
+    }
+
     .password-toggle {
         position: absolute;
         top: 50%;
@@ -1112,6 +1143,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         generateMcpTokenButton.addEventListener('click', async () => {
             try {
                 activateProfileTab('profile-mcp-panel');
+                activateMcpStep('mcp-step-config-panel');
                 await runMcpTokenAction('{{ url_for('auth.generate_profile_mcp_token') }}', 'Token MCP gerado com sucesso. Copie-o na janela aberta e depois gere o código para IA.');
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
@@ -1123,6 +1155,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         renewMcpTokenButton.addEventListener('click', async () => {
             try {
                 activateProfileTab('profile-mcp-panel');
+                activateMcpStep('mcp-step-config-panel');
                 await runMcpTokenAction('{{ url_for('auth.renew_profile_mcp_token') }}', 'Token MCP renovado com sucesso. Copie-o na janela aberta e atualize sua instalação.');
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
