@@ -247,11 +247,13 @@ class UserMcpTokenService:
                     company_id=company_id,
                 )
             instruction_text = (
-                "Gere o código para IA conforme as configurações escolhidas. "
-                "Se o cliente suportar instalador, o passo a passo já vai orientar como concluir a instalação guiada."
+                f"Você está preparando o {experience_label} para uso no {runtime_label}. "
+                "Gere o código para IA conforme as configurações escolhidas e siga o passo a passo orientado pelo APP32. "
+                "A instalação entra pelo Coordenador e depois pode chamar Comercial, Operacional e Administrativo/Financeiro quando necessário."
             )
             if normalized_runtime == "other":
                 instruction_text = (
+                    f"Você está preparando o {experience_label} para uso em outro cliente de IA. "
                     "Gere o código para IA conforme as configurações escolhidas. "
                     "Se este cliente não suportar integração automática, use o modo avançado com a configuração técnica."
                 )
@@ -272,7 +274,9 @@ class UserMcpTokenService:
                 command_alias=command_alias,
             )
             instruction_text = (
-                "O Squad de Engenharia é operado em ambiente técnico controlado. Use o instalador apenas em rollout autorizado pela Versus."
+                f"Você está preparando o {experience_label} para uso no {runtime_label}. "
+                "O Squad de Engenharia opera em ambiente técnico controlado e prioriza excelência técnica. "
+                "Use o instalador apenas em rollout autorizado pela Versus."
             )
         elif normalized_squad == "squad_versus":
             resolved_profile = "squad_versus"
@@ -291,7 +295,9 @@ class UserMcpTokenService:
                 command_alias=command_alias,
             )
             instruction_text = (
-                "O Squad Versus usa surface administrativa e fica sob rollout controlado. Gere o comando apenas para instalação assistida pela Versus."
+                f"Você está preparando o {experience_label} para uso no {runtime_label}. "
+                "O Squad Versus usa surface administrativa e fica sob rollout controlado. "
+                "Gere o comando apenas para instalação assistida pela Versus."
             )
 
         return {

@@ -154,80 +154,20 @@
                     <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
                         <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo a passo recomendado</div>
                         <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
-                            <li>Escolha o cliente/CLI e a empresa padrão.</li>
+                            <li>Escolha o squad e qual cliente de IA você vai usar.</li>
+                            <li>Se quiser, defina a empresa padrão e o nome desta instalação.</li>
                             <li>Gere ou renove o token no final desta tela.</li>
                             <li>Clique em <strong>Gerar código para IA</strong>, copie e cole no cliente escolhido.</li>
                             <li>Peça para a IA criar a entrada com o nome visível do Sapiens correspondente.</li>
                         </ol>
                     </div>
 
-                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
-                        <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
-                            Entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.
-                        </div>
-                        <div id="mcpOfficialAgentsList" style="display: grid; gap: 0.45rem;">
-                            <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main);">Agente Coordenador</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">porta de entrada, triagem e roteamento econômico</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quem vai te atender no Sapiens Cliente</div>
-                        <div style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.75rem;">
-                            Você instala uma única entrada chamada <strong>Sapiens Cliente</strong>. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.
-                        </div>
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.65rem;">
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Coordenador</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entende seu pedido, organiza o atendimento e chama o especialista certo.</div>
-                            </div>
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Comercial</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com clientes, propostas, negociação, preço e oportunidades.</div>
-                            </div>
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Operacional</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com tarefas, prioridades, rotina, organização e execução.</div>
-                            </div>
-                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Administrativo/Financeiro</div>
-                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.</div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div>
-                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Como você quer instalar</h3>
-                        <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Todos os clientes/CLIs abaixo seguem fluxo guiado. O APP32 resolve nome visível, profile, surface, agente coordenador e harness inicial automaticamente.</p>
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Squad que será instalado</h3>
+                        <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Escolha primeiro qual versão do Sapiens você quer publicar. A tela será ajustada automaticamente conforme o squad escolhido.</p>
                     </div>
 
                     <div class="filter-field">
-                        <label>Cliente / CLI onde você vai instalar</label>
-                        <div class="mcp-choice-grid" id="mcpRuntimeChoices">
-                            <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
-                                <strong>Claude (recomendado)</strong>
-                                <span>Experiência principal para o cliente.</span>
-                            </button>
-                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
-                                <strong>Codex</strong>
-                                <span>Instalação guiada em ambiente técnico.</span>
-                            </button>
-                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
-                                <strong>Antigravity</strong>
-                                <span>Instalação guiada para uso consultivo.</span>
-                            </button>
-                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
-                                <strong>Outro cliente MCP</strong>
-                                <span>Fluxo guiado com fallback para modo avançado.</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="filter-field">
-                        <label>Squad que será instalado</label>
                         {% if can_install_all_squads %}
                             <div class="mcp-choice-grid" id="mcpSquadChoices">
                                 <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
@@ -265,6 +205,39 @@
                             </div>
                             <small style="color: var(--text-tertiary);">Seu perfil atual instala apenas o Sapiens Cliente. Sapiens Consultor e Sapiens Engenharia ficam disponíveis somente para perfis autorizados.</small>
                         {% endif %}
+                    </div>
+
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Qual Cliente de IA você irá usar?</h3>
+                        <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Todos os clientes de IA abaixo seguem fluxo guiado. O APP32 ajusta automaticamente nome visível, profile, surface, agente de entrada e instruções conforme a combinação escolhida.</p>
+                    </div>
+
+                    <div class="filter-field">
+                        <div class="mcp-choice-grid" id="mcpRuntimeChoices">
+                            <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
+                                <strong>Claude (recomendado)</strong>
+                                <span>Experiência principal para o cliente.</span>
+                            </button>
+                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
+                                <strong>Codex</strong>
+                                <span>Instalação guiada em ambiente técnico.</span>
+                            </button>
+                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
+                                <strong>Antigravity</strong>
+                                <span>Instalação guiada para uso consultivo.</span>
+                            </button>
+                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
+                                <strong>Outro cliente MCP</strong>
+                                <span>Fluxo guiado com fallback para modo avançado.</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                        <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
+                        <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
+                            Você está configurando o Sapiens Cliente para uso no Claude. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.
+                        </div>
                     </div>
 
                     <div class="filter-field">
@@ -310,6 +283,44 @@
                         <div class="mcp-summary-card">
                             <div class="mcp-summary-label">Agente de entrada</div>
                             <div class="mcp-summary-value" id="mcpResolvedEntryAgent">Harness Coordenador do Squad Cliente</div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                        <div id="mcpOfficialCompositionTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
+                        <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
+                            Entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.
+                        </div>
+                        <div id="mcpOfficialAgentsList" style="display: grid; gap: 0.45rem;">
+                            <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                <div style="font-weight: 700; color: var(--text-main);">Agente Coordenador</div>
+                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">porta de entrada, triagem e roteamento econômico</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                        <div id="mcpAudienceTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quem vai te atender no Sapiens Cliente</div>
+                        <div id="mcpAudienceIntro" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.75rem;">
+                            Você instala uma única entrada chamada <strong>Sapiens Cliente</strong>. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.
+                        </div>
+                        <div id="mcpAudienceFlow" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.65rem;">
+                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Coordenador</div>
+                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entende seu pedido, organiza o atendimento e chama o especialista certo.</div>
+                            </div>
+                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Comercial</div>
+                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com clientes, propostas, negociação, preço e oportunidades.</div>
+                            </div>
+                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Operacional</div>
+                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com tarefas, prioridades, rotina, organização e execução.</div>
+                            </div>
+                            <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Administrativo/Financeiro</div>
+                                <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.</div>
+                            </div>
                         </div>
                     </div>
 
@@ -674,8 +685,14 @@
     const mcpInstallAvailability = document.getElementById('mcpInstallAvailability');
     const mcpResolvedCommand = document.getElementById('mcpResolvedCommand');
     const mcpResolvedEntryAgent = document.getElementById('mcpResolvedEntryAgent');
+    const mcpSelectionGuideTitle = document.getElementById('mcpSelectionGuideTitle');
+    const mcpSelectionGuideText = document.getElementById('mcpSelectionGuideText');
+    const mcpOfficialCompositionTitle = document.getElementById('mcpOfficialCompositionTitle');
     const mcpOfficialPhaseText = document.getElementById('mcpOfficialPhaseText');
     const mcpOfficialAgentsList = document.getElementById('mcpOfficialAgentsList');
+    const mcpAudienceTitle = document.getElementById('mcpAudienceTitle');
+    const mcpAudienceIntro = document.getElementById('mcpAudienceIntro');
+    const mcpAudienceFlow = document.getElementById('mcpAudienceFlow');
     const mcpTokenHelpText = document.getElementById('mcpTokenHelpText');
     const mcpTokenFootnoteText = document.getElementById('mcpTokenFootnoteText');
     const mcpTokenModal = document.getElementById('mcpTokenModal');
@@ -770,6 +787,57 @@
         };
     }
 
+    function getSquadUiCopy(resolvedConfig) {
+        const squad = resolvedConfig && resolvedConfig.squad ? resolvedConfig.squad : 'squad_cliente';
+        const runtimeLabel = resolvedConfig && resolvedConfig.runtime_label ? resolvedConfig.runtime_label : 'o cliente de IA escolhido';
+        if (squad === 'squad_versus') {
+            return {
+                guideTitle: 'Como essa combinação vai funcionar',
+                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Consultor'} para uso no ${runtimeLabel}. Esta instalação é voltada para trabalho consultivo, governança e rollout assistido, com uso controlado pela Versus.`,
+                compositionTitle: 'Composição oficial do Sapiens Consultor',
+                phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação consultiva com especialistas de estratégia, operação, performance, finanças e auditoria conforme o caso.`,
+                audienceTitle: 'Quem opera no Sapiens Consultor',
+                audienceIntro: 'Você instala uma única entrada consultiva. A partir dela, o atendimento começa por coordenação consultiva e pode acionar especialistas da Versus quando a demanda exigir análise estrutural, governança ou revisão estratégica.',
+                audienceCards: [
+                    { title: 'Coordenação consultiva', summary: 'Entende o caso, define a linha de análise e organiza os especialistas certos.' },
+                    { title: 'Estratégia e operação', summary: 'Apoia decisões estruturais, processos, posicionamento e evolução do negócio.' },
+                    { title: 'Finanças e auditoria', summary: 'Atua em leitura crítica, governança e temas sensíveis com maior controle.' },
+                ],
+            };
+        }
+        if (squad === 'engineering') {
+            return {
+                guideTitle: 'Como essa combinação vai funcionar',
+                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Engenharia'} para uso no ${runtimeLabel}. Esta instalação é técnica e controlada, pensada para diagnóstico, arquitetura, implementação e suporte avançado.`,
+                compositionTitle: 'Composição oficial do Sapiens Engenharia',
+                phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação técnica com roteamento para arquitetura, backend, AI engineering, dados e QA conforme a necessidade.`,
+                audienceTitle: 'Quem opera no Sapiens Engenharia',
+                audienceIntro: 'Você instala uma única entrada técnica. O atendimento começa por coordenação de engenharia e pode acionar especialistas internos para investigação, implementação, testes e diagnóstico profundo.',
+                audienceCards: [
+                    { title: 'Coordenação técnica', summary: 'Classifica o problema e direciona para a especialidade certa.' },
+                    { title: 'Arquitetura e backend', summary: 'Apoia desenho técnico, APIs, serviços, integrações e regras críticas.' },
+                    { title: 'AI, dados e qualidade', summary: 'Apoia agentes, MCP, banco de dados, testes, validação e excelência técnica.' },
+                ],
+            };
+        }
+        return {
+            guideTitle: 'Como essa combinação vai funcionar',
+            guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.`,
+            compositionTitle: 'Família inicial oficial do Squad Cliente',
+            phaseText: resolvedConfig.official_phase_label
+                ? `${resolvedConfig.official_phase_label}: entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.`
+                : 'A instalação publica a entrada padrão do squad com o harness inicial resolvido automaticamente pelo APP32.',
+            audienceTitle: 'Quem vai te atender no Sapiens Cliente',
+            audienceIntro: 'Você instala uma única entrada chamada Sapiens Cliente. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.',
+            audienceCards: [
+                { title: 'Coordenador', summary: 'Entende seu pedido, organiza o atendimento e chama o especialista certo.' },
+                { title: 'Comercial', summary: 'Ajuda com clientes, propostas, negociação, preço e oportunidades.' },
+                { title: 'Operacional', summary: 'Ajuda com tarefas, prioridades, rotina, organização e execução.' },
+                { title: 'Administrativo/Financeiro', summary: 'Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.' },
+            ],
+        };
+    }
+
     function renderMcpConfig(config, mode = 'activation') {
         if (!mcpConfigOutput) return;
         if (!config) {
@@ -785,10 +853,22 @@
         if (mcpInstallAvailability) mcpInstallAvailability.textContent = resolvedConfig.availability_label || '-';
         if (mcpResolvedCommand) mcpResolvedCommand.textContent = resolvedConfig.command_alias || '-';
         if (mcpResolvedEntryAgent) mcpResolvedEntryAgent.textContent = resolvedConfig.harness_label || 'Harness inicial não resolvido';
+        const uiCopy = getSquadUiCopy(resolvedConfig);
+        if (mcpSelectionGuideTitle) mcpSelectionGuideTitle.textContent = uiCopy.guideTitle;
+        if (mcpSelectionGuideText) mcpSelectionGuideText.textContent = uiCopy.guideText;
+        if (mcpOfficialCompositionTitle) mcpOfficialCompositionTitle.textContent = uiCopy.compositionTitle;
         if (mcpOfficialPhaseText) {
-            mcpOfficialPhaseText.textContent = resolvedConfig.official_phase_label
-                ? `${resolvedConfig.official_phase_label}: entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.`
-                : 'A instalação publica a entrada padrão do squad com o harness inicial resolvido automaticamente pelo APP32.';
+            mcpOfficialPhaseText.textContent = uiCopy.phaseText;
+        }
+        if (mcpAudienceTitle) mcpAudienceTitle.textContent = uiCopy.audienceTitle;
+        if (mcpAudienceIntro) mcpAudienceIntro.textContent = uiCopy.audienceIntro;
+        if (mcpAudienceFlow && Array.isArray(uiCopy.audienceCards) && uiCopy.audienceCards.length) {
+            mcpAudienceFlow.innerHTML = uiCopy.audienceCards.map((card) => `
+                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">${card.title}</div>
+                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">${card.summary}</div>
+                </div>
+            `).join('');
         }
         if (mcpOfficialAgentsList) {
             const officialAgents = Array.isArray(resolvedConfig.official_agents) ? resolvedConfig.official_agents : [];
