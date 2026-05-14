@@ -2,6 +2,8 @@ param(
     [string]$Email,
     [string]$Token,
     [int]$CompanyId = 0,
+    [ValidateSet("claude", "codex", "antigravity", "other")]
+    [string]$ClientRuntime = "other",
     [string]$Profile = "squad_cliente",
     [string]$Surface = "user",
     [string]$ExperienceLabel = "Sapiens Cliente",
@@ -12,6 +14,7 @@ param(
     [string]$CommandAlias = "sapiens cliente on",
     [string]$AppBaseUrl = "https://app.gestaoversus.com.br",
     [string]$WorkspaceRoot = (Get-Location).Path,
+    [string]$ConfigPath,
     [switch]$SkipSmoke
 )
 
@@ -40,6 +43,29 @@ function Backup-IfExists([string]$Path) {
     $backupPath = "$Path.bak_$timestamp"
     Copy-Item -LiteralPath $Path -Destination $backupPath -Force
     return $backupPath
+}
+
+function Resolve-WorkspaceMcpConfigPath([string]$StartPath) {
+    $current = [IO.Path]::GetFullPath($StartPath)
+    while (-not [string]::IsNullOrWhiteSpace($current)) {
+        $candidate = Join-Path $current ".mcp.json"
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+        $parent = Split-Path -Path $current -Parent
+        if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $current) {
+            break
+        }
+        $current = $parent
+    }
+    return (Join-Path ([IO.Path]::GetFullPath($StartPath)) ".mcp.json")
+}
+
+function Resolve-TargetConfigPath([string]$ExplicitPath, [string]$StartPath) {
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
+        return [IO.Path]::GetFullPath($ExplicitPath)
+    }
+    return Resolve-WorkspaceMcpConfigPath -StartPath $StartPath
 }
 
 function Merge-McpConfig([string]$ConfigPath, [string]$Name, [hashtable]$ServerConfig) {
@@ -72,6 +98,7 @@ function Invoke-BasicSmoke([string]$BaseUrl) {
 }
 
 Write-Step "Instalação guiada do $ExperienceLabel"
+Write-Host "Cliente alvo........: $ClientRuntime"
 
 if ([string]::IsNullOrWhiteSpace($Email)) {
     $Email = $env:GV_USER_EMAIL
@@ -83,21 +110,31 @@ if ([string]::IsNullOrWhiteSpace($Email)) {
     throw "E-mail obrigatório."
 }
 
+$configPath = Resolve-TargetConfigPath -ExplicitPath $ConfigPath -StartPath $WorkspaceRoot
+$serverUrl = "{0}/mcp/{1}/" -f $AppBaseUrl.TrimEnd('/'), $Surface
+if ($CompanyId -gt 0) {
+    $serverUrl = "${serverUrl}?company_id=$CompanyId"
+}
+
+Write-Step "Localizando arquivo de configuração MCP do cliente"
+Write-Host "Arquivo alvo........: $configPath"
+Write-Host "Profile.............: $Profile"
+Write-Host "Surface.............: $Surface"
+Write-Host "Harness inicial.....: $HarnessLabel"
+Write-Host "URL.................: $serverUrl"
+Write-Host ""
+Write-Host "No próximo passo você precisará colar o token MCP gerado no APP32." -ForegroundColor Yellow
+Write-Host "Abra o APP32 > Meu perfil > Instalar Squad, gere ou renove o token e volte para este terminal." -ForegroundColor Yellow
+
 if ([string]::IsNullOrWhiteSpace($Token)) {
     $Token = $env:GV_MCP_TOKEN
 }
 if ([string]::IsNullOrWhiteSpace($Token)) {
-    $secureToken = Read-Host "Cole o token MCP gerado no APP32" -AsSecureString
+    $secureToken = Read-Host "Cole agora o token MCP gerado no APP32" -AsSecureString
     $Token = Get-PlainTextFromSecureString $secureToken
 }
 if ([string]::IsNullOrWhiteSpace($Token)) {
     throw "Token MCP obrigatório."
-}
-
-$configPath = Join-Path $WorkspaceRoot ".mcp.json"
-$serverUrl = "{0}/mcp/{1}/" -f $AppBaseUrl.TrimEnd('/'), $Surface
-if ($CompanyId -gt 0) {
-    $serverUrl = "$serverUrl?company_id=$CompanyId"
 }
 
 Write-Step "Preparando .mcp.json local"
@@ -122,6 +159,7 @@ $serverConfig = @{
 }
 
 Merge-McpConfig -ConfigPath $configPath -Name $ServerName -ServerConfig $serverConfig
+$Token = $null
 
 $smokeResult = $null
 if (-not $SkipSmoke) {

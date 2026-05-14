@@ -247,6 +247,27 @@ Esta SPEC não congela os detalhes dos harnesses; congela apenas o vínculo can�
 
 ---
 
+## 13.1 Bootstrap operacional do runtime
+
+O runtime externo do `Sapiens Cliente` não deve depender da leitura de SPECs longas para agir corretamente.
+
+### Regra oficial
+O APP32 deve expor um bootstrap operacional curto e executável do `Squad Cliente`, suficiente para orientar o CLI com:
+- agente de entrada
+- especialistas oficiais da fase 1
+- ordem de roteamento
+- regra de economia de tokens
+- regra de escalonamento
+- harnesses oficiais expostos ao runtime
+
+### Tool oficial de bootstrap
+- `describe_app32_squad_runtime_tool`
+
+### Consequência prática
+A SPEC continua sendo a fonte de verdade, mas o comportamento do runtime deve ser guiado pelo bootstrap operacional resumido e pelos harnesses correspondentes.
+
+---
+
 ## 14. Modo Conselho
 
 O `Modo Conselho` permanece, em v1, como protocolo especial em amadurecimento conceitual.

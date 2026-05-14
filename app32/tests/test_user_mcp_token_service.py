@@ -59,6 +59,7 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert "ative o Sapiens Cliente" in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
     assert "Coordenador, Comercial, Operacional e Adm/Financeiro" in config["activation_prompt"]
+    assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
     assert "sapiens cliente on" in config["activation_prompt"]
     assert "◆ SAPIENS · Gestão Versus ● ativo" in config["activation_prompt"]
     assert '"transport": "http"' in config["technical_config_text"]
@@ -86,13 +87,13 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["runtime"] == "claude"
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
-    assert config["install_mode"] == "guided"
+    assert config["install_mode"] == "self_service"
     assert config["actor_type"] == "client_agent"
     assert config["experience_label"] == "Sapiens Cliente"
     assert config["command_alias"] == "sapiens cliente on"
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
-    assert "install-sapiens-runtime.ps1" in config["install_command"]
+    assert "install-sapiens-cliente.ps1" in config["install_command"]
 
 
 def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
@@ -201,6 +202,6 @@ def test_build_client_config_marks_all_runtimes_as_guided_for_squad_cliente(monk
         squad="squad_cliente",
     )
 
-    assert config["availability_label"] == "Instalação guiada"
-    assert config["install_mode"] == "guided"
+    assert config["availability_label"] == "Instalação automática guiada"
+    assert config["install_mode"] == "self_service"
     assert "Gere o código para IA" in config["instruction_text"]

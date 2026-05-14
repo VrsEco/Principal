@@ -16,6 +16,10 @@ from services.email_service import email_service
 from services.log_service import log_service
 from services.whatsapp_service import whatsapp_service
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
+from services.squad_runtime_bootstrap_service import (
+    OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS,
+    SquadRuntimeBootstrapService,
+)
 from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 from utils.permissions import (
     can_access_company,
@@ -34,6 +38,7 @@ PROFILE_TO_FALLBACK_ROLE = {
     "collaborator": "colaborador",
 }
 GENERIC_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-runtime.ps1"
+SAPIENS_CLIENTE_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-cliente.ps1"
 RUNTIME_LABELS = {
     "claude": "Claude",
     "codex": "Codex",
@@ -63,35 +68,6 @@ ROLE_ALLOWED_SQUADS = {
     "client": ("squad_cliente",),
     "user": ("squad_cliente",),
 }
-OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS = (
-    "harness_coordenador_cliente_v1",
-    "harness_comercial_cliente_v1",
-    "harness_operacional_cliente_v1",
-    "harness_admfin_cliente_v1",
-)
-OFFICIAL_SQUAD_CLIENTE_AGENTS = (
-    {
-        "key": "SC-COORD",
-        "label": "Agente Coordenador",
-        "summary": "porta de entrada, triagem e roteamento econômico",
-    },
-    {
-        "key": "SC-COM",
-        "label": "Agente Comercial",
-        "summary": "mercado, carteira, proposta, negociação e preço",
-    },
-    {
-        "key": "SC-OPS",
-        "label": "Agente Operacional",
-        "summary": "rotina, backlog, tarefas, projetos e execução assistida",
-    },
-    {
-        "key": "SC-ADM",
-        "label": "Agente Adm/Financeiro",
-        "summary": "alertas, vencimentos, inadimplência e contexto seguro",
-    },
-)
-
 
 @dataclass(frozen=True)
 class UserMcpResolvedContext:
@@ -190,6 +166,7 @@ class UserMcpTokenService:
     def _build_generic_install_command(
         cls,
         *,
+        runtime_key: str | None,
         company_id: int | None,
         profile_key: str,
         surface: str,
@@ -207,6 +184,7 @@ class UserMcpTokenService:
         return (
             "powershell -ExecutionPolicy Bypass -File "
             f"\"{GENERIC_INSTALLER_COMMAND}\""
+            f" -ClientRuntime \"{runtime_key or 'other'}\""
             f"{company_arg}"
             f" -Profile \"{profile_key}\""
             f" -Surface \"{surface}\""
@@ -216,6 +194,21 @@ class UserMcpTokenService:
             f" -HarnessLabel \"{harness_label_value}\""
             f" -ServerName \"{server_name}\""
             f" -CommandAlias \"{command_alias_value}\""
+        )
+
+    @classmethod
+    def _build_squad_cliente_install_command(
+        cls,
+        *,
+        runtime_key: str | None,
+        company_id: int | None,
+    ) -> str:
+        company_arg = f" -CompanyId {company_id}" if company_id else ""
+        return (
+            "powershell -ExecutionPolicy Bypass -File "
+            f"\"{SAPIENS_CLIENTE_INSTALLER_COMMAND}\""
+            f" -ClientRuntime \"{runtime_key or 'other'}\""
+            f"{company_arg}"
         )
 
     @classmethod
@@ -247,15 +240,11 @@ class UserMcpTokenService:
             resolved_profile = "squad_cliente"
             resolved_surface = "user"
             if normalized_runtime in {"claude", "codex", "antigravity"}:
-                install_command = cls._build_generic_install_command(
+                install_mode = "self_service"
+                availability_label = "Instalação automática guiada"
+                install_command = cls._build_squad_cliente_install_command(
+                    runtime_key=normalized_runtime,
                     company_id=company_id,
-                    profile_key=resolved_profile,
-                    surface=resolved_surface,
-                    experience_label=experience_label,
-                    canonical_label=squad_label,
-                    harness_key=runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
-                    harness_label=runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
-                    command_alias=command_alias,
                 )
             instruction_text = (
                 "Gere o código para IA conforme as configurações escolhidas. "
@@ -272,6 +261,7 @@ class UserMcpTokenService:
             install_mode = "guided_controlled"
             availability_label = "Instalação guiada controlada"
             install_command = cls._build_generic_install_command(
+                runtime_key=normalized_runtime,
                 company_id=company_id,
                 profile_key=resolved_profile,
                 surface=resolved_surface,
@@ -290,6 +280,7 @@ class UserMcpTokenService:
             install_mode = "guided_controlled"
             availability_label = "Instalação guiada controlada"
             install_command = cls._build_generic_install_command(
+                runtime_key=normalized_runtime,
                 company_id=company_id,
                 profile_key=resolved_profile,
                 surface=resolved_surface,
@@ -320,7 +311,7 @@ class UserMcpTokenService:
                 normalized_squad,
                 runtime_profile_spec,
             ),
-            "official_agents": list(OFFICIAL_SQUAD_CLIENTE_AGENTS) if normalized_squad == "squad_cliente" else [],
+            "official_agents": SquadRuntimeBootstrapService.list_official_squad_cliente_agents() if normalized_squad == "squad_cliente" else [],
             "official_phase_label": "Fase 1 oficial" if normalized_squad == "squad_cliente" else None,
             "requires_training": runtime_profile_spec.requires_training if runtime_profile_spec else True,
             "resolved_profile": resolved_profile,
@@ -669,7 +660,7 @@ class UserMcpTokenService:
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
                     f"Comando sugerido:\n{installation_command}\n\n"
-                    "Quando o instalador abrir, informe o seu e-mail do APP32 e cole o token MCP gerado nesta tela."
+                    "Quando o instalador abrir, ele vai localizar o arquivo MCP do cliente, pedir seu e-mail e solicitar o token MCP no momento correto, de forma interativa e segura."
                 )
             elif installation_command:
                 installation_instruction = (

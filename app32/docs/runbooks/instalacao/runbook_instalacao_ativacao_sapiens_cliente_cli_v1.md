@@ -143,6 +143,7 @@ Esse conteúdo é o prompt guiado para o cliente escolhido configurar a conexão
 - surface
 - harness inicial
 - Bearer token
+- bootstrap operacional resumido do Squad Cliente
 
 ### Opções auxiliares
 Também podem existir:
@@ -173,6 +174,9 @@ Ela deve:
 
 Quando solicitado:
 - colar o token MCP pessoal gerado na tela `/profile`
+
+### Regra oficial
+O token deve ser solicitado pelo instalador somente no momento correto da configuração, de forma interativa e segura, sem exigir que o usuário o coloque antecipadamente em linha de comando.
 
 ---
 
@@ -225,9 +229,18 @@ Uma vez ativa, a experiência deve iniciar no:
 
 ### Sequência inicial esperada
 As primeiras tools esperadas são:
+- `describe_app32_squad_runtime_tool`
 - `list_user_app32_capabilities`
 - `describe_app32_profile_contracts_tool`
 - `describe_app32_surface_playbooks_tool`
+
+### Leitura do bootstrap
+Logo após conectar, o cliente deve usar `describe_app32_squad_runtime_tool` para ler:
+- agente de entrada
+- especialistas oficiais da fase 1
+- ordem de roteamento
+- regra de economia de tokens
+- regra de escalonamento
 
 ---
 

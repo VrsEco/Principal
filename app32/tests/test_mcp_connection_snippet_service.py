@@ -53,6 +53,7 @@ def test_build_prompt_supports_squad_cliente_profile():
     assert "sapiens cliente on" in content
     assert "Surface alvo: user" in content
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in content
+    assert "describe_app32_squad_runtime_tool" in content
     assert "list_user_app32_capabilities" in content
     assert "describe_app32_profile_contracts_tool" in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content

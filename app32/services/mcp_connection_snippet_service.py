@@ -50,6 +50,7 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
             "startup_tools": [
+                "describe_app32_squad_runtime_tool",
                 "list_user_app32_capabilities",
                 "describe_app32_profile_contracts_tool",
                 "describe_app32_surface_playbooks_tool",
@@ -117,6 +118,7 @@ class MCPConnectionSnippetService:
                 "5. Explique que a entrada começa pelo agente coordenador do squad e pode rotear internamente para especialistas conforme a necessidade.",
                 "5.1. Se o profile for `squad_cliente`, explique também que a família inicial oficial é composta por Coordenador, Comercial, Operacional e Adm/Financeiro, com economia de tokens por padrão.",
                 f"6. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
+                "6.1. Use `describe_app32_squad_runtime_tool` como contrato operacional curto do squad antes de agir.",
                 f"7. Ao ativar, use esta mensagem inicial do {experience_label}:",
                 "",
                 "◆ SAPIENS · Gestão Versus ● ativo",
