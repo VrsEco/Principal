@@ -56,15 +56,17 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     config = service.build_client_config(user_id=7, plaintext_token="mcpu_token_real", company_id=9)
 
-    assert "ative o Sapiens Cliente" in config["activation_prompt"]
+    assert "Instale a conexão MCP Sapiens Cliente no cliente Claude." in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
-    assert "Coordenador, Comercial, Operacional e Adm/Financeiro" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
-    assert "sapiens cliente on" in config["activation_prompt"]
-    assert "◆ SAPIENS · Gestão Versus ● ativo" in config["activation_prompt"]
+    assert "Autenticação: Bearer Token" in config["activation_prompt"]
+    assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
     assert '"transport": "http"' in config["technical_config_text"]
     assert '"Authorization": "Bearer mcpu_token_real"' in config["technical_config_text"]
     assert '"experience_label": "Sapiens Cliente"' in config["technical_config_text"]
+    assert config["guided_connection_fields"][0]["label"] == "Nome da conexão"
+    assert config["guided_install_steps"][0].startswith("Abra o Claude/Cowork")
+    assert config["validation_prompt"] == "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
 
 
 def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch):

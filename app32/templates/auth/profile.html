@@ -199,6 +199,29 @@
                             </div>
                         </div>
 
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como criar a conexão MCP neste cliente</div>
+                            <ol id="mcpGuidedStepsList" style="margin: 0; padding-left: 1rem; display: grid; gap: 0.45rem; font-size: 0.92rem; line-height: 1.55;">
+                                <li>Escolha o cliente de IA acima.</li>
+                                <li>Gere ou renove o token.</li>
+                                <li>Siga aqui o passo a passo para criar a conexão MCP.</li>
+                            </ol>
+                        </div>
+
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Dados para preencher na conexão</div>
+                            <div id="mcpGuidedFields" style="display:grid; gap:0.55rem;">
+                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main);">Nome da conexão</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Sapiens Cliente</div>
+                                </div>
+                            </div>
+                            <div id="mcpValidationPromptBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
+                                <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Teste inicial recomendado</div>
+                                <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.</div>
+                            </div>
+                        </div>
+
                         <div class="card" style="border-radius: 24px;">
                             <div class="card-body" style="display: grid; gap: 1rem;">
                                 <div>
@@ -743,6 +766,9 @@
     const mcpResolvedEntryAgent = document.getElementById('mcpResolvedEntryAgent');
     const mcpSelectionGuideTitle = document.getElementById('mcpSelectionGuideTitle');
     const mcpSelectionGuideText = document.getElementById('mcpSelectionGuideText');
+    const mcpGuidedStepsList = document.getElementById('mcpGuidedStepsList');
+    const mcpGuidedFields = document.getElementById('mcpGuidedFields');
+    const mcpValidationPromptText = document.getElementById('mcpValidationPromptText');
     const mcpOfficialCompositionTitle = document.getElementById('mcpOfficialCompositionTitle');
     const mcpOfficialPhaseText = document.getElementById('mcpOfficialPhaseText');
     const mcpOfficialAgentsList = document.getElementById('mcpOfficialAgentsList');
@@ -916,6 +942,24 @@
         const uiCopy = getSquadUiCopy(resolvedConfig);
         if (mcpSelectionGuideTitle) mcpSelectionGuideTitle.textContent = uiCopy.guideTitle;
         if (mcpSelectionGuideText) mcpSelectionGuideText.textContent = uiCopy.guideText;
+        if (mcpGuidedStepsList && Array.isArray(resolvedConfig.guided_install_steps) && resolvedConfig.guided_install_steps.length) {
+            mcpGuidedStepsList.innerHTML = resolvedConfig.guided_install_steps
+                .map((step) => `<li>${step}</li>`)
+                .join('');
+        }
+        if (mcpGuidedFields && Array.isArray(resolvedConfig.guided_connection_fields) && resolvedConfig.guided_connection_fields.length) {
+            mcpGuidedFields.innerHTML = resolvedConfig.guided_connection_fields
+                .map((field) => `
+                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                        <div style="font-weight: 700; color: var(--text-main);">${field.label}</div>
+                        <div style="font-size: 0.86rem; color: var(--text-tertiary); word-break: break-word;">${field.value}</div>
+                    </div>
+                `)
+                .join('');
+        }
+        if (mcpValidationPromptText) {
+            mcpValidationPromptText.textContent = resolvedConfig.validation_prompt || 'Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.';
+        }
         if (mcpOfficialCompositionTitle) mcpOfficialCompositionTitle.textContent = uiCopy.compositionTitle;
         if (mcpOfficialPhaseText) {
             mcpOfficialPhaseText.textContent = uiCopy.phaseText;

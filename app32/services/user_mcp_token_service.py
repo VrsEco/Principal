@@ -212,6 +212,102 @@ class UserMcpTokenService:
         )
 
     @classmethod
+    def _build_guided_connection_fields(
+        cls,
+        *,
+        connection_name: str,
+        url: str,
+        token_value: str,
+        runtime_config: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        fields = [
+            {"label": "Nome da conexão", "value": connection_name},
+            {"label": "URL MCP", "value": url},
+            {"label": "Autenticação", "value": "Bearer Token"},
+            {"label": "Token", "value": token_value},
+        ]
+        if runtime_config.get("harness_label"):
+            fields.append({"label": "Agente de entrada", "value": runtime_config["harness_label"]})
+        return fields
+
+    @classmethod
+    def _build_guided_install_steps(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        connection_name: str,
+        url: str,
+        token_value: str,
+    ) -> list[str]:
+        runtime = runtime_config["runtime"]
+        if runtime == "claude":
+            return [
+                "Abra o Claude/Cowork e vá até a área de Configurações.",
+                "Entre em Conectores, MCP ou Integrações e escolha a opção para adicionar uma nova conexão.",
+                f"Crie uma conexão chamada {connection_name}.",
+                f"Na URL, cole {url}.",
+                "Na autenticação, escolha Bearer Token.",
+                f"No campo do token, cole {token_value}.",
+                "Salve a conexão e volte para uma conversa normal no cliente.",
+                "Faça o primeiro teste pedindo para usar o Sapiens Cliente e rodar describe_app32_squad_runtime_tool.",
+            ]
+        if runtime in {"codex", "antigravity"} and runtime_config.get("install_command"):
+            return [
+                f"Abra o terminal do cliente {runtime_config['runtime_label']}.",
+                "Execute o comando de instalação sugerido pelo APP32.",
+                "Quando o instalador pedir, cole o token MCP gerado nesta página.",
+                "Confirme a gravação da conexão MCP no cliente.",
+                "Depois da instalação, abra uma conversa e rode describe_app32_squad_runtime_tool como teste inicial.",
+            ]
+        return [
+            f"Abra a área de conectores ou MCP do cliente {runtime_config['runtime_label']}.",
+            f"Crie uma conexão chamada {connection_name}.",
+            f"Cole a URL {url}.",
+            "Escolha autenticação Bearer Token.",
+            f"Cole o token {token_value}.",
+            "Salve a conexão e rode describe_app32_squad_runtime_tool como teste inicial.",
+        ]
+
+    @classmethod
+    def _build_guided_install_text(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        connection_name: str,
+        url: str,
+        token_value: str,
+    ) -> str:
+        steps = cls._build_guided_install_steps(
+            runtime_config=runtime_config,
+            connection_name=connection_name,
+            url=url,
+            token_value=token_value,
+        )
+        lines = [
+            f"Instale a conexão MCP {connection_name} no cliente {runtime_config['runtime_label']}.",
+            "",
+            "Passo a passo:",
+        ]
+        lines.extend([f"{idx}. {step}" for idx, step in enumerate(steps, start=1)])
+        lines.extend(
+            [
+                "",
+                "Dados para preencher:",
+                f"- Nome: {connection_name}",
+                f"- URL: {url}",
+                "- Autenticação: Bearer Token",
+                f"- Token: {token_value}",
+                f"- Perfil técnico: {runtime_config['runtime_profile']}",
+                f"- Surface: {runtime_config['resolved_surface']}",
+                f"- Harness inicial: {runtime_config['harness_label'] or '-'}",
+                "",
+                "Teste inicial recomendado:",
+                "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
+            ]
+        )
+        return "\n".join(lines)
+
+    @classmethod
     def _resolve_runtime_installation(
         cls,
         *,
@@ -639,6 +735,24 @@ class UserMcpTokenService:
             technical_config_text = MCPConnectionSnippetService.build_raw_config(snippet_payload)
             activation_prompt = MCPConnectionSnippetService.build_prompt(snippet_payload)
             config_json = json.loads(technical_config_text)
+            guided_fields = cls._build_guided_connection_fields(
+                connection_name=connection_name,
+                url=url,
+                token_value=token_value,
+                runtime_config=runtime_config,
+            )
+            guided_steps = cls._build_guided_install_steps(
+                runtime_config=runtime_config,
+                connection_name=connection_name,
+                url=url,
+                token_value=token_value,
+            )
+            guided_install_text = cls._build_guided_install_text(
+                runtime_config=runtime_config,
+                connection_name=connection_name,
+                url=url,
+                token_value=token_value,
+            )
             config_text = (
                 f"Conexão: {connection_name}\n"
                 f"Família canônica: {runtime_config['squad_label']}\n"
@@ -659,9 +773,9 @@ class UserMcpTokenService:
             if runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
-                    "A instalação publica o Sapiens Cliente com entrada pelo Agente Coordenador. "
-                    "A família inicial oficial do Squad Cliente é composta por Comercial, Operacional e Adm/Financeiro."
-                )
+                "A instalação publica o Sapiens Cliente com entrada pelo Agente Coordenador. "
+                "A família inicial oficial do Squad Cliente é composta por Comercial, Operacional e Adm/Financeiro."
+            )
             if runtime_config["supports_personal_token"]:
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
@@ -683,6 +797,8 @@ class UserMcpTokenService:
                     f"{installation_instruction}\n\n"
                     f"Comando de referência:\n{installation_command}"
                 )
+            if runtime_config["runtime"] == "claude":
+                activation_prompt = guided_install_text
             return {
                 "client_name": (client_name or "").strip() or None,
                 "surface": resolved_surface,
@@ -712,6 +828,10 @@ class UserMcpTokenService:
                 "install_command": installation_command,
                 "instruction_text": installation_instruction,
                 "supports_personal_token": runtime_config["supports_personal_token"],
+                "guided_install_steps": guided_steps,
+                "guided_connection_fields": guided_fields,
+                "guided_install_text": guided_install_text,
+                "validation_prompt": "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
                 "text": config_text,
                 "json": config_json,
                 "technical_config_text": technical_config_text,
