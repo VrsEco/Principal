@@ -56,10 +56,13 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     config = service.build_client_config(user_id=7, plaintext_token="mcpu_token_real", company_id=9)
 
-    assert "ative o Sapiens" in config["activation_prompt"]
+    assert "ative o Sapiens Cliente" in config["activation_prompt"]
+    assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
+    assert "sapiens cliente on" in config["activation_prompt"]
     assert "◆ SAPIENS · Gestão Versus ● ativo" in config["activation_prompt"]
-    assert "Este cliente não suporta ativação automática do Sapiens." in config["activation_prompt"]
-    assert '"token": "mcpu_token_real"' in config["technical_config_text"]
+    assert '"transport": "http"' in config["technical_config_text"]
+    assert '"Authorization": "Bearer mcpu_token_real"' in config["technical_config_text"]
+    assert '"experience_label": "Sapiens Cliente"' in config["technical_config_text"]
 
 
 def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch):
@@ -82,18 +85,20 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["runtime"] == "claude"
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
-    assert config["install_mode"] == "self_service"
+    assert config["install_mode"] == "guided"
     assert config["actor_type"] == "client_agent"
+    assert config["experience_label"] == "Sapiens Cliente"
+    assert config["command_alias"] == "sapiens cliente on"
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
-    assert "install-claude-laboratorio.ps1" in config["install_command"]
+    assert "install-sapiens-runtime.ps1" in config["install_command"]
 
 
 def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
     service = token_service_module.user_mcp_token_service
+    fake_user = SimpleNamespace(id=7, is_active=True, role="admin")
     monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
-    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: SimpleNamespace(id=7, is_active=True))))
-    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_normalize_surface", staticmethod(lambda surface: "user"))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: fake_user)))
     monkeypatch.setattr(token_service_module.UserMcpTokenService, "_resolve_explicit_company_id_for_user", staticmethod(lambda user, company_id: 10))
     monkeypatch.setattr(token_service_module.UserMcpTokenService, "list_accessible_companies", staticmethod(lambda user: [{"id": 10, "label": "M1 - Empresa Laboratorio"}]))
     monkeypatch.setenv("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
@@ -108,7 +113,9 @@ def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
 
     assert config["resolved_profile"] == "squad_versus"
     assert config["resolved_surface"] == "admin"
-    assert config["install_mode"] == "controlled"
+    assert config["url"] == "https://app.gestaoversus.com.br/mcp/admin/?company_id=10"
+    assert config["experience_label"] == "Sapiens Consultor"
+    assert config["install_mode"] == "guided_controlled"
     assert config["supports_personal_token"] is False
 
 
@@ -144,3 +151,48 @@ def test_build_client_config_exposes_squad_cliente_harness_catalog(monkeypatch):
 
     assert any(item["key"] == "harness_comercial_cliente_v1" for item in config["available_harnesses"])
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["activation_prompt"]
+
+
+def test_build_client_config_restricts_advanced_squad_for_client_role(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    fake_user = SimpleNamespace(id=7, is_active=True, role="client")
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: fake_user)))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_resolve_explicit_company_id_for_user", staticmethod(lambda user, company_id: 10))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "list_accessible_companies", staticmethod(lambda user: [{"id": 10, "label": "M1 - Empresa Laboratorio"}]))
+    monkeypatch.setenv("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
+
+    config = service.build_client_config(
+        user_id=7,
+        plaintext_token="mcpu_token_real",
+        company_id=10,
+        runtime="antigravity",
+        squad="squad_versus",
+    )
+
+    assert config["squad"] == "squad_cliente"
+    assert config["experience_label"] == "Sapiens Cliente"
+    assert config["resolved_surface"] == "user"
+    assert config["allowed_squads"] == ["squad_cliente"]
+
+
+def test_build_client_config_marks_all_runtimes_as_guided_for_squad_cliente(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: SimpleNamespace(id=7, is_active=True))))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_normalize_surface", staticmethod(lambda surface: "user"))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_resolve_explicit_company_id_for_user", staticmethod(lambda user, company_id: 10))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "list_accessible_companies", staticmethod(lambda user: [{"id": 10, "label": "M1 - Empresa Laboratorio"}]))
+    monkeypatch.setenv("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
+
+    config = service.build_client_config(
+        user_id=7,
+        plaintext_token="mcpu_token_real",
+        company_id=10,
+        runtime="codex",
+        squad="squad_cliente",
+    )
+
+    assert config["availability_label"] == "Instalação guiada"
+    assert config["install_mode"] == "guided"
+    assert "Gere o código para IA" in config["instruction_text"]

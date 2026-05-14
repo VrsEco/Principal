@@ -15,6 +15,7 @@ from models import Company, Employee, User, UserMcpToken, db
 from services.email_service import email_service
 from services.log_service import log_service
 from services.whatsapp_service import whatsapp_service
+from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 from utils.permissions import (
     can_access_company,
@@ -32,11 +33,7 @@ PROFILE_TO_FALLBACK_ROLE = {
     "client": "cliente",
     "collaborator": "colaborador",
 }
-RUNTIME_INSTALLER_COMMANDS = {
-    "claude": ".\\app32\\scripts\\installers\\install-claude-laboratorio.ps1",
-    "codex": ".\\app32\\scripts\\installers\\install-codex-laboratorio.ps1",
-    "antigravity": ".\\app32\\scripts\\installers\\install-antigravity-laboratorio.ps1",
-}
+GENERIC_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-runtime.ps1"
 RUNTIME_LABELS = {
     "claude": "Claude",
     "codex": "Codex",
@@ -47,6 +44,24 @@ SQUAD_LABELS = {
     "squad_cliente": "Squad Cliente",
     "squad_versus": "Squad Versus",
     "engineering": "Squad de Engenharia",
+}
+SQUAD_EXPERIENCE_LABELS = {
+    "squad_cliente": "Sapiens Cliente",
+    "squad_versus": "Sapiens Consultor",
+    "engineering": "Sapiens Engenharia",
+}
+SQUAD_COMMAND_ALIASES = {
+    "squad_cliente": "sapiens cliente on",
+    "squad_versus": "sapiens consultor on",
+    "engineering": "sapiens engenharia on",
+}
+ROLE_ALLOWED_SQUADS = {
+    "admin": ("squad_cliente", "squad_versus", "engineering"),
+    "administrator": ("squad_cliente", "squad_versus", "engineering"),
+    "consultant": ("squad_cliente", "squad_versus"),
+    "collaborator": ("squad_cliente",),
+    "client": ("squad_cliente",),
+    "user": ("squad_cliente",),
 }
 
 
@@ -105,6 +120,53 @@ class UserMcpTokenService:
         return normalized if normalized in allowed else "squad_cliente"
 
     @classmethod
+    def _resolve_allowed_squads_for_user(cls, user: User | None) -> tuple[str, ...]:
+        if user and is_platform_admin(user=user):
+            return ROLE_ALLOWED_SQUADS["admin"]
+        role = str(getattr(user, "role", "") or "client").strip().lower()
+        return ROLE_ALLOWED_SQUADS.get(role, ("squad_cliente",))
+
+    @classmethod
+    def _resolve_authorized_squad_for_user(cls, user: User | None, squad: str | None) -> str:
+        normalized = cls._normalize_squad(squad)
+        allowed_squads = cls._resolve_allowed_squads_for_user(user)
+        if normalized in allowed_squads:
+            return normalized
+        return allowed_squads[0] if allowed_squads else "squad_cliente"
+
+    @classmethod
+    def _build_generic_install_command(
+        cls,
+        *,
+        company_id: int | None,
+        profile_key: str,
+        surface: str,
+        experience_label: str,
+        canonical_label: str,
+        harness_key: str | None,
+        harness_label: str | None,
+        command_alias: str | None,
+    ) -> str:
+        company_arg = f" -CompanyId {company_id}" if company_id else ""
+        harness_key_value = harness_key or ""
+        harness_label_value = harness_label or ""
+        command_alias_value = command_alias or ""
+        server_name = experience_label.strip().lower().replace(" ", "-")
+        return (
+            "powershell -ExecutionPolicy Bypass -File "
+            f"\"{GENERIC_INSTALLER_COMMAND}\""
+            f"{company_arg}"
+            f" -Profile \"{profile_key}\""
+            f" -Surface \"{surface}\""
+            f" -ExperienceLabel \"{experience_label}\""
+            f" -CanonicalLabel \"{canonical_label}\""
+            f" -HarnessKey \"{harness_key_value}\""
+            f" -HarnessLabel \"{harness_label_value}\""
+            f" -ServerName \"{server_name}\""
+            f" -CommandAlias \"{command_alias_value}\""
+        )
+
+    @classmethod
     def _resolve_runtime_installation(
         cls,
         *,
@@ -116,50 +178,56 @@ class UserMcpTokenService:
         normalized_squad = cls._normalize_squad(squad)
         runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
         squad_label = SQUAD_LABELS.get(normalized_squad, normalized_squad)
+        experience_label = SQUAD_EXPERIENCE_LABELS.get(normalized_squad, squad_label)
+        command_alias = SQUAD_COMMAND_ALIASES.get(normalized_squad)
         runtime_profile_spec = get_runtime_profile_spec(normalized_squad)
 
         resolved_profile = "squad_cliente"
         resolved_surface = "user"
-        install_mode = "manual"
-        availability_label = "Manual"
+        install_mode = "guided"
+        availability_label = "Instalação guiada"
         install_command = None
-        company_arg = f" -CompanyId {company_id}" if company_id else ""
         instruction_text = (
-            "Use a configuração técnica abaixo para ligar um cliente MCP manualmente com o seu token pessoal."
+            "Use o gerador guiado para receber o passo a passo de instalação conforme o cliente escolhido."
         )
 
         if normalized_squad == "squad_cliente":
             resolved_profile = "squad_cliente"
             resolved_surface = "user"
-            if normalized_runtime == "claude":
-                install_mode = "self_service"
-                availability_label = "Auto instalação"
-                install_command = (
-                    f"powershell -ExecutionPolicy Bypass -File "
-                    f"\"{RUNTIME_INSTALLER_COMMANDS['claude']}\"{company_arg}"
+            if normalized_runtime in {"claude", "codex", "antigravity"}:
+                install_command = cls._build_generic_install_command(
+                    company_id=company_id,
+                    profile_key=resolved_profile,
+                    surface=resolved_surface,
+                    experience_label=experience_label,
+                    canonical_label=squad_label,
+                    harness_key=runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
+                    harness_label=runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
+                    command_alias=command_alias,
                 )
+            instruction_text = (
+                "Gere o código para IA conforme as configurações escolhidas. "
+                "Se o cliente suportar instalador, o passo a passo já vai orientar como concluir a instalação guiada."
+            )
+            if normalized_runtime == "other":
                 instruction_text = (
-                    "Copie o comando de instalação, rode no workspace com o repositório do APP32 e informe o token MCP quando o script pedir."
-                )
-            elif normalized_runtime == "other":
-                instruction_text = (
-                    "Este runtime usa o mesmo token pessoal do MCP user. Se ele não suportar instalador PowerShell, use a configuração técnica manual."
-                )
-            else:
-                install_mode = "manual"
-                availability_label = "Manual"
-                instruction_text = (
-                    "Para este runtime, o caminho oficial desta fase é a configuração manual usando o MCP user."
+                    "Gere o código para IA conforme as configurações escolhidas. "
+                    "Se este cliente não suportar integração automática, use o modo avançado com a configuração técnica."
                 )
         elif normalized_squad == "engineering":
             resolved_profile = "engineering"
             resolved_surface = "ops"
-            install_mode = "controlled"
-            availability_label = "Controlado"
-            install_command = (
-                f"powershell -ExecutionPolicy Bypass -File "
-                f"\"{RUNTIME_INSTALLER_COMMANDS.get(normalized_runtime, RUNTIME_INSTALLER_COMMANDS['codex'])}\""
-                f"{company_arg}"
+            install_mode = "guided_controlled"
+            availability_label = "Instalação guiada controlada"
+            install_command = cls._build_generic_install_command(
+                company_id=company_id,
+                profile_key=resolved_profile,
+                surface=resolved_surface,
+                experience_label=experience_label,
+                canonical_label=squad_label,
+                harness_key=runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
+                harness_label=runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
+                command_alias=command_alias,
             )
             instruction_text = (
                 "O Squad de Engenharia é operado em ambiente técnico controlado. Use o instalador apenas em rollout autorizado pela Versus."
@@ -167,12 +235,17 @@ class UserMcpTokenService:
         elif normalized_squad == "squad_versus":
             resolved_profile = "squad_versus"
             resolved_surface = "admin"
-            install_mode = "controlled"
-            availability_label = "Controlado"
-            install_command = (
-                f"powershell -ExecutionPolicy Bypass -File "
-                f"\"{RUNTIME_INSTALLER_COMMANDS.get(normalized_runtime, RUNTIME_INSTALLER_COMMANDS['antigravity'])}\""
-                f"{company_arg}"
+            install_mode = "guided_controlled"
+            availability_label = "Instalação guiada controlada"
+            install_command = cls._build_generic_install_command(
+                company_id=company_id,
+                profile_key=resolved_profile,
+                surface=resolved_surface,
+                experience_label=experience_label,
+                canonical_label=squad_label,
+                harness_key=runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
+                harness_label=runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
+                command_alias=command_alias,
             )
             instruction_text = (
                 "O Squad Versus usa surface administrativa e fica sob rollout controlado. Gere o comando apenas para instalação assistida pela Versus."
@@ -183,6 +256,8 @@ class UserMcpTokenService:
             "runtime_label": runtime_label,
             "squad": normalized_squad,
             "squad_label": squad_label,
+            "experience_label": experience_label,
+            "command_alias": command_alias,
             "runtime_profile": runtime_profile_spec.key if runtime_profile_spec else normalized_squad,
             "actor_type": runtime_profile_spec.actor_type if runtime_profile_spec else "client_agent",
             "runtime_family": runtime_profile_spec.family_key if runtime_profile_spec else normalized_squad,
@@ -477,103 +552,77 @@ class UserMcpTokenService:
             user = User.query.get(user_id)
             if not user:
                 raise ValueError("Usuário inválido para configuração MCP.")
-            normalized_surface = cls._normalize_surface(surface)
+            authorized_squad = cls._resolve_authorized_squad_for_user(user, squad)
             resolved_company_id = cls._resolve_explicit_company_id_for_user(user, company_id)
             companies = cls.list_accessible_companies(user)
             company_lookup = {item["id"]: item for item in companies}
             selected_company = company_lookup.get(resolved_company_id) if resolved_company_id else None
             public_base = str(os.environ.get("APP32_MCP_PUBLIC_BASE_URL") or DEFAULT_PUBLIC_BASE_URL).rstrip("/")
-            url = f"{public_base}/mcp/{normalized_surface}/"
-            if resolved_company_id:
-                url = f"{url}?company_id={resolved_company_id}"
             display_name = selected_company["label"] if selected_company else "Sem empresa padrão"
             token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
             runtime_config = cls._resolve_runtime_installation(
                 runtime=runtime,
-                squad=squad,
+                squad=authorized_squad,
                 company_id=resolved_company_id,
             )
-            config_json = {
-                "auth_type": "bearer",
-                "name": f"Sapiens {normalized_surface.title()}",
-                "token": token_value,
-                "url": url,
+            resolved_surface = runtime_config["resolved_surface"]
+            url = f"{public_base}/mcp/{resolved_surface}/"
+            if resolved_company_id:
+                url = f"{url}?company_id={resolved_company_id}"
+            connection_name = runtime_config["experience_label"]
+            snippet_payload = {
                 "profile": runtime_config["runtime_profile"],
+                "name": connection_name,
+                "default_company": display_name,
+                "url": url,
+                "auth_type": "bearer",
+                "token": token_value,
                 "harness_key": runtime_config["harness_key"],
-                "harness_label": runtime_config["harness_label"],
             }
+            technical_config_text = MCPConnectionSnippetService.build_raw_config(snippet_payload)
+            activation_prompt = MCPConnectionSnippetService.build_prompt(snippet_payload)
+            config_json = json.loads(technical_config_text)
             config_text = (
-                f"Nome: Sapiens {normalized_surface.title()}\n"
-                f"Empresa: {display_name}\n"
+                f"Conexão: {connection_name}\n"
+                f"Família canônica: {runtime_config['squad_label']}\n"
+                f"Empresa padrão: {display_name}\n"
+                f"Runtime: {runtime_config['runtime_label']}\n"
+                f"Comando sugerido: {runtime_config['command_alias'] or '-'}\n"
                 f"URL: {url}\n"
-                f"Autenticação: Bearer Token\n"
-                f"Token: {token_value}\n"
-                f"Perfil de runtime: {runtime_config['runtime_profile']}\n"
+                f"Perfil: {runtime_config['runtime_profile']}\n"
                 f"Harness inicial: {runtime_config['harness_label'] or '-'}"
-            )
-            technical_config_text = (
-                f"{config_text}\n\n"
-                f"JSON:\n{json.dumps(config_json, ensure_ascii=False, indent=2)}"
             )
             installation_command = runtime_config["install_command"]
             installation_instruction = runtime_config["instruction_text"]
+            if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente":
+                installation_instruction = (
+                    "Experiência recomendada: instalar o Sapiens Cliente no Claude. "
+                    "Gere ou renove o token, copie o código para IA e cole no cliente escolhido para concluir a configuração guiada."
+                )
+            if runtime_config["supports_personal_token"]:
+                installation_instruction = (
+                    f"{installation_instruction}\n\n"
+                    "Durante a instalação, use o token MCP pessoal gerado nesta página."
+                )
+            else:
+                installation_instruction = (
+                    f"{installation_instruction}\n\n"
+                    "Este perfil usa rollout controlado. A credencial final pode ser provisionada pela Versus ou por administrador autorizado."
+                )
             if installation_command and runtime_config["install_mode"] == "self_service":
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
                     f"Comando sugerido:\n{installation_command}\n\n"
-                    f"Quando o instalador abrir, informe o e-mail do usuário APP32 e cole o token MCP gerado nesta tela."
+                    "Quando o instalador abrir, informe o seu e-mail do APP32 e cole o token MCP gerado nesta tela."
                 )
             elif installation_command:
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
                     f"Comando de referência:\n{installation_command}"
                 )
-            activation_prompt = "\n".join([
-                "Quero que você ative o Sapiens neste cliente usando a conexão MCP abaixo.",
-                "",
-                "Dados da conexão:",
-                f"- Nome: Sapiens {normalized_surface.title()}",
-                f"- Empresa padrão: {display_name}",
-                f"- URL: {url}",
-                "- Autenticação: Bearer Token",
-                f"- Token: {token_value}",
-                f"- Perfil de runtime: {runtime_config['runtime_profile']}",
-                f"- Harness inicial: {runtime_config['harness_label'] or '-'}",
-                "",
-                "JSON:",
-                json.dumps(config_json, ensure_ascii=False, indent=2),
-                "",
-                "Sua tarefa:",
-                "1. Verifique se este cliente suporta configuração MCP automática.",
-                "2. Se suportar, faça a configuração.",
-                "3. Se este cliente permitir criar atalho, comando, agente ou persona, crie um atalho chamado Sapiens.",
-                "4. Ao ativar, use esta mensagem inicial:",
-                "",
-                "◆ SAPIENS · Gestão Versus ● ativo",
-                "",
-                "Olá! Sou o Sapiens, assistente virtual da Versus.",
-                "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
-                "",
-                "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
-                "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
-                "",
-                "5. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
-                "- Este cliente não suporta ativação automática do Sapiens.",
-                "- A conexão técnica está pronta, mas precisa ser configurada manualmente.",
-                "- Se quiser, eu posso te mostrar o passo a passo manual para este cliente.",
-                "6. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa e informe ao usuário como chamar o Sapiens de forma simples na conversa.",
-                "7. Não invente valores. Use exatamente os dados fornecidos.",
-                "",
-                "Formato da resposta:",
-                "1. Diagnóstico",
-                "2. Ação executada",
-                "3. Resultado final",
-                "4. Como usar o Sapiens neste cliente",
-                "5. Se não suportar, mostrar a resposta padrão",
-            ])
             return {
                 "client_name": (client_name or "").strip() or None,
-                "surface": normalized_surface,
+                "surface": resolved_surface,
                 "company_id": resolved_company_id,
                 "company_label": display_name,
                 "url": url,
@@ -581,6 +630,8 @@ class UserMcpTokenService:
                 "runtime_label": runtime_config["runtime_label"],
                 "squad": runtime_config["squad"],
                 "squad_label": runtime_config["squad_label"],
+                "experience_label": runtime_config["experience_label"],
+                "command_alias": runtime_config["command_alias"],
                 "runtime_profile": runtime_config["runtime_profile"],
                 "actor_type": runtime_config["actor_type"],
                 "runtime_family": runtime_config["runtime_family"],
@@ -601,6 +652,7 @@ class UserMcpTokenService:
                 "technical_config_text": technical_config_text,
                 "activation_prompt": activation_prompt,
                 "companies": companies,
+                "allowed_squads": list(cls._resolve_allowed_squads_for_user(user)),
             }
 
     @classmethod

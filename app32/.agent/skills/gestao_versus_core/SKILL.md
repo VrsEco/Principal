@@ -77,6 +77,16 @@ Skill obrigatória de governança do projeto.
 - no WhatsApp, quando houver multiplas empresas elegiveis para a operacao, a selecao da empresa deve acontecer antes da confirmacao final
 - quando a consulta operacional estiver clara e for somente leitura, nao empurrar fallback agentic por falha de classificação textual
 
+## Governança documental obrigatória
+- toda documentacao nova do APP32 deve ser classificada em exatamente uma destas classes: `Paper`, `SPEC`, `Manifesto`, `Playbook`, `Runbook`, `Harness`
+- antes de criar um novo documento, localizar e priorizar a atualizacao do arquivo canônico existente
+- `Paper` registra tese, visão e evolução conceitual; `SPEC` registra a decisão oficial; `Manifesto` registra identidade e princípios; `Playbook` registra atuação e decisão; `Runbook` registra execução e troubleshooting; `Harness` registra o runtime operacional do agente
+- toda mudanca relevante em Sapiens, Squads, MCP, surfaces, profiles, agentes ou harnesses deve atualizar a documentacao dependente na ordem: `Paper` -> `SPEC` -> `Manifesto` -> `Playbook` -> `Runbook` -> `Harness`
+- destino canônico alvo para novos documentos: `app32/docs/papers`, `app32/docs/spec`, `app32/docs/manifestos`, `app32/docs/playbooks`, `app32/docs/runbooks`, `app32/docs/harnesses`
+- `docs/specifications/` permanece como legado temporario; novas decisoes canônicas devem preferir `docs/spec/`
+- se a dúvida for “ainda estamos amadurecendo a ideia?”, usar `Paper`; se a dúvida for “isso já virou decisão oficial?”, usar `SPEC`
+- a IA/CLI deve evitar duplicidade documental e nao pode deixar drift entre código, `SPEC`, `Playbook`, `Runbook` e `Harness` quando a mudança já estiver oficializada
+
 ## Referências
 - `../../router/orchestrator.md`
 - `../../router/routing-matrix.md`
@@ -84,3 +94,4 @@ Skill obrigatória de governança do projeto.
 - `../../references/personas.md`
 - `../../references/component-boundaries.md`
 - `../../references/sapiens-official-tree.md`
+- `../../../docs/governance/governanca_documental_oficial_v1.md`

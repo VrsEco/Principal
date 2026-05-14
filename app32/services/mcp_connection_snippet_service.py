@@ -12,7 +12,10 @@ class MCPConnectionSnippetService:
 
     RUNTIME_PROFILES = {
         "sapiens_default": {
-            "label": "Sapiens User",
+            "label": "Sapiens",
+            "experience_label": "Sapiens",
+            "canonical_label": "Sapiens Default",
+            "cli_command": "sapiens on",
             "activation_subject": "ative o Sapiens neste cliente usando a conexão MCP abaixo.",
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
@@ -23,8 +26,11 @@ class MCPConnectionSnippetService:
             "routing_note": "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
         },
         "squad_versus": {
-            "label": "Squad Versus",
-            "activation_subject": "ative o Squad Versus neste cliente usando a conexão MCP abaixo.",
+            "label": "Sapiens Consultor",
+            "experience_label": "Sapiens Consultor",
+            "canonical_label": "Squad Versus",
+            "cli_command": "sapiens consultor on",
+            "activation_subject": "ative o Sapiens Consultor neste cliente usando a conexão MCP abaixo.",
             "url": "https://app.gestaoversus.com.br/mcp/admin",
             "surface": "admin",
             "startup_tools": [
@@ -36,8 +42,11 @@ class MCPConnectionSnippetService:
             "routing_note": "O Squad Versus deve operar como consultoria e governança: começar por discovery, respeitar company_id explícito nas surfaces privilegiadas e evitar mutações sem necessidade e sem trilha.",
         },
         "squad_cliente": {
-            "label": "Squad Cliente",
-            "activation_subject": "ative o Squad Cliente neste cliente usando a conexão MCP abaixo.",
+            "label": "Sapiens Cliente",
+            "experience_label": "Sapiens Cliente",
+            "canonical_label": "Squad Cliente",
+            "cli_command": "sapiens cliente on",
+            "activation_subject": "ative o Sapiens Cliente neste cliente usando a conexão MCP abaixo.",
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
             "startup_tools": [
@@ -48,8 +57,11 @@ class MCPConnectionSnippetService:
             "routing_note": "O Squad Cliente deve operar em menor privilégio, com utilização assistida, foco operacional e sem tentar contornar restrições de admin, analytics ou ops.",
         },
         "engineering": {
-            "label": "Squad de Engenharia",
-            "activation_subject": "ative o Squad de Engenharia neste ambiente usando a conexão MCP abaixo.",
+            "label": "Sapiens Engenharia",
+            "experience_label": "Sapiens Engenharia",
+            "canonical_label": "Squad de Engenharia",
+            "cli_command": "sapiens engenharia on",
+            "activation_subject": "ative o Sapiens Engenharia neste ambiente usando a conexão MCP abaixo.",
             "url": "https://app.gestaoversus.com.br/mcp/ops",
             "surface": "ops",
             "startup_tools": [
@@ -72,6 +84,9 @@ class MCPConnectionSnippetService:
         harness_label = normalized.get("harness_label") or (
             runtime_spec.default_harness_label if runtime_spec is not None else None
         )
+        experience_label = profile["experience_label"]
+        canonical_label = profile["canonical_label"]
+        cli_command = profile["cli_command"]
 
         lines = [
             f"Quero que você {profile['activation_subject']}",
@@ -81,7 +96,8 @@ class MCPConnectionSnippetService:
             f"- Empresa padrão: {normalized['default_company']}",
             f"- URL: {normalized['url']}",
             f"- Autenticação: {normalized['auth_label']}",
-            f"- Perfil de runtime: {profile['label']}",
+            f"- Experiência visível: {experience_label}",
+            f"- Família canônica: {canonical_label}",
             f"- Surface alvo: {profile['surface']}",
             f"- Token: {normalized['token']}",
         ]
@@ -96,30 +112,32 @@ class MCPConnectionSnippetService:
                 "Sua tarefa:",
                 "1. Verifique se este cliente suporta configuração MCP automática.",
                 "2. Se suportar, faça a configuração.",
-                "3. Se este cliente permitir criar atalho, comando, agente ou persona, crie um atalho chamado Sapiens.",
-                f"4. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
-                "5. Ao ativar, use esta mensagem inicial:",
+                f"3. Se este cliente permitir criar atalho, comando, agente ou persona, crie a entrada visível chamada {experience_label}.",
+                f"4. Se este cliente permitir alias textual, configure também o comando simples `{cli_command}`.",
+                "5. Explique que a entrada começa pelo agente coordenador do squad e pode rotear internamente para especialistas conforme a necessidade.",
+                f"6. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
+                f"7. Ao ativar, use esta mensagem inicial do {experience_label}:",
                 "",
                 "◆ SAPIENS · Gestão Versus ● ativo",
                 "",
-                "Olá! Sou o Sapiens, assistente virtual da Versus.",
+                f"Olá! Sou o {experience_label}, assistente virtual da Versus.",
                 "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
                 "",
                 "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
                 profile["routing_note"],
                 "",
-                "6. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
-                "- Este cliente não suporta ativação automática do Sapiens.",
+                "8. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
+                f"- Este cliente não suporta ativação automática do {experience_label}.",
                 "- A conexão técnica está pronta, mas precisa ser configurada manualmente.",
                 "- Se quiser, eu posso te mostrar o passo a passo manual para este cliente.",
-                "7. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa, execute a sequência de startup informada e explique ao usuário como chamar o Sapiens de forma simples na conversa.",
-                "8. Não invente valores. Use exatamente os dados fornecidos.",
+                f"9. Se este cliente suportar MCP mas não suportar atalho, mantenha a conexão ativa, execute a sequência de startup informada e explique ao usuário como chamar o {experience_label} de forma simples na conversa.",
+                "10. Não invente valores. Use exatamente os dados fornecidos.",
                 "",
                 "Formato da resposta:",
                 "1. Diagnóstico",
                 "2. Ação executada",
                 "3. Resultado final",
-                "4. Como usar o Sapiens neste cliente",
+                f"4. Como usar o {experience_label} neste cliente",
                 "5. Se não suportar, mostrar a resposta padrão",
             ]
         )
@@ -139,7 +157,8 @@ class MCPConnectionSnippetService:
                     OrderedDict(
                         [
                             ("profile", normalized["profile"]),
-                            ("profile_label", profile["label"]),
+                            ("profile_label", profile["canonical_label"]),
+                            ("experience_label", profile["experience_label"]),
                             ("surface", profile["surface"]),
                             ("harness_key", normalized.get("harness_key")),
                             ("harness_label", normalized.get("harness_label")),
@@ -171,6 +190,7 @@ class MCPConnectionSnippetService:
                 ("auth_type", "bearer"),
                 ("name", normalized["name"]),
                 ("profile", normalized["profile"]),
+                ("experience_label", profile["experience_label"]),
                 ("surface", profile["surface"]),
                 ("harness_key", normalized.get("harness_key")),
                 ("harness_label", normalized.get("harness_label")),

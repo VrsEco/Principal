@@ -58,6 +58,20 @@ Profiles atualmente publicados:
 - `squad_versus`
 - `squad_cliente`
 
+### Convenção de nome visível no CLI
+Quando mais de um runtime estiver instalado no mesmo cliente/CLI, a UX deve separar:
+
+| Nome visível | Família canônica | Profile técnico | Comando sugerido |
+|---|---|---|---|
+| `Sapiens Cliente` | `Squad Cliente` | `squad_cliente` | `sapiens cliente on` |
+| `Sapiens Consultor` | `Squad Versus` | `squad_versus` | `sapiens consultor on` |
+| `Sapiens Engenharia` | `Squad de Engenharia` | `engineering` | `sapiens engenharia on` |
+
+Regra:
+- `Sapiens` é a marca-mãe/front door
+- o nome visível no CLI não substitui o profile técnico
+- policy, contracts, permission matrix e telemetry continuam operando pelos nomes canônicos
+
 Arquivo-base observado:
 - `C:\GestaoVersus\app32\app32\services\mcp_connection_snippet_service.py`
 

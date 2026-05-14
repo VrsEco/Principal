@@ -144,6 +144,18 @@ Deve preferencialmente entrar pelo APP32/Sapiens, com experiência assistida.
 ### 7.4 Pedido técnico/fábrica/engenharia
 - o `Sapiens` ou a interface especializada encaminha para `engineering` ou `factory`
 
+## 4.1 Convenção de nome nas instalações de CLI
+Quando houver mais de uma instalação no mesmo cliente/CLI, o front door `Sapiens` deve aparecer separado por contexto:
+
+- `Sapiens Cliente`
+- `Sapiens Consultor`
+- `Sapiens Engenharia`
+
+Regra:
+- `Sapiens` continua como marca e camada de entrada
+- os nomes acima são a apresentação visível no cliente/CLI
+- a arquitetura interna continua usando `Squad Cliente`, `Squad Versus` e `engineering`
+
 ---
 
 ## 8. Relação com utilização assistida

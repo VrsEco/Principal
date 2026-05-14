@@ -1263,3 +1263,8 @@ Ao final do amadurecimento, este documento deve permitir:
 - orientar a separação entre principal, fallback, legado e alvo futuro
 - reduzir ambiguidade antes da abertura de execução
 - orientar a construção da malha híbrida de inteligência entre Versus e empresa cliente
+
+### Desdobramento executivo atual
+Para execução incremental dos principais ajustes identificados neste paper, usar também:
+
+- `C:\GestaoVersus\app32\app32\docs\spec\plano_correcao_arquitetural_dos_squads_v1.md`

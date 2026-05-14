@@ -29,10 +29,15 @@ class _FakeAuthService:
 
 
 def _build_app():
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "templates")),
+    )
     app.config['TESTING'] = True
     app.config['LOGIN_DISABLED'] = True
     app.register_blueprint(auth_route.auth_bp)
+    app.jinja_env.globals['url_for'] = lambda endpoint, **values: '/' + endpoint.replace('.', '/')
+    app.jinja_env.globals['has_permission'] = lambda *args, **kwargs: False
     return app
 
 
@@ -120,3 +125,84 @@ def test_change_password_route_validates_current_password(monkeypatch):
     assert response.status_code == 400
     assert payload['message'] == 'Senha atual incorreta'
     assert fake_service.password_calls[0][1] == 'errada'
+
+
+def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=20,
+        name='Cliente',
+        email='cliente@empresa.com',
+        role='client',
+        whatsapp=None,
+        telegram=None,
+        instagram=None,
+        summary_delivery_channels='telegram',
+        is_authenticated=True,
+    )
+
+    monkeypatch.setattr(auth_route, 'current_user', fake_user)
+    app.jinja_env.globals['current_user'] = fake_user
+
+    response = app.test_client().get('/profile')
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Instalar Squad' in html
+    assert 'Sapiens Cliente' in html
+    assert 'Seu perfil atual instala apenas o Sapiens Cliente' in html
+    assert 'data-choice-value="squad_versus"' not in html
+    assert 'data-choice-value="engineering"' not in html
+
+
+def test_profile_get_shows_consultor_and_cliente_for_consultant(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=30,
+        name='Consultor',
+        email='consultor@versus.com',
+        role='consultant',
+        whatsapp=None,
+        telegram=None,
+        instagram=None,
+        summary_delivery_channels='telegram',
+        is_authenticated=True,
+    )
+
+    monkeypatch.setattr(auth_route, 'current_user', fake_user)
+    app.jinja_env.globals['current_user'] = fake_user
+
+    response = app.test_client().get('/profile')
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Sapiens Cliente' in html
+    assert 'Sapiens Consultor' in html
+    assert 'data-choice-value="engineering"' not in html
+
+
+def test_profile_get_shows_all_squads_for_admin(monkeypatch):
+    app = _build_app()
+    fake_user = SimpleNamespace(
+        id=21,
+        name='Admin',
+        email='admin@empresa.com',
+        role='admin',
+        whatsapp=None,
+        telegram=None,
+        instagram=None,
+        summary_delivery_channels='telegram',
+        is_authenticated=True,
+    )
+
+    monkeypatch.setattr(auth_route, 'current_user', fake_user)
+    app.jinja_env.globals['current_user'] = fake_user
+
+    response = app.test_client().get('/profile')
+
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert 'Seu perfil atual pode instalar Sapiens Cliente, Sapiens Consultor e Sapiens Engenharia.' in html
+    assert 'Sapiens Cliente' in html
+    assert 'Sapiens Consultor' in html
+    assert 'Sapiens Engenharia' in html

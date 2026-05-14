@@ -11,11 +11,25 @@ O **Squad Cliente** deve ser lido como **família de copilotos do cliente**, e n
 
 Padronização adotada no APP32:
 - `runtime_profile = squad_cliente` representa a **família Squad Cliente**
+- a experiência visível no CLI deve usar o nome **`Sapiens Cliente`**
+- o comando textual preferencial, quando o cliente suportar alias, é `sapiens cliente on`
 - o harness inicial padrão é `harness_coordenador_cliente_v1`
 - a família deve poder especializar a operação por domínio, com harnesses como:
   - `harness_comercial_cliente_v1`
   - `harness_operacional_cliente_v1`
   - `harness_admfin_cliente_v1`
+
+## Nomenclatura padronizada
+Separar sempre:
+
+- **nome de experiência**: `Sapiens Cliente`
+- **família canônica**: `Squad Cliente`
+- **profile técnico**: `squad_cliente`
+- **harness inicial**: `harness_coordenador_cliente_v1`
+
+Regra:
+- o cliente final deve enxergar `Sapiens Cliente`
+- specs, policy, RBAC e telemetry continuam usando `Squad Cliente` / `squad_cliente`
 
 ## Perfil publicado
 - `profile`: `squad_cliente`

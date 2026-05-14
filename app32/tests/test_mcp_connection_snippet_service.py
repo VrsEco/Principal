@@ -30,7 +30,9 @@ def test_build_prompt_supports_squad_versus_profile():
         }
     )
 
-    assert "ative o Squad Versus" in content
+    assert "ative o Sapiens Consultor" in content
+    assert "Família canônica: Squad Versus" in content
+    assert "sapiens consultor on" in content
     assert "Surface alvo: admin" in content
     assert "list_admin_app32_capabilities" in content
     assert "https://app.gestaoversus.com.br/mcp/admin" in content
@@ -46,7 +48,9 @@ def test_build_prompt_supports_squad_cliente_profile():
         }
     )
 
-    assert "ative o Squad Cliente" in content
+    assert "ative o Sapiens Cliente" in content
+    assert "Família canônica: Squad Cliente" in content
+    assert "sapiens cliente on" in content
     assert "Surface alvo: user" in content
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in content
     assert "list_user_app32_capabilities" in content
@@ -79,6 +83,8 @@ def test_build_raw_config_includes_runtime_profile_metadata():
     )
 
     assert '"profile": "squad_versus"' in content
+    assert '"profile_label": "Squad Versus"' in content
+    assert '"experience_label": "Sapiens Consultor"' in content
     assert '"surface": "admin"' in content
 
 
@@ -118,7 +124,9 @@ def test_build_prompt_supports_engineering_profile():
         }
     )
 
-    assert "ative o Squad de Engenharia" in content
+    assert "ative o Sapiens Engenharia" in content
+    assert "Família canônica: Squad de Engenharia" in content
+    assert "sapiens engenharia on" in content
     assert "Surface alvo: ops" in content
     assert "Harness inicial: Harness Coordenador do Squad de Engenharia" in content
     assert "list_ops_app32_capabilities" in content

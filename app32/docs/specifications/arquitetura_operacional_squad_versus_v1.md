@@ -6,6 +6,18 @@ Formalizar o primeiro perfil de runtime externo do **Squad Versus** consumindo o
 ## Decisão
 O **Squad Versus** opera inicialmente como runtime externo consultivo na **surface `admin`**, usando `company_id` explícito quando exigido e começando sempre por discovery antes de qualquer mutação.
 
+## Nomenclatura padronizada
+Separar sempre:
+
+- **nome de experiência**: `Sapiens Consultor`
+- **família canônica**: `Squad Versus`
+- **profile técnico**: `squad_versus`
+- **harness inicial**: `harness_coordenador_versus_v1`
+
+Regra:
+- o consultor enxerga `Sapiens Consultor` no CLI
+- specs, policy, RBAC e telemetry continuam usando `Squad Versus` / `squad_versus`
+
 ## Perfil publicado
 - `profile`: `squad_versus`
 - `url` padrão: `https://app.gestaoversus.com.br/mcp/admin`

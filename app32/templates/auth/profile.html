@@ -25,7 +25,7 @@
 
     <div class="profile-tabs" role="tablist" aria-label="Seções do perfil">
         <button type="button" class="profile-tab is-active" data-tab-target="profile-data-panel">Dados e comunicação</button>
-        <button type="button" class="profile-tab" data-tab-target="profile-mcp-panel">Runtimes e acesso MCP</button>
+        <button type="button" class="profile-tab" data-tab-target="profile-mcp-panel">Instalar Squad</button>
         <button type="button" class="profile-tab" data-tab-target="profile-security-panel">Segurança</button>
     </div>
 
@@ -139,15 +139,165 @@
     </section>
 
     <section id="profile-mcp-panel" class="profile-tab-panel">
-        <div style="max-width: 860px;">
+        {% set role_key = (user.role if user else '') %}
+        {% set can_install_all_squads = role_key in ['admin', 'administrator'] %}
+        <div style="max-width: 860px; display: grid; gap: 1.5rem;">
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body" style="display: grid; gap: 1rem;">
                     <div>
-                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Instalação de runtimes MCP</h2>
-                        <p style="color: var(--text-tertiary); margin: 0;">Gere seu token, escolha o runtime e o squad e copie o comando de instalação ou a configuração técnica correspondente.</p>
+                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Instalação guiada de squads</h2>
+                        <p style="color: var(--text-tertiary); margin: 0;">Escolha onde você vai instalar, confirme qual versão do Sapiens será publicada e gere o código guiado para a IA fazer a configuração. O modo avançado fica disponível só quando necessário.</p>
                     </div>
 
                     <div id="mcp-token-alert-container"></div>
+
+                    <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
+                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo a passo recomendado</div>
+                        <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
+                            <li>Escolha o cliente/CLI e a empresa padrão.</li>
+                            <li>Gere ou renove o token no final desta tela.</li>
+                            <li>Clique em <strong>Gerar código para IA</strong>, copie e cole no cliente escolhido.</li>
+                            <li>Peça para a IA criar a entrada com o nome visível do Sapiens correspondente.</li>
+                        </ol>
+                    </div>
+
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Como você quer instalar</h3>
+                        <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Todos os clientes/CLIs abaixo seguem fluxo guiado. O APP32 resolve nome visível, profile, surface, agente coordenador e harness inicial automaticamente.</p>
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Cliente / CLI onde você vai instalar</label>
+                        <div class="mcp-choice-grid" id="mcpRuntimeChoices">
+                            <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
+                                <strong>Claude (recomendado)</strong>
+                                <span>Experiência principal para o cliente.</span>
+                            </button>
+                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
+                                <strong>Codex</strong>
+                                <span>Instalação guiada em ambiente técnico.</span>
+                            </button>
+                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
+                                <strong>Antigravity</strong>
+                                <span>Instalação guiada para uso consultivo.</span>
+                            </button>
+                            <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
+                                <strong>Outro cliente MCP</strong>
+                                <span>Fluxo guiado com fallback para modo avançado.</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Squad que será instalado</label>
+                        {% if can_install_all_squads %}
+                            <div class="mcp-choice-grid" id="mcpSquadChoices">
+                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                                    <strong>Sapiens Cliente</strong>
+                                    <span>Squad Cliente com coordenador e roteamento automático.</span>
+                                </button>
+                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
+                                    <strong>Sapiens Consultor</strong>
+                                    <span>Squad Versus para uso consultivo e rollout assistido.</span>
+                                </button>
+                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="engineering">
+                                    <strong>Sapiens Engenharia</strong>
+                                    <span>Squad de Engenharia para uso técnico e diagnóstico controlado.</span>
+                                </button>
+                            </div>
+                            <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente, Sapiens Consultor e Sapiens Engenharia.</small>
+                        {% elif role_key == 'consultant' %}
+                            <div class="mcp-choice-grid" id="mcpSquadChoices">
+                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                                    <strong>Sapiens Cliente</strong>
+                                    <span>Squad Cliente com menor privilégio e operação assistida.</span>
+                                </button>
+                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
+                                    <strong>Sapiens Consultor</strong>
+                                    <span>Squad Versus com governança consultiva e rollout assistido.</span>
+                                </button>
+                            </div>
+                            <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente e Sapiens Consultor. Sapiens Engenharia fica restrito à administração.</small>
+                        {% else %}
+                            <div class="mcp-choice-grid" id="mcpSquadChoices">
+                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                                    <strong>Sapiens Cliente</strong>
+                                    <span>Disponível para o seu perfil, com menor privilégio e entrada pelo coordenador.</span>
+                                </button>
+                            </div>
+                            <small style="color: var(--text-tertiary);">Seu perfil atual instala apenas o Sapiens Cliente. Sapiens Consultor e Sapiens Engenharia ficam disponíveis somente para perfis autorizados.</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Empresa padrão (opcional)</label>
+                        <select id="mcpCompanyId" class="form-control"></select>
+                        <small style="color: var(--text-tertiary);">Se você escolher uma empresa, a instalação já sai apontando para ela. Se deixar em branco, você escolhe a empresa depois durante o uso.</small>
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Nome desta instalação (opcional)</label>
+                        <input type="text" class="form-control" id="mcpClientName" placeholder="Ex.: Claude do notebook comercial">
+                    </div>
+
+                    <div class="mcp-summary-grid">
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Cliente / CLI</div>
+                            <div class="mcp-summary-value" id="mcpResolvedRuntime">Claude</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Nome visível</div>
+                            <div class="mcp-summary-value" id="mcpResolvedSquad">Sapiens Cliente</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Família canônica</div>
+                            <div class="mcp-summary-value" id="mcpResolvedFamily">Squad Cliente</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Perfil técnico</div>
+                            <div class="mcp-summary-value" id="mcpResolvedProfile">squad_cliente</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Surface</div>
+                            <div class="mcp-summary-value" id="mcpResolvedSurface">user</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Disponibilidade</div>
+                            <div class="mcp-summary-value" id="mcpInstallAvailability">Instalação guiada</div>
+                        </div>
+                        <div class="mcp-summary-card">
+                            <div class="mcp-summary-label">Comando sugerido</div>
+                            <div class="mcp-summary-value" id="mcpResolvedCommand">sapiens cliente on</div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como a instalação funciona</div>
+                        <div style="font-size: 0.92rem; line-height: 1.55;">
+                            A instalação publica uma entrada do <strong>Sapiens</strong> no seu cliente/CLI. Essa entrada começa pelo <strong>agente coordenador</strong> do squad e usa o <strong>harness inicial</strong> resolvido automaticamente pelo APP32. Depois disso, o próprio Sapiens pode rotear a conversa para especialistas internos quando necessário.
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Gerar código para IA</button>
+                        <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar</button>
+                        <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Modo avançado</button>
+                    </div>
+
+                    <div class="filter-field" style="margin-top:-0.25rem;">
+                        <label>Conteúdo pronto</label>
+                        <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token no final da página, use Gerar código para IA e copie o conteúdo exibido."></textarea>
+                        <small id="mcpInstructionText" style="color: var(--text-tertiary);">A experiência principal é gerar o código guiado e colar no cliente/CLI escolhido. O conteúdo já explica o nome visível do Sapiens, o agente coordenador e o uso do harness inicial. Use o modo avançado apenas quando necessário.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="border-radius: 24px;">
+                <div class="card-body" style="display: grid; gap: 1rem;">
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Token de acesso MCP</h3>
+                        <p id="mcpTokenHelpText" style="color: var(--text-tertiary); margin: 0;">Gere o token no final, depois copie o código acima e siga a instalação. O token será solicitado durante a instalação do squad.</p>
+                    </div>
 
                     <div style="display:grid; gap:0.75rem;">
                         <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
@@ -165,104 +315,24 @@
                         <button type="button" class="btn btn-secondary" id="renewMcpTokenButton">Renovar token</button>
                         <button type="button" class="btn btn-danger" id="revokeMcpTokenButton">Revogar token</button>
                     </div>
-                    <small style="color: var(--text-tertiary); margin-top:-0.25rem;">A emissão e a renovação são pessoais. O token não fica preso a uma empresa específica.</small>
-
-                    <div style="margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); display:grid; gap:1rem;">
-                        <div>
-                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Escolha do runtime e do squad</h3>
-                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">O APP32 resolve profile e surface automaticamente. Use instalação guiada quando disponível e configuração técnica apenas em modo avançado.</p>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Runtime de destino</label>
-                            <div class="mcp-choice-grid" id="mcpRuntimeChoices">
-                                <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
-                                    <strong>Claude</strong>
-                                    <span>Runtime recomendado para o Squad Cliente.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
-                                    <strong>Codex</strong>
-                                    <span>Uso técnico e ambiente controlado.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
-                                    <strong>Antigravity</strong>
-                                    <span>Consultoria assistida pela Versus.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
-                                    <strong>Outro cliente MCP</strong>
-                                    <span>Conexão manual com JSON técnico.</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Squad / perfil operacional</label>
-                            <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                    <strong>Squad Cliente</strong>
-                                    <span>Operação assistida, menor privilégio e surface user.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
-                                    <strong>Squad Versus</strong>
-                                    <span>Uso consultivo em rollout controlado.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="engineering">
-                                    <strong>Squad de Engenharia</strong>
-                                    <span>Diagnóstico técnico em surface ops.</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Empresa padrão da configuração (opcional)</label>
-                            <select id="mcpCompanyId" class="form-control"></select>
-                            <small style="color: var(--text-tertiary);">Se você selecionar uma empresa, a URL copiada já sai com <code>company_id</code> explícito. Se não selecionar, o token continua pessoal e você define a empresa no cliente ou no uso.</small>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Nome do cliente (opcional)</label>
-                            <input type="text" class="form-control" id="mcpClientName" placeholder="Ex.: Antigravity do notebook">
-                        </div>
-
-                        <div class="mcp-summary-grid">
-                            <div class="mcp-summary-card">
-                                <div class="mcp-summary-label">Runtime</div>
-                                <div class="mcp-summary-value" id="mcpResolvedRuntime">Claude</div>
-                            </div>
-                            <div class="mcp-summary-card">
-                                <div class="mcp-summary-label">Squad</div>
-                                <div class="mcp-summary-value" id="mcpResolvedSquad">Squad Cliente</div>
-                            </div>
-                            <div class="mcp-summary-card">
-                                <div class="mcp-summary-label">Profile</div>
-                                <div class="mcp-summary-value" id="mcpResolvedProfile">squad_cliente</div>
-                            </div>
-                            <div class="mcp-summary-card">
-                                <div class="mcp-summary-label">Surface</div>
-                                <div class="mcp-summary-value" id="mcpResolvedSurface">user</div>
-                            </div>
-                            <div class="mcp-summary-card">
-                                <div class="mcp-summary-label">Disponibilidade</div>
-                                <div class="mcp-summary-value" id="mcpInstallAvailability">Auto instalação</div>
-                            </div>
-                        </div>
-
-                        <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Copiar comando de instalação</button>
-                            <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Ver configuração técnica</button>
-                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar conteúdo</button>
-                        </div>
-
-                        <div class="filter-field" style="margin-top:-0.25rem;">
-                            <label>Conteúdo pronto para copiar</label>
-                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Após gerar/renovar o token, use Copiar comando de instalação para o fluxo guiado ou Ver configuração técnica para o JSON/manual avançado."></textarea>
-                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">A instalação guiada é a experiência principal. Use configuração técnica apenas quando o runtime não suportar o instalador padrão.</small>
-                        </div>
-                    </div>
+                    <small id="mcpTokenFootnoteText" style="color: var(--text-tertiary); margin-top:-0.25rem;">O token é pessoal. Ele não fica preso a uma empresa específica e não será mostrado novamente depois que a janela de cópia for fechada.</small>
                 </div>
             </div>
         </div>
     </section>
+
+    <div id="mcpTokenModal" class="mcp-token-modal" hidden>
+        <div class="mcp-token-modal__backdrop" data-close-token-modal="true"></div>
+        <div class="mcp-token-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mcpTokenModalTitle">
+            <h3 id="mcpTokenModalTitle" style="margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Copie seu token agora</h3>
+            <p style="margin: 0 0 1rem; color: var(--text-secondary);">Esse token será solicitado durante a instalação do squad. Ele não será mostrado novamente depois que esta janela for fechada. Copie no botão abaixo e cole em um local seguro antes de fechar.</p>
+            <textarea id="mcpTokenModalValue" class="form-control" rows="4" readonly></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1rem; flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary" id="copyMcpTokenModalButton">Copiar token</button>
+                <button type="button" class="btn btn-primary" id="closeMcpTokenModalButton">Fechar</button>
+            </div>
+        </div>
+    </div>
 
     <section id="profile-security-panel" class="profile-tab-panel">
         <div style="max-width: 860px;">
@@ -550,9 +620,17 @@
     const mcpInstructionText = document.getElementById('mcpInstructionText');
     const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
     const mcpResolvedSquad = document.getElementById('mcpResolvedSquad');
+    const mcpResolvedFamily = document.getElementById('mcpResolvedFamily');
     const mcpResolvedProfile = document.getElementById('mcpResolvedProfile');
     const mcpResolvedSurface = document.getElementById('mcpResolvedSurface');
     const mcpInstallAvailability = document.getElementById('mcpInstallAvailability');
+    const mcpResolvedCommand = document.getElementById('mcpResolvedCommand');
+    const mcpTokenHelpText = document.getElementById('mcpTokenHelpText');
+    const mcpTokenFootnoteText = document.getElementById('mcpTokenFootnoteText');
+    const mcpTokenModal = document.getElementById('mcpTokenModal');
+    const mcpTokenModalValue = document.getElementById('mcpTokenModalValue');
+    const copyMcpTokenModalButton = document.getElementById('copyMcpTokenModalButton');
+    const closeMcpTokenModalButton = document.getElementById('closeMcpTokenModalButton');
 
     let mcpStatusCache = null;
     let latestMcpPlaintextToken = null;
@@ -649,10 +727,25 @@
         }
         const resolvedConfig = injectLatestTokenIntoConfig(config);
         if (mcpResolvedRuntime) mcpResolvedRuntime.textContent = resolvedConfig.runtime_label || '-';
-        if (mcpResolvedSquad) mcpResolvedSquad.textContent = resolvedConfig.squad_label || '-';
+        if (mcpResolvedSquad) mcpResolvedSquad.textContent = resolvedConfig.experience_label || resolvedConfig.squad_label || '-';
+        if (mcpResolvedFamily) mcpResolvedFamily.textContent = resolvedConfig.squad_label || '-';
         if (mcpResolvedProfile) mcpResolvedProfile.textContent = resolvedConfig.resolved_profile || '-';
         if (mcpResolvedSurface) mcpResolvedSurface.textContent = resolvedConfig.resolved_surface || '-';
         if (mcpInstallAvailability) mcpInstallAvailability.textContent = resolvedConfig.availability_label || '-';
+        if (mcpResolvedCommand) mcpResolvedCommand.textContent = resolvedConfig.command_alias || '-';
+        if (generateMcpTokenButton) generateMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
+        if (renewMcpTokenButton) renewMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
+        if (revokeMcpTokenButton) revokeMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
+        if (mcpTokenHelpText) {
+            mcpTokenHelpText.textContent = resolvedConfig.supports_personal_token
+                ? 'Gere o token no final, depois copie o código acima e siga a instalação. O token será solicitado durante a instalação do squad.'
+                : 'Esta instalação usa rollout controlado. O código acima continua guiando a configuração, mas a credencial final pode ser provisionada pela Versus ou por administrador autorizado.';
+        }
+        if (mcpTokenFootnoteText) {
+            mcpTokenFootnoteText.textContent = resolvedConfig.supports_personal_token
+                ? 'O token é pessoal. Ele não fica preso a uma empresa específica e não será mostrado novamente depois que a janela de cópia for fechada.'
+                : 'Para este perfil, mantenha a instalação guiada e combine a credencial final com a equipe autorizada antes de concluir o uso.';
+        }
         if (mcpInstructionText) {
             mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Use a instalação guiada quando disponível.';
         }
@@ -663,7 +756,7 @@ JSON:
 ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             return;
         }
-        mcpConfigOutput.value = resolvedConfig.install_command || resolvedConfig.instruction_text || resolvedConfig.activation_prompt || '';
+        mcpConfigOutput.value = resolvedConfig.activation_prompt || resolvedConfig.instruction_text || resolvedConfig.install_command || '';
     }
 
     async function buildMcpConfig(mode = 'activation', showSuccessAlert = true) {
@@ -681,8 +774,8 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         }
         if (showSuccessAlert) {
             const message = mode === 'technical'
-                ? 'Configuração técnica MCP pronta para copiar.'
-                : 'Comando de instalação pronto para copiar.';
+                ? 'Modo avançado pronto para copiar.'
+                : 'Código para IA pronto para copiar.';
             renderAlert('mcp-token-alert-container', true, message);
         }
         return data.data;
@@ -699,6 +792,9 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             throw new Error(data.message || 'Falha na operação do token MCP.');
         }
         latestMcpPlaintextToken = data.data && data.data.token ? data.data.token : latestMcpPlaintextToken;
+        if (data.data && data.data.token) {
+            openMcpTokenModal(data.data.token);
+        }
         if (data.data && data.data.status) {
             renderMcpStatus(data.data.status);
         } else if (data.data) {
@@ -754,10 +850,30 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         });
     }
 
+    function updateMcpActionLabels() {
+        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Gerar código para IA';
+        if (buildMcpTechnicalButton) buildMcpTechnicalButton.textContent = 'Modo avançado';
+        if (copyMcpConfigButton) copyMcpConfigButton.textContent = 'Copiar';
+    }
+
+    function openMcpTokenModal(token) {
+        if (!mcpTokenModal || !mcpTokenModalValue) return;
+        mcpTokenModalValue.value = token || '';
+        mcpTokenModal.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMcpTokenModal() {
+        if (!mcpTokenModal) return;
+        mcpTokenModal.hidden = true;
+        document.body.style.overflow = '';
+    }
+
     document.querySelectorAll('[data-choice-group="runtime"]').forEach((button) => {
         button.addEventListener('click', async () => {
             selectedMcpRuntime = button.getAttribute('data-choice-value') || 'claude';
             syncChoiceButtons('runtime', selectedMcpRuntime);
+            updateMcpActionLabels();
             try {
                 await buildMcpConfig('activation', false);
             } catch (error) {
@@ -770,6 +886,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         button.addEventListener('click', async () => {
             selectedMcpSquad = button.getAttribute('data-choice-value') || 'squad_cliente';
             syncChoiceButtons('squad', selectedMcpSquad);
+            updateMcpActionLabels();
             try {
                 await buildMcpConfig('activation', false);
             } catch (error) {
@@ -792,7 +909,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         generateMcpTokenButton.addEventListener('click', async () => {
             try {
                 activateProfileTab('profile-mcp-panel');
-                await runMcpTokenAction('{{ url_for('auth.generate_profile_mcp_token') }}', 'Token MCP gerado com sucesso. Copie a configuração agora.');
+                await runMcpTokenAction('{{ url_for('auth.generate_profile_mcp_token') }}', 'Token MCP gerado com sucesso. Copie-o na janela aberta e depois gere o código para IA.');
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
@@ -803,7 +920,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         renewMcpTokenButton.addEventListener('click', async () => {
             try {
                 activateProfileTab('profile-mcp-panel');
-                await runMcpTokenAction('{{ url_for('auth.renew_profile_mcp_token') }}', 'Token MCP renovado com sucesso. Atualize seu cliente remoto.');
+                await runMcpTokenAction('{{ url_for('auth.renew_profile_mcp_token') }}', 'Token MCP renovado com sucesso. Copie-o na janela aberta e atualize sua instalação.');
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
@@ -937,11 +1054,29 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         }
     });
 
+    document.querySelectorAll('[data-close-token-modal="true"]').forEach((element) => {
+        element.addEventListener('click', closeMcpTokenModal);
+    });
+
+    if (copyMcpTokenModalButton) {
+        copyMcpTokenModalButton.addEventListener('click', async () => {
+            if (!mcpTokenModalValue || !mcpTokenModalValue.value) return;
+            await navigator.clipboard.writeText(mcpTokenModalValue.value);
+            renderAlert('mcp-token-alert-container', true, 'Token copiado. Cole em um local seguro antes de fechar a janela.');
+        });
+    }
+
+    if (closeMcpTokenModalButton) {
+        closeMcpTokenModalButton.addEventListener('click', closeMcpTokenModal);
+    }
+
     if (window.location.hash === '#mcp-token') {
         activateProfileTab('profile-mcp-panel');
     } else if (window.location.hash === '#seguranca') {
         activateProfileTab('profile-security-panel');
     }
+
+    updateMcpActionLabels();
 
     loadMcpTokenStatus().finally(() => {
         buildMcpConfig('activation', false).catch(() => {});
