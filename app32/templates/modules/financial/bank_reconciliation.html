@@ -23,49 +23,42 @@
         </div>
     </header>
 
-    <section class="panel">
-        <div class="panel-header">
-            <div>
-                <h2>Contas bancárias</h2>
-                <p>Abra a workspace da conta para acompanhar pendências, sugestões automáticas e itens conciliados.</p>
-            </div>
-        </div>
-        <div id="accounts-grid" class="accounts-grid"></div>
-    </section>
-
-    <section class="panel">
-        <div class="panel-header row-between">
+    <section class="panel panel--collapsible panel--collapsed" id="upload-panel">
+        <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="upload-panel-body" onclick="handlePanelToggleClick(event, 'upload-panel')" onkeydown="handlePanelToggleKeydown(event, 'upload-panel')">
             <div>
                 <h2>Upload prático do extrato</h2>
                 <p>O fluxo aceita arquivos OFX, XLS, XLSX e CSV e já tenta sugerir vínculos automáticos após o envio.</p>
             </div>
+            <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
         </div>
-        <form id="upload-form" class="upload-grid" novalidate>
-            <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
-            <label><span>Fonte</span>
-                <select name="source_type" id="upload-source-type">
-                    <option value="ofx">OFX</option>
-                    <option value="xlsx">XLSX</option>
-                    <option value="xls">XLS</option>
-                    <option value="csv">CSV</option>
-                </select>
-            </label>
-            <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
-            <label class="upload-dropzone">
-                <span>Arquivo do extrato</span>
-                <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
-                <small>Arraste ou selecione o arquivo.</small>
-            </label>
-            <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
-            <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
-            <div class="col-span-2 actions-right">
-                <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
-            </div>
-        </form>
+        <div id="upload-panel-body" class="panel-body">
+            <form id="upload-form" class="upload-grid" novalidate>
+                <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
+                <label><span>Fonte</span>
+                    <select name="source_type" id="upload-source-type">
+                        <option value="ofx">OFX</option>
+                        <option value="xlsx">XLSX</option>
+                        <option value="xls">XLS</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </label>
+                <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
+                <label class="upload-dropzone">
+                    <span>Arquivo do extrato</span>
+                    <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
+                    <small>Arraste ou selecione o arquivo.</small>
+                </label>
+                <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
+                <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
+                <div class="col-span-2 actions-right">
+                    <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
+                </div>
+            </form>
+        </div>
     </section>
 
-    <section id="workspace-panel" class="panel hidden">
-        <div class="panel-header row-between">
+    <section id="workspace-panel" class="panel panel--collapsible hidden">
+        <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="workspace-panel-body" onclick="handlePanelToggleClick(event, 'workspace-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-panel')">
             <div>
                 <h2 id="workspace-title">Workspace da conciliação</h2>
                 <p id="workspace-subtitle">Selecione uma conta bancária.</p>
@@ -74,48 +67,50 @@
                 <label><span>Lote</span><select id="batch-select"></select></label>
                 <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar</button>
             </div>
+            <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
         </div>
+        <div id="workspace-panel-body" class="panel-body">
+            <div id="workspace-summary" class="summary-grid"></div>
 
-        <div id="workspace-summary" class="summary-grid"></div>
+            <div class="board-toolbar">
+                <div class="filter-group" id="bank-filter-group"></div>
+                <label class="compact-field">
+                    <span>Buscar no sistema</span>
+                    <input id="system-search" type="search" placeholder="Histórico, documento ou código">
+                </label>
+            </div>
 
-        <div class="board-toolbar">
-            <div class="filter-group" id="bank-filter-group"></div>
-            <label class="compact-field">
-                <span>Buscar no sistema</span>
-                <input id="system-search" type="search" placeholder="Histórico, documento ou código">
-            </label>
-        </div>
-
-        <div class="recon-board" id="recon-board">
-            <section class="board-column board-column--bank">
-                <div class="column-header">
-                    <div>
-                        <h3>1. Extrato do banco</h3>
-                        <p>Linhas pendentes, sugeridas e conciliadas.</p>
+            <div class="recon-board" id="recon-board">
+                <section class="board-column board-column--bank">
+                    <div class="column-header">
+                        <div>
+                            <h3>1. Extrato do banco</h3>
+                            <p>Linhas pendentes, sugeridas e conciliadas.</p>
+                        </div>
                     </div>
-                </div>
-                <div id="bank-rows-list" class="rows-stack rows-stack--dense"></div>
-            </section>
+                    <div id="bank-rows-list" class="rows-stack rows-stack--dense"></div>
+                </section>
 
-            <section class="board-column board-column--system">
-                <div class="column-header">
-                    <div>
-                        <h3>2. Extrato do sistema</h3>
-                        <p>Itens sem vínculo e lançamentos elegíveis para associação.</p>
+                <section class="board-column board-column--system">
+                    <div class="column-header">
+                        <div>
+                            <h3>2. Extrato do sistema</h3>
+                            <p>Itens sem vínculo e lançamentos elegíveis para associação.</p>
+                        </div>
                     </div>
-                </div>
-                <div id="system-rows-list" class="rows-stack rows-stack--dense"></div>
-            </section>
+                    <div id="system-rows-list" class="rows-stack rows-stack--dense"></div>
+                </section>
 
-            <aside class="board-column board-column--actions">
-                <div class="column-header">
-                    <div>
-                        <h3>3. Painel de decisão</h3>
-                        <p>Revise sugestões, faça vínculos 1:1 / 1:N e crie lançamentos quando necessário.</p>
+                <aside class="board-column board-column--actions">
+                    <div class="column-header">
+                        <div>
+                            <h3>3. Painel de decisão</h3>
+                            <p>Revise sugestões, faça vínculos 1:1 / 1:N e crie lançamentos quando necessário.</p>
+                        </div>
                     </div>
-                </div>
-                <div id="workbench-panel" class="rows-stack rows-stack--dense"></div>
-            </aside>
+                    <div id="workbench-panel" class="rows-stack rows-stack--dense"></div>
+                </aside>
+            </div>
         </div>
     </section>
 </div>
@@ -127,12 +122,17 @@
     .recon-subtitle{color:var(--text-secondary);max-width:72rem}
     .panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
     .panel-header{padding:1.25rem 1.25rem 0}
+    .panel-body{display:block}
+    .panel--collapsed .panel-body{display:none}
+    .panel-toggle{cursor:pointer}
+    .panel-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
+    .panel-toggle-icon{font-size:1.2rem;color:var(--text-secondary);transition:transform .2s ease}
+    .panel--collapsed .panel-toggle-icon{transform:rotate(-90deg)}
     .panel-header h2,.column-header h3{margin:0}
     .panel-header p,.column-header p,.row-meta,.muted{margin:.25rem 0 0;color:var(--text-secondary)}
     .row-between,.actions-right,.workspace-toolbar,.board-toolbar,.inline-actions,.filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
     .row-between,.actions-right,.workspace-toolbar,.board-toolbar{justify-content:space-between}
-    .accounts-grid,.summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}
-    .accounts-grid{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+    .summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}
     .summary-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
     .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .upload-grid label,.workspace-toolbar label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
@@ -230,19 +230,30 @@ async function api(url, options={}){
 }
 function escapeHtml(value){ return String(value || '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
 function renderAccountsError(message){
-    const grid = document.getElementById('accounts-grid');
     const uploadSelect = document.getElementById('upload-bank-account');
-    if(grid){
-        grid.innerHTML = `
-            <div class="account-card">
-                <h3>Não foi possível carregar as contas bancárias</h3>
-                <p>${escapeHtml(message || 'Atualize a página ou selecione novamente a empresa no topo.')}</p>
-                <div class="inline-actions">
-                    <button type="button" class="btn btn-primary" onclick="loadOverview()">Tentar novamente</button>
-                </div>
-            </div>`;
-    }
     if(uploadSelect) uploadSelect.innerHTML = '<option value="">Erro ao carregar contas</option>';
+    showUploadStatus(message || 'Não foi possível carregar as contas bancárias. Atualize a página ou selecione novamente a empresa no topo.', 'error');
+}
+
+function togglePanelCollapse(panelId, forceExpanded=null){
+    const panel = document.getElementById(panelId);
+    if(!panel) return;
+    const shouldExpand = forceExpanded == null ? panel.classList.contains('panel--collapsed') : Boolean(forceExpanded);
+    panel.classList.toggle('panel--collapsed', !shouldExpand);
+    const toggle = panel.querySelector('.panel-toggle');
+    if(toggle) toggle.setAttribute('aria-expanded', String(shouldExpand));
+}
+
+function handlePanelToggleClick(event, panelId){
+    const interactive = event.target.closest('button, a, input, select, textarea, label');
+    if(interactive && interactive !== event.currentTarget) return;
+    togglePanelCollapse(panelId);
+}
+
+function handlePanelToggleKeydown(event, panelId){
+    if(event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    togglePanelCollapse(panelId);
 }
 
 function rowStatusKind(row){
@@ -274,12 +285,14 @@ function getVisibleBankRows(){
 }
 
 function renderAccounts(){
-    const grid = document.getElementById('accounts-grid');
     const uploadSelect = document.getElementById('upload-bank-account');
     if(!state.accounts.length){
-        grid.innerHTML = '<div class="account-card"><p>Nenhuma conta bancária ativa encontrada.</p></div>';
         if(uploadSelect) uploadSelect.innerHTML = '<option value="">Nenhuma conta disponível</option>';
         return;
+    }
+    const selectedExists = state.accounts.some((item) => String(item.bank_account.id) === String(state.selectedBankAccountId));
+    if(!selectedExists){
+        state.selectedBankAccountId = Number(state.accounts[0]?.bank_account?.id || 0) || null;
     }
     if(uploadSelect){
         uploadSelect.innerHTML = '<option value="">Selecione</option>' + state.accounts.map(item => `<option value="${item.bank_account.id}">${escapeHtml(item.bank_account.name)}</option>`).join('');
@@ -287,26 +300,6 @@ function renderAccounts(){
             uploadSelect.value = String(state.selectedBankAccountId);
         }
     }
-    grid.innerHTML = state.accounts.map(item => `
-        <article class="account-card ${String(item.bank_account.id) === String(state.selectedBankAccountId) ? 'is-selected' : ''}" onclick="selectBankAccountCard(${item.bank_account.id})">
-            <h3>${escapeHtml(item.bank_account.name)}</h3>
-            <p>${escapeHtml(item.bank_account.bank_name || '-')} · ${escapeHtml(item.bank_account.account_number || 'sem conta informada')}</p>
-            <p>${escapeHtml(item.status_message || 'Sem status')}</p>
-            <div class="badges">
-                ${badge(`Pendentes ${item.pending_count || 0}`, item.pending_count ? 'warn' : 'ok')}
-                ${badge(`Sugestões ${item.latest_batch ? (item.latest_batch.valid_rows || 0) : 0}`, 'info')}
-                ${item.last_reconciled_date ? badge(`Última ${item.last_reconciled_date}`, 'ok') : badge('Sem histórico', 'mute')}
-            </div>
-            <div class="inline-actions">
-                <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); openWorkspace(${item.bank_account.id})">Abrir workspace</button>
-            </div>
-        </article>
-    `).join('');
-}
-
-function selectBankAccountCard(bankAccountId){
-    state.selectedBankAccountId = Number(bankAccountId);
-    renderAccounts();
 }
 
 function renderSummary(){
@@ -533,6 +526,7 @@ function renderWorkspace(){
         return;
     }
     panel.classList.remove('hidden');
+    togglePanelCollapse('workspace-panel', true);
     document.getElementById('workspace-title').textContent = `Workspace · ${state.workspace.bank_account.name}`;
     document.getElementById('workspace-subtitle').textContent = state.workspace.selected_batch
         ? `Lote ${state.workspace.selected_batch.batch_code} · fonte ${state.workspace.selected_batch.source_type}`
@@ -551,7 +545,17 @@ async function loadOverview(){
         companyId = resolveCompanyId();
         const payload = await api(`/api/financial/reconciliation/overview${companyQuery()}`);
         state.accounts = payload.items || [];
+        if(!state.accounts.length){
+            state.selectedBankAccountId = null;
+            state.workspace = null;
+            renderWorkspace();
+        }
         renderAccounts();
+        const selectedExists = state.accounts.some((item) => String(item.bank_account.id) === String(state.selectedBankAccountId));
+        const workspaceMatchesSelection = String(state.workspace?.bank_account?.id || '') === String(state.selectedBankAccountId || '');
+        if(selectedExists && state.selectedBankAccountId && (!state.workspace || !workspaceMatchesSelection)){
+            await openWorkspace(state.selectedBankAccountId);
+        }
     } catch(error){
         console.error('Falha ao carregar contas bancárias da conciliação:', error);
         renderAccountsError(error.message);
