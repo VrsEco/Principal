@@ -3,7 +3,9 @@ param(
 )
 
 $commandsDir = Join-Path $env:USERPROFILE ".claude\commands"
+$skillsDir = Join-Path $env:USERPROFILE ".claude\skills"
 New-Item -ItemType Directory -Force -Path $commandsDir | Out-Null
+New-Item -ItemType Directory -Force -Path $skillsDir | Out-Null
 
 function Write-SlashCommand {
     param(
@@ -25,6 +27,41 @@ $Body
     Write-Host "Comando criado: $path"
 }
 
+function Write-ClaudeSkill {
+    param(
+        [string]$SkillName,
+        [string]$Description,
+        [string]$Body
+    )
+
+    $skillPath = Join-Path (Join-Path $skillsDir $SkillName) "SKILL.md"
+    New-Item -ItemType Directory -Force -Path (Split-Path $skillPath) | Out-Null
+
+    $content = @"
+---
+name: $SkillName
+description: $Description
+disable-model-invocation: true
+---
+
+$Body
+"@
+
+    [System.IO.File]::WriteAllText($skillPath, $content, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "Skill criada: $skillPath"
+}
+
+function Publish-ClaudeActivation {
+    param(
+        [string]$CommandName,
+        [string]$Description,
+        [string]$Body
+    )
+
+    Write-SlashCommand -FileName "$CommandName.md" -Description $Description -Body $Body
+    Write-ClaudeSkill -SkillName $CommandName -Description $Description -Body $Body
+}
+
 function Get-SquadLabel {
     param([string]$Squad)
     switch ($Squad) {
@@ -43,8 +80,8 @@ $normalizedSquads = @(
 )
 
 if ($normalizedSquads -contains "squad_cliente") {
-    Write-SlashCommand `
-        -FileName "sapiens-cliente-on.md" `
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-cliente-on" `
         -Description "Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente." `
         -Body @"
 Ative o **Sapiens Cliente** nesta conversa.
@@ -72,8 +109,8 @@ Regras obrigatórias desta ativação:
 }
 
 if ($normalizedSquads -contains "squad_versus") {
-    Write-SlashCommand `
-        -FileName "sapiens-consultor-on.md" `
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-consultor-on" `
         -Description "Ativa o Sapiens Consultor e carrega o bootstrap oficial do Squad Versus." `
         -Body @"
 Ative o **Sapiens Consultor** nesta conversa.
@@ -99,8 +136,8 @@ Regras obrigatórias desta ativação:
 }
 
 if ($normalizedSquads -contains "engineering") {
-    Write-SlashCommand `
-        -FileName "sapiens-engenharia-on.md" `
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-engenharia-on" `
         -Description "Ativa o Sapiens Engenharia e carrega o bootstrap oficial do Squad de Engenharia." `
         -Body @"
 Ative o **Sapiens Engenharia** nesta conversa.
@@ -129,8 +166,8 @@ $availableLabels = @($normalizedSquads | ForEach-Object { Get-SquadLabel $_ })
 $availableList = $availableLabels -join ", "
 
 if ($normalizedSquads.Count -gt 1) {
-    Write-SlashCommand `
-        -FileName "sapiens-on.md" `
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-on" `
         -Description "Ativa o Sapiens e, se houver mais de um Squad disponível, pede confirmação antes de seguir." `
         -Body @"
 Ative o **Sapiens** nesta conversa.
@@ -154,8 +191,8 @@ elseif ($normalizedSquads.Count -eq 1) {
         default { "/sapiens-cliente-on" }
     }
 
-    Write-SlashCommand `
-        -FileName "sapiens-on.md" `
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-on" `
         -Description "Ativa o único Squad Sapiens disponível nesta máquina." `
         -Body @"
 Ative o **$onlyLabel** nesta conversa.
@@ -166,8 +203,8 @@ Execute integralmente o fluxo equivalente a `$onlyCommand` e confirme a ativaç�
 "@
 }
 
-Write-SlashCommand `
-    -FileName "sapiens.md" `
+Publish-ClaudeActivation `
+    -CommandName "sapiens" `
     -Description "Alias defensivo do Sapiens oficial para evitar ativação genérica incorreta." `
     -Body @"
 Ative o **Sapiens oficial do APP32** nesta conversa.
@@ -181,4 +218,4 @@ Ative o **Sapiens oficial do APP32** nesta conversa.
    - Engenharia: `/sapiens-engenharia-on`
 "@
 
-Write-Host "Comandos oficiais de ativação do Sapiens instalados em $commandsDir"
+Write-Host "Comandos oficiais instalados em $commandsDir e skills oficiais instaladas em $skillsDir"
