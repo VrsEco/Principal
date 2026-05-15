@@ -12,20 +12,39 @@
 
 {% block workspace_content %}
 <div class="recon-page fade-in" data-company-id="{{ company_id or (active_company.id if active_company else '') }}">
-    <header class="recon-header">
-        <div>
+    <header class="recon-hero">
+        <div class="recon-hero__main">
             <p class="recon-eyebrow">Gestão Financeira · Conciliação operacional</p>
             <h1>Conciliação Bancária</h1>
             <p class="recon-subtitle">
                 Importe OFX, XLS, XLSX ou CSV, revise as vinculações automáticas e concilie com visão clara
                 do extrato bancário, do sistema e do painel de decisão.
             </p>
+            <div class="recon-hero__actions">
+                <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
+                <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar workspace</button>
+            </div>
         </div>
+        <aside class="recon-hero__aside">
+            <article class="recon-hero-card">
+                <span>Conta em foco</span>
+                <strong id="hero-account-name">Aguardando carregamento</strong>
+                <small id="hero-account-status">Assim que a conta for carregada, a operação principal aparece aqui.</small>
+            </article>
+            <article class="recon-hero-card">
+                <span>Lote ativo</span>
+                <strong id="hero-batch-code">Sem lote vinculado</strong>
+                <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
+            </article>
+        </aside>
     </header>
+
+    <section id="recon-overview-stats" class="recon-overview-grid" aria-live="polite"></section>
 
     <section class="panel panel--collapsible panel--collapsed" id="upload-panel">
         <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="upload-panel-body" onclick="handlePanelToggleClick(event, 'upload-panel')" onkeydown="handlePanelToggleKeydown(event, 'upload-panel')">
-            <div>
+            <div class="panel-header__copy">
+                <span class="panel-kicker">Fluxo de entrada</span>
                 <h2>Upload prático do extrato</h2>
                 <p>O fluxo aceita arquivos OFX, XLS, XLSX e CSV e já tenta sugerir vínculos automáticos após o envio.</p>
             </div>
@@ -59,7 +78,8 @@
 
     <section id="workspace-panel" class="panel panel--collapsible hidden">
         <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="workspace-panel-body" onclick="handlePanelToggleClick(event, 'workspace-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-panel')">
-            <div>
+            <div class="panel-header__copy">
+                <span class="panel-kicker">Operação assistida</span>
                 <h2 id="workspace-title">Workspace da conciliação</h2>
                 <p id="workspace-subtitle">Selecione uma conta bancária.</p>
             </div>
@@ -116,11 +136,21 @@
 </div>
 
 <style>
-    .recon-page{padding:0 2rem 2rem}
-    .recon-header{margin-bottom:1.5rem}
+    .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:1rem}
+    .recon-hero{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:1rem;border:1px solid var(--border);border-radius:24px;padding:1.35rem;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05));box-shadow:var(--shadow-sm)}
+    .recon-hero__main,.recon-hero__aside{display:flex;flex-direction:column}
+    .recon-hero__main{gap:1rem}
+    .recon-hero__aside{gap:.85rem}
+    .recon-hero__actions{display:flex;gap:.75rem;flex-wrap:wrap}
+    .recon-hero-card{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.52);border-radius:18px;padding:1rem;backdrop-filter:blur(10px)}
+    .recon-hero-card span,.recon-overview-card span,.summary-card span{display:block;color:var(--text-secondary);font-size:.82rem}
+    .recon-hero-card strong,.recon-overview-card strong,.summary-card strong{display:block;margin:.3rem 0;font-size:1.08rem;color:var(--text-primary)}
+    .recon-hero-card small,.recon-overview-card small,.summary-card small{display:block;color:var(--text-secondary);line-height:1.45}
     .recon-eyebrow{margin:0 0 .35rem;color:var(--primary);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
     .recon-subtitle{color:var(--text-secondary);max-width:72rem}
-    .panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm);margin-bottom:1.5rem}
+    .recon-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
+    .recon-overview-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-sm);padding:1rem}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-sm)}
     .panel-header{padding:1.25rem 1.25rem 0}
     .panel-body{display:block}
     .panel--collapsed .panel-body{display:none}
@@ -128,6 +158,8 @@
     .panel-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
     .panel-toggle-icon{font-size:1.2rem;color:var(--text-secondary);transition:transform .2s ease}
     .panel--collapsed .panel-toggle-icon{transform:rotate(-90deg)}
+    .panel-header__copy{display:flex;flex-direction:column}
+    .panel-kicker{display:inline-flex;width:max-content;margin-bottom:.4rem;padding:.32rem .6rem;border-radius:999px;background:rgba(37,99,235,.08);color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
     .panel-header h2,.column-header h3{margin:0}
     .panel-header p,.column-header p,.row-meta,.muted{margin:.25rem 0 0;color:var(--text-secondary)}
     .row-between,.actions-right,.workspace-toolbar,.board-toolbar,.inline-actions,.filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
@@ -137,16 +169,16 @@
     .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .upload-grid label,.workspace-toolbar label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
     .upload-grid input,.upload-grid select,.workspace-toolbar select,.compact-field input,.allocation-grid input,.entry-form-grid input,.entry-form-grid select,.entry-form-grid textarea{
-        background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:.8rem .9rem;color:var(--text-primary)
+        background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.85rem .95rem;color:var(--text-primary)
     }
-    .upload-dropzone{background:linear-gradient(180deg,rgba(59,130,246,.06),rgba(59,130,246,.02));border:1px dashed rgba(59,130,246,.32);border-radius:16px;padding:1rem}
+    .upload-dropzone{background:linear-gradient(180deg,rgba(59,130,246,.08),rgba(59,130,246,.03));border:1px dashed rgba(59,130,246,.32);border-radius:18px;padding:1rem}
     .upload-dropzone small{color:var(--text-secondary);font-weight:500}
     .upload-status{display:none;border-radius:14px;padding:.85rem 1rem;font-weight:700}
     .upload-status.is-visible{display:block}
     .upload-status--info{background:#dbeafe;color:#1d4ed8}
     .upload-status--success{background:#dcfce7;color:#166534}
     .upload-status--error{background:#fee2e2;color:#b91c1c}
-    .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);padding:1rem}
+    .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:18px;background:var(--surface-secondary);padding:1rem}
     .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected{border-color:var(--primary);box-shadow:0 0 0 1px rgba(59,130,246,.14)}
     .badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}
     .badge{display:inline-flex;border-radius:999px;padding:.25rem .65rem;font-size:.74rem;font-weight:700}
@@ -155,7 +187,7 @@
     .badge--info{background:#dbeafe;color:#1d4ed8}
     .badge--mute{background:#e2e8f0;color:#475569}
     .badge--danger{background:#fee2e2;color:#b91c1c}
-    .btn{border:none;border-radius:12px;padding:.8rem 1rem;font-weight:700;cursor:pointer}
+    .btn{border:none;border-radius:12px;padding:.82rem 1rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.45rem}
     .btn-primary{background:var(--primary);color:#fff}
     .btn-secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}
     .btn-danger{background:#b91c1c;color:#fff}
@@ -164,23 +196,32 @@
     .col-span-2{grid-column:span 2}
     .rows-stack{display:flex;flex-direction:column;gap:.85rem;padding:1.25rem}
     .rows-stack--dense{padding:1rem}
-    .recon-board{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1.15fr) minmax(320px,.9fr);gap:1rem;padding:0 1.25rem 1.25rem}
-    .board-column{border:1px solid var(--border);border-radius:18px;background:var(--surface)}
+    .recon-board{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.05fr) minmax(340px,.9fr);gap:1rem;padding:0 1.25rem 1.25rem;align-items:start}
+    .board-column{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+    .board-column--actions{position:sticky;top:1rem}
     .column-header{padding:1rem 1rem 0}
-    .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.65rem .9rem;border-radius:999px;font-weight:700;cursor:pointer}
+    .column-header h3{font-size:1.05rem}
+    .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.7rem .95rem;border-radius:999px;font-weight:700;cursor:pointer;transition:all .18s ease}
+    .filter-chip:hover{transform:translateY(-1px);border-color:rgba(37,99,235,.28)}
+    .summary-card{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(241,245,249,.78))}
     .row-card h4,.slot-card h4,.workbench-card h4{margin:0 0 .25rem}
     .row-card p,.slot-card p,.workbench-card p{margin:.2rem 0}
+    .row-card,.slot-card,.workbench-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+    .row-card:hover,.slot-card:hover,.workbench-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
     .selection-line{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
     .selection-line input[type="checkbox"]{margin-top:.25rem}
     .allocation-grid,.entry-form-grid{display:grid;gap:.75rem}
     .entry-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .entry-form-grid textarea{min-height:88px;resize:vertical}
     .workbench-empty{padding:2rem 1rem;color:var(--text-secondary);text-align:center}
+    .recon-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.4rem;min-height:180px;padding:1.4rem;border:1px dashed rgba(148,163,184,.4);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.85),rgba(241,245,249,.65))}
+    .recon-empty-state strong{color:var(--text-primary);font-size:1rem}
+    .recon-empty-state span{color:var(--text-secondary);max-width:36ch}
     .helper-list{display:flex;flex-direction:column;gap:.55rem}
     .divider{height:1px;background:var(--border);margin:.25rem 0}
     .compact-field{min-width:240px}
-    @media (max-width:1200px){.recon-board{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.workspace-toolbar,.board-toolbar{flex-direction:column;align-items:stretch}}
+    @media (max-width:1200px){.recon-hero,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}}
+    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.workspace-toolbar,.board-toolbar,.recon-hero__actions{flex-direction:column;align-items:stretch}}
 </style>
 
 <script>
@@ -210,6 +251,22 @@ const state = {
 
 function brl(value){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value || 0)); }
 function badge(label, kind='mute'){ return `<span class="badge badge--${kind}">${label}</span>`; }
+function formatDateDisplay(value){
+    if(!value) return 'Sem histórico';
+    const normalized = /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? `${value}T12:00:00` : value;
+    const date = new Date(normalized);
+    if(Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat('pt-BR').format(date);
+}
+function formatDateTimeDisplay(value){
+    if(!value) return 'processamento recente';
+    const date = new Date(value);
+    if(Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(date);
+}
+function emptyState(title, description){
+    return `<div class="recon-empty-state"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span></div>`;
+}
 function companyQuery(extra={}){
     const params = new URLSearchParams();
     if(companyId) params.set('company_id', companyId);
@@ -235,6 +292,59 @@ function renderAccountsError(message){
     showUploadStatus(message || 'Não foi possível carregar as contas bancárias. Atualize a página ou selecione novamente a empresa no topo.', 'error');
 }
 
+function getSelectedAccountOverview(){
+    return (state.accounts || []).find((item) => String(item.bank_account?.id || '') === String(state.selectedBankAccountId || '')) || null;
+}
+
+function renderHero(){
+    const selected = getSelectedAccountOverview();
+    const items = state.accounts || [];
+    const accountsWithBatch = items.filter((item) => item.latest_batch).length;
+    const pendingTotal = items.reduce((sum, item) => sum + Number(item.pending_count || 0), 0);
+    const latestStatementDates = items.map((item) => item.statement_end).filter(Boolean).sort().reverse();
+    const latestStatementDate = latestStatementDates[0] || null;
+    const latestBatch = state.workspace?.selected_batch || selected?.latest_batch || null;
+
+    const heroAccountName = document.getElementById('hero-account-name');
+    const heroAccountStatus = document.getElementById('hero-account-status');
+    const heroBatchCode = document.getElementById('hero-batch-code');
+    const heroBatchStatus = document.getElementById('hero-batch-status');
+    const stats = document.getElementById('recon-overview-stats');
+
+    if(heroAccountName) heroAccountName.textContent = selected?.bank_account?.name || 'Selecione uma conta bancária';
+    if(heroAccountStatus) heroAccountStatus.textContent = selected?.status_message || 'Escolha uma conta para abrir a operação principal da conciliação.';
+    if(heroBatchCode) heroBatchCode.textContent = latestBatch?.batch_code || 'Sem lote vinculado';
+    if(heroBatchStatus){
+        heroBatchStatus.textContent = latestBatch
+            ? `Fonte ${String(latestBatch.source_type || '').toUpperCase()} · importado em ${formatDateTimeDisplay(latestBatch.imported_at || latestBatch.created_at)}`
+            : 'Use o upload para iniciar uma nova rodada de conciliação.';
+    }
+    if(stats){
+        stats.innerHTML = `
+            <article class="recon-overview-card">
+                <span>Contas elegíveis</span>
+                <strong>${items.length}</strong>
+                <small>Contas bancárias ativas disponíveis para conciliação nesta empresa.</small>
+            </article>
+            <article class="recon-overview-card">
+                <span>Contas com extrato</span>
+                <strong>${accountsWithBatch}</strong>
+                <small>${items.length - accountsWithBatch} conta(s) ainda sem lote importado.</small>
+            </article>
+            <article class="recon-overview-card">
+                <span>Pendências consolidadas</span>
+                <strong>${pendingTotal}</strong>
+                <small>Total de linhas que ainda pedem vínculo manual ou revisão.</small>
+            </article>
+            <article class="recon-overview-card">
+                <span>Último extrato lido</span>
+                <strong>${formatDateDisplay(latestStatementDate)}</strong>
+                <small>Última data de movimentação encontrada entre os extratos carregados.</small>
+            </article>
+        `;
+    }
+}
+
 function togglePanelCollapse(panelId, forceExpanded=null){
     const panel = document.getElementById(panelId);
     if(!panel) return;
@@ -254,6 +364,12 @@ function handlePanelToggleKeydown(event, panelId){
     if(event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     togglePanelCollapse(panelId);
+}
+
+function openUploadPanel(){
+    togglePanelCollapse('upload-panel', true);
+    const fileInput = document.getElementById('upload-file');
+    fileInput?.focus();
 }
 
 function rowStatusKind(row){
@@ -288,6 +404,7 @@ function renderAccounts(){
     const uploadSelect = document.getElementById('upload-bank-account');
     if(!state.accounts.length){
         if(uploadSelect) uploadSelect.innerHTML = '<option value="">Nenhuma conta disponível</option>';
+        renderHero();
         return;
     }
     const selectedExists = state.accounts.some((item) => String(item.bank_account.id) === String(state.selectedBankAccountId));
@@ -300,16 +417,17 @@ function renderAccounts(){
             uploadSelect.value = String(state.selectedBankAccountId);
         }
     }
+    renderHero();
 }
 
 function renderSummary(){
     const summary = state.workspace?.summary || {};
     document.getElementById('workspace-summary').innerHTML = `
-        <div class="summary-card"><span>Total banco</span><strong>${summary.total_rows || 0}</strong></div>
-        <div class="summary-card"><span>Pendentes banco</span><strong>${summary.unmatched_bank_rows || 0}</strong></div>
-        <div class="summary-card"><span>Sugestões</span><strong>${summary.suggested_matches || 0}</strong></div>
-        <div class="summary-card"><span>Conciliados</span><strong>${summary.confirmed_matches || 0}</strong></div>
-        <div class="summary-card"><span>Sem vínculo no sistema</span><strong>${summary.unmatched_system_rows || 0}</strong></div>
+        <div class="summary-card"><span>Total no banco</span><strong>${summary.total_rows || 0}</strong><small>Linhas vindas do extrato selecionado.</small></div>
+        <div class="summary-card"><span>Pendentes no banco</span><strong>${summary.unmatched_bank_rows || 0}</strong><small>Itens ainda sem vínculo confirmado.</small></div>
+        <div class="summary-card"><span>Sugestões automáticas</span><strong>${summary.suggested_matches || 0}</strong><small>Candidatos já identificados pelo motor.</small></div>
+        <div class="summary-card"><span>Conciliados</span><strong>${summary.confirmed_matches || 0}</strong><small>Linhas já resolvidas nesta conta.</small></div>
+        <div class="summary-card"><span>Sem vínculo no sistema</span><strong>${summary.unmatched_system_rows || 0}</strong><small>Lançamentos que seguem sem associação no lote.</small></div>
     `;
 }
 
@@ -330,7 +448,7 @@ function renderBankRows(){
     const container = document.getElementById('bank-rows-list');
     const rows = getVisibleBankRows();
     if(!rows.length){
-        container.innerHTML = '<div class="workbench-empty">Nenhuma linha encontrada para o filtro selecionado.</div>';
+        container.innerHTML = emptyState('Nenhuma linha encontrada', 'Ajuste o filtro ou importe um novo extrato para continuar a conciliação.');
         return;
     }
     container.innerHTML = rows.map(row => `
@@ -368,7 +486,7 @@ function renderSystemRows(){
         return haystack.includes(query);
     });
     if(!rows.length){
-        container.innerHTML = '<div class="workbench-empty">Nenhum lançamento do sistema encontrado.</div>';
+        container.innerHTML = emptyState('Nenhum lançamento elegível', 'Revise a busca aplicada ou aguarde novos lançamentos do sistema para associação.');
         return;
     }
     container.innerHTML = rows.map(item => `
@@ -419,7 +537,7 @@ function renderWorkbench(){
     const container = document.getElementById('workbench-panel');
     const row = getActiveRow();
     if(!row){
-        container.innerHTML = '<div class="workbench-empty">Selecione uma linha do extrato bancário para começar.</div>';
+        container.innerHTML = emptyState('Selecione uma linha bancária', 'O painel de decisão mostra sugestões, vinculação manual e criação assistida quando uma linha é escolhida.');
         return;
     }
     const candidatePayload = state.rowCandidates[row.id] || { items: [] };
@@ -523,6 +641,7 @@ function renderWorkspace(){
     const panel = document.getElementById('workspace-panel');
     if(!state.workspace){
         panel.classList.add('hidden');
+        renderHero();
         return;
     }
     panel.classList.remove('hidden');
@@ -538,6 +657,7 @@ function renderWorkspace(){
     renderBankRows();
     renderSystemRows();
     renderWorkbench();
+    renderHero();
 }
 
 async function loadOverview(){
