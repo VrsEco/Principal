@@ -34,6 +34,7 @@ TOOL_DOMAIN_ALIASES: dict[str, str] = {
 
 TOOL_DOMAIN_FAMILY_ALIASES: dict[str, tuple[str, ...]] = {
     "identity": ("identity_self_service", "identity_admin"),
+    "identity_self_service": ("identity_admin",),
 }
 
 
