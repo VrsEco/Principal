@@ -106,6 +106,7 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"] is None
+    assert "install-claude-sapiens-slash-commands.ps1" in config["copy_install_command_text"]
     assert "Claude Desktop (Windows)" in config["instruction_text"]
     assert "mcp-remote" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]

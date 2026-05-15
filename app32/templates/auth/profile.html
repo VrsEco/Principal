@@ -899,6 +899,7 @@
             onboarding_summary_text: replacePlaceholder(config.onboarding_summary_text),
             harness_summary_text: replacePlaceholder(config.harness_summary_text),
             smoke_guided_text: replacePlaceholder(config.smoke_guided_text),
+            copy_install_command_text: replacePlaceholder(config.copy_install_command_text),
         };
     }
 
@@ -1062,7 +1063,7 @@
             mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Use a instalação guiada quando disponível.';
         }
         if (copyMcpInstallCommandButton) {
-            copyMcpInstallCommandButton.disabled = !String(resolvedConfig.install_command || '').trim();
+            copyMcpInstallCommandButton.disabled = !String(resolvedConfig.copy_install_command_text || resolvedConfig.install_command || '').trim();
         }
         if (mode === 'technical') {
             mcpConfigOutput.value = resolvedConfig.technical_config_text || `${resolvedConfig.text}
@@ -1320,7 +1321,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         copyMcpInstallCommandButton.addEventListener('click', async () => {
             try {
                 const config = await buildMcpConfig('command', false);
-                const installCommand = String((config && config.install_command) || '').trim();
+                const installCommand = String((config && (config.copy_install_command_text || config.install_command)) || '').trim();
                 if (!installCommand) {
                     renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe comando automático. Use Ver instruções para concluir a instalação guiada.');
                     return;

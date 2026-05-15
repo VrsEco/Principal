@@ -1019,11 +1019,13 @@ class UserMcpTokenService:
             )
             installation_command = runtime_config["install_command"]
             installation_instruction = runtime_config["instruction_text"]
+            copy_install_command_text = installation_command
             if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
                     "Experiência recomendada: instalar o Sapiens Cliente no Claude Desktop (Windows). "
                     "Gere ou renove o token, valide node/npm/npx, teste mcp-remote e depois grave a conexão MCP no arquivo claude_desktop_config.json usando o passo a passo do APP32."
                 )
+                copy_install_command_text = activation_commands_install_command or guided_install_text
             if runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
@@ -1090,6 +1092,7 @@ class UserMcpTokenService:
                 "install_mode": runtime_config["install_mode"],
                 "availability_label": runtime_config["availability_label"],
                 "install_command": installation_command,
+                "copy_install_command_text": copy_install_command_text,
                 "instruction_text": installation_instruction,
                 "supports_personal_token": runtime_config["supports_personal_token"],
                 "guided_install_steps": guided_steps,
