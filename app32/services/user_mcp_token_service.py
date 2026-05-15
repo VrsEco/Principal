@@ -42,7 +42,7 @@ GENERIC_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-runt
 SAPIENS_CLIENTE_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-cliente.ps1"
 CLAUDE_SLASH_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1"
 RUNTIME_LABELS = {
-    "claude": "Claude Desktop (Windows)",
+    "claude": "Claude Code / Desktop",
     "codex": "Codex",
     "antigravity": "Antigravity",
     "other": "Outro cliente MCP",
@@ -231,11 +231,10 @@ class UserMcpTokenService:
         if runtime_config.get("runtime") == "claude":
             fields.extend(
                 [
-                    {"label": "Pacote local", "value": "mcp-remote"},
-                    {"label": "Comando local", "value": r"C:\Users\%USERNAME%\AppData\Roaming\npm\npx.cmd"},
+                    {"label": "Comando Claude", "value": "claude mcp add --scope user --transport http ..."},
                     {
-                        "label": "Arquivo do Claude Desktop",
-                        "value": r"%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude\claude_desktop_config.json",
+                        "label": "Arquivo MCP do Claude Code",
+                        "value": r"%USERPROFILE%\.claude.json",
                     },
                 ]
             )
@@ -309,6 +308,20 @@ class UserMcpTokenService:
         return f"powershell -ExecutionPolicy Bypass -EncodedCommand {encoded}"
 
     @classmethod
+    def _build_claude_mcp_add_command(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        url: str,
+        token_value: str,
+    ) -> str:
+        server_name = f"sapiens-{runtime_config['resolved_surface']}"
+        return (
+            f'claude mcp add --scope user --transport http {server_name} "{url}" '
+            f'--header "Authorization: Bearer {token_value}"'
+        )
+
+    @classmethod
     def _build_guided_install_steps(
         cls,
         *,
@@ -319,17 +332,19 @@ class UserMcpTokenService:
     ) -> list[str]:
         runtime = runtime_config["runtime"]
         if runtime == "claude":
+            claude_add_command = cls._build_claude_mcp_add_command(
+                runtime_config=runtime_config,
+                url=url,
+                token_value=token_value,
+            )
             return [
-                "No Windows, confirme que Node.js e npm estão instalados com node --version e npm --version.",
-                "Rode where.exe npx e use de preferência o caminho em AppData\\Roaming\\npm\\npx.cmd, evitando o caminho em Program Files.",
-                f"Teste a conexão com npx -y mcp-remote {url} --header \"Authorization:Bearer {token_value}\".",
-                "Se aparecer Connected to remote server using StreamableHTTPClientTransport, interrompa com Ctrl+C.",
-                "Localize a pasta do Claude Desktop em %LOCALAPPDATA%\\Packages e encontre a pasta Claude_*.",
-                "Abra ou crie o arquivo claude_desktop_config.json dentro de LocalCache\\Roaming\\Claude.",
-                f"Adicione um servidor MCP chamado {connection_name} apontando para npx.cmd + mcp-remote + header Authorization:Bearer.",
-                "Feche o Claude completamente, inclusive na bandeja do sistema, e abra de novo.",
-                "Vá em Configurações → Conectores e confirme que Sapiens Cliente apareceu em Desktop.",
-                "Abra uma conversa e rode describe_app32_squad_runtime_tool como primeiro teste funcional.",
+                "No terminal do Windows, confirme que o Claude Code está instalado com claude --version.",
+                f"Execute o comando oficial do APP32 para registrar o MCP no registry real do Claude Code: {claude_add_command}.",
+                "Se o Claude solicitar aprovação do servidor, confirme a inclusão do MCP user.",
+                "Rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
+                "Se necessário, confira o arquivo %USERPROFILE%\\.claude.json e valide que mcpServers.sapiens-user foi gravado ali.",
+                "Abra uma nova sessão do Claude Code e use o prompt de ativação recomendado pelo APP32 em vez de depender de slash command.",
+                "Como smoke inicial, peça primeiro o bootstrap com describe_app32_squad_runtime_tool.",
             ]
         if runtime in {"codex", "antigravity"} and runtime_config.get("install_command"):
             return [
@@ -364,39 +379,24 @@ class UserMcpTokenService:
             token_value=token_value,
         )
         if runtime_config["runtime"] == "claude":
+            claude_mcp_add_command = cls._build_claude_mcp_add_command(
+                runtime_config=runtime_config,
+                url=url,
+                token_value=token_value,
+            )
             claude_config_snippet = "\n".join(
                 [
-                    "$npxPath = \"C:\\Users\\$env:USERNAME\\AppData\\Roaming\\npm\\npx.cmd\"",
-                    "$claudePackage = Get-ChildItem \"$env:LOCALAPPDATA\\Packages\" | Where-Object { $_.Name -like \"Claude*\" } | Select-Object -First 1 -ExpandProperty FullName",
-                    "$configPath = Join-Path $claudePackage \"LocalCache\\Roaming\\Claude\\claude_desktop_config.json\"",
-                    f"$token = \"{token_value}\"",
-                    "",
-                    "if (Test-Path $configPath) {",
-                    "    $config = Get-Content $configPath -Raw | ConvertFrom-Json",
-                    "} else {",
-                    "    New-Item -ItemType Directory -Force -Path (Split-Path $configPath) | Out-Null",
-                    "    $config = [PSCustomObject]@{}",
+                    "{",
+                    '  "mcpServers": {',
+                    '    "sapiens-user": {',
+                    '      "type": "http",',
+                    f'      "url": "{url}",',
+                    '      "headers": {',
+                    f'        "Authorization": "Bearer {token_value}"',
+                    "      }",
+                    "    }",
+                    "  }",
                     "}",
-                    "",
-                    "if (-not $config.mcpServers) {",
-                    "    $config | Add-Member -MemberType NoteProperty -Name \"mcpServers\" -Value ([PSCustomObject]@{})",
-                    "}",
-                    "",
-                    "$server = [PSCustomObject]@{",
-                    "    command = $npxPath",
-                    "    args    = @(",
-                    "        \"-y\",",
-                    "        \"mcp-remote\",",
-                    f"        \"{url}\",",
-                    "        \"--header\",",
-                    "        \"Authorization:Bearer $token\"",
-                    "    )",
-                    "}",
-                    "",
-                    f"$config.mcpServers | Add-Member -MemberType NoteProperty -Name \"{connection_name}\" -Value $server -Force",
-                    "$json = $config | ConvertTo-Json -Depth 10",
-                    "[System.IO.File]::WriteAllText($configPath, $json, [System.Text.UTF8Encoding]::new($false))",
-                    "Write-Host \"MCP configurado. Reinicie o Claude Desktop.\"",
                 ]
             )
             lines = [
@@ -417,13 +417,18 @@ class UserMcpTokenService:
                     f"- Surface: {runtime_config['resolved_surface']}",
                     f"- Harness inicial: {runtime_config['harness_label'] or '-'}",
                     "",
-                    "PowerShell de referência para gravar no Claude Desktop:",
-                    "```powershell",
+                    "Comando oficial recomendado para o Claude Code:",
+                    "```bash",
+                    claude_mcp_add_command,
+                    "```",
+                    "",
+                    "JSON de referência esperado em %USERPROFILE%\\.claude.json:",
+                    "```json",
                     claude_config_snippet,
                     "```",
                     "",
                     "Teste inicial recomendado:",
-                    "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
+                    "Cole o prompt de ativação recomendado pelo APP32 e peça primeiro describe_app32_squad_runtime_tool.",
                 ]
             )
             return "\n".join(lines)
@@ -600,8 +605,8 @@ class UserMcpTokenService:
             if normalized_runtime == "claude":
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "Neste cliente, a conexão MCP usa o Claude Desktop no Windows com proxy local mcp-remote. "
-                    "O APP32 vai te entregar o token, a URL, o passo a passo e o PowerShell de referência para gravar a conexão no arquivo do Claude Desktop."
+                    "Neste cliente, a conexão MCP usa o registry nativo do Claude Code em %USERPROFILE%\\.claude.json. "
+                    "O APP32 vai te entregar o token, a URL, o comando claude mcp add e o prompt de ativação para operar sem depender de slash commands."
                 )
             if normalized_runtime == "other":
                 instruction_text = (
@@ -1029,11 +1034,17 @@ class UserMcpTokenService:
             installation_instruction = runtime_config["instruction_text"]
             copy_install_command_text = installation_command
             if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente":
-                installation_instruction = (
-                    "Experiência recomendada: instalar o Sapiens Cliente no Claude Desktop (Windows). "
-                    "Gere ou renove o token, valide node/npm/npx, teste mcp-remote e depois grave a conexão MCP no arquivo claude_desktop_config.json usando o passo a passo do APP32."
+                claude_mcp_add_command = cls._build_claude_mcp_add_command(
+                    runtime_config=runtime_config,
+                    url=url,
+                    token_value=token_value,
                 )
-                copy_install_command_text = activation_commands_install_command or guided_install_text
+                installation_instruction = (
+                    "Experiência recomendada: instalar o Sapiens Cliente no Claude Code / Desktop pelo comando nativo claude mcp add. "
+                    "Gere ou renove o token, registre o servidor HTTP no registry real do Claude Code (%USERPROFILE%\\.claude.json) e use o prompt de ativação recomendado pelo APP32."
+                )
+                installation_command = claude_mcp_add_command
+                copy_install_command_text = claude_mcp_add_command
             if runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
@@ -1064,14 +1075,23 @@ class UserMcpTokenService:
             if runtime_config["runtime"] == "claude":
                 activation_prompt = (
                     f"{guided_install_text}\n\n"
-                    "Comandos oficiais de ativação no Claude Desktop/Code:\n"
+                    "Prompt de ativação recomendado no Claude Code:\n"
+                    "Use a conexão MCP sapiens-user desta sessão.\n\n"
+                    "Antes de responder, rode nesta ordem:\n"
+                    "1. describe_app32_squad_runtime_tool\n"
+                    "2. list_user_app32_capabilities\n"
+                    "3. describe_app32_profile_contracts_tool\n"
+                    "4. describe_app32_surface_playbooks_tool\n"
+                    "5. describe_app32_domain_playbooks_tool\n\n"
+                    "Depois disso, responda à demanda do usuário.\n\n"
+                    "Atalhos slash opcionais no Claude Code:\n"
                     + "\n".join([f"- {item['command']}: {item['summary']}" for item in activation_commands])
                     + (
-                        f"\n\nPara instalar esses comandos slash automaticamente nesta máquina, use:\n{activation_commands_install_command}"
+                        f"\n\nSe você quiser instalar atalhos slash opcionais nesta máquina, use:\n{activation_commands_install_command}"
                         if activation_commands_install_command
                         else ""
                     )
-                    + "\n\nImportante: comandos oficiais usam barra inicial. Exemplo: /sapiens-cliente-on. Texto livre como 'sapiens on' não vira comando por si só."
+                    + "\n\nImportante: o caminho canônico de operação no Claude Code é o MCP registrado por `claude mcp add` + prompt de ativação. Slash commands são opcionais e podem variar conforme a versão do runtime."
                 )
             return {
                 "client_name": (client_name or "").strip() or None,

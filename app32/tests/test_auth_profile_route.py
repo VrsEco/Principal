@@ -153,7 +153,7 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     assert '2. Instalar Squad' in html
     assert 'Squad que será instalado' in html
     assert 'Qual Cliente de IA você irá usar?' in html
-    assert 'Claude Desktop (Windows)' in html
+    assert 'Claude Code / Desktop' in html
     assert 'Sapiens Cliente' in html
     assert 'Como essa combinação vai funcionar' in html
     assert 'Como criar a conexão MCP neste cliente' in html
