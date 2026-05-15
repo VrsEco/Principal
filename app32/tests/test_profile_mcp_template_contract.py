@@ -17,6 +17,8 @@ def test_profile_template_supports_activation_and_technical_mcp_outputs():
     assert "function injectLatestTokenIntoConfig(config)" in template
     assert "const resolvedData = injectLatestTokenIntoConfig(data.data);" in template
     assert "const resolvedConfig = injectLatestTokenIntoConfig(config);" in template
+    assert "install_command: replacePlaceholder(config.install_command)" in template
+    assert "resolvedConfig.copy_install_command_text || resolvedConfig.install_command" in template
     assert "activation_prompt" in template
     assert "technical_config_text" in template
     assert "buildMcpConfig('activation'" in template

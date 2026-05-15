@@ -893,6 +893,7 @@
             ...config,
             text: replacePlaceholder(config.text),
             json: rawJson,
+            install_command: replacePlaceholder(config.install_command),
             technical_config_text: replacePlaceholder(config.technical_config_text),
             activation_prompt: replacePlaceholder(config.activation_prompt),
             guided_install_text: replacePlaceholder(config.guided_install_text),
@@ -1073,7 +1074,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             return;
         }
         if (mode === 'command') {
-            mcpConfigOutput.value = resolvedConfig.install_command || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
+            mcpConfigOutput.value = resolvedConfig.copy_install_command_text || resolvedConfig.install_command || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
             return;
         }
         if (mode === 'harness') {
