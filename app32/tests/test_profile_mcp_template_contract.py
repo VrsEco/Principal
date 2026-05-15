@@ -12,6 +12,8 @@ def test_profile_template_supports_activation_and_technical_mcp_outputs():
     assert "Ver harness" in template
     assert "Executar smoke guiado" in template
     assert "Onboarding por runtime e squad" in template
+    assert "Claude Code / aba Code do Desktop" in template
+    assert "A aba <strong>Chat</strong> / Connectors usa outra superfície" in template
     assert "function buildMcpTokenPayload()" in template
     assert "return buildMcpConfigPayload();" in template
     assert "function injectLatestTokenIntoConfig(config)" in template

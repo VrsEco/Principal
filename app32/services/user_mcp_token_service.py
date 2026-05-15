@@ -42,7 +42,7 @@ GENERIC_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-runt
 SAPIENS_CLIENTE_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-cliente.ps1"
 CLAUDE_SLASH_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1"
 RUNTIME_LABELS = {
-    "claude": "Claude Code / Desktop",
+    "claude": "Claude Code / aba Code do Claude Desktop",
     "codex": "Codex",
     "antigravity": "Antigravity",
     "other": "Outro cliente MCP",
@@ -233,8 +233,8 @@ class UserMcpTokenService:
                 [
                     {"label": "Comando Claude", "value": "claude mcp add --scope user --transport http ..."},
                     {
-                        "label": "Arquivo MCP do Claude Code",
-                        "value": r"%USERPROFILE%\.claude.json",
+                        "label": "Registry MCP do Claude Code",
+                        "value": r"~/.claude.json (ou equivalente gerenciado da instalação)",
                     },
                 ]
             )
@@ -339,11 +339,12 @@ class UserMcpTokenService:
             )
             return [
                 "No terminal do Windows, confirme que o Claude Code está instalado com claude --version.",
+                "Se estiver no Claude Desktop, abra a aba Code. Não use a aba Chat para este onboarding MCP local.",
                 f"Execute o comando oficial do APP32 para registrar o MCP no registry real do Claude Code: {claude_add_command}.",
                 "Se o Claude solicitar aprovação do servidor, confirme a inclusão do MCP user.",
                 "Rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
-                "Se necessário, confira o arquivo %USERPROFILE%\\.claude.json e valide que mcpServers.sapiens-user foi gravado ali.",
-                "Abra uma nova sessão do Claude Code e use o prompt de ativação recomendado pelo APP32 em vez de depender de slash command.",
+                "Se necessário, confira o registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e valide que mcpServers.sapiens-user foi gravado ali.",
+                "Abra uma nova sessão do Claude Code, ou uma nova sessão na aba Code do Claude Desktop, e use o prompt de ativação recomendado pelo APP32 em vez de depender de slash command.",
                 "Como smoke inicial, peça primeiro o bootstrap com describe_app32_squad_runtime_tool.",
             ]
         if runtime in {"codex", "antigravity"} and runtime_config.get("install_command"):
@@ -422,7 +423,7 @@ class UserMcpTokenService:
                     claude_mcp_add_command,
                     "```",
                     "",
-                    "JSON de referência esperado em %USERPROFILE%\\.claude.json:",
+                    "JSON de referência esperado no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação):",
                     "```json",
                     claude_config_snippet,
                     "```",
@@ -605,8 +606,8 @@ class UserMcpTokenService:
             if normalized_runtime == "claude":
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "Neste cliente, a conexão MCP usa o registry nativo do Claude Code em %USERPROFILE%\\.claude.json. "
-                    "O APP32 vai te entregar o token, a URL, o comando claude mcp add e o prompt de ativação para operar sem depender de slash commands."
+                    "Neste cliente, a conexão MCP usa o registry nativo do Claude Code (~/.claude.json ou equivalente gerenciado da instalação). "
+                    "Use a aba Code do Claude Desktop, não a aba Chat. O APP32 vai te entregar o token, a URL, o comando claude mcp add e o prompt de ativação para operar sem depender de slash commands."
                 )
             if normalized_runtime == "other":
                 instruction_text = (
@@ -1040,8 +1041,8 @@ class UserMcpTokenService:
                     token_value=token_value,
                 )
                 installation_instruction = (
-                    "Experiência recomendada: instalar o Sapiens Cliente no Claude Code / Desktop pelo comando nativo claude mcp add. "
-                    "Gere ou renove o token, registre o servidor HTTP no registry real do Claude Code (%USERPROFILE%\\.claude.json) e use o prompt de ativação recomendado pelo APP32."
+                    "Experiência recomendada: instalar o Sapiens Cliente no Claude Code / aba Code do Claude Desktop pelo comando nativo claude mcp add. "
+                    "Gere ou renove o token, registre o servidor HTTP no registry real do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e use o prompt de ativação recomendado pelo APP32 na aba Code."
                 )
                 installation_command = claude_mcp_add_command
                 copy_install_command_text = claude_mcp_add_command
@@ -1075,7 +1076,7 @@ class UserMcpTokenService:
             if runtime_config["runtime"] == "claude":
                 activation_prompt = (
                     f"{guided_install_text}\n\n"
-                    "Prompt de ativação recomendado no Claude Code:\n"
+                    "Prompt de ativação recomendado no Claude Code ou na aba Code do Claude Desktop:\n"
                     "Use a conexão MCP sapiens-user desta sessão.\n\n"
                     "Antes de responder, rode nesta ordem:\n"
                     "1. describe_app32_squad_runtime_tool\n"
@@ -1091,7 +1092,7 @@ class UserMcpTokenService:
                         if activation_commands_install_command
                         else ""
                     )
-                    + "\n\nImportante: o caminho canônico de operação no Claude Code é o MCP registrado por `claude mcp add` + prompt de ativação. Slash commands são opcionais e podem variar conforme a versão do runtime."
+                    + "\n\nImportante: o caminho canônico de operação é o MCP registrado por `claude mcp add` + prompt de ativação no Claude Code ou na aba Code do Claude Desktop. Slash commands são opcionais e podem variar conforme a versão do runtime."
                 )
             return {
                 "client_name": (client_name or "").strip() or None,

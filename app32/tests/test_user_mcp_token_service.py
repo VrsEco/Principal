@@ -57,7 +57,7 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     config = service.build_client_config(user_id=7, plaintext_token="mcpu_token_real", company_id=9)
 
-    assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Code / Desktop." in config["activation_prompt"]
+    assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Code / aba Code do Claude Desktop." in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
     assert "Autenticação: Bearer Token" in config["activation_prompt"]
@@ -66,7 +66,7 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert '"Authorization": "Bearer mcpu_token_real"' in config["technical_config_text"]
     assert '"experience_label": "Sapiens Cliente"' in config["technical_config_text"]
     assert config["guided_connection_fields"][0]["label"] == "Nome da conexão"
-    assert any(field["label"] == "Arquivo MCP do Claude Code" for field in config["guided_connection_fields"])
+    assert any(field["label"] == "Registry MCP do Claude Code" for field in config["guided_connection_fields"])
     assert config["guided_install_steps"][0].startswith("No terminal do Windows, confirme que o Claude Code")
     assert config["validation_prompt"] == "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["harness_summary_text"]
@@ -100,7 +100,7 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     )
 
     assert config["runtime"] == "claude"
-    assert config["runtime_label"] == "Claude Code / Desktop"
+    assert config["runtime_label"] == "Claude Code / aba Code do Claude Desktop"
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
     assert config["install_mode"] == "guided_manual"
@@ -114,7 +114,8 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["copy_install_command_text"].startswith("claude mcp add --scope user --transport http sapiens-user")
     assert '"https://app.gestaoversus.com.br/mcp/user/?company_id=10"' in config["copy_install_command_text"]
     assert "Authorization: Bearer mcpu_token_real" in config["copy_install_command_text"]
-    assert "Claude Code / Desktop" in config["instruction_text"]
+    assert "Claude Code / aba Code do Claude Desktop" in config["instruction_text"]
+    assert "aba Code do Claude Desktop" in config["instruction_text"]
     assert ".claude.json" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]
     assert "/sapiens-on" in config["activation_prompt"]

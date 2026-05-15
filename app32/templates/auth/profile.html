@@ -174,8 +174,8 @@
                         <div class="filter-field">
                             <div class="mcp-choice-grid" id="mcpRuntimeChoices">
                                 <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
-                                    <strong>Claude Code / Desktop</strong>
-                                    <span>Usa MCP HTTP nativo via claude mcp add e registry local.</span>
+                                    <strong>Claude Code / aba Code do Desktop</strong>
+                                    <span>Usa MCP HTTP nativo via claude mcp add e registry do Claude Code.</span>
                                 </button>
                                 <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
                                     <strong>Codex</strong>
@@ -195,7 +195,14 @@
                         <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
                             <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
                             <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
-                                Você está configurando o Sapiens Cliente para uso no Claude Code / Desktop. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e como registrar o MCP HTTP no registry real do Claude Code.
+                                Você está configurando o Sapiens Cliente para uso no Claude Code ou na aba Code do Claude Desktop. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e como registrar o MCP HTTP no registry real do Claude Code.
+                            </div>
+                        </div>
+
+                        <div style="padding: 1rem; border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 14px; background: rgba(245, 158, 11, 0.08); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Importante para clientes Claude</div>
+                            <div style="font-size: 0.92rem; line-height: 1.55;">
+                                Se você estiver usando o Claude Desktop, faça este fluxo na <strong>aba Code</strong>. A aba <strong>Chat</strong> / Connectors usa outra superfície e não é o caminho canônico para o MCP local do APP32.
                             </div>
                         </div>
 
@@ -229,7 +236,7 @@
 
                         <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Comandos oficiais de ativação</div>
-                            <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Desktop/Code, a ativação oficial usa <strong>slash commands</strong>. Texto livre como <code>sapiens on</code> não vira comando sozinho.</p>
+                            <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Code ou na aba Code do Claude Desktop, a ativação oficial usa <strong>slash commands</strong>. Texto livre como <code>sapiens on</code> não vira comando sozinho.</p>
                             <div id="mcpActivationCommandsList" style="display:grid; gap:0.55rem;">
                                 <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
                                     <div style="font-weight: 700; color: var(--text-main);">/sapiens-cliente-on</div>
@@ -238,7 +245,7 @@
                             </div>
                             <div id="mcpActivationCommandsInstallBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
                                 <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Instalação automática dos comandos slash</div>
-                                <div id="mcpActivationCommandsInstallText" style="font-size:0.9rem; color:var(--text-secondary); word-break: break-word;">Use o script canônico do APP32 para gravar os comandos oficiais de ativação no Claude Desktop/Code.</div>
+                                <div id="mcpActivationCommandsInstallText" style="font-size:0.9rem; color:var(--text-secondary); word-break: break-word;">Use o script canônico do APP32 para gravar os comandos oficiais de ativação no Claude Code ou na aba Code do Claude Desktop.</div>
                             </div>
                         </div>
 
@@ -339,7 +346,7 @@
                         <div class="mcp-summary-grid">
                         <div class="mcp-summary-card">
                             <div class="mcp-summary-label">Cliente / CLI</div>
-                            <div class="mcp-summary-value" id="mcpResolvedRuntime">Claude Desktop (Windows)</div>
+                            <div class="mcp-summary-value" id="mcpResolvedRuntime">Claude Code / aba Code do Desktop</div>
                         </div>
                         <div class="mcp-summary-card">
                             <div class="mcp-summary-label">Nome visível</div>
@@ -912,7 +919,7 @@
         if (squad === 'squad_versus') {
             return {
                 guideTitle: 'Como essa combinação vai funcionar',
-                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Consultor'} para uso no ${runtimeLabel}. Esta instalação é voltada para trabalho consultivo, governança e rollout assistido, com uso controlado pela Versus.${isClaudeDesktop ? ' No Claude Code, a conexão MCP deve ser registrada via claude mcp add no arquivo %USERPROFILE%\\.claude.json.' : ''}`,
+                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Consultor'} para uso no ${runtimeLabel}. Esta instalação é voltada para trabalho consultivo, governança e rollout assistido, com uso controlado pela Versus.${isClaudeDesktop ? ' Use a aba Code do Claude Desktop. A conexão MCP deve ser registrada via claude mcp add no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação).' : ''}`,
                 compositionTitle: 'Composição oficial do Sapiens Consultor',
                 phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação consultiva com especialistas de estratégia, operação, performance, finanças e auditoria conforme o caso.`,
                 audienceTitle: 'Quem opera no Sapiens Consultor',
@@ -927,7 +934,7 @@
         if (squad === 'engineering') {
             return {
                 guideTitle: 'Como essa combinação vai funcionar',
-                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Engenharia'} para uso no ${runtimeLabel}. Esta instalação é técnica e controlada, pensada para diagnóstico, arquitetura, implementação e suporte avançado.${isClaudeDesktop ? ' No Claude Code, a conexão MCP deve ser registrada via claude mcp add no arquivo %USERPROFILE%\\.claude.json.' : ''}`,
+                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Engenharia'} para uso no ${runtimeLabel}. Esta instalação é técnica e controlada, pensada para diagnóstico, arquitetura, implementação e suporte avançado.${isClaudeDesktop ? ' Use a aba Code do Claude Desktop. A conexão MCP deve ser registrada via claude mcp add no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação).' : ''}`,
                 compositionTitle: 'Composição oficial do Sapiens Engenharia',
                 phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação técnica com roteamento para arquitetura, backend, AI engineering, dados e QA conforme a necessidade.`,
                 audienceTitle: 'Quem opera no Sapiens Engenharia',
@@ -942,7 +949,7 @@
         return {
             guideTitle: 'Como essa combinação vai funcionar',
             guideText: isClaudeDesktop
-                ? `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. Neste cliente, a conexão MCP usa o registry nativo do Claude Code em %USERPROFILE%\\.claude.json. O APP32 prepara a URL, o token, o comando claude mcp add e o prompt de ativação canônico.`
+                ? `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. Neste cliente, a conexão MCP usa o registry nativo do Claude Code (~/.claude.json ou equivalente gerenciado da instalação). Use a aba Code do Claude Desktop, não a aba Chat. O APP32 prepara a URL, o token, o comando claude mcp add e o prompt de ativação canônico.`
                 : `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.`,
             compositionTitle: 'Família inicial oficial do Squad Cliente',
             phaseText: resolvedConfig.official_phase_label
