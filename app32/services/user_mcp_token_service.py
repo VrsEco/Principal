@@ -444,6 +444,108 @@ class UserMcpTokenService:
         return "\n".join(lines)
 
     @classmethod
+    def _build_harness_summary_text(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+    ) -> str:
+        lines = [
+            f"Harness inicial: {runtime_config.get('harness_label') or '-'}",
+            f"Profile técnico: {runtime_config.get('resolved_profile') or '-'}",
+            f"Surface resolvida: {runtime_config.get('resolved_surface') or '-'}",
+            "",
+        ]
+        official_agents = list(runtime_config.get("official_agents") or [])
+        available_harnesses = list(runtime_config.get("available_harnesses") or [])
+        if official_agents:
+            lines.append("Agentes/harnesses oficiais expostos nesta instalação:")
+            for item in official_agents:
+                lines.append(f"- {item.get('label')}: {item.get('summary')}")
+        elif available_harnesses:
+            lines.append("Harnesses disponíveis nesta instalação:")
+            for item in available_harnesses:
+                role = item.get("business_role") or ""
+                suffix = f" — {role}" if role else ""
+                lines.append(f"- {item.get('label')}{suffix}")
+        lines.extend(
+            [
+                "",
+                "Regra operacional:",
+                "A entrada sempre começa pelo harness inicial resolvido pelo APP32. Depois disso, o runtime pode rotear internamente para especialistas do mesmo squad conforme o contrato da família.",
+            ]
+        )
+        return "\n".join(lines)
+
+    @classmethod
+    def _build_smoke_guided_text(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        connection_name: str,
+    ) -> str:
+        validation_prompt = "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
+        discovery_tools = [
+            "describe_app32_squad_runtime_tool",
+            "describe_app32_profile_contracts_tool",
+            "describe_app32_surface_playbooks_tool",
+            "describe_app32_domain_playbooks_tool",
+            "describe_app32_release_checklist_tool",
+            "describe_app32_tool_freeze_procedure_tool",
+        ]
+        lines = [
+            f"Smoke guiado da instalação: {connection_name}",
+            "",
+            "Sequência recomendada:",
+            f"1. Abra uma conversa no cliente {runtime_config.get('runtime_label') or 'selecionado'}.",
+            f"2. Rode: {validation_prompt}",
+            "3. Confirme que a resposta identifica profile, surface, harness inicial e company_id.",
+            "4. Rode as tools de discovery obrigatórias abaixo antes da primeira operação real.",
+            "5. Só depois execute uma operação do domínio desejado.",
+            "",
+            "Discovery obrigatório:",
+        ]
+        lines.extend([f"- {tool_name}" for tool_name in discovery_tools])
+        lines.extend(
+            [
+                "",
+                "Smokes documentais esperados no backend:",
+                "- MCP_USER_ADMIN_RUNBOOK_SMOKE_OK True True",
+                "- AI_MCP_RELEASE_CHECKLIST_OK 7 3",
+                "- AI_MCP_TOOL_FREEZE_OK 7 4",
+                "- AI_MCP_EXTERNAL_ONBOARDING_OK 4 5",
+                "- AI_MCP_OPERATIONAL_READINESS_OK 5 5",
+            ]
+        )
+        return "\n".join(lines)
+
+    @classmethod
+    def _build_onboarding_summary_text(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        allowed_squads: list[str],
+    ) -> str:
+        lines = [
+            "Onboarding operacional desta instalação:",
+            "",
+            f"- Runtime: {runtime_config.get('runtime_label') or '-'}",
+            f"- Squad publicado: {runtime_config.get('experience_label') or runtime_config.get('squad_label') or '-'}",
+            f"- Surface resultante: {runtime_config.get('resolved_surface') or '-'}",
+            f"- Token pessoal permitido: {'sim' if runtime_config.get('supports_personal_token') else 'não'}",
+            "",
+            "Checklist de abertura:",
+            "1. Intake do provider e do caso de uso.",
+            "2. Confirmar menor privilégio por squad/profile/surface.",
+            "3. Registrar a conexão sem expor token em prompt ou log.",
+            "4. Executar discovery obrigatório antes da primeira ação operacional.",
+            "5. Operar com monitoramento e freeze/rollback conhecidos.",
+            "",
+            "Squads disponíveis para este usuário:",
+        ]
+        lines.extend([f"- {SQUAD_EXPERIENCE_LABELS.get(item, item)}" for item in allowed_squads])
+        return "\n".join(lines)
+
+    @classmethod
     def _resolve_runtime_installation(
         cls,
         *,
@@ -896,6 +998,15 @@ class UserMcpTokenService:
                 if runtime_config["runtime"] == "claude"
                 else None
             )
+            harness_summary_text = cls._build_harness_summary_text(runtime_config=runtime_config)
+            smoke_guided_text = cls._build_smoke_guided_text(
+                runtime_config=runtime_config,
+                connection_name=connection_name,
+            )
+            onboarding_summary_text = cls._build_onboarding_summary_text(
+                runtime_config=runtime_config,
+                allowed_squads=allowed_squads,
+            )
             config_text = (
                 f"Conexão: {connection_name}\n"
                 f"Família canônica: {runtime_config['squad_label']}\n"
@@ -984,6 +1095,9 @@ class UserMcpTokenService:
                 "guided_install_steps": guided_steps,
                 "guided_connection_fields": guided_fields,
                 "guided_install_text": guided_install_text,
+                "onboarding_summary_text": onboarding_summary_text,
+                "harness_summary_text": harness_summary_text,
+                "smoke_guided_text": smoke_guided_text,
                 "validation_prompt": "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
                 "activation_commands": activation_commands,
                 "activation_commands_install_command": activation_commands_install_command,

@@ -68,6 +68,10 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert any(field["label"] == "Arquivo do Claude Desktop" for field in config["guided_connection_fields"])
     assert config["guided_install_steps"][0].startswith("No Windows, confirme que Node.js")
     assert config["validation_prompt"] == "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
+    assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["harness_summary_text"]
+    assert "Discovery obrigatório:" in config["smoke_guided_text"]
+    assert "describe_app32_release_checklist_tool" in config["smoke_guided_text"]
+    assert "Onboarding operacional desta instalação:" in config["onboarding_summary_text"]
     assert any(item["command"] == "/sapiens-cliente-on" for item in config["activation_commands"])
     assert any(item["command"] == "/sapiens-on" for item in config["activation_commands"])
     assert "install-claude-sapiens-slash-commands.ps1" in config["activation_commands_install_command"]
@@ -216,4 +220,4 @@ def test_build_client_config_marks_all_runtimes_as_guided_for_squad_cliente(monk
 
     assert config["availability_label"] == "Instalação automática guiada"
     assert config["install_mode"] == "self_service"
-    assert "Gere o código para IA" in config["instruction_text"]
+    assert "Durante a instalação, use o token MCP pessoal gerado nesta página." in config["instruction_text"]

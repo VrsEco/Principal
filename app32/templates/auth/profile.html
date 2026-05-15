@@ -200,6 +200,11 @@
                         </div>
 
                         <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Onboarding por runtime e squad</div>
+                            <pre id="mcpOnboardingSummaryText" style="margin:0; white-space:pre-wrap; font-size:0.92rem; line-height:1.55; color:var(--text-secondary); font-family:inherit;">O APP32 vai consolidar aqui o checklist de onboarding, menor privilégio, discovery obrigatório e guardrails operacionais da combinação escolhida.</pre>
+                        </div>
+
+                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como criar a conexão MCP neste cliente</div>
                             <ol id="mcpGuidedStepsList" style="margin: 0; padding-left: 1rem; display: grid; gap: 0.45rem; font-size: 0.92rem; line-height: 1.55;">
                                 <li>Escolha o cliente de IA acima.</li>
@@ -418,15 +423,18 @@
                         </div>
 
                         <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Gerar código para IA</button>
-                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar</button>
-                            <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Modo avançado</button>
+                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Ver instruções</button>
+                            <button type="button" class="btn btn-secondary" id="copyMcpInstallCommandButton">Copiar comando de instalação</button>
+                            <button type="button" class="btn btn-secondary" id="buildMcpHarnessButton">Ver harness</button>
+                            <button type="button" class="btn btn-secondary" id="buildMcpSmokeButton">Executar smoke guiado</button>
+                            <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Ver configuração técnica</button>
+                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar conteúdo</button>
                         </div>
 
                         <div class="filter-field" style="margin-top:-0.25rem;">
-                            <label>Conteúdo pronto</label>
-                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token na etapa Configurar MCP, use Gerar código para IA e copie o conteúdo exibido."></textarea>
-                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">A experiência principal é gerar o código guiado e colar no cliente/CLI escolhido. O conteúdo já explica o nome visível do Sapiens, o agente coordenador e o uso do harness inicial. Use o modo avançado apenas quando necessário.</small>
+                            <label>Instalação guiada / avançado</label>
+                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token na etapa Configurar MCP, use Ver instruções, Copiar comando de instalação, Ver harness, Executar smoke guiado ou Ver configuração técnica."></textarea>
+                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">A experiência principal é usar instruções guiadas, copiar o comando de instalação quando existir e validar o smoke inicial. A configuração técnica fica como modo avançado.</small>
                         </div>
                     </div>
                     </section>
@@ -768,7 +776,10 @@
     const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
     const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
     const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
+    const copyMcpInstallCommandButton = document.getElementById('copyMcpInstallCommandButton');
     const buildMcpActivationButton = document.getElementById('buildMcpActivationButton');
+    const buildMcpHarnessButton = document.getElementById('buildMcpHarnessButton');
+    const buildMcpSmokeButton = document.getElementById('buildMcpSmokeButton');
     const buildMcpTechnicalButton = document.getElementById('buildMcpTechnicalButton');
     const mcpInstructionText = document.getElementById('mcpInstructionText');
     const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
@@ -781,6 +792,7 @@
     const mcpResolvedEntryAgent = document.getElementById('mcpResolvedEntryAgent');
     const mcpSelectionGuideTitle = document.getElementById('mcpSelectionGuideTitle');
     const mcpSelectionGuideText = document.getElementById('mcpSelectionGuideText');
+    const mcpOnboardingSummaryText = document.getElementById('mcpOnboardingSummaryText');
     const mcpGuidedStepsList = document.getElementById('mcpGuidedStepsList');
     const mcpGuidedFields = document.getElementById('mcpGuidedFields');
     const mcpValidationPromptText = document.getElementById('mcpValidationPromptText');
@@ -883,6 +895,10 @@
             json: rawJson,
             technical_config_text: replacePlaceholder(config.technical_config_text),
             activation_prompt: replacePlaceholder(config.activation_prompt),
+            guided_install_text: replacePlaceholder(config.guided_install_text),
+            onboarding_summary_text: replacePlaceholder(config.onboarding_summary_text),
+            harness_summary_text: replacePlaceholder(config.harness_summary_text),
+            smoke_guided_text: replacePlaceholder(config.smoke_guided_text),
         };
     }
 
@@ -959,6 +975,10 @@
         const uiCopy = getSquadUiCopy(resolvedConfig);
         if (mcpSelectionGuideTitle) mcpSelectionGuideTitle.textContent = uiCopy.guideTitle;
         if (mcpSelectionGuideText) mcpSelectionGuideText.textContent = uiCopy.guideText;
+        if (mcpOnboardingSummaryText) {
+            mcpOnboardingSummaryText.textContent = resolvedConfig.onboarding_summary_text
+                || 'Checklist de onboarding indisponível para esta combinação.';
+        }
         if (mcpGuidedStepsList && Array.isArray(resolvedConfig.guided_install_steps) && resolvedConfig.guided_install_steps.length) {
             mcpGuidedStepsList.innerHTML = resolvedConfig.guided_install_steps
                 .map((step) => `<li>${step}</li>`)
@@ -1041,6 +1061,9 @@
         if (mcpInstructionText) {
             mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Use a instalação guiada quando disponível.';
         }
+        if (copyMcpInstallCommandButton) {
+            copyMcpInstallCommandButton.disabled = !String(resolvedConfig.install_command || '').trim();
+        }
         if (mode === 'technical') {
             mcpConfigOutput.value = resolvedConfig.technical_config_text || `${resolvedConfig.text}
 
@@ -1048,7 +1071,23 @@ JSON:
 ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             return;
         }
-        mcpConfigOutput.value = resolvedConfig.activation_prompt || resolvedConfig.instruction_text || resolvedConfig.install_command || '';
+        if (mode === 'command') {
+            mcpConfigOutput.value = resolvedConfig.install_command || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
+            return;
+        }
+        if (mode === 'harness') {
+            mcpConfigOutput.value = resolvedConfig.harness_summary_text || resolvedConfig.text || '';
+            return;
+        }
+        if (mode === 'smoke') {
+            mcpConfigOutput.value = resolvedConfig.smoke_guided_text || resolvedConfig.validation_prompt || '';
+            return;
+        }
+        if (mode === 'onboarding') {
+            mcpConfigOutput.value = resolvedConfig.onboarding_summary_text || resolvedConfig.guided_install_text || '';
+            return;
+        }
+        mcpConfigOutput.value = resolvedConfig.guided_install_text || resolvedConfig.activation_prompt || resolvedConfig.instruction_text || resolvedConfig.install_command || '';
     }
 
     async function buildMcpConfig(mode = 'activation', showSuccessAlert = true) {
@@ -1065,9 +1104,15 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             renderMcpConfig(data.data, mode);
         }
         if (showSuccessAlert) {
-            const message = mode === 'technical'
-                ? 'Modo avançado pronto para copiar.'
-                : 'Código para IA pronto para copiar.';
+            const messagesByMode = {
+                activation: 'Instruções guiadas prontas.',
+                command: 'Comando de instalação pronto.',
+                technical: 'Configuração técnica pronta.',
+                harness: 'Resumo de harness pronto.',
+                smoke: 'Smoke guiado pronto.',
+                onboarding: 'Resumo de onboarding pronto.',
+            };
+            const message = messagesByMode[mode] || 'Conteúdo MCP pronto.';
             renderAlert('mcp-token-alert-container', true, message);
         }
         return data.data;
@@ -1161,9 +1206,12 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
     }
 
     function updateMcpActionLabels() {
-        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Gerar código para IA';
-        if (buildMcpTechnicalButton) buildMcpTechnicalButton.textContent = 'Modo avançado';
-        if (copyMcpConfigButton) copyMcpConfigButton.textContent = 'Copiar';
+        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Ver instruções';
+        if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.textContent = 'Copiar comando de instalação';
+        if (buildMcpHarnessButton) buildMcpHarnessButton.textContent = 'Ver harness';
+        if (buildMcpSmokeButton) buildMcpSmokeButton.textContent = 'Executar smoke guiado';
+        if (buildMcpTechnicalButton) buildMcpTechnicalButton.textContent = 'Ver configuração técnica';
+        if (copyMcpConfigButton) copyMcpConfigButton.textContent = 'Copiar conteúdo';
     }
 
     function openMcpTokenModal(token) {
@@ -1262,6 +1310,44 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         buildMcpActivationButton.addEventListener('click', async () => {
             try {
                 await buildMcpConfig('activation', true);
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (copyMcpInstallCommandButton) {
+        copyMcpInstallCommandButton.addEventListener('click', async () => {
+            try {
+                const config = await buildMcpConfig('command', false);
+                const installCommand = String((config && config.install_command) || '').trim();
+                if (!installCommand) {
+                    renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe comando automático. Use Ver instruções para concluir a instalação guiada.');
+                    return;
+                }
+                await navigator.clipboard.writeText(installCommand);
+                renderAlert('mcp-token-alert-container', true, 'Comando de instalação copiado para a área de transferência.');
+                renderMcpConfig(config, 'command');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (buildMcpHarnessButton) {
+        buildMcpHarnessButton.addEventListener('click', async () => {
+            try {
+                await buildMcpConfig('harness', true);
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
+    if (buildMcpSmokeButton) {
+        buildMcpSmokeButton.addEventListener('click', async () => {
+            try {
+                await buildMcpConfig('smoke', true);
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }

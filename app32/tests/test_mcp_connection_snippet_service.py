@@ -56,6 +56,9 @@ def test_build_prompt_supports_squad_cliente_profile():
     assert "describe_app32_squad_runtime_tool" in content
     assert "list_user_app32_capabilities" in content
     assert "describe_app32_profile_contracts_tool" in content
+    assert "describe_app32_release_checklist_tool" in content
+    assert "describe_app32_tool_freeze_procedure_tool" in content
+    assert "describe_app32_external_ai_onboarding_tool" in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content
 
 
@@ -131,6 +134,7 @@ def test_build_prompt_supports_engineering_profile():
     assert "Surface alvo: ops" in content
     assert "Harness inicial: Harness Coordenador do Squad de Engenharia" in content
     assert "list_ops_app32_capabilities" in content
+    assert "describe_app32_operational_readiness_tool" in content
     assert "https://app.gestaoversus.com.br/mcp/ops" in content
 
 
