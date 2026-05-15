@@ -49,19 +49,25 @@ if ($normalizedSquads -contains "squad_cliente") {
         -Body @"
 Ative o **Sapiens Cliente** nesta conversa.
 
-1. Use a conexão MCP do Sapiens Cliente.
-2. Rode `describe_app32_squad_runtime_tool`.
-3. Rode `list_user_app32_capabilities`.
-4. Rode `describe_app32_profile_contracts_tool`.
-5. Rode `describe_app32_surface_playbooks_tool`.
-6. Confirme a ativação com uma resposta curta dizendo:
+Regras obrigatórias desta ativação:
+
+1. Use obrigatoriamente a conexão MCP instalada do Sapiens Cliente antes de responder qualquer demanda operacional.
+2. Faça o bootstrap oficial nesta ordem:
+   - `describe_app32_squad_runtime_tool`
+   - `list_user_app32_capabilities`
+   - `describe_app32_profile_contracts_tool`
+   - `describe_app32_surface_playbooks_tool`
+   - `describe_app32_domain_playbooks_tool`
+3. Não invente ativação, não simule tool e não responda consulta operacional sem MCP real.
+4. Nunca mande o usuário digitar `sapiens on` como texto livre.
+5. Se a conexão MCP não estiver disponível nesta sessão, responda exatamente:
+   `A conexão MCP do Sapiens Cliente não está disponível nesta sessão. Revise a instalação MCP no APP32 (/profile), reinstale os comandos slash oficiais e reinicie o Claude.`
+6. Se o bootstrap funcionar, confirme em resposta curta:
    - que o Sapiens Cliente está ativo
-   - qual é o agente de entrada
+   - qual é o agente/harness de entrada
    - qual é a surface ativa
    - qual é a empresa padrão, se houver
-7. Depois pergunte objetivamente qual demanda o usuário quer tratar agora.
-
-Se a conexão MCP não estiver disponível, explique isso claramente e oriente o usuário a revisar a instalação do Sapiens Cliente.
+7. Depois disso, permaneça operando como Sapiens Cliente até nova instrução.
 "@
 }
 
@@ -72,17 +78,23 @@ if ($normalizedSquads -contains "squad_versus") {
         -Body @"
 Ative o **Sapiens Consultor** nesta conversa.
 
-1. Use a conexão MCP do Sapiens Consultor.
-2. Rode `describe_app32_squad_runtime_tool`.
-3. Rode `describe_app32_profile_contracts_tool`.
-4. Rode `describe_app32_surface_playbooks_tool`.
-5. Confirme a ativação com uma resposta curta dizendo:
-   - que o Sapiens Consultor está ativo
-   - qual é o agente de entrada
-   - qual é a surface ativa
-6. Depois pergunte qual frente consultiva o usuário deseja tratar agora.
+Regras obrigatórias desta ativação:
 
-Se a conexão MCP não estiver disponível, explique isso claramente e oriente o usuário a revisar a instalação do Sapiens Consultor.
+1. Use obrigatoriamente a conexão MCP instalada do Sapiens Consultor antes de responder qualquer demanda operacional.
+2. Faça o bootstrap oficial nesta ordem:
+   - `describe_app32_squad_runtime_tool`
+   - `describe_app32_profile_contracts_tool`
+   - `describe_app32_surface_playbooks_tool`
+   - `describe_app32_domain_playbooks_tool`
+3. Não invente ativação, não simule tool e não responda consulta operacional sem MCP real.
+4. Nunca mande o usuário digitar `sapiens on` como texto livre.
+5. Se a conexão MCP não estiver disponível nesta sessão, responda exatamente:
+   `A conexão MCP do Sapiens Consultor não está disponível nesta sessão. Revise a instalação MCP no APP32 (/profile), reinstale os comandos slash oficiais e reinicie o Claude.`
+6. Se o bootstrap funcionar, confirme em resposta curta:
+   - que o Sapiens Consultor está ativo
+   - qual é o agente/harness de entrada
+   - qual é a surface ativa
+7. Depois disso, permaneça operando como Sapiens Consultor até nova instrução.
 "@
 }
 
@@ -93,17 +105,23 @@ if ($normalizedSquads -contains "engineering") {
         -Body @"
 Ative o **Sapiens Engenharia** nesta conversa.
 
-1. Use a conexão MCP do Sapiens Engenharia.
-2. Rode `describe_app32_squad_runtime_tool`.
-3. Rode `describe_app32_profile_contracts_tool`.
-4. Rode `describe_app32_surface_playbooks_tool`.
-5. Confirme a ativação com uma resposta curta dizendo:
-   - que o Sapiens Engenharia está ativo
-   - qual é o agente de entrada
-   - qual é a surface ativa
-6. Depois pergunte qual demanda técnica o usuário deseja tratar agora.
+Regras obrigatórias desta ativação:
 
-Se a conexão MCP não estiver disponível, explique isso claramente e oriente o usuário a revisar a instalação do Sapiens Engenharia.
+1. Use obrigatoriamente a conexão MCP instalada do Sapiens Engenharia antes de responder qualquer demanda operacional.
+2. Faça o bootstrap oficial nesta ordem:
+   - `describe_app32_squad_runtime_tool`
+   - `describe_app32_profile_contracts_tool`
+   - `describe_app32_surface_playbooks_tool`
+   - `describe_app32_domain_playbooks_tool`
+3. Não invente ativação, não simule tool e não responda consulta operacional sem MCP real.
+4. Nunca mande o usuário digitar `sapiens on` como texto livre.
+5. Se a conexão MCP não estiver disponível nesta sessão, responda exatamente:
+   `A conexão MCP do Sapiens Engenharia não está disponível nesta sessão. Revise a instalação MCP no APP32 (/profile), reinstale os comandos slash oficiais e reinicie o Claude.`
+6. Se o bootstrap funcionar, confirme em resposta curta:
+   - que o Sapiens Engenharia está ativo
+   - qual é o agente/harness de entrada
+   - qual é a surface ativa
+7. Depois disso, permaneça operando como Sapiens Engenharia até nova instrução.
 "@
 }
 
@@ -120,10 +138,11 @@ Ative o **Sapiens** nesta conversa.
 Os squads instalados nesta máquina são: **$availableList**.
 
 1. Antes de ativar, pergunte ao usuário qual Squad ele quer usar agora.
-2. Se o usuário escolher Cliente, execute o fluxo equivalente a `/sapiens-cliente-on`.
-3. Se o usuário escolher Consultor, execute o fluxo equivalente a `/sapiens-consultor-on`.
-4. Se o usuário escolher Engenharia, execute o fluxo equivalente a `/sapiens-engenharia-on`.
+2. Se o usuário escolher Cliente, execute integralmente o fluxo de `/sapiens-cliente-on`.
+3. Se o usuário escolher Consultor, execute integralmente o fluxo de `/sapiens-consultor-on`.
+4. Se o usuário escolher Engenharia, execute integralmente o fluxo de `/sapiens-engenharia-on`.
 5. Nunca assuma automaticamente quando houver mais de um Squad possível.
+6. Nunca mande o usuário digitar `sapiens on` como texto livre.
 "@
 }
 elseif ($normalizedSquads.Count -eq 1) {
@@ -143,8 +162,23 @@ Ative o **$onlyLabel** nesta conversa.
 
 Existe apenas um Squad Sapiens disponível nesta máquina.
 
-Execute o fluxo equivalente a `$onlyCommand` e confirme a ativação ao usuário.
+Execute integralmente o fluxo equivalente a `$onlyCommand` e confirme a ativação ao usuário.
 "@
 }
+
+Write-SlashCommand `
+    -FileName "sapiens.md" `
+    -Description "Alias defensivo do Sapiens oficial para evitar ativação genérica incorreta." `
+    -Body @"
+Ative o **Sapiens oficial do APP32** nesta conversa.
+
+1. Nunca trate este comando como skill genérica solta.
+2. Nunca mande o usuário digitar `sapiens on` como texto livre.
+3. Se existir mais de um Squad Sapiens instalado nesta máquina, execute integralmente o fluxo de `/sapiens-on`.
+4. Se existir apenas um Squad Sapiens instalado nesta máquina, execute integralmente o fluxo do comando oficial correspondente:
+   - Cliente: `/sapiens-cliente-on`
+   - Consultor: `/sapiens-consultor-on`
+   - Engenharia: `/sapiens-engenharia-on`
+"@
 
 Write-Host "Comandos oficiais de ativação do Sapiens instalados em $commandsDir"
