@@ -297,11 +297,14 @@ class UserMcpTokenService:
         return (
             "powershell -ExecutionPolicy Bypass -Command "
             "\""
-            f"$scriptUrl = '{CLAUDE_SLASH_INSTALLER_RAW_URL}'; "
-            "$tmpFile = Join-Path $env:TEMP 'install-claude-sapiens-slash-commands.ps1'; "
-            "Invoke-WebRequest -Uri $scriptUrl -OutFile $tmpFile; "
-            f"& $tmpFile -AvailableSquads '{squad_args}'; "
-            "Remove-Item $tmpFile -Force"
+            f"$u='{CLAUDE_SLASH_INSTALLER_RAW_URL}'; "
+            "$f=Join-Path $env:TEMP 'install-claude-sapiens-slash-commands.ps1'; "
+            "Write-Host 'Baixando instalador oficial do Sapiens...'; "
+            "Invoke-WebRequest -Uri $u -OutFile $f; "
+            "Write-Host 'Instalando comandos slash do Claude...'; "
+            f"& $f -AvailableSquads '{squad_args}'; "
+            "Remove-Item $f -Force; "
+            "Write-Host 'Instalacao concluida em %USERPROFILE%\\.claude\\commands.'"
             "\""
         )
 
