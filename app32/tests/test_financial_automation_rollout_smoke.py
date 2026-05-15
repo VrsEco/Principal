@@ -54,6 +54,7 @@ def test_financial_automation_rollout_service_contracts_exist():
         "parse_batch_documents",
         "ingest_accountability_documents",
         "bulk_update_status",
+        "delete_record",
         "generate_records",
     ]
 

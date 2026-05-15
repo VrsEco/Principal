@@ -22,6 +22,7 @@ CRITICAL_FINANCIAL_API_CONTRACT = {
     financial_automation.FinancialAutomationBatchListResource: {"post": "create"},
     financial_automation.FinancialAutomationBatchParseResource: {"post": "create"},
     financial_automation.FinancialAutomationGenerateResource: {"post": "create"},
+    financial_automation.FinancialAutomationRecordResource: {"get": "view", "put": "edit", "delete": "delete"},
     financial_budget.FinancialBudgetExecutionWorkspaceResource: {"get": "view"},
     financial_budget.FinancialBudgetPlanningWorkspaceResource: {"get": "view"},
 }
@@ -52,6 +53,7 @@ def test_financial_api_resources_delegate_to_services_instead_of_embedding_busin
     assert "FinancialBorderoService.update_settlement" in source_by_class["FinancialBorderoSettlementResource"]
     assert "FinancialBorderoService.delete_settlement" in source_by_class["FinancialBorderoSettlementResource"]
     assert "FinancialAutomationService.parse_batch_documents" in source_by_class["FinancialAutomationBatchParseResource"]
+    assert "FinancialAutomationService.delete_record" in source_by_class["FinancialAutomationRecordResource"]
     assert "FinancialBudgetWorkspaceService.get_execution_workspace" in source_by_class["FinancialBudgetExecutionWorkspaceResource"]
 
 

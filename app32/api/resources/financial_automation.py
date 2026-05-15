@@ -122,6 +122,19 @@ class FinancialAutomationRecordResource(Resource):
             return {"error": error}, 400
         return result, 200
 
+    @permission_required("financial", "delete")
+    def delete(self, record_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialAutomationService.delete_record(
+            company_id=company_id,
+            record_id=record_id,
+            allowed_company_ids=get_accessible_company_ids(),
+            performed_by_user_id=getattr(current_user, "id", None),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
 
 class FinancialAutomationBulkStatusResource(Resource):
     @permission_required("financial", "edit")

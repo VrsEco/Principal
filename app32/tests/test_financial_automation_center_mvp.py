@@ -152,6 +152,83 @@ def test_automation_center_js_uses_data_field_mapping_and_origin_labels():
     assert "documentTypeLabels" in script
     assert "filter-document-type" in script
     assert "related_documents" in script
+    assert "method: 'DELETE'" in script
+    assert "/api/financial/automation/records/${id}?company_id=${companyId}" in script
+
+
+def test_delete_record_soft_deletes_when_no_active_links(monkeypatch):
+    batch = _Batch()
+    item = _Record(record_id=41, settlement_state="open", batch=batch)
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return item
+
+    class _RecordModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _Query()
+
+    monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
+    monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_append_history", lambda **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_refresh_batch_summary", lambda batch: None)
+    monkeypatch.setattr(automation_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(automation_module.db.session, "rollback", lambda: None)
+
+    result, error = FinancialAutomationService.delete_record(
+        company_id=9,
+        record_id=41,
+        allowed_company_ids=[9],
+        performed_by_user_id=77,
+    )
+
+    assert error is None
+    assert result == {"id": 41, "deleted": True}
+    assert item.status == "excluded"
+    assert item.deleted_at is not None
+
+
+def test_delete_record_blocks_when_generated_links_are_active(monkeypatch):
+    batch = _Batch()
+    item = _Record(record_id=42, settlement_state="open", batch=batch)
+    item.generated_financial_entry_id = 501
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return item
+
+    class _RecordModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _Query()
+
+    monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
+    monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_list_delete_blockers",
+        lambda current: [{"type": "financial_entry", "id": 501, "label": "Lançamento financeiro #501"}],
+    )
+
+    result, error = FinancialAutomationService.delete_record(
+        company_id=9,
+        record_id=42,
+        allowed_company_ids=[9],
+        performed_by_user_id=77,
+    )
+
+    assert result is None
+    assert "vínculos financeiros ativos" in error
+    assert "Lançamento financeiro #501" in error
 
 
 def test_financial_import_service_accepts_xls_dispatch(monkeypatch):

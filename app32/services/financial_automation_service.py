@@ -23,6 +23,7 @@ from models.financial import (
     FinancialClassificationMemory,
     FinancialCostCenter,
     FinancialCounterparty,
+    FinancialEntry,
     FinancialSchedule,
 )
 from models.process import Process, ProcessInstance, ProcessRoutine
@@ -76,7 +77,53 @@ class FinancialAutomationService:
         payload["document"] = record.source_document.to_dict() if record.source_document else None
         payload["batch"] = record.batch.to_dict() if getattr(record, "batch", None) else None
         payload["related_documents"] = FinancialAutomationService._list_related_documents(record)
+        payload["delete_blockers"] = FinancialAutomationService._list_delete_blockers(record)
+        payload["can_delete"] = len(payload["delete_blockers"]) == 0
         return payload
+
+    @staticmethod
+    def _list_delete_blockers(record: FinancialAutomationRecord) -> List[Dict[str, Any]]:
+        blockers: List[Dict[str, Any]] = []
+
+        entry_id = getattr(record, "generated_financial_entry_id", None)
+        if entry_id:
+            try:
+                active_entry = FinancialEntry.query.filter(
+                    FinancialEntry.id == entry_id,
+                    FinancialEntry.company_id == record.company_id,
+                    FinancialEntry.deleted_at.is_(None),
+                ).first()
+                if active_entry:
+                    blockers.append(
+                        {
+                            "type": "financial_entry",
+                            "id": entry_id,
+                            "label": f"Lançamento financeiro #{entry_id}",
+                        }
+                    )
+            except Exception:
+                pass
+
+        schedule_id = getattr(record, "generated_financial_schedule_id", None)
+        if schedule_id:
+            try:
+                active_schedule = FinancialSchedule.query.filter(
+                    FinancialSchedule.id == schedule_id,
+                    FinancialSchedule.company_id == record.company_id,
+                    FinancialSchedule.deleted_at.is_(None),
+                ).first()
+                if active_schedule:
+                    blockers.append(
+                        {
+                            "type": "financial_schedule",
+                            "id": schedule_id,
+                            "label": f"Agendamento financeiro #{schedule_id}",
+                        }
+                    )
+            except Exception:
+                pass
+
+        return blockers
 
     @staticmethod
     def _list_related_documents(record: FinancialAutomationRecord) -> List[Dict[str, Any]]:
@@ -698,6 +745,8 @@ class FinancialAutomationService:
         payload["document"] = record.source_document.to_dict() if record.source_document else None
         payload["batch"] = record.batch.to_dict() if getattr(record, "batch", None) else None
         payload["related_documents"] = FinancialAutomationService._list_related_documents(record)
+        payload["delete_blockers"] = FinancialAutomationService._list_delete_blockers(record)
+        payload["can_delete"] = len(payload["delete_blockers"]) == 0
         return payload
 
     @staticmethod
@@ -2169,6 +2218,54 @@ class FinancialAutomationService:
             for history in item.history_items.order_by(FinancialAutomationHistory.created_at.desc()).all()
         ]
         return payload, None
+
+    @staticmethod
+    def delete_record(
+        *,
+        company_id: int,
+        record_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+        performed_by_user_id: Optional[int] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialAutomationService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+        item = FinancialAutomationRecord.query.filter(
+            FinancialAutomationRecord.id == record_id,
+            FinancialAutomationRecord.company_id == company_id,
+            FinancialAutomationRecord.deleted_at.is_(None),
+        ).first()
+        if not item:
+            return None, "Registro da Central de Automação Financeira não encontrado no escopo da empresa."
+
+        blockers = FinancialAutomationService._list_delete_blockers(item)
+        if blockers:
+            labels = ", ".join(blocker["label"] for blocker in blockers)
+            return None, (
+                "Registro possui vínculos financeiros ativos e não pode ser excluído. "
+                f"Exclua antes os vínculos ativos: {labels}."
+            )
+
+        before = item.to_dict()
+        try:
+            item.status = "excluded"
+            item.deleted_at = datetime.utcnow()
+            item.updated_at = datetime.utcnow()
+            FinancialAutomationService._append_history(
+                company_id=company_id,
+                record_id=item.id,
+                action_type="delete",
+                performed_by_user_id=performed_by_user_id,
+                payload_before_json=before,
+                payload_after_json=item.to_dict(),
+                metadata_json={"soft_delete": True},
+            )
+            FinancialAutomationService._refresh_batch_summary(item.batch)
+            db.session.commit()
+            return {"id": item.id, "deleted": True}, None
+        except Exception as exc:
+            db.session.rollback()
+            return None, f"Erro ao excluir registro da Central: {exc}"
 
     @staticmethod
     def update_record(
