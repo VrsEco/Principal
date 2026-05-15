@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+import base64
 
 import services.user_mcp_token_service as token_service_module
 
@@ -74,9 +75,11 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert "Onboarding operacional desta instalação:" in config["onboarding_summary_text"]
     assert any(item["command"] == "/sapiens-cliente-on" for item in config["activation_commands"])
     assert any(item["command"] == "/sapiens-on" for item in config["activation_commands"])
-    assert "powershell -ExecutionPolicy Bypass -Command" in config["activation_commands_install_command"]
-    assert "raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1" in config["activation_commands_install_command"]
-    assert "Invoke-WebRequest" in config["activation_commands_install_command"]
+    assert "powershell -ExecutionPolicy Bypass -EncodedCommand" in config["activation_commands_install_command"]
+    encoded = config["activation_commands_install_command"].split(" -EncodedCommand ", 1)[1]
+    decoded = base64.b64decode(encoded).decode("utf-16le")
+    assert "raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1" in decoded
+    assert "Invoke-WebRequest" in decoded
 
 
 def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch):
@@ -108,9 +111,11 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"] is None
-    assert "powershell -ExecutionPolicy Bypass -Command" in config["copy_install_command_text"]
-    assert "raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1" in config["copy_install_command_text"]
-    assert "Invoke-WebRequest" in config["copy_install_command_text"]
+    assert "powershell -ExecutionPolicy Bypass -EncodedCommand" in config["copy_install_command_text"]
+    encoded = config["copy_install_command_text"].split(" -EncodedCommand ", 1)[1]
+    decoded = base64.b64decode(encoded).decode("utf-16le")
+    assert "raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1" in decoded
+    assert "Invoke-WebRequest" in decoded
     assert "Claude Desktop (Windows)" in config["instruction_text"]
     assert "mcp-remote" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]

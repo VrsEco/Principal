@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import secrets
+import base64
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -294,9 +295,7 @@ class UserMcpTokenService:
     ) -> str:
         normalized = [cls._normalize_squad(item) for item in allowed_squads if item]
         squad_args = ",".join(normalized) if normalized else "squad_cliente"
-        return (
-            "powershell -ExecutionPolicy Bypass -Command "
-            "\""
+        script = (
             f"$u='{CLAUDE_SLASH_INSTALLER_RAW_URL}'; "
             "$f=Join-Path $env:TEMP 'install-claude-sapiens-slash-commands.ps1'; "
             "Write-Host 'Baixando instalador oficial do Sapiens...'; "
@@ -304,9 +303,10 @@ class UserMcpTokenService:
             "Write-Host 'Instalando comandos slash do Claude...'; "
             f"& $f -AvailableSquads '{squad_args}'; "
             "Remove-Item $f -Force; "
-            "Write-Host 'Instalacao concluida em %USERPROFILE%\\.claude\\commands.'"
-            "\""
+            "Write-Host 'Instalacao concluida em %USERPROFILE%\\.claude\\commands e %USERPROFILE%\\.claude\\skills.'"
         )
+        encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+        return f"powershell -ExecutionPolicy Bypass -EncodedCommand {encoded}"
 
     @classmethod
     def _build_guided_install_steps(
