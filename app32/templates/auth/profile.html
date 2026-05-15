@@ -1101,8 +1101,9 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         if (!response.ok || !data.success) {
             throw new Error(data.message || 'Falha ao montar configuração MCP.');
         }
+        const resolvedData = injectLatestTokenIntoConfig(data.data);
         if (data.data) {
-            renderMcpConfig(data.data, mode);
+            renderMcpConfig(resolvedData, mode);
         }
         if (showSuccessAlert) {
             const messagesByMode = {
@@ -1116,7 +1117,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             const message = messagesByMode[mode] || 'Conteúdo MCP pronto.';
             renderAlert('mcp-token-alert-container', true, message);
         }
-        return data.data;
+        return resolvedData;
     }
 
     async function runMcpTokenAction(url, successMessage) {
@@ -1321,14 +1322,15 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         copyMcpInstallCommandButton.addEventListener('click', async () => {
             try {
                 const config = await buildMcpConfig('command', false);
-                const installCommand = String((config && (config.copy_install_command_text || config.install_command)) || '').trim();
+                const resolvedConfig = injectLatestTokenIntoConfig(config);
+                const installCommand = String((resolvedConfig && (resolvedConfig.copy_install_command_text || resolvedConfig.install_command)) || '').trim();
                 if (!installCommand) {
                     renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe comando automático. Use Ver instruções para concluir a instalação guiada.');
                     return;
                 }
                 await navigator.clipboard.writeText(installCommand);
                 renderAlert('mcp-token-alert-container', true, 'Comando de instalação copiado para a área de transferência.');
-                renderMcpConfig(config, 'command');
+                renderMcpConfig(resolvedConfig, 'command');
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
