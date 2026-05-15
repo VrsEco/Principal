@@ -60,7 +60,6 @@ SQUAD_COMMAND_ALIASES = {
     "squad_versus": "sapiens consultor on",
     "engineering": "sapiens engenharia on",
 }
-CLAUDE_SLASH_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-claude-sapiens-slash-commands.ps1"
 ROLE_ALLOWED_SQUADS = {
     "admin": ("squad_cliente", "squad_versus", "engineering"),
     "administrator": ("squad_cliente", "squad_versus", "engineering"),
@@ -294,10 +293,44 @@ class UserMcpTokenService:
     ) -> str:
         normalized = [cls._normalize_squad(item) for item in allowed_squads if item]
         squad_args = ",".join(normalized) if normalized else "squad_cliente"
+        escaped_squads = squad_args.replace('"', '`"')
         return (
-            "powershell -ExecutionPolicy Bypass -File "
-            f"\"{CLAUDE_SLASH_INSTALLER_COMMAND}\" "
-            f"-AvailableSquads {squad_args}"
+            "powershell -ExecutionPolicy Bypass -Command "
+            "\""
+            f"$AvailableSquads='{escaped_squads}'; "
+            "$commandsDir = Join-Path $env:USERPROFILE '.claude\\commands'; "
+            "New-Item -ItemType Directory -Force -Path $commandsDir | Out-Null; "
+            "function Write-SlashCommand { param([string]$FileName,[string]$Description,[string]$Body) "
+            "$content = \"---`ndescription: $Description`n---`n`n$Body`n\"; "
+            "$path = Join-Path $commandsDir $FileName; "
+            "[System.IO.File]::WriteAllText($path, $content, [System.Text.UTF8Encoding]::new($false)); "
+            "Write-Host \"Comando criado: $path\"; }; "
+            "function Get-SquadLabel { param([string]$Squad) switch ($Squad) { "
+            "'squad_cliente' { 'Sapiens Cliente' } "
+            "'squad_versus' { 'Sapiens Consultor' } "
+            "'engineering' { 'Sapiens Engenharia' } "
+            "default { $Squad } } }; "
+            "$normalizedSquads = @($AvailableSquads -split ',' | ForEach-Object { $_.Trim().ToLower() } | Where-Object { $_ }); "
+            "if ($normalizedSquads -contains 'squad_cliente') { "
+            "Write-SlashCommand -FileName 'sapiens-cliente-on.md' -Description 'Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente.' -Body 'Ative o **Sapiens Cliente** nesta conversa.`n`n1. Use a conexão MCP do Sapiens Cliente.`n2. Rode `describe_app32_squad_runtime_tool`.`n3. Rode `list_user_app32_capabilities`.`n4. Rode `describe_app32_profile_contracts_tool`.`n5. Rode `describe_app32_surface_playbooks_tool`.`n6. Confirme a ativação com uma resposta curta dizendo: a) que o Sapiens Cliente está ativo b) qual é o agente de entrada c) qual é a surface ativa d) qual é a empresa padrão, se houver.`n7. Depois pergunte objetivamente qual demanda o usuário quer tratar agora.`n`nSe a conexão MCP não estiver disponível, explique isso claramente e oriente o usuário a revisar a instalação do Sapiens Cliente.'; "
+            "} "
+            "if ($normalizedSquads -contains 'squad_versus') { "
+            "Write-SlashCommand -FileName 'sapiens-consultor-on.md' -Description 'Ativa o Sapiens Consultor e carrega o bootstrap oficial do Squad Versus.' -Body 'Ative o **Sapiens Consultor** nesta conversa.`n`n1. Use a conexão MCP do Sapiens Consultor.`n2. Rode `describe_app32_squad_runtime_tool`.`n3. Rode `describe_app32_profile_contracts_tool`.`n4. Rode `describe_app32_surface_playbooks_tool`.`n5. Confirme a ativação com uma resposta curta dizendo: a) que o Sapiens Consultor está ativo b) qual é o agente de entrada c) qual é a surface ativa.`n6. Depois pergunte qual frente consultiva o usuário deseja tratar agora.`n`nSe a conexão MCP não estiver disponível, explique isso claramente e oriente o usuário a revisar a instalação do Sapiens Consultor.'; "
+            "} "
+            "if ($normalizedSquads -contains 'engineering') { "
+            "Write-SlashCommand -FileName 'sapiens-engenharia-on.md' -Description 'Ativa o Sapiens Engenharia e carrega o bootstrap oficial do Squad de Engenharia.' -Body 'Ative o **Sapiens Engenharia** nesta conversa.`n`n1. Use a conexão MCP do Sapiens Engenharia.`n2. Rode `describe_app32_squad_runtime_tool`.`n3. Rode `describe_app32_profile_contracts_tool`.`n4. Rode `describe_app32_surface_playbooks_tool`.`n5. Confirme a ativação com uma resposta curta dizendo: a) que o Sapiens Engenharia está ativo b) qual é o agente de entrada c) qual é a surface ativa.`n6. Depois pergunte qual demanda técnica o usuário deseja tratar agora.`n`nSe a conexão MCP não estiver disponível, explique isso claramente e oriente o usuário a revisar a instalação do Sapiens Engenharia.'; "
+            "} "
+            "$availableLabels = @($normalizedSquads | ForEach-Object { Get-SquadLabel $_ }); "
+            "$availableList = $availableLabels -join ', '; "
+            "if ($normalizedSquads.Count -gt 1) { "
+            "Write-SlashCommand -FileName 'sapiens-on.md' -Description 'Ativa o Sapiens e, se houver mais de um Squad disponível, pede confirmação antes de seguir.' -Body \"Ative o **Sapiens** nesta conversa.`n`nOs squads instalados nesta máquina são: **$availableList**.`n`n1. Antes de ativar, pergunte ao usuário qual Squad ele quer usar agora.`n2. Se o usuário escolher Cliente, execute o fluxo equivalente a `/sapiens-cliente-on`.`n3. Se o usuário escolher Consultor, execute o fluxo equivalente a `/sapiens-consultor-on`.`n4. Se o usuário escolher Engenharia, execute o fluxo equivalente a `/sapiens-engenharia-on`.`n5. Nunca assuma automaticamente quando houver mais de um Squad possível.`n\"; "
+            "} elseif ($normalizedSquads.Count -eq 1) { "
+            "$onlyLabel = $availableLabels[0]; "
+            "$onlyCommand = switch ($normalizedSquads[0]) { 'squad_cliente' { '/sapiens-cliente-on' } 'squad_versus' { '/sapiens-consultor-on' } 'engineering' { '/sapiens-engenharia-on' } default { '/sapiens-cliente-on' } }; "
+            "Write-SlashCommand -FileName 'sapiens-on.md' -Description 'Ativa o único Squad Sapiens disponível nesta máquina.' -Body \"Ative o **$onlyLabel** nesta conversa.`n`nExiste apenas um Squad Sapiens disponível nesta máquina.`n`nExecute o fluxo equivalente a `$onlyCommand` e confirme a ativação ao usuário.`n\"; "
+            "} "
+            "Write-Host \"Comandos oficiais de ativação do Sapiens instalados em $commandsDir\""
+            "\""
         )
 
     @classmethod

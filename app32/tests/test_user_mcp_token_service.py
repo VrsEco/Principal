@@ -74,7 +74,8 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert "Onboarding operacional desta instalação:" in config["onboarding_summary_text"]
     assert any(item["command"] == "/sapiens-cliente-on" for item in config["activation_commands"])
     assert any(item["command"] == "/sapiens-on" for item in config["activation_commands"])
-    assert "install-claude-sapiens-slash-commands.ps1" in config["activation_commands_install_command"]
+    assert "powershell -ExecutionPolicy Bypass -Command" in config["activation_commands_install_command"]
+    assert ".claude\\commands" in config["activation_commands_install_command"]
 
 
 def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch):
@@ -106,7 +107,8 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"] is None
-    assert "install-claude-sapiens-slash-commands.ps1" in config["copy_install_command_text"]
+    assert "powershell -ExecutionPolicy Bypass -Command" in config["copy_install_command_text"]
+    assert ".claude\\commands" in config["copy_install_command_text"]
     assert "Claude Desktop (Windows)" in config["instruction_text"]
     assert "mcp-remote" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]
