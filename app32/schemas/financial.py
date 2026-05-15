@@ -1272,6 +1272,20 @@ class FinancialBorderoSettlementInput(BaseModel):
     created_by_agent: Optional[str] = Field(None, max_length=50)
 
 
+class FinancialBorderoSettlementUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    settlement_date: Optional[date] = None
+    gross_amount: Optional[Decimal] = Field(None, gt=0)
+    settlement_status: Optional[str] = Field(None, pattern=_choices_pattern(BORDERO_SETTLEMENT_STATUS_VALUES))
+    bank_account_id: Optional[int] = None
+    notes: Optional[str] = None
+    metadata_json: Optional[Dict[str, Any]] = None
+    created_by_user_id: Optional[int] = None
+    created_by_employee_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(None, max_length=50)
+
+
 class FinancialAllocationBatchInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

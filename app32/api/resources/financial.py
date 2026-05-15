@@ -999,6 +999,37 @@ class FinancialBorderoSettlementListResource(Resource):
         return result, 201
 
 
+class FinancialBorderoSettlementResource(Resource):
+    @permission_required("financial", "edit")
+    def put(self, bordero_id: int, settlement_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        payload.setdefault("created_by_user_id", getattr(current_user, "id", None))
+        result, error = FinancialBorderoService.update_settlement(
+            bordero_id=bordero_id,
+            settlement_id=settlement_id,
+            company_id=company_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "delete")
+    def delete(self, bordero_id: int, settlement_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialBorderoService.delete_settlement(
+            bordero_id=bordero_id,
+            settlement_id=settlement_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
 class FinancialAutomationRuleListResource(Resource):
     @permission_required("financial", "view")
     def get(self):

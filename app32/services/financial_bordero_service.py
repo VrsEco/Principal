@@ -14,7 +14,12 @@ from models.financial import (
     FinancialSchedule,
     FinancialSettlement,
 )
-from schemas.financial import FinancialBorderoCreateInput, FinancialBorderoSettlementInput, FinancialBorderoUpdateInput
+from schemas.financial import (
+    FinancialBorderoCreateInput,
+    FinancialBorderoSettlementInput,
+    FinancialBorderoSettlementUpdateInput,
+    FinancialBorderoUpdateInput,
+)
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
@@ -408,6 +413,141 @@ class FinancialBorderoService:
             return None, f"Erro ao registrar baixa do borderô: {exc}"
 
     @staticmethod
+    def update_settlement(
+        *,
+        bordero_id: int,
+        settlement_id: int,
+        company_id: int,
+        payload: Dict[str, Any],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        try:
+            data = FinancialBorderoSettlementUpdateInput(**(payload or {}))
+        except Exception as exc:
+            return None, f"Payload inválido para atualização da baixa do borderô: {exc}"
+
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        bordero, settlement, error = FinancialBorderoService._load_bordero_settlement(
+            bordero_id=bordero_id,
+            settlement_id=settlement_id,
+            company_id=company_id,
+        )
+        if error:
+            return None, error
+
+        merged_payload = {
+            "company_id": company_id,
+            "settlement_date": data.settlement_date or settlement.settlement_date,
+            "gross_amount": data.gross_amount if data.gross_amount is not None else settlement.gross_amount,
+            "settlement_status": data.settlement_status or settlement.settlement_status,
+            "bank_account_id": data.bank_account_id if data.bank_account_id is not None else settlement.bank_account_id,
+            "notes": data.notes if data.notes is not None else settlement.notes,
+            "metadata_json": data.metadata_json if data.metadata_json is not None else dict(settlement.metadata_json or {}),
+            "created_by_user_id": data.created_by_user_id,
+            "created_by_employee_id": data.created_by_employee_id,
+            "created_by_agent": data.created_by_agent,
+        }
+
+        validated_payload, validation_error = FinancialBorderoService._validate_bordero_settlement_payload(
+            bordero=bordero,
+            payload=merged_payload,
+            available_amount=(
+                Decimal(str(bordero.open_amount or 0)).quantize(Decimal("0.01"))
+                + Decimal(str(settlement.allocated_amount or 0)).quantize(Decimal("0.01"))
+            ),
+        )
+        if validation_error:
+            return None, validation_error
+
+        deleted, delete_error = FinancialBorderoService.delete_settlement(
+            bordero_id=bordero_id,
+            settlement_id=settlement_id,
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if delete_error:
+            return None, delete_error
+
+        created, create_error = FinancialBorderoService.create_settlement(
+            bordero_id=bordero_id,
+            payload=validated_payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if create_error:
+            return None, create_error
+        return {
+            **dict(created or {}),
+            "message": "Baixa do borderô atualizada com sucesso.",
+            "replaced_settlement_id": settlement_id,
+            "deleted": deleted,
+        }, None
+
+    @staticmethod
+    def delete_settlement(
+        *,
+        bordero_id: int,
+        settlement_id: int,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        bordero, settlement, error = FinancialBorderoService._load_bordero_settlement(
+            bordero_id=bordero_id,
+            settlement_id=settlement_id,
+            company_id=company_id,
+        )
+        if error:
+            return None, error
+
+        child_error = FinancialBorderoService._delete_child_financial_settlements(
+            company_id=company_id,
+            bordero_settlement=settlement,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if child_error:
+            return None, child_error
+
+        try:
+            deleted_at = datetime.utcnow()
+            settlement.deleted_at = deleted_at
+            settlement.settlement_status = "cancelled"
+            settlement.metadata_json = {
+                **dict(settlement.metadata_json or {}),
+                "deleted_at": deleted_at.isoformat(),
+                "deleted_via": "financial_bordero_service.delete_settlement",
+            }
+
+            items = FinancialBorderoItem.query.filter(
+                FinancialBorderoItem.company_id == company_id,
+                FinancialBorderoItem.bordero_id == bordero.id,
+                FinancialBorderoItem.deleted_at.is_(None),
+            ).order_by(FinancialBorderoItem.display_order.asc(), FinancialBorderoItem.id.asc()).all()
+            FinancialBorderoService._recalculate_item_totals_from_settlements(
+                bordero=bordero,
+                items=items,
+            )
+            db.session.commit()
+            return {
+                "message": "Baixa do borderô removida com sucesso.",
+                "id": settlement_id,
+                "bordero": FinancialBorderoService._serialize_bordero(
+                    bordero,
+                    include_items=True,
+                    include_settlements=True,
+                ),
+            }, None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao remover baixa do borderô %s", settlement_id)
+            return None, f"Erro ao remover baixa do borderô: {exc}"
+
+    @staticmethod
     def get_active_bordero_for_schedule(*, company_id: int, schedule_id: int) -> Optional[FinancialBordero]:
         return (
             FinancialBordero.query.join(
@@ -589,6 +729,129 @@ class FinancialBorderoService:
             "open_amount": open_total,
             "status": status,
         }
+
+    @staticmethod
+    def _recalculate_item_totals_from_settlements(
+        *,
+        bordero: FinancialBordero,
+        items: Sequence[FinancialBorderoItem],
+    ) -> Dict[int, Dict[str, Decimal]]:
+        active_settlements = (
+            FinancialBorderoSettlement.query.filter(
+                FinancialBorderoSettlement.company_id == bordero.company_id,
+                FinancialBorderoSettlement.bordero_id == bordero.id,
+                FinancialBorderoSettlement.deleted_at.is_(None),
+            )
+            .order_by(FinancialBorderoSettlement.settlement_date.asc(), FinancialBorderoSettlement.id.asc())
+            .all()
+        )
+        settled_by_item: Dict[int, Decimal] = {
+            int(item.id): Decimal("0.00")
+            for item in items
+            if getattr(item, "id", None) is not None
+        }
+        for settlement in active_settlements:
+            metadata = dict(settlement.metadata_json or {})
+            for allocation in list(metadata.get("allocations") or []):
+                try:
+                    item_id = int(allocation.get("bordero_item_id") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if item_id not in settled_by_item:
+                    continue
+                settled_by_item[item_id] += Decimal(str(allocation.get("allocated_amount") or 0)).quantize(Decimal("0.01"))
+
+        result: Dict[int, Dict[str, Decimal]] = {}
+        for item in items:
+            item_id = int(getattr(item, "id", 0) or 0)
+            selected_amount = Decimal(str(getattr(item, "selected_amount", 0) or 0)).quantize(Decimal("0.01"))
+            settled_amount = min(settled_by_item.get(item_id, Decimal("0.00")), selected_amount).quantize(Decimal("0.01"))
+            open_amount = max(selected_amount - settled_amount, Decimal("0.00")).quantize(Decimal("0.01"))
+            item.settled_amount = settled_amount
+            item.open_amount = open_amount
+            result[item_id] = {
+                "selected_amount": selected_amount,
+                "settled_amount": settled_amount,
+                "open_amount": open_amount,
+            }
+        FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
+        return result
+
+    @staticmethod
+    def _validate_bordero_settlement_payload(
+        *,
+        bordero: FinancialBordero,
+        payload: Dict[str, Any],
+        available_amount: Optional[Decimal] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        try:
+            data = FinancialBorderoSettlementInput(**(payload or {}))
+        except Exception as exc:
+            return None, f"Payload inválido para baixa do borderô: {exc}"
+
+        reference_error = FinancialCatalogService.validate_reference_ids(
+            company_id=data.company_id,
+            bank_account_id=data.bank_account_id or bordero.bank_account_id,
+        )
+        if reference_error:
+            return None, reference_error
+
+        open_amount = Decimal(str(available_amount if available_amount is not None else (bordero.open_amount or 0))).quantize(Decimal("0.01"))
+        gross_amount = Decimal(str(data.gross_amount or 0)).quantize(Decimal("0.01"))
+        if gross_amount > open_amount:
+            return None, f"Baixa excede o saldo em aberto do borderô. Saldo atual: {open_amount}."
+        return data.model_dump(), None
+
+    @staticmethod
+    def _load_bordero_settlement(
+        *,
+        bordero_id: int,
+        settlement_id: int,
+        company_id: int,
+    ) -> Tuple[Optional[FinancialBordero], Optional[FinancialBorderoSettlement], Optional[str]]:
+        bordero = FinancialBordero.query.filter(
+            FinancialBordero.id == bordero_id,
+            FinancialBordero.company_id == company_id,
+            FinancialBordero.deleted_at.is_(None),
+        ).first()
+        if not bordero:
+            return None, None, "Borderô não encontrado no escopo da empresa."
+
+        settlement = FinancialBorderoSettlement.query.filter(
+            FinancialBorderoSettlement.id == settlement_id,
+            FinancialBorderoSettlement.company_id == company_id,
+            FinancialBorderoSettlement.bordero_id == bordero_id,
+            FinancialBorderoSettlement.deleted_at.is_(None),
+        ).first()
+        if not settlement:
+            return bordero, None, "Baixa do borderô não encontrada no escopo da empresa."
+        return bordero, settlement, None
+
+    @staticmethod
+    def _delete_child_financial_settlements(
+        *,
+        company_id: int,
+        bordero_settlement: FinancialBorderoSettlement,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Optional[str]:
+        child_settlements = (
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.external_reference == bordero_settlement.settlement_code,
+                FinancialSettlement.deleted_at.is_(None),
+            )
+            .order_by(FinancialSettlement.id.asc())
+            .all()
+        )
+        for child in child_settlements:
+            _, error = FinancialService.delete_settlement(
+                settlement_id=child.id,
+                company_id=company_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if error:
+                return error
+        return None
 
     @staticmethod
     def _extract_schedule_id_from_entry(entry: FinancialEntry) -> Optional[int]:

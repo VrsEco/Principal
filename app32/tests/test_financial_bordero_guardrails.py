@@ -41,6 +41,9 @@ class _ColumnStub:
     def is_(self, _other):
         return True
 
+    def asc(self):
+        return self
+
 
 def test_ensure_schedule_is_available_blocks_titles_locked_in_other_bordero(monkeypatch):
     monkeypatch.setattr(
@@ -140,3 +143,59 @@ def test_sync_bordero_totals_from_items_marks_partial_and_settled():
     assert summary['open_amount'] == Decimal('0.00')
     assert summary['status'] == 'settled'
     assert bordero.status == 'settled'
+
+
+def test_recalculate_item_totals_from_settlements_reopens_bordero_items(monkeypatch):
+    bordero = SimpleNamespace(id=7, company_id=3, total_amount=Decimal('300.00'), settled_amount=Decimal('300.00'), open_amount=Decimal('0.00'), status='settled')
+    items = [
+        SimpleNamespace(id=1, selected_amount=Decimal('200.00'), settled_amount=Decimal('200.00'), open_amount=Decimal('0.00')),
+        SimpleNamespace(id=2, selected_amount=Decimal('100.00'), settled_amount=Decimal('100.00'), open_amount=Decimal('0.00')),
+    ]
+    active_settlements = [
+        SimpleNamespace(metadata_json={'allocations': [{'bordero_item_id': 1, 'allocated_amount': 50.0}]})
+    ]
+
+    class _AllQuery:
+        def filter(self, *args, **kwargs):
+            return self
+        def order_by(self, *args, **kwargs):
+            return self
+        def all(self):
+            return active_settlements
+
+    fake_settlement_model = type(
+        'FinancialBorderoSettlementStub',
+        (),
+        {'company_id': _ColumnStub(), 'bordero_id': _ColumnStub(), 'deleted_at': _ColumnStub(), 'settlement_date': _ColumnStub(), 'id': _ColumnStub(), 'query': _AllQuery()},
+    )
+    monkeypatch.setattr(bordero_module, 'FinancialBorderoSettlement', fake_settlement_model)
+
+    result = FinancialBorderoService._recalculate_item_totals_from_settlements(bordero=bordero, items=items)
+
+    assert result[1]['settled_amount'] == Decimal('50.00')
+    assert result[1]['open_amount'] == Decimal('150.00')
+    assert result[2]['settled_amount'] == Decimal('0.00')
+    assert result[2]['open_amount'] == Decimal('100.00')
+    assert bordero.status == 'partially_settled'
+
+
+def test_validate_bordero_settlement_payload_respects_available_amount_override(monkeypatch):
+    monkeypatch.setattr(
+        bordero_module.FinancialCatalogService,
+        'validate_reference_ids',
+        staticmethod(lambda **kwargs: None),
+    )
+    bordero = SimpleNamespace(company_id=3, bank_account_id=None, open_amount=Decimal('20.00'))
+
+    payload, error = FinancialBorderoService._validate_bordero_settlement_payload(
+        bordero=bordero,
+        payload={
+            'company_id': 3,
+            'settlement_date': '2026-05-15',
+            'gross_amount': '50.00',
+        },
+        available_amount=Decimal('50.00'),
+    )
+
+    assert error is None
+    assert payload['gross_amount'] == Decimal('50.00')

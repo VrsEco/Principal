@@ -25,6 +25,7 @@
         </div>
         <div class="bordero-header-actions">
             <button type="button" class="btn btn-primary hidden" id="bordero-save-button">Salvar alterações</button>
+            <button type="button" class="btn btn-danger hidden" id="bordero-delete-button">Excluir borderô</button>
             <a class="btn btn-secondary" href="/financial/borderos">Voltar para lista</a>
         </div>
     </header>
@@ -150,6 +151,10 @@
                             <span>&nbsp;</span>
                             <button type="button" class="btn btn-success" id="bordero-settlement-button">Registrar baixa</button>
                         </div>
+                        <div class="field bordero-settlement-action hidden" id="bordero-settlement-cancel-wrap">
+                            <span>&nbsp;</span>
+                            <button type="button" class="btn btn-secondary" id="bordero-settlement-cancel-button">Cancelar edição</button>
+                        </div>
                     </div>
                     <div class="bordero-table-wrap">
                         <table class="bordero-table">
@@ -161,10 +166,11 @@
                                     <th>Alocado</th>
                                     <th>Variação</th>
                                     <th>Status</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="bordero-settlements-body">
-                                <tr><td colspan="6" class="empty-state">Nenhuma baixa registrada.</td></tr>
+                                <tr><td colspan="7" class="empty-state">Nenhuma baixa registrada.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -174,5 +180,5 @@
     </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260420f') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260515-bordero-settlement-actions') }}"></script>
 {% endblock %}

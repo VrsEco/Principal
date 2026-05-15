@@ -686,6 +686,7 @@ def register_api_resources(api):
         FinancialBorderoListResource,
         FinancialBorderoResource,
         FinancialBorderoSettlementListResource,
+        FinancialBorderoSettlementResource,
         FinancialAutomationRuleListResource,
         FinancialAutomationRuleResource,
         FinancialAutomationExecutionListResource,
@@ -899,6 +900,7 @@ def register_api_resources(api):
     api.add_resource(FinancialBorderoListResource, '/api/financial/borderos')
     api.add_resource(FinancialBorderoResource, '/api/financial/borderos/<int:bordero_id>')
     api.add_resource(FinancialBorderoSettlementListResource, '/api/financial/borderos/<int:bordero_id>/settlements')
+    api.add_resource(FinancialBorderoSettlementResource, '/api/financial/borderos/<int:bordero_id>/settlements/<int:settlement_id>')
     api.add_resource(FinancialAutomationRuleListResource, '/api/financial/automation-rules')
     api.add_resource(FinancialAutomationRuleResource, '/api/financial/automation-rules/<int:rule_id>')
     api.add_resource(FinancialAutomationExecutionListResource, '/api/financial/automation-executions')
