@@ -1544,12 +1544,31 @@
     }
   }
 
+  function removeSettlementFromSelectedSchedule(settlementId) {
+    if (!selectedSchedule || !settlementId) return;
+    const normalizedSettlementId = Number(settlementId);
+    if (!normalizedSettlementId) return;
+
+    selectedSchedule.related_entries = (selectedSchedule.related_entries || []).map((entry) => ({
+      ...entry,
+      settlements: (entry.settlements || []).filter((settlement) => Number(settlement.id) !== normalizedSettlementId),
+    }));
+
+    renderBaixas(selectedSchedule.related_entries || []);
+  }
+
   async function deleteSettlement(settlementId) {
     try {
       if (!settlementId || !selectedSchedule?.id) return;
       if (!window.confirm('Excluir esta baixa? O título será liberado para edição se não houver outras baixas.')) return;
+      const currentScheduleId = selectedSchedule.id;
       await fetchJson(`/api/financial/settlements/${settlementId}?company_id=${companyId}`, { method: 'DELETE' });
-      await window.selectSchedule(selectedSchedule.id);
+      removeSettlementFromSelectedSchedule(settlementId);
+      try {
+        await window.selectSchedule(currentScheduleId);
+      } catch (refreshError) {
+        console.warn('Baixa removida, mas a recarga completa do título falhou.', refreshError);
+      }
       switchTab('baixas');
     } catch (error) {
       alert(error.message);

@@ -1494,10 +1494,32 @@ class FinancialScheduleService:
         due_date: Optional[date],
         metadata_json: Optional[Dict[str, Any]],
         legacy_domain_allowance: Optional[CounterType[Tuple[str, str, int]]] = None,
+        existing_metadata_json: Optional[Dict[str, Any]] = None,
+        existing_fallback_chart_account_id: Optional[int] = None,
+        existing_fallback_cost_center_id: Optional[int] = None,
+        existing_fallback_domain_type: Optional[str] = None,
+        existing_fallback_domain_source_kind: Optional[str] = None,
+        existing_fallback_domain_source_id: Optional[int] = None,
+        existing_fallback_domain_label: Optional[str] = None,
     ) -> Optional[str]:
         allocations = list((metadata_json or {}).get("allocations") or [])
         if not allocations:
             return "Informe ao menos uma linha de rateio para o agendamento."
+
+        resolved_legacy_domain_allowance = legacy_domain_allowance
+        if resolved_legacy_domain_allowance is None and existing_metadata_json:
+            resolved_legacy_domain_allowance = FinancialScheduleService._build_legacy_domain_allowance(
+                company_id=company_id,
+                template_amount=template_amount,
+                due_date=due_date,
+                metadata_json=existing_metadata_json,
+                fallback_chart_account_id=existing_fallback_chart_account_id,
+                fallback_cost_center_id=existing_fallback_cost_center_id,
+                fallback_domain_type=existing_fallback_domain_type,
+                fallback_domain_source_kind=existing_fallback_domain_source_kind,
+                fallback_domain_source_id=existing_fallback_domain_source_id,
+                fallback_domain_label=existing_fallback_domain_label,
+            )
 
         totals = FinancialScheduleService._calculate_schedule_adjustments(
             company_id=company_id,
@@ -1575,8 +1597,12 @@ class FinancialScheduleService:
                     source_kind=domain_source_kind,
                 )
                 if domain_error:
-                    if domain_key and legacy_domain_allowance and legacy_domain_allowance.get(domain_key, 0) > 0:
-                        legacy_domain_allowance[domain_key] -= 1
+                    if (
+                        domain_key
+                        and resolved_legacy_domain_allowance
+                        and resolved_legacy_domain_allowance.get(domain_key, 0) > 0
+                    ):
+                        resolved_legacy_domain_allowance[domain_key] -= 1
                     else:
                         return f"Linha {index} do rateio: {domain_error}"
 

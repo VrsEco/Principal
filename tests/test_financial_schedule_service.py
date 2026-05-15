@@ -93,6 +93,56 @@ def test_validate_schedule_allocations_allows_unchanged_legacy_domain(monkeypatc
     assert error is None
 
 
+def test_validate_schedule_allocations_allows_unchanged_legacy_domain_from_existing_metadata(monkeypatch):
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_calculate_schedule_adjustments",
+        staticmethod(lambda **kwargs: {"template_amount": 100}),
+    )
+
+    from app32.services import financial_schedule_service as module
+
+    _FakeChartAccountModel.query = _FakeQuery([SimpleNamespace(accepts_posting=True)])
+    _FakeCostCenterModel.query = _FakeQuery([SimpleNamespace(id=10), None])
+    monkeypatch.setattr(module, "FinancialChartAccount", _FakeChartAccountModel)
+    monkeypatch.setattr(module, "FinancialCostCenter", _FakeCostCenterModel)
+    monkeypatch.setattr(
+        module.FinancialService,
+        "_resolve_budget_links",
+        staticmethod(lambda **kwargs: ({}, None)),
+    )
+    monkeypatch.setattr(
+        module.FinancialDomainEnablementService,
+        "_load_source",
+        staticmethod(lambda *args, **kwargs: (None, "Projeto/Processo não encontrado para a empresa informada.")),
+    )
+
+    metadata_json = {
+        "allocations": [
+            {
+                "chart_account_id": 1,
+                "cost_center_id": 10,
+                "allocation_type": "amount",
+                "allocated_amount": 100,
+                "percentage": 100,
+                "domain_type": "project",
+                "domain_source_id": 999,
+                "domain_source_kind": "routine",
+            }
+        ]
+    }
+
+    error = FinancialScheduleService._validate_schedule_allocations(
+        company_id=1,
+        template_amount=100,
+        due_date=None,
+        metadata_json=metadata_json,
+        existing_metadata_json=metadata_json,
+    )
+
+    assert error is None
+
+
 def test_validate_schedule_allocations_rejects_new_invalid_domain(monkeypatch):
     monkeypatch.setattr(
         FinancialScheduleService,
