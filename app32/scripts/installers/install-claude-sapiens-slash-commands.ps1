@@ -80,10 +80,7 @@ $normalizedSquads = @(
 )
 
 if ($normalizedSquads -contains "squad_cliente") {
-    Publish-ClaudeActivation `
-        -CommandName "sapiens-cliente-on" `
-        -Description "Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente." `
-        -Body @"
+    $clienteBody = @'
 Ative o **Sapiens Cliente** nesta conversa.
 
 Regras obrigatórias desta ativação:
@@ -105,14 +102,15 @@ Regras obrigatórias desta ativação:
    - qual é a surface ativa
    - qual é a empresa padrão, se houver
 7. Depois disso, permaneça operando como Sapiens Cliente até nova instrução.
-"@
+'@
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-cliente-on" `
+        -Description "Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente." `
+        -Body $clienteBody
 }
 
 if ($normalizedSquads -contains "squad_versus") {
-    Publish-ClaudeActivation `
-        -CommandName "sapiens-consultor-on" `
-        -Description "Ativa o Sapiens Consultor e carrega o bootstrap oficial do Squad Versus." `
-        -Body @"
+    $consultorBody = @'
 Ative o **Sapiens Consultor** nesta conversa.
 
 Regras obrigatórias desta ativação:
@@ -132,14 +130,15 @@ Regras obrigatórias desta ativação:
    - qual é o agente/harness de entrada
    - qual é a surface ativa
 7. Depois disso, permaneça operando como Sapiens Consultor até nova instrução.
-"@
+'@
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-consultor-on" `
+        -Description "Ativa o Sapiens Consultor e carrega o bootstrap oficial do Squad Versus." `
+        -Body $consultorBody
 }
 
 if ($normalizedSquads -contains "engineering") {
-    Publish-ClaudeActivation `
-        -CommandName "sapiens-engenharia-on" `
-        -Description "Ativa o Sapiens Engenharia e carrega o bootstrap oficial do Squad de Engenharia." `
-        -Body @"
+    $engenhariaBody = @'
 Ative o **Sapiens Engenharia** nesta conversa.
 
 Regras obrigatórias desta ativação:
@@ -159,20 +158,21 @@ Regras obrigatórias desta ativação:
    - qual é o agente/harness de entrada
    - qual é a surface ativa
 7. Depois disso, permaneça operando como Sapiens Engenharia até nova instrução.
-"@
+'@
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-engenharia-on" `
+        -Description "Ativa o Sapiens Engenharia e carrega o bootstrap oficial do Squad de Engenharia." `
+        -Body $engenhariaBody
 }
 
 $availableLabels = @($normalizedSquads | ForEach-Object { Get-SquadLabel $_ })
 $availableList = $availableLabels -join ", "
 
 if ($normalizedSquads.Count -gt 1) {
-    Publish-ClaudeActivation `
-        -CommandName "sapiens-on" `
-        -Description "Ativa o Sapiens e, se houver mais de um Squad disponível, pede confirmação antes de seguir." `
-        -Body @"
+    $sapiensOnBody = @'
 Ative o **Sapiens** nesta conversa.
 
-Os squads instalados nesta máquina são: **$availableList**.
+Os squads instalados nesta máquina são: **{0}**.
 
 1. Antes de ativar, pergunte ao usuário qual Squad ele quer usar agora.
 2. Se o usuário escolher Cliente, execute integralmente o fluxo de `/sapiens-cliente-on`.
@@ -180,7 +180,11 @@ Os squads instalados nesta máquina são: **$availableList**.
 4. Se o usuário escolher Engenharia, execute integralmente o fluxo de `/sapiens-engenharia-on`.
 5. Nunca assuma automaticamente quando houver mais de um Squad possível.
 6. Nunca mande o usuário digitar `sapiens on` como texto livre.
-"@
+'@ -f $availableList
+    Publish-ClaudeActivation `
+        -CommandName "sapiens-on" `
+        -Description "Ativa o Sapiens e, se houver mais de um Squad disponível, pede confirmação antes de seguir." `
+        -Body $sapiensOnBody
 }
 elseif ($normalizedSquads.Count -eq 1) {
     $onlyLabel = $availableLabels[0]
@@ -190,23 +194,21 @@ elseif ($normalizedSquads.Count -eq 1) {
         "engineering" { "/sapiens-engenharia-on" }
         default { "/sapiens-cliente-on" }
     }
+    $singleSquadBody = @'
+Ative o **{0}** nesta conversa.
+
+Existe apenas um Squad Sapiens disponível nesta máquina.
+
+Execute integralmente o fluxo equivalente a `{1}` e confirme a ativação ao usuário.
+'@ -f $onlyLabel, $onlyCommand
 
     Publish-ClaudeActivation `
         -CommandName "sapiens-on" `
         -Description "Ativa o único Squad Sapiens disponível nesta máquina." `
-        -Body @"
-Ative o **$onlyLabel** nesta conversa.
-
-Existe apenas um Squad Sapiens disponível nesta máquina.
-
-Execute integralmente o fluxo equivalente a `$onlyCommand` e confirme a ativação ao usuário.
-"@
+        -Body $singleSquadBody
 }
 
-Publish-ClaudeActivation `
-    -CommandName "sapiens" `
-    -Description "Alias defensivo do Sapiens oficial para evitar ativação genérica incorreta." `
-    -Body @"
+    $sapiensAliasBody = @'
 Ative o **Sapiens oficial do APP32** nesta conversa.
 
 1. Nunca trate este comando como skill genérica solta.
@@ -216,6 +218,10 @@ Ative o **Sapiens oficial do APP32** nesta conversa.
    - Cliente: `/sapiens-cliente-on`
    - Consultor: `/sapiens-consultor-on`
    - Engenharia: `/sapiens-engenharia-on`
-"@
+'@
+Publish-ClaudeActivation `
+    -CommandName "sapiens" `
+    -Description "Alias defensivo do Sapiens oficial para evitar ativação genérica incorreta." `
+    -Body $sapiensAliasBody
 
 Write-Host "Comandos oficiais instalados em $commandsDir e skills oficiais instaladas em $skillsDir"
