@@ -110,8 +110,54 @@ def test_validate_permission_blocks_finance_for_non_admin_profiles_by_profile_co
 
     assert collaborator_read.allowed is False
     assert client_read.allowed is False
-    assert "domain_forbidden_by_profile_contract" in collaborator_read.checks
+    assert "action_not_allowed" in collaborator_read.checks
     assert "domain_forbidden_by_profile_contract" in client_read.checks
+
+
+def test_validate_permission_allows_explicit_financial_permission_even_for_colaborador():
+    collaborator = PrincipalContext(
+        user_id=2,
+        company_id=12,
+        role="colaborador",
+        permissions=frozenset({"financial", "financial.view", "financial.create"}),
+    )
+
+    read_decision = validate_permission(
+        collaborator,
+        domain="finance",
+        action="read",
+        required_permissions=("financial.view",),
+    )
+    create_decision = validate_permission(
+        collaborator,
+        domain="finance",
+        action="create",
+        required_permissions=("financial.create",),
+    )
+
+    assert read_decision.allowed is True
+    assert create_decision.allowed is True
+    assert "explicit_permissions_match" in read_decision.checks
+    assert "explicit_permissions_match" in create_decision.checks
+
+
+def test_resolve_identity_context_normalizes_permission_mapping_to_resource_actions():
+    principal = resolve_identity_context(
+        {
+            "user_id": 7,
+            "company_id": 12,
+            "role": "colaborador",
+            "permissions": {
+                "financial": ["view", "create"],
+                "projects": ["view"],
+            },
+        }
+    )
+
+    assert "financial" in principal.permissions
+    assert "financial.view" in principal.permissions
+    assert "financial.create" in principal.permissions
+    assert "projects.view" in principal.permissions
 
 
 def test_validate_permission_supports_projects_meetings_and_canonical_actions():

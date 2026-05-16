@@ -20,15 +20,20 @@ def test_app32_crud_contracts_cover_required_domains_and_crud_guidance():
         assert any(operation.action in {"create", "update", "execute"} for operation in contract.operations)
 
 
-def test_finance_mutations_require_human_gate_and_high_risk():
+def test_finance_contract_is_permission_aware_for_create_update_and_keeps_delete_gated():
     finance = APP32_CRUD_CONTRACTS_MANIFEST.get_domain("finance")
 
     assert finance is not None
-    mutating = [op for op in finance.operations if op.action in {"create", "update", "delete", "execute"}]
+    create_update = [op for op in finance.operations if op.action in {"create", "update"}]
+    delete_ops = [op for op in finance.operations if op.action == "delete"]
 
-    assert mutating
-    assert all(operation.human_gate_required for operation in mutating)
-    assert all(operation.risk in {"high", "critical"} for operation in mutating)
+    assert create_update
+    assert delete_ops
+    assert all(operation.human_gate_required is False for operation in create_update)
+    assert all(operation.risk == "medium" for operation in create_update)
+    assert all("colaborador" in operation.allowed_roles for operation in create_update)
+    assert all(operation.human_gate_required is True for operation in delete_ops)
+    assert all(operation.risk == "critical" for operation in delete_ops)
 
     with pytest.raises(ValidationError):
         CRUDOperationContract(
@@ -37,10 +42,10 @@ def test_finance_mutations_require_human_gate_and_high_risk():
             operation="finance.entry.create",
             entity="financial_entry",
             description="Tentativa insegura de mutação financeira.",
-            allowed_roles=["administrador"],
+            allowed_roles=["cliente"],
             required_permissions=["finance.entry.create"],
             human_gate_required=False,
-            risk="medium",
+            risk="low",
         )
 
 

@@ -89,10 +89,6 @@ class MCPRoleOverlayContract(_StrictModel):
         if self.runtime_profile == "squad_cliente":
             if self.surface != "user":
                 raise ValueError("Overlays canônicos do Squad Cliente operam na surface user.")
-            if "finance" in self.allowed_domains:
-                raise ValueError("Overlay do Squad Cliente não pode liberar finanças sensíveis na surface user.")
-            if "finance" not in self.blocked_domains:
-                raise ValueError("Overlay do Squad Cliente deve bloquear finance explicitamente.")
         elif self.runtime_profile == "squad_versus":
             if self.surface not in {"admin", "analytics"}:
                 raise ValueError("Overlays do Squad Versus devem operar em admin ou analytics.")
@@ -444,9 +440,9 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_label="Harness Coordenador do Squad Cliente",
                 allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "identity_self_service"],
                 allowed_actions=["discover", "read", "create", "update", "analyze"],
-                blocked_domains=["finance", "governance", "analytics", "operations", "identity_admin", "workload"],
+                blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
-                    "Escalar finanças sensíveis para admin/analytics.",
+                    "Escalar finanças fora das permissões web equivalentes do usuário para admin/analytics.",
                     "Usar o coordenador como front door antes de acionar harness especializado.",
                 ],
             ),
@@ -461,9 +457,9 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_label="Harness Comercial do Squad Cliente",
                 allowed_domains=["routine", "projects", "meetings", "strategy", "identity_self_service"],
                 allowed_actions=["discover", "read", "create", "update", "analyze"],
-                blocked_domains=["finance", "governance", "analytics", "operations", "identity_admin", "workload"],
+                blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
-                    "Não tratar financeiro sensível pela surface user.",
+                    "Não tratar financeiro fora das permissões web equivalentes do usuário.",
                     "Escalar modelagens estratégicas profundas para Versus ou analytics.",
                 ],
             ),
@@ -478,7 +474,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_label="Harness Operacional do Squad Cliente",
                 allowed_domains=["routine", "projects", "processes", "meetings", "identity_self_service"],
                 allowed_actions=["discover", "read", "create", "update"],
-                blocked_domains=["finance", "governance", "analytics", "operations", "identity_admin", "workload"],
+                blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Escalar análise executiva aprofundada para coordenador/estratégico.",
                     "Escalar suporte técnico ou incidente para ops.",
@@ -488,17 +484,17 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 overlay="admfin_cliente",
                 runtime_profile="squad_cliente",
                 title="Overlay Canônico — Adm/Financeiro do Squad Cliente",
-                summary="Copiloto administrativo/financeiro em menor privilégio, capaz de organizar contexto e leitura operacional sem mutação financeira sensível.",
+                summary="Copiloto administrativo/financeiro em menor privilégio, capaz de operar o financeiro quando a senha do usuário já liberar a mesma ação no APP32.",
                 compatible_profiles=["cliente", "colaborador", "administrador"],
                 surface="user",
                 harness_key="harness_admfin_cliente_v1",
                 harness_label="Harness Adm/Financeiro do Squad Cliente",
-                allowed_domains=["routine", "projects", "meetings", "strategy", "identity_self_service"],
-                allowed_actions=["discover", "read", "analyze"],
-                blocked_domains=["finance", "governance", "analytics", "operations", "identity_admin", "workload"],
+                allowed_domains=["routine", "projects", "meetings", "strategy", "finance", "identity_self_service"],
+                allowed_actions=["discover", "read", "create", "update", "analyze"],
+                blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
-                    "Toda mutação financeira sensível deve migrar para surface admin com gate humano.",
-                    "Leituras financeiras executivas devem ocorrer por analytics/admin quando publicadas.",
+                    "Executar no financeiro apenas o que a senha do usuário já permitir no APP32 e sempre no company_id ativo.",
+                    "Leituras financeiras executivas ampliadas e governança multiempresa devem ocorrer por analytics/admin quando o rito exigir.",
                 ],
             ),
             MCPRoleOverlayContract(
@@ -512,7 +508,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_label="Harness Estratégico do Squad Cliente",
                 allowed_domains=["strategy", "projects", "meetings", "identity_self_service"],
                 allowed_actions=["discover", "read", "analyze"],
-                blocked_domains=["finance", "governance", "analytics", "operations", "identity_admin", "workload"],
+                blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Usar analytics quando a análise exigir read model executivo.",
                     "Escalar mudança estrutural de plano para admin com confirmação.",
@@ -529,7 +525,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_label="Harness Pessoas/Capacidade do Squad Cliente",
                 allowed_domains=["routine", "projects", "meetings", "identity_self_service"],
                 allowed_actions=["discover", "read", "create", "update"],
-                blocked_domains=["finance", "governance", "analytics", "operations", "identity_admin", "workload", "strategy"],
+                blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload", "strategy"],
                 escalation_notes=[
                     "Capacidade analítica consolidada deve migrar para analytics por perfil administrativo.",
                     "Não usar este overlay para gestão de acesso administrativo.",
@@ -541,8 +537,8 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 profile="colaborador",
                 allowed_surfaces=["user"],
                 default_surface="user",
-                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "identity_self_service"],
-                forbidden_domains=["finance", "governance", "admin", "analytics", "operations", "workload", "identity_admin"],
+                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "finance", "identity_self_service"],
+                forbidden_domains=["governance", "admin", "analytics", "operations", "workload", "identity_admin"],
                 max_risk_without_human_gate="medium",
                 can_execute_mutations=True,
             ),

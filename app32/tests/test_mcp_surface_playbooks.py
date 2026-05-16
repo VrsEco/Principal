@@ -62,7 +62,7 @@ def test_surface_contract_rules_and_crud_coherence():
     assert admin_playbook is not None
     assert ops_playbook is not None
 
-    assert "finance" not in user_playbook.allowed_domains
+    assert "finance" in user_playbook.allowed_domains
     assert any("nunca mutar dados" in item.lower() for item in analytics_playbook.forbidden_actions)
     assert any("gate humano" in rule.rule.lower() or "confirmação humana" in rule.rule.lower() for rule in admin_playbook.interaction_rules)
     assert "finance" not in ops_playbook.allowed_domains

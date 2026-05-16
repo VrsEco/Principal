@@ -60,10 +60,6 @@ class DomainPlaybook(_StrictModel):
             raise ValueError("Playbook de domínio MCP não pode liberar SQL livre.")
         if "company_id" not in self.prompt_policy.required_context:
             raise ValueError("Playbook de domínio MCP deve exigir company_id.")
-        if self.domain == "finance" and not set(self.allowed_profiles).issubset({"administrador", "admin_tecnico"}):
-            raise ValueError("Playbook financeiro fica restrito a perfis administrativos.")
-        if self.domain == "finance" and any(overlay.endswith("_cliente") for overlay in self.allowed_role_overlays):
-            raise ValueError("Playbook financeiro não deve anunciar overlays do Squad Cliente.")
         if self.domain == "analytics" and "analytics" not in self.allowed_surfaces:
             raise ValueError("Playbook analytics deve permitir a surface analytics.")
         if self.domain == "operations" and self.allowed_profiles != ["admin_tecnico"]:
@@ -210,20 +206,20 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
             DomainPlaybook(
                 domain="finance",
                 title="Playbook de Finanças",
-                objective="Guiar leituras e ações financeiras com privilégio elevado, rastreabilidade e mínimo escopo.",
-                allowed_surfaces=["admin", "analytics"],
-                allowed_profiles=["administrador", "admin_tecnico"],
-                allowed_role_overlays=["coordenador_versus", "strategist_versus", "pmo_controller_versus", "finance_versus", "auditor_versus"],
+                objective="Guiar leituras e ações financeiras com rastreabilidade, company_id explícito e aderência às mesmas permissões que a senha do usuário já possui no APP32.",
+                allowed_surfaces=["user", "admin", "analytics"],
+                allowed_profiles=["colaborador", "administrador", "admin_tecnico"],
+                allowed_role_overlays=["admfin_cliente", "coordenador_versus", "strategist_versus", "pmo_controller_versus", "finance_versus", "auditor_versus"],
                 canonical_tools=["describe_app32_crud_contracts_tool", "describe_app32_allowed_analyses_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.analysis_catalog", "src.intelligence.security.tool_policy"],
-                discovery_sequence=["describe_app32_profile_contracts_tool", "describe_app32_allowed_analyses_tool", "validar risco financeiro e gate humano"],
+                discovery_sequence=["describe_app32_profile_contracts_tool", "list_user_app32_capabilities", "validar permissão financeira efetiva, risco e gate humano quando exigido"],
                 prompt_policy=_prompt_policy(
-                    preamble="Você trata finanças do APP32 como domínio sensível: menor privilégio, company_id explícito e sem SQL livre.",
-                    output_contract="Responder com filtros financeiros usados, limitações, risco, necessidade de gate humano e resultado permitido.",
+                    preamble="Você trata finanças do APP32 como domínio sensível e permission-aware: só execute o que o usuário já pode fazer no APP32, sempre com company_id explícito e sem SQL livre.",
+                    output_contract="Responder com filtros financeiros usados, permissões assumidas, limitações, risco, necessidade de gate humano quando houver e resultado permitido.",
                 ),
-                analysis_rules=["Usar apenas catálogo de análises financeiras permitidas; SQL livre e credenciais são proibidos."],
-                forbidden_shortcuts=["Não executar mutação financeira pela surface user.", "Não expor credenciais bancárias ou dados cross-tenant."],
-                escalation_rules=["Exigir confirmação humana para risco high/critical e mutações financeiras."],
+                analysis_rules=["Usar apenas tools e análises financeiras permitidas ao usuário/empresa ativos; SQL livre e credenciais são proibidos."],
+                forbidden_shortcuts=["Não executar ação financeira que a senha do usuário não possua no APP32.", "Não expor credenciais bancárias ou dados cross-tenant."],
+                escalation_rules=["Exigir confirmação humana quando a policy marcar gate para risco high/critical ou exclusão financeira."],
             ),
             DomainPlaybook(
                 domain="analytics",

@@ -51,8 +51,6 @@ class SurfacePlaybook(_StrictModel):
     def _validate_surface_rules(self):
         if self.surface == "analytics" and self.default_scope == "none":
             raise ValueError("Surface analytics deve operar com escopo explícito ou empresa ativa.")
-        if self.surface == "user" and "finance" in self.allowed_domains:
-            raise ValueError("Surface user não deve expor domínio financeiro sensível.")
         for overlay in self.role_overlays:
             if self.surface == "user" and not overlay.overlay.endswith("_cliente"):
                 raise ValueError("Surface user deve expor apenas overlays do Squad Cliente.")
@@ -90,14 +88,15 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
             SurfacePlaybook(
                 surface="user",
                 title="Playbook MCP User",
-                objective="Executar fluxos operacionais do usuário final com escopo tenant-safe e menor privilégio.",
+                objective="Executar fluxos operacionais do usuário final com escopo tenant-safe, menor privilégio e exposição permission-aware das tools liberadas na senha do APP32.",
                 actor_roles=["colaborador", "cliente", "administrador"],
-                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "identity_self_service"],
+                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "finance", "identity_self_service"],
                 default_scope="active_company",
                 discovery_tools=["list_user_app32_capabilities", "describe_app32_crud_contracts_tool"],
                 startup_checklist=[
                     "Confirmar company_id ativo antes de qualquer leitura ou mutação.",
                     "Consultar as capabilities da surface user e o contrato CRUD do domínio alvo.",
+                    "Quando o domínio for finance, depender apenas das tools efetivamente liberadas pelas permissões web do usuário na empresa ativa.",
                     "Se houver ambiguidade de escopo, pedir confirmação ao usuário antes de agir.",
                 ],
                 interaction_rules=[
@@ -112,7 +111,7 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                 ],
                 forbidden_actions=[
                     "Não acessar tools exclusivas de admin, analytics ou ops.",
-                    "Não executar mutações financeiras sensíveis pela surface user.",
+                    "Não executar ação financeira fora das permissões web equivalentes do usuário, do company_id ativo e do tenant autorizado.",
                 ],
                 example_flows=[
                     SurfaceExampleFlow(
@@ -153,9 +152,9 @@ def build_surface_playbooks_manifest() -> SurfacePlaybooksManifest:
                         overlay="admfin_cliente",
                         title="Adm/Financeiro do Squad Cliente",
                         harness_key="harness_admfin_cliente_v1",
-                        primary_domains=["routine", "projects", "meetings", "strategy"],
-                        recommended_actions=["discover", "read", "analyze"],
-                        escalation_rules=["Não mutar finanças pela surface user.", "Encaminhar leitura financeira privilegiada para analytics/admin."],
+                        primary_domains=["routine", "projects", "meetings", "strategy", "finance"],
+                        recommended_actions=["discover", "read", "create", "update", "analyze"],
+                        escalation_rules=["Operar finanças somente quando a senha do usuário liberar a tool equivalente no APP32.", "Escalar governança multiempresa e leitura executiva ampliada para admin/analytics quando o rito exigir."],
                     ),
                     SurfaceRoleOverlayGuide(
                         overlay="estrategico_cliente",

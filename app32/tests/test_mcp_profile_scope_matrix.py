@@ -12,7 +12,7 @@ def test_user_playbook_profiles_are_restricted_to_operational_roles():
     assert playbook is not None
     assert set(playbook.actor_roles) == {"colaborador", "cliente", "administrador"}
     assert "admin_tecnico" not in playbook.actor_roles
-    assert "finance" not in playbook.allowed_domains
+    assert "finance" in playbook.allowed_domains
     assert any(item.overlay == "coordenador_cliente" for item in playbook.role_overlays)
     assert any(item.overlay == "admfin_cliente" for item in playbook.role_overlays)
 
@@ -37,21 +37,27 @@ def test_admin_analytics_and_ops_playbooks_are_restricted_to_admin_profiles():
     assert "cliente" not in ops.actor_roles
 
 
-def test_finance_contract_mutations_are_admin_only_and_user_playbook_never_announces_them():
+def test_finance_contract_is_permission_aware_on_user_and_admin_gated_on_delete():
     finance = APP32_CRUD_CONTRACTS_MANIFEST.get_domain("finance")
     user = APP32_SURFACE_PLAYBOOKS_MANIFEST.get_surface("user")
 
     assert finance is not None
     assert user is not None
 
-    mutating = [operation for operation in finance.operations if operation.action in {"create", "update", "delete", "execute"}]
-    assert mutating
-    for operation in mutating:
+    create_or_update = [operation for operation in finance.operations if operation.action in {"create", "update"}]
+    delete_ops = [operation for operation in finance.operations if operation.action == "delete"]
+    assert create_or_update
+    assert delete_ops
+    for operation in create_or_update:
+        assert "colaborador" in operation.allowed_roles
+        assert operation.human_gate_required is False
+        assert operation.surface == "mcp_user"
+    for operation in delete_ops:
         assert set(operation.allowed_roles) == {"administrador", "admin_tecnico"}
         assert operation.human_gate_required is True
         assert operation.surface == "mcp_admin"
 
-    assert "finance" not in user.allowed_domains
+    assert "finance" in user.allowed_domains
 
 
 def test_capability_scopes_match_expected_surfaces_by_profile():

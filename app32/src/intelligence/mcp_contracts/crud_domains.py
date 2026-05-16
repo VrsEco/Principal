@@ -46,13 +46,18 @@ class CRUDOperationContract(_StrictModel):
             raise ValueError("delete/execute exigem human_gate_required=True.")
         if self.risk in {"high", "critical"} and not self.human_gate_required:
             raise ValueError("Operações high/critical devem exigir gate humano.")
-        if self.domain == "finance" and self.action in {"create", "update", "delete", "execute"}:
+        if self.domain == "finance" and self.action in {"create", "update"}:
+            if self.risk not in {"medium", "high", "critical"}:
+                raise ValueError("Mutações financeiras via MCP exigem ao menos risco medium.")
+            if "cliente" in self.allowed_roles:
+                raise ValueError("Cliente não deve receber mutação financeira direta via MCP.")
+        if self.domain == "finance" and self.action in {"delete", "execute"}:
             if not self.human_gate_required:
-                raise ValueError("Mutações financeiras via MCP exigem gate humano.")
+                raise ValueError("Delete/execute financeiro exigem gate humano.")
             if self.risk not in {"high", "critical"}:
-                raise ValueError("Mutações financeiras via MCP exigem risco high/critical.")
+                raise ValueError("Delete/execute financeiro exigem risco high/critical.")
             if "cliente" in self.allowed_roles or "colaborador" in self.allowed_roles:
-                raise ValueError("Mutações financeiras via MCP ficam restritas a perfis administrativos.")
+                raise ValueError("Delete/execute financeiro continuam restritos a perfis administrativos.")
         return self
 
 
@@ -139,11 +144,15 @@ def _domain_contract(
     finance_sensitive: bool = False,
 ) -> CRUDDomainContract:
     admin_roles: list[CRUDRole] = ["administrador", "admin_tecnico"]
-    mutating_roles = admin_roles if finance_sensitive else mutation_roles
-    reading_roles = admin_roles if finance_sensitive else read_roles
-    create_update_risk: CRUDRisk = "high" if finance_sensitive else "medium"
+    mutating_roles = (
+        ["colaborador", "administrador", "admin_tecnico"] if finance_sensitive else mutation_roles
+    )
+    reading_roles = (
+        ["colaborador", "administrador", "admin_tecnico"] if finance_sensitive else read_roles
+    )
+    create_update_risk: CRUDRisk = "medium" if finance_sensitive else "medium"
     delete_risk: CRUDRisk = "critical" if finance_sensitive else "high"
-    surface: CRUDSurface = "mcp_admin" if finance_sensitive else "mcp_user"
+    surface: CRUDSurface = "mcp_user"
 
     operations = [
         _operation(
@@ -175,7 +184,7 @@ def _domain_contract(
             permission=f"{domain}.create",
             risk=create_update_risk,
             surface=surface,
-            human_gate_required=finance_sensitive,
+            human_gate_required=False,
             implementation_status="partial",
         ),
         _operation(
@@ -187,7 +196,7 @@ def _domain_contract(
             permission=f"{domain}.update",
             risk=create_update_risk,
             surface=surface,
-            human_gate_required=finance_sensitive,
+            human_gate_required=False,
             implementation_status="partial",
         ),
         _operation(
@@ -206,7 +215,7 @@ def _domain_contract(
             action="analyze",
             entity=entity,
             description=f"Cruza dados de {title} para análise read-only com filtros tenant-safe.",
-            roles=admin_roles if finance_sensitive else reading_roles,
+            roles=reading_roles,
             permission=f"{domain}.analyze",
             risk="medium" if finance_sensitive else "low",
             surface="mcp_analytics" if finance_sensitive else surface,

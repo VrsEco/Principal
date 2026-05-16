@@ -45,6 +45,7 @@ def test_permission_matrix_boundaries_for_cliente_and_finance():
     cliente_matrices = APP32_PERMISSION_MATRIX_MANIFEST.get_profile("cliente")
     admin_analytics = [m for m in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("administrador") if m.surface == "analytics"][0]
     finance_admin = [m for m in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("administrador") if m.surface == "admin"][0]
+    collaborator_user = [m for m in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("colaborador") if m.surface == "user"][0]
 
     assert len(cliente_matrices) == 1
     assert cliente_matrices[0].surface == "user"
@@ -53,6 +54,9 @@ def test_permission_matrix_boundaries_for_cliente_and_finance():
         for rule in cliente_matrices[0].domains
     )
     assert all(rule.domain != "finance" for rule in cliente_matrices[0].domains)
+    collaborator_finance = next(rule for rule in collaborator_user.domains if rule.domain == "finance")
+    assert collaborator_finance.requires_explicit_company_id is True
+    assert {"discover", "read", "create", "update"} <= set(collaborator_finance.allowed_actions)
     assert all(
         not any(action in rule.allowed_actions for action in {"create", "update", "delete"})
         for rule in admin_analytics.domains
@@ -179,17 +183,15 @@ def test_permission_matrix_contract_rejects_invalid_cliente_and_ops_rules():
         )
 
 
-def test_overlay_permission_matrix_for_admfin_cliente_keeps_finance_outside_user_surface():
+def test_overlay_permission_matrix_for_admfin_cliente_allows_permission_aware_finance():
     matrices = APP32_PERMISSION_MATRIX_MANIFEST.get_overlay("admfin_cliente")
 
     assert len(matrices) == 1
     matrix = matrices[0]
     assert matrix.surface == "user"
-    assert all(rule.domain != "finance" for rule in matrix.domains)
-    assert all(
-        not any(action in rule.allowed_actions for action in {"create", "update", "delete"})
-        for rule in matrix.domains
-    )
+    finance_rule = next(rule for rule in matrix.domains if rule.domain == "finance")
+    assert {"discover", "read", "create", "update"} <= set(finance_rule.allowed_actions)
+    assert "delete" not in finance_rule.allowed_actions
 
 
 def test_overlay_permission_matrix_supports_versus_and_engineering_families():

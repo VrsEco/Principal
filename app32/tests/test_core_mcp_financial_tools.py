@@ -34,7 +34,7 @@ def test_register_financial_mcp_tools_registers_complete_financial_surface():
 
 
 def test_legacy_mcp_server_delegates_financial_surface_to_dedicated_module():
-    source_path = Path("src/core/mcp_server.py")
+    source_path = Path(__file__).resolve().parents[1] / "src" / "core" / "mcp_server.py"
     module = ast.parse(source_path.read_text(encoding="utf-8"))
 
     function_names = {

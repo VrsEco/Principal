@@ -299,7 +299,16 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
             (*checks, "surface_not_allowed_for_profile"),
         )
 
-    if domain and domain in set(profile_contract.forbidden_domains):
+    explicit_permissions = {
+        str(permission).strip().lower()
+        for permission in (request.required_permissions or ())
+        if str(permission).strip()
+    }
+    explicit_permission_match = bool(
+        explicit_permissions and explicit_permissions.issubset(set(principal.permissions))
+    )
+
+    if domain and domain in set(profile_contract.forbidden_domains) and not explicit_permission_match:
         return _deny(
             request,
             principal,

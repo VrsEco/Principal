@@ -47,6 +47,7 @@ def test_runtime_prefers_http_request_context(monkeypatch):
     assert context.company_id == 9
     assert context.employee_id == 23
     assert context.role == "director"
+    assert context.permissions == ("approve",)
     assert context.metadata["surface"] == "user"
     assert context.metadata["transport"] == "streamable_http"
 
@@ -157,3 +158,45 @@ def test_runtime_ignores_company_id_from_env_when_request_has_no_company(monkeyp
     assert context.user_id == 3
     assert context.company_id is None
     assert context.metadata["company_resolution_source"] is None
+
+
+def test_runtime_normalizes_permission_mapping_into_resource_action_tokens(monkeypatch):
+    monkeypatch.delenv("APP32_MCP_USER_ID", raising=False)
+    monkeypatch.delenv("APP32_MCP_COMPANY_ID", raising=False)
+    monkeypatch.delenv("APP32_MCP_FALLBACK_ROLE", raising=False)
+
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="token-4",
+            user_id=4,
+            company_id=11,
+            fallback_role="colaborador",
+            allowed_surfaces=("user",),
+        ),
+        {
+            "user_id": 4,
+            "company_id": 11,
+            "fallback_role": "colaborador",
+            "surface": "user",
+        },
+    )
+
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda user_id, company_id: {
+            "company_id": company_id,
+            "employee_id": 77,
+            "role": "colaborador",
+            "permissions": {"financial": ["view", "create"]},
+            "accessible_company_ids": [company_id],
+        },
+    )
+
+    try:
+        context = resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
+
+    assert "financial" in context.permissions
+    assert "financial.view" in context.permissions
+    assert "financial.create" in context.permissions

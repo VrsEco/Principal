@@ -46,10 +46,8 @@ class PermissionDomainRule(_StrictModel):
                 raise ValueError("Matriz financeira deve declarar risco máximo sem gate como low/medium.")
             if not self.requires_explicit_company_id:
                 raise ValueError("Domínio financeiro exige company_id explícito na matriz canônica.")
-            finance_mutations = {"create", "update", "delete"}
-            allowed_finance_mutations = finance_mutations.intersection(allowed)
-            if allowed_finance_mutations and not allowed_finance_mutations.issubset(set(self.human_gate_for_actions)):
-                raise ValueError("Mutações financeiras permitidas devem exigir gate humano na matriz.")
+            if "delete" in allowed and "delete" not in set(self.human_gate_for_actions):
+                raise ValueError("Delete financeiro deve exigir gate humano na matriz.")
         if self.domain == "analytics" and any(action in allowed for action in {"create", "update", "delete"}):
             raise ValueError("Domínio analytics na matriz não pode liberar mutação.")
         if self.domain == "operations" and "audit" not in allowed:
@@ -542,16 +540,17 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 runtime_profile="squad_cliente",
                 surface="user",
                 title="Overlay Matrix — Adm/Financeiro do Squad Cliente",
-                summary="Organiza contexto administrativo/financeiro em leitura assistida, mantendo finanças sensíveis fora da surface user.",
+                summary="Organiza contexto administrativo/financeiro em modo permission-aware, operando apenas o que a senha do usuário já libera no APP32.",
                 compatible_profiles=["cliente", "colaborador", "administrador"],
                 harness_keys=["harness_admfin_cliente_v1"],
                 default_scope="active_company",
                 domains=[
-                    _rule("routine", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Consulta operacional administrativa."]),
-                    _rule("projects", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Projetos em leitura contextual."]),
-                    _rule("meetings", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Reuniões em leitura contextual."]),
-                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Estratégia em leitura analítica sem finanças sensíveis."]),
-                    _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),
+                    _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], max_risk_without_human_gate="medium", notes=["Consulta e organização operacional administrativa."]),
+                    _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], max_risk_without_human_gate="medium", notes=["Projetos com apoio administrativo contextual."]),
+                    _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], max_risk_without_human_gate="medium", notes=["Reuniões em apoio administrativo e follow-up."]),
+                    _rule("strategy", ["discover", "read", "create", "update", "analyze"], denied=["delete", "audit"], max_risk_without_human_gate="medium", notes=["Estratégia contextual ligada à operação administrativa."]),
+                    _rule("finance", ["discover", "read", "create", "update", "analyze"], denied=["delete", "audit"], requires_explicit_company_id=True, max_risk_without_human_gate="medium", notes=["Financeiro permission-aware: só expor e executar o que a senha do usuário já permite no APP32."]),
+                    _rule("identity_self_service", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Consulta e atualização do contexto próprio."]),
                 ],
             ),
             OverlayPermissionSurfaceMatrix(
@@ -592,7 +591,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 profile="colaborador",
                 surface="user",
                 title="Matriz de permissões MCP - Colaborador / User",
-                summary="Colaborador atua na surface user com foco operacional, sem finanças, governança ou superfícies privilegiadas.",
+                summary="Colaborador atua na surface user com foco operacional e pode receber tools financeiras permission-aware quando a senha já libera a mesma ação no APP32.",
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Pode operar rotina do tenant ativo sem bypass de escopo."]),
@@ -600,6 +599,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Projetos e tarefas seguem surface user e trilha auditável do sistema."]),
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Reuniões permitem preparação e atualização operacional."]),
                     _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Estratégia para colaborador fica restrita à leitura e análise assistida."]),
+                    _rule("finance", ["discover", "read", "create", "update"], denied=["delete", "audit"], requires_explicit_company_id=True, notes=["Financeiro na surface user é permission-aware: só aparece quando a senha do colaborador já possui a permissão web equivalente no APP32."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(
@@ -628,6 +628,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("projects", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Projetos operacionais podem ser geridos na surface user."]),
                     _rule("meetings", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Reuniões seguem fluxo operacional comum."]),
                     _rule("strategy", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Mudanças estratégicas sensíveis podem exigir redirecionamento para admin."]),
+                    _rule("finance", ["discover", "read", "create", "update", "analyze"], denied=["delete"], requires_explicit_company_id=True, notes=["Administrador pode operar finanças pela surface user quando o fluxo funcional bastar e a permissão web equivalente estiver presente."]),
                 ],
             ),
             ProfilePermissionSurfaceMatrix(

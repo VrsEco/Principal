@@ -154,6 +154,28 @@ def _extract_value(source: Any, key: str) -> Any:
 def _normalize_permissions(permissions: Any) -> frozenset[str]:
     if permissions is None:
         return frozenset()
+    if isinstance(permissions, Mapping):
+        normalized: set[str] = set()
+        for resource, actions in permissions.items():
+            resource_name = _normalize_text(resource).lower()
+            if not resource_name:
+                continue
+            normalized.add(resource_name)
+            if isinstance(actions, str):
+                raw_actions: Iterable[Any] = [actions]
+            elif isinstance(actions, Iterable):
+                raw_actions = actions
+            elif isinstance(actions, bool):
+                raw_actions = []
+            elif actions:
+                raw_actions = [actions]
+            else:
+                raw_actions = []
+            for action in raw_actions:
+                action_name = _normalize_text(action).lower()
+                if action_name:
+                    normalized.add(f"{resource_name}.{action_name}")
+        return frozenset(normalized)
     if isinstance(permissions, str):
         raw_items: Iterable[Any] = [item.strip() for item in permissions.split(",")]
     elif isinstance(permissions, Iterable):
@@ -370,16 +392,6 @@ def validate_permission(
     checks = ["normalize_domain", "normalize_action"]
     profile_contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile(normalized_role)
 
-    if profile_contract is not None and normalized_domain in set(profile_contract.forbidden_domains):
-        return PermissionDecision(
-            allowed=False,
-            principal=principal,
-            domain=normalized_domain,
-            action=normalized_action,
-            reason=f"domínio '{normalized_domain}' não permitido para o perfil '{profile_contract.profile}'",
-            checks=(*checks, "domain_forbidden_by_profile_contract"),
-        )
-
     if required and required.issubset(principal.permissions):
         return PermissionDecision(
             allowed=True,
@@ -388,6 +400,16 @@ def validate_permission(
             action=normalized_action,
             reason="ok",
             checks=(*checks, "explicit_permissions_match"),
+        )
+
+    if profile_contract is not None and normalized_domain in set(profile_contract.forbidden_domains):
+        return PermissionDecision(
+            allowed=False,
+            principal=principal,
+            domain=normalized_domain,
+            action=normalized_action,
+            reason=f"domínio '{normalized_domain}' não permitido para o perfil '{profile_contract.profile}'",
+            checks=(*checks, "domain_forbidden_by_profile_contract"),
         )
 
     if normalized_domain is None:

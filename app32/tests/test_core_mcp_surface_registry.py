@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 
 import src.core.mcp_surface_registry as registry
+from src.core.mcp_runtime import MCPExecutionContext
 
 
 @dataclass
@@ -71,6 +72,9 @@ class _FakeCatalog:
 
     def get_langchain_tools(self):
         return list(self.langchain_tools)
+
+    def iter_capabilities(self, scope=None, domain=None):
+        return self._filter_tools(scope=scope, domain=domain)
 
     def get_capability_manifest(self, *, scope=None, domain=None, include_tools=True):
         allowed = self._filter_tools(scope=scope, domain=domain)
@@ -248,3 +252,66 @@ def test_surface_scope_filter_is_explicit_and_safe():
     assert registry.get_surface_scope_filter("analytics") == ("mcp_analytics",)
     assert registry.get_surface_scope_filter("ops") == ("mcp_ops",)
     assert registry.get_surface_scope_filter("admin") == ("mcp_admin",)
+
+
+def test_user_surface_manifest_filters_finance_by_effective_permission(monkeypatch):
+    class _FinanceAwareCatalog(_FakeCatalog):
+        def _capabilities(self):
+            return super()._capabilities() + [
+                {
+                    "name": "create_financial_entry",
+                    "domain": "finance",
+                    "description": "Cria lançamento financeiro",
+                    "scopes": ["mcp_user", "mcp_admin"],
+                    "risk": "medium",
+                    "permissions": ["financial.create"],
+                    "human_gate": False,
+                    "human_gate_reason": None,
+                    "tags": ["finance"],
+                }
+            ]
+
+    fake_catalog = _FinanceAwareCatalog()
+    monkeypatch.setattr(registry, "catalog", fake_catalog)
+
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=7,
+            company_id=9,
+            employee_id=11,
+            role="colaborador",
+            channel="claude_code",
+            thread_id=None,
+            accessible_company_ids=(9,),
+            permissions=("financial", "financial.create"),
+            metadata={"surface": "user", "transport": "streamable_http", "client": "claude_code"},
+        ),
+    )
+
+    manifest = registry.get_surface_manifest("user", include_tools=True)
+    tool_names = {tool["name"] for tool in manifest["tools"]}
+
+    assert "create_financial_entry" in tool_names
+
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=8,
+            company_id=9,
+            employee_id=12,
+            role="colaborador",
+            channel="claude_code",
+            thread_id=None,
+            accessible_company_ids=(9,),
+            permissions=("projects.view",),
+            metadata={"surface": "user", "transport": "streamable_http", "client": "claude_code"},
+        ),
+    )
+
+    blocked_manifest = registry.get_surface_manifest("user", include_tools=True)
+    blocked_tool_names = {tool["name"] for tool in blocked_manifest["tools"]}
+
+    assert "create_financial_entry" not in blocked_tool_names

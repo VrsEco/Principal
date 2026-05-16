@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Any, Literal, Sequence
 
 from src.intelligence.tool_catalog import catalog
-from src.intelligence.tooling.capabilities import ToolScope
-from src.core.mcp_runtime import wrap_mcp_callable
+from src.intelligence.tooling.capabilities import ToolScope, build_capability_manifest, infer_tool_action
+from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
+from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     from mcp.server.fastmcp import FastMCP
@@ -39,9 +40,54 @@ def get_surface_manifest(
     domain: str | Sequence[str] | None = None,
     include_tools: bool = True,
 ) -> dict[str, Any]:
-    return catalog.get_capability_manifest(
-        scope=get_surface_scope_filter(surface),
-        domain=domain,
+    normalized_surface = normalize_surface(surface)
+    capabilities = list(
+        catalog.iter_capabilities(
+            scope=get_surface_scope_filter(normalized_surface),
+            domain=domain,
+        )
+    )
+    try:
+        execution_context = resolve_mcp_execution_context({})
+    except RuntimeError:
+        execution_context = None
+
+    if execution_context is not None and execution_context.user_id is not None:
+        filtered_capabilities = []
+        for capability in capabilities:
+            decision = evaluate_tool_policy(
+                {
+                    "user_id": execution_context.user_id,
+                    "company_id": execution_context.company_id,
+                    "employee_id": execution_context.employee_id,
+                    "role": execution_context.role,
+                    "channel": execution_context.channel,
+                    "thread_id": execution_context.thread_id,
+                    "permissions": execution_context.permissions,
+                    "metadata": dict(execution_context.metadata or {}),
+                },
+                    ToolPolicyRequest(
+                        tool_name=capability.name,
+                        surface=normalized_surface,
+                        domain=capability.domain,
+                        action=infer_tool_action(capability.name, capability.domain),
+                        risk=getattr(capability.risk, "value", capability.risk),
+                        requested_company_id=execution_context.company_id,
+                        accessible_company_ids=execution_context.accessible_company_ids,
+                        required_permissions=capability.permissions,
+                        confirmed_mutation=not capability.human_gate,
+                        required_context=tuple(getattr(capability, "required_context", ()) or ()),
+                        metadata=dict(execution_context.metadata or {}),
+                    ),
+                )
+            if decision.allowed:
+                filtered_capabilities.append(capability)
+        capabilities = filtered_capabilities
+
+    return build_capability_manifest(
+        capabilities,
+        scope=None,
+        domain=None,
         include_tools=include_tools,
     )
 
@@ -73,8 +119,30 @@ def _register_tool(mcp: Any, tool: Any) -> None:
 
 
 def _register_shared_registrars(mcp: Any) -> None:
+    class _WrappedMCPProxy:
+        def __init__(self, target: Any):
+            self._target = target
+
+        def tool(self, *args, **kwargs):
+            decorator = self._target.tool(*args, **kwargs)
+            explicit_name = kwargs.get("name")
+
+            def _decorate(func):
+                tool_name = explicit_name or getattr(func, "__name__", "unknown_tool")
+                wrapped = wrap_mcp_callable(func)
+                setattr(wrapped, "__app32_tool_name__", tool_name)
+                return decorator(wrapped)
+
+            if args and callable(args[0]) and not kwargs:
+                return _decorate(args[0])
+            return _decorate
+
+        def __getattr__(self, item):
+            return getattr(self._target, item)
+
+    proxy = _WrappedMCPProxy(mcp)
     for registrar in getattr(catalog, "mcp_registrars", ()):
-        registrar(mcp)
+        registrar(proxy)
 
 
 def _register_admin_diagnostics(mcp: Any) -> None:

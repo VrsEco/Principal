@@ -43,7 +43,7 @@ def test_mcp_user_admin_runtime_manifests_match_runbook_boundaries():
     assert "mcp_admin" in admin_manifest["summary"]["scopes"]
     assert user_playbook is not None
     assert admin_playbook is not None
-    assert "finance" not in user_playbook.allowed_domains
+    assert "finance" in user_playbook.allowed_domains
     assert "finance" in admin_playbook.allowed_domains
     assert admin_playbook.default_scope == "explicit_company_id"
 

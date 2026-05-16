@@ -63,6 +63,15 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     assert "identity_admin" in cliente.forbidden_domains
 
 
+def test_colaborador_can_expose_finance_when_permission_effective_is_present():
+    colaborador = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile("colaborador")
+
+    assert colaborador is not None
+    assert colaborador.allowed_surfaces == ["user"]
+    assert "finance" in colaborador.allowed_domains
+    assert "finance" not in colaborador.forbidden_domains
+
+
 def test_administrador_and_admin_tecnico_surface_matrix():
     administrador = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile("administrador")
     admin_tecnico = APP32_PROFILE_CONTRACTS_MANIFEST.get_profile("admin_tecnico")
@@ -141,14 +150,15 @@ def test_tool_policy_enforces_surface_by_profile_contract():
     assert allowed.allowed is True
 
 
-def test_cliente_overlay_contracts_keep_finance_blocked_and_user_surface_only():
+def test_admfin_overlay_enables_permission_aware_finance_on_user_surface():
     overlay = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay("admfin_cliente")
 
     assert overlay is not None
     assert overlay.runtime_profile == "squad_cliente"
     assert overlay.surface == "user"
-    assert "finance" in overlay.blocked_domains
-    assert "finance" not in overlay.allowed_domains
+    assert "finance" in overlay.allowed_domains
+    assert "finance" not in overlay.blocked_domains
+    assert "create" in overlay.allowed_actions
 
 
 def test_versus_and_engineering_overlay_contracts_reflect_family_and_surface():

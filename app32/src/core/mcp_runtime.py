@@ -3,15 +3,18 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from functools import wraps
+from types import SimpleNamespace
 from typing import Any, Callable, Mapping
 
 from src.intelligence.security.runtime_identity import resolve_runtime_identity
+from src.intelligence.security.tool_policy import ToolPolicyRequest, require_tool_policy
 from src.intelligence.tool_context import (
     reset_legacy_tool_context,
     reset_sapiens_context,
     set_legacy_tool_context,
     set_sapiens_context,
 )
+from src.intelligence.tooling.capabilities import infer_tool_action, infer_tool_capability
 from src.core.mcp_http_auth import get_http_request_context
 
 
@@ -58,7 +61,31 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
     if raw_permissions is None:
         return ()
     if isinstance(raw_permissions, dict):
-        return tuple(str(key).strip().lower() for key in raw_permissions.keys() if str(key).strip())
+        normalized: list[str] = []
+        for resource, actions in raw_permissions.items():
+            resource_name = str(resource).strip().lower()
+            if not resource_name:
+                continue
+            if resource_name not in normalized:
+                normalized.append(resource_name)
+            if isinstance(actions, str):
+                action_values = [actions]
+            elif isinstance(actions, (list, tuple, set, frozenset)):
+                action_values = list(actions)
+            elif isinstance(actions, bool):
+                action_values = []
+            elif actions:
+                action_values = [actions]
+            else:
+                action_values = []
+            for action in action_values:
+                action_name = str(action).strip().lower()
+                if not action_name:
+                    continue
+                permission_key = f"{resource_name}.{action_name}"
+                if permission_key not in normalized:
+                    normalized.append(permission_key)
+        return tuple(normalized)
     if isinstance(raw_permissions, (list, tuple, set, frozenset)):
         return tuple(str(item).strip().lower() for item in raw_permissions if str(item).strip())
     return (str(raw_permissions).strip().lower(),) if str(raw_permissions).strip() else ()
@@ -159,11 +186,57 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(callback)
     def _wrapped(*args: Any, **kwargs: Any) -> Any:
         from app import create_app
+        from src.intelligence.tool_catalog import catalog
 
         payload = extract_mcp_payload(args, kwargs)
         app = create_app()
         with app.app_context():
             execution_context = resolve_mcp_execution_context(payload)
+            tool_name = str(
+                getattr(callback, "__app32_tool_name__", None)
+                or getattr(callback, "__name__", "unknown_tool")
+            ).strip() or "unknown_tool"
+            capability = catalog.get_tool_capability(tool_name)
+            if capability is None and "financial" in tool_name.lower():
+                capability = infer_tool_capability(
+                    SimpleNamespace(
+                        name=tool_name,
+                        description=getattr(callback, "__doc__", "") or "",
+                    )
+                )
+            if capability is not None:
+                action = infer_tool_action(tool_name, getattr(capability, "domain", None))
+                confirmed_mutation = bool(
+                    payload.get("confirmed_mutation")
+                    or payload.get("human_gate_confirmed")
+                    or payload.get("approval_confirmed")
+                    or not getattr(capability, "human_gate", False)
+                )
+                require_tool_policy(
+                    {
+                        "user_id": execution_context.user_id,
+                        "company_id": execution_context.company_id,
+                        "employee_id": execution_context.employee_id,
+                        "role": execution_context.role,
+                        "channel": execution_context.channel,
+                        "thread_id": execution_context.thread_id,
+                        "permissions": execution_context.permissions,
+                        "metadata": dict(execution_context.metadata or {}),
+                    },
+                    ToolPolicyRequest(
+                        tool_name=tool_name,
+                        surface=str(execution_context.metadata.get("surface") or "user"),
+                        domain=getattr(capability, "domain", None),
+                        action=action,
+                        risk=getattr(getattr(capability, "risk", None), "value", "medium"),
+                        requested_company_id=execution_context.company_id,
+                        accessible_company_ids=execution_context.accessible_company_ids,
+                        required_permissions=tuple(getattr(capability, "permissions", ()) or ()),
+                        confirmed_mutation=confirmed_mutation,
+                        required_context=tuple(getattr(capability, "required_context", ()) or ()),
+                        metadata=dict(execution_context.metadata or {}),
+                    ),
+                )
             sapiens_token = set_sapiens_context(
                 user_id=execution_context.user_id,
                 company_id=execution_context.company_id,

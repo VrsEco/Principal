@@ -495,6 +495,7 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("user", "identity"),
     ("company", "governance"),
     ("finance", "finance"),
+    ("financial", "finance"),
     ("rule", "governance"),
     ("technical", "operations"),
     ("diagnostic", "operations"),
@@ -502,6 +503,35 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
 )
 
 _DOMAIN_FILTER_ALIASES: dict[str, tuple[str, ...]] = {}
+
+_FINANCE_READ_PREFIXES = (
+    "list_",
+    "get_",
+)
+_FINANCE_CREATE_PREFIXES = (
+    "create_",
+    "generate_",
+    "process_",
+    "reconcile_",
+    "classify_",
+    "match_",
+    "apply_",
+    "dispatch_",
+    "duplicate_",
+    "import_",
+    "ask_",
+    "resolve_",
+    "convert_",
+    "replace_",
+    "suggest_",
+    "ai_rank_",
+)
+_FINANCE_UPDATE_PREFIXES = (
+    "update_",
+    "toggle_",
+    "upsert_",
+    "review_",
+)
 
 
 def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
@@ -518,6 +548,118 @@ def _expand_domain_aliases(domains: set[str]) -> set[str]:
     for domain in tuple(expanded):
         expanded.update(_DOMAIN_FILTER_ALIASES.get(domain, ()))
     return expanded
+
+
+def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
+    lowered = str(tool_name or "").strip().lower()
+    normalized_domain = normalize_tool_domain(domain) if domain else None
+
+    if normalized_domain == "finance":
+        if lowered.startswith(_FINANCE_READ_PREFIXES):
+            return "read"
+        if lowered.startswith(_FINANCE_UPDATE_PREFIXES):
+            return "update"
+        if lowered.startswith(_FINANCE_CREATE_PREFIXES):
+            return "create"
+
+    prefix_map = (
+        ("list_", "read"),
+        ("get_", "read"),
+        ("describe_", "read"),
+        ("search_", "discover"),
+        ("create_", "create"),
+        ("update_", "update"),
+        ("toggle_", "update"),
+        ("upsert_", "update"),
+        ("replace_", "update"),
+        ("review_", "update"),
+        ("move_", "update"),
+        ("complete_", "update"),
+        ("finish_", "update"),
+        ("start_", "update"),
+        ("send_", "create"),
+        ("request_", "create"),
+        ("schedule_", "create"),
+        ("log_", "create"),
+        ("register_", "create"),
+        ("delete_", "delete"),
+        ("restore_", "update"),
+        ("generate_", "analyze"),
+        ("simulate_", "analyze"),
+        ("analyze_", "analyze"),
+        ("query_", "analyze"),
+        ("dispatch_", "execute"),
+        ("apply_", "execute"),
+        ("process_", "execute"),
+        ("reconcile_", "execute"),
+        ("classify_", "execute"),
+        ("convert_", "execute"),
+        ("match_", "execute"),
+        ("import_", "execute"),
+        ("duplicate_", "create"),
+        ("ask_", "create"),
+        ("resolve_", "update"),
+    )
+    for prefix, action in prefix_map:
+        if lowered.startswith(prefix):
+            return action
+    return None
+
+
+def _infer_financial_tool_capability(tool_name: str, description: str) -> ToolCapability:
+    action = infer_tool_action(tool_name, "finance") or "read"
+    is_read_only = action in {"read", "discover", "analyze"}
+    scopes: tuple[str, ...]
+    if is_read_only:
+        scopes = (
+            ToolScope.SAPIENS.value,
+            ToolScope.MCP_USER.value,
+            ToolScope.MCP_ADMIN.value,
+            ToolScope.MCP_ANALYTICS.value,
+        )
+    else:
+        scopes = (
+            ToolScope.SAPIENS.value,
+            ToolScope.MCP_USER.value,
+            ToolScope.MCP_ADMIN.value,
+        )
+
+    permission_action = {
+        "read": "view",
+        "discover": "view",
+        "analyze": "view",
+        "create": "create",
+        "update": "edit",
+        "execute": "create",
+        "delete": "delete",
+    }.get(action, "view")
+
+    risk = ToolRiskLevel.LOW if is_read_only else ToolRiskLevel.MEDIUM
+    human_gate = False
+    human_gate_reason = None
+    if action == "delete":
+        risk = ToolRiskLevel.HIGH
+        human_gate = True
+        human_gate_reason = "Exclusão financeira exige confirmação explícita e trilha auditável."
+
+    tags = ["finance", "tenant_safe"]
+    if is_read_only:
+        tags.append("read")
+    else:
+        tags.extend(("mutation", action))
+
+    return ToolCapability(
+        name=tool_name,
+        domain="finance",
+        description=description,
+        scopes=scopes,
+        risk=risk,
+        permissions=(f"financial.{permission_action}",),
+        human_gate=human_gate,
+        human_gate_reason=human_gate_reason,
+        tags=tuple(tags),
+        required_context=(TOOL_CONTEXT_COMPANY,),
+    )
 
 
 def infer_tool_capability(tool: Any) -> ToolCapability:
@@ -547,6 +689,9 @@ def infer_tool_capability(tool: Any) -> ToolCapability:
             domain = mapped_domain
             break
     domain = normalize_tool_domain(domain) or "general"
+
+    if domain == "finance":
+        return _infer_financial_tool_capability(tool_name, description)
 
     mutating_prefixes = ("create_", "update_", "delete_", "complete_", "log_", "request_", "start_", "finish_", "send_", "register_")
     is_mutation = lowered.startswith(mutating_prefixes)
