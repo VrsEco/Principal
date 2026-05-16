@@ -3,16 +3,16 @@ from __future__ import annotations
 from src.intelligence.tools_support import get_active_company_id, sanitize_output
 
 
-def list_plans(mode: str | None = None):
-    """Lista planos estratégicos da empresa ativa."""
+def list_plans(mode: str | None = None, company_id: int | None = None):
+    """Lista planos estratégicos da empresa ativa ou da empresa explicitamente informada."""
     from services.plan_service import PlanService
 
-    company_id = get_active_company_id()
-    if not company_id:
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    if not selected_company_id:
         return "Erro: Contexto de empresa nao identificado."
 
     try:
-        plans = PlanService.list_plans(company_id, mode)
+        plans = PlanService.list_plans(selected_company_id, mode)
         if not plans:
             return "Nenhum plano encontrado."
         return "\n".join(

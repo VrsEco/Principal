@@ -55,6 +55,8 @@ class MCPFeatureCatalogService:
         search: str | None = None,
     ) -> dict[str, Any]:
         self._require_company_context(context)
+        documented_domains = self.list_domains(context.surface)
+        published_domains = self._list_published_domains(context.surface)
         features = self.list_features(
             context.surface,
             domain=domain,
@@ -69,7 +71,9 @@ class MCPFeatureCatalogService:
             "transport": context.transport,
             "thread_id": context.thread_id,
             "catalog_version": str(self._catalog().get("version") or "unknown"),
-            "domains": self.list_domains(context.surface),
+            "domains": published_domains or documented_domains,
+            "documented_domains": documented_domains,
+            "published_domains": published_domains,
             "features": features,
             "current_context": {
                 "required": ["company"],
@@ -86,6 +90,21 @@ class MCPFeatureCatalogService:
             },
             "context_summary": self._build_context_summary(features),
         }
+
+    @staticmethod
+    def _list_published_domains(surface: str) -> list[str]:
+        try:
+            from src.core.mcp_surface_registry import get_surface_manifest
+
+            manifest = get_surface_manifest(surface, include_tools=True)
+            domains = {
+                str(tool.get("domain") or "").strip().lower()
+                for tool in (manifest.get("tools") or [])
+                if str(tool.get("domain") or "").strip()
+            }
+            return sorted(domains)
+        except Exception:
+            return []
 
     def list_domains(self, surface: str) -> list[str]:
         domains: set[str] = set()

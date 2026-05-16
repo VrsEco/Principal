@@ -26,6 +26,24 @@ def test_strategy_ops_list_plans_uses_active_company(monkeypatch):
     assert "Plano A" in result
 
 
+def test_strategy_ops_list_plans_honors_explicit_company(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(strategy_ops, "get_active_company_id", lambda: 31)
+
+    def fake_list(company_id, mode):
+        captured["company_id"] = company_id
+        captured["mode"] = mode
+        return [SimpleNamespace(id=2, title="Plano B", mode="implantation", progress=30)]
+
+    monkeypatch.setattr(PlanService, "list_plans", staticmethod(fake_list))
+
+    result = strategy_ops.list_plans(company_id=10, mode="implantation")
+
+    assert captured == {"company_id": 10, "mode": "implantation"}
+    assert "Plano B" in result
+
+
 def test_strategy_ops_update_plan_section_validates_plan_in_active_company(monkeypatch):
     calls = {}
 
@@ -65,7 +83,7 @@ def test_tools_strategy_wrappers_delegate_to_strategy_domain(monkeypatch):
     monkeypatch.setattr(
         tools_module.strategy_ops_domain,
         "list_plans",
-        lambda mode=None: calls.append(("list", mode)) or "plans-ok",
+        lambda company_id=None, mode=None: calls.append(("list", company_id, mode)) or "plans-ok",
     )
     monkeypatch.setattr(
         tools_module.strategy_ops_domain,
@@ -78,11 +96,11 @@ def test_tools_strategy_wrappers_delegate_to_strategy_domain(monkeypatch):
         lambda plan_id, section_key, status="completed": calls.append(("update", plan_id, section_key, status)) or "update-ok",
     )
 
-    assert tools_module.list_plans.func("growth") == "plans-ok"
+    assert tools_module.list_plans.func(10, "growth") == "plans-ok"
     assert tools_module.get_plan_diagnostics.func(7) == "diag-ok"
     assert tools_module.update_plan_section.func(7, "finance", "completed") == "update-ok"
     assert calls == [
-        ("list", "growth"),
+        ("list", 10, "growth"),
         ("diagnostics", 7),
         ("update", 7, "finance", "completed"),
     ]

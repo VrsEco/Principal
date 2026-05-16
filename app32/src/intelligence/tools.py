@@ -504,13 +504,14 @@ def list_my_companies(search_term: str = None):
     """
     return company_ops_domain.list_my_companies(search_term=search_term)
 @tool
-def list_plans(mode: str = None):
+def list_plans(company_id: int = None, mode: str = None):
     """
-    Lista todos os planos estratégicos (Growth ou Implantation) da empresa ativa.
+    Lista todos os planos estratégicos (Growth ou Implantation) da empresa ativa ou da empresa explicitamente informada.
     Use isto para descobrir quais planos de ação estão em curso.
+    :param company_id: Opcional. Se informado, força o filtro tenant-safe nessa empresa.
     :param mode: Opcional 'growth' ou 'implantation' para filtrar.
     """
-    return strategy_ops_domain.list_plans(mode=mode)
+    return strategy_ops_domain.list_plans(company_id=company_id, mode=mode)
 
 
 @tool
@@ -520,6 +521,15 @@ def get_plan_diagnostics(plan_id: int):
     Use isto para entender gargalos ou o estado atual de uma implantação/crescimento.
     """
     return strategy_ops_domain.get_plan_diagnostics(plan_id=plan_id)
+
+
+@tool
+def list_meetings(company_id: int = None, status: str = None, limit: int = 20):
+    """
+    Lista reuniões da empresa ativa ou da empresa explicitamente informada.
+    Use para leitura segura do domínio meetings sem criar ou alterar reuniões.
+    """
+    return meeting_ops_domain.list_meetings(company_id=company_id, status=status, limit=limit)
 
 
 @tool
@@ -965,6 +975,7 @@ tools = [
     register_system_user,
     update_user_contacts,
     # Fase 2 — Meetings
+    list_meetings,
     schedule_meeting,
     start_meeting,
     log_meeting_discussion,

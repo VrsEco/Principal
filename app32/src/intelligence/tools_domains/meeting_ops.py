@@ -23,6 +23,57 @@ def _get_meeting_project(meeting):
     return project, None
 
 
+def list_meetings(
+    company_id: int | None = None,
+    status: str | None = None,
+    limit: int = 20,
+):
+    """
+    Lista reuniões da empresa ativa ou da empresa explicitamente informada.
+    Use para leitura segura do domínio de reuniões sem executar mutação.
+    """
+    from models.meeting import Meeting
+
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    if not selected_company_id:
+        return "Erro: Nenhuma empresa ativa identificada."
+
+    try:
+        normalized_limit = max(1, min(int(limit or 20), 100))
+    except (TypeError, ValueError):
+        normalized_limit = 20
+
+    query = Meeting.query.filter_by(company_id=int(selected_company_id))
+    normalized_status = str(status or "").strip().lower()
+    if normalized_status:
+        query = query.filter_by(status=normalized_status)
+
+    meetings = (
+        query.order_by(
+            Meeting.scheduled_date.desc().nullslast(),
+            Meeting.scheduled_time.desc().nullslast(),
+            Meeting.created_at.desc(),
+        )
+        .limit(normalized_limit)
+        .all()
+    )
+
+    if not meetings:
+        return "Nenhuma reunião encontrada."
+
+    lines = []
+    for meeting in meetings:
+        scheduled_date = meeting.scheduled_date.isoformat() if getattr(meeting, "scheduled_date", None) else "-"
+        scheduled_time = getattr(meeting, "scheduled_time", None) or "-"
+        project_title = getattr(getattr(meeting, "project", None), "name", None) or "Sem projeto vinculado"
+        lines.append(
+            f"ID: {meeting.id} | Título: {meeting.title} | Status: {meeting.status or '-'} | "
+            f"Data: {scheduled_date} | Hora: {scheduled_time} | Projeto: {project_title}"
+        )
+
+    return "\n".join(lines)
+
+
 def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items: str = None, notes: str = None):
     """
     Cria e agenda uma nova reunião no sistema enviando convite para os participantes.

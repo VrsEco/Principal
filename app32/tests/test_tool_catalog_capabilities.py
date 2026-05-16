@@ -20,6 +20,7 @@ def test_catalog_exposes_known_capability_metadata():
     engineering_suggestion_capability = catalog.get_tool_capability("request_engineering_suggestion")
     update_macro_capability = catalog.get_tool_capability("update_macro_process")
     financial_entry_capability = catalog.get_tool_capability("create_financial_entry")
+    list_meetings_capability = catalog.get_tool_capability("list_meetings")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -45,6 +46,9 @@ def test_catalog_exposes_known_capability_metadata():
     assert financial_entry_capability.domain == "finance"
     assert ToolScope.MCP_USER.value in financial_entry_capability.scopes
     assert "financial.create" in financial_entry_capability.permissions
+    assert list_meetings_capability is not None
+    assert list_meetings_capability.domain == "meetings"
+    assert "meeting.read" in list_meetings_capability.permissions
 
 
 def test_catalog_manifest_filters_by_scope():

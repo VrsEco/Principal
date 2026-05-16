@@ -77,6 +77,25 @@ def test_bootstrap_context_exposes_current_context_and_required_context_summary(
     assert "context_summary" in payload
 
 
+def test_bootstrap_context_prefers_published_domains_when_available(monkeypatch):
+    service = MCPFeatureCatalogService()
+    context = MCPDocumentationContext(
+        company_id=31,
+        user_id=10,
+        role="colaborador",
+        surface="user",
+        client="claude_code",
+        transport="stdio",
+    )
+    monkeypatch.setattr(service, "_list_published_domains", lambda surface: ["finance", "meetings", "routine"])
+
+    payload = service.bootstrap_context(context)
+
+    assert payload["domains"] == ["finance", "meetings", "routine"]
+    assert "documented_domains" in payload
+    assert "published_domains" in payload
+
+
 def test_feature_constraints_expose_required_context_dimensions():
     service = MCPFeatureCatalogService()
 

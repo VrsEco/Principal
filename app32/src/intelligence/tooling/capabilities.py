@@ -181,6 +181,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("plan.read",),
         "tags": ("read",),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "get_plan_diagnostics": {
         "domain": "strategy",
@@ -320,6 +321,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "permissions": ("meeting.minutes.send",),
         "tags": ("communication",),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "list_meetings": {
+        "domain": "meetings",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("meeting.read",),
+        "tags": ("read", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "get_tasks_today": {
         "domain": "routine",
