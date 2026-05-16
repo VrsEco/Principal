@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import inspect
+from typing import Optional
+
 from src.core.mcp_http_auth import App32McpHttpIdentity, reset_http_request_context, set_http_request_context
-from src.core.mcp_runtime import resolve_mcp_execution_context
+from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
 
 
 def test_runtime_prefers_http_request_context(monkeypatch):
@@ -200,3 +203,14 @@ def test_runtime_normalizes_permission_mapping_into_resource_action_tokens(monke
     assert "financial" in context.permissions
     assert "financial.view" in context.permissions
     assert "financial.create" in context.permissions
+
+
+def test_wrap_mcp_callable_materializes_forward_ref_annotations():
+    def sample_tool(note: Optional[str] = None) -> dict[str, str]:
+        return {"note": note or ""}
+
+    wrapped = wrap_mcp_callable(sample_tool)
+    signature = inspect.signature(wrapped)
+
+    assert signature.parameters["note"].annotation == Optional[str]
+    assert signature.return_annotation == dict[str, str]

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
+import inspect
 from dataclasses import dataclass
 from functools import wraps
 from types import SimpleNamespace
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, get_type_hints
 
 from src.intelligence.security.runtime_identity import resolve_runtime_identity
 from src.intelligence.security.tool_policy import ToolPolicyRequest, require_tool_policy
@@ -254,5 +255,28 @@ def wrap_mcp_callable(callback: Callable[..., Any]) -> Callable[..., Any]:
             finally:
                 reset_legacy_tool_context(legacy_tokens)
                 reset_sapiens_context(sapiens_token)
+
+    try:
+        original_signature = inspect.signature(callback)
+        resolved_hints = get_type_hints(callback, globalns=getattr(callback, "__globals__", {}))
+        resolved_parameters = [
+            parameter.replace(
+                annotation=resolved_hints.get(parameter.name, parameter.annotation),
+            )
+            for parameter in original_signature.parameters.values()
+        ]
+        _wrapped.__signature__ = original_signature.replace(  # type: ignore[attr-defined]
+            parameters=resolved_parameters,
+            return_annotation=resolved_hints.get("return", original_signature.return_annotation),
+        )
+        _wrapped.__annotations__ = {
+            parameter.name: parameter.annotation
+            for parameter in resolved_parameters
+            if parameter.annotation is not inspect.Signature.empty
+        }
+        if original_signature.return_annotation is not inspect.Signature.empty:
+            _wrapped.__annotations__["return"] = _wrapped.__signature__.return_annotation
+    except Exception:
+        pass
 
     return _wrapped
