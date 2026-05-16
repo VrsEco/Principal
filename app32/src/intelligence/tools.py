@@ -458,6 +458,34 @@ def update_company_status(company_id: int, is_active: bool, reason: str = None):
     Use isto quando o usuário pedir para 'desativar', 'inativar' ou 'ativar' uma empresa.
     """
     return company_ops_domain.update_company_status(company_id=company_id, is_active=is_active, reason=reason)
+
+
+@tool
+def get_company_profile(company_id: int = None):
+    """
+    Retorna o cadastro detalhado da empresa ativa ou de uma empresa acessível ao usuário.
+    Use para consultar dados cadastrais antes de corrigir ou complementar o cadastro.
+    """
+    return company_ops_domain.get_company_profile(company_id=company_id)
+
+
+@tool
+def update_company_profile(changes: dict, company_id: int = None):
+    """
+    Atualiza parcialmente o cadastro da empresa com whitelist de campos editáveis.
+    Use para corrigir nome, prefixo, segmento, porte, cidade, MVV, logos e demais campos do cadastro.
+    """
+    return company_ops_domain.update_company_profile(changes=changes, company_id=company_id)
+
+
+@tool
+def get_company_registration_diagnostics(company_id: int = None):
+    """
+    Analisa a completude do cadastro da empresa e aponta lacunas prioritárias para organização do cadastro.
+    """
+    return company_ops_domain.get_company_registration_diagnostics(company_id=company_id)
+
+
 @tool
 def list_process_hierarchy(company_id: int = None):
     """
@@ -920,6 +948,9 @@ tools = [
     create_macro_process,
     update_macro_process,
     create_process,
+    get_company_profile,
+    update_company_profile,
+    get_company_registration_diagnostics,
     update_company_status,
     list_process_hierarchy,
     # Fase 1 — Planning

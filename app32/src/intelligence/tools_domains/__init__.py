@@ -8,7 +8,13 @@ from .analytics_ops import (
     get_team_workload_read_model,
 )
 from .system_ops import consult_rules, escalate_technical_issue, query_database
-from .company_ops import list_my_companies, update_company_status
+from .company_ops import (
+    get_company_profile,
+    get_company_registration_diagnostics,
+    list_my_companies,
+    update_company_profile,
+    update_company_status,
+)
 from .user_ops import (
     get_user_summary,
     list_system_users,
@@ -51,7 +57,10 @@ __all__ = [
     "consult_rules",
     "escalate_technical_issue",
     "query_database",
+    "get_company_profile",
+    "get_company_registration_diagnostics",
     "list_my_companies",
+    "update_company_profile",
     "update_company_status",
     "get_user_summary",
     "list_system_users",
