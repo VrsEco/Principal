@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from src.intelligence.security import mcp_mutation_guard as guard
-
-
 def test_evaluate_mutation_limit_blocks_when_threshold_reached(monkeypatch):
     monkeypatch.setattr(
         guard,
@@ -118,4 +116,78 @@ def test_record_mutation_success_embeds_mutation_policy_metadata(monkeypatch):
     assert metadata["project_code"] == "M1.J.10"
     assert metadata["mutation_limit_policy"]["profile_name"] == "implantacao"
     assert metadata["mutation_limit_policy"]["is_override"] is True
+
+
+def test_resolve_mutation_limit_policy_uses_http_request_context_binding_after_restart(monkeypatch):
+    monkeypatch.delenv("APP32_MCP_CONNECTOR", raising=False)
+    monkeypatch.delenv("APP32_MCP_MUTATION_SCENARIO", raising=False)
+    monkeypatch.setenv(
+        "APP32_MCP_MUTATION_LIMIT_PROFILES_JSON",
+        '{"implantacao":{"create_limit":500,"update_limit":200,"delete_limit":20,"restore_limit":20,"window_hours":24}}',
+    )
+    monkeypatch.setenv(
+        "APP32_MCP_MUTATION_LIMIT_BINDINGS_JSON",
+        (
+            '[{"profile":"implantacao","user_id":3,"company_id":10,'
+            '"connector":"claude_remote_connector"}]'
+        ),
+    )
+    monkeypatch.setattr(
+        guard,
+        "_get_runtime_request_metadata",
+        lambda: {
+            "http": {
+                "user_id": 3,
+                "company_id": 10,
+                "client": "claude_remote_connector",
+                "runtime_profile": "implantacao",
+                "fallback_role": "colaborador",
+            },
+            "sapiens": {"user_id": 3, "company_id": 10, "channel": "claude_code", "metadata": {}},
+        },
+    )
+
+    policy = guard.resolve_mutation_limit_policy(company_id=10, user_id=3)
+
+    assert policy.profile_name == "implantacao"
+    assert policy.create_limit == 500
+    assert policy.is_override is True
+    assert "user_id=3" in str(policy.binding_scope)
+    assert "company_id=10" in str(policy.binding_scope)
+    assert "connector=claude_remote_connector" in str(policy.binding_scope)
+
+
+def test_resolve_mutation_limit_policy_uses_sapiens_context_metadata_when_http_context_absent(monkeypatch):
+    monkeypatch.delenv("APP32_MCP_CONNECTOR", raising=False)
+    monkeypatch.delenv("APP32_MCP_MUTATION_SCENARIO", raising=False)
+    monkeypatch.setenv(
+        "APP32_MCP_MUTATION_LIMIT_PROFILES_JSON",
+        '{"implantacao":{"create_limit":500,"update_limit":200,"delete_limit":20,"restore_limit":20,"window_hours":24}}',
+    )
+    monkeypatch.setenv(
+        "APP32_MCP_MUTATION_LIMIT_BINDINGS_JSON",
+        '[{"profile":"implantacao","company_id":10,"connector":"claude_remote_connector","scenario":"implantacao"}]',
+    )
+    monkeypatch.setattr(
+        guard,
+        "_get_runtime_request_metadata",
+        lambda: {
+            "http": {},
+            "sapiens": {
+                "user_id": 3,
+                "company_id": 10,
+                "channel": "claude_code",
+                "metadata": {
+                    "client": "claude_remote_connector",
+                    "runtime_profile": "implantacao",
+                },
+            },
+        },
+    )
+
+    policy = guard.resolve_mutation_limit_policy(company_id=10, user_id=3)
+
+    assert policy.profile_name == "implantacao"
+    assert policy.create_limit == 500
+    assert policy.is_override is True
 

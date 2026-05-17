@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import inspect, text
 
 from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
+from src.intelligence.tool_context import get_sapiens_context
 
 
 def _coerce_positive_int(value: Any, default: int) -> int:
@@ -40,6 +41,33 @@ def _parse_json_env(raw_value: str | None) -> Any:
         return json.loads(payload)
     except Exception:
         return None
+
+
+def _get_runtime_request_metadata() -> dict[str, Any]:
+    try:
+        from src.core.mcp_http_auth import get_http_request_context
+    except Exception:
+        get_http_request_context = None  # type: ignore[assignment]
+
+    http_context = {}
+    if get_http_request_context is not None:
+        try:
+            http_context = dict(get_http_request_context() or {})
+        except Exception:
+            http_context = {}
+
+    sapiens_identity = get_sapiens_context()
+    sapiens_metadata = dict(getattr(sapiens_identity, "metadata", None) or {})
+    return {
+        "http": http_context,
+        "sapiens": {
+            "user_id": getattr(sapiens_identity, "user_id", None),
+            "company_id": getattr(sapiens_identity, "company_id", None),
+            "channel": getattr(sapiens_identity, "channel", None),
+            "thread_id": getattr(sapiens_identity, "thread_id", None),
+            "metadata": sapiens_metadata,
+        },
+    }
 
 
 @dataclass(frozen=True)
@@ -226,17 +254,46 @@ def _load_mutation_limit_bindings() -> list[MutationLimitBinding]:
 
 
 def _resolve_mutation_limit_context(*, company_id: int | None, user_id: int | None) -> MutationLimitContext:
-    channel = _normalize_optional_text(os.environ.get("APP32_MCP_CHANNEL"))
-    connector = _normalize_optional_text(os.environ.get("APP32_MCP_CONNECTOR")) or channel
+    runtime_metadata = _get_runtime_request_metadata()
+    http_context = runtime_metadata.get("http") or {}
+    sapiens_context = runtime_metadata.get("sapiens") or {}
+    sapiens_metadata = sapiens_context.get("metadata") or {}
+
+    channel = (
+        _normalize_optional_text(http_context.get("channel"))
+        or _normalize_optional_text(sapiens_context.get("channel"))
+        or _normalize_optional_text(os.environ.get("APP32_MCP_CHANNEL"))
+    )
+    connector = (
+        _normalize_optional_text(http_context.get("client"))
+        or _normalize_optional_text(sapiens_metadata.get("client"))
+        or _normalize_optional_text(os.environ.get("APP32_MCP_CONNECTOR"))
+        or channel
+    )
     scenario = (
         _normalize_optional_text(os.environ.get("APP32_MCP_MUTATION_SCENARIO"))
+        or _normalize_optional_text(http_context.get("runtime_profile"))
+        or _normalize_optional_text(sapiens_metadata.get("runtime_profile"))
+        or _normalize_optional_text(http_context.get("harness_key"))
+        or _normalize_optional_text(sapiens_metadata.get("harness_key"))
         or _normalize_optional_text(os.environ.get("APP32_MCP_RUNTIME_PROFILE"))
         or _normalize_optional_text(os.environ.get("APP32_MCP_HARNESS_KEY"))
     )
-    role = _normalize_optional_text(os.environ.get("APP32_MCP_FALLBACK_ROLE"))
+    role = (
+        _normalize_optional_text(http_context.get("fallback_role"))
+        or _normalize_optional_text(os.environ.get("APP32_MCP_FALLBACK_ROLE"))
+    )
     return MutationLimitContext(
-        user_id=_coerce_optional_int(user_id),
-        company_id=_coerce_optional_int(company_id),
+        user_id=(
+            _coerce_optional_int(user_id)
+            or _coerce_optional_int(http_context.get("user_id"))
+            or _coerce_optional_int(sapiens_context.get("user_id"))
+        ),
+        company_id=(
+            _coerce_optional_int(company_id)
+            or _coerce_optional_int(http_context.get("company_id"))
+            or _coerce_optional_int(sapiens_context.get("company_id"))
+        ),
         channel=channel,
         connector=connector,
         scenario=scenario,
