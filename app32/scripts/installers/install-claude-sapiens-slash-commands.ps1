@@ -174,12 +174,20 @@ Ative o **Sapiens** nesta conversa.
 
 Os squads instalados nesta máquina são: **{0}**.
 
-1. Antes de ativar, pergunte ao usuário qual Squad ele quer usar agora.
+1. Antes de ativar, pergunte exatamente ao usuário: `Escolha entre: Cliente, Versus ou Engenharia.`
 2. Se o usuário escolher Cliente, execute integralmente o fluxo de `/sapiens-cliente-on`.
 3. Se o usuário escolher Consultor, execute integralmente o fluxo de `/sapiens-consultor-on`.
 4. Se o usuário escolher Engenharia, execute integralmente o fluxo de `/sapiens-engenharia-on`.
 5. Nunca assuma automaticamente quando houver mais de um Squad possível.
 6. Nunca mande o usuário digitar `sapiens on` como texto livre.
+7. Depois da ativação, confirme em resposta curta com a primeira linha exatamente no formato:
+   - `Sapiens Cliente Ativado`
+   - `Sapiens Consultor Ativado`
+   - `Sapiens Engenharia Ativado`
+8. Se o runtime suportar renomear a sessão/conversa, use como título:
+   - `Sapiens Cliente On`
+   - `Sapiens Consultor On`
+   - `Sapiens Engenharia On`
 '@ -f $availableList
     Publish-ClaudeActivation `
         -CommandName "sapiens-on" `
@@ -200,6 +208,8 @@ Ative o **{0}** nesta conversa.
 Existe apenas um Squad Sapiens disponível nesta máquina.
 
 Execute integralmente o fluxo equivalente a `{1}` e confirme a ativação ao usuário.
+
+Use a primeira linha de confirmação exatamente no formato `{0} Ativado`.
 '@ -f $onlyLabel, $onlyCommand
 
     Publish-ClaudeActivation `

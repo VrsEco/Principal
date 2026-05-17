@@ -12,6 +12,7 @@ from services.ai_capabilities_central_service import AICapabilitiesCentralServic
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.ai_automation_registry_service import AIAutomationRegistryService
+from services.instruction_registry_service import InstructionRegistryService
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
 from services.agent_backlog_service import create_backlog_task
@@ -27,6 +28,11 @@ from schemas.ai_capabilities import (
     AICapabilityCompanySettingsUpsertSchema,
     AICapabilityGrantUpsertSchema,
     AICapabilityRolloutUpdateSchema,
+)
+from schemas.instruction_registry_admin import (
+    InstructionRegistryEntryUpsertSchema,
+    InstructionRegistryInvalidateSchema,
+    InstructionRegistryPromoteSchema,
 )
 from utils.company_access import get_accessible_company_ids
 from utils.permissions import permission_required, has_company_full_access, is_platform_admin
@@ -885,6 +891,66 @@ def get_tool_first_catalog():
             include_backlog=include_backlog,
         ),
     })
+
+
+@configs_bp.route('/api/configs/ai/mcp/instruction-registry/frontend-state', methods=['GET'])
+@login_required
+def get_instruction_registry_frontend_state():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    return jsonify({
+        "success": True,
+        "state": InstructionRegistryService.build_frontend_state(),
+    })
+
+
+@configs_bp.route('/api/configs/ai/mcp/instruction-registry/entries', methods=['POST'])
+@login_required
+def upsert_instruction_registry_entry():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = InstructionRegistryEntryUpsertSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        entry = InstructionRegistryService.upsert_entry(payload, actor_user_id=current_user.id)
+        return jsonify({"success": True, "entry": entry.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@configs_bp.route('/api/configs/ai/mcp/instruction-registry/invalidate', methods=['POST'])
+@login_required
+def invalidate_instruction_registry_entries():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = InstructionRegistryInvalidateSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        result = InstructionRegistryService.invalidate_entries(payload, actor_user_id=current_user.id)
+        return jsonify({"success": True, "result": result})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+
+@configs_bp.route('/api/configs/ai/mcp/instruction-registry/promote', methods=['POST'])
+@login_required
+def promote_instruction_registry_entry():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    _require_ai_admin_access(company_id)
+    try:
+        payload = InstructionRegistryPromoteSchema.model_validate(request.get_json(silent=True) or {}).model_dump()
+        entry = InstructionRegistryService.promote_entry(payload, actor_user_id=current_user.id)
+        return jsonify({"success": True, "entry": entry.to_dict()})
+    except ValidationError as exc:
+        return jsonify({"success": False, "error": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
 
 
 @configs_bp.route('/api/configs/ai/capabilities/frontend-state', methods=['GET'])

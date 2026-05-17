@@ -6,6 +6,7 @@ db = SQLAlchemy()
 from .company import Company
 from .user import User
 from .user_mcp_token import UserMcpToken
+from .instruction_registry import InstructionRegistryEntry, InstructionRegistryAuditLog
 from .role import Role
 from .team import Team
 from .employee import Employee
@@ -130,6 +131,7 @@ from .incentive import (
 
 __all__ = [
     'db', 'Company', 'User', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
+    'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
     'Indicator', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',

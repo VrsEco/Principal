@@ -414,6 +414,20 @@
   padding: .9rem 1rem;
   color: var(--text-primary);
 }
+.ai-mcp-connection-generator__form select,
+.ai-mcp-connection-generator__form textarea {
+  width: 100%;
+  background: var(--surface-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: .9rem 1rem;
+  color: var(--text-primary);
+  font: inherit;
+}
+.ai-mcp-connection-generator__form textarea {
+  min-height: 220px;
+  resize: vertical;
+}
 .ai-mcp-connection-generator__actions {
   display: flex;
   flex-wrap: wrap;

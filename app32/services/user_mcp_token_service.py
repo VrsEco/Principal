@@ -17,6 +17,7 @@ from services.email_service import email_service
 from services.log_service import log_service
 from services.whatsapp_service import whatsapp_service
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
+from services.sapiens_activation_service import SapiensActivationService
 from services.squad_runtime_bootstrap_service import (
     OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS,
     SquadRuntimeBootstrapService,
@@ -286,6 +287,17 @@ class UserMcpTokenService:
                     }
                 )
         return commands
+
+    @classmethod
+    def _build_activation_selection_prompt(
+        cls,
+        allowed_squads: list[str],
+    ) -> str | None:
+        squads = SapiensActivationService.list_available_squads(
+            role="administrador",
+            installed_squads=allowed_squads,
+        )
+        return SapiensActivationService.selection_prompt_for_squads(squads)
 
     @classmethod
     def _build_claude_activation_install_command(
@@ -1007,6 +1019,7 @@ class UserMcpTokenService:
                 token_value=token_value,
             )
             activation_commands = cls._build_activation_commands(allowed_squads)
+            activation_selection_prompt = cls._build_activation_selection_prompt(allowed_squads)
             activation_commands_install_command = (
                 cls._build_claude_activation_install_command(allowed_squads)
                 if runtime_config["runtime"] == "claude"
@@ -1088,6 +1101,11 @@ class UserMcpTokenService:
                     "Atalhos slash opcionais no Claude Code:\n"
                     + "\n".join([f"- {item['command']}: {item['summary']}" for item in activation_commands])
                     + (
+                        f"\n\nQuando houver mais de um squad disponível, o comando genérico `/sapiens-on` deve perguntar exatamente:\n{activation_selection_prompt}"
+                        if activation_selection_prompt
+                        else ""
+                    )
+                    + (
                         f"\n\nSe você quiser instalar atalhos slash opcionais nesta máquina, use:\n{activation_commands_install_command}"
                         if activation_commands_install_command
                         else ""
@@ -1132,6 +1150,7 @@ class UserMcpTokenService:
                 "smoke_guided_text": smoke_guided_text,
                 "validation_prompt": "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
                 "activation_commands": activation_commands,
+                "activation_selection_prompt": activation_selection_prompt,
                 "activation_commands_install_command": activation_commands_install_command,
                 "text": config_text,
                 "json": config_json,

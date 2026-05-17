@@ -190,6 +190,7 @@
                         ('profiles', 'Perfis & Permissões'),
                         ('surfaces', 'Surfaces & Domínios'),
                         ('catalog', 'Catálogo'),
+                        ('instruction-registry', 'Instruction Registry'),
                         ('onboarding', 'Onboarding & Cadastros'),
                         ('release', 'Release & Freeze'),
                         ('dashboard', 'Dashboard & Readiness'),
@@ -603,6 +604,369 @@
                     {% endfor %}
                 </div>
             </article>
+        </section>
+
+        <section class="ai-mcp-panel" data-console-panel="instruction-registry" data-searchable="instruction registry bundles overrides rollout stable beta hotfix cache checksum invalidation sapiens squads cliente versus engenharia">
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header>
+                        <h2>Instruction Registry remoto</h2>
+                        <p>
+                            Governança canônica do bundle mínimo do Sapiens por runtime, tenant, canal e rollout.
+                            Esta camada desacopla instrução operacional do bootstrap local e reduz drift entre Cliente, Versus e Engenharia.
+                        </p>
+                    </header>
+                    <div class="ai-mcp-grid ai-mcp-grid--summary">
+                        <div class="ai-mcp-kpi-card">
+                            <span>Entries</span>
+                            <strong id="aiMcpRegistryEntriesCount">{{ console.instruction_registry.summary.entries }}</strong>
+                        </div>
+                        <div class="ai-mcp-kpi-card">
+                            <span>Ativas</span>
+                            <strong id="aiMcpRegistryActiveEntriesCount">{{ console.instruction_registry.summary.active_entries }}</strong>
+                        </div>
+                        <div class="ai-mcp-kpi-card">
+                            <span>Overrides tenant</span>
+                            <strong id="aiMcpRegistryTenantOverridesCount">{{ console.instruction_registry.summary.tenant_overrides }}</strong>
+                        </div>
+                        <div class="ai-mcp-kpi-card">
+                            <span>Canais</span>
+                            <strong id="aiMcpRegistryChannelsCount">{{ console.instruction_registry.summary.channels|length }}</strong>
+                            <small id="aiMcpRegistryChannelsList">{{ console.instruction_registry.summary.channels|join(', ') or 'nenhum' }}</small>
+                        </div>
+                        <div class="ai-mcp-kpi-card">
+                            <span>Runtimes</span>
+                            <strong id="aiMcpRegistryRuntimesCount">{{ console.instruction_registry.summary.runtimes|length }}</strong>
+                            <small id="aiMcpRegistryRuntimesList">{{ console.instruction_registry.summary.runtimes|join(', ') or 'nenhum' }}</small>
+                        </div>
+                        <div class="ai-mcp-kpi-card">
+                            <span>Invalidação</span>
+                            <strong>MCP-first</strong>
+                            <small>checksum + invalidation_token</small>
+                        </div>
+                    </div>
+                    <div class="ai-mcp-section-grid">
+                        <article class="ai-mcp-card ai-mcp-card--inner">
+                            <header><h3>AS-IS</h3><p>Como a instrução tendia a operar antes da fase 2.</p></header>
+                            <ul class="ai-mcp-bullet-list">
+                                <li>bootstrap mais local, com maior acoplamento ao APP32 e ao repositório</li>
+                                <li>docs, harnesses e comportamento espalhados entre código, prompt e runtime</li>
+                                <li>rollout mais dependente de alteração/deploy e maior risco de drift</li>
+                                <li>baixo controle fino por tenant, canal e invalidation remota</li>
+                            </ul>
+                        </article>
+                        <article class="ai-mcp-card ai-mcp-card--inner">
+                            <header><h3>TO-BE</h3><p>Modelo canônico alvo agora operacionalizado.</p></header>
+                            <ul class="ai-mcp-bullet-list">
+                                <li>bundle mínimo remoto e versionado resolvido por runtime, tenant e canal</li>
+                                <li>override controlado para Cliente, Versus e Engenharia com isolamento por <code>company_id</code></li>
+                                <li>cache leve com <code>checksum</code>, <code>cache_key</code> e <code>invalidation_token</code></li>
+                                <li>governança central com auditoria, rollout <code>stable/beta/hotfix</code> e administração remota</li>
+                            </ul>
+                        </article>
+                    </div>
+                    <div class="ai-mcp-entity-card" data-searchable="sapiens on bootstrap remoto resolve_app32_instruction_bundle_tool onboarding session title squad cliente versus engenharia">
+                        <div class="ai-mcp-entity-card__head">
+                            <strong>Sapiens On + bootstrap instrucional</strong>
+                            <span>front door canônica</span>
+                        </div>
+                        <p>
+                            O fluxo ideal passa por <code>/sapiens-on</code>, resolve os squads disponíveis, pergunta quando houver múltiplas famílias
+                            e então carrega o bundle instrucional mínimo via registry antes da operação.
+                        </p>
+                        <small>Cliente com 1 squad ativa direto · cliente com múltiplos squads pergunta: “Escolha entre: Cliente, Versus ou Engenharia.”</small>
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card ai-mcp-connection-card" id="aiMcpInstructionRegistryAdmin" data-searchable="criar editar invalidar entry rollout tenant canal beta stable hotfix">
+                    <header>
+                        <div>
+                            <h2>Administração remota do registry</h2>
+                            <p>Cadastro mínimo para criar/atualizar entries e invalidar cache sem redeploy.</p>
+                        </div>
+                    </header>
+
+                    <div class="ai-mcp-entity-card">
+                        <div class="ai-mcp-entity-card__head">
+                            <strong>Modo de edição</strong>
+                            <span id="aiMcpRegistryEditorMode">novo cadastro</span>
+                        </div>
+                        <p id="aiMcpRegistryEditorDescription">
+                            Use o formulário para publicar uma nova entry ou clique em “Editar” em uma entry existente para carregar os dados.
+                        </p>
+                        <div class="ai-mcp-connection-generator__actions">
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small" id="aiMcpRegistryResetFormButton">Limpar formulário</button>
+                        </div>
+                    </div>
+
+                    <div class="ai-mcp-connection-generator">
+                        <div class="ai-mcp-connection-generator__form">
+                            <label>
+                                <span>Scope</span>
+                                <select id="aiMcpRegistryScopeType">
+                                    <option value="runtime">runtime</option>
+                                    <option value="global">global</option>
+                                    <option value="agent">agent</option>
+                                    <option value="tenant_override">tenant_override</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Runtime</span>
+                                <select id="aiMcpRegistryRuntimeProfile">
+                                    {% for item in console.instruction_registry.supported_runtimes %}
+                                    <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Canal</span>
+                                <select id="aiMcpRegistryChannel">
+                                    {% for item in console.instruction_registry.supported_channels %}
+                                    <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Ambiente</span>
+                                <select id="aiMcpRegistryEnvironment">
+                                    {% for item in console.instruction_registry.supported_environments %}
+                                    <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Status</span>
+                                <select id="aiMcpRegistryStatus">
+                                    <option value="active">active</option>
+                                    <option value="draft">draft</option>
+                                    <option value="paused">paused</option>
+                                    <option value="archived">archived</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Rollout</span>
+                                <select id="aiMcpRegistryRolloutStatus">
+                                    <option value="active">active</option>
+                                    <option value="draft">draft</option>
+                                    <option value="internal_test">internal_test</option>
+                                    <option value="pilot">pilot</option>
+                                    <option value="paused">paused</option>
+                                    <option value="blocked">blocked</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Company ID</span>
+                                <input type="number" id="aiMcpRegistryCompanyId" placeholder="opcional">
+                            </label>
+                            <label>
+                                <span>Agent key</span>
+                                <input type="text" id="aiMcpRegistryAgentKey" placeholder="opcional">
+                            </label>
+                            <label>
+                                <span>Harness key</span>
+                                <input type="text" id="aiMcpRegistryHarnessKey" placeholder="opcional">
+                            </label>
+                            <label>
+                                <span>Versão</span>
+                                <input type="text" id="aiMcpRegistryEntryVersion" value="v1">
+                            </label>
+                            <label>
+                                <span>Cache TTL (s)</span>
+                                <input type="number" id="aiMcpRegistryCacheTtl" min="60" max="86400" value="1800">
+                            </label>
+                            <label class="ai-mcp-connection-generator__field--full">
+                                <span>Notas</span>
+                                <input type="text" id="aiMcpRegistryNotes" placeholder="ex.: piloto do Squad Cliente para tenant específico">
+                            </label>
+                            <label class="ai-mcp-connection-generator__field--full">
+                                <span>Payload JSON</span>
+                                <textarea id="aiMcpRegistryPayloadJson" rows="10">{
+  "summary": "Bundle mínimo remoto do runtime selecionado",
+  "introduction_message": "Carregar bundle mínimo, manter MCP First e consultar docs completos sob demanda."
+}</textarea>
+                            </label>
+                        </div>
+
+                        <div class="ai-mcp-connection-generator__actions">
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--primary" id="aiMcpRegistrySaveButton">Salvar entry</button>
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary" id="aiMcpRegistryRefreshButton">Recarregar estado</button>
+                        </div>
+
+                        <div class="ai-mcp-connection-generator__feedback" id="aiMcpRegistryFeedback" hidden></div>
+                    </div>
+
+                    <div class="ai-mcp-connection-generator">
+                        <div class="ai-mcp-connection-generator__form">
+                            <label>
+                                <span>Entry ID</span>
+                                <input type="number" id="aiMcpRegistryInvalidateEntryId" placeholder="opcional">
+                            </label>
+                            <label>
+                                <span>Runtime</span>
+                                <select id="aiMcpRegistryInvalidateRuntimeProfile">
+                                    <option value="">todos</option>
+                                    {% for item in console.instruction_registry.supported_runtimes %}
+                                    <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Canal</span>
+                                <select id="aiMcpRegistryInvalidateChannel">
+                                    <option value="">todos</option>
+                                    {% for item in console.instruction_registry.supported_channels %}
+                                    <option value="{{ item }}">{{ item }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label>
+                                <span>Company ID</span>
+                                <input type="number" id="aiMcpRegistryInvalidateCompanyId" placeholder="opcional">
+                            </label>
+                            <label class="ai-mcp-connection-generator__field--full">
+                                <span>Motivo da invalidação</span>
+                                <input type="text" id="aiMcpRegistryInvalidateReason" value="Ajuste controlado do bundle remoto" minlength="8">
+                            </label>
+                        </div>
+                        <div class="ai-mcp-connection-generator__actions">
+                            <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary" id="aiMcpRegistryInvalidateButton">Invalidar cache</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Entries publicadas</h2><p>Visão operacional das camadas do registry que estão aptas a compor bundle.</p></header>
+                    <div class="ai-mcp-connection-generator__form">
+                        <label>
+                            <span>Filtro runtime</span>
+                            <select id="aiMcpRegistryFilterRuntime">
+                                <option value="">todos</option>
+                                {% for item in console.instruction_registry.supported_runtimes %}
+                                <option value="{{ item }}">{{ item }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Filtro canal</span>
+                            <select id="aiMcpRegistryFilterChannel">
+                                <option value="">todos</option>
+                                {% for item in console.instruction_registry.supported_channels %}
+                                <option value="{{ item }}">{{ item }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Filtro status</span>
+                            <select id="aiMcpRegistryFilterStatus">
+                                <option value="">todos</option>
+                                <option value="active">active</option>
+                                <option value="draft">draft</option>
+                                <option value="paused">paused</option>
+                                <option value="archived">archived</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Filtro rollout</span>
+                            <select id="aiMcpRegistryFilterRollout">
+                                <option value="">todos</option>
+                                <option value="active">active</option>
+                                <option value="draft">draft</option>
+                                <option value="internal_test">internal_test</option>
+                                <option value="pilot">pilot</option>
+                                <option value="paused">paused</option>
+                                <option value="blocked">blocked</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Filtro ambiente</span>
+                            <select id="aiMcpRegistryFilterEnvironment">
+                                <option value="">todos</option>
+                                {% for item in console.instruction_registry.supported_environments %}
+                                <option value="{{ item }}">{{ item }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Filtro company_id</span>
+                            <input type="number" id="aiMcpRegistryFilterCompanyId" placeholder="todos">
+                        </label>
+                    </div>
+                    <div class="ai-mcp-stack ai-mcp-stack--scroll" id="aiMcpRegistryEntriesList">
+                        {% for entry in console.instruction_registry.entries %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ entry.runtime_profile }} {{ entry.scope_type }} {{ entry.channel }} {{ entry.status }} {{ entry.rollout_status }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ entry.runtime_profile }}</strong>
+                                <span>{{ entry.scope_type }} · {{ entry.channel }}</span>
+                            </div>
+                            <p>Status {{ entry.status }} · rollout {{ entry.rollout_status }} · version {{ entry.entry_version }}</p>
+                            <small>company_id={{ entry.company_id or '—' }} · checksum={{ entry.checksum or 'n/a' }} · invalidation={{ entry.invalidation_token or 'n/a' }}</small>
+                            <div class="ai-mcp-connection-generator__actions">
+                                <button type="button" class="ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small">Editar</button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="ai-mcp-entity-card">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>Nenhuma entry cadastrada</strong>
+                                <span>aguardando seed</span>
+                            </div>
+                            <p>Assim que o registry remoto for sincronizado, as entries aparecerão aqui.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="ai-mcp-card">
+                    <header><h2>Auditoria recente</h2><p>Criação, alteração e invalidação do registry com trilha curta e legível.</p></header>
+                    <div class="ai-mcp-stack ai-mcp-stack--scroll" id="aiMcpRegistryAuditList">
+                        {% for audit in console.instruction_registry.recent_audit %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ audit.event_type }} {{ audit.result }} {{ audit.detail or '' }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ audit.event_type }}</strong>
+                                <span>{{ audit.result }}</span>
+                            </div>
+                            <p>{{ audit.detail or 'Sem detalhe adicional.' }}</p>
+                            <small>entry_id={{ audit.entry_id or '—' }} · actor={{ audit.actor_user_id or '—' }} · {{ audit.created_at or 'sem timestamp' }}</small>
+                        </div>
+                        {% else %}
+                        <div class="ai-mcp-entity-card">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>Sem auditoria recente</strong>
+                                <span>baseline</span>
+                            </div>
+                            <p>Os eventos de criação, atualização e invalidação serão exibidos aqui.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+            <div class="ai-mcp-section-grid">
+                <article class="ai-mcp-card">
+                    <header><h2>Mudanças recentes</h2><p>Resumo comparativo curto dos últimos deltas relevantes do registry.</p></header>
+                    <div class="ai-mcp-stack ai-mcp-stack--scroll" id="aiMcpRegistryChangesList">
+                        {% for change in console.instruction_registry.recent_changes %}
+                        <div class="ai-mcp-entity-card" data-searchable="{{ change.event_type }} {{ change.summary }}">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>{{ change.event_type }}</strong>
+                                <span>entry {{ change.entry_id or '—' }}</span>
+                            </div>
+                            <p>{{ change.summary }}</p>
+                            <small>{{ change.created_at or 'sem timestamp' }}</small>
+                        </div>
+                        {% else %}
+                        <div class="ai-mcp-entity-card">
+                            <div class="ai-mcp-entity-card__head">
+                                <strong>Sem mudanças comparativas recentes</strong>
+                                <span>baseline</span>
+                            </div>
+                            <p>Quando houver create/update/promote com delta relevante, o resumo aparecerá aqui.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
         </section>
 
         <section class="ai-mcp-panel" data-console-panel="onboarding" data-searchable="onboarding cadastros configs provider user admin analytics ops">

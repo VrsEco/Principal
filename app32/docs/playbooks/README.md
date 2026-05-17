@@ -6,3 +6,4 @@ Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_
 
 ## Squad Cliente
 - `C:\GestaoVersus\app32\app32\docs\playbooks\squad_cliente\playbook_handoff_escalonamento_squad_cliente_v1.md`
+- `C:\GestaoVersus\app32\app32\docs\playbooks\squad_cliente\playbook_bootstrap_instruction_registry_squad_cliente_v1.md`

@@ -57,6 +57,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectionOutput = document.getElementById('aiMcpConnectionOutput');
     const connectionSourceJson = document.getElementById('aiMcpConnectionSourceJson');
     const connectionCopyButton = document.getElementById('aiMcpConnectionCopyButton');
+    const registryEntriesCount = document.getElementById('aiMcpRegistryEntriesCount');
+    const registryActiveEntriesCount = document.getElementById('aiMcpRegistryActiveEntriesCount');
+    const registryTenantOverridesCount = document.getElementById('aiMcpRegistryTenantOverridesCount');
+    const registryChannelsCount = document.getElementById('aiMcpRegistryChannelsCount');
+    const registryChannelsList = document.getElementById('aiMcpRegistryChannelsList');
+    const registryRuntimesCount = document.getElementById('aiMcpRegistryRuntimesCount');
+    const registryRuntimesList = document.getElementById('aiMcpRegistryRuntimesList');
+    const registryEntriesList = document.getElementById('aiMcpRegistryEntriesList');
+    const registryAuditList = document.getElementById('aiMcpRegistryAuditList');
+    const registryChangesList = document.getElementById('aiMcpRegistryChangesList');
+    const registryFeedback = document.getElementById('aiMcpRegistryFeedback');
+    const registrySaveButton = document.getElementById('aiMcpRegistrySaveButton');
+    const registryRefreshButton = document.getElementById('aiMcpRegistryRefreshButton');
+    const registryInvalidateButton = document.getElementById('aiMcpRegistryInvalidateButton');
+    const registryResetFormButton = document.getElementById('aiMcpRegistryResetFormButton');
+    const registryEditorMode = document.getElementById('aiMcpRegistryEditorMode');
+    const registryEditorDescription = document.getElementById('aiMcpRegistryEditorDescription');
+    const registryFilterRuntime = document.getElementById('aiMcpRegistryFilterRuntime');
+    const registryFilterChannel = document.getElementById('aiMcpRegistryFilterChannel');
+    const registryFilterStatus = document.getElementById('aiMcpRegistryFilterStatus');
+    const registryFilterRollout = document.getElementById('aiMcpRegistryFilterRollout');
+    const registryFilterEnvironment = document.getElementById('aiMcpRegistryFilterEnvironment');
+    const registryFilterCompanyId = document.getElementById('aiMcpRegistryFilterCompanyId');
 
     const helpTopics = {
         overview: {
@@ -130,6 +153,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Confira as condições de bloqueio antes de ampliar uso.',
                 'Se houver drift, trate como tarefa de correção, não como dúvida.'
             ]
+        },
+        'instruction-registry': {
+            title: 'Instruction Registry',
+            body: 'Aqui você governa o bundle mínimo remoto do Sapiens. É a camada para rollout controlado, override por tenant e invalidation sem redeploy.',
+            steps: [
+                'Comece validando channels, runtimes e quantidade de entries ativas.',
+                'Use o cadastro mínimo para publicar ou ajustar uma entry do runtime correto.',
+                'Se o bundle mudou, invalide cache de forma controlada e releia a auditoria.'
+            ]
         }
     };
 
@@ -145,6 +177,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectionState = {
         mode: null,
         content: '',
+    };
+    const registryUiState = {
+        editingEntry: null,
+        filters: {
+            runtime_profile: '',
+            channel: '',
+            status: '',
+            rollout_status: '',
+            environment: '',
+            company_id: '',
+        },
     };
 
     function formatContextLabel(value) {
@@ -483,6 +526,477 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionFeedback.dataset.tone = message ? tone : '';
     }
 
+    function setRegistryFeedback(message, tone = 'error') {
+        if (!registryFeedback) return;
+        registryFeedback.hidden = !message;
+        registryFeedback.textContent = message || '';
+        registryFeedback.dataset.tone = message ? tone : '';
+    }
+
+    function getRegistryEntries() {
+        return Array.isArray(consoleState?.instruction_registry?.entries) ? consoleState.instruction_registry.entries : [];
+    }
+
+    function getRegistryAudit() {
+        return Array.isArray(consoleState?.instruction_registry?.recent_audit) ? consoleState.instruction_registry.recent_audit : [];
+    }
+
+    function getRegistryChanges() {
+        return Array.isArray(consoleState?.instruction_registry?.recent_changes) ? consoleState.instruction_registry.recent_changes : [];
+    }
+
+    function safeParseJson(value) {
+        try {
+            return { ok: true, value: JSON.parse(value || '{}') };
+        } catch (error) {
+            return { ok: false, error };
+        }
+    }
+
+    function createActionButton(label, action, entryId, extra = {}) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'ai-mcp-btn ai-mcp-btn--secondary ai-mcp-btn--small';
+        button.textContent = label;
+        button.dataset.registryAction = action;
+        button.dataset.entryId = String(entryId);
+        Object.entries(extra).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                button.dataset[key] = String(value);
+            }
+        });
+        return button;
+    }
+
+    function createRegistryEntryCard(entry) {
+        const card = document.createElement('div');
+        card.className = 'ai-mcp-entity-card';
+        card.dataset.searchable = [
+            entry.runtime_profile,
+            entry.scope_type,
+            entry.channel,
+            entry.status,
+            entry.rollout_status,
+            entry.agent_key,
+            entry.harness_key,
+        ].filter(Boolean).join(' ');
+        const title = document.createElement('div');
+        title.className = 'ai-mcp-entity-card__head';
+        title.innerHTML = `
+            <strong>${entry.runtime_profile || 'runtime indefinido'}</strong>
+            <span>${entry.scope_type || 'scope'} · ${entry.channel || 'canal'}</span>
+        `;
+        const body = document.createElement('p');
+        body.textContent = `Status ${entry.status || 'n/a'} · rollout ${entry.rollout_status || 'n/a'} · version ${entry.entry_version || 'n/a'} · env ${entry.environment || 'n/a'}`;
+        const meta = document.createElement('small');
+        meta.textContent = `company_id=${entry.company_id ?? '—'} · checksum=${entry.checksum || 'n/a'} · invalidation=${entry.invalidation_token || 'n/a'}`;
+        const actions = document.createElement('div');
+        actions.className = 'ai-mcp-connection-generator__actions';
+        actions.appendChild(createActionButton('Editar', 'edit', entry.id));
+        if (entry.channel !== 'stable') {
+            actions.appendChild(createActionButton('Promover p/ stable', 'promote', entry.id, { targetChannel: 'stable' }));
+        }
+        if (entry.channel !== 'beta') {
+            actions.appendChild(createActionButton('Clonar p/ beta', 'promote', entry.id, { targetChannel: 'beta' }));
+        }
+        actions.appendChild(createActionButton(entry.status === 'active' ? 'Pausar' : 'Ativar', 'toggle-status', entry.id));
+        actions.appendChild(createActionButton('Invalidar', 'invalidate', entry.id));
+        card.appendChild(title);
+        card.appendChild(body);
+        card.appendChild(meta);
+        card.appendChild(actions);
+        return card;
+    }
+
+    function createRegistryAuditCard(audit) {
+        const card = document.createElement('div');
+        card.className = 'ai-mcp-entity-card';
+        card.dataset.searchable = [
+            audit.event_type,
+            audit.result,
+            audit.detail,
+        ].filter(Boolean).join(' ');
+        card.innerHTML = `
+            <div class="ai-mcp-entity-card__head">
+                <strong>${audit.event_type || 'evento'}</strong>
+                <span>${audit.result || 'n/a'}</span>
+            </div>
+            <p>${audit.detail || 'Sem detalhe adicional.'}</p>
+            <small>entry_id=${audit.entry_id ?? '—'} · actor=${audit.actor_user_id ?? '—'} · ${audit.created_at || 'sem timestamp'}</small>
+        `;
+        return card;
+    }
+
+    function createRegistryChangeCard(change) {
+        const card = document.createElement('div');
+        card.className = 'ai-mcp-entity-card';
+        card.dataset.searchable = [change.event_type, change.summary].filter(Boolean).join(' ');
+        card.innerHTML = `
+            <div class="ai-mcp-entity-card__head">
+                <strong>${change.event_type || 'mudança'}</strong>
+                <span>entry ${change.entry_id ?? '—'}</span>
+            </div>
+            <p>${change.summary || 'sem resumo'}</p>
+            <small>${change.created_at || 'sem timestamp'}</small>
+        `;
+        return card;
+    }
+
+    function renderRegistryCollection(node, items, emptyTitle, emptySubtitle, factory) {
+        if (!node) return;
+        node.innerHTML = '';
+        if (!Array.isArray(items) || !items.length) {
+            const card = document.createElement('div');
+            card.className = 'ai-mcp-entity-card';
+            card.innerHTML = `
+                <div class="ai-mcp-entity-card__head">
+                    <strong>${emptyTitle}</strong>
+                    <span>baseline</span>
+                </div>
+                <p>${emptySubtitle}</p>
+            `;
+            node.appendChild(card);
+            return;
+        }
+        items.forEach((item) => node.appendChild(factory(item)));
+    }
+
+    function getRegistryFilteredEntries() {
+        const filters = registryUiState.filters || {};
+        return getRegistryEntries().filter((entry) => {
+            if (filters.runtime_profile && entry.runtime_profile !== filters.runtime_profile) return false;
+            if (filters.channel && entry.channel !== filters.channel) return false;
+            if (filters.status && entry.status !== filters.status) return false;
+            if (filters.rollout_status && entry.rollout_status !== filters.rollout_status) return false;
+            if (filters.environment && entry.environment !== filters.environment) return false;
+            if (filters.company_id && String(entry.company_id ?? '') !== String(filters.company_id)) return false;
+            return true;
+        });
+    }
+
+    function renderInstructionRegistry(state) {
+        const summary = state?.summary || {};
+        const entries = getRegistryFilteredEntries();
+        const audit = getRegistryAudit();
+        const changes = getRegistryChanges();
+        const channels = Array.isArray(summary.channels) ? summary.channels : [];
+        const runtimes = Array.isArray(summary.runtimes) ? summary.runtimes : [];
+
+        if (registryEntriesCount) registryEntriesCount.textContent = String(summary.entries || 0);
+        if (registryActiveEntriesCount) registryActiveEntriesCount.textContent = String(summary.active_entries || 0);
+        if (registryTenantOverridesCount) registryTenantOverridesCount.textContent = String(summary.tenant_overrides || 0);
+        if (registryChannelsCount) registryChannelsCount.textContent = String(channels.length);
+        if (registryChannelsList) registryChannelsList.textContent = channels.join(', ') || 'nenhum';
+        if (registryRuntimesCount) registryRuntimesCount.textContent = String(runtimes.length);
+        if (registryRuntimesList) registryRuntimesList.textContent = runtimes.join(', ') || 'nenhum';
+
+        renderRegistryCollection(
+            registryEntriesList,
+            entries,
+            'Nenhuma entry cadastrada',
+            'Assim que o registry remoto for sincronizado, as entries aparecerão aqui.',
+            createRegistryEntryCard,
+        );
+        renderRegistryCollection(
+            registryAuditList,
+            audit,
+            'Sem auditoria recente',
+            'Os eventos de criação, atualização e invalidação serão exibidos aqui.',
+            createRegistryAuditCard,
+        );
+        renderRegistryCollection(
+            registryChangesList,
+            changes,
+            'Sem mudanças comparativas recentes',
+            'Quando houver create/update/promote com delta relevante, o resumo aparecerá aqui.',
+            createRegistryChangeCard,
+        );
+    }
+
+    function getRegistryAdminState() {
+        return consoleState?.instruction_registry || {};
+    }
+
+    function setRegistryEditorMode(entry = null) {
+        registryUiState.editingEntry = entry || null;
+        if (registryEditorMode) {
+            registryEditorMode.textContent = entry
+                ? `editando entry #${entry.id} (${entry.runtime_profile} · ${entry.channel})`
+                : 'novo cadastro';
+        }
+        if (registryEditorDescription) {
+            registryEditorDescription.textContent = entry
+                ? 'Os campos abaixo foram preenchidos a partir da entry selecionada. Você pode salvar para atualizar a própria entry ou mudar o canal para clonar/promover.'
+                : 'Use o formulário para publicar uma nova entry ou clique em “Editar” em uma entry existente para carregar os dados.';
+        }
+    }
+
+    function fillRegistryForm(entry) {
+        document.getElementById('aiMcpRegistryScopeType').value = entry.scope_type || 'runtime';
+        document.getElementById('aiMcpRegistryRuntimeProfile').value = entry.runtime_profile || 'squad_cliente';
+        document.getElementById('aiMcpRegistryChannel').value = entry.channel || 'stable';
+        document.getElementById('aiMcpRegistryEnvironment').value = entry.environment || 'production';
+        document.getElementById('aiMcpRegistryStatus').value = entry.status || 'active';
+        document.getElementById('aiMcpRegistryRolloutStatus').value = entry.rollout_status || 'active';
+        document.getElementById('aiMcpRegistryCompanyId').value = entry.company_id ?? '';
+        document.getElementById('aiMcpRegistryAgentKey').value = entry.agent_key || '';
+        document.getElementById('aiMcpRegistryHarnessKey').value = entry.harness_key || '';
+        document.getElementById('aiMcpRegistryEntryVersion').value = entry.entry_version || 'v1';
+        document.getElementById('aiMcpRegistryCacheTtl').value = entry.cache_ttl_seconds || 1800;
+        document.getElementById('aiMcpRegistryNotes').value = entry.notes || '';
+        document.getElementById('aiMcpRegistryPayloadJson').value = JSON.stringify(entry.payload_json || {}, null, 2);
+        setRegistryEditorMode(entry);
+    }
+
+    function resetRegistryForm() {
+        document.getElementById('aiMcpRegistryScopeType').value = 'runtime';
+        document.getElementById('aiMcpRegistryRuntimeProfile').value = 'squad_cliente';
+        document.getElementById('aiMcpRegistryChannel').value = 'stable';
+        document.getElementById('aiMcpRegistryEnvironment').value = 'production';
+        document.getElementById('aiMcpRegistryStatus').value = 'active';
+        document.getElementById('aiMcpRegistryRolloutStatus').value = 'active';
+        document.getElementById('aiMcpRegistryCompanyId').value = '';
+        document.getElementById('aiMcpRegistryAgentKey').value = '';
+        document.getElementById('aiMcpRegistryHarnessKey').value = '';
+        document.getElementById('aiMcpRegistryEntryVersion').value = 'v1';
+        document.getElementById('aiMcpRegistryCacheTtl').value = '1800';
+        document.getElementById('aiMcpRegistryNotes').value = '';
+        document.getElementById('aiMcpRegistryPayloadJson').value = `{
+  "summary": "Bundle mínimo remoto do runtime selecionado",
+  "introduction_message": "Carregar bundle mínimo, manter MCP First e consultar docs completos sob demanda."
+}`;
+        setRegistryEditorMode(null);
+    }
+
+    function findRegistryEntryById(entryId) {
+        return getRegistryEntries().find((entry) => String(entry.id) === String(entryId)) || null;
+    }
+
+    async function refreshInstructionRegistryState() {
+        const endpoint = getRegistryAdminState()?.endpoints?.frontend_state;
+        if (!endpoint) return;
+        try {
+            const response = await fetch(endpoint, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Falha ao recarregar o instruction registry.');
+            }
+            consoleState.instruction_registry = payload.state || {};
+            renderInstructionRegistry(consoleState.instruction_registry);
+            setRegistryFeedback('Estado do instruction registry recarregado.', 'success');
+        } catch (error) {
+            setRegistryFeedback(error.message || 'Falha ao recarregar o instruction registry.');
+        }
+    }
+
+    function collectRegistryUpsertPayload() {
+        const parsedPayload = safeParseJson(document.getElementById('aiMcpRegistryPayloadJson')?.value || '{}');
+        if (!parsedPayload.ok) {
+            throw new Error('Payload JSON inválido. Revise a estrutura antes de salvar.');
+        }
+        const companyIdRaw = document.getElementById('aiMcpRegistryCompanyId')?.value?.trim();
+        const cacheTtlRaw = document.getElementById('aiMcpRegistryCacheTtl')?.value?.trim();
+        return {
+            scope_type: document.getElementById('aiMcpRegistryScopeType')?.value || 'runtime',
+            runtime_profile: document.getElementById('aiMcpRegistryRuntimeProfile')?.value || 'squad_cliente',
+            channel: document.getElementById('aiMcpRegistryChannel')?.value || 'stable',
+            environment: document.getElementById('aiMcpRegistryEnvironment')?.value || 'production',
+            status: document.getElementById('aiMcpRegistryStatus')?.value || 'active',
+            rollout_status: document.getElementById('aiMcpRegistryRolloutStatus')?.value || 'active',
+            company_id: companyIdRaw ? Number(companyIdRaw) : null,
+            agent_key: document.getElementById('aiMcpRegistryAgentKey')?.value?.trim() || null,
+            harness_key: document.getElementById('aiMcpRegistryHarnessKey')?.value?.trim() || null,
+            entry_version: document.getElementById('aiMcpRegistryEntryVersion')?.value?.trim() || 'v1',
+            cache_ttl_seconds: cacheTtlRaw ? Number(cacheTtlRaw) : 1800,
+            notes: document.getElementById('aiMcpRegistryNotes')?.value?.trim() || null,
+            payload: parsedPayload.value,
+        };
+    }
+
+    async function saveInstructionRegistryEntry() {
+        const endpoint = getRegistryAdminState()?.endpoints?.upsert_entry;
+        if (!endpoint) return;
+        setRegistryFeedback('');
+        registrySaveButton && (registrySaveButton.disabled = true);
+        try {
+            const payload = collectRegistryUpsertPayload();
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Falha ao salvar entry do instruction registry.');
+            }
+            setRegistryFeedback('Entry salva com sucesso. Recarregando estado...', 'success');
+            await refreshInstructionRegistryState();
+        } catch (error) {
+            setRegistryFeedback(error.message || 'Falha ao salvar entry do instruction registry.');
+        } finally {
+            registrySaveButton && (registrySaveButton.disabled = false);
+        }
+    }
+
+    function collectRegistryInvalidatePayload() {
+        const entryIdRaw = document.getElementById('aiMcpRegistryInvalidateEntryId')?.value?.trim();
+        const companyIdRaw = document.getElementById('aiMcpRegistryInvalidateCompanyId')?.value?.trim();
+        return {
+            entry_id: entryIdRaw ? Number(entryIdRaw) : null,
+            runtime_profile: document.getElementById('aiMcpRegistryInvalidateRuntimeProfile')?.value || null,
+            channel: document.getElementById('aiMcpRegistryInvalidateChannel')?.value || null,
+            company_id: companyIdRaw ? Number(companyIdRaw) : null,
+            reason: document.getElementById('aiMcpRegistryInvalidateReason')?.value?.trim() || 'Ajuste controlado do bundle remoto',
+        };
+    }
+
+    async function invalidateInstructionRegistryEntries() {
+        const endpoint = getRegistryAdminState()?.endpoints?.invalidate;
+        if (!endpoint) return;
+        setRegistryFeedback('');
+        registryInvalidateButton && (registryInvalidateButton.disabled = true);
+        try {
+            const payload = collectRegistryInvalidatePayload();
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Falha ao invalidar cache do instruction registry.');
+            }
+            setRegistryFeedback(`Invalidação concluída em ${result.result?.invalidated || 0} entry(s).`, 'success');
+            await refreshInstructionRegistryState();
+        } catch (error) {
+            setRegistryFeedback(error.message || 'Falha ao invalidar cache do instruction registry.');
+        } finally {
+            registryInvalidateButton && (registryInvalidateButton.disabled = false);
+        }
+    }
+
+    async function quickUpsertRegistryEntry(entry, patch = {}, successLabel = 'Entry atualizada com sucesso.') {
+        const endpoint = getRegistryAdminState()?.endpoints?.upsert_entry;
+        if (!endpoint || !entry) return;
+        const payload = {
+            scope_type: entry.scope_type,
+            runtime_profile: entry.runtime_profile,
+            agent_key: entry.agent_key,
+            harness_key: entry.harness_key,
+            company_id: entry.company_id,
+            channel: entry.channel,
+            environment: entry.environment,
+            status: entry.status,
+            rollout_status: entry.rollout_status,
+            entry_version: entry.entry_version,
+            cache_ttl_seconds: entry.cache_ttl_seconds,
+            payload: entry.payload_json || {},
+            notes: entry.notes,
+            ...patch,
+        };
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Falha ao executar ação rápida no instruction registry.');
+        }
+        setRegistryFeedback(successLabel, 'success');
+        await refreshInstructionRegistryState();
+    }
+
+    async function quickPromoteRegistryEntry(entry, targetChannel) {
+        const endpoint = getRegistryAdminState()?.endpoints?.promote;
+        if (!endpoint || !entry) return;
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source_entry_id: entry.id,
+                target_channel: targetChannel,
+                target_environment: entry.environment || 'production',
+                target_status: 'active',
+                target_rollout_status: 'active',
+                notes: `Promoção rápida da entry #${entry.id} para ${targetChannel} via console`,
+            }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Falha ao promover a entry selecionada.');
+        }
+        setRegistryFeedback(`Entry #${entry.id} promovida para ${targetChannel}.`, 'success');
+        await refreshInstructionRegistryState();
+    }
+
+    async function quickInvalidateRegistryEntry(entry) {
+        const endpoint = getRegistryAdminState()?.endpoints?.invalidate;
+        if (!endpoint || !entry) return;
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                entry_id: entry.id,
+                reason: `Invalidação rápida da entry ${entry.id} pelo console`,
+            }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Falha ao invalidar a entry selecionada.');
+        }
+        setRegistryFeedback(`Entry #${entry.id} invalidada com sucesso.`, 'success');
+        await refreshInstructionRegistryState();
+    }
+
+    async function handleRegistryListAction(event) {
+        const button = event.target.closest('[data-registry-action]');
+        if (!button) return;
+        const entry = findRegistryEntryById(button.dataset.entryId);
+        if (!entry) {
+            setRegistryFeedback('Entry não encontrada para a ação solicitada.');
+            return;
+        }
+        const action = button.dataset.registryAction;
+        try {
+            if (action === 'edit') {
+                fillRegistryForm(entry);
+                setRegistryFeedback(`Entry #${entry.id} carregada no formulário.`, 'success');
+                return;
+            }
+            if (action === 'toggle-status') {
+                const nextStatus = entry.status === 'active' ? 'paused' : 'active';
+                const nextRollout = nextStatus === 'active' && entry.rollout_status === 'paused' ? 'active' : entry.rollout_status;
+                await quickUpsertRegistryEntry(
+                    entry,
+                    { status: nextStatus, rollout_status: nextRollout, notes: `${entry.notes || ''}`.trim() || null },
+                    `Entry #${entry.id} atualizada para status ${nextStatus}.`,
+                );
+                return;
+            }
+            if (action === 'promote') {
+                const targetChannel = button.dataset.targetChannel || 'stable';
+                await quickPromoteRegistryEntry(entry, targetChannel);
+                return;
+            }
+            if (action === 'invalidate') {
+                await quickInvalidateRegistryEntry(entry);
+            }
+        } catch (error) {
+            setRegistryFeedback(error.message || 'Falha ao executar a ação rápida no instruction registry.');
+        }
+    }
+
+    function updateRegistryFilters() {
+        registryUiState.filters.runtime_profile = registryFilterRuntime?.value || '';
+        registryUiState.filters.channel = registryFilterChannel?.value || '';
+        registryUiState.filters.status = registryFilterStatus?.value || '';
+        registryUiState.filters.rollout_status = registryFilterRollout?.value || '';
+        registryUiState.filters.environment = registryFilterEnvironment?.value || '';
+        registryUiState.filters.company_id = registryFilterCompanyId?.value?.trim() || '';
+        renderInstructionRegistry(consoleState.instruction_registry || {});
+    }
+
     function getConnectionPayload(mode) {
         return {
             mode,
@@ -681,11 +1195,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     connectionCopyButton?.addEventListener('click', copyConnectionResult);
+    registrySaveButton?.addEventListener('click', saveInstructionRegistryEntry);
+    registryRefreshButton?.addEventListener('click', refreshInstructionRegistryState);
+    registryInvalidateButton?.addEventListener('click', invalidateInstructionRegistryEntries);
+    registryResetFormButton?.addEventListener('click', resetRegistryForm);
+    registryEntriesList?.addEventListener('click', handleRegistryListAction);
+    registryFilterRuntime?.addEventListener('change', updateRegistryFilters);
+    registryFilterChannel?.addEventListener('change', updateRegistryFilters);
+    registryFilterStatus?.addEventListener('change', updateRegistryFilters);
+    registryFilterRollout?.addEventListener('change', updateRegistryFilters);
+    registryFilterEnvironment?.addEventListener('change', updateRegistryFilters);
+    registryFilterCompanyId?.addEventListener('input', updateRegistryFilters);
 
     setupCollapsibleCards();
     wizardReset?.addEventListener('click', resetWizard);
     renderRuntimeContext(consoleState);
     renderBootstrapContext(consoleState?.documentation_bootstrap?.summary || {});
+    renderInstructionRegistry(consoleState?.instruction_registry || {});
+    setRegistryEditorMode(null);
     activateTab(root.dataset.defaultTab || tabs[0]?.dataset.consoleTab || 'overview');
     resetWizard();
     autoBootstrapDocumentationCatalog();

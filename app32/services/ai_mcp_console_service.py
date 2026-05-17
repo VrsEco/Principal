@@ -17,6 +17,7 @@ from src.intelligence.mcp_contracts.usage_dashboard import APP32_USAGE_DASHBOARD
 from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 from src.intelligence.tool_catalog import catalog
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
+from services.instruction_registry_service import InstructionRegistryService
 from services.squad_runtime_bootstrap_service import (
     OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS,
     SquadRuntimeBootstrapService,
@@ -598,6 +599,7 @@ class AIMCPConsoleService:
             "connection_generator": connection_generator,
             "external_runtime_profiles": cls._build_external_runtime_profiles(active_company),
             "documentation_bootstrap": documentation_bootstrap,
+            "instruction_registry": cls._build_instruction_registry_state(),
             "runtime_context": {
                 "required_contract_dimensions": ["user", "company"],
                 "resolved": {
@@ -812,3 +814,34 @@ class AIMCPConsoleService:
             }
         except Exception:
             return baseline
+
+    @classmethod
+    def _build_instruction_registry_state(cls) -> dict[str, Any]:
+        try:
+            state = InstructionRegistryService.build_frontend_state()
+        except Exception:
+            state = {
+                "summary": {
+                    "entries": 0,
+                    "active_entries": 0,
+                    "tenant_overrides": 0,
+                    "channels": [],
+                    "runtimes": [],
+                    "status_distribution": {},
+                    "rollout_distribution": {},
+                    "environment_distribution": {},
+                },
+                "entries": [],
+                "recent_audit": [],
+                "recent_changes": [],
+                "supported_runtimes": ["squad_cliente", "squad_versus", "engineering"],
+                "supported_channels": ["stable", "beta", "hotfix"],
+                "supported_environments": ["production", "staging", "development"],
+            }
+        state["endpoints"] = {
+            "frontend_state": "/api/configs/ai/mcp/instruction-registry/frontend-state",
+            "upsert_entry": "/api/configs/ai/mcp/instruction-registry/entries",
+            "invalidate": "/api/configs/ai/mcp/instruction-registry/invalidate",
+            "promote": "/api/configs/ai/mcp/instruction-registry/promote",
+        }
+        return state

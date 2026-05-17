@@ -166,6 +166,19 @@ from .external_llm_factory import (
     ExternalLLMFactoryStrategy,
     build_external_llm_factory_manifest,
 )
+from .instruction_registry import (
+    APP32_INSTRUCTION_REGISTRY_MANIFEST,
+    InstructionBootstrapBundle,
+    InstructionBootstrapEnvelope,
+    InstructionChannel,
+    InstructionDocumentClass,
+    InstructionDocumentRef,
+    InstructionLayerDefinition,
+    InstructionRegistryManifest,
+    InstructionRule,
+    InstructionRuntimeGuide,
+    build_app32_instruction_registry_manifest,
+)
 
 __all__ = [
     "MCPErrorDetail",
@@ -302,4 +315,15 @@ __all__ = [
     "ExternalLLMFactoryManifest",
     "ExternalLLMFactoryStrategy",
     "build_external_llm_factory_manifest",
+    "APP32_INSTRUCTION_REGISTRY_MANIFEST",
+    "InstructionBootstrapBundle",
+    "InstructionBootstrapEnvelope",
+    "InstructionChannel",
+    "InstructionDocumentClass",
+    "InstructionDocumentRef",
+    "InstructionLayerDefinition",
+    "InstructionRegistryManifest",
+    "InstructionRule",
+    "InstructionRuntimeGuide",
+    "build_app32_instruction_registry_manifest",
 ]

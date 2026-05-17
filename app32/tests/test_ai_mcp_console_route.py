@@ -65,6 +65,28 @@ def test_ai_mcp_console_frontend_state_api_returns_payload(monkeypatch):
     assert payload["console"]["runtime_context"]["resolved"]["company_id"] == 9
 
 
+def test_ai_mcp_console_template_includes_instruction_registry_panel():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "operations",
+            "ai_mcp_console.html",
+        )
+    )
+
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "Instruction Registry" in body
+    assert "Sapiens On + bootstrap instrucional" in body
+    assert "Filtro runtime" in body
+    assert "Modo de edição" in body
+    assert "Mudanças recentes" in body
+
+
 def test_ai_mcp_bootstrap_session_api_returns_payload(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=31, name="Empresa MCP", client_code="MCP")
@@ -201,6 +223,12 @@ def test_ai_mcp_console_service_exposes_context_requirements_and_runtime_context
     assert "context_requirements" in payload["catalog"]
     assert payload["runtime_context"]["resolved"]["company_id"] == 9
     assert payload["runtime_context"]["resolution"]["company"] == "active_company"
+    assert "instruction_registry" in payload
+    assert payload["instruction_registry"]["endpoints"]["frontend_state"] == "/api/configs/ai/mcp/instruction-registry/frontend-state"
+    assert payload["instruction_registry"]["endpoints"]["promote"] == "/api/configs/ai/mcp/instruction-registry/promote"
+    assert "squad_cliente" in payload["instruction_registry"]["supported_runtimes"]
+    assert "status_distribution" in payload["instruction_registry"]["summary"]
+    assert "production" in payload["instruction_registry"]["supported_environments"]
 
 
 def test_ai_mcp_console_service_exposes_squad_versus_runtime_profile():
@@ -245,6 +273,7 @@ def test_ai_mcp_console_service_exposes_squad_cliente_runtime_profile():
         "harness_operacional_cliente_v1",
         "harness_admfin_cliente_v1",
     ]
+    assert "resolve_app32_instruction_bundle_tool" in squad_cliente["startup_tools"]
 
 
 def test_ai_mcp_console_service_exposes_assisted_usage_and_maturity_model():

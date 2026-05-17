@@ -28,10 +28,12 @@ from src.core.mcp_external_llm_factory_tools import register_external_llm_factor
 from src.core.mcp_financial_tools import register_financial_mcp_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
+from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
+from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
 from src.core.mcp_sapiens_factory_tools import register_sapiens_factory_tools
 from src.core.mcp_squad_runtime_tools import register_squad_runtime_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
@@ -387,10 +389,12 @@ catalog = ToolCatalog(
         register_implantation_persona_profile_tools,
         register_incentive_tools,
         register_integration_request_tools,
+        register_instruction_registry_tools,
         register_operational_readiness_tools,
         register_permission_matrix_tools,
         register_profile_contract_tools,
         register_release_checklist_tools,
+        register_sapiens_activation_tools,
         register_sapiens_factory_tools,
         register_squad_runtime_tools,
         register_surface_playbook_tools,
