@@ -156,6 +156,17 @@ class MutationLimitBinding:
             )
         )
 
+    def matches_except_connector(self, context: MutationLimitContext) -> bool:
+        return all(
+            (
+                self.user_id is None or self.user_id == context.user_id,
+                self.company_id is None or self.company_id == context.company_id,
+                self.channel is None or self.channel == context.channel,
+                self.scenario is None or self.scenario == context.scenario,
+                self.role is None or self.role == context.role,
+            )
+        )
+
     def specificity(self) -> int:
         return sum(
             1
@@ -325,10 +336,19 @@ def resolve_mutation_limit_policy(
 
     context = _resolve_mutation_limit_context(company_id=company_id, user_id=user_id)
     matched_binding: MutationLimitBinding | None = None
-    for binding in sorted(_load_mutation_limit_bindings(), key=lambda item: item.specificity(), reverse=True):
+    bindings = sorted(_load_mutation_limit_bindings(), key=lambda item: item.specificity(), reverse=True)
+    for binding in bindings:
         if binding.matches(context):
             matched_binding = binding
             break
+
+    if matched_binding is None:
+        for binding in bindings:
+            if binding.connector is None:
+                continue
+            if binding.matches_except_connector(context):
+                matched_binding = binding
+                break
 
     if matched_binding is None:
         return profiles["default"]

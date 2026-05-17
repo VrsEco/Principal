@@ -195,6 +195,104 @@ def test_request_context_payload_exposes_default_harness_for_squad_cliente(monke
     assert payload["harness_label"] == "Harness Coordenador do Squad Cliente"
 
 
+def test_get_http_request_context_rehydrates_from_current_mcp_request(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="10",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+    )
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "path": "/",
+            "root_path": "/mcp/user",
+            "query_string": b"company_id=10",
+            "headers": [(b"authorization", b"Bearer token-123")],
+            "client": ("127.0.0.1", 12345),
+            "server": ("app.gestaoversus.com.br", 443),
+        }
+    )
+
+    monkeypatch.setattr(module, "_get_current_mcp_server_request", lambda: request)
+
+    payload = module.get_http_request_context()
+
+    assert payload is not None
+    assert payload["user_id"] == 3
+    assert payload["company_id"] == 10
+    assert payload["transport"] == "streamable_http"
+    assert payload["client"] == "claude_remote_connector"
+
+
+def test_get_http_request_identity_rehydrates_from_current_mcp_request(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="10",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+    )
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "path": "/",
+            "root_path": "/mcp/user",
+            "query_string": b"company_id=10",
+            "headers": [(b"authorization", b"Bearer token-123")],
+            "client": ("127.0.0.1", 12345),
+            "server": ("app.gestaoversus.com.br", 443),
+        }
+    )
+
+    monkeypatch.setattr(module, "_get_current_mcp_server_request", lambda: request)
+
+    identity = module.get_http_request_identity()
+
+    assert identity is not None
+    assert identity.user_id == 3
+    assert identity.company_id == 10
+
+
+def test_get_http_request_context_rehydrates_even_without_surface_in_scope(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="10",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+    )
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "path": "/",
+            "root_path": "",
+            "query_string": b"company_id=10",
+            "headers": [(b"authorization", b"Bearer token-123")],
+            "client": ("127.0.0.1", 12345),
+            "server": ("app.gestaoversus.com.br", 443),
+        }
+    )
+
+    monkeypatch.setattr(module, "_get_current_mcp_server_request", lambda: request)
+
+    payload = module.get_http_request_context()
+
+    assert payload is not None
+    assert payload["surface"] == "user"
+    assert payload["client"] == "claude_remote_connector"
+
+
 def test_request_context_middleware_blocks_runtime_profile_surface_mismatch(monkeypatch):
     module = _reload_auth(
         monkeypatch,

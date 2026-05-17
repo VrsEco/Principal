@@ -3,6 +3,9 @@ from __future__ import annotations
 import inspect
 from typing import Optional
 
+from starlette.requests import Request
+
+import src.core.mcp_http_auth as auth
 from src.core.mcp_http_auth import App32McpHttpIdentity, reset_http_request_context, set_http_request_context
 from src.core.mcp_runtime import resolve_mcp_execution_context, wrap_mcp_callable
 
@@ -214,3 +217,44 @@ def test_wrap_mcp_callable_materializes_forward_ref_annotations():
 
     assert signature.parameters["note"].annotation == Optional[str]
     assert signature.return_annotation == dict[str, str]
+
+
+def test_runtime_rehydrates_http_request_context_from_current_mcp_request(monkeypatch):
+    monkeypatch.setenv("APP32_MCP_HTTP_TOKEN", "token-123")
+    monkeypatch.setenv("APP32_MCP_USER_ID", "3")
+    monkeypatch.setenv("APP32_MCP_COMPANY_ID", "10")
+    monkeypatch.setenv("APP32_MCP_FALLBACK_ROLE", "colaborador")
+    auth.load_http_token_registry.cache_clear()
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "path": "/",
+            "root_path": "",
+            "query_string": b"company_id=10",
+            "headers": [(b"authorization", b"Bearer token-123")],
+            "client": ("127.0.0.1", 12345),
+            "server": ("app.gestaoversus.com.br", 443),
+        }
+    )
+
+    monkeypatch.setattr("src.core.mcp_http_auth._get_current_mcp_server_request", lambda: request)
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda user_id, company_id: {
+            "company_id": company_id,
+            "employee_id": 23,
+            "role": "director",
+            "permissions": {"approve": True},
+            "accessible_company_ids": [company_id],
+        },
+    )
+
+    context = resolve_mcp_execution_context({})
+
+    assert context.user_id == 3
+    assert context.company_id == 10
+    assert context.metadata["transport"] == "streamable_http"
+    assert context.metadata["client"] == "claude_remote_connector"

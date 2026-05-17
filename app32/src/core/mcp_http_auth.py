@@ -112,6 +112,66 @@ _http_identity_ctx: ContextVar[App32McpHttpIdentity | None] = ContextVar("app32_
 _http_request_ctx: ContextVar[dict[str, Any] | None] = ContextVar("app32_mcp_http_request_context", default=None)
 
 
+def _infer_surface_from_request(request: Request) -> str | None:
+    try:
+        scope = getattr(request, "scope", {}) or {}
+        root_path = _coerce_str(scope.get("root_path")) or ""
+        path = _coerce_str(scope.get("path")) or ""
+        candidate = f"{root_path.rstrip('/')}/{path.lstrip('/')}".strip("/") or path.strip("/") or root_path.strip("/")
+        segments = [segment.strip().lower() for segment in candidate.split("/") if segment.strip()]
+        if "mcp" in segments:
+            mcp_index = segments.index("mcp")
+            if mcp_index + 1 < len(segments):
+                return normalize_surface(segments[mcp_index + 1])
+        for segment in reversed(segments):
+            if segment in {"user", "admin", "analytics", "ops"}:
+                return normalize_surface(segment)
+    except Exception:
+        return None
+    return None
+
+
+def _get_current_mcp_server_request() -> Request | None:
+    try:
+        from mcp.server.lowlevel.server import request_ctx
+    except Exception:
+        return None
+
+    try:
+        current_context = request_ctx.get()
+    except LookupError:
+        return None
+    except Exception:
+        return None
+
+    request = getattr(current_context, "request", None)
+    return request if isinstance(request, Request) else None
+
+
+def _resolve_identity_from_current_request(
+    request: Request,
+    *,
+    preferred_surface: str | None = None,
+) -> tuple[App32McpHttpIdentity | None, str | None]:
+    candidate_surfaces: list[str] = []
+    if preferred_surface:
+        candidate_surfaces.append(preferred_surface)
+    candidate_surfaces.extend(
+        surface
+        for surface in ("user", "admin", "analytics", "ops")
+        if surface not in candidate_surfaces
+    )
+
+    for surface in candidate_surfaces:
+        try:
+            identity = resolve_request_identity(request, surface=surface)
+        except Exception:
+            identity = None
+        if identity is not None:
+            return identity, surface
+    return None, None
+
+
 def set_http_request_context(identity: App32McpHttpIdentity, payload: Mapping[str, Any]) -> tuple[Any, Any]:
     identity_token = _http_identity_ctx.set(identity)
     request_token = _http_request_ctx.set(dict(payload))
@@ -125,11 +185,42 @@ def reset_http_request_context(tokens: tuple[Any, Any]) -> None:
 
 
 def get_http_request_identity() -> App32McpHttpIdentity | None:
-    return _http_identity_ctx.get()
+    identity = _http_identity_ctx.get()
+    if identity is not None:
+        return identity
+
+    request = _get_current_mcp_server_request()
+    if request is None:
+        return None
+
+    identity, _ = _resolve_identity_from_current_request(
+        request,
+        preferred_surface=_infer_surface_from_request(request),
+    )
+    return identity
 
 
 def get_http_request_context() -> dict[str, Any] | None:
-    return _http_request_ctx.get()
+    payload = _http_request_ctx.get()
+    if payload:
+        return payload
+
+    request = _get_current_mcp_server_request()
+    if request is None:
+        return payload
+
+    identity, surface = _resolve_identity_from_current_request(
+        request,
+        preferred_surface=_infer_surface_from_request(request),
+    )
+    if identity is None or surface is None:
+        return payload
+
+    try:
+        resolved = resolve_request_context_payload(request, surface=surface)
+    except Exception:
+        return payload
+    return resolved or payload
 
 
 def _single_token_config() -> dict[str, Any]:
