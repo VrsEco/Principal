@@ -130,7 +130,7 @@ def create_project(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectMCPService.create_project(
         company_id=int(decision.resolved_company_id),
@@ -178,7 +178,7 @@ def update_project(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectMCPService.update_project(
         company_id=int(decision.resolved_company_id),
@@ -226,7 +226,7 @@ def delete_project(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectMCPService.soft_delete_project(
         company_id=int(decision.resolved_company_id),

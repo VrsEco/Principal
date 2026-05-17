@@ -300,7 +300,7 @@ def create_project_task_secure(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectTaskMCPService.create_task(
         company_id=int(decision.resolved_company_id),
@@ -349,7 +349,7 @@ def update_project_task_secure(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectTaskMCPService.update_task(
         company_id=int(decision.resolved_company_id),
@@ -394,7 +394,7 @@ def delete_project_task_secure(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectTaskMCPService.soft_delete_task(
         company_id=int(decision.resolved_company_id),
@@ -439,7 +439,7 @@ def restore_project_task_secure(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     payload, error = ProjectTaskMCPService.restore_task(
         company_id=int(decision.resolved_company_id),

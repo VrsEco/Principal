@@ -695,7 +695,7 @@ def delete_meeting_secure(
         user_id=principal.get("user_id"),
     )
     if not limit_decision.allowed:
-        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
 
     meeting, error_message = _get_meeting_in_company_scope(
         meeting_id,
