@@ -246,7 +246,35 @@ Uma vez ativa, a experiência deve iniciar no:
 - com entrada pelo `Harness Coordenador do Squad Cliente`
 
 ### Caso Claude Desktop / Claude Code
-A ativação oficial usa slash commands, por exemplo:
+
+O caminho canônico de ativação é:
+
+1. usar a conexão MCP registrada do `Sapiens Cliente`
+2. colar o prompt de ativação canônico do APP32
+3. confirmar o bootstrap real da sessão
+
+Prompt canônico de referência:
+
+```text
+Use a conexão MCP Sapiens Cliente desta sessão.
+
+Antes de responder, rode nesta ordem:
+1. resolve_app32_instruction_bundle_tool
+2. describe_app32_squad_runtime_tool
+3. list_user_app32_capabilities
+4. describe_app32_profile_contracts_tool
+5. describe_app32_surface_playbooks_tool
+6. describe_app32_domain_playbooks_tool
+
+Se o bootstrap funcionar, confirme na primeira linha exatamente `Sapiens Cliente Ativado`.
+Se o runtime suportar título de sessão, prefira `Sapiens Cliente On`.
+Depois disso, responda dizendo qual squad, surface e harness de entrada estão ativos.
+```
+
+### Slash commands opcionais
+
+Quando a instalação específica do Claude catalogar custom commands locais, também podem existir:
+
 - `/sapiens-cliente-on`
 - `/sapiens-on`
 
@@ -267,6 +295,10 @@ Se existir mais de um Squad Sapiens disponível na máquina, `/sapiens-on` deve 
 - `Escolha entre: Cliente, Versus ou Engenharia.`
 
 Se existir apenas um Squad, `/sapiens-on` deve ativar diretamente esse Squad.
+
+### Regra de fallback
+
+Se os slash commands não aparecerem no `/help` do Claude Code, a homologação continua válida usando o prompt canônico acima.
 
 ### Leitura do bootstrap
 Logo após conectar, o cliente deve usar `describe_app32_squad_runtime_tool` para ler:
@@ -290,6 +322,30 @@ Considere a instalação bem-sucedida quando:
 6. as tools de startup responderem
 7. o usuário conseguir chamar o ambiente como `Sapiens Cliente`
 8. a ativação usar o bundle remoto do instruction registry
+9. em Claude Code, a sessão conseguir ativar corretamente mesmo sem depender de slash command local
+
+---
+
+## 9.1 Resultado homologado para Claude Code em 2026-05-17
+
+Na homologação de campo validada:
+
+- `claude mcp list` retornou `Sapiens Cliente ... ✓ Connected`
+- a sessão ativa confirmou:
+  - `Squad Cliente`
+  - `surface user`
+  - `SC-COORD`
+  - `harness_coordenador_cliente_v1`
+  - bundle `2026-05-17.2`
+- os custom commands locais não foram catalogados por essa instalação específica do Claude
+- o prompt canônico do APP32 ativou a sessão corretamente
+
+### Decisão oficial
+
+No Claude Code / aba Code do Claude Desktop:
+
+- prompt canônico = caminho oficial
+- slash command local = opcional / best effort
 
 ---
 

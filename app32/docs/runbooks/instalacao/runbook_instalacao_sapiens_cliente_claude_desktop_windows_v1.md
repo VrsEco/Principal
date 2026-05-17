@@ -168,10 +168,22 @@ Depois do restart:
 
 1. abra `Configurações → Conectores`
 2. confirme que `Sapiens Cliente` apareceu em `Desktop`
-3. abra uma conversa e teste:
+3. abra uma conversa e cole o prompt de ativação canônico:
 
 ```text
-/sapiens-cliente-on
+Use a conexão MCP Sapiens Cliente desta sessão.
+
+Antes de responder, rode nesta ordem:
+1. resolve_app32_instruction_bundle_tool
+2. describe_app32_squad_runtime_tool
+3. list_user_app32_capabilities
+4. describe_app32_profile_contracts_tool
+5. describe_app32_surface_playbooks_tool
+6. describe_app32_domain_playbooks_tool
+
+Se o bootstrap funcionar, confirme na primeira linha exatamente `Sapiens Cliente Ativado`.
+Se o runtime suportar título de sessão, prefira `Sapiens Cliente On`.
+Depois disso, responda dizendo qual squad, surface e harness de entrada estão ativos.
 ```
 
 ### Resultado esperado
@@ -185,9 +197,19 @@ O Claude deve:
 
 ---
 
-## 11. Comandos oficiais de ativação
+## 11. Ativação canônica e comandos opcionais
 
-Além da conexão MCP, o Claude Desktop/Code pode receber comandos slash oficiais para ativação:
+### Caminho canônico
+
+No Claude Code / aba Code do Claude Desktop, o caminho canônico de ativação é:
+
+- usar a conexão MCP registrada
+- colar o prompt de ativação canônico do APP32
+- confirmar o bootstrap real da sessão
+
+### Comandos opcionais
+
+Além da conexão MCP, o Claude Desktop/Code pode receber comandos slash oficiais para ativação, em modo best effort:
 
 - `/sapiens-cliente-on`
 - `/sapiens-on`
@@ -226,6 +248,14 @@ Não tratar texto livre como comando instalado:
 - `sapiens on`
 - `sapiens cliente on`
 
+### Regra de fallback
+
+Se a instalação específica do Claude não carregar os custom commands locais, a homologação continua válida desde que:
+
+1. `claude mcp list` mostre `Sapiens Cliente` como `Connected`
+2. o prompt canônico consiga carregar o bundle e o runtime
+3. a sessão confirme `Sapiens Cliente Ativado`
+
 ---
 
 ## 12. Limpeza controlada antes da reinstalação
@@ -253,3 +283,28 @@ Se o objetivo for homologar o novo modelo como cliente real, a limpeza controlad
 - o token é pessoal do APP32; cada pessoa deve usar o seu
 - se aparecer erro com `C:\Program`, o caminho do `npx` usado está com espaço
 - o pacote correto é `mcp-remote`, sem prefixo `@anthropic/`
+- alguns builds do Claude Code podem conectar MCP normalmente e ainda assim não catalogar arquivos locais em `~/.claude/commands` ou `.claude/commands`
+- nesses casos, o APP32 deve tratar os slash commands como opcionais e manter o prompt de ativação como caminho operacional canônico
+
+---
+
+## 14. Homologação de campo validada em 2026-05-17
+
+Resultado observado na instalação validada:
+
+1. `claude mcp list` retornou `Sapiens Cliente ... ✓ Connected`
+2. o bootstrap real carregou:
+   - `Squad Cliente`
+   - `surface user`
+   - `SC-COORD`
+   - `harness_coordenador_cliente_v1`
+   - bundle `2026-05-17.2`
+3. os custom commands locais do Claude não foram catalogados nessa instalação específica
+4. o prompt de ativação canônico funcionou integralmente
+
+### Decisão operacional
+
+Para Claude Code / aba Code do Claude Desktop:
+
+- MCP + prompt canônico = caminho oficial e robusto
+- slash commands = conveniência opcional, sem dependência operacional
