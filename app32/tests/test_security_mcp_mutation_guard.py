@@ -191,3 +191,27 @@ def test_resolve_mutation_limit_policy_uses_sapiens_context_metadata_when_http_c
     assert policy.create_limit == 500
     assert policy.is_override is True
 
+
+def test_resolve_mutation_limit_policy_uses_app32_mcp_client_env_as_connector_fallback(monkeypatch):
+    monkeypatch.delenv("APP32_MCP_CONNECTOR", raising=False)
+    monkeypatch.setenv("APP32_MCP_CLIENT", "claude_remote_connector")
+    monkeypatch.setenv(
+        "APP32_MCP_MUTATION_LIMIT_PROFILES_JSON",
+        '{"implantacao":{"create_limit":500,"update_limit":200,"delete_limit":20,"restore_limit":20,"window_hours":24}}',
+    )
+    monkeypatch.setenv(
+        "APP32_MCP_MUTATION_LIMIT_BINDINGS_JSON",
+        '[{"profile":"implantacao","company_id":10,"connector":"claude_remote_connector"}]',
+    )
+    monkeypatch.setattr(
+        guard,
+        "_get_runtime_request_metadata",
+        lambda: {"http": {}, "sapiens": {"user_id": None, "company_id": None, "channel": None, "metadata": {}}},
+    )
+
+    policy = guard.resolve_mutation_limit_policy(company_id=10, user_id=3)
+
+    assert policy.profile_name == "implantacao"
+    assert policy.create_limit == 500
+    assert policy.is_override is True
+

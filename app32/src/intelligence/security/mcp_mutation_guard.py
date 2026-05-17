@@ -267,6 +267,7 @@ def _resolve_mutation_limit_context(*, company_id: int | None, user_id: int | No
     connector = (
         _normalize_optional_text(http_context.get("client"))
         or _normalize_optional_text(sapiens_metadata.get("client"))
+        or _normalize_optional_text(os.environ.get("APP32_MCP_CLIENT"))
         or _normalize_optional_text(os.environ.get("APP32_MCP_CONNECTOR"))
         or channel
     )

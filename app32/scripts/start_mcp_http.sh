@@ -21,6 +21,8 @@ export APP32_MCP_HTTP_HOST="$HOST"
 export APP32_MCP_HTTP_PORT="$PORT"
 export APP32_MCP_PUBLIC_BASE_URL="$PUBLIC_BASE_URL"
 export APP32_MCP_HTTP_APP_DIR="$APP_DIR"
+export APP32_MCP_CLIENT="${APP32_MCP_CLIENT:-claude_remote_connector}"
+export APP32_MCP_CONNECTOR="${APP32_MCP_CONNECTOR:-claude_remote_connector}"
 
 exec "$PYTHON_BIN" - <<'PY'
 import os
