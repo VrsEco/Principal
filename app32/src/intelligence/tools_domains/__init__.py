@@ -28,6 +28,7 @@ from .process_ops import (
     list_process_hierarchy,
 )
 from .meeting_ops import (
+    delete_meeting_secure,
     finish_meeting,
     log_meeting_discussion,
     schedule_meeting,
@@ -70,6 +71,7 @@ __all__ = [
     "create_process",
     "create_process_area",
     "list_process_hierarchy",
+    "delete_meeting_secure",
     "finish_meeting",
     "log_meeting_discussion",
     "schedule_meeting",

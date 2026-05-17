@@ -322,6 +322,16 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("communication",),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
+    "delete_meeting_secure": {
+        "domain": "meetings",
+        "scopes": (ToolScope.MCP_ADMIN.value,),
+        "risk": ToolRiskLevel.HIGH,
+        "permissions": ("meeting.delete",),
+        "human_gate": True,
+        "human_gate_reason": "Exclusão de reunião exige confirmação explícita e trilha de auditoria.",
+        "tags": ("crud", "hard_delete", "quota"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "list_meetings": {
         "domain": "meetings",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

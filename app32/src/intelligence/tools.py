@@ -595,7 +595,15 @@ def update_user_contacts(user_id: int, whatsapp: str = None, telegram: str = Non
     """
     return user_ops_domain.update_user_contacts(user_id=user_id, whatsapp=whatsapp, telegram=telegram)
 @tool
-def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items: str = None, notes: str = None):
+def schedule_meeting(
+    title: str,
+    date: str,
+    time: str,
+    guests: str,
+    agenda_items: str = None,
+    notes: str = None,
+    company_id: int = None,
+):
     """
     Cria e agenda uma nova reunião no sistema enviando convite para os participantes.
     :param title: Título/Assunto da reunião. Ex: 'Revisão de Metas Q1'
@@ -604,6 +612,7 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
     :param guests: Lista de e-mails ou nomes dos convidados, separados por vírgula.
     :param agenda_items: Pautas separadas por ponto-e-vírgula.
     :param notes: Observações ou pauta livre para o convite.
+    :param company_id: Opcional. Se informado, força a escrita tenant-safe nessa empresa.
     """
     return meeting_ops_domain.schedule_meeting(
         title=title,
@@ -612,20 +621,29 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
         guests=guests,
         agenda_items=agenda_items,
         notes=notes,
+        company_id=company_id,
     )
 
 
 @tool
-def start_meeting(meeting_id: int):
+def start_meeting(meeting_id: int, company_id: int = None):
     """
     Inicia uma reunião agendada. Marca o horário real de início e vincula/cria um projeto automático.
     :param meeting_id: ID da reunião a ser iniciada.
+    :param company_id: Opcional. Se informado, opera de forma tenant-safe nessa empresa.
     """
-    return meeting_ops_domain.start_meeting(meeting_id=meeting_id)
+    return meeting_ops_domain.start_meeting(meeting_id=meeting_id, company_id=company_id)
 
 
 @tool
-def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, responsible: str = None, deadline: str = None):
+def log_meeting_discussion(
+    meeting_id: int,
+    topic: str,
+    decision: str = None,
+    responsible: str = None,
+    deadline: str = None,
+    company_id: int = None,
+):
     """
     Registra um ponto discutido em uma reunião em andamento.
     """
@@ -635,24 +653,41 @@ def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, re
         decision=decision,
         responsible=responsible,
         deadline=deadline,
+        company_id=company_id,
     )
 
 
 @tool
-def finish_meeting(meeting_id: int):
+def finish_meeting(meeting_id: int, company_id: int = None):
     """
     Encerra uma reunião em andamento e gera a ATA completa.
     """
-    return meeting_ops_domain.finish_meeting(meeting_id=meeting_id)
+    return meeting_ops_domain.finish_meeting(meeting_id=meeting_id, company_id=company_id)
 
 
 @tool
-def send_meeting_minutes(meeting_id: int, channel: str = "email"):
+def send_meeting_minutes(meeting_id: int, channel: str = "email", company_id: int = None):
     """
     Envia a ATA para todos os participantes após o encerramento.
     :param channel: Canal de envio: 'email', 'whatsapp' ou 'ambos'.
     """
-    return meeting_ops_domain.send_meeting_minutes(meeting_id=meeting_id, channel=channel)
+    return meeting_ops_domain.send_meeting_minutes(meeting_id=meeting_id, channel=channel, company_id=company_id)
+
+
+@tool
+def delete_meeting_secure(meeting_id: int, reason: str, confirm: bool = False, company_id: int = None):
+    """
+    Exclui uma reunião em surface admin com gate humano obrigatório.
+    :param reason: Motivo auditável da exclusão.
+    :param confirm: Deve ser True para confirmar a exclusão.
+    :param company_id: Opcional. Se informado, força a exclusão tenant-safe nessa empresa.
+    """
+    return meeting_ops_domain.delete_meeting_secure(
+        meeting_id=meeting_id,
+        reason=reason,
+        confirm=confirm,
+        company_id=company_id,
+    )
 
 
 # =============================================================================
@@ -987,6 +1022,7 @@ tools = [
     log_meeting_discussion,
     finish_meeting,
     send_meeting_minutes,
+    delete_meeting_secure,
     # Fase 2 — Task Management
     get_tasks_today,
     create_project_task,

@@ -1,11 +1,104 @@
 from __future__ import annotations
 
+import os
 import logging
 
 from models import db
-from src.intelligence.tools_support import get_active_company_id, get_meeting_in_active_company
+from src.intelligence.security.mcp_mutation_guard import (
+    evaluate_mutation_limit,
+    record_mutation_success,
+)
+from src.intelligence.security.runtime_identity import resolve_runtime_identity
+from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy
+from src.intelligence.tooling.capabilities import TOOL_CONTEXT_COMPANY, TOOL_CONTEXT_USER
+from src.intelligence.tools_support import get_active_company_id, get_active_user_id
 
 logger = logging.getLogger(__name__)
+
+
+def _current_surface() -> str:
+    return str(os.environ.get("APP32_MCP_SURFACE") or "user").strip().lower()
+
+
+def _build_mcp_principal(company_id: int | None) -> dict[str, object]:
+    user_id = get_active_user_id()
+    runtime_identity = (
+        resolve_runtime_identity(user_id=int(user_id), company_id=company_id)
+        if user_id
+        else {}
+    )
+    permissions = runtime_identity.get("permissions") or ()
+    if isinstance(permissions, dict):
+        permissions = tuple(str(key).strip().lower() for key in permissions.keys() if str(key).strip())
+    elif isinstance(permissions, (list, tuple, set, frozenset)):
+        permissions = tuple(str(item).strip().lower() for item in permissions if str(item).strip())
+    elif permissions:
+        permissions = (str(permissions).strip().lower(),)
+    else:
+        permissions = ()
+
+    return {
+        "user_id": user_id,
+        "company_id": runtime_identity.get("company_id") or company_id,
+        "employee_id": runtime_identity.get("employee_id"),
+        "role": runtime_identity.get("role") or str(os.environ.get("APP32_MCP_FALLBACK_ROLE") or "colaborador").strip().lower(),
+        "channel": str(os.environ.get("APP32_MCP_CHANNEL") or "claude_code").strip().lower(),
+        "thread_id": os.environ.get("APP32_MCP_THREAD_ID"),
+        "permissions": permissions,
+        "accessible_company_ids": tuple(runtime_identity.get("accessible_company_ids") or ()),
+    }
+
+
+def _authorize_meeting_mcp(
+    *,
+    tool_name: str,
+    action: str,
+    company_id: int | None,
+    risk: str,
+    required_permissions: tuple[str, ...],
+    confirmed_mutation: bool = False,
+):
+    principal = _build_mcp_principal(company_id)
+    decision = evaluate_tool_policy(
+        principal,
+        ToolPolicyRequest(
+            tool_name=tool_name,
+            surface=_current_surface(),
+            domain="meetings",
+            action=action,
+            risk=risk,
+            requested_company_id=company_id,
+            accessible_company_ids=tuple(principal.get("accessible_company_ids") or ()),
+            required_permissions=required_permissions,
+            confirmed_mutation=confirmed_mutation,
+            required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+        ),
+    )
+    return principal, decision
+
+
+def _resolve_requested_company_id(company_id: int | None) -> int | None:
+    if company_id is None:
+        active_company_id = get_active_company_id()
+        return int(active_company_id) if active_company_id else None
+    try:
+        return int(company_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_meeting_in_company_scope(meeting_id: int, company_id: int | None = None):
+    from models.meeting import Meeting
+
+    selected_company_id = _resolve_requested_company_id(company_id)
+    if not selected_company_id:
+        return None, "Erro: Nenhuma empresa ativa identificada."
+
+    meeting = Meeting.query.filter_by(id=meeting_id, company_id=int(selected_company_id)).first()
+    if not meeting:
+        return None, f"Reunião ID {meeting_id} não encontrada na empresa selecionada."
+
+    return meeting, None
 
 
 def _get_meeting_project(meeting):
@@ -74,7 +167,15 @@ def list_meetings(
     return "\n".join(lines)
 
 
-def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items: str = None, notes: str = None):
+def schedule_meeting(
+    title: str,
+    date: str,
+    time: str,
+    guests: str,
+    agenda_items: str = None,
+    notes: str = None,
+    company_id: int | None = None,
+):
     """
     Cria e agenda uma nova reunião no sistema enviando convite para os participantes.
     :param title: Título/Assunto da reunião. Ex: 'Revisão de Metas Q1'
@@ -85,14 +186,27 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
     :param notes: Observações ou pauta livre para o convite.
     """
     from models.meeting import Meeting
-    from models.user import User
     from services.email_service import email_service
-    from services.whatsapp_service import whatsapp_service
     import json
 
-    company_id = get_active_company_id()
-    if not company_id:
-        return "Erro: Nenhuma empresa ativa identificada."
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, decision = _authorize_meeting_mcp(
+        tool_name="schedule_meeting",
+        action="create",
+        company_id=requested_company_id,
+        risk="medium",
+        required_permissions=("meeting.schedule",),
+    )
+    if not decision.allowed:
+        return f"Erro: {decision.reason}"
+
+    limit_decision = evaluate_mutation_limit(
+        action="create",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return f"Erro: {limit_decision.reason}"
 
     try:
         # Monta estrutura de convidados
@@ -105,7 +219,7 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
             agenda = [{"title": item.strip()} for item in agenda_items.split(';') if item.strip()]
 
         meeting = Meeting(
-            company_id=int(company_id),
+            company_id=int(decision.resolved_company_id),
             title=title,
             scheduled_date=date,
             scheduled_time=time,
@@ -116,6 +230,13 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
         )
         db.session.add(meeting)
         db.session.commit()
+
+        persisted = Meeting.query.filter_by(
+            id=meeting.id,
+            company_id=int(decision.resolved_company_id),
+        ).first()
+        if not persisted:
+            return "Erro: falha na validação pós-escrita da reunião na empresa selecionada."
 
         # Envia convite por e-mail para quem for e-mail válido
         email_guests = [g for g in guest_list if '@' in g]
@@ -136,6 +257,16 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
                 body=email_body
             )
 
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="create",
+                company_id=int(decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name="schedule_meeting",
+                domain="meetings",
+                metadata={"meeting_id": int(meeting.id)},
+            )
+
         return (
             f"✅ Reunião '{title}' criada com sucesso!\n"
             f"   ID: {meeting.id} | Data: {date} às {time}\n"
@@ -147,7 +278,7 @@ def schedule_meeting(title: str, date: str, time: str, guests: str, agenda_items
         db.session.rollback()
         return f"Erro ao agendar reunião: {str(e)}"
 
-def start_meeting(meeting_id: int):
+def start_meeting(meeting_id: int, company_id: int | None = None):
     """
     Inicia uma reunião agendada. Marca o horário real de início e vincula/cria um projeto automático.
     :param meeting_id: ID da reunião a ser iniciada (obtido ao criar a reunião).
@@ -155,8 +286,30 @@ def start_meeting(meeting_id: int):
     from models.project import Project
     from datetime import datetime
 
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, decision = _authorize_meeting_mcp(
+        tool_name="start_meeting",
+        action="update",
+        company_id=requested_company_id,
+        risk="medium",
+        required_permissions=("meeting.start",),
+    )
+    if not decision.allowed:
+        return f"Erro: {decision.reason}"
+
+    limit_decision = evaluate_mutation_limit(
+        action="update",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return f"Erro: {limit_decision.reason}"
+
     try:
-        meeting, error_message = get_meeting_in_active_company(meeting_id)
+        meeting, error_message = _get_meeting_in_company_scope(
+            meeting_id,
+            company_id=decision.resolved_company_id,
+        )
         if error_message:
             return error_message
 
@@ -181,6 +334,15 @@ def start_meeting(meeting_id: int):
             meeting.project_id = proj.id
 
         db.session.commit()
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="update",
+                company_id=int(decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name="start_meeting",
+                domain="meetings",
+                metadata={"meeting_id": int(meeting_id)},
+            )
         return (
             f"🟢 Reunião '{meeting.title}' INICIADA!\n"
             f"   Horário de início: {now.strftime('%d/%m/%Y às %H:%M')}\n"
@@ -191,7 +353,14 @@ def start_meeting(meeting_id: int):
         db.session.rollback()
         return f"Erro ao iniciar reunião: {str(e)}"
 
-def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, responsible: str = None, deadline: str = None):
+def log_meeting_discussion(
+    meeting_id: int,
+    topic: str,
+    decision: str = None,
+    responsible: str = None,
+    deadline: str = None,
+    company_id: int | None = None,
+):
     """
     Registra um ponto discutido, decisão tomada ou atividade criada durante a reunião.
     Use repetidamente para cada ponto discutido durante a reunião.
@@ -201,11 +370,32 @@ def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, re
     :param responsible: Nome do responsável pela ação. Ex: 'Carlos'
     :param deadline: Prazo para conclusão no formato YYYY-MM-DD. Ex: '2026-03-31'
     """
-    from models.project import ProjectTask
     import json
 
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, policy_decision = _authorize_meeting_mcp(
+        tool_name="log_meeting_discussion",
+        action="update",
+        company_id=requested_company_id,
+        risk="low",
+        required_permissions=("meeting.notes.write",),
+    )
+    if not policy_decision.allowed:
+        return f"Erro: {policy_decision.reason}"
+
+    limit_decision = evaluate_mutation_limit(
+        action="update",
+        company_id=policy_decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return f"Erro: {limit_decision.reason}"
+
     try:
-        meeting, error_message = get_meeting_in_active_company(meeting_id)
+        meeting, error_message = _get_meeting_in_company_scope(
+            meeting_id,
+            company_id=policy_decision.resolved_company_id,
+        )
         if error_message:
             return error_message
 
@@ -255,6 +445,15 @@ def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, re
                 db.session.add(task)
 
         db.session.commit()
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="update",
+                company_id=int(policy_decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name="log_meeting_discussion",
+                domain="meetings",
+                metadata={"meeting_id": int(meeting_id)},
+            )
 
         resp = f"📝 Ponto registrado na reunião '{meeting.title}':\n   Tópico: {topic}"
         if decision:
@@ -270,7 +469,7 @@ def log_meeting_discussion(meeting_id: int, topic: str, decision: str = None, re
         db.session.rollback()
         return f"Erro ao registrar ponto da reunião: {str(e)}"
 
-def finish_meeting(meeting_id: int):
+def finish_meeting(meeting_id: int, company_id: int | None = None):
     """
     Encerra uma reunião em andamento e gera a Ata de Reunião (ATA) completa.
     Após encerrar, use 'send_meeting_minutes' para enviar a ATA aos participantes.
@@ -279,8 +478,30 @@ def finish_meeting(meeting_id: int):
     import json
     from datetime import datetime
 
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, decision = _authorize_meeting_mcp(
+        tool_name="finish_meeting",
+        action="update",
+        company_id=requested_company_id,
+        risk="medium",
+        required_permissions=("meeting.finish",),
+    )
+    if not decision.allowed:
+        return f"Erro: {decision.reason}"
+
+    limit_decision = evaluate_mutation_limit(
+        action="update",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return f"Erro: {limit_decision.reason}"
+
     try:
-        meeting, error_message = get_meeting_in_active_company(meeting_id)
+        meeting, error_message = _get_meeting_in_company_scope(
+            meeting_id,
+            company_id=decision.resolved_company_id,
+        )
         if error_message:
             return error_message
 
@@ -341,6 +562,15 @@ def finish_meeting(meeting_id: int):
                 pass  # Não bloqueia o encerramento se houver erro na task-resumo
 
         db.session.commit()
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="update",
+                company_id=int(decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name="finish_meeting",
+                domain="meetings",
+                metadata={"meeting_id": int(meeting_id)},
+            )
 
         return (
             f"🏁 Reunião '{meeting.title}' ENCERRADA!\n\n"
@@ -352,7 +582,7 @@ def finish_meeting(meeting_id: int):
         db.session.rollback()
         return f"Erro ao encerrar reunião: {str(e)}"
 
-def send_meeting_minutes(meeting_id: int, channel: str = "email"):
+def send_meeting_minutes(meeting_id: int, channel: str = "email", company_id: int | None = None):
     """
     Envia a ATA (Ata de Reunião) para todos os participantes após o encerramento.
     :param meeting_id: ID da reunião já encerrada.
@@ -366,8 +596,30 @@ def send_meeting_minutes(meeting_id: int, channel: str = "email"):
     from services.whatsapp_service import whatsapp_service
     import json
 
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, decision = _authorize_meeting_mcp(
+        tool_name="send_meeting_minutes",
+        action="update",
+        company_id=requested_company_id,
+        risk="medium",
+        required_permissions=("meeting.minutes.send",),
+    )
+    if not decision.allowed:
+        return f"Erro: {decision.reason}"
+
+    limit_decision = evaluate_mutation_limit(
+        action="update",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return f"Erro: {limit_decision.reason}"
+
     try:
-        meeting, error_message = get_meeting_in_active_company(meeting_id)
+        meeting, error_message = _get_meeting_in_company_scope(
+            meeting_id,
+            company_id=decision.resolved_company_id,
+        )
         if error_message:
             return error_message
 
@@ -394,6 +646,16 @@ def send_meeting_minutes(meeting_id: int, channel: str = "email"):
                 if ok:
                     sent_wa += 1
 
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="update",
+                company_id=int(decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name="send_meeting_minutes",
+                domain="meetings",
+                metadata={"meeting_id": int(meeting_id), "channel": channel},
+            )
+
         return (
             f"📤 ATA da reunião '{meeting.title}' enviada!\n"
             f"   E-mails enviados: {sent_email}\n"
@@ -401,4 +663,92 @@ def send_meeting_minutes(meeting_id: int, channel: str = "email"):
         )
     except Exception as e:
         return f"Erro ao enviar ATA: {str(e)}"
+
+
+def delete_meeting_secure(
+    meeting_id: int,
+    reason: str,
+    confirm: bool = False,
+    company_id: int | None = None,
+):
+    """
+    Exclui uma reunião de forma administrativa, tenant-safe e auditável.
+    Use apenas em surface admin e com confirmação explícita.
+    """
+    from models import WorkJourneyItem
+
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, decision = _authorize_meeting_mcp(
+        tool_name="delete_meeting_secure",
+        action="delete",
+        company_id=requested_company_id,
+        risk="high",
+        required_permissions=("meeting.delete",),
+        confirmed_mutation=bool(confirm),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    limit_decision = evaluate_mutation_limit(
+        action="delete",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.__dict__}
+
+    meeting, error_message = _get_meeting_in_company_scope(
+        meeting_id,
+        company_id=decision.resolved_company_id,
+    )
+    if error_message:
+        return {"success": False, "error": error_message}
+
+    linked_project_id = getattr(meeting, "project_id", None)
+    meeting_title = getattr(meeting, "title", None)
+    work_journey_items = (
+        WorkJourneyItem.query.filter_by(
+            company_id=int(decision.resolved_company_id),
+            item_type="meeting",
+            source_id=int(meeting_id),
+        ).all()
+    )
+
+    try:
+        removed_work_journey_items = len(work_journey_items)
+        for item in work_journey_items:
+            db.session.delete(item)
+
+        db.session.delete(meeting)
+        db.session.commit()
+
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="delete",
+                company_id=int(decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name="delete_meeting_secure",
+                domain="meetings",
+                metadata={
+                    "meeting_id": int(meeting_id),
+                    "meeting_title": meeting_title,
+                    "reason": str(reason or "").strip(),
+                    "linked_project_id": int(linked_project_id) if linked_project_id else None,
+                    "removed_work_journey_items": removed_work_journey_items,
+                },
+            )
+
+        return {
+            "success": True,
+            "meeting_id": int(meeting_id),
+            "company_id": int(decision.resolved_company_id),
+            "title": meeting_title,
+            "linked_project_id": int(linked_project_id) if linked_project_id else None,
+            "removed_work_journey_items": removed_work_journey_items,
+            "reason": str(reason or "").strip(),
+            "message": "Reunião excluída com sucesso.",
+        }
+    except Exception as exc:
+        db.session.rollback()
+        return {"success": False, "error": f"Erro ao excluir reunião: {exc}"}
 

@@ -21,6 +21,7 @@ def test_catalog_exposes_known_capability_metadata():
     update_macro_capability = catalog.get_tool_capability("update_macro_process")
     financial_entry_capability = catalog.get_tool_capability("create_financial_entry")
     list_meetings_capability = catalog.get_tool_capability("list_meetings")
+    delete_meeting_capability = catalog.get_tool_capability("delete_meeting_secure")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -49,6 +50,11 @@ def test_catalog_exposes_known_capability_metadata():
     assert list_meetings_capability is not None
     assert list_meetings_capability.domain == "meetings"
     assert "meeting.read" in list_meetings_capability.permissions
+    assert delete_meeting_capability is not None
+    assert delete_meeting_capability.domain == "meetings"
+    assert ToolScope.MCP_ADMIN.value in delete_meeting_capability.scopes
+    assert ToolScope.MCP_USER.value not in delete_meeting_capability.scopes
+    assert delete_meeting_capability.human_gate is True
 
 
 def test_catalog_manifest_filters_by_scope():
@@ -76,6 +82,8 @@ def test_catalog_manifest_filters_by_scope():
     assert "request_engineering_suggestion" in user_tool_names
     assert "list_my_engineering_suggestions" in user_tool_names
     assert "update_macro_process" in user_tool_names
+    assert "delete_meeting_secure" in admin_tool_names
+    assert "delete_meeting_secure" not in user_tool_names
 
 
 def test_catalog_manifest_supports_legacy_identity_domain_alias():
