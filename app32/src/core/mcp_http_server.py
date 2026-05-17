@@ -55,6 +55,16 @@ DEFAULT_PORT = int(os.environ.get("APP32_MCP_HTTP_PORT", "8101"))
 DEFAULT_PUBLIC_BASE_URL = os.environ.get("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
 
 
+def _env_flag(name: str, default: bool) -> bool:
+    raw = str(os.environ.get(name, "")).strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "on"}
+
+
+DEFAULT_STATELESS_HTTP = _env_flag("APP32_MCP_HTTP_STATELESS", True)
+
+
 def _surface_mount_path(surface: str) -> str:
     return f"/mcp/{surface}"
 
@@ -81,7 +91,7 @@ def build_surface_http_app(surface: str):
     mcp.settings.port = DEFAULT_PORT
     mcp.settings.streamable_http_path = "/"
     mcp.settings.mount_path = "/"
-    mcp.settings.stateless_http = False
+    mcp.settings.stateless_http = DEFAULT_STATELESS_HTTP
     mcp.settings.auth = build_auth_settings(
         base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{_surface_mount_path(surface)}"
     )
@@ -111,6 +121,7 @@ async def _healthz(_: Request) -> JSONResponse:
                 "issuer_url": oauth_preparation.issuer_url,
                 "resource_server_url": oauth_preparation.resource_server_url,
             },
+            "stateless_http": DEFAULT_STATELESS_HTTP,
         }
     )
 

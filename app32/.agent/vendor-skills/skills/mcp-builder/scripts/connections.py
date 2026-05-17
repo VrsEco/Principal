@@ -1,13 +1,17 @@
 """Lightweight connection handling for MCP servers."""
 
+import asyncio
 from abc import ABC, abstractmethod
 from contextlib import AsyncExitStack
+import logging
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
+
+logger = logging.getLogger(__name__)
 
 
 class MCPConnection(ABC):
@@ -21,8 +25,7 @@ class MCPConnection(ABC):
     def _create_context(self):
         """Create the connection context based on connection type."""
 
-    async def __aenter__(self):
-        """Initialize MCP server connection."""
+    async def _open(self):
         self._stack = AsyncExitStack()
         await self._stack.__aenter__()
 
@@ -40,10 +43,16 @@ class MCPConnection(ABC):
             session_ctx = ClientSession(read, write)
             self.session = await self._stack.enter_async_context(session_ctx)
             await self.session.initialize()
-            return self
         except BaseException:
             await self._stack.__aexit__(None, None, None)
+            self.session = None
+            self._stack = None
             raise
+
+    async def __aenter__(self):
+        """Initialize MCP server connection."""
+        await self._open()
+        return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Clean up MCP server connection resources."""
@@ -100,13 +109,74 @@ class MCPConnectionSSE(MCPConnection):
 class MCPConnectionHTTP(MCPConnection):
     """MCP connection using Streamable HTTP."""
 
-    def __init__(self, url: str, headers: dict[str, str] = None):
+    def __init__(
+        self,
+        url: str,
+        headers: dict[str, str] = None,
+        *,
+        reconnect_attempts: int = 2,
+        reconnect_backoff_seconds: float = 0.25,
+    ):
         super().__init__()
         self.url = url
         self.headers = headers or {}
+        self.reconnect_attempts = max(1, int(reconnect_attempts))
+        self.reconnect_backoff_seconds = max(0.0, float(reconnect_backoff_seconds))
+        self._reconnect_lock = asyncio.Lock()
 
     def _create_context(self):
         return streamablehttp_client(url=self.url, headers=self.headers)
+
+    @staticmethod
+    def _is_invalid_session_error(exc: Exception) -> bool:
+        message = str(exc or "").strip().lower()
+        return any(
+            marker in message
+            for marker in (
+                "no valid session id provided",
+                "invalid or expired session id",
+                "missing session id",
+            )
+        )
+
+    async def _reconnect(self) -> None:
+        async with self._reconnect_lock:
+            if self._stack:
+                await self._stack.__aexit__(None, None, None)
+            self.session = None
+            self._stack = None
+            await self._open()
+
+    async def _call_with_reconnect(self, operation_name: str, callback):
+        last_exc: Exception | None = None
+        for attempt in range(1, self.reconnect_attempts + 1):
+            try:
+                return await callback()
+            except Exception as exc:
+                last_exc = exc
+                if not self._is_invalid_session_error(exc) or attempt >= self.reconnect_attempts:
+                    raise
+                logger.warning(
+                    "Sessão streamable-HTTP inválida em %s; reinitializando sessão e repetindo chamada (tentativa %s/%s).",
+                    operation_name,
+                    attempt,
+                    self.reconnect_attempts,
+                )
+                await self._reconnect()
+                if self.reconnect_backoff_seconds > 0:
+                    await asyncio.sleep(self.reconnect_backoff_seconds * attempt)
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError(f"Falha inesperada ao executar {operation_name}")
+
+    async def list_tools(self) -> list[dict[str, Any]]:
+        return await self._call_with_reconnect("list_tools", super().list_tools)
+
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        return await self._call_with_reconnect(
+            f"call_tool:{tool_name}",
+            lambda: super(MCPConnectionHTTP, self).call_tool(tool_name, arguments),
+        )
 
 
 def create_connection(
