@@ -107,6 +107,18 @@ class WorkJourneyManualTaskCreateSchema(_StrictModel):
     status: Literal['pending', 'in_progress', 'completed', 'postponed', 'suspended'] = 'pending'
     worked_minutes: int = Field(default=0, ge=0, le=1440)
 
+    @model_validator(mode='before')
+    @classmethod
+    def reject_occurrence_date_input(cls, data: Any):
+        if not isinstance(data, dict):
+            return data
+        if 'occurrence_date' in data:
+            raise ValueError(
+                "occurrence_date é um campo somente-leitura gerenciado pelo servidor. "
+                "Use due_date na criação da tarefa avulsa."
+            )
+        return data
+
 
 class WorkJourneyTransferRequestCreateSchema(_StrictModel):
     to_employee_id: int

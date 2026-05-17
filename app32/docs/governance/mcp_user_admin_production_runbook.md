@@ -38,14 +38,14 @@ execution -> menu_engine -> work_agents.graph -> tool_catalog
 Uso pretendido:
 
 - colaborador, cliente e administrador em fluxos operacionais de menor privilégio;
-- domínios permitidos: `routine`, `projects`, `meetings`, `strategy`;
+- domínios permitidos: `routine`, `projects`, `meetings`, `strategy` e `finance` **somente quando a permissão real do usuário no APP32 permitir**;
 - escopo padrão: empresa ativa (`active_company`);
 - descoberta inicial: `list_user_app32_capabilities` e `describe_app32_crud_contracts_tool`.
 
 Proibições:
 
 - não acessar tools exclusivas de `admin`, `analytics` ou `ops`;
-- não executar mutações financeiras sensíveis;
+- não executar mutações financeiras sensíveis sem permissão real, contrato compatível e gate quando aplicável;
 - não inferir `company_id` por nome parcial de empresa;
 - não usar SQL livre.
 
@@ -82,10 +82,11 @@ Antes de publicar mudança MCP user/admin:
    - `tests/test_mcp_domain_playbooks.py`;
    - `tests/test_official_runtime_smoke.py`;
    - `tests/test_tool_catalog_capabilities.py`.
-3. Verificar que `user` não expõe `finance`.
+3. Verificar que `user` só expõe `finance` para usuários com permissão efetiva compatível no APP32.
 4. Verificar que `admin` exige `company_id` explícito para ações sensíveis.
 5. Verificar que discovery tools estão registradas para ambas as surfaces.
 6. Confirmar que nenhuma nova tool ignora `company_id`, RBAC ou política de risco.
+7. Confirmar que wrappers MCP preservam assinatura tipada compatível com FastMCP.
 
 ## 5. Smoke pós-deploy
 
@@ -107,6 +108,7 @@ Validações mínimas em produção:
 - `get_surface_manifest('admin')` retorna manifesto não vazio;
 - `describe_app32_surface_playbooks_tool` segue disponível via registradores compartilhados;
 - `describe_app32_domain_playbooks_tool` segue disponível via registradores compartilhados;
+- `https://app.gestaoversus.com.br/mcp/healthz` retorna `200 OK`;
 - import de `app` e registry MCP não falha após migrations/restart uWSGI.
 
 ## 6. Fluxo operacional de agente externo
@@ -120,6 +122,11 @@ Validações mínimas em produção:
 5. Validar `company_id` ativo.
 6. Executar tool operacional permitida.
 7. Responder com ação executada, filtros, IDs e pendências.
+
+Para domínio `finance` na surface `user`:
+
+8. validar permissão efetiva do usuário conforme o mesmo modelo da senha no APP32 (ex.: `financial.view`, `financial.create`, `financial.edit`, `financial.delete`);
+9. bloquear a execução se a capability existir no catálogo, mas a permissão efetiva do usuário não cobrir a ação requerida.
 
 ### 6.2 Fluxo admin
 
@@ -139,7 +146,7 @@ Congelar uma tool user/admin quando qualquer condição ocorrer:
 
 - evidência ou suspeita de vazamento cross-tenant;
 - execução sem `company_id` quando obrigatório;
-- mutação financeira acessível pela surface `user`;
+- mutação financeira acessível pela surface `user` sem correspondência com a permissão real do usuário;
 - bypass de RBAC/profile/surface;
 - erro 500 recorrente após chamada MCP;
 - divergência entre capability manifest e contrato CRUD;
@@ -174,5 +181,46 @@ A surface MCP user/admin só deve ser considerada apta quando:
 - deploy conclui sem erro de migration/restart;
 - smoke pós-deploy retorna `MCP_USER_ADMIN_RUNBOOK_SMOKE_OK True True`;
 - não há rota alternativa usando runtime legado;
-- não há acesso user a `finance`;
+- acesso user a `finance` só ocorre quando houver permissão efetiva compatível no APP32;
 - ações admin sensíveis exigem `company_id` e confirmação quando aplicável.
+
+## 10. Runbook de Campo — Lições aprendidas
+
+### 10.1 Claude Code / Desktop
+
+- o alvo canônico de operação MCP é **Claude Code** ou a **aba Code do Claude Desktop**;
+- a aba **Chat** e **Connectors** do Claude Desktop não devem ser tratadas como referência principal de homologação MCP local;
+- o caminho primário de ativação é:
+  - `claude mcp add ...`
+  - seguido de prompt de bootstrap/ativação;
+- slash commands como `/sapiens-cliente-on` devem ser tratados como **opcionais**, não como único caminho crítico.
+
+### 10.2 Registro local do Claude
+
+- instalações reais podem usar registry gerenciado da instalação, como `C:\ClaudeShared\.claude.json`, e não apenas `%USERPROFILE%\.claude.json`;
+- onboarding e troubleshooting devem falar em `~/.claude.json ou equivalente gerenciado da instalação`.
+
+### 10.3 Financeiro permission-aware
+
+- a surface `user` não deve ser “pobre” nem “aberta demais”;
+- o comportamento canônico é: **expor exatamente o que a senha do usuário já permite no APP32**, preservando `company_id`, RBAC, surface e risco;
+- usuário do financeiro pode consultar/criar/atualizar operações financeiras via MCP se a permissão real existir;
+- operações críticas continuam sujeitas a gate humano quando o contrato exigir.
+
+### 10.4 Deploy e saúde do runtime MCP HTTP
+
+- deploy concluído não basta; o runtime MCP HTTP remoto precisa de smoke próprio;
+- validar sempre:
+  - `https://app.gestaoversus.com.br/mcp/healthz`
+  - surfaces publicadas no health
+  - restart real do listener em `127.0.0.1:8101`;
+- se houver `502`, inspecionar imediatamente:
+  - `logs/mcp_http_stdout.log`
+  - `logs/mcp_http_stderr.log`
+
+### 10.5 Wrappers e FastMCP
+
+- wrappers de tools MCP precisam preservar assinatura tipada e annotations resolvidas;
+- se o wrapper perder a assinatura, o FastMCP pode falhar no bootstrap com erros como:
+  - `InvalidSignature`
+  - `Unable to evaluate type annotation ForwardRef(...)`

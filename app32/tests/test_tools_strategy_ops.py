@@ -51,7 +51,7 @@ def test_strategy_ops_update_plan_section_validates_plan_in_active_company(monke
 
     def fake_get_plan(plan_id, company_id):
         calls["get_plan"] = (plan_id, company_id)
-        return SimpleNamespace(id=plan_id)
+        return SimpleNamespace(id=plan_id, mode="implantation")
 
     def fake_update(plan_id, section_key, status):
         calls["update"] = (plan_id, section_key, status)
@@ -66,6 +66,52 @@ def test_strategy_ops_update_plan_section_validates_plan_in_active_company(monke
         "update": (7, "finance", "completed"),
     }
     assert "Sucesso" in result
+
+
+def test_strategy_ops_update_plan_section_honors_explicit_company(monkeypatch):
+    calls = {}
+
+    monkeypatch.setattr(strategy_ops, "get_active_company_id", lambda: 31)
+
+    def fake_get_plan(plan_id, company_id):
+        calls["get_plan"] = (plan_id, company_id)
+        return SimpleNamespace(id=plan_id, mode="implantation")
+
+    def fake_update(plan_id, section_key, status):
+        calls["update"] = (plan_id, section_key, status)
+
+    monkeypatch.setattr(PlanService, "get_plan", staticmethod(fake_get_plan))
+    monkeypatch.setattr(PlanService, "update_section_status", staticmethod(fake_update))
+
+    result = strategy_ops.update_plan_section(14, "participants", "in_progress", company_id=10)
+
+    assert calls == {
+        "get_plan": (14, 10),
+        "update": (14, "participants", "in_progress"),
+    }
+    assert "Sucesso" in result
+
+
+def test_strategy_ops_update_plan_section_rejects_invalid_section_key(monkeypatch):
+    calls = {}
+
+    monkeypatch.setattr(strategy_ops, "get_active_company_id", lambda: 31)
+
+    def fake_get_plan(plan_id, company_id):
+        calls["get_plan"] = (plan_id, company_id)
+        return SimpleNamespace(id=plan_id, mode="implantation")
+
+    def fake_update(plan_id, section_key, status):
+        calls["update"] = (plan_id, section_key, status)
+
+    monkeypatch.setattr(PlanService, "get_plan", staticmethod(fake_get_plan))
+    monkeypatch.setattr(PlanService, "update_section_status", staticmethod(fake_update))
+
+    result = strategy_ops.update_plan_section(14, "overview", "completed", company_id=10)
+
+    assert calls == {"get_plan": (14, 10)}
+    assert "section_key 'overview' inválida" in result
+    assert "participants, alignment, model, execution, finance" in result
 
 
 def test_strategy_ops_update_plan_section_blocks_missing_plan(monkeypatch):
@@ -93,14 +139,14 @@ def test_tools_strategy_wrappers_delegate_to_strategy_domain(monkeypatch):
     monkeypatch.setattr(
         tools_module.strategy_ops_domain,
         "update_plan_section",
-        lambda plan_id, section_key, status="completed": calls.append(("update", plan_id, section_key, status)) or "update-ok",
+        lambda plan_id, section_key, status="completed", company_id=None: calls.append(("update", plan_id, section_key, status, company_id)) or "update-ok",
     )
 
     assert tools_module.list_plans.func(10, "growth") == "plans-ok"
     assert tools_module.get_plan_diagnostics.func(7) == "diag-ok"
-    assert tools_module.update_plan_section.func(7, "finance", "completed") == "update-ok"
+    assert tools_module.update_plan_section.func(7, "finance", "completed", 10) == "update-ok"
     assert calls == [
         ("list", 10, "growth"),
         ("diagnostics", 7),
-        ("update", 7, "finance", "completed"),
+        ("update", 7, "finance", "completed", 10),
     ]

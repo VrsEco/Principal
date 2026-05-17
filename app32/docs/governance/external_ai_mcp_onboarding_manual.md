@@ -20,7 +20,7 @@ Documento operacional da **AA.J.31.1325 — Organização IA/MCP - Grupo 08 - Cr
 
 | Surface | Providers permitidos | Perfis | Observação |
 |---|---|---|---|
-| `user` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | menor privilégio, sem finance |
+| `user` | ChatGPT, Claude, Gemini, custom, internal | colaborador, cliente, administrador | menor privilégio, `finance` permission-aware |
 | `admin` | custom, internal | administrador, admin_tecnico | exige aprovação humana |
 | `analytics` | custom, internal | administrador, admin_tecnico | somente read models/catálogo |
 | `ops` | internal | admin_tecnico | uso técnico e incidentes |
@@ -43,6 +43,27 @@ Toda IA externa deve consultar:
 - Não conceder admin/ops a provider genérico sem aprovação humana.
 - Não executar operação sem `company_id` explícito quando o contrato exigir.
 
+## Diretriz canônica para Claude
+
+- O caminho homologado é **Claude Code** ou a **aba Code do Claude Desktop**.
+- A aba **Chat** / **Connectors** do Claude Desktop não deve ser usada como referência principal para MCP local.
+- O onboarding deve privilegiar:
+  1. `claude mcp add ...`
+  2. validação com `claude mcp list`
+  3. prompt de bootstrap/ativação
+- Slash commands personalizados podem existir, mas são **opcionais**.
+
+## Regra de permissão real do usuário
+
+- A IA externa não deve assumir que `surface=user` implica bloqueio automático de `finance`.
+- O comportamento correto é refletir a mesma permissão efetiva da senha do usuário no APP32.
+- Exemplos de permissões efetivas:
+  - `financial.view`
+  - `financial.create`
+  - `financial.edit`
+  - `financial.delete`
+- Se a permissão real não existir, a IA deve bloquear a ação mesmo que a tool exista no catálogo.
+
 ## Smokes de go-live
 
 Resultado esperado:
@@ -53,6 +74,12 @@ AI_MCP_RELEASE_CHECKLIST_OK 7 3
 AI_MCP_TOOL_FREEZE_OK 7 4
 AI_MCP_EXTERNAL_ONBOARDING_OK 4 5
 ```
+
+Checklist adicional de homologação Claude:
+
+- `claude mcp list` mostra o servidor esperado como `Connected`;
+- a conversa de teste roda na **aba Code** ou no **Claude Code CLI**;
+- bootstrap MCP consegue chamar tools explícitas, não apenas reconhecer o servidor.
 
 ## Uso via MCP
 

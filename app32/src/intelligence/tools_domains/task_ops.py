@@ -97,71 +97,62 @@ def get_tasks_today(scope: str = "me"):
     :param scope: 'me' para o usuário logado, 'team' para a equipe, 'company' para toda a empresa.
     """
     
-    from datetime import date
-    from models.employee import Employee
-    from models.process import Process, ProcessInstance, ProcessRoutine
-    from models.project import Project, ProjectTask
-    from sqlalchemy import func
+    from services.my_work.discovery_service import get_user_activities_v2
 
     company_id = get_active_company_id()
     if not company_id:
         return "Erro: Nenhuma empresa ativa identificada."
+    user_id = get_active_user_id()
+    if not user_id:
+        return "Erro: Usuario nao autenticado."
 
     today = date.today()
     today_str = today.isoformat()
+    normalized_scope = str(scope or "me").strip().lower()
+    if normalized_scope == "team":
+        normalized_scope = "company"
+    if normalized_scope not in {"me", "company", "general"}:
+        return "Erro: scope inválido. Use me, team, company ou general."
 
     try:
-        tasks = [
-            dict(row._mapping)
-            for row in (
-                db.session.query(
-                    ProjectTask.id,
-                    ProjectTask.what.label("title"),
-                    ProjectTask.due_date,
-                    ProjectTask.status,
-                    ProjectTask.who.label("responsible"),
-                    Project.name.label("project_name"),
-                )
-                .join(Project, Project.id == ProjectTask.project_id)
-                .filter(Project.company_id == company_id)
-                .filter(ProjectTask.status.notin_(["completed", "cancelled"]))
-                .filter(ProjectTask.due_date <= today)
-                .order_by(ProjectTask.due_date.asc())
-                .all()
-            )
-        ]
-
-        responsible_employee_id = func.coalesce(
-            ProcessInstance.responsible_id,
-            ProcessInstance.executor_id,
-            ProcessInstance.owner_employee_id,
-        )
-        process_title = func.coalesce(
-            ProcessRoutine.name,
-            Process.name,
-            ProcessInstance.title,
+        activities, _scope_counts = get_user_activities_v2(
+            user_id=user_id,
+            scope=normalized_scope,
+            filters={
+                "delivery_tags": ["open"],
+                "due_date_end": today_str,
+            },
+            company_ids=[company_id],
+            active_company_id=company_id,
         )
 
-        procs = [
-            dict(row._mapping)
-            for row in (
-                db.session.query(
-                    ProcessInstance.id,
-                    process_title.label("title"),
-                    ProcessInstance.due_date,
-                    ProcessInstance.status,
-                    Employee.name.label("responsible"),
-                )
-                .outerjoin(ProcessRoutine, ProcessRoutine.id == ProcessInstance.routine_id)
-                .outerjoin(Process, Process.id == ProcessInstance.process_id)
-                .outerjoin(Employee, Employee.id == responsible_employee_id)
-                .filter(ProcessInstance.company_id == company_id)
-                .filter(ProcessInstance.status.notin_(["completed", "cancelled"]))
-                .filter(ProcessInstance.due_date <= today)
-                .order_by(ProcessInstance.due_date.asc())
-                .all()
-            )
-        ]
+        tasks = []
+        procs = []
+        for activity in activities:
+            item = {
+                "id": activity.get("id"),
+                "title": activity.get("title") or "Item sem título",
+                "due_date": activity.get("deadline_date") or activity.get("deadline"),
+                "status": activity.get("status"),
+                "responsible": activity.get("responsible_name")
+                or activity.get("executor_name")
+                or (
+                    ", ".join(
+                        str(collab.get("name") or "").strip()
+                        for collab in (activity.get("collaborators_json") or [])
+                        if str(collab.get("name") or "").strip()
+                    )
+                    or None
+                ),
+            }
+            if activity.get("type") == "project":
+                item["project_name"] = activity.get("project_title") or "Projeto sem título"
+                tasks.append(item)
+            elif activity.get("type") == "process":
+                procs.append(item)
+
+        tasks.sort(key=lambda item: (str(item.get("due_date") or ""), int(item.get("id") or 0)))
+        procs.sort(key=lambda item: (str(item.get("due_date") or ""), int(item.get("id") or 0)))
 
         if not tasks and not procs:
             return f"🟢 Nenhuma tarefa vencendo hoje ({today_str}) ou atrasada. Ótimo!"

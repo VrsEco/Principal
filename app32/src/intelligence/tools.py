@@ -542,12 +542,18 @@ def get_plan_diagnostics_read_model(company_id: int, plan_id: int):
 
 
 @tool
-def update_plan_section(plan_id: int, section_key: str, status: str = 'completed'):
+def update_plan_section(plan_id: int, section_key: str, status: str = 'completed', company_id: int = None):
     """
     Atualiza o status de uma seção do plano (ex: 'participants', 'finance', 'projects').
     Use isto para marcar etapas como concluídas conforme a IA ou o usuário executam as tarefas.
+    :param company_id: Opcional. Se informado, força a validação tenant-safe nessa empresa.
     """
-    return strategy_ops_domain.update_plan_section(plan_id=plan_id, section_key=section_key, status=status)
+    return strategy_ops_domain.update_plan_section(
+        plan_id=plan_id,
+        section_key=section_key,
+        status=status,
+        company_id=company_id,
+    )
 
 
 @tool

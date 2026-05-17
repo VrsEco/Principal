@@ -56,18 +56,31 @@ def get_plan_diagnostics(plan_id: int):
         return sanitize_output(f"Erro ao diagnosticar plano: {exc}")
 
 
-def update_plan_section(plan_id: int, section_key: str, status: str = "completed"):
-    """Atualiza seção de plano após validar existência no tenant ativo."""
+def update_plan_section(
+    plan_id: int,
+    section_key: str,
+    status: str = "completed",
+    company_id: int | None = None,
+):
+    """Atualiza seção de plano após validar existência no tenant ativo ou explicitamente informado."""
     from services.plan_service import PlanService
 
-    company_id = get_active_company_id()
-    if not company_id:
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    if not selected_company_id:
         return "Erro: Contexto de empresa nao identificado."
 
     try:
-        plan = PlanService.get_plan(plan_id, company_id)
+        plan = PlanService.get_plan(plan_id, selected_company_id)
         if not plan:
             return f"Plano {plan_id} não encontrado."
+
+        valid_section_keys = PlanService.get_valid_section_keys(plan.mode)
+        if section_key not in valid_section_keys:
+            valid_keys = ", ".join(valid_section_keys)
+            return (
+                f"Erro: section_key '{section_key}' inválida para plano no modo '{plan.mode}'. "
+                f"Use uma das opções: {valid_keys}."
+            )
 
         PlanService.update_section_status(plan_id, section_key, status)
         return f"Sucesso: Seção '{section_key}' do plano {plan_id} alterada para '{status}'."

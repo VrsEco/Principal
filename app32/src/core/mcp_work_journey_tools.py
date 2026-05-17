@@ -179,7 +179,11 @@ def register_work_journey_tools(mcp) -> None:
 
     @mcp.tool()
     def create_work_journey_manual_task_tool(company_id: int, payload: dict) -> dict:
-        """Cria uma tarefa avulsa diretamente na agenda do colaborador."""
+        """Cria uma tarefa avulsa diretamente na agenda do colaborador.
+
+        Observação: `occurrence_date` é campo somente-leitura, calculado pelo servidor.
+        Para criação, informe `due_date`.
+        """
         data = WorkJourneyManualTaskCreateSchema.model_validate(payload).model_dump()
         return {'item': _run(create_manual_task, company_id, data)}
 

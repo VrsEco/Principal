@@ -11,6 +11,7 @@
     schedules: [],
     bankAccounts: [],
     selectedType: initialType || '',
+    editingSettlementId: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -18,7 +19,10 @@
   const detailSection = $('bordero-detail-section');
   const createButton = $('bordero-create-button');
   const saveButton = $('bordero-save-button');
+  const deleteButton = $('bordero-delete-button');
   const settlementButton = $('bordero-settlement-button');
+  const settlementCancelWrap = $('bordero-settlement-cancel-wrap');
+  const settlementCancelButton = $('bordero-settlement-cancel-button');
   const banner = $('bordero-banner');
   const typeInfo = $('bordero-type-info');
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -175,6 +179,30 @@
     renderSettlementBankAccountOptions();
   }
 
+  function resetSettlementForm(bordero = state.bordero) {
+    state.editingSettlementId = null;
+    settlementButton.textContent = 'Registrar baixa';
+    settlementCancelWrap?.classList.add('hidden');
+    const openAmount = Number(bordero?.open_amount || 0);
+    $('settlement-date').value = new Date().toISOString().slice(0, 10);
+    $('settlement-amount').value = formatCurrencyFromDigits(Math.round(openAmount * 100));
+    $('settlement-bank-account').value = bordero?.bank_account_id || '';
+    $('settlement-notes').value = '';
+    settlementButton.disabled = !(bordero && bordero.status !== 'cancelled' && openAmount > 0);
+  }
+
+  function startSettlementEdit(settlement) {
+    if (!settlement) return;
+    state.editingSettlementId = Number(settlement.id || 0) || null;
+    $('settlement-date').value = settlement.settlement_date || new Date().toISOString().slice(0, 10);
+    $('settlement-amount').value = formatCurrencyFromDigits(Math.round(Number(settlement.gross_amount || 0) * 100));
+    $('settlement-bank-account').value = settlement.bank_account_id || state.bordero?.bank_account_id || '';
+    $('settlement-notes').value = settlement.notes || '';
+    settlementButton.textContent = 'Salvar edição';
+    settlementCancelWrap?.classList.remove('hidden');
+    settlementButton.disabled = false;
+  }
+
   function renderDetail(bordero) {
     state.bordero = bordero;
     page.dataset.borderoType = bordero.bordero_type || '';
@@ -218,7 +246,7 @@
     const settlementsBody = $('bordero-settlements-body');
     const settlements = bordero.settlements || [];
     if (!settlements.length) {
-      settlementsBody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma baixa registrada.</td></tr>';
+      settlementsBody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhuma baixa registrada.</td></tr>';
     } else {
       settlementsBody.innerHTML = settlements.map((item) => `
         <tr>
@@ -228,6 +256,12 @@
           <td data-label="Alocado">${money(item.allocated_amount || 0)}</td>
           <td data-label="Variação">${money(item.variance_amount || 0)}</td>
           <td data-label="Status">${settlementStatusLabel(item.settlement_status)}</td>
+          <td data-label="Ações">
+            <div class="bordero-table-actions">
+              <button type="button" class="btn btn-secondary btn-xs" data-bordero-settlement-edit="${item.id}">Editar</button>
+              <button type="button" class="btn btn-danger btn-xs" data-bordero-settlement-delete="${item.id}">Excluir</button>
+            </div>
+          </td>
         </tr>
       `).join('');
     }
@@ -236,10 +270,10 @@
     detailSection.classList.remove('hidden');
     saveButton?.classList.remove('hidden');
     const openAmount = Number(bordero.open_amount || 0);
-    const canSettle = bordero.status !== 'cancelled' && openAmount > 0;
     $('settlement-date').value = new Date().toISOString().slice(0, 10);
-    $('settlement-amount').value = formatCurrencyFromDigits(Math.round(openAmount * 100));
-    settlementButton.disabled = !canSettle;
+    deleteButton?.classList.toggle('hidden', !bordero.can_delete);
+    deleteButton && (deleteButton.disabled = !bordero.can_delete);
+    resetSettlementForm(bordero);
   }
 
   async function loadDetail() {
@@ -303,6 +337,42 @@
     await loadDetail();
   }
 
+  async function updateSettlement() {
+    if (!state.editingSettlementId) throw new Error('Selecione uma baixa do borderô para editar.');
+    const amount = parseCurrency($('settlement-amount').value);
+    if (amount <= 0) throw new Error('Informe um valor válido para a baixa do borderô.');
+    const payload = {
+      settlement_date: $('settlement-date').value,
+      gross_amount: amount,
+      bank_account_id: Number($('settlement-bank-account').value || 0) || null,
+      notes: $('settlement-notes').value.trim() || null,
+    };
+    await fetchJson(`/api/financial/borderos/${borderoId}/settlements/${state.editingSettlementId}?company_id=${companyId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    await loadDetail();
+  }
+
+  async function deleteSettlement(settlementId) {
+    if (!settlementId) return;
+    if (!window.confirm('Excluir esta baixa do borderô? Os títulos voltarão a ficar disponíveis conforme o saldo reaberto.')) return;
+    await fetchJson(`/api/financial/borderos/${borderoId}/settlements/${settlementId}?company_id=${companyId}`, {
+      method: 'DELETE',
+    });
+    await loadDetail();
+  }
+
+  async function deleteBordero() {
+    if (!borderoId) return;
+    if (!window.confirm('Excluir este borderô? Esta ação só é permitida quando não existirem baixas ativas.')) return;
+    await fetchJson(`/api/financial/borderos/${borderoId}?company_id=${companyId}`, {
+      method: 'DELETE',
+    });
+    window.location.href = '/financial/borderos';
+  }
+
   async function init() {
     try {
       await Promise.all([loadBankAccounts(), loadSchedules()]);
@@ -318,7 +388,26 @@
         try { await createBordero(); } catch (error) { alert(error.message); }
       });
       settlementButton?.addEventListener('click', async () => {
-        try { await createSettlement(); } catch (error) { alert(error.message); }
+        try {
+          if (state.editingSettlementId) await updateSettlement();
+          else await createSettlement();
+        } catch (error) { alert(error.message); }
+      });
+      settlementCancelButton?.addEventListener('click', () => resetSettlementForm());
+      deleteButton?.addEventListener('click', async () => {
+        try { await deleteBordero(); } catch (error) { alert(error.message); }
+      });
+      $('bordero-settlements-body')?.addEventListener('click', async (event) => {
+        const editButton = event.target.closest('button[data-bordero-settlement-edit]');
+        if (editButton) {
+          const settlement = (state.bordero?.settlements || []).find((item) => Number(item.id) === Number(editButton.dataset.borderoSettlementEdit));
+          startSettlementEdit(settlement);
+          return;
+        }
+        const deleteSettlementButton = event.target.closest('button[data-bordero-settlement-delete]');
+        if (deleteSettlementButton) {
+          try { await deleteSettlement(Number(deleteSettlementButton.dataset.borderoSettlementDelete)); } catch (error) { alert(error.message); }
+        }
       });
 
       if (borderoId) {

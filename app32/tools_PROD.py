@@ -439,20 +439,29 @@ def get_plan_diagnostics(plan_id: int):
         return sanitize_output(f"Erro ao diagnosticar plano: {str(e)}")
 
 @tool
-def update_plan_section(plan_id: int, section_key: str, status: str = 'completed'):
+def update_plan_section(plan_id: int, section_key: str, status: str = 'completed', company_id: int = None):
     """
     Atualiza o status de uma seção do plano (ex: 'participants', 'finance', 'projects').
     Use isto para marcar etapas como concluídas conforme a IA ou o usuário executam as tarefas.
+    :param company_id: Opcional. Se informado, força a validação tenant-safe nessa empresa.
     """
     from services.plan_service import PlanService
     from flask import session
-    company_id = get_active_company_id()
-    if not company_id: return "Erro: Contexto de empresa nao identificado."
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    if not selected_company_id: return "Erro: Contexto de empresa nao identificado."
 
     try:
         # Check permissions/existence
-        plan = PlanService.get_plan(plan_id, company_id)
+        plan = PlanService.get_plan(plan_id, selected_company_id)
         if not plan: return f"Plano {plan_id} não encontrado."
+
+        valid_section_keys = [section['key'] for section in PlanService.get_sections_config(plan.mode)]
+        if section_key not in valid_section_keys:
+            valid_keys = ", ".join(valid_section_keys)
+            return (
+                f"Erro: section_key '{section_key}' inválida para plano no modo '{plan.mode}'. "
+                f"Use uma das opções: {valid_keys}."
+            )
         
         PlanService.update_section_status(plan_id, section_key, status)
         return f"Sucesso: Seção '{section_key}' do plano {plan_id} alterada para '{status}'."

@@ -208,7 +208,9 @@ def get_user_activities_v2(
 
     can_view_by_cid = {}
     for cid in allowed_company_ids:
-        if user_role in ('admin', 'client'):
+        if user_role == 'admin':
+            can_view_by_cid[cid] = True
+        elif user_role == 'client':
             can_view_by_cid[cid] = can_access_company(cid)
         else:
             can_view_by_cid[cid] = has_permission(cid, 'companies', 'view')

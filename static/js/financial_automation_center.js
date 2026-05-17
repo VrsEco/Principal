@@ -348,6 +348,12 @@
     return record.recipient_name || record.issuer_name || 'Não definido';
   }
 
+  function deleteBlockersTitle(record) {
+    const blockers = Array.isArray(record?.delete_blockers) ? record.delete_blockers : [];
+    if (!blockers.length) return '';
+    return `Exclusão bloqueada: ${blockers.map((item) => item.label || item.type || 'vínculo ativo').join(', ')}`;
+  }
+
   function render() {
     refreshReviewQueue();
     if (!state.records.length) {
@@ -375,7 +381,7 @@
           <div class="fa-inline fa-inline--table">
             <button type="button" class="fa-btn fa-btn--primary" data-action="review">Revisar</button>
             <button type="button" class="fa-btn fa-btn--secondary" data-action="origin">Documento</button>
-            <button type="button" class="fa-btn fa-btn--danger" data-action="exclude">Excluir</button>
+            <button type="button" class="fa-btn fa-btn--danger" data-action="exclude" ${record.can_delete ? '' : 'disabled'} title="${escapeHtml(deleteBlockersTitle(record))}">Excluir</button>
           </div>
         </td>
       </tr>
@@ -798,14 +804,17 @@
     const id = Number(recordId || 0);
     if (!id) return;
     const record = state.records.find((item) => item.id === id);
+    if (record && record.can_delete === false) {
+      alert(deleteBlockersTitle(record));
+      return;
+    }
     const details = record
       ? `\n\nLote: ${batchOptionLabel(record.batch_id)}\nDocumento: ${documentDisplayCode(record)} · ${documentLabel(record)}`
       : '';
     const confirmed = window.confirm(`Deseja excluir este registro da Central de Automação?${details}`);
     if (!confirmed) return;
-    await api(`/api/financial/automation/records/bulk-status?company_id=${companyId}`, {
-      method: 'POST',
-      body: JSON.stringify({ record_ids: [id], status: 'excluded' }),
+    await api(`/api/financial/automation/records/${id}?company_id=${companyId}`, {
+      method: 'DELETE',
     });
     await loadRecords();
   }

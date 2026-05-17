@@ -38,7 +38,8 @@ Consolidar, em um artefato único e consultável, os gates mínimos para abrir o
 ### 2. Release
 - checklist oficial de release executado;
 - deploy concluído;
-- smoke pós-deploy validado.
+- smoke pós-deploy validado;
+- health do MCP HTTP remoto validado externamente.
 
 ### 3. Onboarding
 - intake, desenho de acesso, registro e validação de IA externa prontos;
@@ -74,7 +75,8 @@ AI_MCP_OPERATIONAL_READINESS_OK 5 5
 - exigir `company_id` explícito quando o contrato exigir;
 - bloquear liberação irrestrita enquanto houver drift aberto;
 - congelar tool ao primeiro sinal de risco cross-tenant/RBAC;
-- manter rollback validado.
+- manter rollback validado;
+- validar o caminho canônico do Claude em **Claude Code / aba Code**.
 
 ## Condições de bloqueio
 
@@ -82,7 +84,15 @@ AI_MCP_OPERATIONAL_READINESS_OK 5 5
 - smoke pós-deploy falhando;
 - tool sensível sem freeze/rollback operacionalizado;
 - risco cross-tenant;
-- abertura geral sem onboarding e readiness documental.
+- abertura geral sem onboarding e readiness documental;
+- regressão no runtime MCP HTTP (ex.: `502`, listener morto, bootstrap FastMCP quebrado).
+
+## Lições aprendidas incorporadas à readiness
+
+- `surface=user` deve ser **permission-aware** e refletir a permissão real da senha do APP32;
+- health `200` em `/mcp/healthz` é gate mínimo obrigatório, não opcional;
+- wrappers MCP precisam preservar assinatura tipada para não quebrar o bootstrap do FastMCP;
+- Claude Chat e Claude Code são superfícies diferentes e não devem ser misturados no onboarding canônico.
 
 ## Uso via MCP
 

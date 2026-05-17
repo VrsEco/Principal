@@ -9,6 +9,11 @@ logger = logging.getLogger(__name__)
 
 class PlanService:
     @staticmethod
+    def get_valid_section_keys(mode: str) -> List[str]:
+        """Retorna as section_keys válidas para o modo informado."""
+        return [section["key"] for section in PlanService.get_sections_config(mode)]
+
+    @staticmethod
     def _normalize_period(value: Optional[str]) -> str:
         """Normaliza datas YYYY-MM, YYYY.MM e YYYY-MM-DD para YYYY-MM."""
         if not value:

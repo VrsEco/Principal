@@ -8,11 +8,69 @@ continuam nos serviços financeiros chamados por cada tool.
 from __future__ import annotations
 
 import base64
+import os
 from typing import Any, Optional
 
 
 def register_financial_mcp_tools(mcp: Any) -> None:
     """Registra as tools MCP financeiras no servidor informado."""
+
+    def _attach_mcp_audit_payload(payload: dict | None) -> dict:
+        from src.intelligence.tool_context import get_sapiens_context
+
+        def _resolve_employee_id(resolved_user_id: int | None, company_id_value: int | None, fallback_employee_id: int | None) -> int | None:
+            if fallback_employee_id is not None:
+                return int(fallback_employee_id)
+            if resolved_user_id is None or company_id_value is None:
+                return None
+            try:
+                from models.employee import Employee
+
+                employee = Employee.query.filter_by(
+                    user_id=int(resolved_user_id),
+                    company_id=int(company_id_value),
+                ).first()
+                if employee and getattr(employee, "id", None) is not None:
+                    return int(employee.id)
+            except Exception:
+                return None
+            return None
+
+        normalized = dict(payload or {})
+        identity = get_sapiens_context()
+        user_id = identity.user_id or (int(os.environ["APP32_MCP_USER_ID"]) if os.environ.get("APP32_MCP_USER_ID") else None)
+        company_id = normalized.get("company_id") or os.environ.get("APP32_MCP_COMPANY_ID") or identity.company_id
+        company_id = int(company_id) if company_id not in (None, "") else None
+        employee_id = _resolve_employee_id(user_id, company_id, identity.employee_id)
+        channel = (
+            str(os.environ.get("APP32_MCP_CLIENT") or os.environ.get("APP32_MCP_CHANNEL") or identity.channel or "app32_mcp")
+            .strip()
+            .lower()
+        )
+        thread_id = identity.thread_id or os.environ.get("APP32_MCP_THREAD_ID")
+        agent_name = channel or "app32_mcp"
+
+        normalized.setdefault("created_by_agent", agent_name)
+        if user_id is not None:
+            normalized.setdefault("created_by_user_id", int(user_id))
+        if employee_id is not None:
+            normalized.setdefault("created_by_employee_id", int(employee_id))
+
+        metadata = dict(normalized.get("metadata_json") or {})
+        audit = dict(metadata.get("audit") or {})
+        actor = dict(audit.get("actor") or {})
+        if user_id is not None:
+            actor.setdefault("user_id", int(user_id))
+        if employee_id is not None:
+            actor.setdefault("employee_id", int(employee_id))
+        actor.setdefault("agent", agent_name)
+        audit["actor"] = actor
+        audit.setdefault("channel", channel)
+        if thread_id:
+            audit.setdefault("thread_id", thread_id)
+        metadata["audit"] = audit
+        normalized["metadata_json"] = metadata
+        return normalized
 
     def _run_financial_action(callback, *args, **kwargs) -> Any:
         from app import create_app
@@ -250,7 +308,7 @@ def register_financial_mcp_tools(mcp: Any) -> None:
 
         result, error = _run_financial_action(
             FinancialScheduleService.create_schedule,
-            payload=payload,
+            payload=_attach_mcp_audit_payload(payload),
         )
         if error:
             return {"success": False, "error": error}
@@ -635,7 +693,7 @@ def register_financial_mcp_tools(mcp: Any) -> None:
 
         entry, error = _run_financial_action(
             _create_and_serialize_entry,
-            payload=payload,
+            payload=_attach_mcp_audit_payload(payload),
         )
         if error:
             return {"success": False, "error": error}
