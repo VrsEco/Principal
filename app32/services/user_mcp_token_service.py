@@ -91,8 +91,9 @@ class UserMcpResolvedContext:
 
 class UserMcpTokenService:
     CLIENTE_VALIDATION_PROMPT = (
-        "Rode /sapiens-cliente-on e confirme o bootstrap com "
-        "resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool."
+        "Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com "
+        "bootstrap_session_context, describe_app32_available_sapiens_squads_tool e "
+        "resolve_app32_sapiens_activation_tool."
     )
 
     @staticmethod
@@ -254,43 +255,37 @@ class UserMcpTokenService:
         allowed_squads: list[str],
     ) -> list[dict[str, str]]:
         normalized = [cls._normalize_squad(item) for item in allowed_squads if item]
-        commands: list[dict[str, str]] = []
+        commands: list[dict[str, str]] = [
+            {
+                "command": "Sapiens On",
+                "summary": "Entrada textual oficial. Equivale a /sapiens-on e inicia o fluxo guiado de ativação.",
+            },
+            {
+                "command": "/sapiens-on",
+                "summary": "Entrada slash oficial. Conecta ao MCP, resolve squads e ativa o squad escolhido.",
+            },
+        ]
         if "squad_cliente" in normalized:
             commands.append(
                 {
                     "command": "/sapiens-cliente-on",
-                    "summary": "Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente.",
+                    "summary": "Atalho direto do Sapiens Cliente. Resolve a ativação e executa a startup sequence oficial.",
                 }
             )
         if "squad_versus" in normalized:
             commands.append(
                 {
                     "command": "/sapiens-consultor-on",
-                    "summary": "Ativa o Sapiens Consultor e carrega o bootstrap oficial do Squad Versus.",
+                    "summary": "Atalho direto do Sapiens Consultor. Resolve a ativação e executa a startup sequence oficial.",
                 }
             )
         if "engineering" in normalized:
             commands.append(
                 {
                     "command": "/sapiens-engenharia-on",
-                    "summary": "Ativa o Sapiens Engenharia e carrega o bootstrap oficial do Squad de Engenharia.",
+                    "summary": "Atalho direto do Sapiens Engenharia. Resolve a ativação e executa a startup sequence oficial.",
                 }
             )
-        if normalized:
-            if len(normalized) == 1:
-                commands.append(
-                    {
-                        "command": "/sapiens-on",
-                        "summary": "Ativa automaticamente o único Squad Sapiens disponível nesta máquina.",
-                    }
-                )
-            else:
-                commands.append(
-                    {
-                        "command": "/sapiens-on",
-                        "summary": "Pergunta qual Squad Sapiens deve ser ativado quando houver mais de um disponível.",
-                    }
-                )
         return commands
 
     @classmethod
@@ -303,6 +298,80 @@ class UserMcpTokenService:
             installed_squads=allowed_squads,
         )
         return SapiensActivationService.selection_prompt_for_squads(squads)
+
+    @classmethod
+    def _build_deactivation_commands(
+        cls,
+        allowed_squads: list[str],
+    ) -> list[dict[str, str]]:
+        normalized = [cls._normalize_squad(item) for item in allowed_squads if item]
+        commands: list[dict[str, str]] = [
+            {
+                "command": "Sapiens Off",
+                "summary": "Encerra o squad ativo, remove o badge e mantém a sessão aberta sem contexto Sapiens.",
+            },
+            {
+                "command": "/sapiens-off",
+                "summary": "Versão slash do encerramento genérico do Sapiens.",
+            },
+        ]
+        if "squad_cliente" in normalized:
+            commands.append(
+                {
+                    "command": "Sapiens Cliente Off",
+                    "summary": "Encerra explicitamente a sessão do Sapiens Cliente.",
+                }
+            )
+        if "squad_versus" in normalized:
+            commands.append(
+                {
+                    "command": "Sapiens Consultor Off",
+                    "summary": "Encerra explicitamente a sessão do Sapiens Consultor.",
+                }
+            )
+        if "engineering" in normalized:
+            commands.append(
+                {
+                    "command": "Sapiens Engenharia Off",
+                    "summary": "Encerra explicitamente a sessão do Sapiens Engenharia.",
+                }
+            )
+        return commands
+
+    @classmethod
+    def _build_session_lifecycle(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        allowed_squads: list[str],
+        company_id: int | None,
+    ) -> dict[str, Any]:
+        activation_payload = SapiensActivationService.resolve_activation(
+            role="administrador",
+            squad=runtime_config["squad"],
+            installed_squads=allowed_squads,
+            company_id=company_id,
+        )
+        startup_tools = list(activation_payload.get("startup_tools") or [])
+        selection_prompt = cls._build_activation_selection_prompt(allowed_squads)
+        requires_selection = len(allowed_squads) > 1
+        return {
+            "entry_aliases": ["Sapiens On", "sapiens on", "/sapiens-on"],
+            "preflight_tools": [
+                "bootstrap_session_context",
+                "describe_app32_available_sapiens_squads_tool",
+            ],
+            "activation_tool": "resolve_app32_sapiens_activation_tool",
+            "selection_prompt": selection_prompt,
+            "requires_selection": requires_selection,
+            "auto_activate_when_single_squad": not requires_selection,
+            "available_squads_count": len(allowed_squads),
+            "startup_tools": startup_tools,
+            "session_badge": activation_payload.get("session_badge"),
+            "session_title": activation_payload.get("session_title"),
+            "activation_message": activation_payload.get("activation_message"),
+            "deactivation_commands": cls._build_deactivation_commands(allowed_squads),
+        }
 
     @classmethod
     def _build_claude_activation_install_command(
@@ -475,6 +544,37 @@ class UserMcpTokenService:
         return "\n".join(lines)
 
     @classmethod
+    def _build_company_context_rules(
+        cls,
+        *,
+        companies: list[dict[str, Any]],
+        selected_company: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        multiple_companies = len(companies) > 1
+        return {
+            "session_company_required": False,
+            "multiple_companies": multiple_companies,
+            "default_company_optional": True,
+            "active_company_id": selected_company.get("id") if selected_company else None,
+            "active_company_label": selected_company.get("label") if selected_company else None,
+            "read_scope": (
+                "Consultas pessoais podem operar em escopo multiempresa e devem retornar agrupadas por empresa."
+                if multiple_companies
+                else "Consultas pessoais podem operar diretamente na única empresa autorizada."
+            ),
+            "write_scope": (
+                "Ações operacionais, mutações e consultas ambíguas devem pedir empresa quando houver mais de uma elegível."
+                if multiple_companies
+                else "Ações operacionais usam a empresa autorizada desta instalação, salvo instrução explícita em contrário."
+            ),
+            "selection_policy": (
+                "Não perguntar empresa na abertura da sessão; perguntar somente quando a intenção exigir escopo único."
+                if multiple_companies
+                else "Não perguntar empresa na abertura da sessão; a única empresa autorizada pode ser usada automaticamente."
+            ),
+        }
+
+    @classmethod
     def _build_harness_summary_text(
         cls,
         *,
@@ -513,30 +613,37 @@ class UserMcpTokenService:
         *,
         runtime_config: dict[str, Any],
         connection_name: str,
+        session_lifecycle: dict[str, Any],
+        company_context_rules: dict[str, Any],
     ) -> str:
         validation_prompt = cls.CLIENTE_VALIDATION_PROMPT
-        discovery_tools = [
-            "resolve_app32_instruction_bundle_tool",
-            "describe_app32_squad_runtime_tool",
-            "describe_app32_profile_contracts_tool",
-            "describe_app32_surface_playbooks_tool",
-            "describe_app32_domain_playbooks_tool",
-            "describe_app32_release_checklist_tool",
-            "describe_app32_tool_freeze_procedure_tool",
-        ]
+        preflight_tools = list(session_lifecycle.get("preflight_tools") or [])
+        startup_tools = list(session_lifecycle.get("startup_tools") or [])
         lines = [
             f"Smoke guiado da instalação: {connection_name}",
             "",
             "Sequência recomendada:",
             f"1. Abra uma conversa no cliente {runtime_config.get('runtime_label') or 'selecionado'}.",
             f"2. Rode: {validation_prompt}",
-            "3. Confirme que a resposta identifica profile, surface, harness inicial e company_id.",
-            "4. Rode as tools de discovery obrigatórias abaixo antes da primeira operação real.",
-            "5. Só depois execute uma operação do domínio desejado.",
+            "3. Confirme que o runtime perguntou pelo squad quando houver mais de um disponível e que o badge da sessão foi aplicado.",
+            "4. Confirme que a resposta identifica profile, surface, harness inicial e company_id.",
+            "5. Se a leitura for pessoal e houver múltiplas empresas, confirme retorno agrupado por empresa sem exigir escolha inicial.",
+            "6. Só depois execute uma operação do domínio desejado.",
             "",
-            "Discovery obrigatório:",
+            "Política de empresa na sessão:",
+            f"- {company_context_rules.get('selection_policy')}",
+            f"- {company_context_rules.get('write_scope')}",
+            "",
+            "Pré-flight obrigatório:",
         ]
-        lines.extend([f"- {tool_name}" for tool_name in discovery_tools])
+        lines.extend([f"- {tool_name}" for tool_name in preflight_tools])
+        lines.extend(
+            [
+                "",
+                "Startup tools que devem estar carregadas após a escolha do squad:",
+            ]
+        )
+        lines.extend([f"- {tool_name}" for tool_name in startup_tools])
         lines.extend(
             [
                 "",
@@ -556,6 +663,8 @@ class UserMcpTokenService:
         *,
         runtime_config: dict[str, Any],
         allowed_squads: list[str],
+        session_lifecycle: dict[str, Any],
+        company_context_rules: dict[str, Any],
     ) -> str:
         lines = [
             "Onboarding operacional desta instalação:",
@@ -564,13 +673,22 @@ class UserMcpTokenService:
             f"- Squad publicado: {runtime_config.get('experience_label') or runtime_config.get('squad_label') or '-'}",
             f"- Surface resultante: {runtime_config.get('resolved_surface') or '-'}",
             f"- Token pessoal permitido: {'sim' if runtime_config.get('supports_personal_token') else 'não'}",
+            f"- Badge esperado da sessão: {session_lifecycle.get('session_badge') or '-'}",
+            f"- Seleção de squad obrigatória: {'sim' if session_lifecycle.get('requires_selection') else 'não'}",
+            f"- Empresa padrão ativa: {company_context_rules.get('active_company_label') or 'não definida (escopo dinâmico)'}",
             "",
             "Checklist de abertura:",
             "1. Intake do provider e do caso de uso.",
             "2. Confirmar menor privilégio por squad/profile/surface.",
             "3. Registrar a conexão sem expor token em prompt ou log.",
-            "4. Executar discovery obrigatório antes da primeira ação operacional.",
+            "4. Executar o fluxo Sapiens On com preflight, escolha do squad e startup sequence completa.",
             "5. Operar com monitoramento e freeze/rollback conhecidos.",
+            "6. Encerrar com Sapiens Off quando a sessão não precisar mais do contexto ativo.",
+            "",
+            "Política de empresa na sessão:",
+            f"- {company_context_rules.get('selection_policy')}",
+            f"- {company_context_rules.get('read_scope')}",
+            f"- {company_context_rules.get('write_scope')}",
             "",
             "Squads disponíveis para este usuário:",
         ]
@@ -1025,20 +1143,34 @@ class UserMcpTokenService:
                 token_value=token_value,
             )
             activation_commands = cls._build_activation_commands(allowed_squads)
+            deactivation_commands = cls._build_deactivation_commands(allowed_squads)
             activation_selection_prompt = cls._build_activation_selection_prompt(allowed_squads)
             activation_commands_install_command = (
                 cls._build_claude_activation_install_command(allowed_squads)
                 if runtime_config["runtime"] == "claude"
                 else None
             )
+            session_lifecycle = cls._build_session_lifecycle(
+                runtime_config=runtime_config,
+                allowed_squads=allowed_squads,
+                company_id=resolved_company_id,
+            )
+            company_context_rules = cls._build_company_context_rules(
+                companies=companies,
+                selected_company=selected_company,
+            )
             harness_summary_text = cls._build_harness_summary_text(runtime_config=runtime_config)
             smoke_guided_text = cls._build_smoke_guided_text(
                 runtime_config=runtime_config,
                 connection_name=connection_name,
+                session_lifecycle=session_lifecycle,
+                company_context_rules=company_context_rules,
             )
             onboarding_summary_text = cls._build_onboarding_summary_text(
                 runtime_config=runtime_config,
                 allowed_squads=allowed_squads,
+                session_lifecycle=session_lifecycle,
+                company_context_rules=company_context_rules,
             )
             config_text = (
                 f"Conexão: {connection_name}\n"
@@ -1097,20 +1229,28 @@ class UserMcpTokenService:
                     f"{guided_install_text}\n\n"
                     "Prompt de ativação recomendado no Claude Code ou na aba Code do Claude Desktop:\n"
                     f"Use a conexão MCP {connection_name} desta sessão.\n\n"
-                    "Antes de responder, rode nesta ordem:\n"
-                    "1. resolve_app32_instruction_bundle_tool\n"
-                    "2. describe_app32_squad_runtime_tool\n"
-                    "3. list_user_app32_capabilities\n"
-                    "4. describe_app32_profile_contracts_tool\n"
-                    "5. describe_app32_surface_playbooks_tool\n"
-                    "6. describe_app32_domain_playbooks_tool\n\n"
-                    "Se o bootstrap funcionar, confirme na primeira linha exatamente `Sapiens Cliente Ativado`.\n"
-                    "Se o runtime suportar título de sessão, prefira `Sapiens Cliente On`.\n"
+                    "Quando o usuário digitar `Sapiens On`, `sapiens on` ou `/sapiens-on`, execute exatamente este fluxo:\n"
+                    "1. Verifique se a conexão MCP do APP32 está disponível na sessão.\n"
+                    "2. Rode `bootstrap_session_context`.\n"
+                    "3. Rode `describe_app32_available_sapiens_squads_tool`.\n"
+                    f"4. Se houver mais de um squad, pergunte exatamente: `{activation_selection_prompt or 'Com qual squad você vai trabalhar?'}`.\n"
+                    f"5. Rode `resolve_app32_sapiens_activation_tool` com o squad escolhido ou resolvido.\n"
+                    "6. Execute a startup sequence retornada em `startup_tools`, na ordem, para pré-carregar schema e contexto.\n"
+                    "7. Se o fluxo funcionar, responda com a mensagem de ativação e mantenha o squad ativo nesta sessão.\n\n"
+                    "Startup sequence esperada após a escolha do squad:\n"
+                    + "\n".join([f"- {item}" for item in session_lifecycle["startup_tools"]])
+                    + "\n\n"
+                    f"Badge esperado: `{session_lifecycle['session_badge'] or runtime_config['experience_label'] + ' On'}`.\n"
+                    "Se o runtime suportar título/badge de sessão, aplique esse badge no canto superior esquerdo ou no título visível da conversa.\n"
+                    "Quando o usuário digitar `Sapiens Off` ou um off explícito do squad, remova o badge, descarte o bundle/contexto do squad e mantenha a sessão aberta.\n"
                     "Depois disso, responda à demanda do usuário.\n\n"
-                    "Atalhos slash opcionais no Claude Code:\n"
+                    "Entradas oficiais de ativação:\n"
                     + "\n".join([f"- {item['command']}: {item['summary']}" for item in activation_commands])
+                    + "\n\n"
+                    + "Entradas oficiais de encerramento:\n"
+                    + "\n".join([f"- {item['command']}: {item['summary']}" for item in deactivation_commands])
                     + (
-                        f"\n\nQuando houver mais de um squad disponível, o comando genérico `/sapiens-on` deve perguntar exatamente:\n{activation_selection_prompt}"
+                        f"\n\nQuando houver mais de um squad disponível, o comando genérico deve perguntar exatamente:\n{activation_selection_prompt}"
                         if activation_selection_prompt
                         else ""
                     )
@@ -1159,14 +1299,23 @@ class UserMcpTokenService:
                 "smoke_guided_text": smoke_guided_text,
                 "validation_prompt": cls.CLIENTE_VALIDATION_PROMPT,
                 "activation_commands": activation_commands,
+                "deactivation_commands": deactivation_commands,
                 "activation_selection_prompt": activation_selection_prompt,
                 "activation_commands_install_command": activation_commands_install_command,
+                "session_badge": session_lifecycle["session_badge"],
+                "startup_tools": session_lifecycle["startup_tools"],
+                "preflight_tools": session_lifecycle["preflight_tools"],
+                "activation_tool": session_lifecycle["activation_tool"],
+                "requires_squad_selection": session_lifecycle["requires_selection"],
+                "auto_activate_when_single_squad": session_lifecycle["auto_activate_when_single_squad"],
+                "company_context_rules": company_context_rules,
                 "text": config_text,
                 "json": config_json,
                 "technical_config_text": technical_config_text,
                 "activation_prompt": activation_prompt,
                 "companies": companies,
                 "allowed_squads": allowed_squads,
+                "session_lifecycle": session_lifecycle,
             }
 
     @classmethod

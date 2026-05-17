@@ -20,6 +20,8 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
             "startup_tools": [
+                "bootstrap_session_context",
+                "describe_app32_available_sapiens_squads_tool",
                 "list_user_app32_capabilities",
                 "describe_app32_surface_playbooks_tool",
             ],
@@ -34,6 +36,8 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/admin",
             "surface": "admin",
             "startup_tools": [
+                "bootstrap_session_context",
+                "describe_app32_squad_runtime_tool",
                 "list_admin_app32_capabilities",
                 "describe_app32_profile_contracts_tool",
                 "describe_app32_surface_playbooks_tool",
@@ -54,6 +58,7 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/user",
             "surface": "user",
             "startup_tools": [
+                "bootstrap_session_context",
                 "resolve_app32_instruction_bundle_tool",
                 "describe_app32_squad_runtime_tool",
                 "list_user_app32_capabilities",
@@ -75,6 +80,8 @@ class MCPConnectionSnippetService:
             "url": "https://app.gestaoversus.com.br/mcp/ops",
             "surface": "ops",
             "startup_tools": [
+                "bootstrap_session_context",
+                "describe_app32_squad_runtime_tool",
                 "list_ops_app32_capabilities",
                 "describe_app32_profile_contracts_tool",
                 "describe_app32_surface_playbooks_tool",

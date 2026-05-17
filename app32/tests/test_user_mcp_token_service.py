@@ -59,6 +59,9 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Code / aba Code do Claude Desktop." in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
+    assert "bootstrap_session_context" in config["activation_prompt"]
+    assert "describe_app32_available_sapiens_squads_tool" in config["activation_prompt"]
+    assert "resolve_app32_sapiens_activation_tool" in config["activation_prompt"]
     assert "resolve_app32_instruction_bundle_tool" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
     assert "Autenticação: Bearer Token" in config["activation_prompt"]
@@ -70,15 +73,23 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert any(field["label"] == "Registry MCP do Claude Code" for field in config["guided_connection_fields"])
     assert config["guided_install_steps"][0].startswith("No terminal do Windows, confirme que o Claude Code")
     assert config["validation_prompt"] == (
-        "Rode /sapiens-cliente-on e confirme o bootstrap com "
-        "resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool."
+        "Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com "
+        "bootstrap_session_context, describe_app32_available_sapiens_squads_tool e "
+        "resolve_app32_sapiens_activation_tool."
     )
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["harness_summary_text"]
-    assert "Discovery obrigatório:" in config["smoke_guided_text"]
-    assert "describe_app32_release_checklist_tool" in config["smoke_guided_text"]
+    assert "Pré-flight obrigatório:" in config["smoke_guided_text"]
+    assert "bootstrap_session_context" in config["smoke_guided_text"]
+    assert "resolve_app32_instruction_bundle_tool" in config["smoke_guided_text"]
     assert "Onboarding operacional desta instalação:" in config["onboarding_summary_text"]
+    assert "Badge esperado da sessão: Sapiens Cliente On" in config["onboarding_summary_text"]
+    assert config["session_badge"] == "Sapiens Cliente On"
+    assert config["preflight_tools"] == ["bootstrap_session_context", "describe_app32_available_sapiens_squads_tool"]
+    assert config["activation_tool"] == "resolve_app32_sapiens_activation_tool"
+    assert config["startup_tools"][0] == "bootstrap_session_context"
     assert any(item["command"] == "/sapiens-cliente-on" for item in config["activation_commands"])
     assert any(item["command"] == "/sapiens-on" for item in config["activation_commands"])
+    assert any(item["command"] == "Sapiens Off" for item in config["deactivation_commands"])
     assert "powershell -ExecutionPolicy Bypass -EncodedCommand" in config["activation_commands_install_command"]
     encoded = config["activation_commands_install_command"].split(" -EncodedCommand ", 1)[1]
     decoded = base64.b64decode(encoded).decode("utf-16le")
@@ -124,6 +135,9 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert "/sapiens-cliente-on" in config["activation_prompt"]
     assert "/sapiens-on" in config["activation_prompt"]
     assert "Use a conexão MCP Sapiens Cliente desta sessão." in config["activation_prompt"]
+    assert "Quando o usuário digitar `Sapiens On`, `sapiens on` ou `/sapiens-on`" in config["activation_prompt"]
+    assert "Com qual squad você vai trabalhar?" in config["activation_prompt"]
+    assert "Sapiens Off" in config["activation_prompt"]
 
 
 def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):

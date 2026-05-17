@@ -32,7 +32,7 @@ class SapiensActivationService:
             "session_badge": "Sapiens Cliente On",
         },
         "squad_versus": {
-            "choice_label": "Versus",
+            "choice_label": "Consultor",
             "experience_label": "Sapiens Consultor",
             "command": "/sapiens-consultor-on",
             "runtime_profile": "squad_versus",
@@ -49,7 +49,7 @@ class SapiensActivationService:
         },
     }
 
-    DEFAULT_SELECTION_PROMPT = "Escolha entre: Cliente, Versus ou Engenharia."
+    DEFAULT_SELECTION_PROMPT = "Com qual squad você vai trabalhar? Cliente / Consultor / Engenharia"
 
     @classmethod
     def normalize_squad(cls, squad: str | None) -> str | None:
@@ -100,9 +100,9 @@ class SapiensActivationService:
         if len(squads) <= 1:
             return None
         labels = [item["choice_label"] for item in squads]
-        if labels == ["Cliente", "Versus", "Engenharia"]:
+        if labels == ["Cliente", "Consultor", "Engenharia"]:
             return cls.DEFAULT_SELECTION_PROMPT
-        return "Escolha entre: " + ", ".join(labels) + "."
+        return "Com qual squad você vai trabalhar? " + " / ".join(labels)
 
     @classmethod
     def resolve_activation(

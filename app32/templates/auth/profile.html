@@ -230,17 +230,21 @@
                             </div>
                             <div id="mcpValidationPromptBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
                                 <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Teste inicial recomendado</div>
-                                <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Rode /sapiens-cliente-on e confirme o bootstrap com resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool.</div>
+                                <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com bootstrap_session_context, describe_app32_available_sapiens_squads_tool e resolve_app32_sapiens_activation_tool.</div>
                             </div>
                         </div>
 
                         <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Comandos oficiais de ativação</div>
-                            <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Code ou na aba Code do Claude Desktop, a ativação oficial usa <strong>slash commands</strong>. Texto livre como <code>sapiens on</code> não vira comando sozinho.</p>
+                            <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Code ou na aba Code do Claude Desktop, a ativação oficial agora reconhece tanto <strong>texto livre</strong> quanto <strong>slash commands</strong>. <code>Sapiens On</code>, <code>sapiens on</code> e <code>/sapiens-on</code> devem iniciar o mesmo fluxo.</p>
                             <div id="mcpActivationCommandsList" style="display:grid; gap:0.55rem;">
                                 <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                    <div style="font-weight: 700; color: var(--text-main);">Sapiens On</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entrada textual oficial. Inicia conexão, bootstrap, escolha de squad e startup sequence.</div>
+                                </div>
+                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
                                     <div style="font-weight: 700; color: var(--text-main);">/sapiens-cliente-on</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ativa o Sapiens Cliente e carrega o bootstrap oficial do Squad Cliente.</div>
+                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Atalho direto do Sapiens Cliente para sessões com squad único ou ativação explícita.</div>
                                 </div>
                             </div>
                             <div id="mcpActivationCommandsInstallBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
@@ -335,7 +339,7 @@
                         <div class="filter-field">
                             <label>Empresa padrão (opcional)</label>
                             <select id="mcpCompanyId" class="form-control"></select>
-                            <small style="color: var(--text-tertiary);">Se você escolher uma empresa, a instalação já sai apontando para ela. Se deixar em branco, você escolhe a empresa depois, durante o uso.</small>
+                            <small style="color: var(--text-tertiary);">Escolher empresa aqui é opcional. Se deixar em branco, o Sapiens abre em escopo dinâmico: leituras pessoais podem cruzar empresas autorizadas e ações específicas pedem empresa só quando necessário.</small>
                         </div>
 
                         <div class="filter-field">
@@ -429,8 +433,35 @@
                             </ol>
                         </div>
 
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Badge da sessão ativa</div>
+                                <div id="mcpSessionBadgeText" style="font-size: 0.92rem; line-height: 1.55;">Sapiens Cliente On</div>
+                            </div>
+                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Pré-flight e startup</div>
+                                <div id="mcpStartupToolsList" style="font-size: 0.92rem; line-height: 1.55;">bootstrap_session_context → describe_app32_available_sapiens_squads_tool → resolve_app32_sapiens_activation_tool</div>
+                            </div>
+                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Escolha de squad</div>
+                                <div id="mcpSquadSelectionText" style="font-size: 0.92rem; line-height: 1.55;">Se houver um único squad autorizado, o Sapiens ativa sem perguntar.</div>
+                            </div>
+                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Empresa na sessão</div>
+                                <div id="mcpCompanyContextText" style="font-size: 0.92rem; line-height: 1.55;">Empresa padrão é opcional. Leituras pessoais podem operar em escopo multiempresa.</div>
+                            </div>
+                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quando pedir empresa</div>
+                                <div id="mcpCompanyWritePolicyText" style="font-size: 0.92rem; line-height: 1.55;">O Sapiens pede empresa apenas em ações específicas, mutações ou ambiguidades.</div>
+                            </div>
+                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como encerrar</div>
+                                <div id="mcpOffCommandsList" style="font-size: 0.92rem; line-height: 1.55;">Sapiens Off / Sapiens Cliente Off</div>
+                            </div>
+                        </div>
+
                         <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Ver instruções</button>
+                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Ver fluxo Sapiens On</button>
                             <button type="button" class="btn btn-secondary" id="copyMcpInstallCommandButton">Copiar comando de instalação</button>
                             <button type="button" class="btn btn-secondary" id="buildMcpHarnessButton">Ver harness</button>
                             <button type="button" class="btn btn-secondary" id="buildMcpSmokeButton">Executar smoke guiado</button>
@@ -805,6 +836,12 @@
     const mcpValidationPromptText = document.getElementById('mcpValidationPromptText');
     const mcpActivationCommandsList = document.getElementById('mcpActivationCommandsList');
     const mcpActivationCommandsInstallText = document.getElementById('mcpActivationCommandsInstallText');
+    const mcpSessionBadgeText = document.getElementById('mcpSessionBadgeText');
+    const mcpStartupToolsList = document.getElementById('mcpStartupToolsList');
+    const mcpSquadSelectionText = document.getElementById('mcpSquadSelectionText');
+    const mcpCompanyContextText = document.getElementById('mcpCompanyContextText');
+    const mcpCompanyWritePolicyText = document.getElementById('mcpCompanyWritePolicyText');
+    const mcpOffCommandsList = document.getElementById('mcpOffCommandsList');
     const mcpOfficialCompositionTitle = document.getElementById('mcpOfficialCompositionTitle');
     const mcpOfficialPhaseText = document.getElementById('mcpOfficialPhaseText');
     const mcpOfficialAgentsList = document.getElementById('mcpOfficialAgentsList');
@@ -1004,7 +1041,7 @@
                 .join('');
         }
         if (mcpValidationPromptText) {
-            mcpValidationPromptText.textContent = resolvedConfig.validation_prompt || 'Rode /sapiens-cliente-on e confirme o bootstrap com resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool.';
+            mcpValidationPromptText.textContent = resolvedConfig.validation_prompt || 'Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com bootstrap_session_context, describe_app32_available_sapiens_squads_tool e resolve_app32_sapiens_activation_tool.';
         }
         if (mcpActivationCommandsList && Array.isArray(resolvedConfig.activation_commands) && resolvedConfig.activation_commands.length) {
             mcpActivationCommandsList.innerHTML = resolvedConfig.activation_commands
@@ -1015,6 +1052,33 @@
                     </div>
                 `)
                 .join('');
+        }
+        if (mcpSessionBadgeText) {
+            mcpSessionBadgeText.textContent = resolvedConfig.session_badge || 'Badge não informado';
+        }
+        if (mcpStartupToolsList) {
+            const sequence = [
+                ...(Array.isArray(resolvedConfig.preflight_tools) ? resolvedConfig.preflight_tools : []),
+                resolvedConfig.activation_tool || null,
+                ...(Array.isArray(resolvedConfig.startup_tools) ? resolvedConfig.startup_tools : []),
+            ].filter(Boolean);
+            mcpStartupToolsList.textContent = sequence.length ? sequence.join(' → ') : 'Sequência não informada';
+        }
+        if (mcpSquadSelectionText) {
+            mcpSquadSelectionText.textContent = resolvedConfig.requires_squad_selection
+                ? `Há mais de um squad autorizado. O Sapiens pergunta: ${resolvedConfig.activation_selection_prompt || 'Com qual squad você vai trabalhar?'}`
+                : 'Há apenas um squad autorizado. O Sapiens ativa sem perguntar e baixa somente este squad.';
+        }
+        if (mcpCompanyContextText) {
+            mcpCompanyContextText.textContent = resolvedConfig.company_context_rules?.read_scope
+                || 'Empresa padrão é opcional. Leituras pessoais podem operar em escopo multiempresa.';
+        }
+        if (mcpCompanyWritePolicyText) {
+            mcpCompanyWritePolicyText.textContent = resolvedConfig.company_context_rules?.write_scope
+                || 'O Sapiens pede empresa apenas em ações específicas, mutações ou ambiguidades.';
+        }
+        if (mcpOffCommandsList && Array.isArray(resolvedConfig.deactivation_commands) && resolvedConfig.deactivation_commands.length) {
+            mcpOffCommandsList.textContent = resolvedConfig.deactivation_commands.map((item) => item.command).join(' / ');
         }
         if (mcpActivationCommandsInstallText) {
             mcpActivationCommandsInstallText.textContent = resolvedConfig.activation_commands_install_command
@@ -1216,7 +1280,7 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
     }
 
     function updateMcpActionLabels() {
-        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Ver instruções';
+        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Ver fluxo Sapiens On';
         if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.textContent = 'Copiar comando de instalação';
         if (buildMcpHarnessButton) buildMcpHarnessButton.textContent = 'Ver harness';
         if (buildMcpSmokeButton) buildMcpSmokeButton.textContent = 'Executar smoke guiado';
