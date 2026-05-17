@@ -27,8 +27,10 @@ Ao final deste runbook, o usuário deve ter:
 - a experiência visível chamada `Sapiens Cliente`
 - acesso ao `Squad Cliente`
 - entrada inicial pelo `Harness Coordenador do Squad Cliente`
+- bootstrap instrucional remoto via `resolve_app32_instruction_bundle_tool`
 - possibilidade de chamar o ambiente por:
-  - `sapiens cliente on`
+  - `/sapiens-on`
+  - `/sapiens-cliente-on`
   - ou pela entrada criada no cliente compatível
 
 ---
@@ -63,8 +65,9 @@ Para o `Sapiens Cliente`, os parâmetros oficiais são:
 ### URL base
 - `https://app.gestaoversus.com.br/mcp/user/`
 
-### Comando canônico sugerido
-- `sapiens cliente on`
+### Comandos canônicos sugeridos
+- `/sapiens-on`
+- `/sapiens-cliente-on`
 
 ---
 
@@ -178,8 +181,9 @@ Ela deve:
 2. verificar se suporta configuração automática
 3. criar a conexão
 4. criar a entrada visível `Sapiens Cliente`, quando suportado
-5. configurar o alias:
-   - `sapiens cliente on`
+5. configurar os atalhos oficiais, quando o cliente suportar:
+   - `/sapiens-on`
+   - `/sapiens-cliente-on`
 6. ativar a conexão
 
 ---
@@ -246,14 +250,23 @@ A ativação oficial usa slash commands, por exemplo:
 - `/sapiens-cliente-on`
 - `/sapiens-on`
 
-Texto livre como `sapiens on` não deve ser tratado como comando oficial instalado.
+Texto livre como `sapiens on` ou `sapiens cliente on` não deve ser tratado como comando oficial instalado.
 
 ### Sequência inicial esperada
 As primeiras tools esperadas são:
+- `resolve_app32_instruction_bundle_tool`
 - `describe_app32_squad_runtime_tool`
 - `list_user_app32_capabilities`
 - `describe_app32_profile_contracts_tool`
 - `describe_app32_surface_playbooks_tool`
+
+### Regra do comando genérico
+
+Se existir mais de um Squad Sapiens disponível na máquina, `/sapiens-on` deve perguntar exatamente:
+
+- `Escolha entre: Cliente, Versus ou Engenharia.`
+
+Se existir apenas um Squad, `/sapiens-on` deve ativar diretamente esse Squad.
 
 ### Leitura do bootstrap
 Logo após conectar, o cliente deve usar `describe_app32_squad_runtime_tool` para ler:
@@ -276,6 +289,7 @@ Considere a instalação bem-sucedida quando:
 5. a empresa padrão estiver correta
 6. as tools de startup responderem
 7. o usuário conseguir chamar o ambiente como `Sapiens Cliente`
+8. a ativação usar o bundle remoto do instruction registry
 
 ---
 

@@ -230,7 +230,7 @@
                             </div>
                             <div id="mcpValidationPromptBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
                                 <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Teste inicial recomendado</div>
-                                <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.</div>
+                                <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Rode /sapiens-cliente-on e confirme o bootstrap com resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool.</div>
                             </div>
                         </div>
 
@@ -1004,7 +1004,7 @@
                 .join('');
         }
         if (mcpValidationPromptText) {
-            mcpValidationPromptText.textContent = resolvedConfig.validation_prompt || 'Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.';
+            mcpValidationPromptText.textContent = resolvedConfig.validation_prompt || 'Rode /sapiens-cliente-on e confirme o bootstrap com resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool.';
         }
         if (mcpActivationCommandsList && Array.isArray(resolvedConfig.activation_commands) && resolvedConfig.activation_commands.length) {
             mcpActivationCommandsList.innerHTML = resolvedConfig.activation_commands

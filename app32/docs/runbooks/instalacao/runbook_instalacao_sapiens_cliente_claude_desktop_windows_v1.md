@@ -22,6 +22,7 @@ Ao final deste runbook, o usuário deve ter:
 - a conexão apontando para `https://app.gestaoversus.com.br/mcp/user/`
 - autenticação por Bearer Token pessoal
 - entrada inicial pelo `Harness Coordenador do Squad Cliente`
+- bootstrap remoto do bundle mínimo via `resolve_app32_instruction_bundle_tool`
 
 ---
 
@@ -170,8 +171,17 @@ Depois do restart:
 3. abra uma conversa e teste:
 
 ```text
-Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.
+/sapiens-cliente-on
 ```
+
+### Resultado esperado
+
+O Claude deve:
+
+1. usar a conexão MCP instalada
+2. carregar o bundle mínimo remoto
+3. executar o bootstrap oficial
+4. responder com confirmação curta de ativação
 
 ---
 
@@ -183,6 +193,12 @@ Além da conexão MCP, o Claude Desktop/Code pode receber comandos slash oficiai
 - `/sapiens-on`
 
 Quando houver mais de um Squad instalado na mesma máquina, o comando genérico `/sapiens-on` deve pedir confirmação do usuário antes de ativar o Squad correto.
+
+Pergunta esperada:
+
+```text
+Escolha entre: Cliente, Versus ou Engenharia.
+```
 
 ### Instalação dos comandos slash
 
@@ -212,7 +228,26 @@ Não tratar texto livre como comando instalado:
 
 ---
 
-## 12. Observações importantes
+## 12. Limpeza controlada antes da reinstalação
+
+Se houver suspeita de instalação antiga, drift ou comandos slash desatualizados, fazer este reset antes de reinstalar:
+
+1. fechar o Claude Desktop completamente
+2. remover os comandos/skills antigos em:
+   - `%USERPROFILE%\.claude\commands`
+   - `%USERPROFILE%\.claude\skills`
+3. revisar o `claude_desktop_config.json` e remover entradas antigas do `Sapiens Cliente`, se houver
+4. reinstalar a conexão MCP
+5. reinstalar os comandos slash oficiais
+6. reabrir o Claude
+
+### Critério
+
+Se o objetivo for homologar o novo modelo como cliente real, a limpeza controlada é recomendada.
+
+---
+
+## 13. Observações importantes
 
 - a configuração do `claude_desktop_config.json` vale para o usuário Windows local
 - o token é pessoal do APP32; cada pessoa deve usar o seu

@@ -59,9 +59,9 @@ SQUAD_EXPERIENCE_LABELS = {
     "engineering": "Sapiens Engenharia",
 }
 SQUAD_COMMAND_ALIASES = {
-    "squad_cliente": "sapiens cliente on",
-    "squad_versus": "sapiens consultor on",
-    "engineering": "sapiens engenharia on",
+    "squad_cliente": "/sapiens-cliente-on",
+    "squad_versus": "/sapiens-consultor-on",
+    "engineering": "/sapiens-engenharia-on",
 }
 ROLE_ALLOWED_SQUADS = {
     "admin": ("squad_cliente", "squad_versus", "engineering"),
@@ -90,6 +90,11 @@ class UserMcpResolvedContext:
 
 
 class UserMcpTokenService:
+    CLIENTE_VALIDATION_PROMPT = (
+        "Rode /sapiens-cliente-on e confirme o bootstrap com "
+        "resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool."
+    )
+
     @staticmethod
     @contextmanager
     def _ensure_app_context() -> Iterator[None]:
@@ -356,8 +361,8 @@ class UserMcpTokenService:
                 "Se o Claude solicitar aprovação do servidor, confirme a inclusão do MCP user.",
                 "Rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
                 "Se necessário, confira o registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e valide que mcpServers.sapiens-user foi gravado ali.",
-                "Abra uma nova sessão do Claude Code, ou uma nova sessão na aba Code do Claude Desktop, e use o prompt de ativação recomendado pelo APP32 em vez de depender de slash command.",
-                "Como smoke inicial, peça primeiro o bootstrap com describe_app32_squad_runtime_tool.",
+                "Abra uma nova sessão do Claude Code, ou uma nova sessão na aba Code do Claude Desktop, e use o prompt de ativação recomendado pelo APP32.",
+                "Como smoke inicial, rode /sapiens-cliente-on e confirme o bootstrap remoto pelo instruction registry.",
             ]
         if runtime in {"codex", "antigravity"} and runtime_config.get("install_command"):
             return [
@@ -365,7 +370,7 @@ class UserMcpTokenService:
                 "Execute o comando de instalação sugerido pelo APP32.",
                 "Quando o instalador pedir, cole o token MCP gerado nesta página.",
                 "Confirme a gravação da conexão MCP no cliente.",
-                "Depois da instalação, abra uma conversa e rode describe_app32_squad_runtime_tool como teste inicial.",
+                "Depois da instalação, abra uma conversa, rode /sapiens-cliente-on e confirme o bootstrap remoto.",
             ]
         return [
             f"Abra a área de conectores ou MCP do cliente {runtime_config['runtime_label']}.",
@@ -373,7 +378,7 @@ class UserMcpTokenService:
             f"Cole a URL {url}.",
             "Escolha autenticação Bearer Token.",
             f"Cole o token {token_value}.",
-            "Salve a conexão e rode describe_app32_squad_runtime_tool como teste inicial.",
+            "Salve a conexão, rode /sapiens-cliente-on e confirme o bootstrap remoto.",
         ]
 
     @classmethod
@@ -441,7 +446,7 @@ class UserMcpTokenService:
                     "```",
                     "",
                     "Teste inicial recomendado:",
-                    "Cole o prompt de ativação recomendado pelo APP32 e peça primeiro describe_app32_squad_runtime_tool.",
+                    cls.CLIENTE_VALIDATION_PROMPT,
                 ]
             )
             return "\n".join(lines)
@@ -464,7 +469,7 @@ class UserMcpTokenService:
                 f"- Harness inicial: {runtime_config['harness_label'] or '-'}",
                 "",
                 "Teste inicial recomendado:",
-                "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
+                cls.CLIENTE_VALIDATION_PROMPT,
             ]
         )
         return "\n".join(lines)
@@ -509,8 +514,9 @@ class UserMcpTokenService:
         runtime_config: dict[str, Any],
         connection_name: str,
     ) -> str:
-        validation_prompt = "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
+        validation_prompt = cls.CLIENTE_VALIDATION_PROMPT
         discovery_tools = [
+            "resolve_app32_instruction_bundle_tool",
             "describe_app32_squad_runtime_tool",
             "describe_app32_profile_contracts_tool",
             "describe_app32_surface_playbooks_tool",
@@ -1090,13 +1096,16 @@ class UserMcpTokenService:
                 activation_prompt = (
                     f"{guided_install_text}\n\n"
                     "Prompt de ativação recomendado no Claude Code ou na aba Code do Claude Desktop:\n"
-                    "Use a conexão MCP sapiens-user desta sessão.\n\n"
+                    f"Use a conexão MCP {connection_name} desta sessão.\n\n"
                     "Antes de responder, rode nesta ordem:\n"
-                    "1. describe_app32_squad_runtime_tool\n"
-                    "2. list_user_app32_capabilities\n"
-                    "3. describe_app32_profile_contracts_tool\n"
-                    "4. describe_app32_surface_playbooks_tool\n"
-                    "5. describe_app32_domain_playbooks_tool\n\n"
+                    "1. resolve_app32_instruction_bundle_tool\n"
+                    "2. describe_app32_squad_runtime_tool\n"
+                    "3. list_user_app32_capabilities\n"
+                    "4. describe_app32_profile_contracts_tool\n"
+                    "5. describe_app32_surface_playbooks_tool\n"
+                    "6. describe_app32_domain_playbooks_tool\n\n"
+                    "Se o bootstrap funcionar, confirme na primeira linha exatamente `Sapiens Cliente Ativado`.\n"
+                    "Se o runtime suportar título de sessão, prefira `Sapiens Cliente On`.\n"
                     "Depois disso, responda à demanda do usuário.\n\n"
                     "Atalhos slash opcionais no Claude Code:\n"
                     + "\n".join([f"- {item['command']}: {item['summary']}" for item in activation_commands])
@@ -1148,7 +1157,7 @@ class UserMcpTokenService:
                 "onboarding_summary_text": onboarding_summary_text,
                 "harness_summary_text": harness_summary_text,
                 "smoke_guided_text": smoke_guided_text,
-                "validation_prompt": "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool.",
+                "validation_prompt": cls.CLIENTE_VALIDATION_PROMPT,
                 "activation_commands": activation_commands,
                 "activation_selection_prompt": activation_selection_prompt,
                 "activation_commands_install_command": activation_commands_install_command,

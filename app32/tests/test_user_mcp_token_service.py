@@ -59,6 +59,7 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Code / aba Code do Claude Desktop." in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
+    assert "resolve_app32_instruction_bundle_tool" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
     assert "Autenticação: Bearer Token" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
@@ -68,7 +69,10 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert config["guided_connection_fields"][0]["label"] == "Nome da conexão"
     assert any(field["label"] == "Registry MCP do Claude Code" for field in config["guided_connection_fields"])
     assert config["guided_install_steps"][0].startswith("No terminal do Windows, confirme que o Claude Code")
-    assert config["validation_prompt"] == "Use o Sapiens Cliente e rode describe_app32_squad_runtime_tool."
+    assert config["validation_prompt"] == (
+        "Rode /sapiens-cliente-on e confirme o bootstrap com "
+        "resolve_app32_instruction_bundle_tool e describe_app32_squad_runtime_tool."
+    )
     assert "Harness inicial: Harness Coordenador do Squad Cliente" in config["harness_summary_text"]
     assert "Discovery obrigatório:" in config["smoke_guided_text"]
     assert "describe_app32_release_checklist_tool" in config["smoke_guided_text"]
@@ -107,7 +111,7 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["availability_label"] == "Instalação manual guiada"
     assert config["actor_type"] == "client_agent"
     assert config["experience_label"] == "Sapiens Cliente"
-    assert config["command_alias"] == "sapiens cliente on"
+    assert config["command_alias"] == "/sapiens-cliente-on"
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"].startswith("claude mcp add --scope user --transport http sapiens-user")
@@ -119,7 +123,7 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert ".claude.json" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]
     assert "/sapiens-on" in config["activation_prompt"]
-    assert "Use a conexão MCP sapiens-user desta sessão." in config["activation_prompt"]
+    assert "Use a conexão MCP Sapiens Cliente desta sessão." in config["activation_prompt"]
 
 
 def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
