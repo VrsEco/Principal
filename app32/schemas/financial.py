@@ -776,6 +776,34 @@ class FinancialCounterpartyUpdateInput(BaseModel):
         return _digits_only(value)
 
 
+class FinancialScheduleAllocationInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    chart_account_id: Optional[int] = None
+    cost_center_id: Optional[int] = None
+    budget_version_id: Optional[int] = None
+    budget_line_id: Optional[int] = None
+    budget_contract_id: Optional[int] = None
+    budget_document_id: Optional[int] = None
+    domain_type: Optional[str] = Field(None, pattern=_choices_pattern(DOMAIN_ENABLEMENT_TYPE_VALUES))
+    domain_source_kind: Optional[str] = Field("routine", pattern=_choices_pattern(DOMAIN_SOURCE_KIND_VALUES))
+    domain_source_id: Optional[int] = None
+    domain_label: Optional[str] = Field(None, max_length=255)
+    allocation_type: str = Field(..., pattern=_choices_pattern(ALLOCATION_TYPE_VALUES))
+    percentage: Optional[Decimal] = Field(None, ge=0)
+    allocated_amount: Optional[Decimal] = None
+    notes: Optional[str] = None
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_allocation(self):
+        if self.allocation_type == "percentage" and self.percentage is None:
+            raise ValueError("Rateio percentual exige campo percentage.")
+        if self.allocation_type == "amount" and self.allocated_amount is None:
+            raise ValueError("Rateio por valor exige campo allocated_amount.")
+        return self
+
+
 class FinancialScheduleCreateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -817,6 +845,7 @@ class FinancialScheduleCreateInput(BaseModel):
     created_by_agent: Optional[str] = Field(None, max_length=50)
     notes: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
+    allocations: List[FinancialScheduleAllocationInput] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -873,6 +902,7 @@ class FinancialScheduleUpdateInput(BaseModel):
     routine_id: Optional[int] = None
     notes: Optional[str] = None
     metadata_json: Optional[Dict[str, Any]] = None
+    allocations: List[FinancialScheduleAllocationInput] = Field(default_factory=list)
 
 
 class FinancialAutomationRuleCreateInput(BaseModel):

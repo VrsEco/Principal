@@ -487,6 +487,10 @@ class FinancialScheduleService:
             return None, validation_error
 
         normalized_metadata_json = dict(data.metadata_json or {})
+        if data.allocations:
+            normalized_metadata_json["allocations"] = FinancialScheduleService._sanitize_json(
+                [item.model_dump() for item in data.allocations]
+            )
         normalized_metadata_json["allocations"] = FinancialScheduleService._normalize_schedule_allocations(
             company_id=data.company_id,
             template_amount=data.template_amount,
@@ -538,7 +542,7 @@ class FinancialScheduleService:
         if existing and not auto_generated_code:
             return None, f"Já existe agendamento com código {data.schedule_code} para esta empresa."
 
-        normalized = data.model_dump()
+        normalized = data.model_dump(exclude={"allocations"})
         normalized.update(budget_links or {})
         normalized["competence_date"] = normalized.get("competence_date") or normalized.get("start_date")
         normalized["metadata_json"] = FinancialScheduleService._normalize_schedule_metadata(
@@ -621,7 +625,10 @@ class FinancialScheduleService:
         if FinancialScheduleService._has_active_settlements(company_id=company_id, schedule_id=schedule.id):
             return None, "Título Financeiro com baixa registrada. Remova as baixas antes de alterar o cadastro do título."
 
-        merged = data.model_dump(exclude_unset=True)
+        allocations_in_payload = "allocations" in data.model_fields_set
+        raw_allocations = [item.model_dump() for item in data.allocations] if allocations_in_payload else None
+
+        merged = data.model_dump(exclude_unset=True, exclude={"allocations"})
         if "schedule_code" in merged:
             if merged["schedule_code"] != schedule.schedule_code:
                 return None, "O código do Título Financeiro não pode ser alterado após a criação."
@@ -646,6 +653,8 @@ class FinancialScheduleService:
             return None, validation_error
 
         merged_metadata_json = dict(merged.get("metadata_json", schedule.metadata_json) or {})
+        if raw_allocations is not None:
+            merged_metadata_json["allocations"] = FinancialScheduleService._sanitize_json(raw_allocations)
         merged_metadata_json["allocations"] = FinancialScheduleService._normalize_schedule_allocations(
             company_id=company_id,
             template_amount=merged.get("template_amount", schedule.template_amount),

@@ -627,13 +627,19 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         """
         from services.financial_service import FinancialService
 
+        def _create_and_serialize_entry(*, payload: dict):
+            entry, error = FinancialService.create_entry(payload=payload)
+            if error:
+                return None, error
+            return FinancialService.serialize_entry(entry), None
+
         entry, error = _run_financial_action(
-            FinancialService.create_entry,
+            _create_and_serialize_entry,
             payload=payload,
         )
         if error:
             return {"success": False, "error": error}
-        return {"success": True, "item": entry.to_dict()}
+        return {"success": True, "item": entry}
 
     @mcp.tool()
     def create_financial_direct_entry(payload: dict) -> dict:
