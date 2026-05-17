@@ -54,6 +54,7 @@ from src.intelligence.tool_context import (
     get_sapiens_context
 )
 from src.intelligence.tools_domains import task_ops as task_ops_domain
+from src.intelligence.tools_domains import project_ops as project_ops_domain
 from src.intelligence.tools_domains import meeting_ops as meeting_ops_domain
 from src.intelligence.tools_domains import process_ops as process_ops_domain
 from src.intelligence.tools_domains import work_ops as work_ops_domain
@@ -705,6 +706,61 @@ def get_tasks_today(scope: str = "me"):
 
 
 @tool
+def create_project(company_id: int, name: str, description: str = None, responsible_name: str = None, start_date: str = None, due_date: str = None):
+    """
+    Cria um projeto tenant-safe via MCP e retorna o código no padrão EMPRESA.J.ID.
+    """
+    return project_ops_domain.create_project(
+        company_id=company_id,
+        name=name,
+        description=description,
+        responsible_name=responsible_name,
+        start_date=start_date,
+        due_date=due_date,
+    )
+
+
+@tool
+def list_projects(company_id: int = None, status: str = None, include_deleted: bool = False, limit: int = 50):
+    """
+    Lista projetos do tenant com filtros de status e suporte a soft delete.
+    """
+    return project_ops_domain.list_projects(
+        company_id=company_id,
+        status=status,
+        include_deleted=include_deleted,
+        limit=limit,
+    )
+
+
+@tool
+def update_project(company_id: int, changes: dict, project_id: int = None, project_code: str = None):
+    """
+    Atualiza projeto via MCP usando whitelist de campos e escopo explícito por tenant.
+    """
+    return project_ops_domain.update_project(
+        company_id=company_id,
+        changes=changes,
+        project_id=project_id,
+        project_code=project_code,
+    )
+
+
+@tool
+def delete_project(company_id: int, reason: str, project_id: int = None, project_code: str = None, confirm: bool = False):
+    """
+    Executa soft delete de projeto via MCP. Exige confirmação explícita.
+    """
+    return project_ops_domain.delete_project(
+        company_id=company_id,
+        reason=reason,
+        project_id=project_id,
+        project_code=project_code,
+        confirm=confirm,
+    )
+
+
+@tool
 def create_project_task(project_code: str, task_name: str, responsible_name: str = None, due_date: str = None, description: str = None, priority: str = "normal", notes: str = None):
     """
     Cria uma nova atividade em um projeto existente, respeitando o contexto multiempresa.
@@ -765,6 +821,19 @@ def update_project_task_secure(task_id: int, changes: dict, company_id: int = No
     return task_ops_domain.update_project_task_secure(
         task_id=task_id,
         changes=changes,
+        company_id=company_id,
+    )
+
+
+@tool
+def delete_project_task(task_id: int, reason: str, company_id: int, confirm: bool = False):
+    """
+    Alias canônico MCP para soft delete de atividade de projeto. Exige confirmação explícita.
+    """
+    return task_ops_domain.delete_project_task_secure(
+        task_id=task_id,
+        reason=reason,
+        confirm=confirm,
         company_id=company_id,
     )
 
@@ -1025,10 +1094,15 @@ tools = [
     delete_meeting_secure,
     # Fase 2 — Task Management
     get_tasks_today,
+    create_project,
+    list_projects,
+    update_project,
+    delete_project,
     create_project_task,
     list_project_tasks_secure,
     create_project_task_secure,
     update_project_task_secure,
+    delete_project_task,
     delete_project_task_secure,
     restore_project_task_secure,
     get_project_task_analytics_report,

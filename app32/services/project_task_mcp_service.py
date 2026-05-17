@@ -57,7 +57,7 @@ class ProjectTaskMCPService:
             .filter(Project.company_id == int(company_id))
         )
         if not include_deleted:
-            query = query.filter(ProjectTask.is_deleted.is_(False))
+            query = query.filter(ProjectTask.is_deleted.is_(False), Project.is_deleted.is_(False))
         return query
 
     @staticmethod

@@ -18,6 +18,7 @@ class Project(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
     # Map 'name' attribute to 'title' column in DB to match PostgreSQL schema
     name = db.Column("title", db.String(200), nullable=False)
+    description = db.Column(db.Text)
     plan_id = db.Column(db.Integer, db.ForeignKey("plans.id"), nullable=True)
     okr_links = db.Column(db.JSON)  # List of OKR IDs
     kpis = db.Column(db.JSON)  # List of KPI names
@@ -25,12 +26,18 @@ class Project(db.Model):
     status = db.Column(
         db.String(50), default="planned"
     )  # planned, in_progress, completed, cancelled
-    deadline = db.Column(db.Date)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    deadline = db.synonym("end_date")
     budget = db.Column(db.String(100))  # e.g., "R$ 450k"
     notes = db.Column(db.Text)
     progress = db.Column(db.Integer, default=0)
     priority = db.Column(db.String(20), default="medium") # low, medium, high
     portfolio_id = db.Column(db.Integer, db.ForeignKey("portfolios.id"), nullable=True)
+    is_deleted = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+    deleted_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    delete_reason = db.Column(db.Text)
     code_sequence = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
@@ -51,11 +58,12 @@ class Project(db.Model):
         all_tasks = self.tasks.all()
         now = datetime.now().date()
         
-        total = len(all_tasks)
-        completed = len([t for t in all_tasks if t.stage == 'completed'])
+        visible_tasks = [t for t in all_tasks if not getattr(t, "is_deleted", False)]
+        total = len(visible_tasks)
+        completed = len([t for t in visible_tasks if t.stage == 'completed'])
         open_tasks = total - completed
         
-        delayed = len([t for t in all_tasks 
+        delayed = len([t for t in visible_tasks 
                       if t.stage != 'completed' 
                       and t.due_date 
                       and (t.due_date.date() if isinstance(t.due_date, datetime) else t.due_date) < now])
@@ -103,15 +111,22 @@ class Project(db.Model):
             "code_sequence": self.code_sequence,
             "plan_id": self.plan_id,
             "name": self.name,
+            "description": self.description,
             "okr_links": self.okr_links,
             "kpis": self.kpis,
             "owner": self.owner,
             "status": self.status,
             "priority": self.priority,
             "progress": self.progress,
+            "start_date": self.start_date.isoformat() if hasattr(self.start_date, 'isoformat') else self.start_date,
+            "end_date": self.end_date.isoformat() if hasattr(self.end_date, 'isoformat') else self.end_date,
             "deadline": self.deadline.isoformat() if hasattr(self.deadline, 'isoformat') else self.deadline,
             "budget": self.budget,
             "notes": self.notes,
+            "is_deleted": bool(self.is_deleted),
+            "deleted_at": self.deleted_at.isoformat() if hasattr(self.deleted_at, 'isoformat') else self.deleted_at,
+            "deleted_by_user_id": self.deleted_by_user_id,
+            "delete_reason": self.delete_reason,
             "task_stats": stats,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
             "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
