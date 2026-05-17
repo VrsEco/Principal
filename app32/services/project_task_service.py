@@ -84,8 +84,6 @@ class ProjectTaskService:
             if ProjectTaskService._sanitize_company_code(company.client_code or company.name[:2], company.id) == company_prefix
         ]
 
-        if not matched_company_ids and normalized_company_ids and len(normalized_company_ids) == 1:
-            matched_company_ids = normalized_company_ids
         if not matched_company_ids:
             return None, f"Empresa do código '{project_code}' não encontrada no contexto informado."
 
