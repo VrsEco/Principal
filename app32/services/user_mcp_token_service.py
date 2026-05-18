@@ -70,12 +70,6 @@ ROLE_ALLOWED_SQUADS = {
     "client": ("squad_cliente",),
     "user": ("squad_cliente",),
 }
-RUNTIME_CANONICAL_SQUADS = {
-    "claude": "squad_cliente",
-    "antigravity": "squad_versus",
-    "codex": "engineering",
-}
-
 @dataclass(frozen=True)
 class UserMcpResolvedContext:
     token_record_id: int
@@ -164,56 +158,34 @@ class UserMcpTokenService:
     ) -> dict[str, Any]:
         normalized_runtime = cls._normalize_runtime(runtime)
         normalized_requested_squad = cls._normalize_squad(requested_squad)
-        canonical_squad = RUNTIME_CANONICAL_SQUADS.get(normalized_runtime)
         fallback_squad = allowed_squads[0] if allowed_squads else "squad_cliente"
-
-        if canonical_squad is None:
-            resolved_squad = (
-                normalized_requested_squad
-                if normalized_requested_squad in allowed_squads
-                else fallback_squad
-            )
+        runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
+        if normalized_requested_squad in allowed_squads:
             return {
                 "runtime": normalized_runtime,
                 "requested_squad": normalized_requested_squad,
-                "resolved_squad": resolved_squad,
+                "resolved_squad": normalized_requested_squad,
                 "canonical_squad": None,
                 "runtime_locked": False,
                 "runtime_blocked": False,
-                "runtime_note": None,
-                "fallback_runtime": None,
-                "fallback_runtime_label": None,
-            }
-
-        canonical_label = SQUAD_EXPERIENCE_LABELS.get(canonical_squad, canonical_squad)
-        runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
-        if canonical_squad in allowed_squads:
-            return {
-                "runtime": normalized_runtime,
-                "requested_squad": normalized_requested_squad,
-                "resolved_squad": canonical_squad,
-                "canonical_squad": canonical_squad,
-                "runtime_locked": True,
-                "runtime_blocked": False,
                 "runtime_note": (
-                    f"No {runtime_label}, a família canônica publicada pelo APP32 é {canonical_label}."
+                    f"O {runtime_label} aceita qualquer squad autorizado ao seu perfil."
                 ),
                 "fallback_runtime": None,
                 "fallback_runtime_label": None,
             }
-
         fallback_runtime = "claude" if "squad_cliente" in allowed_squads else "other"
         fallback_runtime_label = RUNTIME_LABELS.get(fallback_runtime, fallback_runtime.title())
         return {
             "runtime": normalized_runtime,
             "requested_squad": normalized_requested_squad,
             "resolved_squad": fallback_squad,
-            "canonical_squad": canonical_squad,
-            "runtime_locked": True,
+            "canonical_squad": None,
+            "runtime_locked": False,
             "runtime_blocked": True,
             "runtime_note": (
-                f"O runtime {runtime_label} foi desenhado para {canonical_label}, "
-                "mas seu perfil atual não tem essa liberação."
+                f"Seu perfil não pode instalar {SQUAD_EXPERIENCE_LABELS.get(normalized_requested_squad, normalized_requested_squad)} "
+                f"no {runtime_label}."
             ),
             "fallback_runtime": fallback_runtime,
             "fallback_runtime_label": fallback_runtime_label,
@@ -471,6 +443,75 @@ class UserMcpTokenService:
         return (
             f'claude mcp add --scope user --transport http {server_name} "{url}" '
             f'--header "Authorization: Bearer {token_value}"'
+        )
+
+    @classmethod
+    def _build_cli_install_text(
+        cls,
+        *,
+        runtime_config: dict[str, Any],
+        connection_name: str,
+        url: str,
+        token_value: str,
+    ) -> str:
+        runtime = runtime_config["runtime"]
+        server_name = f"sapiens-{runtime_config['resolved_surface']}"
+        if runtime == "claude":
+            native_command = cls._build_claude_mcp_add_command(
+                runtime_config=runtime_config,
+                url=url,
+                token_value=token_value,
+            )
+            return "\n".join(
+                [
+                    f"Instale {connection_name} no Claude Code usando apenas o registry nativo do próprio Claude.",
+                    "",
+                    "Passos:",
+                    "1. Abra o Claude Code ou a aba Code do Claude Desktop.",
+                    "2. Rode o comando abaixo no terminal do Claude.",
+                    "3. Confirme que a conexão foi criada no próprio Claude Code.",
+                    "4. Depois abra uma nova sessão e use Sapiens On.",
+                    "",
+                    native_command,
+                ]
+            )
+        if runtime == "codex":
+            return "\n".join(
+                [
+                    f"Configure {connection_name} somente no Codex.",
+                    "",
+                    "No próprio Codex, aplique esta configuração em ~/.codex/config.toml:",
+                    f"[mcp_servers.{server_name}]",
+                    f'url = "{url}"',
+                    f'bearer_token_env_var = "APP32_MCP_TOKEN_{server_name.upper().replace("-", "_")}"',
+                    "startup_timeout_sec = 20",
+                    "tool_timeout_sec = 120",
+                    "",
+                    f'Depois defina a variável APP32_MCP_TOKEN_{server_name.upper().replace("-", "_")} com o valor abaixo:',
+                    token_value,
+                ]
+            )
+        if runtime == "antigravity":
+            token_env_var = f"APP32_MCP_TOKEN_{server_name.upper().replace('-', '_')}"
+            return "\n".join(
+                [
+                    f"Configure {connection_name} somente no Antigravity.",
+                    "",
+                    "No próprio Antigravity, grave esta entrada em ~/.gemini/antigravity/mcp_config.json:",
+                    "{",
+                    f'  "mcpServers": {{"{server_name}": {{',
+                    '    "command": "npx",',
+                    f'    "args": ["-y", "mcp-remote", "{url}", "--header", "Authorization: Bearer ${{{token_env_var}}}"],',
+                    f'    "env": {{"{token_env_var}": "{token_value}"}}',
+                    "  }}}",
+                    "}",
+                ]
+            )
+        return cls._build_guided_install_text(
+            runtime_config=runtime_config,
+            connection_name=connection_name,
+            url=url,
+            token_value=token_value,
         )
 
     @classmethod
@@ -838,8 +879,7 @@ class UserMcpTokenService:
                 availability_label = "Instalação automática"
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "O instalador remoto grava a conexão no registry nativo do Claude Code usando o próprio CLI `claude mcp add`. "
-                    "Use a aba Code do Claude Desktop, não a aba Chat."
+                    "Use a instalação via CLI para o caminho nativo do Claude ou a instalação via PowerShell para automatizar tudo."
                 )
             elif normalized_runtime == "other":
                 instruction_text = (
@@ -851,8 +891,7 @@ class UserMcpTokenService:
                 availability_label = "Instalação automática"
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "O APP32 vai gerar um comando único de instalação que baixa o instalador online e grava a configuração no cliente escolhido. "
-                    "A instalação entra pelo Coordenador e depois pode chamar Comercial, Operacional e Administrativo/Financeiro quando necessário."
+                    "O APP32 vai gerar instalação via CLI e via PowerShell, sempre gravando a configuração apenas no cliente escolhido."
                 )
         elif normalized_squad == "engineering":
             resolved_profile = "engineering"
@@ -861,7 +900,7 @@ class UserMcpTokenService:
             availability_label = "Instalação automática"
             instruction_text = (
                 f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                "O instalador remoto baixa o script oficial, grava a configuração diretamente no Codex e prepara a sessão técnica."
+                "O APP32 vai gerar instalação via CLI e via PowerShell para o Codex."
             )
         elif normalized_squad == "squad_versus":
             resolved_profile = "squad_versus"
@@ -870,7 +909,7 @@ class UserMcpTokenService:
             availability_label = "Instalação automática"
             instruction_text = (
                 f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                "O instalador remoto grava a configuração diretamente no Antigravity e prepara a sessão consultiva com company_id explícito."
+                "O APP32 vai gerar instalação via CLI e via PowerShell para o Antigravity."
             )
 
         runtime_blocked = bool(runtime_policy.get("runtime_blocked"))
@@ -1423,9 +1462,9 @@ class UserMcpTokenService:
                 token_value=token_value,
             )
             session_allowed_squads = (
-                [runtime_config["squad"]]
-                if runtime_config["runtime_locked"] and not runtime_config["runtime_blocked"]
-                else allowed_squads
+                allowed_squads
+                if runtime_config["runtime_blocked"]
+                else [runtime_config["squad"]]
             )
             activation_commands = cls._build_activation_commands(session_allowed_squads)
             deactivation_commands = cls._build_deactivation_commands(session_allowed_squads)
@@ -1485,6 +1524,12 @@ class UserMcpTokenService:
                 )
                 if runtime_config["install_mode"] == "self_service"
                 else runtime_config["install_command"]
+            )
+            cli_install_text = cls._build_cli_install_text(
+                runtime_config=runtime_config,
+                connection_name=connection_name,
+                url=url,
+                token_value=token_value,
             )
             installation_instruction = runtime_config["instruction_text"]
             copy_install_command_text = installation_command
@@ -1598,6 +1643,8 @@ class UserMcpTokenService:
                 "requires_company_selection": runtime_config["requires_company_selection"],
                 "install_command": installation_command,
                 "copy_install_command_text": copy_install_command_text,
+                "powershell_install_command": installation_command,
+                "cli_install_text": cli_install_text,
                 "instruction_text": installation_instruction,
                 "supports_personal_token": runtime_config["supports_personal_token"],
                 "guided_install_steps": guided_steps,

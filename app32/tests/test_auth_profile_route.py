@@ -149,25 +149,19 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     html = response.get_data(as_text=True)
     assert response.status_code == 200
     assert 'Instalar Squad' in html
-    assert '1. Configurar MCP' in html
-    assert '2. Instalar Squad' in html
+    assert '1. Escolher CLI' in html
+    assert '2. Gerar token' in html
+    assert '3. Instalar' in html
     assert 'Squad que será instalado' in html
-    assert 'Qual Cliente de IA você irá usar?' in html
+    assert 'Em qual CLI você vai instalar?' in html
     assert 'Claude Code / aba Code do Desktop' in html
     assert 'Sapiens Cliente' in html
-    assert 'Como essa combinação vai funcionar' in html
+    assert 'Ver detalhes técnicos desta instalação' in html
     assert 'aba Code' in html
     assert 'aba Chat' in html
-    assert 'Como criar a conexão MCP neste cliente' in html
-    assert 'Dados para preencher na conexão' in html
-    assert 'Teste inicial recomendado' in html
-    assert 'Comandos oficiais de ativação' in html
-    assert '/sapiens-cliente-on' in html
-    assert 'Família inicial oficial do Squad Cliente' in html
-    assert 'Quem vai te atender no Sapiens Cliente' in html
-    assert 'Ajuda com clientes, propostas, negociação, preço e oportunidades.' in html
-    assert 'Para você, continua sendo uma única conversa, simples e contínua.' in html
-    assert 'Agente Coordenador' in html
+    assert 'Instalação via CLI' in html
+    assert 'Instalação via PowerShell' in html
+    assert 'Ver contexto avançado do squad' in html
     assert 'Copie seu token agora' in html
     assert '.mcp-token-modal__dialog' in html
     assert 'Seu perfil atual instala apenas o Sapiens Cliente' in html

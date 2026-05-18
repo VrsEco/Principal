@@ -131,6 +131,8 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
     assert config["copy_install_command_text"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
+    assert "claude mcp add --scope user --transport http sapiens-user" in config["cli_install_text"]
+    assert config["powershell_install_command"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
     decoded = base64.b64decode(config["install_command"].split(" -EncodedCommand ", 1)[1]).decode("utf-16le")
     assert "install-sapiens-runtime.ps1" in decoded
     assert "-ClientRuntime 'claude'" in decoded
@@ -170,7 +172,7 @@ def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
     assert config["experience_label"] == "Sapiens Consultor"
     assert config["install_mode"] == "self_service"
     assert config["supports_personal_token"] is False
-    assert config["runtime_locked"] is True
+    assert config["runtime_locked"] is False
     assert config["runtime_blocked"] is False
 
 

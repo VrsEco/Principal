@@ -151,9 +151,10 @@
 
                     <div id="mcp-token-alert-container"></div>
 
-                    <div class="profile-tabs" role="tablist" aria-label="Etapas da instalação do squad" style="margin-top: 0;">
-                        <button type="button" class="profile-tab mcp-step-tab is-active" data-mcp-step-target="mcp-step-config-panel">1. Escolher CLI</button>
-                        <button type="button" class="profile-tab mcp-step-tab" data-mcp-step-target="mcp-step-squad-panel">2. Gerar e instalar</button>
+                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0;">
+                        <span class="badge" style="background:rgba(37,99,235,0.12); color:#1d4ed8;">1. Escolher CLI</span>
+                        <span class="badge" style="background:rgba(15,23,42,0.08); color:var(--text-secondary);">2. Gerar token</span>
+                        <span class="badge" style="background:rgba(15,23,42,0.08); color:var(--text-secondary);">3. Instalar</span>
                     </div>
 
                     <section id="mcp-step-config-panel" class="mcp-step-panel is-active" style="display:grid; gap:1rem;">
@@ -193,66 +194,71 @@
                             <small style="color: var(--text-tertiary);">Cada runtime tem uma família canônica: Claude → Sapiens Cliente, Antigravity → Sapiens Consultor, Codex → Sapiens Engenharia.</small>
                         </div>
 
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
-                            <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
-                                Você está configurando o Sapiens Cliente para uso no Claude Code ou na aba Code do Claude Desktop. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e como registrar o MCP HTTP no registry real do Claude Code.
-                            </div>
-                        </div>
+                        <details style="border:1px solid rgba(15,23,42,0.08); border-radius:14px; padding:0.9rem 1rem; background:var(--bg-body);">
+                            <summary style="cursor:pointer; font-weight:700; color:var(--text-main);">Ver detalhes técnicos desta instalação</summary>
+                            <div style="display:grid; gap:1rem; margin-top:1rem;">
+                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                    <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
+                                    <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
+                                        Você está configurando o Sapiens Cliente para uso no Claude Code ou na aba Code do Claude Desktop. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e como registrar o MCP HTTP no registry real do Claude Code.
+                                    </div>
+                                </div>
 
-                        <div style="padding: 1rem; border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 14px; background: rgba(245, 158, 11, 0.08); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Importante para clientes Claude</div>
-                            <div style="font-size: 0.92rem; line-height: 1.55;">
-                                Se você estiver usando o Claude Desktop, faça este fluxo na <strong>aba Code</strong>. A aba <strong>Chat</strong> / Connectors usa outra superfície e não é o caminho canônico para o MCP local do APP32.
-                            </div>
-                        </div>
+                                <div style="padding: 1rem; border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 14px; background: rgba(245, 158, 11, 0.08); color: var(--text-secondary);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Importante para clientes Claude</div>
+                                    <div style="font-size: 0.92rem; line-height: 1.55;">
+                                        Se você estiver usando o Claude Desktop, faça este fluxo na <strong>aba Code</strong>. A aba <strong>Chat</strong> / Connectors usa outra superfície e não é o caminho canônico para o MCP local do APP32.
+                                    </div>
+                                </div>
 
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Resumo da instalação</div>
-                            <pre id="mcpOnboardingSummaryText" style="margin:0; white-space:pre-wrap; font-size:0.92rem; line-height:1.55; color:var(--text-secondary); font-family:inherit;">O APP32 vai consolidar aqui o checklist de onboarding, menor privilégio, discovery obrigatório e guardrails operacionais da combinação escolhida.</pre>
-                        </div>
+                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Resumo da instalação</div>
+                                    <pre id="mcpOnboardingSummaryText" style="margin:0; white-space:pre-wrap; font-size:0.92rem; line-height:1.55; color:var(--text-secondary); font-family:inherit;">O APP32 vai consolidar aqui o checklist de onboarding, menor privilégio, discovery obrigatório e guardrails operacionais da combinação escolhida.</pre>
+                                </div>
 
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">O que o instalador vai fazer</div>
-                            <ol id="mcpGuidedStepsList" style="margin: 0; padding-left: 1rem; display: grid; gap: 0.45rem; font-size: 0.92rem; line-height: 1.55;">
-                                <li>Escolha o cliente de IA acima.</li>
-                                <li>Gere ou renove o token.</li>
-                                <li>Siga aqui o passo a passo para criar a conexão MCP.</li>
-                            </ol>
-                        </div>
+                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">O que o instalador vai fazer</div>
+                                    <ol id="mcpGuidedStepsList" style="margin: 0; padding-left: 1rem; display: grid; gap: 0.45rem; font-size: 0.92rem; line-height: 1.55;">
+                                        <li>Escolha o cliente de IA acima.</li>
+                                        <li>Gere ou renove o token.</li>
+                                        <li>Siga aqui o passo a passo para criar a conexão MCP.</li>
+                                    </ol>
+                                </div>
 
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Dados técnicos resolvidos pelo APP32</div>
-                            <div id="mcpGuidedFields" style="display:grid; gap:0.55rem;">
-                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main);">Nome da conexão</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Sapiens Cliente</div>
+                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Dados técnicos resolvidos pelo APP32</div>
+                                    <div id="mcpGuidedFields" style="display:grid; gap:0.55rem;">
+                                        <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                            <div style="font-weight: 700; color: var(--text-main);">Nome da conexão</div>
+                                            <div style="font-size: 0.86rem; color: var(--text-tertiary);">Sapiens Cliente</div>
+                                        </div>
+                                    </div>
+                                    <div id="mcpValidationPromptBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
+                                        <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Teste inicial recomendado</div>
+                                        <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com bootstrap_session_context, describe_app32_available_sapiens_squads_tool e resolve_app32_sapiens_activation_tool.</div>
+                                    </div>
+                                </div>
+
+                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
+                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Comandos oficiais de ativação</div>
+                                    <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Code ou na aba Code do Claude Desktop, a ativação oficial agora reconhece tanto <strong>texto livre</strong> quanto <strong>slash commands</strong>. <code>Sapiens On</code>, <code>sapiens on</code> e <code>/sapiens-on</code> devem iniciar o mesmo fluxo.</p>
+                                    <div id="mcpActivationCommandsList" style="display:grid; gap:0.55rem;">
+                                        <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                            <div style="font-weight: 700; color: var(--text-main);">Sapiens On</div>
+                                            <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entrada textual oficial. Inicia conexão, bootstrap, escolha de squad e startup sequence.</div>
+                                        </div>
+                                        <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
+                                            <div style="font-weight: 700; color: var(--text-main);">/sapiens-cliente-on</div>
+                                            <div style="font-size: 0.86rem; color: var(--text-tertiary);">Atalho direto do Sapiens Cliente para sessões com squad único ou ativação explícita.</div>
+                                        </div>
+                                    </div>
+                                    <div id="mcpActivationCommandsInstallBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
+                                        <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Comandos locais opcionais</div>
+                                        <div id="mcpActivationCommandsInstallText" style="font-size:0.9rem; color:var(--text-secondary); word-break: break-word;">Use o script canônico do APP32 para gravar os comandos oficiais de ativação no Claude Code ou na aba Code do Claude Desktop.</div>
+                                    </div>
                                 </div>
                             </div>
-                            <div id="mcpValidationPromptBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
-                                <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Teste inicial recomendado</div>
-                                <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com bootstrap_session_context, describe_app32_available_sapiens_squads_tool e resolve_app32_sapiens_activation_tool.</div>
-                            </div>
-                        </div>
-
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Comandos oficiais de ativação</div>
-                            <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Code ou na aba Code do Claude Desktop, a ativação oficial agora reconhece tanto <strong>texto livre</strong> quanto <strong>slash commands</strong>. <code>Sapiens On</code>, <code>sapiens on</code> e <code>/sapiens-on</code> devem iniciar o mesmo fluxo.</p>
-                            <div id="mcpActivationCommandsList" style="display:grid; gap:0.55rem;">
-                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main);">Sapiens On</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entrada textual oficial. Inicia conexão, bootstrap, escolha de squad e startup sequence.</div>
-                                </div>
-                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main);">/sapiens-cliente-on</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Atalho direto do Sapiens Cliente para sessões com squad único ou ativação explícita.</div>
-                                </div>
-                            </div>
-                            <div id="mcpActivationCommandsInstallBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
-                                <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Comandos locais opcionais</div>
-                                <div id="mcpActivationCommandsInstallText" style="font-size:0.9rem; color:var(--text-secondary); word-break: break-word;">Use o script canônico do APP32 para gravar os comandos oficiais de ativação no Claude Code ou na aba Code do Claude Desktop.</div>
-                            </div>
-                        </div>
+                        </details>
 
                         <div class="card" style="border-radius: 24px;">
                             <div class="card-body" style="display: grid; gap: 1rem;">
@@ -282,7 +288,7 @@
                         </div>
                     </section>
 
-                    <section id="mcp-step-squad-panel" class="mcp-step-panel" style="display:grid; gap:1rem;">
+                    <section id="mcp-step-squad-panel" class="mcp-step-panel is-active" style="display:grid; gap:1rem;">
                         <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
                             <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo 2 — Gerar token e instalar</div>
                             <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
@@ -384,6 +390,9 @@
                         </div>
                         </div>
 
+                        <details style="border:1px solid rgba(15,23,42,0.08); border-radius:14px; padding:0.9rem 1rem; background:var(--bg-body);">
+                            <summary style="cursor:pointer; font-weight:700; color:var(--text-main);">Ver contexto avançado do squad</summary>
+                            <div style="display:grid; gap:1rem; margin-top:1rem;">
                         <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
                             <div id="mcpOfficialCompositionTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
                             <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
@@ -461,19 +470,30 @@
                                 <div id="mcpOffCommandsList" style="font-size: 0.92rem; line-height: 1.55;">Sapiens Off / Sapiens Cliente Off</div>
                             </div>
                         </div>
+                            </div>
+                        </details>
 
                         <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-primary" id="buildMcpActivationButton">Ver instruções de instalação</button>
-                            <button type="button" class="btn btn-secondary" id="copyMcpInstallCommandButton">Copiar comando de instalação</button>
-                            <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Ver modo técnico</button>
-                            <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar conteúdo</button>
+                            <button type="button" class="btn btn-primary" id="buildMcpCliInstallButton">Instalação via CLI</button>
+                            <button type="button" class="btn btn-secondary" id="copyMcpInstallCommandButton">Instalação via PowerShell</button>
                         </div>
 
                         <div class="filter-field" style="margin-top:-0.25rem;">
                             <label>Saída pronta para copiar</label>
-                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token, use Ver instruções, Copiar comando de instalação ou Ver modo técnico."></textarea>
-                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">Fluxo recomendado: gerar token, copiar o comando único e colar no CLI escolhido. Use o modo técnico só quando precisar ajustar manualmente.</small>
+                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token, escolha Instalação via CLI ou Instalação via PowerShell."></textarea>
+                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">Fluxo recomendado: gerar token, copiar a instalação desejada e colar no cliente correto.</small>
                         </div>
+
+                        <details style="border:1px solid rgba(15,23,42,0.08); border-radius:14px; padding:0.9rem 1rem; background:var(--bg-body);">
+                            <summary style="cursor:pointer; font-weight:700; color:var(--text-main);">Modo técnico</summary>
+                            <div style="display:grid; gap:0.75rem; margin-top:1rem;">
+                                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:flex-end;">
+                                    <button type="button" class="btn btn-secondary" id="buildMcpActivationButton">Ver instruções detalhadas</button>
+                                    <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Ver configuração técnica</button>
+                                    <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar conteúdo</button>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                     </section>
                 </div>
@@ -596,11 +616,11 @@
     }
 
     .mcp-step-panel {
-        display: none !important;
+        display: grid !important;
     }
 
-    .mcp-step-panel.is-active {
-        display: grid !important;
+    .mcp-step-tab {
+        display: none !important;
     }
 
     .mcp-token-modal[hidden] {
@@ -822,10 +842,9 @@
     const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
     const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
     const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
+    const buildMcpCliInstallButton = document.getElementById('buildMcpCliInstallButton');
     const copyMcpInstallCommandButton = document.getElementById('copyMcpInstallCommandButton');
     const buildMcpActivationButton = document.getElementById('buildMcpActivationButton');
-    const buildMcpHarnessButton = document.getElementById('buildMcpHarnessButton');
-    const buildMcpSmokeButton = document.getElementById('buildMcpSmokeButton');
     const buildMcpTechnicalButton = document.getElementById('buildMcpTechnicalButton');
     const mcpInstructionText = document.getElementById('mcpInstructionText');
     const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
@@ -908,13 +927,11 @@
         });
         if (mcpSquadRuntimeHint) {
             if (blocked) {
-                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'Seu perfil atual não pode publicar este runtime com a família canônica exigida.';
+                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'Seu perfil atual não pode instalar este squad no CLI escolhido.';
             } else if (resolvedConfig && resolvedConfig.requires_company_selection) {
                 mcpSquadRuntimeHint.textContent = 'Esta combinação usa surface privilegiada. Escolha uma empresa padrão antes de gerar a instalação.';
-            } else if (locked) {
-                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'O runtime escolhido trava a família publicada para preservar a combinação oficial.';
             } else {
-                mcpSquadRuntimeHint.textContent = 'O runtime escolhido pode travar esta seleção para manter a combinação oficial de runtime, squad e surface.';
+                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'Qualquer CLI pode receber qualquer squad autorizado ao seu perfil.';
             }
         }
     }
@@ -974,6 +991,8 @@
             text: replacePlaceholder(config.text),
             json: rawJson,
             install_command: replacePlaceholder(config.install_command),
+            powershell_install_command: replacePlaceholder(config.powershell_install_command),
+            cli_install_text: replacePlaceholder(config.cli_install_text),
             technical_config_text: replacePlaceholder(config.technical_config_text),
             activation_prompt: replacePlaceholder(config.activation_prompt),
             guided_install_text: replacePlaceholder(config.guided_install_text),
@@ -1163,7 +1182,7 @@
         if (revokeMcpTokenButton) revokeMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
         if (mcpTokenHelpText) {
             mcpTokenHelpText.textContent = resolvedConfig.supports_personal_token
-                ? 'Gere o token, copie o comando único e cole no CLI escolhido. O APP32 já embute o contexto necessário nesta instalação.'
+                ? 'Gere o token, escolha Instalação via CLI ou Instalação via PowerShell e cole no destino correto.'
                 : 'Esta instalação usa rollout controlado. O código acima continua guiando a configuração, mas a credencial final pode ser provisionada pela Versus ou por administrador autorizado.';
         }
         if (mcpTokenFootnoteText) {
@@ -1175,9 +1194,8 @@
             mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Use a instalação guiada quando disponível.';
         }
         syncSquadButtonsForRuntime(resolvedConfig);
-        if (copyMcpInstallCommandButton) {
-            copyMcpInstallCommandButton.disabled = !String(resolvedConfig.copy_install_command_text || resolvedConfig.install_command || '').trim();
-        }
+        if (buildMcpCliInstallButton) buildMcpCliInstallButton.disabled = !String(resolvedConfig.cli_install_text || '').trim();
+        if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.disabled = !String(resolvedConfig.powershell_install_command || resolvedConfig.copy_install_command_text || resolvedConfig.install_command || '').trim();
         if (mode === 'technical') {
             mcpConfigOutput.value = resolvedConfig.technical_config_text || `${resolvedConfig.text}
 
@@ -1185,20 +1203,12 @@ JSON:
 ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             return;
         }
+        if (mode === 'cli') {
+            mcpConfigOutput.value = resolvedConfig.cli_install_text || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
+            return;
+        }
         if (mode === 'command') {
-            mcpConfigOutput.value = resolvedConfig.copy_install_command_text || resolvedConfig.install_command || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
-            return;
-        }
-        if (mode === 'harness') {
-            mcpConfigOutput.value = resolvedConfig.harness_summary_text || resolvedConfig.text || '';
-            return;
-        }
-        if (mode === 'smoke') {
-            mcpConfigOutput.value = resolvedConfig.smoke_guided_text || resolvedConfig.validation_prompt || '';
-            return;
-        }
-        if (mode === 'onboarding') {
-            mcpConfigOutput.value = resolvedConfig.onboarding_summary_text || resolvedConfig.guided_install_text || '';
+            mcpConfigOutput.value = resolvedConfig.powershell_install_command || resolvedConfig.copy_install_command_text || resolvedConfig.install_command || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
             return;
         }
         mcpConfigOutput.value = resolvedConfig.guided_install_text || resolvedConfig.activation_prompt || resolvedConfig.instruction_text || resolvedConfig.install_command || '';
@@ -1221,11 +1231,9 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         if (showSuccessAlert) {
             const messagesByMode = {
                 activation: 'Instruções de instalação prontas.',
+                cli: 'Instalação via CLI pronta.',
                 command: 'Comando de instalação pronto.',
                 technical: 'Modo técnico pronto.',
-                harness: 'Resumo de harness pronto.',
-                smoke: 'Smoke guiado pronto.',
-                onboarding: 'Resumo de onboarding pronto.',
             };
             const message = messagesByMode[mode] || 'Conteúdo MCP pronto.';
             renderAlert('mcp-token-alert-container', true, message);
@@ -1321,8 +1329,9 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
     }
 
     function updateMcpActionLabels() {
-        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Ver instruções de instalação';
-        if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.textContent = 'Copiar comando de instalação';
+        if (buildMcpCliInstallButton) buildMcpCliInstallButton.textContent = 'Instalação via CLI';
+        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Ver instruções detalhadas';
+        if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.textContent = 'Instalação via PowerShell';
         if (buildMcpTechnicalButton) buildMcpTechnicalButton.textContent = 'Ver modo técnico';
         if (copyMcpConfigButton) copyMcpConfigButton.textContent = 'Copiar conteúdo';
     }
@@ -1429,39 +1438,38 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         });
     }
 
+    if (buildMcpCliInstallButton) {
+        buildMcpCliInstallButton.addEventListener('click', async () => {
+            try {
+                const config = await buildMcpConfig('cli', false);
+                const resolvedConfig = injectLatestTokenIntoConfig(config);
+                const cliText = String((resolvedConfig && resolvedConfig.cli_install_text) || '').trim();
+                if (!cliText) {
+                    renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe instalação via CLI.');
+                    return;
+                }
+                await navigator.clipboard.writeText(cliText);
+                renderAlert('mcp-token-alert-container', true, 'Instalação via CLI copiada para a área de transferência.');
+                renderMcpConfig(resolvedConfig, 'cli');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
+        });
+    }
+
     if (copyMcpInstallCommandButton) {
         copyMcpInstallCommandButton.addEventListener('click', async () => {
             try {
                 const config = await buildMcpConfig('command', false);
                 const resolvedConfig = injectLatestTokenIntoConfig(config);
-                const installCommand = String((resolvedConfig && (resolvedConfig.copy_install_command_text || resolvedConfig.install_command)) || '').trim();
+                const installCommand = String((resolvedConfig && (resolvedConfig.powershell_install_command || resolvedConfig.copy_install_command_text || resolvedConfig.install_command)) || '').trim();
                 if (!installCommand) {
-                    renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe comando automático. Use Ver instruções para concluir a instalação guiada.');
+                    renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe instalação via PowerShell.');
                     return;
                 }
                 await navigator.clipboard.writeText(installCommand);
-                renderAlert('mcp-token-alert-container', true, 'Comando de instalação copiado para a área de transferência.');
+                renderAlert('mcp-token-alert-container', true, 'Instalação via PowerShell copiada para a área de transferência.');
                 renderMcpConfig(resolvedConfig, 'command');
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
-        });
-    }
-
-    if (buildMcpHarnessButton) {
-        buildMcpHarnessButton.addEventListener('click', async () => {
-            try {
-                await buildMcpConfig('harness', true);
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
-        });
-    }
-
-    if (buildMcpSmokeButton) {
-        buildMcpSmokeButton.addEventListener('click', async () => {
-            try {
-                await buildMcpConfig('smoke', true);
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
