@@ -4,14 +4,13 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_profile_template_supports_activation_and_technical_mcp_outputs():
+def test_profile_template_supports_simple_runtime_installer_flow():
     template = (_REPO_ROOT / "templates" / "auth" / "profile.html").read_text(encoding="utf-8")
 
     assert "Copiar comando de instalação" in template
-    assert "Ver configuração técnica" in template
-    assert "Ver harness" in template
-    assert "Executar smoke guiado" in template
-    assert "Onboarding por runtime e squad" in template
+    assert "Ver modo técnico" in template
+    assert "Instalar Sapiens no seu CLI" in template
+    assert "o instalador sempre baixa o script oficial online" in template.lower()
     assert "Claude Code / aba Code do Desktop" in template
     assert "A aba <strong>Chat</strong> / Connectors usa outra superfície" in template
     assert "function buildMcpTokenPayload()" in template
@@ -25,5 +24,3 @@ def test_profile_template_supports_activation_and_technical_mcp_outputs():
     assert "technical_config_text" in template
     assert "buildMcpConfig('activation'" in template
     assert "buildMcpConfig('technical'" in template
-    assert "buildMcpConfig('harness'" in template
-    assert "buildMcpConfig('smoke'" in template

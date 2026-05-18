@@ -1,20 +1,16 @@
 param(
-    [string]$Email,
-    [string]$Token,
-    [int]$CompanyId = 0,
     [ValidateSet("claude", "codex", "antigravity", "other")]
     [string]$ClientRuntime = "other",
+    [string]$ServerName = "sapiens-user",
+    [string]$ServerUrl,
+    [string]$BearerToken,
     [string]$Profile = "squad_cliente",
     [string]$Surface = "user",
     [string]$ExperienceLabel = "Sapiens Cliente",
     [string]$CanonicalLabel = "Squad Cliente",
     [string]$HarnessKey = "harness_coordenador_cliente_v1",
     [string]$HarnessLabel = "Harness Coordenador do Squad Cliente",
-    [string]$ServerName = "sapiens-cliente",
-    [string]$CommandAlias = "sapiens cliente on",
-    [string]$AppBaseUrl = "https://app.gestaoversus.com.br",
-    [string]$WorkspaceRoot = (Get-Location).Path,
-    [string]$ConfigPath,
+    [string]$CommandAlias = "/sapiens-cliente-on",
     [switch]$SkipSmoke
 )
 
@@ -25,14 +21,12 @@ function Write-Step([string]$Message) {
     Write-Host "==> $Message" -ForegroundColor Cyan
 }
 
-function Get-PlainTextFromSecureString([Security.SecureString]$SecureValue) {
-    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureValue)
-    try {
-        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
+function Require-Command([string]$Name) {
+    $command = Get-Command -Name $Name -ErrorAction SilentlyContinue
+    if (-not $command) {
+        throw "Comando obrigatório não encontrado: $Name"
     }
-    finally {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
-    }
+    return $command.Source
 }
 
 function Backup-IfExists([string]$Path) {
@@ -45,35 +39,24 @@ function Backup-IfExists([string]$Path) {
     return $backupPath
 }
 
-function Resolve-WorkspaceMcpConfigPath([string]$StartPath) {
-    $current = [IO.Path]::GetFullPath($StartPath)
-    while (-not [string]::IsNullOrWhiteSpace($current)) {
-        $candidate = Join-Path $current ".mcp.json"
-        if (Test-Path -LiteralPath $candidate) {
-            return $candidate
-        }
-        $parent = Split-Path -Path $current -Parent
-        if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $current) {
-            break
-        }
-        $current = $parent
+function Ensure-ParentDirectory([string]$Path) {
+    $parent = Split-Path -Path $Path -Parent
+    if (-not [string]::IsNullOrWhiteSpace($parent) -and -not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
-    return (Join-Path ([IO.Path]::GetFullPath($StartPath)) ".mcp.json")
 }
 
-function Resolve-TargetConfigPath([string]$ExplicitPath, [string]$StartPath) {
-    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
-        return [IO.Path]::GetFullPath($ExplicitPath)
-    }
-    return Resolve-WorkspaceMcpConfigPath -StartPath $StartPath
+function Set-UserEnv([string]$Name, [string]$Value) {
+    [Environment]::SetEnvironmentVariable($Name, $Value, "User")
+    Set-Item -Path ("Env:" + $Name) -Value $Value
 }
 
-function Merge-McpConfig([string]$ConfigPath, [string]$Name, [hashtable]$ServerConfig) {
+function Merge-JsonMcpServer([string]$ConfigPath, [string]$Name, [hashtable]$ServerConfig) {
     $root = @{ mcpServers = @{} }
     if (Test-Path -LiteralPath $ConfigPath) {
         $raw = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8
         if ($raw.Trim()) {
-            $parsed = $raw | ConvertFrom-Json -Depth 20 -AsHashtable
+            $parsed = $raw | ConvertFrom-Json -Depth 30 -AsHashtable
             if ($parsed -is [hashtable]) {
                 $root = $parsed
             }
@@ -83,110 +66,155 @@ function Merge-McpConfig([string]$ConfigPath, [string]$Name, [hashtable]$ServerC
         $root.mcpServers = @{}
     }
     $root.mcpServers[$Name] = $ServerConfig
-    $json = $root | ConvertTo-Json -Depth 20
-    Set-Content -LiteralPath $ConfigPath -Value $json -Encoding UTF8
+    Ensure-ParentDirectory -Path $ConfigPath
+    ($root | ConvertTo-Json -Depth 30) | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
 }
 
-function Invoke-BasicSmoke([string]$BaseUrl) {
-    $healthUrl = "$($BaseUrl.TrimEnd('/'))/mcp/healthz"
-    $response = Invoke-RestMethod -Method Get -Uri $healthUrl -TimeoutSec 30
+function Merge-CodexToml([string]$ConfigPath, [string]$Name, [string]$Url, [string]$TokenEnvVar) {
+    Ensure-ParentDirectory -Path $ConfigPath
+    $raw = ""
+    if (Test-Path -LiteralPath $ConfigPath) {
+        $raw = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8
+    }
+
+    $escapedName = [Regex]::Escape($Name)
+    $pattern = "(?ms)^\[mcp_servers\.$escapedName\]\s*.*?(?=^\[|\z)"
+    $block = @(
+        "[mcp_servers.$Name]"
+        "url = ""$Url"""
+        "bearer_token_env_var = ""$TokenEnvVar"""
+        "startup_timeout_sec = 20"
+        "tool_timeout_sec = 120"
+    ) -join "`r`n"
+
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        Set-Content -LiteralPath $ConfigPath -Value ($block + "`r`n") -Encoding UTF8
+        return
+    }
+
+    if ([Regex]::IsMatch($raw, $pattern)) {
+        $updated = [Regex]::Replace($raw, $pattern, $block + "`r`n")
+    }
+    else {
+        $separator = ""
+        if (-not $raw.EndsWith("`n")) {
+            $separator = "`r`n"
+        }
+        $updated = $raw + $separator + "`r`n" + $block + "`r`n"
+    }
+    Set-Content -LiteralPath $ConfigPath -Value $updated -Encoding UTF8
+}
+
+function Install-ClaudeRuntime {
+    $null = Require-Command "claude"
+    & claude mcp remove $ServerName *> $null
+    & claude mcp add --scope user --transport http $ServerName $ServerUrl --header "Authorization: Bearer $BearerToken"
     return @{
-        ok = ($response.ok -eq $true)
-        public_base_url = $response.public_base_url
-        surfaces = $response.surfaces
+        config_path = "~/.claude.json (ou equivalente gerenciado da instalação)"
+        verify_command = "claude mcp list"
     }
 }
 
-Write-Step "Instalação guiada do $ExperienceLabel"
-Write-Host "Cliente alvo........: $ClientRuntime"
-
-if ([string]::IsNullOrWhiteSpace($Email)) {
-    $Email = $env:GV_USER_EMAIL
-}
-if ([string]::IsNullOrWhiteSpace($Email)) {
-    $Email = Read-Host "Informe o e-mail do usuário APP32"
-}
-if ([string]::IsNullOrWhiteSpace($Email)) {
-    throw "E-mail obrigatório."
-}
-
-$configPath = Resolve-TargetConfigPath -ExplicitPath $ConfigPath -StartPath $WorkspaceRoot
-$serverUrl = "{0}/mcp/{1}/" -f $AppBaseUrl.TrimEnd('/'), $Surface
-if ($CompanyId -gt 0) {
-    $serverUrl = "${serverUrl}?company_id=$CompanyId"
-}
-
-Write-Step "Localizando arquivo de configuração MCP do cliente"
-Write-Host "Arquivo alvo........: $configPath"
-Write-Host "Profile.............: $Profile"
-Write-Host "Surface.............: $Surface"
-Write-Host "Harness inicial.....: $HarnessLabel"
-Write-Host "URL.................: $serverUrl"
-Write-Host ""
-Write-Host "No próximo passo você precisará colar o token MCP gerado no APP32." -ForegroundColor Yellow
-Write-Host "Abra o APP32 > Meu perfil > Instalar Squad, gere ou renove o token e volte para este terminal." -ForegroundColor Yellow
-
-if ([string]::IsNullOrWhiteSpace($Token)) {
-    $Token = $env:GV_MCP_TOKEN
-}
-if ([string]::IsNullOrWhiteSpace($Token)) {
-    $secureToken = Read-Host "Cole agora o token MCP gerado no APP32" -AsSecureString
-    $Token = Get-PlainTextFromSecureString $secureToken
-}
-if ([string]::IsNullOrWhiteSpace($Token)) {
-    throw "Token MCP obrigatório."
-}
-
-Write-Step "Preparando .mcp.json local"
-$backupPath = Backup-IfExists -Path $configPath
-
-$serverConfig = @{
-    transport = "http"
-    url = $serverUrl
-    metadata = @{
-        profile = $Profile
-        profile_label = $CanonicalLabel
-        experience_label = $ExperienceLabel
-        surface = $Surface
-        company_id = $(if ($CompanyId -gt 0) { $CompanyId } else { $null })
-        harness_key = $HarnessKey
-        harness_label = $HarnessLabel
-        email = $Email
-    }
-    headers = @{
-        Authorization = "Bearer $Token"
+function Install-CodexRuntime {
+    $configPath = Join-Path $HOME ".codex\config.toml"
+    $tokenEnvVar = ("APP32_MCP_TOKEN_{0}" -f ($ServerName.ToUpper().Replace("-", "_")))
+    $backupPath = Backup-IfExists -Path $configPath
+    Set-UserEnv -Name $tokenEnvVar -Value $BearerToken
+    Merge-CodexToml -ConfigPath $configPath -Name $ServerName -Url $ServerUrl -TokenEnvVar $tokenEnvVar
+    return @{
+        config_path = $configPath
+        backup_path = $backupPath
+        verify_command = "codex mcp list"
+        token_env_var = $tokenEnvVar
     }
 }
 
-Merge-McpConfig -ConfigPath $configPath -Name $ServerName -ServerConfig $serverConfig
-$Token = $null
+function Install-AntigravityRuntime {
+    $configPath = Join-Path $HOME ".gemini\antigravity\mcp_config.json"
+    $tokenEnvVar = ("APP32_MCP_TOKEN_{0}" -f ($ServerName.ToUpper().Replace("-", "_")))
+    $backupPath = Backup-IfExists -Path $configPath
+    Set-UserEnv -Name $tokenEnvVar -Value $BearerToken
+    Merge-JsonMcpServer -ConfigPath $configPath -Name $ServerName -ServerConfig @{
+        command = "npx"
+        args = @(
+            "-y",
+            "mcp-remote",
+            $ServerUrl,
+            "--header",
+            ("Authorization: Bearer ${" + $tokenEnvVar + "}")
+        )
+        env = @{
+            $tokenEnvVar = $BearerToken
+        }
+        metadata = @{
+            profile = $Profile
+            profile_label = $CanonicalLabel
+            experience_label = $ExperienceLabel
+            surface = $Surface
+            harness_key = $HarnessKey
+            harness_label = $HarnessLabel
+        }
+    }
+    return @{
+        config_path = $configPath
+        backup_path = $backupPath
+        verify_command = "Reabra o painel MCP do Antigravity e confira INSTALLED MCP SERVERS"
+        token_env_var = $tokenEnvVar
+    }
+}
 
-$smokeResult = $null
+function Invoke-BasicSmoke([string]$Url) {
+    $base = [Uri]$Url
+    $healthUrl = "$($base.Scheme)://$($base.Authority)/mcp/healthz"
+    return Invoke-RestMethod -Method Get -Uri $healthUrl -TimeoutSec 30
+}
+
+if ([string]::IsNullOrWhiteSpace($ServerUrl)) {
+    throw "ServerUrl é obrigatório."
+}
+if ([string]::IsNullOrWhiteSpace($BearerToken)) {
+    throw "BearerToken é obrigatório."
+}
+
+Write-Step "Instalação automática do $ExperienceLabel"
+Write-Host "Runtime alvo........: $ClientRuntime"
+Write-Host "Servidor MCP.......: $ServerName"
+Write-Host "URL................: $ServerUrl"
+
+$result = $null
+switch ($ClientRuntime) {
+    "claude" { $result = Install-ClaudeRuntime; break }
+    "codex" { $result = Install-CodexRuntime; break }
+    "antigravity" { $result = Install-AntigravityRuntime; break }
+    default { throw "Runtime '$ClientRuntime' ainda não possui instalador automático oficial." }
+}
+
+$smoke = $null
 if (-not $SkipSmoke) {
-    Write-Step "Executando smoke básico do endpoint MCP"
-    $smokeResult = Invoke-BasicSmoke -BaseUrl $AppBaseUrl
+    Write-Step "Validando endpoint MCP público"
+    $smoke = Invoke-BasicSmoke -Url $ServerUrl
 }
 
 Write-Step "Instalação concluída"
-Write-Host "Nome visível.........: $ExperienceLabel"
-Write-Host "Família canônica.....: $CanonicalLabel"
-Write-Host "Profile..............: $Profile"
-Write-Host "Surface..............: $Surface"
-Write-Host "Company ID...........: $(if ($CompanyId -gt 0) { $CompanyId } else { 'não definido' })"
-Write-Host "Harness inicial......: $HarnessLabel"
-Write-Host "Alias sugerido.......: $CommandAlias"
-Write-Host "MCP config...........: $configPath"
-if ($backupPath) {
-    Write-Host "Backup do .mcp.json..: $backupPath"
+Write-Host "Experiência.........: $ExperienceLabel"
+Write-Host "Família canônica....: $CanonicalLabel"
+Write-Host "Profile.............: $Profile"
+Write-Host "Surface.............: $Surface"
+Write-Host "Harness inicial.....: $HarnessLabel"
+Write-Host "Comando Sapiens On..: $CommandAlias"
+Write-Host "Config alvo.........: $($result.config_path)"
+if ($result.backup_path) {
+    Write-Host "Backup..............: $($result.backup_path)"
 }
-if ($smokeResult) {
-    Write-Host "Smoke................: OK"
-    Write-Host "Public base URL......: $($smokeResult.public_base_url)"
+if ($result.token_env_var) {
+    Write-Host "Token persistido....: $($result.token_env_var) (escopo do usuário)"
+}
+if ($smoke -and $smoke.ok -eq $true) {
+    Write-Host "Smoke...............: OK"
 }
 
 Write-Host ""
-Write-Host "Próximo passo:" -ForegroundColor Yellow
-Write-Host "1. Abra o cliente/CLI no contexto correto."
-Write-Host "2. Use a entrada visível: $ExperienceLabel"
-Write-Host "3. Se o cliente suportar alias textual, teste: $CommandAlias"
-Write-Host "4. Confirme a sequência de startup e o agente coordenador inicial."
+Write-Host "Próximos passos:" -ForegroundColor Yellow
+Write-Host "1. Verifique a conexão no cliente: $($result.verify_command)"
+Write-Host "2. Abra uma nova sessão e execute: $CommandAlias"
+Write-Host "3. Confirme o bootstrap remoto do Sapiens On"

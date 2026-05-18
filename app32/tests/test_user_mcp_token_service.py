@@ -122,20 +122,23 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["runtime_label"] == "Claude Code / aba Code do Claude Desktop"
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
-    assert config["install_mode"] == "guided_manual"
-    assert config["availability_label"] == "Instalação manual guiada"
+    assert config["install_mode"] == "self_service"
+    assert config["availability_label"] == "Instalação automática"
     assert config["actor_type"] == "client_agent"
     assert config["experience_label"] == "Sapiens Cliente"
     assert config["command_alias"] == "/sapiens-cliente-on"
     assert config["harness_key"] == "harness_coordenador_cliente_v1"
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
-    assert config["install_command"].startswith("claude mcp add --scope user --transport http sapiens-user")
-    assert config["copy_install_command_text"].startswith("claude mcp add --scope user --transport http sapiens-user")
-    assert '"https://app.gestaoversus.com.br/mcp/user/"' in config["copy_install_command_text"]
-    assert "Authorization: Bearer mcpu_token_real" in config["copy_install_command_text"]
-    assert "Claude Code / aba Code do Claude Desktop" in config["instruction_text"]
-    assert "aba Code do Claude Desktop" in config["instruction_text"]
-    assert ".claude.json" in config["instruction_text"]
+    assert config["install_command"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
+    assert config["copy_install_command_text"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
+    decoded = base64.b64decode(config["install_command"].split(" -EncodedCommand ", 1)[1]).decode("utf-16le")
+    assert "install-sapiens-runtime.ps1" in decoded
+    assert "-ClientRuntime 'claude'" in decoded
+    assert "-ServerUrl 'https://app.gestaoversus.com.br/mcp/user/'" in decoded
+    assert "-BearerToken 'mcpu_token_real'" in decoded
+    assert "comando único do APP32" in config["instruction_text"]
+    assert "claude mcp add" in config["instruction_text"]
+    assert "Claude Code, Codex ou Antigravity" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]
     assert "/sapiens-on" in config["activation_prompt"]
     assert "Use a conexão MCP Sapiens Cliente desta sessão." in config["activation_prompt"]
@@ -165,7 +168,7 @@ def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
     assert config["resolved_surface"] == "admin"
     assert config["url"] == "https://app.gestaoversus.com.br/mcp/admin/?company_id=10"
     assert config["experience_label"] == "Sapiens Consultor"
-    assert config["install_mode"] == "guided_controlled"
+    assert config["install_mode"] == "self_service"
     assert config["supports_personal_token"] is False
     assert config["runtime_locked"] is True
     assert config["runtime_blocked"] is False

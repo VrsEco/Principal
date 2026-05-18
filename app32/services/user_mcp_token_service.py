@@ -39,8 +39,7 @@ PROFILE_TO_FALLBACK_ROLE = {
     "client": "cliente",
     "collaborator": "colaborador",
 }
-GENERIC_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-runtime.ps1"
-SAPIENS_CLIENTE_INSTALLER_COMMAND = ".\\app32\\scripts\\installers\\install-sapiens-cliente.ps1"
+RUNTIME_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-sapiens-runtime.ps1"
 CLAUDE_SLASH_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1"
 RUNTIME_LABELS = {
     "claude": "Claude Code / aba Code do Claude Desktop",
@@ -249,49 +248,42 @@ class UserMcpTokenService:
         cls,
         *,
         runtime_key: str | None,
-        company_id: int | None,
+        url: str,
+        token_value: str,
         profile_key: str,
         surface: str,
         experience_label: str,
         canonical_label: str,
         harness_key: str | None,
         harness_label: str | None,
+        server_name: str,
         command_alias: str | None,
     ) -> str:
-        company_arg = f" -CompanyId {company_id}" if company_id else ""
-        harness_key_value = harness_key or ""
-        harness_label_value = harness_label or ""
-        command_alias_value = command_alias or ""
-        server_name = experience_label.strip().lower().replace(" ", "-")
-        return (
-            "powershell -ExecutionPolicy Bypass -File "
-            f"\"{GENERIC_INSTALLER_COMMAND}\""
-            f" -ClientRuntime \"{runtime_key or 'other'}\""
-            f"{company_arg}"
-            f" -Profile \"{profile_key}\""
-            f" -Surface \"{surface}\""
-            f" -ExperienceLabel \"{experience_label}\""
-            f" -CanonicalLabel \"{canonical_label}\""
-            f" -HarnessKey \"{harness_key_value}\""
-            f" -HarnessLabel \"{harness_label_value}\""
-            f" -ServerName \"{server_name}\""
-            f" -CommandAlias \"{command_alias_value}\""
-        )
+        def _ps_quote(value: str | None) -> str:
+            return "'" + str(value or "").replace("'", "''") + "'"
 
-    @classmethod
-    def _build_squad_cliente_install_command(
-        cls,
-        *,
-        runtime_key: str | None,
-        company_id: int | None,
-    ) -> str:
-        company_arg = f" -CompanyId {company_id}" if company_id else ""
-        return (
-            "powershell -ExecutionPolicy Bypass -File "
-            f"\"{SAPIENS_CLIENTE_INSTALLER_COMMAND}\""
-            f" -ClientRuntime \"{runtime_key or 'other'}\""
-            f"{company_arg}"
+        script = " ".join(
+            [
+                f"$u={_ps_quote(RUNTIME_INSTALLER_RAW_URL)};",
+                "$f=Join-Path $env:TEMP 'install-sapiens-runtime.ps1';",
+                "Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile $f;",
+                "& $f",
+                f"-ClientRuntime {_ps_quote(runtime_key or 'other')}",
+                f"-ServerName {_ps_quote(server_name)}",
+                f"-ServerUrl {_ps_quote(url)}",
+                f"-BearerToken {_ps_quote(token_value)}",
+                f"-Profile {_ps_quote(profile_key)}",
+                f"-Surface {_ps_quote(surface)}",
+                f"-ExperienceLabel {_ps_quote(experience_label)}",
+                f"-CanonicalLabel {_ps_quote(canonical_label)}",
+                f"-HarnessKey {_ps_quote(harness_key or '')}",
+                f"-HarnessLabel {_ps_quote(harness_label or '')}",
+                f"-CommandAlias {_ps_quote(command_alias or '')};",
+                "Remove-Item $f -Force",
+            ]
         )
+        encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+        return f"powershell -ExecutionPolicy Bypass -EncodedCommand {encoded}"
 
     @classmethod
     def _build_guided_connection_fields(
@@ -513,25 +505,29 @@ class UserMcpTokenService:
             )
             return [
                 "No terminal do Windows, confirme que o Claude Code está instalado com claude --version.",
+                "Copie o comando único do APP32 e execute exatamente como foi gerado.",
                 "Se estiver no Claude Desktop, abra a aba Code. Não use a aba Chat para este onboarding MCP local.",
-                f"Execute o comando oficial do APP32 para registrar o MCP no registry real do Claude Code: {claude_add_command}.",
+                f"O instalador vai registrar o MCP no registry real do Claude Code usando internamente: {claude_add_command}.",
                 "Se o Claude solicitar aprovação do servidor, confirme a inclusão do MCP user.",
                 "Rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
                 "Se necessário, confira o registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e valide que mcpServers.sapiens-user foi gravado ali.",
                 "Abra uma nova sessão do Claude Code, ou uma nova sessão na aba Code do Claude Desktop, e use o prompt de ativação recomendado pelo APP32.",
                 "Como smoke inicial, digite Sapiens On e confirme o bootstrap remoto pelo instruction registry.",
             ]
-        if runtime in {"codex", "antigravity"} and runtime_config.get("install_command"):
-            token_step = (
-                "Quando o instalador pedir, cole o token MCP gerado nesta página."
-                if runtime_config.get("supports_personal_token")
-                else "Se o rollout usar credencial controlada, confirme com a Versus ou com o administrador autorizado qual credencial final deve ser provisionada."
-            )
+        if runtime == "codex" and runtime_config.get("install_command"):
             return [
-                f"Abra o terminal do cliente {runtime_config['runtime_label']}.",
-                "Execute o comando de instalação sugerido pelo APP32.",
-                token_step,
-                "Confirme a gravação da conexão MCP no cliente.",
+                "Abra o terminal onde o Codex está instalado.",
+                "Copie o comando único do APP32 e execute exatamente como foi gerado.",
+                "O instalador vai gravar a conexão em ~/.codex/config.toml e persistir o token em variável do usuário.",
+                "Rode codex mcp list e confirme que a entrada sapiens-ops aparece habilitada.",
+                f"Depois da instalação, abra uma conversa, use {activation_command} e confirme o bootstrap remoto.",
+            ]
+        if runtime == "antigravity" and runtime_config.get("install_command"):
+            return [
+                "Abra o ambiente em que o Antigravity está instalado.",
+                "Copie o comando único do APP32 e execute exatamente como foi gerado.",
+                "O instalador vai gravar a conexão em ~/.gemini/antigravity/mcp_config.json usando o bridge HTTP com token desta instalação.",
+                "Reabra o painel MCP do Antigravity e confirme que a entrada sapiens-admin aparece instalada.",
                 f"Depois da instalação, abra uma conversa, use {activation_command} e confirme o bootstrap remoto.",
             ]
         return [
@@ -838,66 +834,43 @@ class UserMcpTokenService:
             resolved_profile = "squad_cliente"
             resolved_surface = "user"
             if normalized_runtime == "claude":
-                install_mode = "guided_manual"
-                availability_label = "Instalação manual guiada"
+                install_mode = "self_service"
+                availability_label = "Instalação automática"
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "Neste cliente, a conexão MCP usa o registry nativo do Claude Code (~/.claude.json ou equivalente gerenciado da instalação). "
-                    "Use a aba Code do Claude Desktop, não a aba Chat. O APP32 vai te entregar o token, a URL, o comando claude mcp add e o prompt de ativação para operar sem depender de slash commands."
+                    "O instalador remoto grava a conexão no registry nativo do Claude Code usando o próprio CLI `claude mcp add`. "
+                    "Use a aba Code do Claude Desktop, não a aba Chat."
                 )
             elif normalized_runtime == "other":
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso em outro cliente de IA. "
-                    "Gere o código para IA conforme as configurações escolhidas. "
-                    "Se este cliente não suportar integração automática, use o modo avançado com a configuração técnica."
+                    "Use o comando de instalação quando o cliente suportar automação; caso contrário, abra o modo técnico."
                 )
             else:
+                install_mode = "self_service"
+                availability_label = "Instalação automática"
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "Gere o código para IA conforme as configurações escolhidas e siga o passo a passo orientado pelo APP32. "
+                    "O APP32 vai gerar um comando único de instalação que baixa o instalador online e grava a configuração no cliente escolhido. "
                     "A instalação entra pelo Coordenador e depois pode chamar Comercial, Operacional e Administrativo/Financeiro quando necessário."
                 )
         elif normalized_squad == "engineering":
             resolved_profile = "engineering"
             resolved_surface = "ops"
-            install_mode = "guided_controlled"
-            availability_label = "Instalação guiada controlada"
-            install_command = cls._build_generic_install_command(
-                runtime_key=normalized_runtime,
-                company_id=company_id,
-                profile_key=resolved_profile,
-                surface=resolved_surface,
-                experience_label=experience_label,
-                canonical_label=squad_label,
-                harness_key=runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
-                harness_label=runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
-                command_alias=command_alias,
-            )
+            install_mode = "self_service"
+            availability_label = "Instalação automática"
             instruction_text = (
                 f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                "O Squad de Engenharia opera em ambiente técnico controlado e prioriza excelência técnica. "
-                "Use o instalador apenas em rollout autorizado pela Versus."
+                "O instalador remoto baixa o script oficial, grava a configuração diretamente no Codex e prepara a sessão técnica."
             )
         elif normalized_squad == "squad_versus":
             resolved_profile = "squad_versus"
             resolved_surface = "admin"
-            install_mode = "guided_controlled"
-            availability_label = "Instalação guiada controlada"
-            install_command = cls._build_generic_install_command(
-                runtime_key=normalized_runtime,
-                company_id=company_id,
-                profile_key=resolved_profile,
-                surface=resolved_surface,
-                experience_label=experience_label,
-                canonical_label=squad_label,
-                harness_key=runtime_profile_spec.default_harness_key if runtime_profile_spec else None,
-                harness_label=runtime_profile_spec.default_harness_label if runtime_profile_spec else None,
-                command_alias=command_alias,
-            )
+            install_mode = "self_service"
+            availability_label = "Instalação automática"
             instruction_text = (
                 f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                "O Squad Versus usa surface administrativa e fica sob rollout controlado. "
-                "Gere o comando apenas para instalação assistida pela Versus."
+                "O instalador remoto grava a configuração diretamente no Antigravity e prepara a sessão consultiva com company_id explícito."
             )
 
         runtime_blocked = bool(runtime_policy.get("runtime_blocked"))
@@ -1495,7 +1468,24 @@ class UserMcpTokenService:
                 f"Perfil: {runtime_config['runtime_profile']}\n"
                 f"Harness inicial: {runtime_config['harness_label'] or '-'}"
             )
-            installation_command = runtime_config["install_command"]
+            server_name = f"sapiens-{runtime_config['resolved_surface']}"
+            installation_command = (
+                cls._build_generic_install_command(
+                    runtime_key=runtime_config["runtime"],
+                    url=url,
+                    token_value=token_value,
+                    profile_key=runtime_config["resolved_profile"],
+                    surface=runtime_config["resolved_surface"],
+                    experience_label=runtime_config["experience_label"],
+                    canonical_label=runtime_config["squad_label"],
+                    harness_key=runtime_config["harness_key"],
+                    harness_label=runtime_config["harness_label"],
+                    server_name=server_name,
+                    command_alias=runtime_config["command_alias"],
+                )
+                if runtime_config["install_mode"] == "self_service"
+                else runtime_config["install_command"]
+            )
             installation_instruction = runtime_config["instruction_text"]
             copy_install_command_text = installation_command
             if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente":
@@ -1505,11 +1495,10 @@ class UserMcpTokenService:
                     token_value=token_value,
                 )
                 installation_instruction = (
-                    "Experiência recomendada: instalar o Sapiens Cliente no Claude Code / aba Code do Claude Desktop pelo comando nativo claude mcp add. "
-                    "Gere ou renove o token, registre o servidor HTTP no registry real do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e use o prompt de ativação recomendado pelo APP32 na aba Code."
+                    "Experiência recomendada: usar o comando único do APP32. "
+                    "Ele baixa o instalador oficial e registra o servidor HTTP no registry real do Claude Code pelo próprio CLI `claude mcp add`."
                 )
-                installation_command = claude_mcp_add_command
-                copy_install_command_text = claude_mcp_add_command
+                copy_install_command_text = installation_command
             if runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
@@ -1530,7 +1519,7 @@ class UserMcpTokenService:
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
                     f"Comando sugerido:\n{installation_command}\n\n"
-                    "Quando o instalador abrir, ele vai localizar o arquivo MCP do cliente, pedir seu e-mail e solicitar o token MCP no momento correto, de forma interativa e segura."
+                    "O instalador baixa o script oficial online e grava a configuração somente no cliente escolhido: Claude Code, Codex ou Antigravity."
                 )
             elif installation_command:
                 installation_instruction = (
