@@ -92,6 +92,8 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert 'data-apply-filters-only="true"' not in template
     assert 'data-cash-flow-submit-mode="report"' in template
     assert 'formaction="/financial/reports/{{ report_definition.slug }}/view"' in template
+    assert "Gerar Fluxo de Caixa" in template
+    assert "Atualizar fluxo de caixa" not in template
     assert 'data-cash-flow-submit-mode="filters"' in sidebar_template
     assert 'formaction="/financial/reports/{{ report_definition.slug }}"' in sidebar_template
     assert 'name="ui_refresh" value="1"' in sidebar_template
@@ -211,6 +213,10 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "Contas a Pagar Selecionadas" in template
     assert "Voltar</a>" in template
     assert ">Filtros</a>" not in template
+    assert "Exportar PDF" not in template
+    assert "cash_flow_header_cards" in template
+    assert "Relatório de Fluxo de Caixa" in template
+    assert "cashflow-header-card" in template
     assert "projected_amount_label" in template
     assert "Retirado" in template
     assert "cashflow-accounts-layout" in template
@@ -261,6 +267,9 @@ class _QueryStub:
     def order_by(self, *args, **kwargs):
         self.ordering.extend(args)
         return self
+
+    def count(self):
+        return 0
 
 
 def test_cash_flow_projected_query_includes_titles_without_bank_account_when_accounts_selected(monkeypatch):
@@ -592,6 +601,9 @@ def test_cash_flow_build_includes_schedule_titles_when_entries_do_not_exist(monk
     assert result["selected_payables"][0]["counterparty"] == "Fornecedor Teste"
     assert result["rows"][1]["entrada"] == "R$ 1.250,00"
     assert result["rows"][1]["saida"] == "R$ 1.050,00"
+    assert result["cash_flow_header_cards"][0]["title"] == "Período e projeção"
+    assert result["cash_flow_header_cards"][0]["lines"][1]["value"] == "Com correção financeira"
+    assert result["cash_flow_header_cards"][2]["lines"][0]["value"] == "Não"
 
 
 def test_cash_flow_build_excludes_schedule_without_generated_entry_when_selected(monkeypatch):
@@ -722,6 +734,7 @@ def test_cash_flow_build_excludes_schedule_without_generated_entry_when_selected
     assert result["rows"][29]["saida"] == "R$ 0,00"
     assert result["totals"]["excluded_projected_amount"] == 540.0
     assert result["excluded_titles"][0]["projection_ref"] == "schedule:88"
+    assert result["cash_flow_header_cards"][2]["lines"][0]["value"] == "Sim"
 
 
 class _QueryStubWithItems(_QueryStub):

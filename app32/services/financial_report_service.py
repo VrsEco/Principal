@@ -349,6 +349,20 @@ class FinancialReportService:
         return result
 
     @staticmethod
+    def _cash_flow_header_dimension_line(
+        label: str,
+        selected_ids: Sequence[int],
+        names_by_id: Dict[int, str],
+    ) -> Optional[Dict[str, str]]:
+        ids = FinancialReportService._selected_ids(None, selected_ids)
+        if not ids:
+            return None
+        return {
+            "label": label,
+            "value": ", ".join(names_by_id.get(item, str(item)) for item in ids),
+        }
+
+    @staticmethod
     def _working_capital_type_label(value: Optional[str]) -> str:
         return {
             "asset": "Ativo",
@@ -2769,6 +2783,10 @@ class FinancialReportService:
     def _build_cash_flow(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
+        chart_names = FinancialReportService._name_map(FinancialChartAccount, company_id)
+        center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
+        project_names = FinancialReportService._name_map(Project, company_id)
+        process_names = FinancialReportService._name_map(Process, company_id)
         bank_account_ids = FinancialReportService._selected_ids(
             filters.bank_account_id,
             filters.bank_account_ids,
@@ -2799,6 +2817,7 @@ class FinancialReportService:
             FinancialBankAccount.deleted_at.is_(None),
             FinancialBankAccount.is_active.is_(True),
         )
+        all_active_bank_account_count = bank_accounts_query.count()
         if bank_account_ids == [-1]:
             selected_bank_accounts: List[FinancialBankAccount] = []
         else:
@@ -2808,6 +2827,11 @@ class FinancialReportService:
                 FinancialBankAccount.code.asc(),
                 FinancialBankAccount.name.asc(),
             ).all()
+        has_unselected_bank_accounts = (
+            all_active_bank_account_count > 0
+            if bank_account_ids == [-1]
+            else bool(bank_account_ids) and len(selected_bank_accounts) < all_active_bank_account_count
+        )
 
         overdraft_limit = (
             FinancialDashboardAnalytics.calculate_overdraft_limit(
@@ -3120,6 +3144,62 @@ class FinancialReportService:
                 if filters.enable_title_exclusions
                 else "Incluídos"
             )
+        dimension_lines = [
+            item
+            for item in (
+                FinancialReportService._cash_flow_header_dimension_line(
+                    "Plano de Contas",
+                    getattr(filters, "chart_account_ids", None)
+                    or ([getattr(filters, "chart_account_id", None)] if getattr(filters, "chart_account_id", None) else []),
+                    chart_names,
+                ),
+                FinancialReportService._cash_flow_header_dimension_line(
+                    "Centro de Resultados",
+                    getattr(filters, "cost_center_ids", None)
+                    or ([getattr(filters, "cost_center_id", None)] if getattr(filters, "cost_center_id", None) else []),
+                    center_names,
+                ),
+                FinancialReportService._cash_flow_header_dimension_line(
+                    "Processos",
+                    getattr(filters, "process_ids", None) or [],
+                    process_names,
+                ),
+                FinancialReportService._cash_flow_header_dimension_line(
+                    "Projetos",
+                    getattr(filters, "project_ids", None) or [],
+                    project_names,
+                ),
+            )
+            if item
+        ]
+        if not dimension_lines:
+            dimension_lines = [{"label": "Seleções", "value": "Nenhuma seleção específica"}]
+        cash_flow_header_cards = [
+            {
+                "title": "Período e projeção",
+                "lines": [
+                    {
+                        "label": "Período",
+                        "value": f"{FinancialReportService._format_date_br(filters.period_start)} até {FinancialReportService._format_date_br(filters.period_end)}",
+                    },
+                    {
+                        "label": "Correção",
+                        "value": FinancialReportService._projected_values_mode_label(filters.projected_values_mode),
+                    },
+                ],
+            },
+            {
+                "title": "Filtros dimensionais",
+                "lines": dimension_lines,
+            },
+            {
+                "title": "Controle do relatório",
+                "lines": [
+                    {"label": "Títulos retirados", "value": "Sim" if excluded_titles else "Não"},
+                    {"label": "Contas bancárias não selecionadas", "value": "Sim" if has_unselected_bank_accounts else "Não"},
+                ],
+            },
+        ]
 
         balance_reference_date = date.today()
         bank_balance_totals = {
@@ -3285,6 +3365,7 @@ class FinancialReportService:
                     "open_amount_value": FinancialReportService._serialize_money(payable_open_total),
                 },
                 "excluded_titles": excluded_titles,
+                "cash_flow_header_cards": cash_flow_header_cards,
                 "projected_values_mode": filters.projected_values_mode,
                 "projected_values_mode_label": FinancialReportService._projected_values_mode_label(filters.projected_values_mode),
                 "projected_amount_label": "Saldo do Principal Corrigido" if filters.projected_values_mode == "with_financial_correction" else "Saldo do Principal",

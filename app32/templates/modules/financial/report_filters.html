@@ -705,7 +705,7 @@
             {% endif %}
 
             <div class="report-actions{% if is_dre %} report-actions--full{% endif %}">
-                <button type="submit" class="btn btn-primary"{% if is_cash_flow %} formmethod="get" formaction="/financial/reports/{{ report_definition.slug }}/view" data-cash-flow-submit-mode="report"{% endif %}>{{ 'Atualizar fluxo de caixa' if is_cash_flow else 'Gerar relatório' }}</button>
+                <button type="submit" class="btn btn-primary"{% if is_cash_flow %} formmethod="get" formaction="/financial/reports/{{ report_definition.slug }}/view" data-cash-flow-submit-mode="report"{% endif %}>{{ 'Gerar Fluxo de Caixa' if is_cash_flow else 'Gerar relatório' }}</button>
             </div>
         </form>
     </section>
