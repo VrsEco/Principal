@@ -21,13 +21,67 @@ document.addEventListener('DOMContentLoaded', () => {
         return select ? select.value : '';
     };
 
-    form.addEventListener('submit', () => {
-        if (form.dataset.applyFiltersOnly === 'true') {
-            form.action = form.dataset.viewAction;
+    const serializeControlValue = (params, control) => {
+        if (!control || control.disabled || !control.name) {
             return;
         }
-        const outputMode = resolveOutputMode();
-        form.action = outputMode === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
+
+        const tagName = String(control.tagName || '').toUpperCase();
+        const type = String(control.type || '').toLowerCase();
+
+        if ((type === 'checkbox' || type === 'radio') && !control.checked) {
+            return;
+        }
+
+        if (tagName === 'SELECT' && control.multiple) {
+            Array.from(control.selectedOptions || [])
+                .map((option) => option.value)
+                .filter((value) => String(value ?? '').trim() !== '')
+                .forEach((value) => params.append(control.name, value));
+            return;
+        }
+
+        const value = control.value;
+        if (value == null) {
+            return;
+        }
+        params.append(control.name, value);
+    };
+
+    const buildSubmissionQuery = () => {
+        const params = new URLSearchParams();
+        const seen = new Set();
+        const controls = Array.from(form.elements || []);
+        const associatedControls = formId
+            ? Array.from(document.querySelectorAll(`[form="${formId}"]`))
+            : [];
+
+        [...controls, ...associatedControls].forEach((control) => {
+            if (!control || seen.has(control)) {
+                return;
+            }
+            seen.add(control);
+            serializeControlValue(params, control);
+        });
+
+        params.set('ui_refresh', '1');
+        return params;
+    };
+
+    form.addEventListener('submit', (event) => {
+        let targetAction = form.dataset.viewAction;
+        if (form.dataset.applyFiltersOnly !== 'true') {
+            const outputMode = resolveOutputMode();
+            targetAction = outputMode === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
+        }
+
+        if (!targetAction) {
+            return;
+        }
+
+        event.preventDefault();
+        const query = buildSubmissionQuery().toString();
+        window.location.href = query ? `${targetAction}?${query}` : targetAction;
     });
 
     const scopedSelector = (selector) => {

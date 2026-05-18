@@ -705,7 +705,7 @@
             {% endif %}
 
             <div class="report-actions{% if is_dre %} report-actions--full{% endif %}">
-                <button type="submit" class="btn btn-primary">Gerar relatório</button>
+                <button type="submit" class="btn btn-primary">{{ 'Atualizar fluxo de caixa' if is_cash_flow else 'Gerar relatório' }}</button>
             </div>
         </form>
     </section>

@@ -306,10 +306,18 @@
     document.addEventListener('DOMContentLoaded', () => {
         const left = document.getElementById('sidebar-left');
         const right = document.getElementById('sidebar-right');
+        const searchParams = new URLSearchParams(window.location.search);
 
         // Ensure collapsed class is present (should be in HTML, but failsafe)
         if (left && !left.classList.contains('collapsed')) left.classList.add('collapsed');
         if (right && !right.classList.contains('collapsed')) right.classList.add('collapsed');
+
+        if (right && searchParams.get('ui_refresh') === '1') {
+            right.classList.remove('collapsed');
+            if (window.innerWidth <= 768) {
+                document.getElementById('ws-overlay')?.classList.add('active');
+            }
+        }
     });
 
     // Handle window resize logic - only close if resizing DOWN to mobile
