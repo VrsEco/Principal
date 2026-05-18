@@ -194,6 +194,7 @@ def test_cash_flow_view_template_uses_dedicated_partial_and_styles():
     assert "report.report_type == 'cash_flow'" in template
     assert "report_view_cash_flow.html" in template
     assert "financial_cash_flow_report.css" in template
+    assert "20260518d" in template
 
 
 def test_cash_flow_report_partial_contains_expected_sections():
@@ -227,6 +228,21 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "css_base }}--negative" in template
     assert "cashflow-title-col--counterparty" in template
     assert "cashflow-title-col--projected" in template
+
+
+def test_cash_flow_print_css_keeps_header_cards_in_one_row():
+    css_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "css"
+        / "financial_cash_flow_report.css"
+    )
+    css = css_path.read_text(encoding="utf-8")
+
+    assert "@media print" in css
+    assert ".cashflow-accounts-layout" in css
+    assert "grid-template-columns: repeat(4, minmax(0, 1fr)) !important" in css
+    assert ".cashflow-accounts-brand,\n  .cashflow-header-card" in css
 
 
 class _Column:

@@ -386,4 +386,36 @@
   .cashflow-report-header-actions {
     display: none !important;
   }
+
+  .cashflow-accounts-layout {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+    align-items: stretch !important;
+  }
+
+  .cashflow-accounts-brand,
+  .cashflow-header-card {
+    min-height: 116px !important;
+    padding: 0.65rem !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .cashflow-accounts-brand__eyebrow,
+  .cashflow-header-card__title {
+    margin-bottom: 0.42rem;
+    font-size: 0.54rem;
+  }
+
+  .cashflow-accounts-brand__title {
+    font-size: 0.95rem !important;
+  }
+
+  .cashflow-header-card__line span {
+    font-size: 0.5rem;
+  }
+
+  .cashflow-header-card__line strong {
+    font-size: 0.58rem;
+  }
 }
