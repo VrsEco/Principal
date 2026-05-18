@@ -101,6 +101,55 @@ def test_runtime_pins_single_accessible_company_when_request_has_no_company(monk
     assert context.metadata["company_resolution_source"] == "runtime_identity.single_accessible_company_id"
 
 
+def test_runtime_preserves_unselected_company_when_http_context_requires_selection(monkeypatch):
+    monkeypatch.delenv("APP32_MCP_USER_ID", raising=False)
+    monkeypatch.delenv("APP32_MCP_COMPANY_ID", raising=False)
+    monkeypatch.delenv("APP32_MCP_FALLBACK_ROLE", raising=False)
+
+    tokens = set_http_request_context(
+        App32McpHttpIdentity(
+            token="token-2b",
+            user_id=3,
+            company_id=None,
+            fallback_role="administrador",
+            allowed_surfaces=("user",),
+        ),
+        {
+            "user_id": 3,
+            "fallback_role": "administrador",
+            "surface": "user",
+            "transport": "streamable_http",
+            "client": "claude_remote_connector",
+            "accessible_company_ids": [1, 10],
+            "multi_company": True,
+            "disable_company_fallback": True,
+        },
+    )
+
+    monkeypatch.setattr(
+        "src.core.mcp_runtime.resolve_runtime_identity",
+        lambda user_id, company_id: {
+            "company_id": 10,
+            "employee_id": 37,
+            "role": "administrator",
+            "permissions": {"approve": True},
+            "accessible_company_ids": [10],
+        },
+    )
+
+    try:
+        context = resolve_mcp_execution_context({})
+    finally:
+        reset_http_request_context(tokens)
+
+    assert context.user_id == 3
+    assert context.company_id is None
+    assert context.employee_id == 37
+    assert context.metadata["accessible_company_ids"] == [1, 10]
+    assert context.metadata["selection_required_for_mutations"] is True
+    assert context.metadata["disable_company_fallback"] is True
+
+
 def test_runtime_prefers_selected_company_from_payload(monkeypatch):
     monkeypatch.delenv("APP32_MCP_USER_ID", raising=False)
     monkeypatch.delenv("APP32_MCP_COMPANY_ID", raising=False)

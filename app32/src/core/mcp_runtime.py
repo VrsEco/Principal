@@ -31,6 +31,17 @@ def _coerce_optional_int(value: Any) -> int | None:
     return None
 
 
+def _coerce_optional_int_list(value: Any) -> tuple[int, ...]:
+    if isinstance(value, (list, tuple, set, frozenset)):
+        normalized: list[int] = []
+        for item in value:
+            coerced = _coerce_optional_int(item)
+            if coerced is not None and coerced not in normalized:
+                normalized.append(coerced)
+        return tuple(normalized)
+    return ()
+
+
 def extract_mcp_payload(args: tuple[Any, ...], kwargs: Mapping[str, Any]) -> dict[str, Any]:
     if kwargs:
         return dict(kwargs)
@@ -137,12 +148,17 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
     if user_id:
         runtime_identity = resolve_runtime_identity(user_id=user_id, company_id=requested_company_id)
 
-    resolved_company_id = _coerce_optional_int(runtime_identity.get("company_id")) or requested_company_id
-    accessible_company_ids = tuple(
+    http_accessible_company_ids = _coerce_optional_int_list(http_request_context.get("accessible_company_ids"))
+    runtime_accessible_company_ids = tuple(
         int(company_id)
         for company_id in (runtime_identity.get("accessible_company_ids") or ())
         if _coerce_optional_int(company_id) is not None
     )
+    accessible_company_ids = http_accessible_company_ids or runtime_accessible_company_ids
+    disable_company_fallback = bool(http_request_context.get("disable_company_fallback"))
+    resolved_company_id = requested_company_id
+    if resolved_company_id is None and not disable_company_fallback:
+        resolved_company_id = _coerce_optional_int(runtime_identity.get("company_id"))
     company_resolution_source = requested_company_source
     if resolved_company_id is None and len(accessible_company_ids) == 1:
         resolved_company_id = int(accessible_company_ids[0])
@@ -171,7 +187,7 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         "accessible_company_ids": list(accessible_company_ids),
         "multi_company": len(accessible_company_ids) > 1,
         "selection_required_for_mutations": len(accessible_company_ids) > 1 and resolved_company_id is None,
-        "disable_company_fallback": len(accessible_company_ids) > 1,
+        "disable_company_fallback": disable_company_fallback or len(accessible_company_ids) > 1,
     }
 
     return MCPExecutionContext(

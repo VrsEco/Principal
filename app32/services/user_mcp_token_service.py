@@ -1027,6 +1027,69 @@ class UserMcpTokenService:
         }
 
     @classmethod
+    def _build_identity_payload(
+        cls,
+        user: User,
+        *,
+        companies: list[dict[str, Any]] | None = None,
+        resolved_company_id: int | None = None,
+    ) -> dict[str, Any]:
+        normalized_companies = list(companies or [])
+        active_company = next(
+            (company for company in normalized_companies if company.get("id") == resolved_company_id),
+            None,
+        )
+        return {
+            "user_id": getattr(user, "id", None),
+            "email": getattr(user, "email", None),
+            "name": getattr(user, "name", None),
+            "role": getattr(user, "role", None),
+            "accessible_company_ids": [
+                company["id"]
+                for company in normalized_companies
+                if isinstance(company.get("id"), int)
+            ],
+            "accessible_companies_count": len(normalized_companies),
+            "active_company_id": resolved_company_id,
+            "active_company_label": active_company.get("label") if active_company else None,
+        }
+
+    @classmethod
+    def _build_identity_summary_text(
+        cls,
+        user: User,
+        *,
+        companies: list[dict[str, Any]] | None = None,
+        resolved_company_id: int | None = None,
+    ) -> str:
+        identity = cls._build_identity_payload(
+            user,
+            companies=companies,
+            resolved_company_id=resolved_company_id,
+        )
+        companies_lines: list[str] = []
+        for company in companies or []:
+            prefix = company.get("client_code") or "SEM PREFIXO"
+            marker = " [ATIVA]" if company.get("id") == resolved_company_id else ""
+            companies_lines.append(
+                f"- ID: {company.get('id')} | Prefixo: {prefix} | Nome: {company.get('name')}{marker}"
+            )
+        if not companies_lines:
+            companies_lines.append("- Nenhuma empresa acessível vinculada ao token.")
+        active_company_label = identity.get("active_company_label") or "não definida"
+        return (
+            "Identidade MCP confirmada:\n"
+            f"- user_id: {identity.get('user_id')}\n"
+            f"- email: {identity.get('email') or '-'}\n"
+            f"- nome: {identity.get('name') or '-'}\n"
+            f"- papel: {identity.get('role') or '-'}\n"
+            f"- empresa ativa: {active_company_label}\n"
+            f"- total de empresas acessíveis: {identity.get('accessible_companies_count')}\n"
+            "Empresas acessíveis:\n"
+            + "\n".join(companies_lines)
+        )
+
+    @classmethod
     def list_accessible_companies(cls, user: User) -> list[dict[str, Any]]:
         with cls._ensure_app_context():
             if is_platform_admin(user=user):
@@ -1229,6 +1292,12 @@ class UserMcpTokenService:
         days_to_expire = None
         if record and record.expires_at:
             days_to_expire = (record.expires_at.date() - cls._utcnow().date()).days
+        active_company_id = record.last_company_id if record and record.last_company_id else default_company_id
+        identity = cls._build_identity_payload(
+            user,
+            companies=companies,
+            resolved_company_id=active_company_id,
+        )
 
         return {
             "has_active_token": bool(record and record.status == "active"),
@@ -1245,6 +1314,12 @@ class UserMcpTokenService:
             "default_company_id": default_company_id,
             "allowed_surfaces": list(ALLOWED_SURFACES),
             "companies": companies,
+            "identity": identity,
+            "identity_summary_text": cls._build_identity_summary_text(
+                user,
+                companies=companies,
+                resolved_company_id=active_company_id,
+            ),
         }
 
     @classmethod
@@ -1426,6 +1501,16 @@ class UserMcpTokenService:
                 if selected_company
                 else ("Escopo dinâmico multiempresa" if resolved_surface == "user" else "Sem empresa padrão")
             )
+            identity = cls._build_identity_payload(
+                user,
+                companies=companies,
+                resolved_company_id=resolved_company_id,
+            )
+            identity_summary_text = cls._build_identity_summary_text(
+                user,
+                companies=companies,
+                resolved_company_id=resolved_company_id,
+            )
             token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
             url = f"{public_base}/mcp/{resolved_surface}/"
             if resolved_surface != "user" and resolved_company_id:
@@ -1588,6 +1673,8 @@ class UserMcpTokenService:
                     + "\n".join([f"- {item}" for item in session_lifecycle["startup_tools"]])
                     + "\n\n"
                     f"Badge esperado: `{session_lifecycle['session_badge'] or runtime_config['experience_label'] + ' On'}`.\n"
+                    "Antes de responder à primeira pergunta operacional do usuário, exponha explicitamente a identidade e o escopo resolvidos nesta sessão:\n"
+                    f"{identity_summary_text}\n\n"
                     "Se o runtime suportar título/badge de sessão, aplique esse badge no canto superior esquerdo ou no título visível da conversa.\n"
                     "Quando o usuário digitar `Sapiens Off` ou um off explícito do squad, remova o badge, descarte o bundle/contexto do squad e mantenha a sessão aberta.\n"
                     "Depois disso, responda à demanda do usuário.\n\n"
@@ -1658,6 +1745,8 @@ class UserMcpTokenService:
                 "deactivation_commands": deactivation_commands,
                 "activation_selection_prompt": activation_selection_prompt,
                 "activation_commands_install_command": activation_commands_install_command,
+                "identity": identity,
+                "identity_summary_text": identity_summary_text,
                 "session_badge": session_lifecycle["session_badge"],
                 "startup_tools": session_lifecycle["startup_tools"],
                 "preflight_tools": session_lifecycle["preflight_tools"],

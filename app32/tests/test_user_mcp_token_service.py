@@ -59,6 +59,9 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Code / aba Code do Claude Desktop." in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
+    assert "Identidade MCP confirmada:" in config["activation_prompt"]
+    assert "- user_id: 7" in config["activation_prompt"]
+    assert "- empresa ativa: AA - Versus Gestao Corporativa" in config["activation_prompt"]
     assert "bootstrap_session_context" in config["activation_prompt"]
     assert "describe_app32_available_sapiens_squads_tool" in config["activation_prompt"]
     assert "resolve_app32_sapiens_activation_tool" in config["activation_prompt"]
@@ -72,6 +75,10 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert config["guided_connection_fields"][0]["label"] == "Nome da conexão"
     assert any(field["label"] == "Registry MCP do Claude Code" for field in config["guided_connection_fields"])
     assert config["guided_install_steps"][0].startswith("No terminal do Windows, confirme que o Claude Code")
+    assert config["identity"]["user_id"] == 7
+    assert config["identity"]["active_company_id"] == 9
+    assert config["identity"]["accessible_company_ids"] == [9]
+    assert "AA - Versus Gestao Corporativa" in config["identity_summary_text"]
     assert config["validation_prompt"] == (
         "Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com "
         "bootstrap_session_context, describe_app32_available_sapiens_squads_tool e "
@@ -174,6 +181,49 @@ def test_build_client_config_marks_admin_surface_as_controlled(monkeypatch):
     assert config["supports_personal_token"] is False
     assert config["runtime_locked"] is False
     assert config["runtime_blocked"] is False
+
+
+def test_build_status_payload_exposes_identity_and_scope(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    fake_user = SimpleNamespace(
+        id=7,
+        is_active=True,
+        email="ana@empresa.com",
+        name="Ana",
+        role="admin",
+    )
+    fake_record = SimpleNamespace(
+        status="active",
+        token_prefix="mcpu_prefix",
+        created_at=datetime.utcnow(),
+        expires_at=datetime.utcnow() + timedelta(days=30),
+        last_used_at=None,
+        last_client_name="Claude",
+        last_surface="user",
+        last_company_id=12,
+    )
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "list_accessible_companies",
+        staticmethod(lambda user: [{"id": 10, "label": "Empresa 10"}, {"id": 12, "label": "Empresa 12"}]),
+    )
+    monkeypatch.setattr(token_service_module, "get_default_company_id", lambda user=None: 10)
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "_utcnow",
+        staticmethod(lambda: datetime(2026, 5, 18)),
+    )
+
+    payload = service._build_status_payload(fake_user, fake_record)
+
+    assert payload["identity"]["user_id"] == 7
+    assert payload["identity"]["email"] == "ana@empresa.com"
+    assert payload["identity"]["active_company_id"] == 12
+    assert payload["identity"]["accessible_company_ids"] == [10, 12]
+    assert payload["identity"]["accessible_companies_count"] == 2
+    assert "Identidade MCP confirmada:" in payload["identity_summary_text"]
+    assert "- user_id: 7" in payload["identity_summary_text"]
+    assert "- empresa ativa: Empresa 12" in payload["identity_summary_text"]
 
 
 def test_resolve_for_http_request_returns_none_for_unsupported_surface():

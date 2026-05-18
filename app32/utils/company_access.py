@@ -5,6 +5,7 @@ from typing import List, Optional
 from flask_login import current_user
 
 from models import Employee
+from utils.permissions import is_platform_admin
 
 
 def get_accessible_company_ids(user=None) -> Optional[List[int]]:
@@ -17,7 +18,7 @@ def get_accessible_company_ids(user=None) -> Optional[List[int]]:
     if not user or not getattr(user, "is_authenticated", False):
         return []
 
-    if getattr(user, "role", None) == "admin":
+    if is_platform_admin(user=user):
         return None
 
     employees = Employee.query.filter_by(user_id=user.id, status="active").all()
