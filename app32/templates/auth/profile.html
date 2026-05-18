@@ -141,6 +141,8 @@
     <section id="profile-mcp-panel" class="profile-tab-panel">
         {% set role_key = (user.role if user else '') %}
         {% set can_install_all_squads = role_key in ['admin', 'administrator'] %}
+        {% set can_install_antigravity = can_install_all_squads or role_key == 'consultant' %}
+        {% set can_install_codex = can_install_all_squads %}
         <div style="max-width: 860px; display: grid; gap: 1.5rem;">
             <div class="card" style="border-radius: 24px;">
                 <div class="card-body" style="display: grid; gap: 1rem;">
@@ -175,21 +177,22 @@
                             <div class="mcp-choice-grid" id="mcpRuntimeChoices">
                                 <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
                                     <strong>Claude Code / aba Code do Desktop</strong>
-                                    <span>Usa MCP HTTP nativo via claude mcp add e registry do Claude Code.</span>
+                                    <span>Runtime canônico do Sapiens Cliente. Usa MCP HTTP nativo via claude mcp add e registry do Claude Code.</span>
                                 </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
+                                <button type="button" class="mcp-choice-card {{ '' if can_install_codex else 'is-disabled' }}" data-choice-group="runtime" data-choice-value="codex" {{ '' if can_install_codex else 'disabled' }}>
                                     <strong>Codex</strong>
-                                    <span>Instalação guiada em ambiente técnico.</span>
+                                    <span>Runtime canônico do Sapiens Engenharia, com instalação guiada em ambiente técnico controlado.</span>
                                 </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
+                                <button type="button" class="mcp-choice-card {{ '' if can_install_antigravity else 'is-disabled' }}" data-choice-group="runtime" data-choice-value="antigravity" {{ '' if can_install_antigravity else 'disabled' }}>
                                     <strong>Antigravity</strong>
-                                    <span>Instalação guiada para uso consultivo.</span>
+                                    <span>Runtime canônico do Sapiens Consultor, com surface administrativa e rollout consultivo controlado.</span>
                                 </button>
                                 <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
                                     <strong>Outro cliente MCP</strong>
                                     <span>Fluxo guiado com fallback para modo avançado.</span>
                                 </button>
                             </div>
+                            <small style="color: var(--text-tertiary);">Cada runtime tem uma família canônica: Claude → Sapiens Cliente, Antigravity → Sapiens Consultor, Codex → Sapiens Engenharia.</small>
                         </div>
 
                         <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
@@ -334,6 +337,7 @@
                                 </div>
                                 <small style="color: var(--text-tertiary);">Seu perfil atual instala apenas o Sapiens Cliente. Sapiens Consultor e Sapiens Engenharia ficam disponíveis somente para perfis autorizados.</small>
                             {% endif %}
+                            <small id="mcpSquadRuntimeHint" style="color: var(--text-tertiary); display:block; margin-top:0.55rem;">O runtime escolhido pode travar esta seleção para manter a combinação oficial de runtime, squad e surface.</small>
                         </div>
 
                         <div class="filter-field">
@@ -704,6 +708,14 @@
         box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
     }
 
+    .mcp-choice-card.is-disabled,
+    .mcp-choice-card:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        background: rgba(148, 163, 184, 0.08);
+        border-style: dashed;
+    }
+
     .mcp-summary-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -848,6 +860,7 @@
     const mcpAudienceTitle = document.getElementById('mcpAudienceTitle');
     const mcpAudienceIntro = document.getElementById('mcpAudienceIntro');
     const mcpAudienceFlow = document.getElementById('mcpAudienceFlow');
+    const mcpSquadRuntimeHint = document.getElementById('mcpSquadRuntimeHint');
     const mcpTokenHelpText = document.getElementById('mcpTokenHelpText');
     const mcpTokenFootnoteText = document.getElementById('mcpTokenFootnoteText');
     const mcpTokenModal = document.getElementById('mcpTokenModal');
@@ -881,6 +894,33 @@
             options.push(`<option value="${company.id}" ${selected}>${company.label}</option>`);
         });
         mcpCompanySelect.innerHTML = options.join('');
+    }
+
+    function setChoiceDisabled(button, disabled) {
+        if (!button) return;
+        button.disabled = Boolean(disabled);
+        button.classList.toggle('is-disabled', Boolean(disabled));
+    }
+
+    function syncSquadButtonsForRuntime(resolvedConfig) {
+        const locked = Boolean(resolvedConfig && resolvedConfig.runtime_locked);
+        const blocked = Boolean(resolvedConfig && resolvedConfig.runtime_blocked);
+        const activeSquad = resolvedConfig && resolvedConfig.squad ? resolvedConfig.squad : selectedMcpSquad;
+        document.querySelectorAll('[data-choice-group="squad"]').forEach((button) => {
+            const value = button.getAttribute('data-choice-value');
+            setChoiceDisabled(button, blocked || (locked && value !== activeSquad));
+        });
+        if (mcpSquadRuntimeHint) {
+            if (blocked) {
+                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'Seu perfil atual não pode publicar este runtime com a família canônica exigida.';
+            } else if (resolvedConfig && resolvedConfig.requires_company_selection) {
+                mcpSquadRuntimeHint.textContent = 'Esta combinação usa surface privilegiada. Escolha uma empresa padrão antes de gerar a instalação.';
+            } else if (locked) {
+                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'O runtime escolhido trava a família publicada para preservar a combinação oficial.';
+            } else {
+                mcpSquadRuntimeHint.textContent = 'O runtime escolhido pode travar esta seleção para manter a combinação oficial de runtime, squad e surface.';
+            }
+        }
     }
 
     function renderMcpStatus(status) {
@@ -1010,6 +1050,10 @@
             return;
         }
         const resolvedConfig = injectLatestTokenIntoConfig(config);
+        if (resolvedConfig && resolvedConfig.squad) {
+            selectedMcpSquad = resolvedConfig.squad;
+            syncChoiceButtons('squad', selectedMcpSquad);
+        }
         if (mcpResolvedRuntime) mcpResolvedRuntime.textContent = resolvedConfig.runtime_label || '-';
         if (mcpResolvedSquad) mcpResolvedSquad.textContent = resolvedConfig.experience_label || resolvedConfig.squad_label || '-';
         if (mcpResolvedFamily) mcpResolvedFamily.textContent = resolvedConfig.squad_label || '-';
@@ -1134,6 +1178,7 @@
         if (mcpInstructionText) {
             mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Use a instalação guiada quando disponível.';
         }
+        syncSquadButtonsForRuntime(resolvedConfig);
         if (copyMcpInstallCommandButton) {
             copyMcpInstallCommandButton.disabled = !String(resolvedConfig.copy_install_command_text || resolvedConfig.install_command || '').trim();
         }

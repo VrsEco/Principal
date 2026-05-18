@@ -71,6 +71,11 @@ ROLE_ALLOWED_SQUADS = {
     "client": ("squad_cliente",),
     "user": ("squad_cliente",),
 }
+RUNTIME_CANONICAL_SQUADS = {
+    "claude": "squad_cliente",
+    "antigravity": "squad_versus",
+    "codex": "engineering",
+}
 
 @dataclass(frozen=True)
 class UserMcpResolvedContext:
@@ -149,6 +154,71 @@ class UserMcpTokenService:
         if normalized in allowed_squads:
             return normalized
         return allowed_squads[0] if allowed_squads else "squad_cliente"
+
+    @classmethod
+    def _resolve_runtime_squad_policy(
+        cls,
+        *,
+        runtime: str | None,
+        requested_squad: str | None,
+        allowed_squads: list[str],
+    ) -> dict[str, Any]:
+        normalized_runtime = cls._normalize_runtime(runtime)
+        normalized_requested_squad = cls._normalize_squad(requested_squad)
+        canonical_squad = RUNTIME_CANONICAL_SQUADS.get(normalized_runtime)
+        fallback_squad = allowed_squads[0] if allowed_squads else "squad_cliente"
+
+        if canonical_squad is None:
+            resolved_squad = (
+                normalized_requested_squad
+                if normalized_requested_squad in allowed_squads
+                else fallback_squad
+            )
+            return {
+                "runtime": normalized_runtime,
+                "requested_squad": normalized_requested_squad,
+                "resolved_squad": resolved_squad,
+                "canonical_squad": None,
+                "runtime_locked": False,
+                "runtime_blocked": False,
+                "runtime_note": None,
+                "fallback_runtime": None,
+                "fallback_runtime_label": None,
+            }
+
+        canonical_label = SQUAD_EXPERIENCE_LABELS.get(canonical_squad, canonical_squad)
+        runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
+        if canonical_squad in allowed_squads:
+            return {
+                "runtime": normalized_runtime,
+                "requested_squad": normalized_requested_squad,
+                "resolved_squad": canonical_squad,
+                "canonical_squad": canonical_squad,
+                "runtime_locked": True,
+                "runtime_blocked": False,
+                "runtime_note": (
+                    f"No {runtime_label}, a família canônica publicada pelo APP32 é {canonical_label}."
+                ),
+                "fallback_runtime": None,
+                "fallback_runtime_label": None,
+            }
+
+        fallback_runtime = "claude" if "squad_cliente" in allowed_squads else "other"
+        fallback_runtime_label = RUNTIME_LABELS.get(fallback_runtime, fallback_runtime.title())
+        return {
+            "runtime": normalized_runtime,
+            "requested_squad": normalized_requested_squad,
+            "resolved_squad": fallback_squad,
+            "canonical_squad": canonical_squad,
+            "runtime_locked": True,
+            "runtime_blocked": True,
+            "runtime_note": (
+                f"O runtime {runtime_label} foi desenhado para {canonical_label}, "
+                "mas seu perfil atual não tem essa liberação."
+            ),
+            "fallback_runtime": fallback_runtime,
+            "fallback_runtime_label": fallback_runtime_label,
+        }
 
     @classmethod
     def _resolve_exposed_harnesses(
@@ -421,6 +491,20 @@ class UserMcpTokenService:
         token_value: str,
     ) -> list[str]:
         runtime = runtime_config["runtime"]
+        activation_command = runtime_config.get("command_alias") or "Sapiens On"
+        if runtime_config.get("runtime_blocked"):
+            fallback_runtime_label = runtime_config.get("fallback_runtime_label") or "outro cliente MCP"
+            return [
+                f"O runtime {runtime_config['runtime_label']} não está liberado para o seu perfil atual.",
+                runtime_config.get("runtime_note") or "A combinação pedida não faz parte do rollout autorizado.",
+                f"Para continuar agora, use {fallback_runtime_label} com o squad disponível para o seu perfil.",
+            ]
+        if runtime_config.get("requires_company_selection"):
+            return [
+                "Escolha uma empresa padrão antes de gerar a instalação.",
+                "Surfaces privilegiadas do Sapiens precisam sair do APP32 com company_id explícito.",
+                "Depois de selecionar a empresa, gere novamente o fluxo guiado para publicar a conexão.",
+            ]
         if runtime == "claude":
             claude_add_command = cls._build_claude_mcp_add_command(
                 runtime_config=runtime_config,
@@ -435,15 +519,20 @@ class UserMcpTokenService:
                 "Rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
                 "Se necessário, confira o registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e valide que mcpServers.sapiens-user foi gravado ali.",
                 "Abra uma nova sessão do Claude Code, ou uma nova sessão na aba Code do Claude Desktop, e use o prompt de ativação recomendado pelo APP32.",
-                "Como smoke inicial, rode /sapiens-cliente-on e confirme o bootstrap remoto pelo instruction registry.",
+                "Como smoke inicial, digite Sapiens On e confirme o bootstrap remoto pelo instruction registry.",
             ]
         if runtime in {"codex", "antigravity"} and runtime_config.get("install_command"):
+            token_step = (
+                "Quando o instalador pedir, cole o token MCP gerado nesta página."
+                if runtime_config.get("supports_personal_token")
+                else "Se o rollout usar credencial controlada, confirme com a Versus ou com o administrador autorizado qual credencial final deve ser provisionada."
+            )
             return [
                 f"Abra o terminal do cliente {runtime_config['runtime_label']}.",
                 "Execute o comando de instalação sugerido pelo APP32.",
-                "Quando o instalador pedir, cole o token MCP gerado nesta página.",
+                token_step,
                 "Confirme a gravação da conexão MCP no cliente.",
-                "Depois da instalação, abra uma conversa, rode /sapiens-cliente-on e confirme o bootstrap remoto.",
+                f"Depois da instalação, abra uma conversa, use {activation_command} e confirme o bootstrap remoto.",
             ]
         return [
             f"Abra a área de conectores ou MCP do cliente {runtime_config['runtime_label']}.",
@@ -451,7 +540,7 @@ class UserMcpTokenService:
             f"Cole a URL {url}.",
             "Escolha autenticação Bearer Token.",
             f"Cole o token {token_value}.",
-            "Salve a conexão, rode /sapiens-cliente-on e confirme o bootstrap remoto.",
+            f"Salve a conexão, use {activation_command} e confirme o bootstrap remoto.",
         ]
 
     @classmethod
@@ -553,8 +642,27 @@ class UserMcpTokenService:
         *,
         companies: list[dict[str, Any]],
         selected_company: dict[str, Any] | None,
+        surface: str = "user",
     ) -> dict[str, Any]:
         multiple_companies = len(companies) > 1
+        privileged_surface = surface != "user"
+        if privileged_surface:
+            return {
+                "session_company_required": True,
+                "multiple_companies": multiple_companies,
+                "default_company_optional": False,
+                "active_company_id": selected_company.get("id") if selected_company else None,
+                "active_company_label": selected_company.get("label") if selected_company else None,
+                "read_scope": (
+                    "Esta instalação privilegiada deve operar com company_id explícito e isolado por tenant."
+                ),
+                "write_scope": (
+                    "Toda leitura crítica, mutação ou workflow privilegiado exige empresa definida antes da ativação."
+                ),
+                "selection_policy": (
+                    "Selecione a empresa antes de publicar esta instalação. O APP32 não deve abrir surfaces privilegiadas em escopo dinâmico."
+                ),
+            }
         return {
             "session_company_required": False,
             "multiple_companies": multiple_companies,
@@ -706,9 +814,11 @@ class UserMcpTokenService:
         runtime: str | None,
         squad: str | None,
         company_id: int | None,
+        runtime_policy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         normalized_runtime = cls._normalize_runtime(runtime)
         normalized_squad = cls._normalize_squad(squad)
+        runtime_policy = runtime_policy or {}
         runtime_label = RUNTIME_LABELS.get(normalized_runtime, normalized_runtime.title())
         squad_label = SQUAD_LABELS.get(normalized_squad, normalized_squad)
         experience_label = SQUAD_EXPERIENCE_LABELS.get(normalized_squad, squad_label)
@@ -727,33 +837,25 @@ class UserMcpTokenService:
         if normalized_squad == "squad_cliente":
             resolved_profile = "squad_cliente"
             resolved_surface = "user"
-            if normalized_runtime in {"codex", "antigravity"}:
-                install_mode = "self_service"
-                availability_label = "Instalação automática guiada"
-                install_command = cls._build_squad_cliente_install_command(
-                    runtime_key=normalized_runtime,
-                    company_id=company_id,
-                )
-            elif normalized_runtime == "claude":
+            if normalized_runtime == "claude":
                 install_mode = "guided_manual"
                 availability_label = "Instalação manual guiada"
-                install_command = None
-            instruction_text = (
-                f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                "Gere o código para IA conforme as configurações escolhidas e siga o passo a passo orientado pelo APP32. "
-                "A instalação entra pelo Coordenador e depois pode chamar Comercial, Operacional e Administrativo/Financeiro quando necessário."
-            )
-            if normalized_runtime == "claude":
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
                     "Neste cliente, a conexão MCP usa o registry nativo do Claude Code (~/.claude.json ou equivalente gerenciado da instalação). "
                     "Use a aba Code do Claude Desktop, não a aba Chat. O APP32 vai te entregar o token, a URL, o comando claude mcp add e o prompt de ativação para operar sem depender de slash commands."
                 )
-            if normalized_runtime == "other":
+            elif normalized_runtime == "other":
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso em outro cliente de IA. "
                     "Gere o código para IA conforme as configurações escolhidas. "
                     "Se este cliente não suportar integração automática, use o modo avançado com a configuração técnica."
+                )
+            else:
+                instruction_text = (
+                    f"Você está preparando o {experience_label} para uso no {runtime_label}. "
+                    "Gere o código para IA conforme as configurações escolhidas e siga o passo a passo orientado pelo APP32. "
+                    "A instalação entra pelo Coordenador e depois pode chamar Comercial, Operacional e Administrativo/Financeiro quando necessário."
                 )
         elif normalized_squad == "engineering":
             resolved_profile = "engineering"
@@ -798,6 +900,29 @@ class UserMcpTokenService:
                 "Gere o comando apenas para instalação assistida pela Versus."
             )
 
+        runtime_blocked = bool(runtime_policy.get("runtime_blocked"))
+        requires_company_selection = resolved_surface != "user" and company_id is None
+        if runtime_blocked:
+            install_mode = "blocked"
+            availability_label = "Indisponível para seu perfil"
+            install_command = None
+            fallback_runtime_label = runtime_policy.get("fallback_runtime_label") or "outro cliente MCP"
+            canonical_label = SQUAD_EXPERIENCE_LABELS.get(runtime_policy.get("canonical_squad"), runtime_policy.get("canonical_squad") or "outro squad")
+            instruction_text = (
+                f"O runtime {runtime_label} não está liberado para o seu perfil atual. "
+                f"Ele publica canonicamente {canonical_label}. "
+                f"Para continuar agora, use {fallback_runtime_label} com o squad disponível para sua permissão."
+            )
+        elif requires_company_selection:
+            install_mode = "selection_required"
+            availability_label = "Selecione uma empresa para continuar"
+            install_command = None
+            instruction_text = (
+                f"Você está preparando o {experience_label} para uso no {runtime_label}. "
+                "Como esta instalação usa surface privilegiada, escolha uma empresa padrão antes de gerar a conexão. "
+                "O APP32 não deve publicar admin/ops sem company_id explícito."
+            )
+
         return {
             "runtime": normalized_runtime,
             "runtime_label": runtime_label,
@@ -824,7 +949,14 @@ class UserMcpTokenService:
             "availability_label": availability_label,
             "install_command": install_command,
             "instruction_text": instruction_text,
-            "supports_personal_token": resolved_surface == "user",
+            "supports_personal_token": resolved_surface == "user" and not runtime_blocked,
+            "runtime_locked": bool(runtime_policy.get("runtime_locked")),
+            "runtime_blocked": runtime_blocked,
+            "runtime_note": runtime_policy.get("runtime_note"),
+            "canonical_squad": runtime_policy.get("canonical_squad"),
+            "fallback_runtime": runtime_policy.get("fallback_runtime"),
+            "fallback_runtime_label": runtime_policy.get("fallback_runtime_label"),
+            "requires_company_selection": requires_company_selection,
         }
 
     @staticmethod
@@ -1247,18 +1379,36 @@ class UserMcpTokenService:
             if not user:
                 raise ValueError("Usuário inválido para configuração MCP.")
             allowed_squads = list(cls._resolve_allowed_squads_for_user(user))
-            authorized_squad = cls._resolve_authorized_squad_for_user(user, squad)
-            resolved_company_id = cls._resolve_explicit_company_id_for_user(user, company_id)
+            runtime_policy = cls._resolve_runtime_squad_policy(
+                runtime=runtime,
+                requested_squad=squad,
+                allowed_squads=allowed_squads,
+            )
             companies = cls.list_accessible_companies(user)
-            company_lookup = {item["id"]: item for item in companies}
-            selected_company = company_lookup.get(resolved_company_id) if resolved_company_id else None
             public_base = str(os.environ.get("APP32_MCP_PUBLIC_BASE_URL") or DEFAULT_PUBLIC_BASE_URL).rstrip("/")
             runtime_config = cls._resolve_runtime_installation(
                 runtime=runtime,
-                squad=authorized_squad,
-                company_id=resolved_company_id,
+                squad=runtime_policy["resolved_squad"],
+                company_id=cls._resolve_explicit_company_id_for_user(user, company_id),
+                runtime_policy=runtime_policy,
             )
             resolved_surface = runtime_config["resolved_surface"]
+            if resolved_surface == "user":
+                resolved_company_id = cls._resolve_explicit_company_id_for_user(user, company_id)
+            else:
+                resolved_company_id, _, _ = cls._resolve_runtime_company_context(
+                    user,
+                    requested_company_id=company_id,
+                )
+                runtime_config = cls._resolve_runtime_installation(
+                    runtime=runtime,
+                    squad=runtime_policy["resolved_squad"],
+                    company_id=resolved_company_id,
+                    runtime_policy=runtime_policy,
+                )
+                resolved_surface = runtime_config["resolved_surface"]
+            company_lookup = {item["id"]: item for item in companies}
+            selected_company = company_lookup.get(resolved_company_id) if resolved_company_id else None
             display_name = (
                 selected_company["label"]
                 if selected_company
@@ -1299,22 +1449,28 @@ class UserMcpTokenService:
                 url=url,
                 token_value=token_value,
             )
-            activation_commands = cls._build_activation_commands(allowed_squads)
-            deactivation_commands = cls._build_deactivation_commands(allowed_squads)
-            activation_selection_prompt = cls._build_activation_selection_prompt(allowed_squads)
+            session_allowed_squads = (
+                [runtime_config["squad"]]
+                if runtime_config["runtime_locked"] and not runtime_config["runtime_blocked"]
+                else allowed_squads
+            )
+            activation_commands = cls._build_activation_commands(session_allowed_squads)
+            deactivation_commands = cls._build_deactivation_commands(session_allowed_squads)
+            activation_selection_prompt = cls._build_activation_selection_prompt(session_allowed_squads)
             activation_commands_install_command = (
-                cls._build_claude_activation_install_command(allowed_squads)
+                cls._build_claude_activation_install_command(session_allowed_squads)
                 if runtime_config["runtime"] == "claude"
                 else None
             )
             session_lifecycle = cls._build_session_lifecycle(
                 runtime_config=runtime_config,
-                allowed_squads=allowed_squads,
+                allowed_squads=session_allowed_squads,
                 company_id=resolved_company_id,
             )
             company_context_rules = cls._build_company_context_rules(
                 companies=companies,
                 selected_company=selected_company,
+                surface=resolved_surface,
             )
             harness_summary_text = cls._build_harness_summary_text(runtime_config=runtime_config)
             smoke_guided_text = cls._build_smoke_guided_text(
@@ -1444,6 +1600,13 @@ class UserMcpTokenService:
                 "resolved_surface": runtime_config["resolved_surface"],
                 "install_mode": runtime_config["install_mode"],
                 "availability_label": runtime_config["availability_label"],
+                "runtime_locked": runtime_config["runtime_locked"],
+                "runtime_blocked": runtime_config["runtime_blocked"],
+                "runtime_note": runtime_config["runtime_note"],
+                "canonical_squad": runtime_config["canonical_squad"],
+                "fallback_runtime": runtime_config["fallback_runtime"],
+                "fallback_runtime_label": runtime_config["fallback_runtime_label"],
+                "requires_company_selection": runtime_config["requires_company_selection"],
                 "install_command": installation_command,
                 "copy_install_command_text": copy_install_command_text,
                 "instruction_text": installation_instruction,
