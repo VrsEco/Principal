@@ -168,6 +168,10 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         "actor_type": str(http_request_context.get("actor_type") or "").strip().lower() or None,
         "client_id": str(http_request_context.get("client_id") or "").strip() or None,
         "token_subject": str(http_request_context.get("token_subject") or "").strip() or None,
+        "accessible_company_ids": list(accessible_company_ids),
+        "multi_company": len(accessible_company_ids) > 1,
+        "selection_required_for_mutations": len(accessible_company_ids) > 1 and resolved_company_id is None,
+        "disable_company_fallback": len(accessible_company_ids) > 1,
     }
 
     return MCPExecutionContext(

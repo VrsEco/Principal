@@ -42,7 +42,7 @@ def test_build_client_config_uses_trailing_slash(monkeypatch):
 
     config = service.build_client_config(user_id=7, plaintext_token="abc", company_id=12)
 
-    assert config["url"] == "https://app.gestaoversus.com.br/mcp/user/?company_id=12"
+    assert config["url"] == "https://app.gestaoversus.com.br/mcp/user/"
 
 
 
@@ -84,7 +84,11 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert "Onboarding operacional desta instalação:" in config["onboarding_summary_text"]
     assert "Badge esperado da sessão: Sapiens Cliente On" in config["onboarding_summary_text"]
     assert config["session_badge"] == "Sapiens Cliente On"
-    assert config["preflight_tools"] == ["bootstrap_session_context", "describe_app32_available_sapiens_squads_tool"]
+    assert config["preflight_tools"] == [
+        "bootstrap_session_context",
+        "describe_app32_session_company_scope_tool",
+        "describe_app32_available_sapiens_squads_tool",
+    ]
     assert config["activation_tool"] == "resolve_app32_sapiens_activation_tool"
     assert config["startup_tools"][0] == "bootstrap_session_context"
     assert any(item["command"] == "/sapiens-cliente-on" for item in config["activation_commands"])
@@ -127,7 +131,7 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"].startswith("claude mcp add --scope user --transport http sapiens-user")
     assert config["copy_install_command_text"].startswith("claude mcp add --scope user --transport http sapiens-user")
-    assert '"https://app.gestaoversus.com.br/mcp/user/?company_id=10"' in config["copy_install_command_text"]
+    assert '"https://app.gestaoversus.com.br/mcp/user/"' in config["copy_install_command_text"]
     assert "Authorization: Bearer mcpu_token_real" in config["copy_install_command_text"]
     assert "Claude Code / aba Code do Claude Desktop" in config["instruction_text"]
     assert "aba Code do Claude Desktop" in config["instruction_text"]
@@ -176,6 +180,47 @@ def test_resolve_for_http_request_returns_none_for_unsupported_surface():
     )
 
     assert resolved is None
+
+
+def test_build_client_config_marks_user_surface_as_dynamic_scope_when_no_explicit_company(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: SimpleNamespace(id=7, is_active=True))))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_normalize_surface", staticmethod(lambda surface: "user"))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_resolve_explicit_company_id_for_user", staticmethod(lambda user, company_id: None))
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "list_accessible_companies",
+        staticmethod(lambda user: [{"id": 10, "label": "Empresa 10"}, {"id": 12, "label": "Empresa 12"}]),
+    )
+    monkeypatch.setenv("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
+
+    config = service.build_client_config(user_id=7, plaintext_token="abc", company_id=None)
+
+    assert config["url"] == "https://app.gestaoversus.com.br/mcp/user/"
+    assert config["company_label"] == "Escopo dinâmico multiempresa"
+    assert config["company_context_rules"]["multiple_companies"] is True
+
+
+def test_build_runtime_company_scope_requires_explicit_selection_for_multi_company(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    user = SimpleNamespace(id=7, is_active=True)
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "list_accessible_companies",
+        staticmethod(lambda current_user: [{"id": 10, "label": "Empresa 10"}, {"id": 12, "label": "Empresa 12"}]),
+    )
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "_resolve_explicit_company_id_for_user",
+        staticmethod(lambda current_user, company_id: int(company_id) if company_id in {10, 12} else None),
+    )
+
+    scope = service.build_runtime_company_scope(user, requested_company_id=None, persisted_company_id=None)
+
+    assert scope["active_company_id"] is None
+    assert scope["selection_required_for_mutations"] is True
+    assert scope["accessible_company_ids"] == [10, 12]
 
 
 def test_build_client_config_exposes_squad_cliente_harness_catalog(monkeypatch):

@@ -76,11 +76,14 @@ ROLE_ALLOWED_SQUADS = {
 class UserMcpResolvedContext:
     token_record_id: int
     user_id: int
-    company_id: int
+    company_id: int | None
     fallback_role: str
     allowed_surfaces: tuple[str, ...]
     subject: str | None
     client_name: str | None
+    company_resolution_source: str | None = None
+    accessible_company_ids: tuple[int, ...] = ()
+    multi_company: bool = False
     runtime_profile: str | None = None
     actor_type: str | None = None
     harness_key: str | None = None
@@ -359,6 +362,7 @@ class UserMcpTokenService:
             "entry_aliases": ["Sapiens On", "sapiens on", "/sapiens-on"],
             "preflight_tools": [
                 "bootstrap_session_context",
+                "describe_app32_session_company_scope_tool",
                 "describe_app32_available_sapiens_squads_tool",
             ],
             "activation_tool": "resolve_app32_sapiens_activation_tool",
@@ -910,6 +914,16 @@ class UserMcpTokenService:
             ]
 
     @classmethod
+    def _list_accessible_company_ids(cls, user: User) -> tuple[int, ...]:
+        companies = cls.list_accessible_companies(user)
+        normalized: list[int] = []
+        for company in companies:
+            company_id = company.get("id")
+            if isinstance(company_id, int) and company_id not in normalized:
+                normalized.append(company_id)
+        return tuple(normalized)
+
+    @classmethod
     def _resolve_company_id_for_user(cls, user: User, requested_company_id: int | None) -> int | None:
         candidate = requested_company_id or get_default_company_id(user=user)
         if candidate and can_access_company(candidate, user=user):
@@ -924,6 +938,145 @@ class UserMcpTokenService:
         if can_access_company(candidate, user=user):
             return candidate
         return None
+
+    @classmethod
+    def _resolve_runtime_company_context(
+        cls,
+        user: User,
+        *,
+        requested_company_id: int | None = None,
+        persisted_company_id: int | None = None,
+    ) -> tuple[int | None, str | None, tuple[int, ...]]:
+        accessible_company_ids = cls._list_accessible_company_ids(user)
+        explicit_company_id = cls._resolve_explicit_company_id_for_user(user, requested_company_id)
+        if explicit_company_id is not None:
+            return explicit_company_id, "request.company_id", accessible_company_ids
+
+        persisted_selection = cls._resolve_explicit_company_id_for_user(user, persisted_company_id)
+        if persisted_selection is not None:
+            return persisted_selection, "token.last_company_id", accessible_company_ids
+
+        if len(accessible_company_ids) == 1:
+            return accessible_company_ids[0], "user.single_accessible_company_id", accessible_company_ids
+
+        return None, None, accessible_company_ids
+
+    @classmethod
+    def build_runtime_company_scope(
+        cls,
+        user: User,
+        *,
+        requested_company_id: int | None = None,
+        persisted_company_id: int | None = None,
+    ) -> dict[str, Any]:
+        companies = cls.list_accessible_companies(user)
+        resolved_company_id, resolution_source, accessible_company_ids = cls._resolve_runtime_company_context(
+            user,
+            requested_company_id=requested_company_id,
+            persisted_company_id=persisted_company_id,
+        )
+        company_lookup = {item["id"]: item for item in companies if isinstance(item.get("id"), int)}
+        active_company = company_lookup.get(resolved_company_id) if resolved_company_id is not None else None
+        multi_company = len(accessible_company_ids) > 1
+        return {
+            "user_id": getattr(user, "id", None),
+            "accessible_company_ids": list(accessible_company_ids),
+            "companies": companies,
+            "active_company_id": resolved_company_id,
+            "active_company_label": active_company.get("label") if active_company else None,
+            "company_resolution_source": resolution_source,
+            "multi_company": multi_company,
+            "selection_required_for_mutations": multi_company and resolved_company_id is None,
+        }
+
+    @classmethod
+    def describe_runtime_company_scope(
+        cls,
+        *,
+        token: str,
+        requested_company_id: int | None = None,
+    ) -> dict[str, Any]:
+        token_hash = cls._hash_token(token)
+        with cls._ensure_app_context():
+            record = (
+                UserMcpToken.query.filter_by(token_hash=token_hash)
+                .order_by(UserMcpToken.created_at.desc())
+                .first()
+            )
+            if not record:
+                raise ValueError("Token MCP inválido.")
+            cls._expire_if_needed(record)
+            if record.status != "active":
+                db.session.commit()
+                raise ValueError("Token MCP inativo.")
+            user = User.query.get(record.user_id)
+            if not user or not getattr(user, "is_active", False):
+                raise ValueError("Usuário inválido para escopo MCP.")
+            return cls.build_runtime_company_scope(
+                user,
+                requested_company_id=requested_company_id,
+                persisted_company_id=record.last_company_id,
+            )
+
+    @classmethod
+    def select_runtime_company(
+        cls,
+        *,
+        token: str,
+        company_id: int,
+        client_name: str | None = None,
+    ) -> dict[str, Any]:
+        token_hash = cls._hash_token(token)
+        with cls._ensure_app_context():
+            record = (
+                UserMcpToken.query.filter_by(token_hash=token_hash)
+                .order_by(UserMcpToken.created_at.desc())
+                .first()
+            )
+            if not record:
+                raise ValueError("Token MCP inválido.")
+            cls._expire_if_needed(record)
+            if record.status != "active":
+                db.session.commit()
+                raise ValueError("Token MCP inativo.")
+            user = User.query.get(record.user_id)
+            if not user or not getattr(user, "is_active", False):
+                raise ValueError("Usuário inválido para seleção de empresa.")
+            selected_company_id = cls._resolve_explicit_company_id_for_user(user, company_id)
+            if selected_company_id is None:
+                raise ValueError("Empresa não autorizada para este token MCP.")
+            record.last_company_id = selected_company_id
+            record.last_client_name = (client_name or "").strip() or record.last_client_name
+            record.updated_at = cls._utcnow()
+            db.session.commit()
+            return cls.build_runtime_company_scope(
+                user,
+                requested_company_id=selected_company_id,
+                persisted_company_id=selected_company_id,
+            )
+
+    @classmethod
+    def clear_runtime_company(cls, *, token: str) -> dict[str, Any]:
+        token_hash = cls._hash_token(token)
+        with cls._ensure_app_context():
+            record = (
+                UserMcpToken.query.filter_by(token_hash=token_hash)
+                .order_by(UserMcpToken.created_at.desc())
+                .first()
+            )
+            if not record:
+                raise ValueError("Token MCP inválido.")
+            cls._expire_if_needed(record)
+            if record.status != "active":
+                db.session.commit()
+                raise ValueError("Token MCP inativo.")
+            user = User.query.get(record.user_id)
+            if not user or not getattr(user, "is_active", False):
+                raise ValueError("Usuário inválido para limpeza de empresa.")
+            record.last_company_id = None
+            record.updated_at = cls._utcnow()
+            db.session.commit()
+            return cls.build_runtime_company_scope(user, persisted_company_id=None)
 
     @classmethod
     def _build_status_payload(cls, user: User, record: UserMcpToken | None) -> dict[str, Any]:
@@ -1100,16 +1253,20 @@ class UserMcpTokenService:
             company_lookup = {item["id"]: item for item in companies}
             selected_company = company_lookup.get(resolved_company_id) if resolved_company_id else None
             public_base = str(os.environ.get("APP32_MCP_PUBLIC_BASE_URL") or DEFAULT_PUBLIC_BASE_URL).rstrip("/")
-            display_name = selected_company["label"] if selected_company else "Sem empresa padrão"
-            token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
             runtime_config = cls._resolve_runtime_installation(
                 runtime=runtime,
                 squad=authorized_squad,
                 company_id=resolved_company_id,
             )
             resolved_surface = runtime_config["resolved_surface"]
+            display_name = (
+                selected_company["label"]
+                if selected_company
+                else ("Escopo dinâmico multiempresa" if resolved_surface == "user" else "Sem empresa padrão")
+            )
+            token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
             url = f"{public_base}/mcp/{resolved_surface}/"
-            if resolved_company_id:
+            if resolved_surface != "user" and resolved_company_id:
                 url = f"{url}?company_id={resolved_company_id}"
             connection_name = runtime_config["experience_label"]
             snippet_payload = {
@@ -1347,14 +1504,21 @@ class UserMcpTokenService:
             user = User.query.get(record.user_id)
             if not user or not getattr(user, "is_active", False):
                 return None
-            resolved_company_id = cls._resolve_company_id_for_user(user, company_id or record.last_company_id)
-            if resolved_company_id is None:
-                return None
-            profile = get_access_profile(resolved_company_id, user=user) or "collaborator"
+            resolved_company_id, resolution_source, accessible_company_ids = cls._resolve_runtime_company_context(
+                user,
+                requested_company_id=company_id,
+                persisted_company_id=record.last_company_id,
+            )
+            profile = (
+                get_access_profile(resolved_company_id, user=user) or "collaborator"
+                if resolved_company_id is not None
+                else "collaborator"
+            )
             fallback_role = PROFILE_TO_FALLBACK_ROLE.get(profile, "colaborador")
             record.last_used_at = cls._utcnow()
             record.last_surface = normalized_surface
-            record.last_company_id = resolved_company_id
+            if resolution_source in {"request.company_id", "token.last_company_id", "user.single_accessible_company_id"}:
+                record.last_company_id = resolved_company_id
             record.last_client_name = (client_name or "").strip() or record.last_client_name
             record.updated_at = cls._utcnow()
             db.session.commit()
@@ -1366,6 +1530,9 @@ class UserMcpTokenService:
                 allowed_surfaces=ALLOWED_SURFACES,
                 subject=user.email,
                 client_name=record.last_client_name,
+                company_resolution_source=resolution_source,
+                accessible_company_ids=accessible_company_ids,
+                multi_company=len(accessible_company_ids) > 1,
                 runtime_profile="squad_cliente",
                 actor_type="client_agent",
                 harness_key="harness_coordenador_cliente_v1",

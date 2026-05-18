@@ -106,8 +106,8 @@ def list_projects(
 
 
 def create_project(
-    company_id: int,
     name: str,
+    company_id: int | None = None,
     description: str | None = None,
     responsible_name: str | None = None,
     start_date: str | None = None,
@@ -156,8 +156,8 @@ def create_project(
 
 
 def update_project(
-    company_id: int,
     changes: dict,
+    company_id: int | None = None,
     project_id: int | None = None,
     project_code: str | None = None,
 ):
@@ -202,8 +202,8 @@ def update_project(
 
 
 def delete_project(
-    company_id: int,
     reason: str,
+    company_id: int | None = None,
     project_id: int | None = None,
     project_code: str | None = None,
     confirm: bool = False,

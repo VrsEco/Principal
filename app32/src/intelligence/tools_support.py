@@ -18,6 +18,13 @@ def get_active_company_id():
     if identity.company_id:
         return identity.company_id
 
+    metadata = identity.metadata or {}
+    if metadata.get("disable_company_fallback"):
+        accessible_company_ids = tuple(metadata.get("accessible_company_ids") or ())
+        if len(accessible_company_ids) == 1:
+            return accessible_company_ids[0]
+        return None
+
     cid = active_company_id_ctx.get()
     if cid:
         return cid

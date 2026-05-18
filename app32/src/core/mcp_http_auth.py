@@ -348,6 +348,9 @@ def _resolve_db_backed_identity(
             "actor_type": getattr(resolved, "actor_type", None),
             "harness_key": getattr(resolved, "harness_key", None),
             "harness_label": getattr(resolved, "harness_label", None),
+            "company_resolution_source": getattr(resolved, "company_resolution_source", None),
+            "accessible_company_ids": list(getattr(resolved, "accessible_company_ids", ()) or ()),
+            "multi_company": bool(getattr(resolved, "multi_company", False)),
             "mcp_enabled": getattr(resolved, "mcp_enabled", True),
             "training_completed": getattr(resolved, "training_completed", True),
         },
@@ -473,6 +476,13 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
         "harness_label": harness_label,
         "client_id": identity.client_id,
         "token_subject": identity.metadata.get("subject"),
+        "company_resolution_source": _coerce_str(identity.metadata.get("company_resolution_source")),
+        "accessible_company_ids": list(identity.metadata.get("accessible_company_ids") or []),
+        "multi_company": bool(identity.metadata.get("multi_company", False)),
+        "selection_required_for_mutations": bool(
+            identity.metadata.get("multi_company", False) and identity.company_id is None
+        ),
+        "disable_company_fallback": bool(identity.metadata.get("multi_company", False)),
         "mcp_enabled": bool(identity.metadata.get("mcp_enabled", True)),
         "training_completed": bool(identity.metadata.get("training_completed", True)),
     }
@@ -488,7 +498,7 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
         if identity is None:
             return JSONResponse({"error": "unauthorized", "detail": "Bearer token inválido ou ausente."}, status_code=401)
 
-        if identity.user_id is None or identity.company_id is None:
+        if identity.user_id is None or (identity.company_id is None and self.surface != "user"):
             return JSONResponse(
                 {
                     "error": "invalid_context",

@@ -130,6 +130,8 @@ def _validate_required_context(
 ) -> ToolPolicyDecision | None:
     required_context = _normalize_required_context(request.required_context)
     requested_company_id = request.requested_company_id
+    metadata = dict(principal.metadata or {})
+    metadata.update(dict(request.metadata or {}))
 
     if TOOL_CONTEXT_USER in required_context and principal.user_id is None:
         return _deny(
@@ -143,13 +145,19 @@ def _validate_required_context(
         )
 
     if TOOL_CONTEXT_COMPANY in required_context and _coerce_optional_company_id(requested_company_id, principal.company_id) is None:
+        missing_company_reason = "feature exige company_id no contexto antes da execução"
+        if bool(metadata.get("selection_required_for_mutations")) or bool(metadata.get("multi_company")):
+            missing_company_reason = (
+                "empresa não selecionada para esta sessão multiempresa; use "
+                "select_app32_session_company_tool ou informe company_id explicitamente antes da mutação"
+            )
         return _deny(
             request,
             principal,
             _normalize_surface(request.surface),
             _normalize_risk(request.risk),
             None,
-            "feature exige company_id no contexto antes da execução",
+            missing_company_reason,
             (*checks, "missing_required_company_context"),
         )
 

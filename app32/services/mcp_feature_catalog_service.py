@@ -54,7 +54,9 @@ class MCPFeatureCatalogService:
         domain: str | None = None,
         search: str | None = None,
     ) -> dict[str, Any]:
-        self._require_company_context(context)
+        company_required = context.surface != "user"
+        if company_required:
+            self._require_company_context(context)
         documented_domains = self.list_domains(context.surface)
         published_domains = self._list_published_domains(context.surface)
         features = self.list_features(
@@ -76,14 +78,14 @@ class MCPFeatureCatalogService:
             "published_domains": published_domains,
             "features": features,
             "current_context": {
-                "required": ["company"],
+                "required": ["company"] if company_required else [],
                 "resolved": {
                     "company_id": context.company_id,
                     "user_id": context.user_id,
                     "thread_id": context.thread_id,
                 },
                 "resolution": {
-                    "company": "request_context.company_id",
+                    "company": "request_context.company_id" if context.company_id is not None else None,
                     "user": "request_context.user_id" if context.user_id is not None else None,
                     "thread": "request_context.thread_id" if context.thread_id else None,
                 },

@@ -35,6 +35,7 @@ from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
 from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
 from src.core.mcp_sapiens_factory_tools import register_sapiens_factory_tools
+from src.core.mcp_session_company_tools import register_session_company_tools
 from src.core.mcp_squad_runtime_tools import register_squad_runtime_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
 from src.core.mcp_tool_freeze_tools import register_tool_freeze_tools
@@ -396,6 +397,7 @@ catalog = ToolCatalog(
         register_release_checklist_tools,
         register_sapiens_activation_tools,
         register_sapiens_factory_tools,
+        register_session_company_tools,
         register_squad_runtime_tools,
         register_surface_playbook_tools,
         register_tool_freeze_tools,

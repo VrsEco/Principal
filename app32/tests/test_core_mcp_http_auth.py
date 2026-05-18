@@ -195,6 +195,53 @@ def test_request_context_payload_exposes_default_harness_for_squad_cliente(monke
     assert payload["harness_label"] == "Harness Coordenador do Squad Cliente"
 
 
+def test_request_context_payload_supports_multi_company_user_session_without_active_company(monkeypatch):
+    module = _reload_auth(monkeypatch)
+
+    class _FakeUserMcpTokenService:
+        def resolve_for_http_request(self, **kwargs):
+            return SimpleNamespace(
+                token_record_id=55,
+                user_id=7,
+                company_id=None,
+                fallback_role="cliente",
+                allowed_surfaces=("user",),
+                subject="ana@empresa.com",
+                client_name="Claude",
+                runtime_profile="squad_cliente",
+                actor_type="client_agent",
+                harness_key="harness_coordenador_cliente_v1",
+                harness_label="Harness Coordenador do Squad Cliente",
+                company_resolution_source=None,
+                accessible_company_ids=(10, 12),
+                multi_company=True,
+                mcp_enabled=True,
+                training_completed=True,
+            )
+
+    from types import SimpleNamespace
+    import services.user_mcp_token_service as token_service_module
+
+    monkeypatch.setattr(token_service_module, "user_mcp_token_service", _FakeUserMcpTokenService())
+
+    async def endpoint(request: Request):
+        payload = module.resolve_request_context_payload(request, surface="user")
+        return JSONResponse(payload)
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    client = TestClient(app)
+
+    response = client.get("/", headers={"Authorization": "Bearer token-db"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["company_id"] is None
+    assert payload["multi_company"] is True
+    assert payload["selection_required_for_mutations"] is True
+    assert payload["disable_company_fallback"] is True
+
+
 def test_get_http_request_context_rehydrates_from_current_mcp_request(monkeypatch):
     module = _reload_auth(
         monkeypatch,
@@ -359,4 +406,44 @@ def test_request_context_middleware_blocks_when_training_missing(monkeypatch):
 
     assert response.status_code == 403
     assert response.json()["error"] == "mcp_channel_denied"
+
+
+def test_request_context_middleware_allows_user_surface_without_active_company(monkeypatch):
+    module = _reload_auth(monkeypatch)
+
+    class _FakeUserMcpTokenService:
+        def resolve_for_http_request(self, **kwargs):
+            return SimpleNamespace(
+                token_record_id=55,
+                user_id=7,
+                company_id=None,
+                fallback_role="cliente",
+                allowed_surfaces=("user",),
+                subject="ana@empresa.com",
+                client_name="Claude",
+                runtime_profile="squad_cliente",
+                actor_type="client_agent",
+                accessible_company_ids=(10, 12),
+                multi_company=True,
+                mcp_enabled=True,
+                training_completed=True,
+            )
+
+    from types import SimpleNamespace
+    import services.user_mcp_token_service as token_service_module
+
+    monkeypatch.setattr(token_service_module, "user_mcp_token_service", _FakeUserMcpTokenService())
+
+    async def endpoint(_: Request):
+        return JSONResponse({"ok": True})
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user")
+    client = TestClient(app)
+
+    response = client.get("/", headers={"Authorization": "Bearer token-db"})
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
 

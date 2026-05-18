@@ -45,9 +45,10 @@ def test_feature_catalog_tools_enforce_company_context_and_surface(monkeypatch):
     mcp = _FakeMCP()
     register_feature_catalog_tools(mcp)
 
-    missing_ctx = mcp.registered["bootstrap_session_context"]()
-    assert missing_ctx["success"] is False
-    assert missing_ctx["error"]["code"] == "mcp_feature_catalog_missing_context"
+    bootstrap = mcp.registered["bootstrap_session_context"]()
+    assert bootstrap["success"] is True
+    assert bootstrap["data"]["company_id"] is None
+    assert bootstrap["data"]["current_context"]["required"] == []
 
     monkeypatch.setenv("APP32_MCP_COMPANY_ID", "31")
     forbidden = mcp.registered["get_feature_guide"]("financeiro_fluxo_caixa")
