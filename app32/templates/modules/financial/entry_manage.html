@@ -39,6 +39,16 @@
     <section class="panel">
         <div class="panel-header">
             <div>
+                <h2>Comprovantes vinculados ao lançamento</h2>
+                <p>Documentos de origem importados pela automação ou anexados ao próprio lançamento.</p>
+            </div>
+        </div>
+        <div id="entry-attachments" class="settlements-list"></div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
                 <h2>Nova baixa</h2>
                 <p>Fluxo simplificado: somente os dados operacionais necessários para baixar o lançamento.</p>
             </div>
@@ -326,6 +336,23 @@
         }).join('');
     }
 
+    function renderEntryAttachments(entry) {
+        const container = document.getElementById('entry-attachments');
+        const attachments = Array.isArray(entry?.attachments) ? entry.attachments : [];
+        if (!attachments.length) {
+            container.innerHTML = '<div class="empty-state">Nenhum comprovante vinculado ao lançamento.</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="attachments-list">
+                ${attachments.map(attachment => `
+                    <a class="attachment-link" href="${attachment.url}" target="_blank" rel="noopener noreferrer">${attachment.name}</a>
+                `).join('')}
+            </div>
+        `;
+    }
+
     async function fetchJson(url) {
         const response = await fetch(url);
         const payload = await response.json();
@@ -355,6 +382,7 @@
         document.getElementById('settlement-history').value = initialHistory;
         document.getElementById('settlement-date').value = todayIso();
         refreshAvailableAmount(currentEntry);
+        renderEntryAttachments(currentEntry);
         renderSettlements(currentEntry);
     }
 

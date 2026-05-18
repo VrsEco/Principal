@@ -156,6 +156,16 @@ def test_automation_center_js_uses_data_field_mapping_and_origin_labels():
     assert "/api/financial/automation/records/${id}?company_id=${companyId}" in script
 
 
+def test_entry_manage_template_contains_entry_attachment_panel():
+    template = Path(
+        r"C:\GestaoVersus\app32\app32\templates\modules\financial\entry_manage.html"
+    ).read_text(encoding="utf-8")
+
+    assert "Comprovantes vinculados ao lançamento" in template
+    assert 'id="entry-attachments"' in template
+    assert "renderEntryAttachments(currentEntry);" in template
+
+
 def test_delete_record_soft_deletes_when_no_active_links(monkeypatch):
     batch = _Batch()
     item = _Record(record_id=41, settlement_state="open", batch=batch)
@@ -325,6 +335,75 @@ def test_generate_records_routes_settled_to_entry_and_open_to_schedule(monkeypat
     assert open_record.generated_financial_schedule_id == 901
     assert settled_record.status == "generated"
     assert open_record.status == "generated"
+
+
+def test_generate_entry_from_record_attaches_source_document_to_open_entry(monkeypatch):
+    record = _Record(record_id=14, settlement_state="open", batch=_Batch())
+    record.source_document = SimpleNamespace(
+        id=321,
+        file_name="comprovante.pdf",
+        mime_type="application/pdf",
+        file_size=2048,
+        file_size_original=2048,
+        original_relative_path=r"automation\9\321_comprovante.pdf",
+        stored_relative_path=r"automation\9\321_comprovante.pdf",
+        created_at=None,
+    )
+
+    entry = SimpleNamespace(id=501, metadata_json={})
+    commit_calls = []
+
+    monkeypatch.setattr(automation_module.FinancialService, "create_entry", lambda **kwargs: (entry, None))
+    monkeypatch.setattr(automation_module.db.session, "commit", lambda: commit_calls.append("commit"))
+
+    entry_id, error = FinancialAutomationService._generate_entry_from_record(
+        record,
+        generated_by_user_id=77,
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert entry_id == 501
+    assert commit_calls == ["commit"]
+    assert entry.metadata_json["attachments"][0]["name"] == "comprovante.pdf"
+    assert entry.metadata_json["attachments"][0]["url"] == "/uploads/automation/9/321_comprovante.pdf"
+    assert entry.metadata_json["attachments"][0]["source_document_id"] == 321
+
+
+def test_generate_entry_from_record_attaches_source_document_to_generated_settlement(monkeypatch):
+    record = _Record(record_id=15, settlement_state="settled", batch=_Batch())
+    record.settlement_date = None
+    record.source_document = SimpleNamespace(
+        id=654,
+        file_name="pix.png",
+        mime_type="image/png",
+        file_size=1024,
+        file_size_original=1024,
+        original_relative_path=r"automation\9\654_pix.png",
+        stored_relative_path=r"automation\9\654_pix.png",
+        created_at=None,
+    )
+
+    entry = SimpleNamespace(id=701, metadata_json={})
+    settlement = SimpleNamespace(id=801, metadata_json={})
+    commit_calls = []
+
+    monkeypatch.setattr(automation_module.FinancialService, "create_entry", lambda **kwargs: (entry, None))
+    monkeypatch.setattr(automation_module.FinancialService, "create_settlement", lambda **kwargs: (settlement, None))
+    monkeypatch.setattr(automation_module.db.session, "commit", lambda: commit_calls.append("commit"))
+
+    entry_id, error = FinancialAutomationService._generate_entry_from_record(
+        record,
+        generated_by_user_id=77,
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert entry_id == 701
+    assert commit_calls == ["commit"]
+    assert settlement.metadata_json["attachments"][0]["name"] == "pix.png"
+    assert settlement.metadata_json["attachments"][0]["url"] == "/uploads/automation/9/654_pix.png"
+    assert "attachments" not in entry.metadata_json
 
 
 def test_bulk_update_status_rejects_manual_generated_transition(monkeypatch):

@@ -543,6 +543,7 @@ class FinancialService:
     @staticmethod
     def serialize_entry(entry: FinancialEntry, *, include_children: bool = True) -> Dict[str, Any]:
         payload = FinancialService.enrich_amount_payload(entry.to_dict())
+        payload["attachments"] = list(dict(payload.get("metadata_json") or {}).get("attachments") or [])
         if not include_children:
             return payload
 

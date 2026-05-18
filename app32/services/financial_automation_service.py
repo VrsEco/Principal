@@ -2460,6 +2460,101 @@ class FinancialAutomationService:
         return metadata
 
     @staticmethod
+    def _build_document_public_url(document: FinancialAutomationDocument) -> Optional[str]:
+        relative_path = getattr(document, "original_relative_path", None) or getattr(document, "stored_relative_path", None)
+        if not relative_path:
+            return None
+        normalized_path = str(relative_path).replace("\\", "/")
+        return f"/uploads/{normalized_path}"
+
+    @staticmethod
+    def _serialize_document_as_attachment(document: FinancialAutomationDocument) -> Optional[Dict[str, Any]]:
+        if not document:
+            return None
+        public_url = FinancialAutomationService._build_document_public_url(document)
+        if not public_url:
+            return None
+        return {
+            "id": f"automation_document_{getattr(document, 'id', 'unknown')}",
+            "name": getattr(document, "file_name", None) or f"Documento {getattr(document, 'id', '')}".strip(),
+            "content_type": getattr(document, "mime_type", None),
+            "size": getattr(document, "file_size_original", None) or getattr(document, "file_size", None),
+            "uploaded_at": getattr(getattr(document, "created_at", None), "isoformat", lambda: None)(),
+            "url": public_url,
+            "source": "financial_automation",
+            "source_document_id": getattr(document, "id", None),
+            "readonly": True,
+        }
+
+    @staticmethod
+    def _list_source_documents_for_record(record: FinancialAutomationRecord) -> List[FinancialAutomationDocument]:
+        if not record:
+            return []
+        if getattr(record, "document_group_key", None) and getattr(record, "batch_id", None):
+            try:
+                return (
+                    FinancialAutomationDocument.query.filter(
+                        FinancialAutomationDocument.company_id == record.company_id,
+                        FinancialAutomationDocument.batch_id == record.batch_id,
+                        FinancialAutomationDocument.document_group_key == record.document_group_key,
+                        FinancialAutomationDocument.deleted_at.is_(None),
+                    )
+                    .order_by(FinancialAutomationDocument.id.asc())
+                    .all()
+                )
+            except Exception:
+                pass
+        source_document = getattr(record, "source_document", None)
+        return [source_document] if source_document else []
+
+    @staticmethod
+    def _merge_attachment_payloads(
+        existing_items: Optional[Sequence[Dict[str, Any]]],
+        incoming_items: Optional[Sequence[Dict[str, Any]]],
+    ) -> List[Dict[str, Any]]:
+        merged: List[Dict[str, Any]] = []
+        seen_keys = set()
+        for item in list(existing_items or []) + list(incoming_items or []):
+            if not isinstance(item, dict):
+                continue
+            dedupe_key = (
+                str(item.get("source_document_id") or "").strip()
+                or str(item.get("id") or "").strip()
+                or str(item.get("url") or "").strip()
+            )
+            if not dedupe_key or dedupe_key in seen_keys:
+                continue
+            seen_keys.add(dedupe_key)
+            merged.append(item)
+        return merged
+
+    @staticmethod
+    def _attach_record_documents_to_metadata_holder(
+        *,
+        record: FinancialAutomationRecord,
+        holder: Any,
+    ) -> None:
+        if not record or holder is None:
+            return
+        documents = FinancialAutomationService._list_source_documents_for_record(record)
+        attachments = [
+            item
+            for item in (
+                FinancialAutomationService._serialize_document_as_attachment(document)
+                for document in documents
+            )
+            if item
+        ]
+        if not attachments:
+            return
+        metadata = dict(getattr(holder, "metadata_json", {}) or {})
+        metadata["attachments"] = FinancialAutomationService._merge_attachment_payloads(
+            metadata.get("attachments"),
+            attachments,
+        )
+        setattr(holder, "metadata_json", metadata)
+
+    @staticmethod
     def _resolve_generate_target(
         settlement_state: Optional[str],
         metadata_json: Optional[Dict[str, Any]] = None,
@@ -2567,6 +2662,7 @@ class FinancialAutomationService:
         if error:
             return None, error
         if record.settlement_state == "settled":
+            settlement_payload_metadata = FinancialAutomationService._build_generation_metadata(record)
             settlement_payload = {
                 "company_id": record.company_id,
                 "financial_entry_id": entry.id,
@@ -2583,14 +2679,18 @@ class FinancialAutomationService:
                 "net_amount": Decimal(str(record.amount or 0)),
                 "reconciliation_status": "pending",
                 "notes": f"Baixa criada pela Central de Automação Financeira (record {record.id}).",
-                "metadata_json": FinancialAutomationService._build_generation_metadata(record),
+                "metadata_json": settlement_payload_metadata,
             }
-            _, settlement_error = FinancialService.create_settlement(
+            settlement, settlement_error = FinancialService.create_settlement(
                 payload=settlement_payload,
                 allowed_company_ids=allowed_company_ids,
             )
             if settlement_error:
                 return None, settlement_error
+            FinancialAutomationService._attach_record_documents_to_metadata_holder(record=record, holder=settlement)
+        else:
+            FinancialAutomationService._attach_record_documents_to_metadata_holder(record=record, holder=entry)
+        db.session.commit()
         return entry.id, None
 
     @staticmethod
