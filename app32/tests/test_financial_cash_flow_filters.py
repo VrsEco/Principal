@@ -209,6 +209,8 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "Fluxo de Caixa" in template
     assert "Contas a Receber Selecionadas" in template
     assert "Contas a Pagar Selecionadas" in template
+    assert "Voltar</a>" in template
+    assert ">Filtros</a>" not in template
     assert "projected_amount_label" in template
     assert "Retirado" in template
     assert "cashflow-accounts-layout" in template
