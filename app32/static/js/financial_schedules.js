@@ -267,6 +267,159 @@
     return code && name ? `${code} - ${name}` : (code || name || item.id);
   }
 
+  const normalizeSearchTerm = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  function buildSearchableSelectItems(field) {
+    if (field === 'chart_account_id') {
+      return analyticChartAccounts().map((item) => ({
+        value: asOptionValue(item.id),
+        label: buildChartAccountLabel(item),
+        search: normalizeSearchTerm([item.code, item.name, item.display_label, item.id].filter(Boolean).join(' ')),
+      }));
+    }
+    if (field === 'cost_center_id') {
+      return finalCostCenters().map((item) => ({
+        value: asOptionValue(item.id),
+        label: buildCostCenterLabel(item),
+        search: normalizeSearchTerm([item.code, item.name, item.display_label, item.id].filter(Boolean).join(' ')),
+      }));
+    }
+    if (field === 'domain_value') {
+      return (optionsCache.enabled_domains || []).map((item) => {
+        const value = item.domain_value || `${item.source_kind || 'routine'}:${item.domain_type}:${item.source_id}`;
+        const group = item.domain_type === 'process' ? 'Processo' : 'Projeto';
+        return {
+          value,
+          label: item.display_label || item.name || item.code || value,
+          group,
+          search: normalizeSearchTerm([
+            item.display_label,
+            item.name,
+            item.code,
+            item.domain_type,
+            item.source_id,
+            value,
+          ].filter(Boolean).join(' ')),
+        };
+      });
+    }
+    return [];
+  }
+
+  function searchableSelectPlaceholder(field) {
+    return ({
+      chart_account_id: 'Selecione ou busque...',
+      cost_center_id: 'Selecione ou busque...',
+      domain_value: 'Selecione projeto ou processo...',
+    }[field] || 'Selecione...');
+  }
+
+  function selectedSearchableItemLabel(field, value) {
+    if (!value) return searchableSelectPlaceholder(field);
+    const item = buildSearchableSelectItems(field).find((candidate) => candidate.value === String(value));
+    return item?.label || searchableSelectPlaceholder(field);
+  }
+
+  function renderSearchableSelect(field, index, value) {
+    const selectedLabel = escapeHtml(selectedSearchableItemLabel(field, value));
+    const placeholder = searchableSelectPlaceholder(field);
+    return `
+      <div class="search-select" data-search-select data-field="${field}" data-index="${index}">
+        <select class="search-select__native" data-index="${index}" data-field="${field}" tabindex="-1" aria-hidden="true"></select>
+        <button type="button" class="search-select__trigger" data-search-select-trigger aria-haspopup="listbox" aria-expanded="false">
+          <span class="search-select__trigger-label ${value ? '' : 'is-placeholder'}">${selectedLabel}</span>
+          <span class="search-select__trigger-icon">▾</span>
+        </button>
+        <div class="search-select__popover hidden" data-search-select-popover>
+          <input type="search" class="search-select__input" data-search-select-input placeholder="Digite para filtrar por código ou descrição" autocomplete="off" spellcheck="false">
+          <div class="search-select__options" data-search-select-options role="listbox" aria-label="${placeholder}"></div>
+        </div>
+      </div>`;
+  }
+
+  function closeSearchableSelect(container) {
+    if (!container) return;
+    container.classList.remove('is-open');
+    container.querySelector('[data-search-select-trigger]')?.setAttribute('aria-expanded', 'false');
+    container.querySelector('[data-search-select-popover]')?.classList.add('hidden');
+  }
+
+  function closeAllSearchableSelects(except = null) {
+    $('allocations-body')?.querySelectorAll('[data-search-select]').forEach((container) => {
+      if (container !== except) closeSearchableSelect(container);
+    });
+  }
+
+  function fillNativeSearchableSelect(select) {
+    if (!select) return;
+    const field = select.dataset.field;
+    const currentValue = String(select.value || select.dataset.currentValue || '');
+    const placeholder = searchableSelectPlaceholder(field);
+    const items = buildSearchableSelectItems(field);
+    select.innerHTML = [`<option value="">${placeholder}</option>`]
+      .concat(items.map((item) => `<option value="${item.value}">${escapeHtml(item.label)}</option>`))
+      .join('');
+    select.value = currentValue;
+  }
+
+  function refreshSearchableSelectOptions(container) {
+    if (!container) return;
+    const field = container.dataset.field;
+    const search = normalizeSearchTerm(container.querySelector('[data-search-select-input]')?.value || '');
+    const currentValue = String(container.querySelector('.search-select__native')?.value || '');
+    const items = buildSearchableSelectItems(field)
+      .filter((item) => !search || item.search.includes(search) || normalizeSearchTerm(item.label).includes(search));
+    const host = container.querySelector('[data-search-select-options]');
+    if (!host) return;
+    if (!items.length) {
+      host.innerHTML = '<div class="search-select__empty">Nenhum item encontrado.</div>';
+      return;
+    }
+    host.innerHTML = items.map((item) => `
+      <button type="button" class="search-select__option ${item.value === currentValue ? 'is-selected' : ''}" data-search-option-value="${escapeHtml(item.value)}" role="option" aria-selected="${item.value === currentValue ? 'true' : 'false'}">
+        ${item.group ? `<span class="search-select__option-group">${escapeHtml(item.group)}</span>` : ''}
+        <span>${escapeHtml(item.label)}</span>
+      </button>`).join('');
+  }
+
+  function syncSearchableSelectLabel(container) {
+    if (!container) return;
+    const field = container.dataset.field;
+    const select = container.querySelector('.search-select__native');
+    const value = String(select?.value || '');
+    const label = container.querySelector('.search-select__trigger-label');
+    if (!label) return;
+    label.textContent = selectedSearchableItemLabel(field, value);
+    label.classList.toggle('is-placeholder', !value);
+  }
+
+  function openSearchableSelect(container) {
+    if (!container) return;
+    closeAllSearchableSelects(container);
+    container.classList.add('is-open');
+    container.querySelector('[data-search-select-trigger]')?.setAttribute('aria-expanded', 'true');
+    container.querySelector('[data-search-select-popover]')?.classList.remove('hidden');
+    const input = container.querySelector('[data-search-select-input]');
+    if (input) {
+      input.value = '';
+      refreshSearchableSelectOptions(container);
+      input.focus();
+    }
+  }
+
+  function initializeAllocationSearchableSelects() {
+    $('allocations-body')?.querySelectorAll('[data-search-select]').forEach((container) => {
+      const select = container.querySelector('.search-select__native');
+      if (!select) return;
+      fillNativeSearchableSelect(select);
+      syncSearchableSelectLabel(container);
+    });
+  }
+
   const defaultSuggestions = () => optionsCache.default_suggestions || {};
   const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
   const getBaseAllocationRows = () => allocationRows.filter((row) => !row.adjustment_kind);
@@ -602,27 +755,42 @@
       return;
     }
 
-    const chartOptions = buildOptions(analyticChartAccounts(), 'Selecione...', buildChartAccountLabel);
-    const costCenterOptions = buildOptions(finalCostCenters(), 'Selecione...', buildCostCenterLabel);
     const budgetDocumentOptions = buildOptions(optionsCache.budget_documents, 'Selecione...', buildBudgetLabel);
 
     body.innerHTML = allocationRows.map((row, index) => `
       <tr class="${row.adjustment_kind ? 'rateio-row--adjustment' : ''}">
-        <td class="rateio-cell rateio-cell--chart-account"><select data-index="${index}" data-field="chart_account_id" aria-label="Plano de conta da linha ${index + 1}">${chartOptions}</select></td>
-        <td class="rateio-cell rateio-cell--cost-center"><select data-index="${index}" data-field="cost_center_id" aria-label="Centro de resultado da linha ${index + 1}">${costCenterOptions}</select></td>
+        <td class="rateio-cell rateio-cell--chart-account">${renderSearchableSelect('chart_account_id', index, row.chart_account_id || '')}</td>
+        <td class="rateio-cell rateio-cell--cost-center">${renderSearchableSelect('cost_center_id', index, row.cost_center_id || '')}</td>
         <td class="rateio-cell rateio-cell--budget-document"><select data-index="${index}" data-field="budget_document_id" aria-label="NF ou assemelhado da linha ${index + 1}">${budgetDocumentOptions}</select></td>
-        <td class="rateio-cell rateio-cell--domain"><select data-index="${index}" data-field="domain_value" aria-label="Projeto ou processo da linha ${index + 1}">${buildDomainOptions(row.domain_value || '')}</select></td>
+        <td class="rateio-cell rateio-cell--domain">${renderSearchableSelect('domain_value', index, row.domain_value || '')}</td>
         <td class="rateio-cell rateio-cell--percentage"><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal" placeholder="0,0000" aria-label="Percentual da linha ${index + 1}" ${row.adjustment_kind ? 'readonly tabindex="-1"' : ''}></td>
         <td class="rateio-cell rateio-cell--amount"><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric" placeholder="0,00" aria-label="Valor da linha ${index + 1}" ${row.adjustment_kind ? 'readonly tabindex="-1"' : ''}></td>
         <td class="rateio-cell rateio-cell--actions"><div class="rateio-actions">${row.adjustment_kind ? `<span class="rateio-adjustment-tag">${row.adjustment_label || 'Ajuste'}</span>` : `<button type="button" class="btn btn-secondary btn-icon" data-action="duplicate" data-index="${index}" aria-label="Duplicar linha ${index + 1}">+</button><button type="button" class="btn btn-secondary btn-icon" data-action="remove" data-index="${index}" aria-label="Remover linha ${index + 1}">×</button>`}</div></td>
       </tr>`).join('');
 
     allocationRows.forEach((row, index) => {
-      body.querySelector(`select[data-field="chart_account_id"][data-index="${index}"]`).value = row.chart_account_id || '';
-      body.querySelector(`select[data-field="cost_center_id"][data-index="${index}"]`).value = row.cost_center_id || '';
+      const chartSelect = body.querySelector(`.search-select__native[data-field="chart_account_id"][data-index="${index}"]`);
+      if (chartSelect) {
+        chartSelect.dataset.currentValue = row.chart_account_id || '';
+        fillNativeSearchableSelect(chartSelect);
+        chartSelect.value = row.chart_account_id || '';
+      }
+      const costCenterSelect = body.querySelector(`.search-select__native[data-field="cost_center_id"][data-index="${index}"]`);
+      if (costCenterSelect) {
+        costCenterSelect.dataset.currentValue = row.cost_center_id || '';
+        fillNativeSearchableSelect(costCenterSelect);
+        costCenterSelect.value = row.cost_center_id || '';
+      }
+      const domainSelect = body.querySelector(`.search-select__native[data-field="domain_value"][data-index="${index}"]`);
+      if (domainSelect) {
+        domainSelect.dataset.currentValue = row.domain_value || '';
+        fillNativeSearchableSelect(domainSelect);
+        domainSelect.value = row.domain_value || '';
+      }
       body.querySelector(`select[data-field="budget_document_id"][data-index="${index}"]`).value = row.budget_document_id || '';
     });
 
+    initializeAllocationSearchableSelects();
     renderAllocationSummary();
   }
 
@@ -1761,6 +1929,10 @@
   });
 
   $('allocations-body').addEventListener('input', (event) => {
+    if (event.target.matches('[data-search-select-input]')) {
+      refreshSearchableSelectOptions(event.target.closest('[data-search-select]'));
+      return;
+    }
     const field = event.target.dataset.field;
     const index = Number(event.target.dataset.index || -1);
     if (index < 0 || !field || !allocationRows[index]) return;
@@ -1829,6 +2001,9 @@
         allocationRows[index].domain_type = null;
         allocationRows[index].domain_source_id = null;
         allocationRows[index].domain_label = null;
+        if (event.target.matches('.search-select__native')) {
+          syncSearchableSelectLabel(event.target.closest('[data-search-select]'));
+        }
         return;
       }
       const [sourceKind, domainType, sourceId] = value.split(':');
@@ -1837,12 +2012,41 @@
       allocationRows[index].domain_type = domainType;
       allocationRows[index].domain_source_id = Number(sourceId);
       allocationRows[index].domain_label = item?.display_label || null;
+      if (event.target.matches('.search-select__native')) {
+        syncSearchableSelectLabel(event.target.closest('[data-search-select]'));
+      }
       return;
     }
     allocationRows[index][field] = event.target.value;
+    if (event.target.matches('.search-select__native')) {
+      syncSearchableSelectLabel(event.target.closest('[data-search-select]'));
+    }
   });
 
   $('allocations-body').addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-search-select-trigger]');
+    if (trigger) {
+      event.preventDefault();
+      const container = trigger.closest('[data-search-select]');
+      if (container?.classList.contains('is-open')) {
+        closeSearchableSelect(container);
+      } else {
+        openSearchableSelect(container);
+      }
+      return;
+    }
+    const optionButton = event.target.closest('[data-search-option-value]');
+    if (optionButton) {
+      event.preventDefault();
+      const container = optionButton.closest('[data-search-select]');
+      const select = container?.querySelector('.search-select__native');
+      if (select) {
+        select.value = optionButton.dataset.searchOptionValue || '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      closeSearchableSelect(container);
+      return;
+    }
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const index = Number(button.dataset.index || -1);
@@ -1857,6 +2061,12 @@
       if (!allocationRows.length) allocationRows = [createAllocationRow({ percentage: '100' })];
       recalculateAllRowsFromPercentages();
       renderAllocations();
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-search-select]')) {
+      closeAllSearchableSelects();
     }
   });
 

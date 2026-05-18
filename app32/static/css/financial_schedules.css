@@ -364,6 +364,133 @@
   min-width: 0;
 }
 
+.search-select {
+  position: relative;
+}
+
+.search-select__native {
+  display: none;
+}
+
+.search-select__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 46px;
+  padding: 0.76rem 0.8rem;
+  border: 1px solid var(--form-border);
+  border-radius: 12px;
+  background: var(--form-bg);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.search-select.is-open .search-select__trigger,
+.search-select__trigger:focus-visible {
+  outline: none;
+  border-color: var(--form-tint-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-tint-text) 15%, transparent);
+}
+
+.search-select__trigger-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-select__trigger-label.is-placeholder {
+  color: var(--text-secondary);
+}
+
+.search-select__trigger-icon {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.search-select__popover {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg, 0 18px 45px rgba(15, 23, 42, 0.18));
+}
+
+.search-select__popover.hidden {
+  display: none;
+}
+
+.search-select__input {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--form-border);
+  border-radius: 10px;
+  background: var(--form-bg);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.search-select__input:focus {
+  outline: none;
+  border-color: var(--form-tint-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-tint-text) 15%, transparent);
+}
+
+.search-select__options {
+  max-height: 240px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.search-select__option {
+  width: 100%;
+  padding: 0.6rem 0.65rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.search-select__option:hover,
+.search-select__option.is-selected {
+  background: color-mix(in srgb, var(--form-tint-strong) 65%, transparent);
+  color: var(--form-tint-text);
+}
+
+.search-select__option-group {
+  display: block;
+  margin-bottom: 0.1rem;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.search-select__empty {
+  padding: 0.7rem 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
 .rateio-cell--actions {
   white-space: nowrap;
 }
