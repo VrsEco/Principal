@@ -95,6 +95,8 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert 'data-cash-flow-submit-mode="filters"' in sidebar_template
     assert 'formaction="/financial/reports/{{ report_definition.slug }}"' in sidebar_template
     assert 'name="ui_refresh" value="1"' in sidebar_template
+    assert "{% set cash_period_start = (filters.get('period_start'" in sidebar_template
+    assert "{% set title_filter_movement_nature = (filters.get('title_filter_movement_nature'" in sidebar_template
     assert 'name="enable_title_exclusions"' in template
     assert 'data-cash-flow-process' not in combined_template
     assert 'name="excluded_projected_refs"' in template

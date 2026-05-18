@@ -1,4 +1,23 @@
+{% set filters = filters or {} %}
 {% set selected_frequency = (filters.get('frequency', ['daily']) | first) %}
+{% set cash_period_start = (filters.get('period_start', [default_period_start]) | first) %}
+{% set cash_period_end = (filters.get('period_end', [default_period_end]) | first) %}
+{% set selected_chart_accounts = filters.get('chart_account_ids', []) %}
+{% set selected_cost_centers = filters.get('cost_center_ids', []) %}
+{% set selected_projects = filters.get('project_ids', []) %}
+{% set selected_processes = filters.get('process_ids', []) %}
+{% set selected_bank_accounts_raw = filters.get('bank_account_ids') %}
+{% set selected_bank_accounts = selected_bank_accounts_raw or [] %}
+{% set cash_flow_all_bank_accounts_selected = selected_bank_accounts_raw is none %}
+{% set title_exclusion_enabled = (filters.get('enable_title_exclusions', ['false']) | first) == 'true' %}
+{% set title_filter_movement_nature = (filters.get('title_filter_movement_nature', ['']) | first) %}
+{% set title_filter_counterparty_id = (filters.get('title_filter_counterparty_id', ['']) | first) %}
+{% set title_filter_chart_account_id = (filters.get('title_filter_chart_account_id', ['']) | first) %}
+{% set title_filter_cost_center_id = (filters.get('title_filter_cost_center_id', ['']) | first) %}
+{% set title_filter_search = (filters.get('title_filter_search', ['']) | first) %}
+{% set selected_projected_values_mode = (filters.get('projected_values_mode', ['with_financial_correction']) | first) %}
+{% set selected_orientation = (filters.get('orientation', ['landscape']) | first) %}
+{% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
