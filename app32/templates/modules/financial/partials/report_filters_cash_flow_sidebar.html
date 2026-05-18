@@ -157,7 +157,7 @@
     </section>
 
     <div class="report-workspace-sidebar__footer">
-        <button form="cash-flow-filter-form" type="submit" class="btn btn-primary w-100" data-cash-flow-submit-mode="filters">Aplicar Filtros</button>
+        <button form="cash-flow-filter-form" type="submit" formmethod="get" formaction="/financial/reports/{{ report_definition.slug }}" name="ui_refresh" value="1" class="btn btn-primary w-100" data-cash-flow-submit-mode="filters">Aplicar Filtros</button>
         <a class="btn btn-secondary w-100" href="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">Limpar filtros</a>
     </div>
 </div>

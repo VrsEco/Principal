@@ -21,13 +21,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return select ? select.value : '';
     };
 
-    const serializeControlValue = (params, control) => {
+    const isSubmitLikeControl = (control) => {
+        const tagName = String(control?.tagName || '').toUpperCase();
+        const type = String(control?.type || '').toLowerCase();
+        return tagName === 'BUTTON' || ['button', 'submit', 'reset', 'image', 'file'].includes(type);
+    };
+
+    const serializeControlValue = (params, control, { includeSubmitter = false } = {}) => {
         if (!control || control.disabled || !control.name) {
             return;
         }
 
         const tagName = String(control.tagName || '').toUpperCase();
         const type = String(control.type || '').toLowerCase();
+
+        if (!includeSubmitter && isSubmitLikeControl(control)) {
+            return;
+        }
 
         if ((type === 'checkbox' || type === 'radio') && !control.checked) {
             return;
@@ -63,11 +73,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const buildSubmissionQuery = (mode) => {
+    let lastSubmitter = null;
+    const resolveSubmitter = (event) => event.submitter || lastSubmitter;
+
+    const buildSubmissionQuery = (mode, submitter) => {
         const params = new URLSearchParams();
         collectAssociatedControls().forEach((control) => {
             serializeControlValue(params, control);
         });
+        if (submitter) {
+            serializeControlValue(params, submitter, { includeSubmitter: true });
+        }
 
         if (mode === 'filters') {
             params.set('ui_refresh', '1');
@@ -77,15 +93,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return params;
     };
 
+    collectAssociatedControls()
+        .filter((control) => isSubmitLikeControl(control) && (control.form === form || control.getAttribute('form') === formId))
+        .forEach((control) => {
+            control.addEventListener('click', () => {
+                lastSubmitter = control;
+            });
+        });
+
     form.addEventListener('submit', (event) => {
-        const submitMode = event.submitter?.dataset?.cashFlowSubmitMode
-            || (form.dataset.applyFiltersOnly === 'true' ? 'filters' : 'report');
+        const submitter = resolveSubmitter(event);
+        const submitMode = submitter?.dataset?.cashFlowSubmitMode
+            || (submitter?.name === 'ui_refresh' ? 'filters' : 'report');
+        const submitterAction = submitter?.getAttribute('formaction') || submitter?.formAction || '';
         let targetAction = submitMode === 'filters'
-            ? (form.dataset.filterAction || form.getAttribute('action') || window.location.pathname)
-            : form.dataset.viewAction;
+            ? (submitterAction || form.dataset.filterAction || form.getAttribute('action') || window.location.pathname)
+            : (submitterAction || form.dataset.viewAction);
         if (submitMode !== 'filters') {
             const outputMode = resolveOutputMode();
-            targetAction = outputMode === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
+            targetAction = outputMode === 'pdf' ? form.dataset.pdfAction : (submitterAction || form.dataset.viewAction);
         }
 
         if (!targetAction) {
@@ -93,8 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         event.preventDefault();
-        const query = buildSubmissionQuery(submitMode).toString();
+        const query = buildSubmissionQuery(submitMode, submitter).toString();
         window.location.href = query ? `${targetAction}?${query}` : targetAction;
+        lastSubmitter = null;
     });
 
     const scopedSelector = (selector) => {
@@ -187,6 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const tagName = String(control.tagName || '').toUpperCase();
             const type = String(control.type || '').toLowerCase();
+            if (isSubmitLikeControl(control)) {
+                return;
+            }
             if ((type === 'checkbox' || type === 'radio') && !control.checked) {
                 return;
             }

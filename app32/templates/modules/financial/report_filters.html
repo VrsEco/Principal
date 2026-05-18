@@ -152,7 +152,6 @@
               class="report-filter-grid{% if is_dre %} report-filter-grid--dre{% endif %}{% if is_cash_flow %} report-filter-grid--cash-flow{% endif %}{% if is_ledger %} report-filter-grid--ledger{% endif %}{% if is_working_capital %} report-filter-grid--working-capital{% endif %}"
               data-view-action="/financial/reports/{{ report_definition.slug }}/view"
               data-filter-action="/financial/reports/{{ report_definition.slug }}"
-              {% if is_cash_flow %}data-apply-filters-only="true"{% endif %}
               data-pdf-action="/financial/reports/{{ report_definition.slug }}/export-pdf">
             {% if is_schedule_report %}
             <div class="dre-dates-grid">
@@ -706,7 +705,7 @@
             {% endif %}
 
             <div class="report-actions{% if is_dre %} report-actions--full{% endif %}">
-                <button type="submit" class="btn btn-primary"{% if is_cash_flow %} data-cash-flow-submit-mode="report"{% endif %}>{{ 'Atualizar fluxo de caixa' if is_cash_flow else 'Gerar relatório' }}</button>
+                <button type="submit" class="btn btn-primary"{% if is_cash_flow %} formmethod="get" formaction="/financial/reports/{{ report_definition.slug }}/view" data-cash-flow-submit-mode="report"{% endif %}>{{ 'Atualizar fluxo de caixa' if is_cash_flow else 'Gerar relatório' }}</button>
             </div>
         </form>
     </section>
@@ -868,7 +867,7 @@
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260423d') }}"></script>
 {% elif report_definition.code == 'cash_flow' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260427d') }}"></script>
-<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260427e') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_cash_flow_filters.js', v='20260518b') }}"></script>
 {% else %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {

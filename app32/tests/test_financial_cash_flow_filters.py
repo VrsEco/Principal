@@ -89,9 +89,12 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert 'cash-flow-filter-form' in template
     assert 'action="/financial/reports/{{ report_definition.slug }}/view"' in template
     assert 'data-filter-action="/financial/reports/{{ report_definition.slug }}"' in template
-    assert 'data-apply-filters-only="true"' in template
+    assert 'data-apply-filters-only="true"' not in template
     assert 'data-cash-flow-submit-mode="report"' in template
+    assert 'formaction="/financial/reports/{{ report_definition.slug }}/view"' in template
     assert 'data-cash-flow-submit-mode="filters"' in sidebar_template
+    assert 'formaction="/financial/reports/{{ report_definition.slug }}"' in sidebar_template
+    assert 'name="ui_refresh" value="1"' in sidebar_template
     assert 'name="enable_title_exclusions"' in template
     assert 'data-cash-flow-process' not in combined_template
     assert 'name="excluded_projected_refs"' in template
@@ -107,6 +110,21 @@ def test_cash_flow_filter_template_uses_exclusion_language():
     assert 'name="cost_center_ids"' in sidebar_template
     assert 'name="project_ids"' in sidebar_template
     assert 'name="process_ids"' in sidebar_template
+
+
+def test_cash_flow_filter_javascript_has_submitter_safe_fallback():
+    script = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "js"
+        / "financial_cash_flow_filters.js"
+    ).read_text(encoding="utf-8")
+
+    assert "lastSubmitter" in script
+    assert "event.submitter || lastSubmitter" in script
+    assert "submitter?.name === 'ui_refresh' ? 'filters' : 'report'" in script
+    assert "isSubmitLikeControl(control)" in script
+    assert "includeSubmitter: true" in script
 
 
 def test_cash_flow_filters_accept_manual_title_exclusions():
