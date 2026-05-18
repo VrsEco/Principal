@@ -144,6 +144,7 @@ def test_cash_flow_projected_titles_route_returns_json(monkeypatch):
                         "number_installment": "NF-100 / 1",
                         "competence_date": "2026-04-01",
                         "due_date": "2026-04-15",
+                        "projection_ref": "entry:11",
                         "selected": True,
                     }
                 ],
@@ -166,7 +167,7 @@ def test_cash_flow_projected_titles_route_returns_json(monkeypatch):
         "&bank_account_ids=-1"
         "&bank_account_ids=3"
         "&enable_title_exclusions=true"
-        "&excluded_entry_ids=11"
+        "&excluded_projected_refs=entry:11"
         "&title_filter_search=fornecedor"
         "&title_filter_counterparty_id=9",
         follow_redirects=False,
@@ -178,7 +179,7 @@ def test_cash_flow_projected_titles_route_returns_json(monkeypatch):
     assert captured["company_id"] == 7
     assert captured["filters"]["period_start"] == "2026-04-01"
     assert captured["filters"]["bank_account_ids"] == ["3"]
-    assert captured["filters"]["excluded_entry_ids"] == ["11"]
+    assert captured["filters"]["excluded_projected_refs"] == ["entry:11"]
     assert "title_filter_search" not in captured["filters"]
     assert captured["selection_filters"]["search"] == "fornecedor"
     assert captured["selection_filters"]["counterparty_id"] == "9"

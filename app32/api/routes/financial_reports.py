@@ -48,6 +48,7 @@ _LIST_FILTER_KEYS = {
     "working_capital_accounts",
     "counterparty_ids",
     "excluded_entry_ids",
+    "excluded_projected_refs",
 }
 
 _IGNORED_FILTER_QUERY_KEYS = {

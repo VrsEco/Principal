@@ -35,6 +35,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
     counterparty_id: Optional[int] = Field(default=None, ge=1)
     counterparty_ids: list[int] = Field(default_factory=list)
     excluded_entry_ids: list[int] = Field(default_factory=list)
+    excluded_projected_refs: list[str] = Field(default_factory=list)
 
     movement_nature: Optional[str] = None
     schedule_status: Optional[str] = None

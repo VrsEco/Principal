@@ -2,7 +2,7 @@
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
-    <p class="report-workspace-sidebar-subtitle">Parâmetros do Fluxo de Caixa. A área central fica dedicada à retirada de agendamentos.</p>
+    <p class="report-workspace-sidebar-subtitle">Parâmetros do Fluxo de Caixa. A área central fica dedicada à retirada de títulos financeiros em aberto.</p>
 </div>
 
 <div class="sidebar-content-ws report-workspace-sidebar cash-flow-report-sidebar">
@@ -95,7 +95,7 @@
         <div class="cash-flow-filters-panel__header">
             <div>
                 <strong>Filtros para retirada</strong>
-                <small>Refine a busca e clique em Aplicar Filtros para atualizar a página antes de marcar os agendamentos na tela central.</small>
+                <small>Refine a busca e clique em Aplicar Filtros para atualizar a página antes de marcar os títulos financeiros na tela central.</small>
             </div>
         </div>
         <div class="filter-group">
@@ -134,7 +134,7 @@
             </select>
         </div>
         <div class="filter-group">
-            <label class="filter-label" for="cash-flow-title-search">Buscar agendamento</label>
+            <label class="filter-label" for="cash-flow-title-search">Buscar título financeiro</label>
             <input form="cash-flow-filter-form" id="cash-flow-title-search" type="text" name="title_filter_search" value="{{ title_filter_search }}" placeholder="Histórico, número ou código" data-filter-input data-default-value="">
         </div>
     </section>
@@ -157,7 +157,7 @@
     </section>
 
     <div class="report-workspace-sidebar__footer">
-        <button form="cash-flow-filter-form" type="submit" class="btn btn-primary w-100">Aplicar Filtros</button>
+        <button form="cash-flow-filter-form" type="submit" class="btn btn-primary w-100" data-cash-flow-submit-mode="filters">Aplicar Filtros</button>
         <a class="btn btn-secondary w-100" href="/financial/reports/{{ report_definition.slug }}{% if company_id %}?company_id={{ company_id }}{% endif %}">Limpar filtros</a>
     </div>
 </div>

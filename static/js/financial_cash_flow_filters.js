@@ -48,29 +48,42 @@ document.addEventListener('DOMContentLoaded', () => {
         params.append(control.name, value);
     };
 
-    const buildSubmissionQuery = () => {
-        const params = new URLSearchParams();
+    const collectAssociatedControls = () => {
         const seen = new Set();
         const controls = Array.from(form.elements || []);
         const associatedControls = formId
             ? Array.from(document.querySelectorAll(`[form="${formId}"]`))
             : [];
-
-        [...controls, ...associatedControls].forEach((control) => {
+        return [...controls, ...associatedControls].filter((control) => {
             if (!control || seen.has(control)) {
-                return;
+                return false;
             }
             seen.add(control);
+            return true;
+        });
+    };
+
+    const buildSubmissionQuery = (mode) => {
+        const params = new URLSearchParams();
+        collectAssociatedControls().forEach((control) => {
             serializeControlValue(params, control);
         });
 
-        params.set('ui_refresh', '1');
+        if (mode === 'filters') {
+            params.set('ui_refresh', '1');
+        } else {
+            params.delete('ui_refresh');
+        }
         return params;
     };
 
     form.addEventListener('submit', (event) => {
-        let targetAction = form.dataset.viewAction;
-        if (form.dataset.applyFiltersOnly !== 'true') {
+        const submitMode = event.submitter?.dataset?.cashFlowSubmitMode
+            || (form.dataset.applyFiltersOnly === 'true' ? 'filters' : 'report');
+        let targetAction = submitMode === 'filters'
+            ? (form.dataset.filterAction || form.getAttribute('action') || window.location.pathname)
+            : form.dataset.viewAction;
+        if (submitMode !== 'filters') {
             const outputMode = resolveOutputMode();
             targetAction = outputMode === 'pdf' ? form.dataset.pdfAction : form.dataset.viewAction;
         }
@@ -80,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         event.preventDefault();
-        const query = buildSubmissionQuery().toString();
+        const query = buildSubmissionQuery(submitMode).toString();
         window.location.href = query ? `${targetAction}?${query}` : targetAction;
     });
 
@@ -108,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const periodEndInput = scopedSelector('input[name="period_end"]');
 
     const selectedIds = new Set(
-        Array.from(selectedInputsContainer.querySelectorAll('input[name="excluded_entry_ids"]'))
+        Array.from(selectedInputsContainer.querySelectorAll('input[name="excluded_projected_refs"], input[name="excluded_entry_ids"]'))
             .map((input) => String(input.value || '').trim())
             .filter(Boolean)
     );
@@ -130,11 +143,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const syncSelectedInputs = () => {
         selectedInputsContainer.innerHTML = '';
         Array.from(selectedIds)
-            .sort((left, right) => Number(left) - Number(right))
+            .sort((left, right) => String(left).localeCompare(String(right), 'pt-BR', { numeric: true }))
             .forEach((entryId) => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
-                input.name = 'excluded_entry_ids';
+                input.name = 'excluded_projected_refs';
                 input.value = entryId;
                 selectedInputsContainer.appendChild(input);
             });
@@ -164,19 +177,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buildPreviewQuery = () => {
         const params = new URLSearchParams();
-        const formData = new FormData(form);
-        for (const [key, rawValue] of formData.entries()) {
-            if (key === 'excluded_entry_ids' || key === 'enable_title_exclusions') {
-                continue;
+        collectAssociatedControls().forEach((control) => {
+            if (!control || control.disabled || !control.name) {
+                return;
             }
-            const value = String(rawValue ?? '').trim();
+            if (control.name === 'excluded_entry_ids' || control.name === 'excluded_projected_refs' || control.name === 'enable_title_exclusions') {
+                return;
+            }
+
+            const tagName = String(control.tagName || '').toUpperCase();
+            const type = String(control.type || '').toLowerCase();
+            if ((type === 'checkbox' || type === 'radio') && !control.checked) {
+                return;
+            }
+
+            if (tagName === 'SELECT' && control.multiple) {
+                Array.from(control.selectedOptions || [])
+                    .map((option) => String(option.value ?? '').trim())
+                    .filter(Boolean)
+                    .forEach((value) => params.append(control.name, value));
+                return;
+            }
+
+            const value = String(control.value ?? '').trim();
             if (!value) {
-                continue;
+                return;
             }
-            params.append(key, value);
-        }
+            params.append(control.name, value);
+        });
         params.set('enable_title_exclusions', flagInput.value || 'false');
-        Array.from(selectedIds).forEach((entryId) => params.append('excluded_entry_ids', entryId));
+        Array.from(selectedIds).forEach((entryId) => params.append('excluded_projected_refs', entryId));
         return params;
     };
 
@@ -205,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         previewBody.innerHTML = '';
         titles.forEach((item) => {
-            const entryId = String(item.id);
+            const entryId = String(item.projection_ref || item.id);
             if (item.selected) {
                 selectedIds.add(entryId);
             }

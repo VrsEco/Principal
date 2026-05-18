@@ -120,7 +120,7 @@
 {% set selected_output_mode = (filters.get('output_mode', ['screen']) | first) %}
 {% set selected_reference_date = (filters.get('reference_date', [default_period_end]) | first) %}
 {% set title_exclusion_enabled = (filters.get('enable_title_exclusions', ['false']) | first) == 'true' %}
-{% set selected_excluded_entry_ids = filters.get('excluded_entry_ids', []) %}
+{% set selected_excluded_projected_refs = filters.get('excluded_projected_refs', filters.get('excluded_entry_ids', [])) %}
 {% set title_filter_movement_nature = (filters.get('title_filter_movement_nature', ['']) | first) %}
 {% set title_filter_counterparty_id = (filters.get('title_filter_counterparty_id', ['']) | first) %}
 {% set title_filter_chart_account_id = (filters.get('title_filter_chart_account_id', ['']) | first) %}
@@ -148,9 +148,10 @@
     <section class="report-panel">
         <form method="get"
               id="{{ 'cash-flow-filter-form' if is_cash_flow else 'financial-report-filter-form' }}"
-              action="/financial/reports/{{ report_definition.slug }}{% if not is_cash_flow %}/view{% endif %}"
+              action="/financial/reports/{{ report_definition.slug }}/view"
               class="report-filter-grid{% if is_dre %} report-filter-grid--dre{% endif %}{% if is_cash_flow %} report-filter-grid--cash-flow{% endif %}{% if is_ledger %} report-filter-grid--ledger{% endif %}{% if is_working_capital %} report-filter-grid--working-capital{% endif %}"
-              data-view-action="/financial/reports/{{ report_definition.slug }}{% if not is_cash_flow %}/view{% endif %}"
+              data-view-action="/financial/reports/{{ report_definition.slug }}/view"
+              data-filter-action="/financial/reports/{{ report_definition.slug }}"
               {% if is_cash_flow %}data-apply-filters-only="true"{% endif %}
               data-pdf-action="/financial/reports/{{ report_definition.slug }}/export-pdf">
             {% if is_schedule_report %}
@@ -415,14 +416,14 @@
                         <input type="hidden" name="enable_title_exclusions" value="{{ 'true' if title_exclusion_enabled else 'false' }}" data-cash-flow-exclusion-flag>
                         <label class="check-field">
                             <input type="checkbox" value="true" data-cash-flow-exclusion-toggle {% if title_exclusion_enabled %}checked{% endif %}>
-                            <span>Retirar agendamentos financeiros do fluxo</span>
+                            <span>Retirar títulos financeiros em aberto do fluxo</span>
                         </label>
-                        <small class="cash-flow-banner__hint">Use os filtros no painel lateral direito, clique em Aplicar Filtros e marque abaixo os agendamentos/títulos que não devem compor o saldo projetado.</small>
+                        <small class="cash-flow-banner__hint">Use os filtros no painel lateral direito, clique em Aplicar Filtros e marque abaixo os títulos financeiros em aberto que não devem compor o saldo projetado.</small>
                     </div>
 
                     <div class="cash-flow-selected-inputs" data-cash-flow-selected-inputs>
-                        {% for entry_id in selected_excluded_entry_ids %}
-                        <input type="hidden" name="excluded_entry_ids" value="{{ entry_id }}">
+                        {% for projection_ref in selected_excluded_projected_refs %}
+                        <input type="hidden" name="excluded_projected_refs" value="{{ projection_ref }}">
                         {% endfor %}
                     </div>
 
@@ -432,11 +433,11 @@
                          data-enabled="{{ 'true' if title_exclusion_enabled else 'false' }}">
                         <div class="cash-flow-preview__toolbar">
                             <div>
-                                <strong>Agendamentos elegíveis para retirada</strong>
+                                <strong>Títulos financeiros em aberto elegíveis para retirada</strong>
                                 <small data-cash-flow-preview-summary>Abra os filtros no botão superior, ajuste o período e clique em <strong>Aplicar Filtros</strong>.</small>
                             </div>
                             <div class="cash-flow-preview__selected">
-                                <span data-cash-flow-selected-count>{{ selected_excluded_entry_ids|length }}</span>
+                                <span data-cash-flow-selected-count>{{ selected_excluded_projected_refs|length }}</span>
                                 <small>selecionado(s)</small>
                             </div>
                         </div>
@@ -453,7 +454,7 @@
                         </div>
                         <div class="cash-flow-preview__body" data-cash-flow-preview-body>
                             <div class="cash-flow-preview__empty">
-                                Os agendamentos/títulos em aberto do período aparecerão aqui para marcação individual.
+                                Os títulos financeiros em aberto do período aparecerão aqui para marcação individual.
                             </div>
                         </div>
                     </div>
@@ -705,7 +706,7 @@
             {% endif %}
 
             <div class="report-actions{% if is_dre %} report-actions--full{% endif %}">
-                <button type="submit" class="btn btn-primary">{{ 'Atualizar fluxo de caixa' if is_cash_flow else 'Gerar relatório' }}</button>
+                <button type="submit" class="btn btn-primary"{% if is_cash_flow %} data-cash-flow-submit-mode="report"{% endif %}>{{ 'Atualizar fluxo de caixa' if is_cash_flow else 'Gerar relatório' }}</button>
             </div>
         </form>
     </section>
