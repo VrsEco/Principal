@@ -26,6 +26,8 @@ desktop.ini
 **/*.sqlite
 **/instance/
 **/.pytest_cache/
+backups/database/*.sql
+backups/database/*.sql.gz
 
 # Project specific ignores
 **/2026.01 - XML - Entradas/
