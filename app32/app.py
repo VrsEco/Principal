@@ -719,6 +719,7 @@ def register_api_resources(api):
         FinancialBankReconciliationRowCandidatesResource,
         FinancialBankReconciliationRowMatchResource,
         FinancialBankReconciliationGroupMatchResource,
+        FinancialBankReconciliationTitleSettlementResource,
         FinancialBankReconciliationCreateEntryResource,
         FinancialClassificationRuleListResource,
         FinancialClassificationRuleResource,
@@ -937,6 +938,7 @@ def register_api_resources(api):
     api.add_resource(FinancialBankReconciliationRowCandidatesResource, '/api/financial/reconciliation/rows/<int:row_id>/candidates')
     api.add_resource(FinancialBankReconciliationRowMatchResource, '/api/financial/reconciliation/rows/<int:row_id>/match')
     api.add_resource(FinancialBankReconciliationGroupMatchResource, '/api/financial/reconciliation/groups/match')
+    api.add_resource(FinancialBankReconciliationTitleSettlementResource, '/api/financial/reconciliation/rows/<int:row_id>/settle-title')
     api.add_resource(FinancialBankReconciliationCreateEntryResource, '/api/financial/reconciliation/rows/<int:row_id>/create-entry')
     api.add_resource(
         FinancialAutomationOptionsResource,

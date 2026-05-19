@@ -13,6 +13,7 @@ from models.financial import (
     FinancialImportBatch,
     FinancialImportRow,
     FinancialReconciliationMatch,
+    FinancialSchedule,
     FinancialSettlement,
 )
 from services.financial_catalog_service import FinancialCatalogService
@@ -57,6 +58,20 @@ class FinancialReconciliationService:
             .scalar()
         ) or Decimal("0")
         return Decimal(entry.original_amount or 0) - Decimal(total_liquidated)
+
+    @staticmethod
+    def _get_settled_principal(entry: FinancialEntry) -> Decimal:
+        total_liquidated = (
+            db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
+            .filter(
+                FinancialSettlement.company_id == entry.company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            .scalar()
+        ) or Decimal("0")
+        return Decimal(total_liquidated)
 
     @staticmethod
     def _create_auto_settlement_from_match(
@@ -147,6 +162,63 @@ class FinancialReconciliationService:
         metadata["reconciled"] = bool(reconciled)
         metadata["reconciliation_updated_reason"] = actor_reason
         entry.metadata_json = metadata
+
+    @staticmethod
+    def _append_reconciliation_audit_event(entry: FinancialEntry, payload: Dict) -> None:
+        metadata = dict(entry.metadata_json or {})
+        history = list(metadata.get("reconciliation_audit_history") or [])
+        history.append(payload)
+        metadata["reconciliation_audit_history"] = history[-20:]
+        entry.metadata_json = metadata
+
+    @staticmethod
+    def _adjust_open_title_original_amount(
+        *,
+        entry: FinancialEntry,
+        target_amount: Decimal,
+        row: FinancialImportRow,
+    ) -> Dict:
+        target_amount = FinancialReconciliationService._decimal(target_amount).quantize(Decimal("0.01"))
+        settled_before = FinancialReconciliationService._get_settled_principal(entry).quantize(Decimal("0.01"))
+        if target_amount <= 0:
+            raise ValueError("O novo valor do título precisa ser maior que zero.")
+        if target_amount < settled_before:
+            raise ValueError("O novo valor do título não pode ser menor que o valor já baixado.")
+
+        previous_amount = FinancialReconciliationService._decimal(entry.original_amount or 0).quantize(Decimal("0.01"))
+        entry.original_amount = target_amount
+        if entry.financial_schedule_id:
+            schedule = FinancialSchedule.query.filter(
+                FinancialSchedule.id == entry.financial_schedule_id,
+                FinancialSchedule.company_id == entry.company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            ).first()
+            if schedule:
+                schedule.template_amount = target_amount
+                schedule_metadata = dict(schedule.metadata_json or {})
+                schedule_metadata["reconciliation_title_amount_adjustment"] = {
+                    "source": "bank_reconciliation_open_title",
+                    "row_id": row.id,
+                    "previous_amount": float(previous_amount),
+                    "new_amount": float(target_amount),
+                }
+                schedule.metadata_json = schedule_metadata
+
+        FinancialReconciliationService._append_reconciliation_audit_event(
+            entry,
+            {
+                "event": "title_original_amount_adjusted_via_reconciliation",
+                "row_id": row.id,
+                "import_batch_id": row.import_batch_id,
+                "previous_amount": float(previous_amount),
+                "new_amount": float(target_amount),
+            },
+        )
+        return {
+            "previous_amount": float(previous_amount),
+            "new_amount": float(target_amount),
+            "settled_before": float(settled_before),
+        }
 
     @staticmethod
     def _resolve_row_context(company_id: int, row: FinancialImportRow) -> Dict:
@@ -645,6 +717,196 @@ class FinancialReconciliationService:
             "confirmed_matches": confirmations,
             "remaining_row_amount": float(remaining_row_amount),
         }, None
+
+    @staticmethod
+    def settle_open_title_from_bank_row(
+        *,
+        row_id: int,
+        financial_entry_id: int,
+        company_id: int,
+        resolution_strategy: Optional[str] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        row = FinancialImportRow.query.filter(
+            FinancialImportRow.id == row_id,
+            FinancialImportRow.company_id == company_id,
+            FinancialImportRow.deleted_at.is_(None),
+        ).first()
+        if not row:
+            return None, "Linha do extrato não encontrada no escopo da empresa."
+
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == financial_entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first()
+        if not entry:
+            return None, "Título financeiro não encontrado no escopo da empresa."
+        if entry.entry_type not in {"payable", "receivable"}:
+            return None, "A baixa 1x1 desta coluna aceita apenas títulos financeiros."
+
+        existing_confirmed = FinancialReconciliationMatch.query.filter(
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.import_row_id == row.id,
+            FinancialReconciliationMatch.match_status == "confirmed",
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ).first()
+        if existing_confirmed or row.created_entry_id:
+            return None, "A linha bancária já está conciliada. Cancele a conciliação antes de refazer a baixa."
+
+        row_nature = str(row.movement_nature or "").strip().lower()
+        entry_nature = str(entry.movement_nature or "").strip().lower()
+        if row_nature and entry_nature and row_nature != entry_nature:
+            return None, "A natureza do título financeiro precisa ser a mesma da linha bancária selecionada."
+
+        remaining_principal = FinancialReconciliationService._get_remaining_principal(entry).quantize(Decimal("0.01"))
+        if remaining_principal <= 0:
+            return None, "O título financeiro selecionado já está totalmente baixado."
+
+        settled_before = FinancialReconciliationService._get_settled_principal(entry).quantize(Decimal("0.01"))
+        row_amount = FinancialReconciliationService._decimal(row.amount or 0).quantize(Decimal("0.01"))
+        difference = (row_amount - remaining_principal).quantize(Decimal("0.01"))
+        tolerance = Decimal("0.01")
+
+        normalized_strategy = str(resolution_strategy or "").strip().lower()
+        can_partial = row_amount < remaining_principal
+        can_change_original = True
+        can_financial_correction = abs(difference) > tolerance
+
+        if abs(difference) > tolerance and normalized_strategy not in {
+            "partial_settlement",
+            "change_original_amount",
+            "financial_correction",
+        }:
+            return {
+                "requires_resolution": True,
+                "row_id": row.id,
+                "financial_entry_id": entry.id,
+                "bank_amount": float(row_amount),
+                "title_open_amount": float(remaining_principal),
+                "difference": float(difference),
+                "can_partial_settlement": can_partial,
+                "can_change_original_amount": can_change_original,
+                "can_financial_correction": can_financial_correction,
+                "message": "Os valores divergem. Escolha como deseja tratar a baixa do título financeiro.",
+            }, None
+
+        if normalized_strategy == "partial_settlement" and not can_partial:
+            return None, "Baixa parcial só pode ser usada quando o valor do extrato for menor que o saldo em aberto do título."
+
+        batch = FinancialImportBatch.query.filter(
+            FinancialImportBatch.id == row.import_batch_id,
+            FinancialImportBatch.company_id == company_id,
+            FinancialImportBatch.deleted_at.is_(None),
+        ).first()
+        if not batch:
+            return None, "Lote da linha de extrato não encontrado para preparar a baixa do título."
+
+        row_context = FinancialReconciliationService._resolve_row_context(company_id, row)
+        match = FinancialReconciliationMatch.query.filter(
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.import_row_id == row.id,
+            FinancialReconciliationMatch.financial_entry_id == entry.id,
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ).first()
+        if not match:
+            score, reason = FinancialReconciliationService._score_match(row, entry, row_context=row_context)
+            match = FinancialReconciliationMatch(
+                company_id=company_id,
+                import_batch_id=batch.id,
+                import_row_id=row.id,
+                financial_entry_id=entry.id,
+                match_status="suggested",
+                confidence_score=score,
+                match_reason=f"baixa de título em aberto: {reason}",
+                matched_amount=row.amount,
+                matched_date=row.occurred_on or row.due_date,
+                metadata_json={"manual_selection": True, "open_title_reconciliation": True},
+            )
+            db.session.add(match)
+            db.session.flush()
+
+        adjustments: Dict[str, object] = {
+            "principal_amount": row_amount,
+        }
+        amount_adjustment_snapshot = None
+
+        if abs(difference) <= tolerance:
+            normalized_strategy = "exact_match"
+        elif normalized_strategy == "partial_settlement":
+            adjustments["principal_amount"] = row_amount
+        elif normalized_strategy == "change_original_amount":
+            target_amount = (settled_before + row_amount).quantize(Decimal("0.01"))
+            try:
+                amount_adjustment_snapshot = FinancialReconciliationService._adjust_open_title_original_amount(
+                    entry=entry,
+                    target_amount=target_amount,
+                    row=row,
+                )
+            except ValueError as exc:
+                return None, str(exc)
+            adjustments["principal_amount"] = row_amount
+        elif normalized_strategy == "financial_correction":
+            adjustments["principal_amount"] = remaining_principal
+            if difference > 0:
+                adjustments["other_adjustments_amount"] = difference
+            else:
+                adjustments["discount_amount"] = abs(difference)
+
+        try:
+            match.match_status = "confirmed"
+            match.matched_amount = row.amount
+            match.matched_date = row.occurred_on or row.due_date
+            match.metadata_json = {
+                **dict(match.metadata_json or {}),
+                "manual_selection": True,
+                "open_title_reconciliation": True,
+                "resolution_strategy": normalized_strategy,
+                "difference": float(difference),
+            }
+
+            row.normalized_payload = row_context
+            row.matched_entry_id = entry.id
+            row.processing_status = "validated" if row.processing_status != "imported" else row.processing_status
+            entry.review_status = "reviewed"
+
+            settlement_payload, settlement_error = FinancialReconciliationService._create_auto_settlement_from_match(
+                company_id=company_id,
+                row=row,
+                entry=entry,
+                match=match,
+                adjustments=adjustments,
+            )
+            if settlement_error:
+                db.session.rollback()
+                return None, settlement_error
+
+            db.session.commit()
+            memory_result, memory_error = FinancialClassificationHybridService.learn_from_confirmed_row(
+                company_id=company_id,
+                import_row_id=row.id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            return {
+                "row_id": row.id,
+                "financial_entry_id": entry.id,
+                "match_mode": "1:1",
+                "resolution_strategy": normalized_strategy,
+                "difference": float(difference),
+                "match": match.to_dict(),
+                "auto_settlement": settlement_payload,
+                "title_amount_adjustment": amount_adjustment_snapshot,
+                "classification_memory": memory_result,
+                "classification_memory_error": memory_error,
+            }, None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao baixar título em aberto via conciliação bancária")
+            return None, f"Erro ao baixar título em aberto: {str(exc)}"
 
     @staticmethod
     def reconcile_group(

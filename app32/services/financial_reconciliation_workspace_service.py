@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -11,6 +11,7 @@ from models.financial import (
     FinancialImportBatch,
     FinancialImportRow,
     FinancialReconciliationMatch,
+    FinancialSchedule,
     FinancialSettlement,
 )
 from services.financial_reconciliation_service import FinancialReconciliationService
@@ -98,6 +99,39 @@ class FinancialReconciliationWorkspaceService:
         payload["linked_row_ids"] = linked_row_ids
         payload["linked_rows_count"] = len(linked_row_ids)
         payload["match_mode"] = "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched")
+        return payload
+
+    @staticmethod
+    def _serialize_open_title(
+        entry: FinancialEntry,
+        *,
+        linked_row_ids: Optional[Sequence[int]] = None,
+    ) -> Dict:
+        payload = FinancialReconciliationWorkspaceService._serialize_system_entry(
+            entry,
+            linked_row_ids=linked_row_ids,
+        )
+        schedule = None
+        if entry.financial_schedule_id:
+            schedule = FinancialSchedule.query.filter(
+                FinancialSchedule.id == entry.financial_schedule_id,
+                FinancialSchedule.company_id == entry.company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            ).first()
+        payload["title"] = {
+            "schedule_id": getattr(schedule, "id", None),
+            "schedule_code": getattr(schedule, "schedule_code", None),
+            "name": getattr(schedule, "name", None) or payload.get("description"),
+            "status": getattr(schedule, "status", None) or payload.get("status"),
+            "next_due_date": (
+                getattr(schedule, "next_due_date", None).isoformat()
+                if getattr(schedule, "next_due_date", None)
+                else payload.get("due_date")
+            ),
+            "template_amount": float(getattr(schedule, "template_amount", 0) or payload.get("original_amount") or 0),
+            "source": "schedule" if schedule else "entry",
+        }
+        payload["can_title_settle"] = payload["remaining_amount"] > 0
         return payload
 
     @staticmethod
@@ -189,6 +223,54 @@ class FinancialReconciliationWorkspaceService:
             .limit(200)
             .all()
         )
+
+    @staticmethod
+    def _load_open_titles(
+        *,
+        company_id: int,
+        rows: Sequence[FinancialImportRow],
+    ) -> List[FinancialEntry]:
+        query = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+            FinancialEntry.entry_type.in_(["payable", "receivable"]),
+            FinancialEntry.status.in_(["posted", "partially_settled"]),
+        )
+
+        reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
+        if reference_dates:
+            start_date = min(reference_dates) - timedelta(days=120)
+            end_date = max(reference_dates) + timedelta(days=120)
+            query = query.filter(
+                db.or_(
+                    FinancialEntry.occurred_on.between(start_date, end_date),
+                    FinancialEntry.due_date.between(start_date, end_date),
+                    FinancialEntry.competence_date.between(start_date, end_date),
+                )
+            )
+
+        movement_natures = {
+            str(item.movement_nature or "").strip().lower()
+            for item in rows
+            if str(item.movement_nature or "").strip()
+        }
+        if len(movement_natures) == 1:
+            query = query.filter(FinancialEntry.movement_nature == next(iter(movement_natures)))
+
+        candidates = (
+            query.order_by(
+                FinancialEntry.due_date.asc(),
+                FinancialEntry.competence_date.asc(),
+                FinancialEntry.id.desc(),
+            )
+            .limit(200)
+            .all()
+        )
+        return [
+            entry
+            for entry in candidates
+            if FinancialReconciliationWorkspaceService._entry_remaining_amount(entry) > 0
+        ]
 
     @staticmethod
     def _build_status_message(
@@ -362,6 +444,22 @@ class FinancialReconciliationWorkspaceService:
             if not item["linked_rows_count"] and not item["is_reconciled"]
         ]
 
+        open_titles = FinancialReconciliationWorkspaceService._load_open_titles(
+            company_id=company_id,
+            rows=rows,
+        )
+        open_title_rows = [
+            FinancialReconciliationWorkspaceService._serialize_open_title(
+                entry,
+                linked_row_ids=linked_entry_ids.get(int(entry.id), []),
+            )
+            for entry in open_titles
+        ]
+        open_title_unmatched_rows = [
+            item for item in open_title_rows
+            if item.get("can_title_settle") and not item["is_reconciled"]
+        ]
+
         return {
             "bank_account": account.to_dict(),
             "selected_batch": selected_batch.to_dict() if selected_batch else None,
@@ -373,6 +471,8 @@ class FinancialReconciliationWorkspaceService:
             "bank_rows_reconciled": confirmed_rows,
             "system_rows": system_rows,
             "system_rows_without_link": system_unmatched_rows,
+            "open_title_rows": open_title_rows,
+            "open_title_rows_without_link": open_title_unmatched_rows,
             "summary": {
                 "total_rows": len(rows),
                 "pending_rows": len(pending_rows),
@@ -381,6 +481,7 @@ class FinancialReconciliationWorkspaceService:
                 "unmatched_bank_rows": len(pending_rows),
                 "unmatched_system_rows": len(system_unmatched_rows),
                 "system_rows": len(system_rows),
+                "open_titles": len(open_title_rows),
             },
         }, None
 

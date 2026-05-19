@@ -95,7 +95,7 @@
             <div class="board-toolbar">
                 <div class="filter-group" id="bank-filter-group"></div>
                 <label class="compact-field">
-                    <span>Buscar no sistema</span>
+                    <span>Buscar no sistema / títulos</span>
                     <input id="system-search" type="search" placeholder="Histórico, documento ou código">
                 </label>
             </div>
@@ -121,11 +121,21 @@
                     <div id="system-rows-list" class="rows-stack rows-stack--dense"></div>
                 </section>
 
+                <section class="board-column board-column--titles">
+                    <div class="column-header">
+                        <div>
+                            <h3>3. Títulos em aberto</h3>
+                            <p>Baixa 1x1 com a linha bancária usando a data e o valor do extrato.</p>
+                        </div>
+                    </div>
+                    <div id="open-title-rows-list" class="rows-stack rows-stack--dense"></div>
+                </section>
+
                 <aside class="board-column board-column--actions">
                     <div class="column-header">
                         <div>
-                            <h3>3. Painel de decisão</h3>
-                            <p>Revise sugestões, faça vínculos 1:1 / 1:N e crie lançamentos quando necessário.</p>
+                            <h3>4. Painel de decisão</h3>
+                            <p>Revise sugestões, faça vínculos 1:1 / 1:N e efetue baixas diretas de títulos quando necessário.</p>
                         </div>
                     </div>
                     <div id="workbench-panel" class="rows-stack rows-stack--dense"></div>
@@ -179,7 +189,7 @@
     .row-between,.actions-right,.workspace-toolbar{justify-content:space-between}
     .panel-toggle.row-between{justify-content:flex-start}
     .summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}
-    .summary-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+    .summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
     .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .upload-grid label,.workspace-toolbar label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
     .upload-grid input,.upload-grid select,.workspace-toolbar select,.compact-field input,.allocation-grid input,.entry-form-grid input,.entry-form-grid select,.entry-form-grid textarea{
@@ -213,7 +223,7 @@
     .col-span-2{grid-column:span 2}
     .rows-stack{display:flex;flex-direction:column;gap:.85rem;padding:1.25rem}
     .rows-stack--dense{padding:1rem}
-    .recon-board{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.05fr) minmax(340px,.9fr);gap:1rem;padding:0 1.25rem 1.25rem;align-items:start}
+    .recon-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(340px,.88fr);gap:1rem;padding:0 1.25rem 1.25rem;align-items:start}
     .board-column{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
     .board-column--actions{position:sticky;top:1rem}
     .column-header{padding:1rem 1rem 0}
@@ -285,6 +295,7 @@ const state = {
     selectedBankRowIds: [],
     bankFilter: 'pending',
     selectedEntryIds: [],
+    selectedOpenTitleId: null,
     entryAllocations: {},
     rowCandidates: {},
     systemSearch: '',
@@ -445,6 +456,22 @@ function isSystemEntryDisabled(item, activeRow=getActiveRow()){
     return linkedIds.has(Number(item?.id));
 }
 
+function canUseOpenTitleFlow(activeRow=getActiveRow()){
+    if(!activeRow) return false;
+    if((state.selectedBankRowIds || []).length !== 1) return false;
+    if(activeRow?.created_entry_id || activeRow?.matches?.confirmed_count) return false;
+    return true;
+}
+
+function isOpenTitleDisabled(item, activeRow=getActiveRow()){
+    if(!canUseOpenTitleFlow(activeRow)) return true;
+    if(!item?.can_title_settle || Number(item?.remaining_amount || 0) <= 0) return true;
+    if(item?.is_reconciled) return true;
+    const rowNature = String(activeRow?.movement_nature || '').toLowerCase();
+    const titleNature = String(item?.movement_nature || '').toLowerCase();
+    return Boolean(rowNature && titleNature && rowNature !== titleNature);
+}
+
 function systemRowStateClass(item, activeRow=getActiveRow()){
     if(state.selectedEntryIds.map(Number).includes(Number(item?.id))) return 'is-selected';
     return isSystemEntryDisabled(item, activeRow) ? 'is-disabled' : 'is-actionable';
@@ -462,6 +489,10 @@ function getSelectedBankRows(){
 function getSelectedSystemRows(){
     const selectedIds = new Set((state.selectedEntryIds || []).map(Number));
     return (state.workspace?.system_rows || []).filter(item => selectedIds.has(Number(item.id)));
+}
+
+function getSelectedOpenTitle(){
+    return (state.workspace?.open_title_rows || []).find(item => String(item.id) === String(state.selectedOpenTitleId || '')) || null;
 }
 
 function getGroupSummary(){
@@ -525,6 +556,7 @@ function renderSummary(){
         <div class="summary-card"><span>Sugestões automáticas</span><strong>${summary.suggested_matches || 0}</strong><small>Candidatos já identificados pelo motor.</small></div>
         <div class="summary-card"><span>Conciliados</span><strong>${summary.confirmed_matches || 0}</strong><small>Linhas já resolvidas nesta conta.</small></div>
         <div class="summary-card"><span>Sem vínculo no sistema</span><strong>${summary.unmatched_system_rows || 0}</strong><small>Lançamentos que seguem sem associação no lote.</small></div>
+        <div class="summary-card"><span>Títulos em aberto</span><strong>${summary.open_titles || 0}</strong><small>Títulos elegíveis para baixa 1x1 via extrato bancário.</small></div>
     `;
 }
 
@@ -616,6 +648,44 @@ function renderSystemRows(){
     `).join('');
 }
 
+function renderOpenTitleRows(){
+    const container = document.getElementById('open-title-rows-list');
+    const rows = getVisibleOpenTitleRows();
+    const activeRow = getActiveRow();
+    if(!rows.length){
+        container.innerHTML = emptyState('Nenhum título elegível', 'Não há títulos em aberto compatíveis com o filtro atual para esta conta/empresa.');
+        return;
+    }
+    container.innerHTML = rows.map(item => {
+        const title = item.title || {};
+        const selected = String(item.id) === String(state.selectedOpenTitleId || '');
+        const disabled = isOpenTitleDisabled(item, activeRow) && !selected;
+        const difference = Number(activeRow?.amount || 0) - Number(item.remaining_amount || 0);
+        const canPreviewDiff = canUseOpenTitleFlow(activeRow);
+        return `
+            <article class="slot-card ${selected ? 'is-selected' : (disabled ? 'is-disabled' : 'is-actionable')}" onclick="selectOpenTitle(${item.id})">
+                <div class="selection-line">
+                    <div>
+                        <h4>${escapeHtml(title.schedule_code || item.entry_code || `Título ${item.id}`)}</h4>
+                        <p class="row-meta">${escapeHtml(title.name || item.description || '-')}</p>
+                        <p class="row-meta">Saldo ${brl(item.remaining_amount)} · Original ${brl(title.template_amount ?? item.original_amount)} · Venc. ${escapeHtml(title.next_due_date || item.due_date || '-')}</p>
+                    </div>
+                    <input type="radio" name="open-title-selection" ${selected ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="selectOpenTitle(${item.id})">
+                </div>
+                <div class="badges">
+                    ${badge(item.entry_type === 'payable' ? 'Conta a pagar' : 'Conta a receber', 'mute')}
+                    ${badge(item.status || 'posted', 'info')}
+                    ${canPreviewDiff ? badge(`Diferença ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn') : badge('Selecione 1 linha bancária', 'warn')}
+                </div>
+                <div class="inline-actions">
+                    <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;">Abrir título</a>
+                    ${!selected && !disabled ? `<button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOpenTitle(${item.id})">Selecionar</button>` : ''}
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
 function buildAllocationDraft(){
     const activeRow = getActiveRow();
     if(!activeRow) return [];
@@ -639,6 +709,8 @@ function renderWorkbench(){
     const container = document.getElementById('workbench-panel');
     const row = getActiveRow();
     const selectedRows = getSelectedBankRows();
+    const selectedOpenTitle = getSelectedOpenTitle();
+    const titleFlowEnabled = canUseOpenTitleFlow(row);
     if(!selectedRows.length){
         container.innerHTML = emptyState('Selecione um ou mais registros bancários', 'O painel de decisão mostra totais, sugestões, vinculação por conjunto e criação rápida quando há seleção.');
         return;
@@ -680,6 +752,26 @@ function renderWorkbench(){
                     `).join('<div class="divider"></div>')}
                 </div>
             ` : '<p class="muted">Sem candidatos carregados para esta linha.</p>'}
+        </section>
+
+        <section class="workbench-card">
+            <h4>Baixa de título em aberto</h4>
+            <p class="row-meta">Fluxo exclusivo 1x1: selecione exatamente uma linha bancária e um título em aberto para efetuar a baixa usando a data e o valor do extrato.</p>
+            <div class="group-totals">
+                <div class="group-total-card"><span>Linha bancária</span><strong>${row ? brl(row.amount) : brl(0)}</strong></div>
+                <div class="group-total-card"><span>Título aberto</span><strong>${selectedOpenTitle ? brl(selectedOpenTitle.remaining_amount) : brl(0)}</strong></div>
+                <div class="group-total-card"><span>Diferença</span><strong>${selectedOpenTitle && row ? brl(Number(row.amount || 0) - Number(selectedOpenTitle.remaining_amount || 0)) : brl(0)}</strong></div>
+            </div>
+            <div class="helper-list">
+                ${titleFlowEnabled ? `
+                    <p class="row-meta">Linha em foco: ${escapeHtml(row?.description || '-')} · ${brl(row?.amount)}</p>
+                    <p class="row-meta">Título selecionado: ${selectedOpenTitle ? `${escapeHtml(selectedOpenTitle.title?.schedule_code || selectedOpenTitle.entry_code || `Título ${selectedOpenTitle.id}`)} · saldo ${brl(selectedOpenTitle.remaining_amount)}` : 'nenhum título selecionado'}</p>
+                ` : '<p class="row-meta">Para esta operação, mantenha apenas 1 linha bancária selecionada e escolha um título em aberto.</p>'}
+            </div>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-primary" onclick="settleSelectedOpenTitle()" ${!titleFlowEnabled || !selectedOpenTitle ? 'disabled' : ''}>Baixar título selecionado</button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelectedOpenTitle()">Limpar título</button>
+            </div>
         </section>
 
         <section class="workbench-card">
@@ -727,6 +819,7 @@ function renderWorkspace(){
     renderBankFilters();
     renderBankRows();
     renderSystemRows();
+    renderOpenTitleRows();
     renderWorkbench();
     renderHero();
 }
@@ -759,6 +852,7 @@ async function openWorkspace(bankAccountId, batchId=null){
     state.selectedBatchId = batchId;
     state.selectedBankRowIds = [];
     state.selectedEntryIds = [];
+    state.selectedOpenTitleId = null;
     state.entryAllocations = {};
     state.rowCandidates = {};
     state.showCreateEntry = false;
@@ -792,6 +886,7 @@ async function focusBankRow(rowId){
     if(!state.rowCandidates[rowId]) await loadCandidates(rowId);
     renderBankRows();
     renderSystemRows();
+    renderOpenTitleRows();
     renderWorkbench();
 }
 
@@ -811,11 +906,13 @@ async function toggleBankRowSelection(rowId){
     state.selectedBankRowIds = Array.from(current);
     if(!state.selectedBankRowIds.length){
         state.activeRowId = null;
+        state.selectedOpenTitleId = null;
     } else if(!state.selectedBankRowIds.map(Number).includes(Number(state.activeRowId))){
         state.activeRowId = state.selectedBankRowIds[0];
     }
     renderBankRows();
     renderSystemRows();
+    renderOpenTitleRows();
     renderWorkbench();
 }
 
@@ -849,11 +946,28 @@ function clearSelectedEntries(){
     renderWorkbench();
 }
 
+function selectOpenTitle(entryId){
+    const activeRow = getActiveRow();
+    const item = (state.workspace?.open_title_rows || []).find(row => String(row.id) === String(entryId));
+    if(isOpenTitleDisabled(item, activeRow) && String(state.selectedOpenTitleId || '') !== String(entryId)) return;
+    state.selectedOpenTitleId = String(state.selectedOpenTitleId || '') === String(entryId) ? null : Number(entryId);
+    renderOpenTitleRows();
+    renderWorkbench();
+}
+
+function clearSelectedOpenTitle(){
+    state.selectedOpenTitleId = null;
+    renderOpenTitleRows();
+    renderWorkbench();
+}
+
 function clearSelectedBankRows(){
     state.selectedBankRowIds = [];
     state.activeRowId = null;
+    state.selectedOpenTitleId = null;
     renderBankRows();
     renderSystemRows();
+    renderOpenTitleRows();
     renderWorkbench();
 }
 
@@ -890,6 +1004,7 @@ async function confirmSelectedMatches(resolutionStrategy=null){
         closeReconModal();
         state.selectedBankRowIds = [];
         state.selectedEntryIds = [];
+        state.selectedOpenTitleId = null;
         state.entryAllocations = {};
         await loadOverview();
         await refreshWorkspace();
@@ -914,6 +1029,7 @@ async function cancelRowReconciliation(){
     });
     state.selectedEntryIds = [];
     state.entryAllocations = {};
+    state.selectedOpenTitleId = null;
     await loadOverview();
     await refreshWorkspace();
 }
@@ -961,9 +1077,81 @@ function openResolutionModal(payload){
     });
 }
 
+function openOpenTitleResolutionModal(payload){
+    openReconModal({
+        kicker: 'Divergência no título',
+        title: 'Escolha como tratar a diferença',
+        body: `
+            <p class="muted">${escapeHtml(payload.message || 'Os valores divergem entre a linha bancária e o título em aberto.')}</p>
+            <div class="group-totals">
+                <div class="group-total-card"><span>Extrato</span><strong>${brl(payload.bank_amount)}</strong></div>
+                <div class="group-total-card"><span>Saldo do título</span><strong>${brl(payload.title_open_amount)}</strong></div>
+                <div class="group-total-card"><span>Diferença</span><strong>${brl(payload.difference)}</strong></div>
+            </div>
+            <div class="helper-list">
+                ${payload.can_partial_settlement ? '<p class="row-meta">a) Baixa parcial: baixa somente o valor do extrato e mantém saldo em aberto.</p>' : ''}
+                ${payload.can_change_original_amount ? '<p class="row-meta">b) Alterar valor original: ajusta o valor-base do título para casar com o extrato e registra auditoria.</p>' : ''}
+                ${payload.can_financial_correction ? '<p class="row-meta">c) Correção financeira: preserva o valor original e registra a diferença na própria baixa.</p>' : ''}
+            </div>
+            <div class="inline-actions">
+                ${payload.can_partial_settlement ? '<button type="button" class="btn btn-secondary" onclick="settleSelectedOpenTitle(\'partial_settlement\')">Baixa parcial</button>' : ''}
+                ${payload.can_change_original_amount ? '<button type="button" class="btn btn-secondary" onclick="settleSelectedOpenTitle(\'change_original_amount\')">Alterar valor original</button>' : ''}
+                ${payload.can_financial_correction ? '<button type="button" class="btn btn-primary" onclick="settleSelectedOpenTitle(\'financial_correction\')">Correção financeira</button>' : ''}
+                <button type="button" class="btn btn-secondary" onclick="closeReconModal()">Voltar</button>
+            </div>
+        `,
+    });
+}
+
+function getVisibleOpenTitleRows(){
+    const rows = state.workspace?.open_title_rows || [];
+    const query = String(state.systemSearch || '').trim().toLowerCase();
+    return rows.filter((item) => {
+        if(!query) return true;
+        const title = item.title || {};
+        const haystack = [
+            item.entry_code,
+            item.description,
+            item.document_number,
+            title.schedule_code,
+            title.name,
+        ].join(' ').toLowerCase();
+        return haystack.includes(query);
+    });
+}
+
 function openEntryForCorrection(entryId){
     const returnTo = `${window.location.pathname}${window.location.search}`;
     window.location.href = `/financial/entries/${entryId}${companyQuery({return_to: returnTo})}`;
+}
+
+async function settleSelectedOpenTitle(resolutionStrategy=null){
+    const row = getActiveRow();
+    const title = getSelectedOpenTitle();
+    if(!row || !title || !canUseOpenTitleFlow(row)){
+        alert('Selecione exatamente 1 linha bancária e 1 título em aberto.');
+        return;
+    }
+    try{
+        await api(`/api/financial/reconciliation/rows/${row.id}/settle-title${companyQuery()}`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                financial_entry_id: Number(title.id),
+                resolution_strategy: resolutionStrategy,
+            }),
+        });
+        closeReconModal();
+        state.selectedOpenTitleId = null;
+        await loadOverview();
+        await refreshWorkspace();
+    } catch(error){
+        if(error.status === 409 && error.payload?.requires_resolution){
+            openOpenTitleResolutionModal(error.payload);
+            return;
+        }
+        alert(error.message || 'Não foi possível baixar o título selecionado.');
+    }
 }
 
 function openCreateEntryModal(){
@@ -1166,6 +1354,7 @@ document.getElementById('upload-file').addEventListener('change', () => {
 document.getElementById('system-search').addEventListener('input', (event) => {
     state.systemSearch = event.target.value || '';
     renderSystemRows();
+    renderOpenTitleRows();
 });
 
 document.addEventListener('DOMContentLoaded', () => {

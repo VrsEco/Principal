@@ -1544,6 +1544,25 @@ class FinancialBankReconciliationGroupMatchResource(Resource):
         return result, 200
 
 
+class FinancialBankReconciliationTitleSettlementResource(Resource):
+    @permission_required("financial", "edit")
+    def post(self, row_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationService.settle_open_title_from_bank_row(
+            company_id=company_id,
+            row_id=row_id,
+            financial_entry_id=int(payload.get("financial_entry_id") or 0),
+            resolution_strategy=payload.get("resolution_strategy"),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        if result and result.get("requires_resolution"):
+            return result, 409
+        return result, 200
+
+
 class FinancialBankReconciliationCreateEntryResource(Resource):
     @permission_required("financial", "create")
     def post(self, row_id: int):
