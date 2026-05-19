@@ -297,6 +297,19 @@ def is_collaborator_in_company(company_id):
     return get_access_profile(company_id) == PROFILE_COLLABORATOR
 
 
+def can_model_process(company_id):
+    """
+    Permite modelagem BPMN/processual para qualquer usuário com edição completa
+    ou, temporariamente, para todos os colaboradores ativos da empresa.
+
+    Guardrail mantido:
+    - nunca cruza tenant; exige vínculo explícito do usuário com a empresa
+    """
+    if not current_user.is_authenticated or not company_id:
+        return False
+    return has_permission(company_id, "processes", "edit") or is_collaborator_in_company(company_id)
+
+
 def admin_required(f):
     """Decorator to require global admin role"""
 

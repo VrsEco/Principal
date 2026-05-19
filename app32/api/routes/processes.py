@@ -16,7 +16,7 @@ from database import get_db
 from models import db, Company, Process, ProcessInstance, Employee, Indicator
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
-from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company
+from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company, can_model_process
 
 processes_bp = Blueprint('processes', __name__)
 logger = logging.getLogger(__name__)
@@ -256,8 +256,6 @@ def processes_list():
     company_id = request.args.get('company_id', type=int) or session.get('active_company_id')
     if not company_id and current_user.is_authenticated:
         company_id = get_default_company_id()
-    if company_id and is_collaborator_in_company(company_id):
-        abort(403, description="Acesso negado: Colaboradores não podem acessar a listagem detalhada de processos.")
     if company_id:
         session['active_company_id'] = company_id
     return render_template('modules/processes/processes_v2.html', company_id=company_id)
@@ -357,8 +355,8 @@ def process_map_compact():
 def process_details(process_id):
     """Process details page (modeling/pops)"""
     process = _get_process_with_access(process_id, action='view')
-    if is_collaborator_in_company(process.company_id):
-        abort(403, description="Acesso negado: Colaboradores não podem acessar os detalhes de modelagem do processo.")
+    if not can_model_process(process.company_id):
+        abort(403, description="Acesso negado: Usuário sem permissão para modelar este processo.")
 
     company = Company.query.get_or_404(process.company_id)
     return render_template('modules/processes/process_details_v2.html', 
@@ -374,8 +372,8 @@ def process_details(process_id):
 def process_bpmn_modeler(process_id):
     """APP32 BPMN Modeler page."""
     process = _get_process_with_access(process_id, action='view')
-    if is_collaborator_in_company(process.company_id):
-        abort(403, description="Acesso negado: Colaboradores não podem acessar a modelagem BPMN do processo.")
+    if not can_model_process(process.company_id):
+        abort(403, description="Acesso negado: Usuário sem permissão para modelar este processo.")
 
     company = Company.query.get_or_404(process.company_id)
     return render_template(

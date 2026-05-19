@@ -40,7 +40,7 @@ from models import (
     Occurrence,
     FinancialAutomationRule,
 )
-from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required
+from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required, can_model_process
 from utils.sql_execution import execute_formatted_query
 from database import get_db
 from sqlalchemy import and_, or_
@@ -1620,11 +1620,11 @@ class ProcessResource(Resource):
             )
             raise
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def put(self, process_id):
-        process = _get_process_with_access(process_id, action='edit', sync_session=True)
-        if not process:
-            return {"error": "Permission denied: edit on processes"}, 403
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
         try:
             if request.mimetype == 'multipart/form-data':
                 # Handle flow document upload
@@ -1761,7 +1761,7 @@ class ProcessBpmnDiagramResource(Resource):
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'create')
+    @permission_required('processes', 'view')
     def post(self, process_id):
         return self.put(process_id)
 
@@ -1802,11 +1802,11 @@ class ProcessBpmnDiagramExportResource(Resource):
 
 
 class ProcessBpmnPopBindingResource(Resource):
-    @permission_required('processes', 'create')
+    @permission_required('processes', 'view')
     def post(self, process_id):
-        process = _get_process_with_access(process_id, action='create', sync_session=True)
-        if not process:
-            return {"error": "Permission denied: create on processes"}, 403
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
 
         try:
             payload = request.get_json(silent=True) or {}
@@ -1847,11 +1847,11 @@ class ProcessActivityExecutionContractListResource(Resource):
         )
         return process_activity_execution_contracts_schema.dump(contracts), 200
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def post(self, process_id):
-        process = _get_process_with_access(process_id, action='edit', sync_session=True)
-        if not process:
-            return {"error": "Permission denied: edit on processes"}, 403
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
             payload['company_id'] = process.company_id
@@ -1887,12 +1887,12 @@ class ProcessActivityExecutionContractResource(Resource):
             return {"error": "Permission denied: view on processes"}, 403
         return process_activity_execution_contract_schema.dump(contract), 200
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def put(self, contract_id):
         contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
-        process = _get_process_with_access(contract.process_id, action='edit', sync_session=True)
-        if not process or process.company_id != contract.company_id:
-            return {"error": "Permission denied: edit on processes"}, 403
+        process = _get_process_with_access(contract.process_id, action='view', sync_session=True)
+        if not process or process.company_id != contract.company_id or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
             baseline = {
@@ -1928,12 +1928,12 @@ class ProcessActivityExecutionContractResource(Resource):
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
-    @permission_required('processes', 'delete')
+    @permission_required('processes', 'view')
     def delete(self, contract_id):
         contract = ProcessActivityExecutionContract.query.get_or_404(contract_id)
-        process = _get_process_with_access(contract.process_id, action='delete', sync_session=True)
-        if not process or process.company_id != contract.company_id:
-            return {"error": "Permission denied: delete on processes"}, 403
+        process = _get_process_with_access(contract.process_id, action='view', sync_session=True)
+        if not process or process.company_id != contract.company_id or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
         contract.is_active = False
         db.session.commit()
         return {"message": "Contrato de execução desativado com sucesso."}, 200
@@ -1951,11 +1951,11 @@ class ProcessBpmnAiAssistantResource(Resource):
             "execution_modes": get_execution_mode_catalog(),
         }, 200
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def post(self, process_id):
-        process = _get_process_with_access(process_id, action='edit', sync_session=True)
-        if not process:
-            return {"error": "Permission denied: edit on processes"}, 403
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
             payload["process_id"] = process.id

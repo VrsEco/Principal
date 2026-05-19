@@ -48,6 +48,7 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
     monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
     monkeypatch.setattr(process_routes, 'is_collaborator_in_company', lambda company_id: False)
+    monkeypatch.setattr(process_routes, 'can_model_process', lambda company_id: company_id == 22)
     monkeypatch.setattr(process_routes, '_build_process_details_payload', lambda process: {'company_id': process.company_id, 'name': process.name})
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
@@ -74,6 +75,7 @@ def test_process_bpmn_modeler_route_exposes_asset_version(monkeypatch):
     monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
     monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
     monkeypatch.setattr(process_routes, 'is_collaborator_in_company', lambda company_id: False)
+    monkeypatch.setattr(process_routes, 'can_model_process', lambda company_id: company_id == 22)
     monkeypatch.setattr(process_routes, '_process_bpmn_modeler_asset_version', lambda: '123456')
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
@@ -83,6 +85,47 @@ def test_process_bpmn_modeler_route_exposes_asset_version(monkeypatch):
     assert response['template'] == 'modules/processes/bpmn_modeler.html'
     assert response['context']['company_id'] == 22
     assert response['context']['asset_version'] == '123456'
+
+
+def test_collaborator_can_access_bpmn_modeler_when_modeling_is_temporarily_open(monkeypatch):
+    app = _build_app()
+    fake_process = SimpleNamespace(id=287, company_id=22, name='Processo X')
+    fake_company = SimpleNamespace(id=22, name='Empresa X')
+
+    monkeypatch.setattr(process_routes, 'current_user', SimpleNamespace(is_authenticated=True, role='collaborator'))
+    monkeypatch.setattr(process_routes, 'has_permission', lambda company_id, resource, action: company_id == 22)
+    monkeypatch.setattr(process_routes, 'Process', SimpleNamespace(query=_FakeProcessQuery(fake_process)))
+    monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
+    monkeypatch.setattr(process_routes, 'can_model_process', lambda company_id: company_id == 22)
+    monkeypatch.setattr(process_routes, '_process_bpmn_modeler_asset_version', lambda: '123456')
+    monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
+
+    with app.test_request_context('/processes/287/bpmn-modeler'):
+        response = process_routes.process_bpmn_modeler.__wrapped__(287)
+
+    assert response['template'] == 'modules/processes/bpmn_modeler.html'
+    assert response['context']['process_id'] == 287
+
+
+def test_collaborator_can_save_bpmn_when_modeling_is_temporarily_open(monkeypatch):
+    app = _build_app()
+    fake_process = SimpleNamespace(id=287, company_id=22, code='P-22')
+    saved = {}
+
+    monkeypatch.setattr(process_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='collaborator'))
+    monkeypatch.setattr(process_resource, '_get_process_with_access', lambda process_id, action='view', sync_session=False: fake_process)
+    monkeypatch.setattr(process_resource, 'can_model_process', lambda company_id: company_id == 22)
+    monkeypatch.setattr(process_resource, 'upsert_process_bpmn_diagram', lambda process, payload, user_id=None: saved.update({'process': process, 'payload': payload, 'user_id': user_id}) or SimpleNamespace())
+    monkeypatch.setattr(process_resource, 'serialize_diagram', lambda diagram, process: {'process_id': process.id, 'status': 'draft'})
+
+    with app.test_request_context('/api/processes/287/bpmn-diagram', method='PUT', json={'status': 'draft', 'bpmn_xml': '<xml />'}):
+        response, status = process_resource.ProcessBpmnDiagramResource().put.__wrapped__(process_resource.ProcessBpmnDiagramResource(), 287)
+
+    assert status == 200
+    assert response['process_id'] == 287
+    assert saved['process'].company_id == 22
+    assert saved['payload']['status'] == 'draft'
+    assert saved['user_id'] == 9
 
 
 def test_process_resource_checks_permission_against_process_company(monkeypatch):
