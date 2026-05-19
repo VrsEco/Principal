@@ -1,5 +1,6 @@
 import os
 import logging
+import math
 from pathlib import Path
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
@@ -60,6 +61,46 @@ def _coerce_optional_text(value):
     return text or None
 
 
+def _parse_hours_used(value):
+    """Converte dedicação para horas decimais aceitando decimal e HH:MM.
+
+    A tela de executores usa máscara visual HH:MM (ex.: 04:00), mas o backend
+    persiste horas decimais. A validação precisa ser tolerante ao formato real
+    enviado pelo navegador para não transformar uma dedicação válida em zero.
+    """
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        return numeric if math.isfinite(numeric) else None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if ":" in text:
+        parts = text.split(":")
+        if len(parts) != 2:
+            return None
+        hours_raw, minutes_raw = (part.strip() for part in parts)
+        if not (hours_raw.isdigit() and minutes_raw.isdigit()):
+            return None
+        minutes = int(minutes_raw)
+        if minutes < 0 or minutes > 59:
+            return None
+        return int(hours_raw) + (minutes / 60)
+
+    normalized = text.replace(" ", "").replace("\u00a0", "")
+    if "," in normalized:
+        normalized = normalized.replace(".", "").replace(",", ".")
+    try:
+        numeric = float(normalized)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
 def _get_current_company_employee(company_id: int):
     if not current_user.is_authenticated or not company_id:
         return None
@@ -110,9 +151,8 @@ def _validate_routine_collaborator_payload(data: dict):
     except (TypeError, ValueError):
         return None, "Selecione um colaborador válido."
 
-    try:
-        hours_used = float(data.get("hours_used"))
-    except (TypeError, ValueError):
+    hours_used = _parse_hours_used(data.get("hours_used"))
+    if hours_used is None:
         return None, "Informe uma dedicação válida."
 
     if hours_used <= 0:

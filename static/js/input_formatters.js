@@ -112,7 +112,33 @@
   }
 
   function parseClockToDecimalHours(value) {
-    const totalMinutes = parseClockToMinutes(value);
+    const raw = String(value ?? '').trim();
+    if (!raw) return 0;
+
+    if (!raw.includes(':')) {
+      const compact = raw.replace(/\s+/g, '');
+      if (/[,.]/.test(compact)) {
+        const normalizedDecimal = compact.includes(',')
+          ? compact.replace(/\./g, '').replace(',', '.')
+          : compact;
+        const decimal = Number(normalizedDecimal.replace(/[^0-9.\-]/g, ''));
+        if (Number.isFinite(decimal)) {
+          return Math.max(0, Math.round((decimal + Number.EPSILON) * 100) / 100);
+        }
+      }
+
+      const digits = onlyDigits(raw);
+      if (digits && digits.length <= 2) {
+        return Number(digits);
+      }
+      if (digits && digits.length > 2) {
+        const clockValue = normalizeClockInput(digits);
+        const totalMinutesFromDigits = parseClockToMinutes(clockValue);
+        return Math.round(((totalMinutesFromDigits / 60) + Number.EPSILON) * 100) / 100;
+      }
+    }
+
+    const totalMinutes = parseClockToMinutes(raw);
     return Math.round(((totalMinutes / 60) + Number.EPSILON) * 100) / 100;
   }
 
