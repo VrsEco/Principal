@@ -66,6 +66,47 @@ class FinancialService:
         return float(FinancialService._money_decimal(value))
 
     @staticmethod
+    def _is_direct_entry_linked_entry(entry: Optional[FinancialEntry], schedule: Optional[FinancialSchedule] = None) -> bool:
+        if entry is None:
+            return False
+        entry_metadata = dict(getattr(entry, "metadata_json", {}) or {})
+        if entry_metadata.get("direct_entry"):
+            return True
+        if schedule is not None:
+            schedule_metadata = dict(getattr(schedule, "metadata_json", {}) or {})
+            if schedule_metadata.get("direct_entry"):
+                return True
+        return False
+
+    @staticmethod
+    def _requires_whole_entry_delete(entry: Optional[FinancialEntry], schedule: Optional[FinancialSchedule] = None) -> bool:
+        if entry is None:
+            return False
+        entry_metadata = dict(getattr(entry, "metadata_json", {}) or {})
+        if str(entry_metadata.get("generate_target") or "").strip().lower() == "entry":
+            return True
+        return FinancialService._is_direct_entry_linked_entry(entry, schedule)
+
+    @staticmethod
+    def _resolve_linked_schedule(entry: Optional[FinancialEntry], company_id: int) -> Optional[FinancialSchedule]:
+        if entry is None:
+            return None
+        schedule_id = getattr(entry, "financial_schedule_id", None)
+        if not schedule_id:
+            external_reference = str(getattr(entry, "external_reference", "") or "").strip()
+            if external_reference.startswith("financial_schedule:"):
+                raw_schedule_id = external_reference.split(":", 1)[1].strip()
+                if raw_schedule_id.isdigit():
+                    schedule_id = int(raw_schedule_id)
+        if not schedule_id:
+            return None
+        return FinancialSchedule.query.filter(
+            FinancialSchedule.id == schedule_id,
+            FinancialSchedule.company_id == company_id,
+            FinancialSchedule.deleted_at.is_(None),
+        ).first()
+
+    @staticmethod
     def _normalize_component_kind(component_type: Optional[str]) -> str:
         normalized = str(component_type or "").strip().lower()
         if normalized in FinancialService.CORRECTION_COMPONENT_TYPES:
@@ -2414,13 +2455,12 @@ class FinancialService:
                 FinancialEntry.company_id == company_id,
                 FinancialEntry.deleted_at.is_(None),
             ).first()
-            schedule = None
-            if entry and getattr(entry, "financial_schedule_id", None):
-                schedule = FinancialSchedule.query.filter(
-                    FinancialSchedule.id == entry.financial_schedule_id,
-                    FinancialSchedule.company_id == company_id,
-                    FinancialSchedule.deleted_at.is_(None),
-                ).first()
+            schedule = FinancialService._resolve_linked_schedule(entry, company_id)
+            if FinancialService._requires_whole_entry_delete(entry, schedule):
+                return None, (
+                    "Lançamento rápido não permite excluir apenas a baixa. "
+                    "Exclua o lançamento rápido inteiro para remover baixa e título."
+                )
 
             components = FinancialSettlementComponent.query.filter(
                 FinancialSettlementComponent.company_id == company_id,
@@ -2521,6 +2561,86 @@ class FinancialService:
             db.session.rollback()
             logger.exception("Erro ao remover baixa financeira %s", settlement_id)
             return None, f"Erro ao remover baixa: {str(exc)}"
+
+    @staticmethod
+    def delete_entry(
+        *,
+        entry_id: int,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first()
+        if not entry:
+            return None, "Lançamento financeiro não encontrado no escopo da empresa."
+
+        schedule = FinancialService._resolve_linked_schedule(entry, company_id)
+        whole_delete_required = FinancialService._requires_whole_entry_delete(entry, schedule)
+        active_settlements = FinancialSettlement.query.filter(
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.financial_entry_id == entry.id,
+            FinancialSettlement.deleted_at.is_(None),
+            FinancialSettlement.settlement_status != "cancelled",
+        ).all()
+
+        if active_settlements and not whole_delete_required:
+            return None, "Não é possível excluir um lançamento que ainda possui baixa ativa."
+
+        reconciled_settlement = next(
+            (
+                settlement
+                for settlement in active_settlements
+                if str(getattr(settlement, "reconciliation_status", "") or "").strip().lower() in {"matched", "reconciled"}
+            ),
+            None,
+        )
+        if reconciled_settlement is not None:
+            return None, "Não é possível excluir o lançamento porque a baixa já foi conciliada. Desfaça a conciliação antes de excluir."
+
+        try:
+            deleted_at = datetime.utcnow()
+            entry.deleted_at = deleted_at
+            entry.metadata_json = {
+                **dict(getattr(entry, "metadata_json", {}) or {}),
+                "deleted_with_whole_entry_flow": whole_delete_required,
+                "deleted_at": deleted_at.isoformat(),
+            }
+            FinancialEntryAllocation.query.filter(
+                FinancialEntryAllocation.company_id == company_id,
+                FinancialEntryAllocation.financial_entry_id == entry.id,
+                FinancialEntryAllocation.deleted_at.is_(None),
+            ).update({"deleted_at": deleted_at}, synchronize_session=False)
+
+            if schedule is not None and whole_delete_required:
+                schedule.deleted_at = deleted_at
+                schedule.metadata_json = {
+                    **dict(getattr(schedule, "metadata_json", {}) or {}),
+                    "deleted_with_whole_entry_flow": True,
+                    "deleted_at": deleted_at.isoformat(),
+                }
+
+            for settlement in active_settlements:
+                settlement.deleted_at = deleted_at
+                settlement.metadata_json = {
+                    **dict(getattr(settlement, "metadata_json", {}) or {}),
+                    "deleted_at": deleted_at.isoformat(),
+                    "deleted_with_whole_entry_flow": whole_delete_required,
+                    "deleted_via": "financial_service.delete_entry",
+                }
+
+            db.session.commit()
+            return {"message": "Lançamento financeiro removido com sucesso.", "id": entry.id}, None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao remover lançamento financeiro %s", entry_id)
+            return None, f"Erro ao remover lançamento financeiro: {str(exc)}"
 
     @staticmethod
     def _generate_settlement_code(company_id: int) -> str:

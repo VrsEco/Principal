@@ -75,6 +75,10 @@
   overflow: hidden;
 }
 
+.sched-shell--form .sched-card {
+  overflow: visible;
+}
+
 .rail-card,
 .sched-form {
   padding: 1rem;
@@ -331,7 +335,9 @@
 }
 
 .rateio-table-wrap {
-  overflow: auto;
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .rateio-table {
@@ -362,6 +368,93 @@
 .rateio-table td > select,
 .rateio-table td > input {
   min-width: 0;
+}
+
+.search-select {
+  position: relative;
+}
+
+.search-select__native {
+  display: none;
+}
+
+.search-select__display {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.76rem 0.8rem;
+  border: 1px solid var(--form-border);
+  border-radius: 12px;
+  background: var(--form-bg);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.search-select__display:focus {
+  outline: none;
+  border-color: var(--form-tint-text);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-tint-text) 15%, transparent);
+}
+
+.search-select__display::placeholder {
+  color: var(--text-secondary);
+}
+
+.search-select__popover {
+  position: fixed;
+  z-index: 10000;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg, 0 18px 45px rgba(15, 23, 42, 0.18));
+  min-width: 220px;
+}
+
+.search-select__popover.hidden {
+  display: none;
+}
+
+.search-select__options {
+  max-height: 180px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.search-select__option {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.search-select__option:hover,
+.search-select__option.is-selected,
+.search-select__option.is-active {
+  background: color-mix(in srgb, var(--form-tint-strong) 65%, transparent);
+  color: var(--form-tint-text);
+}
+
+.search-select__option-group {
+  display: block;
+  margin-bottom: 0.1rem;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.search-select__empty {
+  padding: 0.7rem 0.65rem;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
 }
 
 .rateio-cell--actions {

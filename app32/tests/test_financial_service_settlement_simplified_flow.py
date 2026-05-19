@@ -834,6 +834,169 @@ def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monk
         assert not saved_path.exists()
 
 
+def test_delete_settlement_rejects_direct_entry_link(monkeypatch):
+    schedule = type("Schedule", (), {"id": 44, "company_id": 7, "metadata_json": {"direct_entry": True}})()
+    entry = type(
+        "Entry",
+        (),
+        {"id": 21, "company_id": 7, "financial_schedule_id": 44, "deleted_at": None, "metadata_json": {"direct_entry": True}},
+    )()
+    settlement = type(
+        "Settlement",
+        (),
+        {"id": 31, "company_id": 7, "deleted_at": None, "financial_entry_id": 21, "reconciliation_status": "pending"},
+    )()
+
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSettlement",
+        type(
+            "SettlementStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(settlement),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntry",
+        type(
+            "EntryStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(entry),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSchedule",
+        type(
+            "ScheduleStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(schedule),
+            },
+        ),
+    )
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+
+    result, error = FinancialService.delete_settlement(
+        settlement_id=31,
+        company_id=7,
+        allowed_company_ids=[7],
+    )
+
+    assert result is None
+    assert "Lançamento rápido" in error
+
+
+def test_delete_entry_whole_flow_soft_deletes_active_settlement(monkeypatch):
+    schedule = type("Schedule", (), {"id": 44, "company_id": 7, "deleted_at": None, "metadata_json": {"direct_entry": True}})()
+    entry = type(
+        "Entry",
+        (),
+        {"id": 21, "company_id": 7, "financial_schedule_id": 44, "deleted_at": None, "metadata_json": {"generate_target": "entry"}},
+    )()
+    settlement = type(
+        "Settlement",
+        (),
+        {"id": 31, "company_id": 7, "deleted_at": None, "financial_entry_id": 21, "reconciliation_status": "pending", "metadata_json": {}},
+    )()
+
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntry",
+        type(
+            "EntryStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(entry),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSchedule",
+        type(
+            "ScheduleStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(schedule),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSettlement",
+        type(
+            "SettlementStub",
+            (),
+            {
+                "company_id": _Column(),
+                "financial_entry_id": _Column(),
+                "deleted_at": _Column(),
+                "settlement_status": _Column(),
+                "query": _QueryStub([settlement]),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntryAllocation",
+        type(
+            "AllocationStub",
+            (),
+            {
+                "company_id": _Column(),
+                "financial_entry_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(None),
+            },
+        ),
+    )
+    captured = {}
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        financial_module.FinancialEntryAllocation.query,
+        "update",
+        lambda values, synchronize_session=False: captured.setdefault("allocation_deleted_at", values["deleted_at"]),
+        raising=False,
+    )
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+
+    result, error = FinancialService.delete_entry(
+        entry_id=21,
+        company_id=7,
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert result == {"message": "Lançamento financeiro removido com sucesso.", "id": 21}
+    assert entry.deleted_at is not None
+    assert schedule.deleted_at is not None
+    assert settlement.deleted_at is not None
+    assert settlement.metadata_json["deleted_via"] == "financial_service.delete_entry"
+    assert captured["committed"] is True
+
+
 def test_create_settlement_rejects_zero_principal_amount(monkeypatch):
     class _FakeEntry:
         id = _Column()

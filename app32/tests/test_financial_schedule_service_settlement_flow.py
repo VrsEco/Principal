@@ -252,6 +252,130 @@ def test_delete_schedule_soft_deletes_generated_entries_without_settlements(monk
     assert isinstance(updates["allocation_deleted_at"], datetime)
 
 
+def test_delete_direct_entry_schedule_soft_deletes_linked_settlements(monkeypatch):
+    schedule = type("Schedule", (), {"id": 48, "company_id": 9, "deleted_at": None, "metadata_json": {"direct_entry": True}})()
+    linked_entry = type("Entry", (), {"id": 58, "metadata_json": {"direct_entry": True}, "deleted_at": None})()
+    linked_settlement = type(
+        "Settlement",
+        (),
+        {"id": 68, "deleted_at": None, "reconciliation_status": "pending", "metadata_json": {}},
+    )()
+
+    class _FakeScheduleModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(first_result=schedule)
+
+    class _FakeEntryModel:
+        company_id = _Column()
+        external_reference = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        query = _QueryStub(all_result=[linked_entry])
+
+    class _FakeSettlementModel:
+        company_id = _Column()
+        financial_entry_id = _Column()
+        deleted_at = _Column()
+        settlement_status = _Column()
+        query = _QueryStub(all_result=[linked_settlement])
+
+    updates = {}
+
+    class _FakeAllocationModel:
+        company_id = _Column()
+        financial_entry_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub()
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeScheduleModel)
+    monkeypatch.setattr(schedule_module, "FinancialEntry", _FakeEntryModel)
+    monkeypatch.setattr(schedule_module, "FinancialSettlement", _FakeSettlementModel)
+    monkeypatch.setattr(schedule_module, "FinancialEntryAllocation", _FakeAllocationModel)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: updates.setdefault("committed", True))
+    monkeypatch.setattr(schedule_module.db.session, "rollback", lambda: updates.setdefault("rollback", True))
+    monkeypatch.setattr(
+        schedule_module.FinancialEntryAllocation.query,
+        "update",
+        lambda values, synchronize_session=False: updates.setdefault("allocation_deleted_at", values["deleted_at"]),
+    )
+
+    import services.financial_bordero_service as bordero_module
+
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
+
+    result, error = FinancialScheduleService.delete_schedule(
+        schedule_id=48,
+        company_id=9,
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result == {"message": "Título Financeiro removido com sucesso.", "id": 48}
+    assert isinstance(schedule.deleted_at, datetime)
+    assert isinstance(linked_entry.deleted_at, datetime)
+    assert isinstance(linked_settlement.deleted_at, datetime)
+    assert linked_settlement.metadata_json["deleted_with_direct_entry_flow"] is True
+    assert updates["committed"] is True
+
+
+def test_delete_direct_entry_schedule_rejects_reconciled_settlement(monkeypatch):
+    schedule = type("Schedule", (), {"id": 48, "company_id": 9, "deleted_at": None, "metadata_json": {"direct_entry": True}})()
+    linked_entry = type("Entry", (), {"id": 58, "metadata_json": {"direct_entry": True}, "deleted_at": None})()
+    reconciled_settlement = type(
+        "Settlement",
+        (),
+        {"id": 68, "deleted_at": None, "reconciliation_status": "reconciled", "metadata_json": {}},
+    )()
+
+    class _FakeScheduleModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(first_result=schedule)
+
+    class _FakeEntryModel:
+        company_id = _Column()
+        external_reference = _Column()
+        deleted_at = _Column()
+        id = _Column()
+        query = _QueryStub(all_result=[linked_entry])
+
+    class _FakeSettlementModel:
+        company_id = _Column()
+        financial_entry_id = _Column()
+        deleted_at = _Column()
+        settlement_status = _Column()
+        query = _QueryStub(all_result=[reconciled_settlement])
+
+    class _FakeAllocationModel:
+        company_id = _Column()
+        financial_entry_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub()
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeScheduleModel)
+    monkeypatch.setattr(schedule_module, "FinancialEntry", _FakeEntryModel)
+    monkeypatch.setattr(schedule_module, "FinancialSettlement", _FakeSettlementModel)
+    monkeypatch.setattr(schedule_module, "FinancialEntryAllocation", _FakeAllocationModel)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+
+    import services.financial_bordero_service as bordero_module
+
+    monkeypatch.setattr(bordero_module.FinancialBorderoService, "get_active_bordero_for_schedule", lambda **kwargs: None)
+
+    result, error = FinancialScheduleService.delete_schedule(
+        schedule_id=48,
+        company_id=9,
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert "Desfaça a conciliação" in error
+
+
 def test_apply_schedule_allocations_persists_only_principal_rows(monkeypatch):
     captured = {}
     schedule = type(

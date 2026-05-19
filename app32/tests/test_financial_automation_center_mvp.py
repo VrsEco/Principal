@@ -26,6 +26,9 @@ class _Column:
     def asc(self):
         return self
 
+    def desc(self):
+        return self
+
 
 class _Batch:
     def __init__(self, batch_id=1, origin_type="manual_upload", source_label="Lote teste"):
@@ -438,6 +441,108 @@ def test_bulk_update_status_rejects_manual_generated_transition(monkeypatch):
 
     assert result is None
     assert error == "Use a ação de geração oficial para marcar registros como Gerada."
+
+
+def test_list_records_reconciles_generated_record_when_target_was_deleted(monkeypatch):
+    batch = _Batch()
+    item = _Record(record_id=19, settlement_state="open", batch=batch)
+    item.status = "generated"
+    item.generated_financial_schedule_id = 48
+    item.generated_by_user_id = 77
+
+    class _Query:
+        def join(self, *args, **kwargs):
+            return self
+
+        def filter(self, *args, **kwargs):
+            return self
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return [item]
+
+    class _RecordModel:
+        company_id = _Column()
+        deleted_at = _Column()
+        created_at = _Column()
+        id = _Column()
+        status = _Column()
+        document_type = _Column()
+        batch_id = _Column()
+        competence_date = _Column()
+        due_date = _Column()
+        query = _Query()
+
+    class _BatchModel:
+        id = _Column()
+        deleted_at = _Column()
+        origin_type = _Column()
+
+    commit_calls = []
+
+    monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
+    monkeypatch.setattr(automation_module, "FinancialAutomationBatch", _BatchModel)
+    monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_append_history", lambda **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_refresh_batch_summary", lambda batch: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_list_delete_blockers", lambda current: [])
+    monkeypatch.setattr(automation_module.db.session, "commit", lambda: commit_calls.append("commit"))
+    monkeypatch.setattr(automation_module.db.session, "rollback", lambda: None)
+
+    result, error = FinancialAutomationService.list_records(
+        company_id=9,
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result[0]["status"] == "validated"
+    assert item.status == "validated"
+    assert item.generated_financial_schedule_id is None
+    assert commit_calls == ["commit"]
+
+
+def test_bulk_update_status_excluded_applies_soft_delete(monkeypatch):
+    batch = _Batch()
+    item = _Record(record_id=23, settlement_state="open", batch=batch)
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return [item]
+
+    class _RecordModel:
+        company_id = _Column()
+        id = _Column()
+        deleted_at = _Column()
+        query = _Query()
+
+    monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationBulkStatusInput,
+        "model_validate",
+        lambda payload: SimpleNamespace(company_id=9, record_ids=[23], status="excluded", validation_notes=None),
+    )
+    monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_append_history", lambda **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_refresh_batch_summary", lambda batch: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_reconcile_generated_records", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(automation_module.db.session, "rollback", lambda: None)
+
+    result, error = FinancialAutomationService.bulk_update_status(
+        payload={"company_id": 9, "record_ids": [23], "status": "excluded"},
+        allowed_company_ids=[9],
+        performed_by_user_id=77,
+    )
+
+    assert error is None
+    assert result["count"] == 1
+    assert item.status == "excluded"
+    assert item.deleted_at is not None
 
 
 def test_upload_batch_files_creates_documents_without_records(monkeypatch):

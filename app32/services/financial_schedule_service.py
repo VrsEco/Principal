@@ -81,6 +81,13 @@ class FinancialScheduleService:
         return value
 
     @staticmethod
+    def _is_direct_entry_schedule(schedule: Optional[FinancialSchedule]) -> bool:
+        if schedule is None:
+            return False
+        metadata = dict(getattr(schedule, "metadata_json", {}) or {})
+        return bool(metadata.get("direct_entry"))
+
+    @staticmethod
     def _normalize_competence_mode(value: Any) -> str:
         return (
             FinancialScheduleService.COMPETENCE_MODE_DUE_DATE
@@ -812,32 +819,63 @@ class FinancialScheduleService:
             FinancialEntry.external_reference == f"financial_schedule:{schedule.id}",
             FinancialEntry.deleted_at.is_(None),
         ).all()
+        direct_entry_schedule = FinancialScheduleService._is_direct_entry_schedule(schedule)
+        active_settlements: List[FinancialSettlement] = []
         now = datetime.utcnow()
         for entry in generated_entries:
-            has_active_settlement = (
-                FinancialSettlement.query.filter(
-                    FinancialSettlement.company_id == company_id,
-                    FinancialSettlement.financial_entry_id == entry.id,
-                    FinancialSettlement.deleted_at.is_(None),
-                    FinancialSettlement.settlement_status != "cancelled",
-                ).first()
-                is not None
-            )
-            if has_active_settlement:
+            entry_active_settlements = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            ).all()
+            if not entry_active_settlements:
+                continue
+            if not direct_entry_schedule:
                 return None, "Não é possível excluir um Título Financeiro que já possui baixas. Cancele-o ou edite-o."
+            active_settlements.extend(entry_active_settlements)
+
+        if direct_entry_schedule:
+            reconciled_settlement = next(
+                (
+                    settlement
+                    for settlement in active_settlements
+                    if str(getattr(settlement, "reconciliation_status", "") or "").strip().lower() in {"matched", "reconciled"}
+                ),
+                None,
+            )
+            if reconciled_settlement is not None:
+                return None, (
+                    "Não é possível excluir o lançamento rápido inteiro porque a baixa já foi conciliada. "
+                    "Desfaça a conciliação antes de excluir."
+                )
 
         try:
             schedule.deleted_at = now
+            schedule.metadata_json = {
+                **dict(getattr(schedule, "metadata_json", None) or {}),
+                "deleted_with_direct_entry_flow": direct_entry_schedule,
+            }
             for entry in generated_entries:
                 entry.deleted_at = now
                 metadata = dict(getattr(entry, "metadata_json", None) or {})
                 metadata["deleted_with_schedule"] = True
+                metadata["deleted_with_direct_entry_flow"] = direct_entry_schedule
                 entry.metadata_json = metadata
                 FinancialEntryAllocation.query.filter(
                     FinancialEntryAllocation.company_id == company_id,
                     FinancialEntryAllocation.financial_entry_id == entry.id,
                     FinancialEntryAllocation.deleted_at.is_(None),
                 ).update({"deleted_at": now}, synchronize_session=False)
+            for settlement in active_settlements:
+                settlement.deleted_at = now
+                settlement.metadata_json = {
+                    **dict(getattr(settlement, "metadata_json", None) or {}),
+                    "deleted_at": now.isoformat(),
+                    "deleted_with_schedule": True,
+                    "deleted_with_direct_entry_flow": True,
+                    "deleted_via": "financial_schedule_service.delete_schedule",
+                }
             db.session.commit()
             return {"message": "Título Financeiro removido com sucesso.", "id": schedule_id}, None
         except Exception as exc:

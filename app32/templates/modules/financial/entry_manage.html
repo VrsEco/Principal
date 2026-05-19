@@ -18,7 +18,10 @@
             <h1>Baixa do Lançamento</h1>
             <p class="settlement-header-subtitle">{{ entry.entry_code }} · {{ entry.description }}</p>
         </div>
-        <a href="/financial/entries" class="btn btn-secondary">Voltar</a>
+        <div style="display:flex; gap:.75rem; align-items:center;">
+            <button type="button" id="delete-entry-button" class="btn btn-danger hidden" onclick="deleteEntryWhole()">Excluir lançamento rápido</button>
+            <a href="/financial/entries" class="btn btn-secondary">Voltar</a>
+        </div>
     </header>
 
     <section class="settlement-summary">
@@ -185,6 +188,7 @@
         color:#b91c1c;
         border:1px solid #fecaca;
     }
+    .hidden { display:none !important; }
     .btn-small {
         padding:.55rem .8rem;
         border-radius:10px;
@@ -249,6 +253,18 @@
         return Math.max(Number(entry?.original_amount || 0) - getSettledNetAmount(entry), 0);
     }
 
+    function requiresWholeEntryDelete(entry) {
+        const metadata = entry?.metadata_json || {};
+        return Boolean(metadata.direct_entry) || String(metadata.generate_target || '').toLowerCase() === 'entry';
+    }
+
+    function renderEntryDeleteAction(entry) {
+        const button = document.getElementById('delete-entry-button');
+        if (!button) return;
+        const visible = requiresWholeEntryDelete(entry);
+        button.classList.toggle('hidden', !visible);
+    }
+
     function refreshAvailableAmount(entry) {
         const available = getAvailableAmount(entry);
         document.getElementById('available-amount-card').textContent = formatCurrency(available);
@@ -289,6 +305,7 @@
     function renderSettlements(entry) {
         const container = document.getElementById('settlements-list');
         const items = entry?.settlements || [];
+        const wholeDeleteRequired = requiresWholeEntryDelete(entry);
         if (!items.length) {
             container.innerHTML = '<div class="empty-state">Nenhuma baixa registrada.</div>';
             return;
@@ -314,13 +331,23 @@
                             </div>
                             <div class="settlement-item-header-actions">
                                 <strong>${formatCurrency(item.principal_amount)}</strong>
-                                <button
-                                    type="button"
-                                    class="btn btn-danger btn-small"
-                                    onclick="deleteSettlement(${Number(item.id)})"
-                                >
-                                    Excluir baixa
-                                </button>
+                                ${wholeDeleteRequired ? `
+                                    <button
+                                        type="button"
+                                        class="btn btn-danger btn-small"
+                                        onclick="deleteEntryWhole()"
+                                    >
+                                        Excluir lançamento rápido
+                                    </button>
+                                ` : `
+                                    <button
+                                        type="button"
+                                        class="btn btn-danger btn-small"
+                                        onclick="deleteSettlement(${Number(item.id)})"
+                                    >
+                                        Excluir baixa
+                                    </button>
+                                `}
                             </div>
                         </div>
                     </div>
@@ -382,12 +409,17 @@
         document.getElementById('settlement-history').value = initialHistory;
         document.getElementById('settlement-date').value = todayIso();
         refreshAvailableAmount(currentEntry);
+        renderEntryDeleteAction(currentEntry);
         renderEntryAttachments(currentEntry);
         renderSettlements(currentEntry);
     }
 
     async function deleteSettlement(settlementId) {
         if (!settlementId) return;
+        if (requiresWholeEntryDelete(currentEntry)) {
+            alert('Lançamento rápido não permite excluir apenas a baixa. Exclua o lançamento inteiro.');
+            return;
+        }
         const confirmed = window.confirm('Deseja realmente excluir esta baixa? Esta ação remove a baixa deste lançamento.');
         if (!confirmed) return;
 
@@ -402,6 +434,23 @@
 
         alert(payload.message || 'Baixa excluída com sucesso.');
         await loadEntry();
+    }
+
+    async function deleteEntryWhole() {
+        if (!currentEntry?.id) return;
+        const confirmed = window.confirm('Deseja realmente excluir este lançamento rápido por completo? Esta ação remove o lançamento e a baixa juntos.');
+        if (!confirmed) return;
+
+        const response = await fetch(`/api/financial/entries/${currentEntry.id}?company_id=${companyId}`, {
+            method: 'DELETE',
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+            alert(payload.error || payload.message || 'Falha ao excluir lançamento.');
+            return;
+        }
+        alert(payload.message || 'Lançamento removido com sucesso.');
+        window.location.href = '/financial/entries';
     }
 
     async function uploadAttachments(settlementId, files) {
