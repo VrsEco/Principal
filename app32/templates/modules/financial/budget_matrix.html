@@ -161,8 +161,8 @@
                             <option value="cash">Caixa</option>
                         </select>
                     </label>
-                    <label class="budget-field"><span>Plano de contas</span><select id="line-chart-account"></select></label>
-                    <label class="budget-field"><span>Centro de resultado</span><select id="line-cost-center"></select></label>
+                    <label class="budget-field"><span>Plano de contas</span><input id="line-chart-account-search" type="text" placeholder="Buscar plano de contas" data-select-filter-target="line-chart-account"><select id="line-chart-account"></select></label>
+                    <label class="budget-field"><span>Centro de resultado</span><input id="line-cost-center-search" type="text" placeholder="Buscar centro de resultado" data-select-filter-target="line-cost-center"><select id="line-cost-center"></select></label>
                 </div>
                 <label class="budget-field">
                     <span>Observações</span>
@@ -215,6 +215,8 @@ async function api(url, options = {}) { const r = await fetch(url, options); con
 function fillSelect(select, items, labelBuilder, placeholder = 'Selecione') {
     select.innerHTML = `<option value=\"\">${placeholder}</option>` + items.map(item => `<option value=\"${item.id}\">${labelBuilder(item)}</option>`).join('');
 }
+function normalizeSearchTerm(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+function filterSelectOptions(selectId, searchValue) { const select = byId(selectId); if (!select) return; const search = normalizeSearchTerm(searchValue); Array.from(select.options || []).forEach((option) => { option.hidden = Boolean(search) && !normalizeSearchTerm(option.textContent || option.label || '').includes(search); }); }
 
 function renderSummary() {
     const summary = state.workspace?.summary || {};
@@ -316,8 +318,13 @@ function renderLines() {
 
 function renderOptions() {
     const options = state.options || {};
-    fillSelect(byId('line-chart-account'), options.chart_accounts || [], item => `${item.code || ''} - ${item.name}`);
-    fillSelect(byId('line-cost-center'), options.cost_centers || [], item => `${item.code || ''} - ${item.name}`);
+    const analyticChartAccounts = (options.chart_accounts || []).filter(item => !!item.accepts_posting);
+    const parentIds = new Set((options.cost_centers || []).filter(item => item.parent_id).map(item => Number(item.parent_id)));
+    const analyticCostCenters = (options.cost_centers || []).filter(item => !!item.accepts_posting && !parentIds.has(Number(item.id)));
+    fillSelect(byId('line-chart-account'), analyticChartAccounts, item => `${item.code || ''} - ${item.name}`);
+    fillSelect(byId('line-cost-center'), analyticCostCenters, item => `${item.code || ''} - ${item.name}`);
+    filterSelectOptions('line-chart-account', byId('line-chart-account-search')?.value || '');
+    filterSelectOptions('line-cost-center', byId('line-cost-center-search')?.value || '');
 }
 
 function clearLineForm() {
@@ -425,6 +432,7 @@ async function removeLine(lineId) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const initialQuery = new URLSearchParams(window.location.search);
+    document.querySelectorAll('[data-select-filter-target]').forEach((input) => { input.addEventListener('input', () => filterSelectOptions(input.dataset.selectFilterTarget, input.value || '')); });
     byId('btn-new-version').addEventListener('click', () => { state.creatingVersion = true; byId('version-code').value=''; byId('version-name').value=''; byId('version-scenario').value='original'; byId('version-status').value='draft'; byId('version-start').value=''; byId('version-end').value=''; byId('version-notes').value=''; byId('version-select').value=''; });
     byId('btn-save-version').addEventListener('click', () => saveVersion().catch(err => alert(err.message)));
     byId('btn-activate-version').addEventListener('click', () => activateVersion().catch(err => alert(err.message)));

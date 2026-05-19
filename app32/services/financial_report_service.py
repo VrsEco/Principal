@@ -432,6 +432,7 @@ class FinancialReportService:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
             return None, scope_error
+        from services.financial_schedule_service import FinancialScheduleService
 
         def _natural_sort_parts(value: str) -> Tuple[Any, ...]:
             return tuple(int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", value or ""))
@@ -497,12 +498,43 @@ class FinancialReportService:
                 for item in records
             ]
 
+        enabled_domains, enabled_error = FinancialScheduleService.list_enabled_domains(
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if enabled_error:
+            return None, enabled_error
+        enabled_domains = enabled_domains or []
+        enabled_project_ids = {
+            int(item.get("source_id"))
+            for item in enabled_domains
+            if item.get("domain_type") == "project" and str(item.get("source_kind") or "routine").strip().lower() == "routine"
+        }
+        enabled_process_ids = {
+            int(item.get("source_id"))
+            for item in enabled_domains
+            if item.get("domain_type") == "process" and str(item.get("source_kind") or "routine").strip().lower() == "routine"
+        }
+
+        def _flat_list_from_enabled(model, enabled_ids: set[int]):
+            return [
+                {
+                    "id": item.id,
+                    "label": _label(item),
+                    "code": str(getattr(item, "code", "") or ""),
+                    "selectable": True,
+                    "level": 0,
+                }
+                for item in _base_records(model)
+                if int(item.id) in enabled_ids
+            ]
+
         return {
             "bank_accounts": _flat_list(FinancialBankAccount),
             "chart_accounts": _hierarchical_list(FinancialChartAccount),
             "cost_centers": _hierarchical_list(FinancialCostCenter),
-            "projects": _flat_list(Project),
-            "processes": _flat_list(Process),
+            "projects": _flat_list_from_enabled(Project, enabled_project_ids),
+            "processes": _flat_list_from_enabled(Process, enabled_process_ids),
             "working_capital_accounts": FinancialReportService._get_working_capital_accounts(company_id),
             "counterparties": _flat_list(FinancialCounterparty),
             "movement_natures": [{"id": "credit", "label": "Entrada"}, {"id": "debit", "label": "Saída"}],

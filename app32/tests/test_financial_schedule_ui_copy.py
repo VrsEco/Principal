@@ -25,8 +25,16 @@ def test_settlement_delete_button_is_bound_to_baixas_list():
     schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
 
     assert "data-settlement-delete" in schedule_js
+    assert "data-direct-entry-delete" in schedule_js
     assert "const baixasListEl = $('baixas-list');" in schedule_js
     assert "baixasListEl.addEventListener('click'" in schedule_js
+
+
+def test_direct_entry_schedule_uses_whole_delete_copy():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "Excluir lançamento rápido" in schedule_js
+    assert "remove o título e a baixa juntos" in schedule_js
 
 
 def test_settlement_delete_button_is_not_disabled_by_title_lock():
@@ -59,3 +67,11 @@ def test_schedule_recurrence_competence_mode_field_is_available():
     assert "Competência conforme vencimento de cada título" in schedule_template
     assert "normalizeCompetenceMode" in schedule_js
     assert "competence_mode: frequency === 'one_time' ? 'same_competence' : competenceMode" in schedule_js
+
+
+def test_schedule_rateio_search_field_selects_current_label_before_new_search():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "const selectedLabel = select?.value"[:28] in schedule_js
+    assert "selectedSearchableItemLabel(container?.dataset.field, select.value)" in schedule_js
+    assert "event.target.select();" in schedule_js

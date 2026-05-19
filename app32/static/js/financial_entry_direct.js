@@ -113,6 +113,11 @@
     const name = item.name || '';
     return code && name ? `${code} - ${name}` : (code || name || item.id);
   };
+  const normalizeSearchTerm = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
   const cloneAllocationRows = () => allocationRows.map((row) => ({ ...row }));
   const defaultSuggestions = () => optionsCache.default_suggestions || {};
   const asOptionValue = (value) => (value == null || value === '' ? '' : String(value));
@@ -251,30 +256,242 @@
     if (changed) renderAllocations();
   }
 
+  function buildSearchableSelectItems(field) {
+    if (field === 'chart_account_id') {
+      return analyticChartAccounts().map((item) => ({
+        value: asOptionValue(item.id),
+        label: buildChartAccountLabel(item),
+        search: normalizeSearchTerm([item.code, item.name, item.display_label, item.id].filter(Boolean).join(' ')),
+      }));
+    }
+    if (field === 'cost_center_id') {
+      return finalCostCenters().map((item) => ({
+        value: asOptionValue(item.id),
+        label: buildCostCenterLabel(item),
+        search: normalizeSearchTerm([item.code, item.name, item.display_label, item.id].filter(Boolean).join(' ')),
+      }));
+    }
+    if (field === 'domain_value') {
+      return (optionsCache.enabled_domains || []).map((item) => {
+        const value = item.domain_value || `${item.source_kind || 'routine'}:${item.domain_type}:${item.source_id}`;
+        const group = item.domain_type === 'process' ? 'Processo' : 'Projeto';
+        return {
+          value,
+          label: item.display_label || item.name || item.code || value,
+          group,
+          search: normalizeSearchTerm([
+            item.display_label,
+            item.name,
+            item.code,
+            item.domain_type,
+            item.source_id,
+            value,
+          ].filter(Boolean).join(' ')),
+        };
+      });
+    }
+    return [];
+  }
+
+  function searchableSelectPlaceholder(field) {
+    return ({
+      chart_account_id: 'Selecione ou busque...',
+      cost_center_id: 'Selecione ou busque...',
+      domain_value: 'Selecione projeto ou processo...',
+    }[field] || 'Selecione...');
+  }
+
+  function selectedSearchableItemLabel(field, value) {
+    if (!value) return searchableSelectPlaceholder(field);
+    const item = buildSearchableSelectItems(field).find((candidate) => candidate.value === String(value));
+    return item?.label || searchableSelectPlaceholder(field);
+  }
+
+  function renderSearchableSelect(field, index, value) {
+    const selectedLabel = selectedSearchableItemLabel(field, value);
+    const placeholder = searchableSelectPlaceholder(field);
+    return `
+      <div class="search-select" data-search-select data-field="${field}" data-index="${index}">
+        <select class="search-select__native" data-index="${index}" data-field="${field}" tabindex="-1" aria-hidden="true"></select>
+        <input type="text" class="search-select__display" data-search-select-display value="${value ? selectedLabel : ''}" placeholder="${placeholder}" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false">
+        <div class="search-select__popover hidden" data-search-select-popover>
+          <div class="search-select__options" data-search-select-options role="listbox" aria-label="${placeholder}"></div>
+        </div>
+      </div>`;
+  }
+
+  function closeSearchableSelect(container) {
+    if (!container) return;
+    container.classList.remove('is-open');
+    container.querySelector('[data-search-select-display]')?.setAttribute('aria-expanded', 'false');
+    container.querySelector('[data-search-select-popover]')?.classList.add('hidden');
+  }
+
+  function closeAllSearchableSelects(except = null) {
+    body?.querySelectorAll('[data-search-select]').forEach((container) => {
+      if (container !== except) closeSearchableSelect(container);
+    });
+  }
+
+  function fillNativeSearchableSelect(select) {
+    if (!select) return;
+    const field = select.dataset.field;
+    const currentValue = String(select.value || select.dataset.currentValue || '');
+    const placeholder = searchableSelectPlaceholder(field);
+    const items = buildSearchableSelectItems(field);
+    select.innerHTML = [`<option value="">${placeholder}</option>`]
+      .concat(items.map((item) => `<option value="${item.value}">${item.label}</option>`))
+      .join('');
+    select.value = currentValue;
+  }
+
+  function resolveSearchableItems(container) {
+    const field = container?.dataset.field;
+    const rawSearch = container?.querySelector('[data-search-select-display]')?.value || '';
+    const search = normalizeSearchTerm(rawSearch);
+    const currentValue = String(container?.querySelector('.search-select__native')?.value || '');
+    const items = buildSearchableSelectItems(field)
+      .filter((item) => !search || item.search.includes(search) || normalizeSearchTerm(item.label).includes(search))
+      .slice(0, 12);
+    return { rawSearch, currentValue, items };
+  }
+
+  function positionSearchablePopover(container) {
+    if (!container) return;
+    const input = container.querySelector('[data-search-select-display]');
+    const popover = container.querySelector('[data-search-select-popover]');
+    if (!input || !popover || popover.classList.contains('hidden')) return;
+    const rect = input.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const estimatedHeight = Math.min(220, Math.max(120, popover.scrollHeight || 0));
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+    const top = openAbove
+      ? Math.max(8, rect.top - estimatedHeight - 6)
+      : Math.min(viewportHeight - estimatedHeight - 8, rect.bottom + 6);
+    const maxWidth = Math.max(220, viewportWidth - rect.left - 12);
+    popover.style.top = `${top}px`;
+    popover.style.left = `${Math.max(8, rect.left)}px`;
+    popover.style.width = `${Math.min(rect.width, maxWidth)}px`;
+    popover.style.maxHeight = `${Math.min(220, openAbove ? Math.max(120, spaceAbove - 12) : Math.max(120, spaceBelow - 12))}px`;
+  }
+
+  function refreshSearchableSelectOptions(container) {
+    if (!container) return;
+    const { currentValue, items, rawSearch } = resolveSearchableItems(container);
+    const host = container.querySelector('[data-search-select-options]');
+    if (!host) return;
+    if (!String(rawSearch || '').trim()) {
+      host.innerHTML = '';
+      closeSearchableSelect(container);
+      return;
+    }
+    if (!items.length) {
+      host.innerHTML = '<div class="search-select__empty">Nenhum item encontrado.</div>';
+      container.classList.add('is-open');
+      container.querySelector('[data-search-select-display]')?.setAttribute('aria-expanded', 'true');
+      container.querySelector('[data-search-select-popover]')?.classList.remove('hidden');
+      return;
+    }
+    host.innerHTML = items.map((item) => `
+      <button type="button" class="search-select__option ${item.value === currentValue ? 'is-selected' : ''}" data-search-option-value="${item.value}" role="option" aria-selected="${item.value === currentValue ? 'true' : 'false'}">
+        ${item.group ? `<span class="search-select__option-group">${item.group}</span>` : ''}
+        <span>${item.label}</span>
+      </button>`).join('');
+    container.classList.add('is-open');
+    container.querySelector('[data-search-select-display]')?.setAttribute('aria-expanded', 'true');
+    container.querySelector('[data-search-select-popover]')?.classList.remove('hidden');
+    positionSearchablePopover(container);
+  }
+
+  function syncSearchableSelectLabel(container) {
+    if (!container) return;
+    const field = container.dataset.field;
+    const select = container.querySelector('.search-select__native');
+    const input = container.querySelector('[data-search-select-display]');
+    if (!input) return;
+    input.value = select?.value ? selectedSearchableItemLabel(field, select.value) : '';
+  }
+
+  function applySearchableSelection(container, nextValue) {
+    if (!container) return;
+    const select = container.querySelector('.search-select__native');
+    if (!select) return;
+    select.value = nextValue || '';
+    syncSearchableSelectLabel(container);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    closeSearchableSelect(container);
+  }
+
+  function reconcileSearchableInput(container) {
+    if (!container) return;
+    const { items, rawSearch } = resolveSearchableItems(container);
+    const normalizedRaw = normalizeSearchTerm(rawSearch);
+    if (!normalizedRaw) {
+      applySearchableSelection(container, '');
+      return;
+    }
+    const exactMatch = items.find((item) => normalizeSearchTerm(item.label) === normalizedRaw);
+    if (exactMatch) {
+      applySearchableSelection(container, exactMatch.value);
+      return;
+    }
+    if (items.length === 1) {
+      applySearchableSelection(container, items[0].value);
+      return;
+    }
+    syncSearchableSelectLabel(container);
+    closeSearchableSelect(container);
+  }
+
+  function initializeAllocationSearchableSelects() {
+    body?.querySelectorAll('[data-search-select]').forEach((container) => {
+      const select = container.querySelector('.search-select__native');
+      if (!select) return;
+      fillNativeSearchableSelect(select);
+      syncSearchableSelectLabel(container);
+    });
+  }
+
   function renderAllocations() {
-    const chartOptions = buildOptions(analyticChartAccounts(), 'Selecione...', buildChartAccountLabel);
-    const costCenterOptions = buildOptions(finalCostCenters(), 'Selecione...', buildCostCenterLabel);
     const budgetDocumentOptions = buildOptions(optionsCache.budget_documents, 'Selecione...', buildBudgetLabel);
     body.innerHTML = allocationRows.length ? allocationRows.map((row, index) => `
       <tr>
-        <td><select data-index="${index}" data-field="chart_account_id">${chartOptions}</select></td>
-        <td><select data-index="${index}" data-field="cost_center_id">${costCenterOptions}</select></td>
+        <td>${renderSearchableSelect('chart_account_id', index, row.chart_account_id || '')}</td>
+        <td>${renderSearchableSelect('cost_center_id', index, row.cost_center_id || '')}</td>
         <td><select data-index="${index}" data-field="budget_document_id">${budgetDocumentOptions}</select></td>
-        <td><select data-index="${index}" data-field="domain_value">${buildDomainOptions(row.domain_value || '')}</select></td>
+        <td>${renderSearchableSelect('domain_value', index, row.domain_value || '')}</td>
         <td><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal"></td>
         <td><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric"></td>
         <td><div class="rateio-actions"><button type="button" class="btn btn-secondary" data-action="duplicate" data-index="${index}">+</button><button type="button" class="btn btn-secondary" data-action="remove" data-index="${index}">×</button></div></td>
       </tr>`).join('') : '<tr><td colspan="7" class="empty-state">Nenhum rateio informado.</td></tr>';
 
     allocationRows.forEach((row, index) => {
-      const chartSelect = body.querySelector(`select[data-field="chart_account_id"][data-index="${index}"]`);
-      const centerSelect = body.querySelector(`select[data-field="cost_center_id"][data-index="${index}"]`);
+      const chartSelect = body.querySelector(`.search-select__native[data-field="chart_account_id"][data-index="${index}"]`);
+      const centerSelect = body.querySelector(`.search-select__native[data-field="cost_center_id"][data-index="${index}"]`);
+      const domainSelect = body.querySelector(`.search-select__native[data-field="domain_value"][data-index="${index}"]`);
       const budgetDocumentSelect = body.querySelector(`select[data-field="budget_document_id"][data-index="${index}"]`);
-      if (chartSelect) chartSelect.value = row.chart_account_id || '';
-      if (centerSelect) centerSelect.value = row.cost_center_id || '';
+      if (chartSelect) {
+        chartSelect.dataset.currentValue = row.chart_account_id || '';
+        fillNativeSearchableSelect(chartSelect);
+        chartSelect.value = row.chart_account_id || '';
+      }
+      if (centerSelect) {
+        centerSelect.dataset.currentValue = row.cost_center_id || '';
+        fillNativeSearchableSelect(centerSelect);
+        centerSelect.value = row.cost_center_id || '';
+      }
+      if (domainSelect) {
+        domainSelect.dataset.currentValue = row.domain_value || '';
+        fillNativeSearchableSelect(domainSelect);
+        domainSelect.value = row.domain_value || '';
+      }
       if (budgetDocumentSelect) budgetDocumentSelect.value = row.budget_document_id || '';
     });
 
+    initializeAllocationSearchableSelects();
     renderAllocationSummary();
   }
 
@@ -496,6 +713,12 @@
   });
 
   body.addEventListener('input', (event) => {
+    if (event.target.matches('[data-search-select-display]')) {
+      const container = event.target.closest('[data-search-select]');
+      closeAllSearchableSelects(container);
+      refreshSearchableSelectOptions(container);
+      return;
+    }
     const field = event.target.dataset.field;
     const index = Number(event.target.dataset.index || -1);
     if (index < 0 || !field || !allocationRows[index]) return;
@@ -547,6 +770,9 @@
         allocationRows[index].domain_type = null;
         allocationRows[index].domain_source_id = null;
         allocationRows[index].domain_label = null;
+        if (event.target.matches('.search-select__native')) {
+          syncSearchableSelectLabel(event.target.closest('[data-search-select]'));
+        }
         return;
       }
       const [sourceKind, domainType, sourceId] = value.split(':');
@@ -555,12 +781,25 @@
       allocationRows[index].domain_type = domainType;
       allocationRows[index].domain_source_id = Number(sourceId);
       allocationRows[index].domain_label = item?.display_label || null;
+      if (event.target.matches('.search-select__native')) {
+        syncSearchableSelectLabel(event.target.closest('[data-search-select]'));
+      }
       return;
     }
     allocationRows[index][field] = event.target.value;
+    if (event.target.matches('.search-select__native')) {
+      syncSearchableSelectLabel(event.target.closest('[data-search-select]'));
+    }
   });
 
   body.addEventListener('click', (event) => {
+    const optionButton = event.target.closest('[data-search-option-value]');
+    if (optionButton) {
+      event.preventDefault();
+      const container = optionButton.closest('[data-search-select]');
+      applySearchableSelection(container, optionButton.dataset.searchOptionValue || '');
+      return;
+    }
     const button = event.target.closest('button[data-action]');
     if (!button) return;
     const index = Number(button.dataset.index || -1);
@@ -574,6 +813,65 @@
       if (!allocationRows.length) allocationRows = [createAllocationRow({ percentage: '100' })];
       recalculateAllRowsFromPercentages();
       renderAllocations();
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-search-select]')) {
+      closeAllSearchableSelects();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    body?.querySelectorAll('[data-search-select].is-open').forEach((container) => positionSearchablePopover(container));
+  });
+
+  window.addEventListener('scroll', () => {
+    body?.querySelectorAll('[data-search-select].is-open').forEach((container) => positionSearchablePopover(container));
+  }, true);
+
+  body.addEventListener('focusin', (event) => {
+    if (!event.target.matches('[data-search-select-display]')) return;
+    const container = event.target.closest('[data-search-select]');
+    const select = container?.querySelector('.search-select__native');
+    const selectedLabel = select?.value
+      ? selectedSearchableItemLabel(container?.dataset.field, select.value)
+      : '';
+    closeAllSearchableSelects(container);
+    if (selectedLabel && String(event.target.value || '') === selectedLabel) {
+      event.target.select();
+      return;
+    }
+    if ((event.target.value || '').trim()) {
+      refreshSearchableSelectOptions(container);
+    }
+  });
+
+  body.addEventListener('focusout', (event) => {
+    if (!event.target.matches('[data-search-select-display]')) return;
+    const container = event.target.closest('[data-search-select]');
+    window.setTimeout(() => {
+      if (!container?.contains(document.activeElement)) {
+        reconcileSearchableInput(container);
+      }
+    }, 120);
+  });
+
+  body.addEventListener('keydown', (event) => {
+    if (!event.target.matches('[data-search-select-display]')) return;
+    const container = event.target.closest('[data-search-select]');
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      syncSearchableSelectLabel(container);
+      closeSearchableSelect(container);
+      return;
+    }
+    if (event.key === 'Enter') {
+      const firstOption = container?.querySelector('[data-search-option-value]');
+      if (firstOption) {
+        event.preventDefault();
+        applySearchableSelection(container, firstOption.dataset.searchOptionValue || '');
+      }
     }
   });
 

@@ -330,12 +330,8 @@
     return `
       <div class="search-select" data-search-select data-field="${field}" data-index="${index}">
         <select class="search-select__native" data-index="${index}" data-field="${field}" tabindex="-1" aria-hidden="true"></select>
-        <button type="button" class="search-select__trigger" data-search-select-trigger aria-haspopup="listbox" aria-expanded="false">
-          <span class="search-select__trigger-label ${value ? '' : 'is-placeholder'}">${selectedLabel}</span>
-          <span class="search-select__trigger-icon">▾</span>
-        </button>
+        <input type="text" class="search-select__display" data-search-select-display value="${value ? selectedLabel : ''}" placeholder="${placeholder}" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false">
         <div class="search-select__popover hidden" data-search-select-popover>
-          <input type="search" class="search-select__input" data-search-select-input placeholder="Digite para filtrar por código ou descrição" autocomplete="off" spellcheck="false">
           <div class="search-select__options" data-search-select-options role="listbox" aria-label="${placeholder}"></div>
         </div>
       </div>`;
@@ -344,7 +340,7 @@
   function closeSearchableSelect(container) {
     if (!container) return;
     container.classList.remove('is-open');
-    container.querySelector('[data-search-select-trigger]')?.setAttribute('aria-expanded', 'false');
+    container.querySelector('[data-search-select-display]')?.setAttribute('aria-expanded', 'false');
     container.querySelector('[data-search-select-popover]')?.classList.add('hidden');
   }
 
@@ -366,17 +362,32 @@
     select.value = currentValue;
   }
 
+  function resolveSearchableItems(container) {
+    const field = container?.dataset.field;
+    const rawSearch = container?.querySelector('[data-search-select-display]')?.value || '';
+    const search = normalizeSearchTerm(rawSearch);
+    const currentValue = String(container?.querySelector('.search-select__native')?.value || '');
+    const items = buildSearchableSelectItems(field)
+      .filter((item) => !search || item.search.includes(search) || normalizeSearchTerm(item.label).includes(search))
+      .slice(0, 12);
+    return { field, rawSearch, search, currentValue, items };
+  }
+
   function refreshSearchableSelectOptions(container) {
     if (!container) return;
-    const field = container.dataset.field;
-    const search = normalizeSearchTerm(container.querySelector('[data-search-select-input]')?.value || '');
-    const currentValue = String(container.querySelector('.search-select__native')?.value || '');
-    const items = buildSearchableSelectItems(field)
-      .filter((item) => !search || item.search.includes(search) || normalizeSearchTerm(item.label).includes(search));
+    const { currentValue, items, rawSearch } = resolveSearchableItems(container);
     const host = container.querySelector('[data-search-select-options]');
     if (!host) return;
+    if (!String(rawSearch || '').trim()) {
+      host.innerHTML = '';
+      closeSearchableSelect(container);
+      return;
+    }
     if (!items.length) {
       host.innerHTML = '<div class="search-select__empty">Nenhum item encontrado.</div>';
+      container.classList.add('is-open');
+      container.querySelector('[data-search-select-display]')?.setAttribute('aria-expanded', 'true');
+      container.querySelector('[data-search-select-popover]')?.classList.remove('hidden');
       return;
     }
     host.innerHTML = items.map((item) => `
@@ -384,6 +395,10 @@
         ${item.group ? `<span class="search-select__option-group">${escapeHtml(item.group)}</span>` : ''}
         <span>${escapeHtml(item.label)}</span>
       </button>`).join('');
+    container.classList.add('is-open');
+    container.querySelector('[data-search-select-display]')?.setAttribute('aria-expanded', 'true');
+    container.querySelector('[data-search-select-popover]')?.classList.remove('hidden');
+    positionSearchablePopover(container);
   }
 
   function syncSearchableSelectLabel(container) {
@@ -391,24 +406,62 @@
     const field = container.dataset.field;
     const select = container.querySelector('.search-select__native');
     const value = String(select?.value || '');
-    const label = container.querySelector('.search-select__trigger-label');
-    if (!label) return;
-    label.textContent = selectedSearchableItemLabel(field, value);
-    label.classList.toggle('is-placeholder', !value);
+    const input = container.querySelector('[data-search-select-display]');
+    if (!input) return;
+    input.value = value ? selectedSearchableItemLabel(field, value) : '';
   }
 
-  function openSearchableSelect(container) {
+  function positionSearchablePopover(container) {
     if (!container) return;
-    closeAllSearchableSelects(container);
-    container.classList.add('is-open');
-    container.querySelector('[data-search-select-trigger]')?.setAttribute('aria-expanded', 'true');
-    container.querySelector('[data-search-select-popover]')?.classList.remove('hidden');
-    const input = container.querySelector('[data-search-select-input]');
-    if (input) {
-      input.value = '';
-      refreshSearchableSelectOptions(container);
-      input.focus();
+    const input = container.querySelector('[data-search-select-display]');
+    const popover = container.querySelector('[data-search-select-popover]');
+    if (!input || !popover || popover.classList.contains('hidden')) return;
+    const rect = input.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const estimatedHeight = Math.min(220, Math.max(120, popover.scrollHeight || 0));
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+    const top = openAbove
+      ? Math.max(8, rect.top - estimatedHeight - 6)
+      : Math.min(viewportHeight - estimatedHeight - 8, rect.bottom + 6);
+    const maxWidth = Math.max(220, viewportWidth - rect.left - 12);
+    popover.style.top = `${top}px`;
+    popover.style.left = `${Math.max(8, rect.left)}px`;
+    popover.style.width = `${Math.min(rect.width, maxWidth)}px`;
+    popover.style.maxHeight = `${Math.min(220, openAbove ? Math.max(120, spaceAbove - 12) : Math.max(120, spaceBelow - 12))}px`;
+  }
+
+  function applySearchableSelection(container, nextValue) {
+    if (!container) return;
+    const select = container.querySelector('.search-select__native');
+    if (!select) return;
+    select.value = nextValue || '';
+    syncSearchableSelectLabel(container);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    closeSearchableSelect(container);
+  }
+
+  function reconcileSearchableInput(container) {
+    if (!container) return;
+    const { items, rawSearch } = resolveSearchableItems(container);
+    const normalizedRaw = normalizeSearchTerm(rawSearch);
+    if (!normalizedRaw) {
+      applySearchableSelection(container, '');
+      return;
     }
+    const exactMatch = items.find((item) => normalizeSearchTerm(item.label) === normalizedRaw);
+    if (exactMatch) {
+      applySearchableSelection(container, exactMatch.value);
+      return;
+    }
+    if (items.length === 1) {
+      applySearchableSelection(container, items[0].value);
+      return;
+    }
+    syncSearchableSelectLabel(container);
+    closeSearchableSelect(container);
   }
 
   function initializeAllocationSearchableSelects() {
@@ -919,11 +972,18 @@
     return settlement.id && !['matched', 'reconciled'].includes(String(settlement.reconciliation_status || '').toLowerCase());
   }
 
+  function isDirectEntrySchedule(schedule = selectedSchedule) {
+    const metadata = schedule?.metadata_json || {};
+    if (metadata.direct_entry) return true;
+    return (schedule?.related_entries || []).some((entry) => Boolean(entry?.metadata_json?.direct_entry));
+  }
+
   function hasActiveSettlements(schedule = selectedSchedule) {
     return (schedule?.related_entries || []).some((entry) => (entry.settlements || []).some((settlement) => !settlement.deleted_at && settlement.settlement_status !== 'cancelled'));
   }
 
   function renderBaixas(entries) {
+    const directEntrySchedule = isDirectEntrySchedule(selectedSchedule);
     $('baixas-empty').classList.toggle('hidden', !!entries.length);
     $('baixas-list').innerHTML = entries.map((entry, index) => `
       <article class="baixa-card">
@@ -931,7 +991,7 @@
         <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
           <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção Financeira</th><th>Descontos</th><th>Total</th><th>Ações</th></tr></thead>
-          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>'}</td></tr>`).join('') : '<tr><td colspan="8">Sem baixas registradas.</td></tr>'}</tbody>
+          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${directEntrySchedule ? `<button type="button" class="btn btn-danger btn-xs" data-direct-entry-delete="${selectedSchedule?.id || ''}">Excluir lançamento rápido</button>` : (canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>')}</td></tr>`).join('') : '<tr><td colspan="8">Sem baixas registradas.</td></tr>'}</tbody>
         </table>
       </article>`).join('');
   }
@@ -1196,6 +1256,7 @@
     setFieldValue('field-frequency', schedule.frequency === 'monthly' ? 'monthly' : schedule.frequency === 'yearly' ? 'yearly' : 'weekly');
     setFieldValue('field-interval-value', schedule.interval_value || 1);
     setFieldValue('field-repeat-count', schedule.metadata_json?.repeat_count || 1);
+    setFieldValue('field-competence-mode', normalizeCompetenceMode(schedule.metadata_json?.competence_mode));
     clearPendingAttachments();
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
@@ -1242,6 +1303,10 @@
     if (!summary.valuesOk) throw new Error('A soma dos valores do rateio deve ser igual ao valor principal do título financeiro.');
   }
 
+  function normalizeCompetenceMode(value) {
+    return String(value || '').trim() === 'due_date' ? 'due_date' : 'same_competence';
+  }
+
   function buildPayload() {
     const entryType = form.entry_type?.value || '';
     if (!entryType) {
@@ -1262,6 +1327,7 @@
     syncAdjustmentAllocationRows();
     validateAllocationSummary();
     const frequency = fieldValue('field-repeat-toggle', 'false') === 'true' ? fieldValue('field-frequency', 'weekly') : 'one_time';
+    const competenceMode = normalizeCompetenceMode(fieldValue('field-competence-mode', 'same_competence'));
     const primaryAllocation = getBaseAllocationRows()[0] || allocationRows[0] || {};
     const isUpdate = Boolean(form.schedule_id?.value);
     return {
@@ -1295,6 +1361,7 @@
         document_number: fieldValue('field-document-number').trim() || null,
         correction_index_id: Number(fieldValue('field-correction-index') || 0) || null,
         discount_rule_id: Number(fieldValue('field-discount-rule') || 0) || null,
+        competence_mode: frequency === 'one_time' ? 'same_competence' : competenceMode,
         discount_amount_override: $('field-discount-configured')?.dataset.manualOverride === '1' ? (getConfiguredDiscountAmount() || 0) : 0,
         repeat_count: Number(fieldValue('field-repeat-count', '1') || 1),
         attachments: selectedSchedule?.attachments || [],
@@ -1397,6 +1464,7 @@
     $('baixas-tab-button')?.classList.add('hidden');
     $('calculation-log-tab-button')?.classList.add('hidden');
     setFieldValue('field-frequency', 'weekly');
+    setFieldValue('field-competence-mode', 'same_competence');
     setDiscountAmountField(0, { manual: false });
     window.toggleRepeatFields();
     syncAdjustmentAllocationRows();
@@ -1728,6 +1796,9 @@
   async function deleteSettlement(settlementId) {
     try {
       if (!settlementId || !selectedSchedule?.id) return;
+      if (isDirectEntrySchedule(selectedSchedule)) {
+        throw new Error('Lançamento rápido não permite excluir apenas a baixa. Exclua o lançamento rápido inteiro.');
+      }
       if (!window.confirm('Excluir esta baixa? O título será liberado para edição se não houver outras baixas.')) return;
       const currentScheduleId = selectedSchedule.id;
       await fetchJson(`/api/financial/settlements/${settlementId}?company_id=${companyId}`, { method: 'DELETE' });
@@ -1738,6 +1809,18 @@
         console.warn('Baixa removida, mas a recarga completa do título falhou.', refreshError);
       }
       switchTab('baixas');
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  async function deleteDirectEntrySchedule(scheduleId) {
+    try {
+      const normalizedScheduleId = Number(scheduleId || selectedSchedule?.id || 0);
+      if (!normalizedScheduleId) return;
+      if (!window.confirm('Excluir este lançamento rápido por completo? Esta ação remove o título e a baixa juntos.')) return;
+      await fetchJson(`/api/financial/schedules/${normalizedScheduleId}?company_id=${companyId}`, { method: 'DELETE' });
+      window.location.href = '/financial/schedules';
     } catch (error) {
       alert(error.message);
     }
@@ -1929,8 +2012,10 @@
   });
 
   $('allocations-body').addEventListener('input', (event) => {
-    if (event.target.matches('[data-search-select-input]')) {
-      refreshSearchableSelectOptions(event.target.closest('[data-search-select]'));
+    if (event.target.matches('[data-search-select-display]')) {
+      const container = event.target.closest('[data-search-select]');
+      closeAllSearchableSelects(container);
+      refreshSearchableSelectOptions(container);
       return;
     }
     const field = event.target.dataset.field;
@@ -2024,27 +2109,11 @@
   });
 
   $('allocations-body').addEventListener('click', (event) => {
-    const trigger = event.target.closest('[data-search-select-trigger]');
-    if (trigger) {
-      event.preventDefault();
-      const container = trigger.closest('[data-search-select]');
-      if (container?.classList.contains('is-open')) {
-        closeSearchableSelect(container);
-      } else {
-        openSearchableSelect(container);
-      }
-      return;
-    }
     const optionButton = event.target.closest('[data-search-option-value]');
     if (optionButton) {
       event.preventDefault();
       const container = optionButton.closest('[data-search-select]');
-      const select = container?.querySelector('.search-select__native');
-      if (select) {
-        select.value = optionButton.dataset.searchOptionValue || '';
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      closeSearchableSelect(container);
+      applySearchableSelection(container, optionButton.dataset.searchOptionValue || '');
       return;
     }
     const button = event.target.closest('button[data-action]');
@@ -2070,6 +2139,59 @@
     }
   });
 
+  window.addEventListener('resize', () => {
+    $('allocations-body')?.querySelectorAll('[data-search-select].is-open').forEach((container) => positionSearchablePopover(container));
+  });
+
+  window.addEventListener('scroll', () => {
+    $('allocations-body')?.querySelectorAll('[data-search-select].is-open').forEach((container) => positionSearchablePopover(container));
+  }, true);
+
+  $('allocations-body').addEventListener('focusin', (event) => {
+    if (!event.target.matches('[data-search-select-display]')) return;
+    const container = event.target.closest('[data-search-select]');
+    const select = container?.querySelector('.search-select__native');
+    const selectedLabel = select?.value
+      ? selectedSearchableItemLabel(container?.dataset.field, select.value)
+      : '';
+    closeAllSearchableSelects(container);
+    if (selectedLabel && String(event.target.value || '') === selectedLabel) {
+      event.target.select();
+      return;
+    }
+    if ((event.target.value || '').trim()) {
+      refreshSearchableSelectOptions(container);
+    }
+  });
+
+  $('allocations-body').addEventListener('focusout', (event) => {
+    if (!event.target.matches('[data-search-select-display]')) return;
+    const container = event.target.closest('[data-search-select]');
+    window.setTimeout(() => {
+      if (!container?.contains(document.activeElement)) {
+        reconcileSearchableInput(container);
+      }
+    }, 120);
+  });
+
+  $('allocations-body').addEventListener('keydown', (event) => {
+    if (!event.target.matches('[data-search-select-display]')) return;
+    const container = event.target.closest('[data-search-select]');
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      syncSearchableSelectLabel(container);
+      closeSearchableSelect(container);
+      return;
+    }
+    if (event.key === 'Enter') {
+      const firstOption = container?.querySelector('[data-search-option-value]');
+      if (firstOption) {
+        event.preventDefault();
+        applySearchableSelection(container, firstOption.dataset.searchOptionValue || '');
+      }
+    }
+  });
+
   $('attachments-list').addEventListener('click', (event) => {
     const preview = event.target.closest('[data-attachment-preview]');
     if (preview) {
@@ -2091,6 +2213,12 @@
   const baixasListEl = $('baixas-list');
   if (baixasListEl) {
     baixasListEl.addEventListener('click', (event) => {
+      const directEntryDeleteButton = event.target.closest('button[data-direct-entry-delete]');
+      if (directEntryDeleteButton) {
+        event.preventDefault();
+        deleteDirectEntrySchedule(directEntryDeleteButton.dataset.directEntryDelete);
+        return;
+      }
       const settlementDeleteButton = event.target.closest('button[data-settlement-delete]');
       if (!settlementDeleteButton) return;
       event.preventDefault();

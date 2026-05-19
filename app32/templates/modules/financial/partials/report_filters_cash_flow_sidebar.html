@@ -74,24 +74,29 @@
     <section class="report-workspace-sidebar__section cash-flow-sidebar-section">
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-chart-accounts">Plano de Contas</label>
+            <input type="text" placeholder="Buscar plano de contas" data-select-filter-target="cash-flow-chart-accounts">
             <select form="cash-flow-filter-form" id="cash-flow-chart-accounts" name="chart_account_ids" multiple size="6" data-filter-input data-default-value="">
                 {% for item in options.chart_accounts %}
                 {% set option_id = item.id|string %}
-                <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %}>{{ item.label }}</option>
+                {% set is_selectable = item.get('selectable', true) %}
+                <option value="{{ item.id }}" {% if option_id in selected_chart_accounts %}selected{% endif %} {% if not is_selectable %}disabled aria-disabled="true"{% endif %}>{{ item.label }}{% if not is_selectable %} · sintética{% endif %}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-cost-centers">Centro de Resultados</label>
+            <input type="text" placeholder="Buscar centro de resultados" data-select-filter-target="cash-flow-cost-centers">
             <select form="cash-flow-filter-form" id="cash-flow-cost-centers" name="cost_center_ids" multiple size="5" data-filter-input data-default-value="">
                 {% for item in options.cost_centers %}
                 {% set option_id = item.id|string %}
-                <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %}>{{ item.label }}</option>
+                {% set is_selectable = item.get('selectable', true) %}
+                <option value="{{ item.id }}" {% if option_id in selected_cost_centers %}selected{% endif %} {% if not is_selectable %}disabled aria-disabled="true"{% endif %}>{{ item.label }}{% if not is_selectable %} · sintética{% endif %}</option>
                 {% endfor %}
             </select>
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-projects">Projeto</label>
+            <input type="text" placeholder="Buscar projeto" data-select-filter-target="cash-flow-projects">
             <select form="cash-flow-filter-form" id="cash-flow-projects" name="project_ids" multiple size="5" data-filter-input data-default-value="">
                 {% for item in options.projects %}
                 {% set option_id = item.id|string %}
@@ -101,6 +106,7 @@
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-processes">Processo</label>
+            <input type="text" placeholder="Buscar processo" data-select-filter-target="cash-flow-processes">
             <select form="cash-flow-filter-form" id="cash-flow-processes" name="process_ids" multiple size="5" data-filter-input data-default-value="">
                 {% for item in options.processes %}
                 {% set option_id = item.id|string %}
@@ -136,19 +142,25 @@
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-title-chart">Plano de conta da retirada</label>
+            <input type="text" placeholder="Buscar plano de conta" data-select-filter-target="cash-flow-title-chart">
             <select form="cash-flow-filter-form" id="cash-flow-title-chart" name="title_filter_chart_account_id" data-filter-input data-default-value="">
                 <option value="">Todos</option>
                 {% for item in options.chart_accounts %}
+                {% if item.get('selectable', true) %}
                 <option value="{{ item.id }}" {% if title_filter_chart_account_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-title-center">Centro de resultados da retirada</label>
+            <input type="text" placeholder="Buscar centro de resultados" data-select-filter-target="cash-flow-title-center">
             <select form="cash-flow-filter-form" id="cash-flow-title-center" name="title_filter_cost_center_id" data-filter-input data-default-value="">
                 <option value="">Todos</option>
                 {% for item in options.cost_centers %}
+                {% if item.get('selectable', true) %}
                 <option value="{{ item.id }}" {% if title_filter_cost_center_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>

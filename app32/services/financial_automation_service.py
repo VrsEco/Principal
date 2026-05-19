@@ -126,6 +126,71 @@ class FinancialAutomationService:
         return blockers
 
     @staticmethod
+    def _reconcile_generated_records(
+        records: Sequence[FinancialAutomationRecord],
+        *,
+        performed_by_user_id: Optional[int] = None,
+    ) -> Optional[str]:
+        changed_batches: set[FinancialAutomationBatch] = set()
+        changed = False
+
+        for item in records or []:
+            if not item or getattr(item, "deleted_at", None) is not None:
+                continue
+            if str(getattr(item, "status", "") or "").strip().lower() != "generated":
+                continue
+
+            had_generated_link = bool(
+                getattr(item, "generated_financial_entry_id", None)
+                or getattr(item, "generated_financial_schedule_id", None)
+                or getattr(item, "generated_at", None)
+            )
+            if not had_generated_link:
+                continue
+
+            blockers = FinancialAutomationService._list_delete_blockers(item)
+            if blockers:
+                continue
+
+            before = item.to_dict()
+            fallback_user_id = getattr(item, "validated_by_user_id", None) or performed_by_user_id or getattr(item, "generated_by_user_id", None)
+            fallback_validated_at = getattr(item, "validated_at", None) or datetime.utcnow()
+
+            item.status = "validated"
+            item.generated_financial_entry_id = None
+            item.generated_financial_schedule_id = None
+            item.generated_by_user_id = None
+            item.generated_at = None
+            item.validated_by_user_id = fallback_user_id
+            item.validated_at = fallback_validated_at
+            item.updated_at = datetime.utcnow()
+
+            FinancialAutomationService._append_history(
+                company_id=item.company_id,
+                record_id=item.id,
+                action_type="auto_revalidate",
+                performed_by_user_id=performed_by_user_id,
+                payload_before_json=before,
+                payload_after_json=item.to_dict(),
+                metadata_json={"reason": "generated_target_deleted_or_missing"},
+            )
+            if getattr(item, "batch", None):
+                changed_batches.add(item.batch)
+            changed = True
+
+        if not changed:
+            return None
+
+        try:
+            for batch in changed_batches:
+                FinancialAutomationService._refresh_batch_summary(batch)
+            db.session.commit()
+            return None
+        except Exception as exc:
+            db.session.rollback()
+            return f"Erro ao reconciliar registros gerados da Central: {exc}"
+
+    @staticmethod
     def _list_related_documents(record: FinancialAutomationRecord) -> List[Dict[str, Any]]:
         if not getattr(record, "batch_id", None):
             return []
@@ -717,8 +782,29 @@ class FinancialAutomationService:
     def _validate_domain_link(company_id: int, domain_type: Optional[str], domain_source_id: Optional[int]) -> Optional[str]:
         if not domain_type or not domain_source_id:
             return None
-        _, error = FinancialDomainEnablementService._load_source(company_id, domain_type, domain_source_id)
-        return error
+        enabled_pairs = {
+            ("routine", item.domain_type, int(item.source_id))
+            for item in FinancialDomainEnablement.query.filter(
+                FinancialDomainEnablement.company_id == company_id,
+                FinancialDomainEnablement.deleted_at.is_(None),
+                FinancialDomainEnablement.is_enabled.is_(True),
+            ).all()
+        }
+        manual_enabled, manual_error = FinancialManualDomainService.list_enabled_items(company_id=company_id)
+        if manual_error:
+            return manual_error
+        for item in manual_enabled or []:
+            enabled_pairs.add(("manual", item["domain_type"], int(item["source_id"])))
+
+        normalized_type = str(domain_type or "").strip().lower()
+        normalized_source_id = int(domain_source_id)
+        if ("routine", normalized_type, normalized_source_id) in enabled_pairs:
+            return None
+        if ("manual", normalized_type, normalized_source_id) in enabled_pairs:
+            return None
+
+        label = "projeto" if normalized_type == "project" else "processo"
+        return f"O {label} selecionado não está habilitado no Financeiro."
 
     @staticmethod
     def _refresh_batch_summary(batch: Optional[FinancialAutomationBatch]) -> None:
@@ -953,8 +1039,29 @@ class FinancialAutomationService:
     def _validate_domain_link(company_id: int, domain_type: Optional[str], domain_source_id: Optional[int]) -> Optional[str]:
         if not domain_type or not domain_source_id:
             return None
-        _, error = FinancialDomainEnablementService._load_source(company_id, domain_type, domain_source_id)
-        return error
+        enabled_pairs = {
+            ("routine", item.domain_type, int(item.source_id))
+            for item in FinancialDomainEnablement.query.filter(
+                FinancialDomainEnablement.company_id == company_id,
+                FinancialDomainEnablement.deleted_at.is_(None),
+                FinancialDomainEnablement.is_enabled.is_(True),
+            ).all()
+        }
+        manual_enabled, manual_error = FinancialManualDomainService.list_enabled_items(company_id=company_id)
+        if manual_error:
+            return manual_error
+        for item in manual_enabled or []:
+            enabled_pairs.add(("manual", item["domain_type"], int(item["source_id"])))
+
+        normalized_type = str(domain_type or "").strip().lower()
+        normalized_source_id = int(domain_source_id)
+        if ("routine", normalized_type, normalized_source_id) in enabled_pairs:
+            return None
+        if ("manual", normalized_type, normalized_source_id) in enabled_pairs:
+            return None
+
+        label = "projeto" if normalized_type == "project" else "processo"
+        return f"O {label} selecionado não está habilitado no Financeiro."
 
     @staticmethod
     def _serialize_rule(rule: FinancialAutomationRule) -> Dict[str, Any]:
@@ -1468,6 +1575,23 @@ class FinancialAutomationService:
                 model.deleted_at.is_(None),
             ).order_by(model.name.asc(), model.id.asc()).all()
 
+        def _analytic_chart_accounts():
+            return [
+                item for item in _ordered_items(FinancialChartAccount)
+                if bool(getattr(item, "accepts_posting", True))
+            ]
+
+        def _analytic_cost_centers():
+            records = _ordered_items(FinancialCostCenter)
+            parent_ids = {
+                int(item.parent_id) for item in records
+                if getattr(item, "parent_id", None)
+            }
+            return [
+                item for item in records
+                if bool(getattr(item, "accepts_posting", True)) and int(item.id) not in parent_ids
+            ]
+
         domains, domain_error = FinancialDomainEnablementService.list_items(
             company_id=company_id,
             allowed_company_ids=allowed_company_ids,
@@ -1503,8 +1627,8 @@ class FinancialAutomationService:
 
         return {
             "bank_accounts": [item.to_dict() for item in _ordered_items(FinancialBankAccount)],
-            "chart_accounts": [item.to_dict() for item in _ordered_items(FinancialChartAccount)],
-            "cost_centers": [item.to_dict() for item in _ordered_items(FinancialCostCenter)],
+            "chart_accounts": [item.to_dict() for item in _analytic_chart_accounts()],
+            "cost_centers": [item.to_dict() for item in _analytic_cost_centers()],
             "counterparties": [item.to_dict() for item in _ordered_items(FinancialCounterparty)],
             "batch_options": batch_options,
             "domain_options": domain_options,
@@ -2193,6 +2317,9 @@ class FinancialAutomationService:
             query = query.filter(FinancialAutomationRecord.due_date <= due_date_to)
 
         items = query.order_by(FinancialAutomationRecord.created_at.desc(), FinancialAutomationRecord.id.desc()).all()
+        reconcile_error = FinancialAutomationService._reconcile_generated_records(items)
+        if reconcile_error:
+            return None, reconcile_error
         return [FinancialAutomationService._serialize_record(item) for item in items], None
 
     @staticmethod
@@ -2212,6 +2339,9 @@ class FinancialAutomationService:
         ).first()
         if not item:
             return None, "Registro da Central de Automação Financeira não encontrado no escopo da empresa."
+        reconcile_error = FinancialAutomationService._reconcile_generated_records([item])
+        if reconcile_error:
+            return None, reconcile_error
         payload = FinancialAutomationService._serialize_record(item)
         payload["history"] = [
             history.to_dict()
@@ -2237,6 +2367,13 @@ class FinancialAutomationService:
         ).first()
         if not item:
             return None, "Registro da Central de Automação Financeira não encontrado no escopo da empresa."
+
+        reconcile_error = FinancialAutomationService._reconcile_generated_records(
+            [item],
+            performed_by_user_id=performed_by_user_id,
+        )
+        if reconcile_error:
+            return None, reconcile_error
 
         blockers = FinancialAutomationService._list_delete_blockers(item)
         if blockers:
@@ -2286,6 +2423,12 @@ class FinancialAutomationService:
         ).first()
         if not item:
             return None, "Registro da Central de Automação Financeira não encontrado no escopo da empresa."
+        reconcile_error = FinancialAutomationService._reconcile_generated_records(
+            [item],
+            performed_by_user_id=performed_by_user_id,
+        )
+        if reconcile_error:
+            return None, reconcile_error
         if item.status == "generated":
             return None, "Registro já gerado não pode ser editado por este fluxo."
 
@@ -2372,6 +2515,12 @@ class FinancialAutomationService:
         ).all()
         if len(items) != len(set(data.record_ids)):
             return None, "Um ou mais registros não foram encontrados no escopo da empresa."
+        reconcile_error = FinancialAutomationService._reconcile_generated_records(
+            items,
+            performed_by_user_id=performed_by_user_id,
+        )
+        if reconcile_error:
+            return None, reconcile_error
         if data.status == "generated":
             return None, "Use a ação de geração oficial para marcar registros como Gerada."
 
@@ -2389,6 +2538,13 @@ class FinancialAutomationService:
                     item.validated_at = datetime.utcnow()
                     if item.settlement_state == "settled" and not item.settlement_date:
                         item.settlement_date = item.due_date or item.competence_date or item.issue_date or datetime.utcnow().date()
+                    item.deleted_at = None
+                elif data.status == "excluded":
+                    item.deleted_at = datetime.utcnow()
+                    item.generated_financial_entry_id = None
+                    item.generated_financial_schedule_id = None
+                    item.generated_by_user_id = None
+                    item.generated_at = None
                 elif data.status != "generated":
                     item.generated_by_user_id = None
                     item.generated_at = None

@@ -79,6 +79,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="ledger-chart-accounts">Plano de Contas</label>
+                <input type="text" placeholder="Buscar plano de contas" data-select-filter-target="ledger-chart-accounts">
                 <select id="ledger-chart-accounts" name="chart_account_ids" multiple size="7" data-filter-input data-default-value="">
                     {% for item in options.chart_accounts %}
                     {% set option_id = item.id|string %}
@@ -90,6 +91,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="ledger-cost-centers">Centro de Resultado</label>
+                <input type="text" placeholder="Buscar centro de resultado" data-select-filter-target="ledger-cost-centers">
                 <select id="ledger-cost-centers" name="cost_center_ids" multiple size="6" data-filter-input data-default-value="">
                     {% for item in options.cost_centers %}
                     {% set option_id = item.id|string %}
@@ -101,6 +103,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="ledger-projects">Projeto</label>
+                <input type="text" placeholder="Buscar projeto" data-select-filter-target="ledger-projects">
                 <select id="ledger-projects" name="project_ids" multiple size="5" data-filter-input data-default-value="">
                     {% for item in options.projects %}
                     {% set option_id = item.id|string %}
@@ -111,6 +114,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="ledger-processes">Projeto / Processo</label>
+                <input type="text" placeholder="Buscar processo" data-select-filter-target="ledger-processes">
                 <select id="ledger-processes" name="process_ids" multiple size="5" data-filter-input data-default-value="">
                     {% for item in options.processes %}
                     {% set option_id = item.id|string %}

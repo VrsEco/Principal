@@ -630,6 +630,8 @@ class FinancialCatalogService:
             ).first()
             if not chart:
                 return "Plano de contas não encontrado no escopo da empresa."
+            if not bool(chart.accepts_posting):
+                return "Selecione uma conta analítica do plano de contas."
 
         if cost_center_id:
             center = FinancialCostCenter.query.filter(
@@ -639,6 +641,8 @@ class FinancialCatalogService:
             ).first()
             if not center:
                 return "Centro de custo não encontrado no escopo da empresa."
+            if not bool(center.accepts_posting):
+                return "Selecione um centro de resultado analítico."
 
         if counterparty_id:
             counterparty = FinancialCounterparty.query.filter(
