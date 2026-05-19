@@ -16,6 +16,22 @@ document.addEventListener('DOMContentLoaded', () => {
     .map((id) => document.getElementById(id))
     .filter(Boolean);
 
+  const normalizeSearchTerm = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  const filterSelectOptions = (selectId, searchValue) => {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    const search = normalizeSearchTerm(searchValue);
+    Array.from(select.options || []).forEach((option) => {
+      const keepVisible = !search || normalizeSearchTerm(option.textContent || option.label || '').includes(search);
+      option.hidden = !keepVisible;
+    });
+  };
+
   const resolveFormAction = () => {
     form.action = form.dataset.viewAction || form.getAttribute('action') || window.location.pathname;
   };
@@ -76,6 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
     input.addEventListener(eventName, () => {
       resolveFormAction();
       countActiveFilters();
+    });
+  });
+
+  form.querySelectorAll('[data-select-filter-target]').forEach((input) => {
+    input.addEventListener('input', () => {
+      filterSelectOptions(input.dataset.selectFilterTarget, input.value || '');
     });
   });
 

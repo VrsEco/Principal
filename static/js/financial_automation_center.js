@@ -138,6 +138,28 @@
       .replaceAll("'", '&#39;');
   }
 
+  function normalizeSearchTerm(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function filterSelectOptions(selectId, searchValue) {
+    const select = byId(selectId);
+    if (!select) return;
+    const search = normalizeSearchTerm(searchValue);
+    Array.from(select.options || []).forEach((option, index) => {
+      if (index === 0) {
+        option.hidden = false;
+        return;
+      }
+      const haystack = normalizeSearchTerm(option.textContent || option.label || '');
+      option.hidden = Boolean(search) && !haystack.includes(search);
+    });
+  }
+
   function documentLabel(record) {
     const type = record.document_type || record.document?.document_type;
     return documentTypeLabels[type] || type || 'Documento';
@@ -398,6 +420,11 @@
         return `<option value="${value}" ${selected}>${labelGetter(item)}</option>`;
       }))
       .join('');
+    const searchInput = document.querySelector(`[data-select-filter-target="${targetId}"]`);
+    if (searchInput) {
+      searchInput.value = '';
+      filterSelectOptions(targetId, '');
+    }
   }
 
   function setText(targetId, html) {
@@ -903,6 +930,11 @@
   byId('fa-review-origin-action')?.addEventListener('click', openReviewDocumentExternal);
   byId('fa-review-preview-open')?.addEventListener('click', openReviewDocumentExternal);
   byId('fa-review-settlement-state')?.addEventListener('change', (event) => syncSettlementDateField(event.target.value));
+  document.querySelectorAll('[data-select-filter-target]').forEach((input) => {
+    input.addEventListener('input', (event) => {
+      filterSelectOptions(event.target.dataset.selectFilterTarget, event.target.value || '');
+    });
+  });
   byId('fa-select-all').addEventListener('change', (event) => {
     document.querySelectorAll('.fa-record-select').forEach((el) => { el.checked = event.target.checked; });
   });

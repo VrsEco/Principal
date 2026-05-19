@@ -64,3 +64,17 @@ def test_backend_enforces_analytic_catalogs_and_enabled_domains():
     assert "não está habilitado no Financeiro" in automation_service
     assert "_flat_list_from_enabled(Project, enabled_project_ids)" in report_service
     assert "_flat_list_from_enabled(Process, enabled_process_ids)" in report_service
+
+
+def test_served_financial_static_assets_match_app32_versions():
+    mirrored_assets = [
+        ("financial_schedules.js", "js"),
+        ("financial_entry_direct.js", "js"),
+        ("financial_automation_center.js", "js"),
+        ("financial_report_workspace.js", "js"),
+    ]
+
+    for filename, folder in mirrored_assets:
+        app32_asset = Path(fr"C:\GestaoVersus\app32\app32\static\{folder}\{filename}").read_text(encoding="utf-8")
+        served_asset = Path(fr"C:\GestaoVersus\app32\static\{folder}\{filename}").read_text(encoding="utf-8")
+        assert served_asset == app32_asset, f"Asset servido divergente: {filename}"
