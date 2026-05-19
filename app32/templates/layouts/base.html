@@ -65,7 +65,7 @@
     }
   </script>
   {% include 'components/sapiens_widget.html' %}
-  <script src="{{ url_for('static', filename='js/input_formatters.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/input_formatters.js', v=static_asset_version('js/input_formatters.js')) }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 

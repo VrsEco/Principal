@@ -188,6 +188,17 @@ def create_app(config_name=None):
     app.config["FLASK_CONFIG"] = config_name
     _sync_public_static_assets(app)
 
+    @app.context_processor
+    def inject_static_asset_version():
+        def static_asset_version(filename: str) -> str:
+            try:
+                asset_path = os.path.join(app.static_folder, filename)
+                return str(int(os.path.getmtime(asset_path)))
+            except (TypeError, OSError, ValueError):
+                return "1"
+
+        return {"static_asset_version": static_asset_version}
+
     if config_name == "production":
         if not app.config.get("SECRET_KEY"):
             raise RuntimeError("SECRET_KEY é obrigatório em produção.")
