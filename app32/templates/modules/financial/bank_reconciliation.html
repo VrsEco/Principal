@@ -135,6 +135,19 @@
     </section>
 </div>
 
+<div id="recon-modal-backdrop" class="recon-modal-backdrop" aria-hidden="true">
+    <section class="recon-modal" role="dialog" aria-modal="true" aria-labelledby="recon-modal-title">
+        <div class="recon-modal__header">
+            <div>
+                <span class="panel-kicker" id="recon-modal-kicker">Conciliação</span>
+                <h3 id="recon-modal-title">Ação necessária</h3>
+            </div>
+            <button type="button" class="recon-modal__close" onclick="closeReconModal()" aria-label="Fechar">×</button>
+        </div>
+        <div id="recon-modal-body" class="recon-modal__body"></div>
+    </section>
+</div>
+
 <style>
     .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:1rem}
     .recon-hero{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:1rem;border:1px solid var(--border);border-radius:24px;padding:1.35rem;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05));box-shadow:var(--shadow-sm)}
@@ -180,7 +193,10 @@
     .upload-status--success{background:#dcfce7;color:#166534}
     .upload-status--error{background:#fee2e2;color:#b91c1c}
     .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:18px;background:var(--surface-secondary);padding:1rem}
-    .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected{border-color:var(--primary);box-shadow:0 0 0 1px rgba(59,130,246,.14)}
+    .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected,.workbench-card.is-selected{border-color:rgba(37,99,235,.68);background:linear-gradient(180deg,rgba(219,234,254,.92),rgba(239,246,255,.98));box-shadow:0 0 0 2px rgba(59,130,246,.18),0 12px 30px rgba(37,99,235,.12)}
+    .row-card.is-actionable,.slot-card.is-actionable{border-color:rgba(14,165,233,.26);background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(239,246,255,.84));box-shadow:0 8px 24px rgba(15,23,42,.05)}
+    .row-card.is-disabled,.slot-card.is-disabled{border-color:rgba(148,163,184,.42);border-style:dashed;background:linear-gradient(180deg,rgba(248,250,252,.92),rgba(241,245,249,.92));opacity:.72}
+    .row-card.is-disabled .btn,.slot-card.is-disabled .btn,.slot-card.is-disabled input[type="checkbox"]{opacity:.6}
     .badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}
     .badge{display:inline-flex;border-radius:999px;padding:.25rem .65rem;font-size:.74rem;font-weight:700}
     .badge--ok{background:#dcfce7;color:#166534}
@@ -215,14 +231,30 @@
     .summary-card{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(241,245,249,.78))}
     .row-card h4,.slot-card h4,.workbench-card h4{margin:0 0 .25rem}
     .row-card p,.slot-card p,.workbench-card p{margin:.2rem 0}
-    .row-card,.slot-card,.workbench-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+    .row-card,.slot-card,.workbench-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease,opacity .18s ease}
     .row-card:hover,.slot-card:hover,.workbench-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+    .row-card.is-selected:hover,.slot-card.is-selected:hover,.workbench-card.is-selected:hover{transform:translateY(-2px)}
+    .row-card.is-actionable::before,.slot-card.is-actionable::before,.row-card.is-selected::before,.slot-card.is-selected::before,.workbench-card.is-selected::before{content:'';display:block;height:4px;margin:-1rem -1rem .85rem;border-radius:18px 18px 999px 999px}
+    .row-card.is-actionable::before,.slot-card.is-actionable::before{background:linear-gradient(90deg,#38bdf8,#2563eb)}
+    .row-card.is-selected::before,.slot-card.is-selected::before,.workbench-card.is-selected::before{background:linear-gradient(90deg,#1d4ed8,#2563eb,#38bdf8)}
+    .row-card.is-disabled::before,.slot-card.is-disabled::before{content:'';display:block;height:4px;margin:-1rem -1rem .85rem;border-radius:18px 18px 999px 999px;background:linear-gradient(90deg,#cbd5e1,#94a3b8)}
     .selection-line{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
     .selection-line input[type="checkbox"]{margin-top:.25rem}
     .allocation-grid,.entry-form-grid{display:grid;gap:.75rem}
     .entry-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .entry-form-grid textarea{min-height:88px;resize:vertical}
     .workbench-empty{padding:2rem 1rem;color:var(--text-secondary);text-align:center}
+    .recon-modal-backdrop{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.46);padding:1rem}
+    .recon-modal-backdrop.is-visible{display:flex}
+    .recon-modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.28);padding:1.25rem}
+    .recon-modal__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem}
+    .recon-modal__header h3{margin:0}
+    .recon-modal__body{display:flex;flex-direction:column;gap:1rem}
+    .recon-modal__close{border:none;background:var(--surface-secondary);border-radius:999px;width:36px;height:36px;cursor:pointer;color:var(--text-primary);font-size:1rem}
+    .group-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+    .group-total-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.78));padding:.85rem}
+    .group-total-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+    .group-total-card strong{display:block;margin-top:.25rem;font-size:1.05rem}
     .recon-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.4rem;min-height:180px;padding:1.4rem;border:1px dashed rgba(148,163,184,.4);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.85),rgba(241,245,249,.65))}
     .recon-empty-state strong{color:var(--text-primary);font-size:1rem}
     .recon-empty-state span{color:var(--text-secondary);max-width:36ch}
@@ -250,11 +282,13 @@ const state = {
     selectedBatchId: null,
     workspace: null,
     activeRowId: null,
+    selectedBankRowIds: [],
     bankFilter: 'pending',
     selectedEntryIds: [],
     entryAllocations: {},
     rowCandidates: {},
     systemSearch: '',
+    resolutionPreview: null,
 };
 
 function brl(value){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value || 0)); }
@@ -290,7 +324,12 @@ async function api(url, options={}){
     const payload = contentType.includes('application/json')
         ? await response.json()
         : { error: await response.text() };
-    if(!response.ok) throw new Error(payload.error || 'Falha na operação.');
+    if(!response.ok){
+        const error = new Error(payload.error || payload.message || 'Falha na operação.');
+        error.payload = payload;
+        error.status = response.status;
+        throw error;
+    }
     return payload;
 }
 function escapeHtml(value){ return String(value || '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
@@ -393,8 +432,50 @@ function rowStatusLabel(row){
     return 'Sem vínculo';
 }
 
+function bankRowStateClass(row){
+    if(state.selectedBankRowIds.map(Number).includes(Number(row?.id))) return 'is-selected';
+    if(row?.created_entry_id || row?.matches?.confirmed_count) return 'is-disabled';
+    return 'is-actionable';
+}
+
+function isSystemEntryDisabled(item, activeRow=getActiveRow()){
+    if(!state.selectedBankRowIds.length && !activeRow) return true;
+    if(item?.is_reconciled) return true;
+    const linkedIds = new Set((activeRow?.matches?.linked_entry_ids || []).map(Number));
+    return linkedIds.has(Number(item?.id));
+}
+
+function systemRowStateClass(item, activeRow=getActiveRow()){
+    if(state.selectedEntryIds.map(Number).includes(Number(item?.id))) return 'is-selected';
+    return isSystemEntryDisabled(item, activeRow) ? 'is-disabled' : 'is-actionable';
+}
+
 function getActiveRow(){
     return (state.workspace?.bank_rows || []).find(item => String(item.id) === String(state.activeRowId)) || null;
+}
+
+function getSelectedBankRows(){
+    const selectedIds = new Set((state.selectedBankRowIds || []).map(Number));
+    return (state.workspace?.bank_rows || []).filter(item => selectedIds.has(Number(item.id)));
+}
+
+function getSelectedSystemRows(){
+    const selectedIds = new Set((state.selectedEntryIds || []).map(Number));
+    return (state.workspace?.system_rows || []).filter(item => selectedIds.has(Number(item.id)));
+}
+
+function getGroupSummary(){
+    const bankRows = getSelectedBankRows();
+    const systemRows = getSelectedSystemRows();
+    const bankTotal = bankRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const systemTotal = systemRows.reduce((sum, item) => sum + Number(item.remaining_amount ?? item.original_amount ?? 0), 0);
+    return {
+        bankRows,
+        systemRows,
+        bankTotal,
+        systemTotal,
+        difference: bankTotal - systemTotal,
+    };
 }
 
 function getVisibleBankRows(){
@@ -428,6 +509,14 @@ function renderAccounts(){
     renderHero();
 }
 
+async function selectBankAccountCard(bankAccountId){
+    state.selectedBankAccountId = Number(bankAccountId || 0) || null;
+    renderAccounts();
+    if(state.selectedBankAccountId){
+        await openWorkspace(state.selectedBankAccountId);
+    }
+}
+
 function renderSummary(){
     const summary = state.workspace?.summary || {};
     document.getElementById('workspace-summary').innerHTML = `
@@ -455,22 +544,27 @@ function renderBankFilters(){
 function renderBankRows(){
     const container = document.getElementById('bank-rows-list');
     const rows = getVisibleBankRows();
+    const selectedIds = new Set((state.selectedBankRowIds || []).map(Number));
     if(!rows.length){
         container.innerHTML = emptyState('Nenhuma linha encontrada', 'Ajuste o filtro ou importe um novo extrato para continuar a conciliação.');
         return;
     }
     container.innerHTML = rows.map(row => `
-        <article class="row-card ${String(row.id) === String(state.activeRowId) ? 'is-selected' : ''}" onclick="selectBankRow(${row.id})">
-            <div class="row-between">
+        <article class="row-card ${bankRowStateClass(row)}" onclick="focusBankRow(${row.id})">
+            <div class="selection-line">
                 <div>
                     <h4>Linha ${row.row_number}</h4>
                     <p class="row-meta">${escapeHtml(row.description || '-')}</p>
                 </div>
+                <input type="checkbox" ${selectedIds.has(Number(row.id)) ? 'checked' : ''} ${(row.created_entry_id || row.matches?.confirmed_count) && !selectedIds.has(Number(row.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleBankRowSelection(${row.id})">
+            </div>
+            <div class="row-between">
+                <p class="row-meta">Data ${escapeHtml(row.occurred_on || row.due_date || '-')} · Valor ${brl(row.amount)} · Ref. ${escapeHtml(row.bank_reference || '-')}</p>
                 <div class="badges">
                     ${badge(rowStatusLabel(row), rowStatusKind(row))}
+                    ${String(row.id) === String(state.activeRowId) ? badge('Em foco', 'info') : ''}
                 </div>
             </div>
-            <p class="row-meta">Data ${escapeHtml(row.occurred_on || row.due_date || '-')} · Valor ${brl(row.amount)} · Ref. ${escapeHtml(row.bank_reference || '-')}</p>
             <p class="row-meta">${escapeHtml(row.counterparty_name || 'Sem favorecido identificado')}</p>
             <div class="badges">
                 ${row.matches?.match_mode ? badge(`Modo ${row.matches.match_mode}`, 'mute') : ''}
@@ -498,14 +592,14 @@ function renderSystemRows(){
         return;
     }
     container.innerHTML = rows.map(item => `
-        <article class="slot-card ${selectedIds.has(Number(item.id)) ? 'is-selected' : ''}">
+        <article class="slot-card ${systemRowStateClass(item, activeRow)}">
             <div class="selection-line">
                 <div>
                     <h4>${escapeHtml(item.entry_code || `Lançamento ${item.id}`)}</h4>
                     <p class="row-meta">${escapeHtml(item.description || '-')}</p>
                     <p class="row-meta">Valor ${brl(item.remaining_amount ?? item.original_amount)} · Data ${escapeHtml(item.occurred_on || item.due_date || item.competence_date || '-')}</p>
                 </div>
-                <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} onchange="toggleEntrySelection(${item.id})">
+                <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onchange="toggleEntrySelection(${item.id})">
             </div>
             <div class="badges">
                 ${linkedIds.has(Number(item.id)) ? badge('Já vinculado à linha', 'ok') : ''}
@@ -516,7 +610,7 @@ function renderSystemRows(){
             </div>
             <div class="inline-actions">
                 <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;">Abrir lançamento</a>
-                ${!selectedIds.has(Number(item.id)) ? `<button type="button" class="btn btn-secondary" onclick="toggleEntrySelection(${item.id})">Selecionar</button>` : ''}
+                ${!selectedIds.has(Number(item.id)) && !isSystemEntryDisabled(item, activeRow) ? `<button type="button" class="btn btn-secondary" onclick="toggleEntrySelection(${item.id})">Selecionar</button>` : ''}
             </div>
         </article>
     `).join('');
@@ -544,28 +638,34 @@ function buildAllocationDraft(){
 function renderWorkbench(){
     const container = document.getElementById('workbench-panel');
     const row = getActiveRow();
-    if(!row){
-        container.innerHTML = emptyState('Selecione uma linha bancária', 'O painel de decisão mostra sugestões, vinculação manual e criação assistida quando uma linha é escolhida.');
+    const selectedRows = getSelectedBankRows();
+    if(!selectedRows.length){
+        container.innerHTML = emptyState('Selecione um ou mais registros bancários', 'O painel de decisão mostra totais, sugestões, vinculação por conjunto e criação rápida quando há seleção.');
         return;
     }
-    const candidatePayload = state.rowCandidates[row.id] || { items: [] };
-    const allocations = buildAllocationDraft();
-    const allocatedTotal = allocations.reduce((sum, item) => sum + Number(item.principal_amount || 0), 0);
-    const difference = Number(row.amount || 0) - allocatedTotal;
+    const candidatePayload = row ? (state.rowCandidates[row.id] || { items: [] }) : { items: [] };
+    const groupSummary = getGroupSummary();
+    const differenceKind = Math.abs(groupSummary.difference) < 0.01 ? 'ok' : 'warn';
     container.innerHTML = `
-        <section class="workbench-card">
-            <h4>Linha bancária selecionada</h4>
-            <p><strong>${escapeHtml(row.description || '-')}</strong></p>
-            <p class="row-meta">Data ${escapeHtml(row.occurred_on || row.due_date || '-')} · Valor ${brl(row.amount)} · Ref. ${escapeHtml(row.bank_reference || '-')}</p>
+        <section class="workbench-card is-selected">
+            <h4>Registros bancários selecionados</h4>
+            <p><strong>${selectedRows.length} linha(s) no conjunto</strong></p>
+            <div class="helper-list">
+                ${selectedRows.slice(0, 4).map(item => `
+                    <p class="row-meta">Linha ${item.row_number} · ${escapeHtml(item.description || '-')} · ${brl(item.amount)}</p>
+                `).join('')}
+                ${selectedRows.length > 4 ? `<p class="row-meta">+ ${selectedRows.length - 4} linha(s) adicionais.</p>` : ''}
+            </div>
             <div class="badges">
-                ${badge(rowStatusLabel(row), rowStatusKind(row))}
-                ${row.matches?.match_mode ? badge(`Modo ${row.matches.match_mode}`, 'mute') : ''}
-                ${row.created_entry_id ? badge(`Criado no sistema #${row.created_entry_id}`, 'ok') : ''}
+                ${badge(`Total banco ${brl(groupSummary.bankTotal)}`, 'info')}
+                ${badge(`Total sistema ${brl(groupSummary.systemTotal)}`, 'mute')}
+                ${badge(`Diferença ${brl(groupSummary.difference)}`, differenceKind)}
             </div>
         </section>
 
         <section class="workbench-card">
-            <h4>Sugestões automáticas</h4>
+            <h4>Sugestões automáticas da linha em foco</h4>
+            ${row ? `<p class="row-meta">Linha ${row.row_number}: ${escapeHtml(row.description || '-')}</p>` : ''}
             ${candidatePayload.items?.length ? `
                 <div class="helper-list">
                     ${candidatePayload.items.map(item => `
@@ -583,65 +683,28 @@ function renderWorkbench(){
         </section>
 
         <section class="workbench-card">
-            <h4>Vinculação manual</h4>
-            <p class="row-meta">Selecione no extrato do sistema os lançamentos que devem compor esta linha do banco.</p>
-            ${allocations.length ? `
-                <div class="allocation-grid">
-                    ${allocations.map(item => `
-                        <label>
-                            <span>${escapeHtml(item.entry.entry_code || `Lançamento ${item.financial_entry_id}`)} · ${escapeHtml(item.entry.description || '')}</span>
-                            <input type="number" min="0" step="0.01" value="${Number(item.principal_amount || 0).toFixed(2)}" onchange="updateAllocation(${item.financial_entry_id}, this.value)">
-                        </label>
-                    `).join('')}
-                </div>
-                <div class="badges">
-                    ${badge(`Alocado ${brl(allocatedTotal)}`, 'info')}
-                    ${badge(`Diferença ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn')}
-                </div>
-                <div class="inline-actions">
-                    <button type="button" class="btn btn-primary" onclick="confirmSelectedMatches()">Confirmar vínculos</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearSelectedEntries()">Limpar seleção</button>
-                </div>
-            ` : '<p class="muted">Nenhum lançamento do sistema selecionado ainda.</p>'}
+            <h4>Conciliação do conjunto</h4>
+            <p class="row-meta">Selecione uma ou mais linhas bancárias e um ou mais lançamentos do sistema. O backend valida o total antes de confirmar.</p>
+            <div class="group-totals">
+                <div class="group-total-card"><span>Banco</span><strong>${brl(groupSummary.bankTotal)}</strong></div>
+                <div class="group-total-card"><span>Sistema</span><strong>${brl(groupSummary.systemTotal)}</strong></div>
+                <div class="group-total-card"><span>Diferença</span><strong>${brl(groupSummary.difference)}</strong></div>
+            </div>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-primary" onclick="confirmSelectedMatches()" ${!state.selectedEntryIds.length ? 'disabled' : ''}>Confirmar conjunto</button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelectedEntries()">Limpar sistema</button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelectedBankRows()">Limpar banco</button>
+            </div>
         </section>
 
         <section class="workbench-card">
             <h4>Ações da conciliação</h4>
             <div class="inline-actions">
-                <button type="button" class="btn btn-secondary" onclick="toggleCreateEntryForm()">${state.showCreateEntry ? 'Ocultar criação assistida' : 'Criar lançamento no sistema'}</button>
-                ${(row.matches?.confirmed_count || row.created_entry_id) ? '<button type="button" class="btn btn-danger" onclick="cancelRowReconciliation()">Cancelar conciliação</button>' : ''}
+                <button type="button" class="btn btn-secondary" onclick="openCreateEntryModal()">Criar lançamento no sistema</button>
+                ${row && (row.matches?.confirmed_count || row.created_entry_id) ? '<button type="button" class="btn btn-danger" onclick="cancelRowReconciliation()">Cancelar conciliação da linha em foco</button>' : ''}
             </div>
-            <p class="row-meta">A baixa continua protegida quando conciliada; para editar, cancele a conciliação primeiro.</p>
+            <p class="row-meta">Para corrigir lançamento do sistema, abra o título, salve a alteração e retorne para esta conciliação com o mesmo lote selecionado.</p>
         </section>
-
-        ${state.showCreateEntry ? `
-            <section class="workbench-card">
-                <h4>Criação assistida de lançamento</h4>
-                <form id="create-entry-form" class="entry-form-grid" onsubmit="submitCreateEntry(event)">
-                    <label><span>Histórico</span><input name="description" value="${escapeHtml(row.description || '')}" required></label>
-                    <label><span>Tipo</span>
-                        <select name="entry_type">
-                            <option value="bank_movement">Movimento bancário</option>
-                            <option value="payable">Conta a pagar</option>
-                            <option value="receivable">Conta a receber</option>
-                        </select>
-                    </label>
-                    <label><span>Data do pagamento/recebimento</span><input type="date" name="occurred_on" value="${escapeHtml(row.occurred_on || row.due_date || '')}" required></label>
-                    <label><span>Vencimento</span><input type="date" name="due_date" value="${escapeHtml(row.due_date || row.occurred_on || '')}" required></label>
-                    <label><span>Competência</span><input type="date" name="competence_date" value="${escapeHtml(row.occurred_on || row.due_date || '')}" required></label>
-                    <label><span>Valor</span><input type="number" min="0" step="0.01" name="original_amount" value="${Number(row.amount || 0).toFixed(2)}" required></label>
-                    <label><span>Conta bancária</span><input type="number" name="bank_account_id" value="${Number(state.selectedBankAccountId || 0)}" required></label>
-                    <label><span>Nº documento</span><input name="document_number" value="${escapeHtml(row.document_number || '')}"></label>
-                    <label><span>Favorecido ID</span><input type="number" min="1" name="counterparty_id"></label>
-                    <label><span>Conta gerencial ID</span><input type="number" min="1" name="chart_account_id"></label>
-                    <label><span>Centro de resultado ID</span><input type="number" min="1" name="cost_center_id"></label>
-                    <label class="col-span-2"><span>Observações</span><textarea name="notes">Criado a partir da conciliação da linha ${row.row_number}.</textarea></label>
-                    <div class="col-span-2 actions-right">
-                        <button type="submit" class="btn btn-primary">Criar e conciliar</button>
-                    </div>
-                </form>
-            </section>
-        ` : ''}
     `;
 }
 
@@ -694,6 +757,7 @@ async function openWorkspace(bankAccountId, batchId=null){
     companyId = resolveCompanyId();
     state.selectedBankAccountId = bankAccountId;
     state.selectedBatchId = batchId;
+    state.selectedBankRowIds = [];
     state.selectedEntryIds = [];
     state.entryAllocations = {};
     state.rowCandidates = {};
@@ -702,6 +766,7 @@ async function openWorkspace(bankAccountId, batchId=null){
     state.workspace = await api(`/api/financial/reconciliation/workspace${companyQuery({bank_account_id: bankAccountId, batch_id: batchId})}`);
     const preferredRow = (state.workspace.bank_rows_without_link || [])[0] || (state.workspace.bank_rows_with_suggestion || [])[0] || (state.workspace.bank_rows || [])[0] || null;
     state.activeRowId = preferredRow?.id || null;
+    state.selectedBankRowIds = preferredRow?.id ? [Number(preferredRow.id)] : [];
     if(state.activeRowId) await loadCandidates(state.activeRowId);
     renderWorkspace();
 }
@@ -722,18 +787,44 @@ async function loadCandidates(rowId){
     state.rowCandidates[rowId] = await api(`/api/financial/reconciliation/rows/${rowId}/candidates${companyQuery({limit: 8})}`);
 }
 
-async function selectBankRow(rowId){
+async function focusBankRow(rowId){
     state.activeRowId = rowId;
-    state.selectedEntryIds = [];
-    state.entryAllocations = {};
-    state.showCreateEntry = false;
     if(!state.rowCandidates[rowId]) await loadCandidates(rowId);
     renderBankRows();
     renderSystemRows();
     renderWorkbench();
 }
 
+async function selectBankRow(rowId){
+    await focusBankRow(rowId);
+}
+
+async function toggleBankRowSelection(rowId){
+    const current = new Set((state.selectedBankRowIds || []).map(Number));
+    if(current.has(Number(rowId))){
+        current.delete(Number(rowId));
+    } else {
+        current.add(Number(rowId));
+        state.activeRowId = rowId;
+        if(!state.rowCandidates[rowId]) await loadCandidates(rowId);
+    }
+    state.selectedBankRowIds = Array.from(current);
+    if(!state.selectedBankRowIds.length){
+        state.activeRowId = null;
+    } else if(!state.selectedBankRowIds.map(Number).includes(Number(state.activeRowId))){
+        state.activeRowId = state.selectedBankRowIds[0];
+    }
+    renderBankRows();
+    renderSystemRows();
+    renderWorkbench();
+}
+
 function toggleEntrySelection(entryId){
+    const activeRow = getActiveRow();
+    const systemEntry = (state.workspace?.system_rows || []).find(item => String(item.id) === String(entryId));
+    if(isSystemEntryDisabled(systemEntry, activeRow) && !state.selectedEntryIds.map(Number).includes(Number(entryId))){
+        return;
+    }
     const current = new Set(state.selectedEntryIds.map(Number));
     if(current.has(Number(entryId))){
         current.delete(Number(entryId));
@@ -758,6 +849,14 @@ function clearSelectedEntries(){
     renderWorkbench();
 }
 
+function clearSelectedBankRows(){
+    state.selectedBankRowIds = [];
+    state.activeRowId = null;
+    renderBankRows();
+    renderSystemRows();
+    renderWorkbench();
+}
+
 async function confirmSuggestedMatch(matchId){
     await api(`/api/financial/reconciliation-matches/${matchId}/review${companyQuery()}`, {
         method:'POST',
@@ -768,29 +867,39 @@ async function confirmSuggestedMatch(matchId){
     await refreshWorkspace();
 }
 
-async function confirmSelectedMatches(){
-    const row = getActiveRow();
-    if(!row || !state.selectedEntryIds.length){
-        alert('Selecione ao menos um lançamento do sistema.');
+async function confirmSelectedMatches(resolutionStrategy=null){
+    const bankRowIds = (state.selectedBankRowIds || []).map(Number).filter(Boolean);
+    if(!bankRowIds.length || !state.selectedEntryIds.length){
+        alert('Selecione ao menos uma linha bancária e um lançamento do sistema.');
         return;
     }
-    const allocations = buildAllocationDraft().map(item => ({
-        financial_entry_id: item.financial_entry_id,
-        principal_amount: Number(item.principal_amount || 0),
-    }));
-    await api(`/api/financial/reconciliation/rows/${row.id}/match${companyQuery()}`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-            financial_entry_id: Number(state.selectedEntryIds[0]),
-            financial_entry_ids: state.selectedEntryIds.slice(1).map(Number),
-            allocations,
-        }),
-    });
-    state.selectedEntryIds = [];
-    state.entryAllocations = {};
-    await loadOverview();
-    await refreshWorkspace();
+    try{
+        await api(`/api/financial/reconciliation/groups/match${companyQuery()}`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                bank_row_ids: bankRowIds,
+                financial_entry_ids: state.selectedEntryIds.map(Number),
+                resolution_strategy: resolutionStrategy,
+                complementary_entry: resolutionStrategy === 'create_complement' ? {
+                    description: 'Complemento criado pela conciliação bancária por conjunto',
+                    bank_account_id: Number(state.selectedBankAccountId || 0),
+                } : null,
+            }),
+        });
+        closeReconModal();
+        state.selectedBankRowIds = [];
+        state.selectedEntryIds = [];
+        state.entryAllocations = {};
+        await loadOverview();
+        await refreshWorkspace();
+    } catch(error){
+        if(error.status === 409 && error.payload?.requires_resolution){
+            openResolutionModal(error.payload);
+            return;
+        }
+        alert(error.message || 'Não foi possível confirmar o conjunto.');
+    }
 }
 
 async function cancelRowReconciliation(){
@@ -810,13 +919,94 @@ async function cancelRowReconciliation(){
 }
 
 function toggleCreateEntryForm(){
-    state.showCreateEntry = !state.showCreateEntry;
-    renderWorkbench();
+    openCreateEntryModal();
+}
+
+function closeReconModal(){
+    const backdrop = document.getElementById('recon-modal-backdrop');
+    if(backdrop){
+        backdrop.classList.remove('is-visible');
+        backdrop.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function openReconModal({kicker='Conciliação', title='Ação necessária', body=''}){
+    document.getElementById('recon-modal-kicker').textContent = kicker;
+    document.getElementById('recon-modal-title').textContent = title;
+    document.getElementById('recon-modal-body').innerHTML = body;
+    const backdrop = document.getElementById('recon-modal-backdrop');
+    backdrop.classList.add('is-visible');
+    backdrop.setAttribute('aria-hidden', 'false');
+}
+
+function openResolutionModal(payload){
+    state.resolutionPreview = payload;
+    const selectedEntries = getSelectedSystemRows();
+    openReconModal({
+        kicker: 'Diferença encontrada',
+        title: 'Escolha como resolver antes de conciliar',
+        body: `
+            <p class="muted">${escapeHtml(payload.message || 'Há diferença entre banco e sistema.')}</p>
+            <div class="group-totals">
+                <div class="group-total-card"><span>Banco</span><strong>${brl(payload.bank_total)}</strong></div>
+                <div class="group-total-card"><span>Sistema</span><strong>${brl(payload.system_total)}</strong></div>
+                <div class="group-total-card"><span>Diferença</span><strong>${brl(payload.difference)}</strong></div>
+            </div>
+            <div class="inline-actions">
+                ${payload.can_create_complement ? '<button type="button" class="btn btn-primary" onclick="confirmSelectedMatches(\'create_complement\')">Criar complemento e conciliar</button>' : ''}
+                ${selectedEntries.length ? `<button type="button" class="btn btn-secondary" onclick="openEntryForCorrection(${selectedEntries[0].id})">Alterar lançamento do sistema</button>` : ''}
+                <button type="button" class="btn btn-secondary" onclick="closeReconModal()">Voltar para seleção</button>
+            </div>
+        `,
+    });
+}
+
+function openEntryForCorrection(entryId){
+    const returnTo = `${window.location.pathname}${window.location.search}`;
+    window.location.href = `/financial/entries/${entryId}${companyQuery({return_to: returnTo})}`;
+}
+
+function openCreateEntryModal(){
+    const row = getActiveRow() || getSelectedBankRows()[0];
+    if(!row){
+        alert('Selecione uma linha bancária para criar o lançamento rápido.');
+        return;
+    }
+    openReconModal({
+        kicker: 'Lançamento rápido',
+        title: `Criar a partir da linha ${row.row_number}`,
+        body: `
+            <form id="create-entry-form" class="entry-form-grid" onsubmit="submitCreateEntry(event)">
+                <label><span>Histórico</span><input name="description" value="${escapeHtml(row.description || '')}" required></label>
+                <label><span>Tipo</span>
+                    <select name="entry_type">
+                        <option value="bank_movement">Movimento bancário</option>
+                        <option value="payable">Conta a pagar</option>
+                        <option value="receivable">Conta a receber</option>
+                    </select>
+                </label>
+                <label><span>Data do pagamento/recebimento</span><input type="date" name="occurred_on" value="${escapeHtml(row.occurred_on || row.due_date || '')}" required></label>
+                <label><span>Vencimento</span><input type="date" name="due_date" value="${escapeHtml(row.due_date || row.occurred_on || '')}" required></label>
+                <label><span>Competência</span><input type="date" name="competence_date" value="${escapeHtml(row.occurred_on || row.due_date || '')}" required></label>
+                <label><span>Valor</span><input type="number" min="0" step="0.01" name="original_amount" value="${Number(row.amount || 0).toFixed(2)}" required></label>
+                <label><span>Conta bancária</span><input type="number" name="bank_account_id" value="${Number(state.selectedBankAccountId || 0)}" required></label>
+                <label><span>Nº documento</span><input name="document_number" value="${escapeHtml(row.document_number || '')}"></label>
+                <label><span>Favorecido ID</span><input type="number" min="1" name="counterparty_id"></label>
+                <label><span>Conta gerencial ID</span><input type="number" min="1" name="chart_account_id"></label>
+                <label><span>Centro de resultado ID</span><input type="number" min="1" name="cost_center_id"></label>
+                <label class="col-span-2"><span>Observações</span><textarea name="notes">Criado a partir da conciliação da linha ${row.row_number}.</textarea></label>
+                <div class="col-span-2 actions-right">
+                    <button type="button" class="btn btn-secondary" onclick="closeReconModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Criar e conciliar</button>
+                </div>
+            </form>
+        `,
+    });
 }
 
 async function submitCreateEntry(event){
     event.preventDefault();
-    const row = getActiveRow();
+    const row = getActiveRow() || getSelectedBankRows()[0];
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
     payload.original_amount = Number(payload.original_amount || 0);
     ['counterparty_id','chart_account_id','cost_center_id','bank_account_id'].forEach((field) => {
@@ -828,6 +1018,7 @@ async function submitCreateEntry(event){
         body: JSON.stringify(payload),
     });
     state.showCreateEntry = false;
+    closeReconModal();
     await loadOverview();
     await refreshWorkspace();
 }

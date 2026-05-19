@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -28,6 +29,20 @@ class FinancialReconciliationService:
     @staticmethod
     def _decimal(value) -> Decimal:
         return Decimal(str(value or 0))
+
+    @staticmethod
+    def _normalize_ids(values: Optional[Sequence[int]]) -> List[int]:
+        normalized: List[int] = []
+        seen = set()
+        for raw_value in values or []:
+            try:
+                current_id = int(raw_value or 0)
+            except (TypeError, ValueError):
+                current_id = 0
+            if current_id > 0 and current_id not in seen:
+                seen.add(current_id)
+                normalized.append(current_id)
+        return normalized
 
     @staticmethod
     def _get_remaining_principal(entry: FinancialEntry) -> Decimal:
@@ -296,9 +311,19 @@ class FinancialReconciliationService:
             for row in rows:
                 row_context = FinancialReconciliationService._resolve_row_context(company_id, row)
                 row.normalized_payload = row_context
+                confirmed_match = FinancialReconciliationMatch.query.filter(
+                    FinancialReconciliationMatch.company_id == company_id,
+                    FinancialReconciliationMatch.import_row_id == row.id,
+                    FinancialReconciliationMatch.match_status == "confirmed",
+                    FinancialReconciliationMatch.deleted_at.is_(None),
+                ).first()
+                if confirmed_match or row.created_entry_id:
+                    continue
+
                 FinancialReconciliationMatch.query.filter(
                     FinancialReconciliationMatch.company_id == company_id,
                     FinancialReconciliationMatch.import_row_id == row.id,
+                    FinancialReconciliationMatch.match_status != "confirmed",
                 ).delete(synchronize_session=False)
 
                 candidates = FinancialEntry.query.filter(
@@ -329,7 +354,7 @@ class FinancialReconciliationService:
                         best_reason = reason
                         best_entry = entry
 
-                threshold = Decimal("0.68") if row_context.get("counterparty_id") or row_context.get("bank_account_id") else Decimal("0.72")
+                threshold = Decimal("0.80")
 
                 if best_entry and best_score >= threshold:
                     match = FinancialReconciliationMatch(
@@ -619,6 +644,214 @@ class FinancialReconciliationService:
             "match_mode": "1:N" if len(confirmations) > 1 else "1:1",
             "confirmed_matches": confirmations,
             "remaining_row_amount": float(remaining_row_amount),
+        }, None
+
+    @staticmethod
+    def reconcile_group(
+        *,
+        company_id: int,
+        bank_row_ids: Sequence[int],
+        financial_entry_ids: Sequence[int],
+        resolution_strategy: Optional[str] = None,
+        complementary_entry: Optional[Dict] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        selected_row_ids = FinancialReconciliationService._normalize_ids(bank_row_ids)
+        selected_entry_ids = FinancialReconciliationService._normalize_ids(financial_entry_ids)
+        if not selected_row_ids:
+            return None, "Selecione ao menos uma linha do extrato bancário."
+        if not selected_entry_ids:
+            return None, "Selecione ao menos um lançamento do sistema."
+
+        rows = FinancialImportRow.query.filter(
+            FinancialImportRow.company_id == company_id,
+            FinancialImportRow.id.in_(selected_row_ids),
+            FinancialImportRow.deleted_at.is_(None),
+        ).order_by(FinancialImportRow.row_number.asc(), FinancialImportRow.id.asc()).all()
+        if len(rows) != len(selected_row_ids):
+            return None, "Uma ou mais linhas do extrato não foram encontradas no escopo da empresa."
+
+        entries = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.id.in_(selected_entry_ids),
+            FinancialEntry.deleted_at.is_(None),
+        ).order_by(FinancialEntry.id.asc()).all()
+        if len(entries) != len(selected_entry_ids):
+            return None, "Um ou mais lançamentos do sistema não foram encontrados no escopo da empresa."
+
+        existing_confirmed = FinancialReconciliationMatch.query.filter(
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.import_row_id.in_(selected_row_ids),
+            FinancialReconciliationMatch.match_status == "confirmed",
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ).first()
+        if existing_confirmed or any(row.created_entry_id for row in rows):
+            return None, "Há linha bancária selecionada que já está conciliada. Cancele a conciliação antes de refazer o grupo."
+
+        row_natures = {str(row.movement_nature or "").strip().lower() for row in rows}
+        entry_natures = {str(entry.movement_nature or "").strip().lower() for entry in entries}
+        row_natures.discard("")
+        entry_natures.discard("")
+        if len(row_natures) != 1 or len(entry_natures) > 1:
+            return None, "A conciliação por conjunto nesta versão exige registros da mesma natureza operacional."
+        movement_nature = next(iter(row_natures))
+        if entry_natures and next(iter(entry_natures)) != movement_nature:
+            return None, "A natureza dos lançamentos do sistema precisa ser a mesma das linhas bancárias selecionadas."
+
+        bank_total = sum((FinancialReconciliationService._decimal(row.amount) for row in rows), Decimal("0"))
+        entry_remaining: Dict[int, Decimal] = {}
+        system_total = Decimal("0")
+        for entry in entries:
+            remaining = FinancialReconciliationService._get_remaining_principal(entry)
+            if remaining <= 0:
+                return None, f"O lançamento {entry.id} já está totalmente baixado."
+            entry_remaining[int(entry.id)] = remaining
+            system_total += remaining
+
+        difference = bank_total - system_total
+        resolution_strategy = str(resolution_strategy or "").strip().lower()
+        complementary_payload = dict(complementary_entry or {})
+        created_complement = None
+        tolerance = Decimal("0.01")
+
+        if abs(difference) > tolerance:
+            preview = {
+                "requires_resolution": True,
+                "bank_row_ids": selected_row_ids,
+                "financial_entry_ids": selected_entry_ids,
+                "bank_total": float(bank_total),
+                "system_total": float(system_total),
+                "difference": float(difference),
+                "can_create_complement": difference > 0,
+                "can_edit_entries": True,
+                "message": (
+                    "O total bancário é maior que os lançamentos selecionados. "
+                    "Crie um lançamento complementar ou ajuste a seleção."
+                    if difference > 0
+                    else "Os lançamentos selecionados excedem o total bancário. Abra o lançamento e corrija o valor antes de conciliar."
+                ),
+            }
+            if resolution_strategy != "create_complement":
+                return preview, None
+            if difference <= 0:
+                return None, "Quando o sistema excede o banco, corrija o lançamento do sistema antes de confirmar."
+
+            first_row = rows[0]
+            first_context = FinancialReconciliationService._resolve_row_context(company_id, first_row)
+            entry_code = complementary_payload.get("entry_code") or f"REC-GRP-{first_row.id}-{datetime.utcnow().strftime('%H%M%S%f')}"
+            fallback_date = first_row.occurred_on or first_row.due_date or datetime.utcnow().date()
+            entry_payload = {
+                "company_id": company_id,
+                "entry_code": entry_code,
+                "entry_type": complementary_payload.get("entry_type") or "bank_movement",
+                "movement_nature": complementary_payload.get("movement_nature") or movement_nature,
+                "origin_type": complementary_payload.get("origin_type") or "manual",
+                "status": "posted",
+                "review_status": "approved",
+                "description": complementary_payload.get("description") or f"Complemento da conciliação bancária linha {first_row.row_number}",
+                "document_number": complementary_payload.get("document_number") or first_row.document_number,
+                "external_reference": complementary_payload.get("external_reference") or first_row.bank_reference,
+                "origin_reference": complementary_payload.get("origin_reference") or f"reconciliation-group:{','.join(map(str, selected_row_ids))}",
+                "competence_date": complementary_payload.get("competence_date") or fallback_date,
+                "due_date": complementary_payload.get("due_date") or fallback_date,
+                "occurred_on": complementary_payload.get("occurred_on") or fallback_date,
+                "original_amount": difference,
+                "bank_account_id": complementary_payload.get("bank_account_id") or first_context.get("bank_account_id"),
+                "counterparty_id": complementary_payload.get("counterparty_id") or first_context.get("counterparty_id"),
+                "chart_account_id": complementary_payload.get("chart_account_id") or first_context.get("chart_account_id"),
+                "cost_center_id": complementary_payload.get("cost_center_id") or first_context.get("cost_center_id"),
+                "notes": complementary_payload.get("notes") or "Criado como complemento de conciliação por conjunto.",
+                "metadata_json": {
+                    "reconciliation_group_bank_row_ids": selected_row_ids,
+                    "reconciliation_group_complement": True,
+                    "reconciled": False,
+                },
+            }
+            if not entry_payload["bank_account_id"]:
+                return None, "Informe a conta bancária para criar o lançamento complementar."
+            created_entry, error = FinancialService.create_entry(payload=entry_payload, allowed_company_ids=allowed_company_ids)
+            if error:
+                return None, error
+            entries.append(created_entry)
+            selected_entry_ids.append(int(created_entry.id))
+            entry_remaining[int(created_entry.id)] = FinancialReconciliationService._decimal(created_entry.original_amount)
+            system_total += FinancialReconciliationService._decimal(created_entry.original_amount)
+            created_complement = FinancialService.serialize_entry(created_entry, include_children=False)
+            difference = bank_total - system_total
+
+        if abs(difference) > tolerance:
+            return None, "O grupo ainda não está balanceado após a resolução escolhida."
+
+        rows_remaining = {int(row.id): FinancialReconciliationService._decimal(row.amount) for row in rows}
+        entry_by_id = {int(entry.id): entry for entry in entries}
+        allocations_by_row: Dict[int, List[Dict]] = {int(row.id): [] for row in rows}
+
+        for row in rows:
+            row_id = int(row.id)
+            for entry_id in list(selected_entry_ids):
+                if rows_remaining[row_id] <= 0:
+                    break
+                available = entry_remaining.get(int(entry_id), Decimal("0"))
+                if available <= 0:
+                    continue
+                amount = min(rows_remaining[row_id], available)
+                if amount <= 0:
+                    continue
+                allocations_by_row[row_id].append(
+                    {"financial_entry_id": int(entry_id), "principal_amount": amount}
+                )
+                rows_remaining[row_id] -= amount
+                entry_remaining[int(entry_id)] = available - amount
+
+        if any(amount > tolerance for amount in rows_remaining.values()) or any(amount > tolerance for amount in entry_remaining.values()):
+            return None, "Não foi possível distribuir automaticamente os valores do grupo selecionado."
+
+        confirmations: List[Dict] = []
+        group_key = f"reconciliation-group:{company_id}:{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}"
+        try:
+            for row in rows:
+                row_allocations = allocations_by_row[int(row.id)]
+                if not row_allocations:
+                    continue
+                result, error = FinancialReconciliationService.manually_match_row(
+                    row_id=int(row.id),
+                    financial_entry_id=int(row_allocations[0]["financial_entry_id"]),
+                    financial_entry_ids=[int(item["financial_entry_id"]) for item in row_allocations[1:]],
+                    company_id=company_id,
+                    adjustments={
+                        "allocations": row_allocations,
+                        "metadata_json": {
+                            "reconciliation_group_key": group_key,
+                            "reconciliation_group_bank_row_ids": selected_row_ids,
+                            "reconciliation_group_entry_ids": selected_entry_ids,
+                        },
+                    },
+                    allowed_company_ids=allowed_company_ids,
+                )
+                if error:
+                    db.session.rollback()
+                    return None, error
+                confirmations.append(result)
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao conciliar grupo bancário")
+            return None, f"Erro ao conciliar grupo bancário: {str(exc)}"
+
+        return {
+            "requires_resolution": False,
+            "group_key": group_key,
+            "match_mode": "N:N" if len(selected_row_ids) > 1 and len(selected_entry_ids) > 1 else ("N:1" if len(selected_row_ids) > 1 else "1:N"),
+            "bank_row_ids": selected_row_ids,
+            "financial_entry_ids": selected_entry_ids,
+            "bank_total": float(bank_total),
+            "system_total": float(system_total),
+            "difference": float(bank_total - system_total),
+            "created_complement": created_complement,
+            "confirmed_groups": confirmations,
         }, None
 
     @staticmethod

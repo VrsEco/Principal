@@ -1157,20 +1157,14 @@ class FinancialEntryResource(Resource):
     @permission_required("financial", "delete")
     def delete(self, entry_id: int):
         company_id = get_request_company_id()
-        entry = FinancialEntry.query.filter(
-            FinancialEntry.id == entry_id,
-            FinancialEntry.company_id == company_id,
-            FinancialEntry.deleted_at.is_(None),
-        ).first_or_404()
-
-        try:
-            entry.deleted_at = datetime.utcnow()
-            db.session.commit()
-            return {"message": "Lançamento financeiro removido com sucesso.", "id": entry.id}, 200
-        except Exception:
-            db.session.rollback()
-            logger.exception("Erro ao remover lançamento financeiro %s", entry_id)
-            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+        result, error = FinancialService.delete_entry(
+            entry_id=entry_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
 
 
 class FinancialEntryAllocationListResource(Resource):
@@ -1527,6 +1521,26 @@ class FinancialBankReconciliationRowMatchResource(Resource):
         )
         if error:
             return {"error": error}, 400
+        return result, 200
+
+
+class FinancialBankReconciliationGroupMatchResource(Resource):
+    @permission_required("financial", "edit")
+    def post(self):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationService.reconcile_group(
+            company_id=company_id,
+            bank_row_ids=payload.get("bank_row_ids") or [],
+            financial_entry_ids=payload.get("financial_entry_ids") or [],
+            resolution_strategy=payload.get("resolution_strategy"),
+            complementary_entry=payload.get("complementary_entry") or {},
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        if result and result.get("requires_resolution"):
+            return result, 409
         return result, 200
 
 
