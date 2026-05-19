@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import current_app, request
 from flask_restful import Resource
@@ -55,6 +55,16 @@ from .process import get_request_company_id
 logger = logging.getLogger(__name__)
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
+
+
+def _get_optional_iso_date_arg(name: str):
+    raw_value = str(request.args.get(name) or "").strip()
+    if not raw_value:
+        return None
+    try:
+        return date.fromisoformat(raw_value)
+    except ValueError:
+        return None
 
 
 def _sanitize_update_payload(payload: dict | None, *extra_fields: str) -> dict:
@@ -1462,6 +1472,8 @@ class FinancialBankReconciliationWorkspaceResource(Resource):
             company_id=company_id,
             bank_account_id=bank_account_id,
             batch_id=request.args.get("batch_id", type=int),
+            due_date_from=_get_optional_iso_date_arg("due_date_from"),
+            due_date_to=_get_optional_iso_date_arg("due_date_to"),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

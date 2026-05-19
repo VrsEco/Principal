@@ -229,6 +229,8 @@ class FinancialReconciliationWorkspaceService:
         *,
         company_id: int,
         rows: Sequence[FinancialImportRow],
+        due_date_from: Optional[date] = None,
+        due_date_to: Optional[date] = None,
     ) -> List[FinancialEntry]:
         query = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
@@ -236,6 +238,11 @@ class FinancialReconciliationWorkspaceService:
             FinancialEntry.entry_type.in_(["payable", "receivable"]),
             FinancialEntry.status.in_(["posted", "partially_settled"]),
         )
+
+        if due_date_from:
+            query = query.filter(FinancialEntry.due_date >= due_date_from)
+        if due_date_to:
+            query = query.filter(FinancialEntry.due_date <= due_date_to)
 
         reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
         if reference_dates:
@@ -377,6 +384,8 @@ class FinancialReconciliationWorkspaceService:
         company_id: int,
         bank_account_id: int,
         batch_id: Optional[int] = None,
+        due_date_from: Optional[date] = None,
+        due_date_to: Optional[date] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
@@ -447,6 +456,8 @@ class FinancialReconciliationWorkspaceService:
         open_titles = FinancialReconciliationWorkspaceService._load_open_titles(
             company_id=company_id,
             rows=rows,
+            due_date_from=due_date_from,
+            due_date_to=due_date_to,
         )
         open_title_rows = [
             FinancialReconciliationWorkspaceService._serialize_open_title(
@@ -482,6 +493,10 @@ class FinancialReconciliationWorkspaceService:
                 "unmatched_system_rows": len(system_unmatched_rows),
                 "system_rows": len(system_rows),
                 "open_titles": len(open_title_rows),
+            },
+            "filters": {
+                "due_date_from": due_date_from.isoformat() if due_date_from else None,
+                "due_date_to": due_date_to.isoformat() if due_date_to else None,
             },
         }, None
 
