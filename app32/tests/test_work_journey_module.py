@@ -347,6 +347,40 @@ def test_work_journey_page_hides_selector_for_non_manager(monkeypatch):
     assert response['can_manage_all'] is False
 
 
+def test_client_calendar_scope_includes_self_and_collaborators_only(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    company = SimpleNamespace(id=9, name='Empresa Teste')
+    employees = [
+        SimpleNamespace(id=3, company_id=9, user_id=7, user_role='client', status='active', name='Cliente Atual', to_dict=lambda: {'id': 3, 'name': 'Cliente Atual'}),
+        SimpleNamespace(id=4, company_id=9, user_id=8, user_role='user', status='active', name='Colaborador', to_dict=lambda: {'id': 4, 'name': 'Colaborador'}),
+        SimpleNamespace(id=5, company_id=9, user_id=9, user_role='client', status='active', name='Outro Cliente', to_dict=lambda: {'id': 5, 'name': 'Outro Cliente'}),
+        SimpleNamespace(id=6, company_id=9, user_id=10, user_role='admin', status='active', name='Administrador', to_dict=lambda: {'id': 6, 'name': 'Administrador'}),
+    ]
+    captured = {}
+
+    monkeypatch.setattr(work_journey_route, 'Company', SimpleNamespace(query=_FakeCompanyQuery(company)))
+    monkeypatch.setattr(
+        work_journey_route,
+        'Employee',
+        SimpleNamespace(query=_FakeEmployeeQuery(employees), name=_Column()),
+    )
+    monkeypatch.setattr(work_journey_route, 'current_user', SimpleNamespace(id=7, role='client', is_authenticated=True))
+    monkeypatch.setattr(work_journey_route, 'has_company_full_access', lambda company_id: True)
+    monkeypatch.setattr(work_journey_route, 'render_template', lambda template, **ctx: captured.update({'template': template, 'ctx': ctx}) or ctx)
+
+    with app.test_request_context('/companies/9/calendar'):
+        response = work_journey_route._render_work_journey_page(9)
+
+    assert response['selected_employee_id'] == 3
+    assert [employee['id'] for employee in response['employees_payload']] == [3, 4]
+    assert response['can_manage_all'] is True
+    assert work_journey_route._can_manage_employee(9, 3, employee=employees[0]) is True
+    assert work_journey_route._can_manage_employee(9, 4, employee=employees[1]) is True
+    assert work_journey_route._can_manage_employee(9, 5, employee=employees[2]) is False
+    assert work_journey_route._can_manage_employee(9, 6, employee=employees[3]) is False
+
+
 def test_work_journey_page_respects_requested_anchor_date(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
@@ -856,6 +890,20 @@ def test_templates_expose_work_journey_entrypoints():
     assert '/api/routines/${routineId}/journey-bindings' in routine_legacy_template
     assert 'Horas/Info' in project_task_template
     assert 'Horas/Info' in process_instance_template
+
+
+def test_calendar_scripts_support_collaborator_without_employee_selector():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    with open(os.path.join(root, 'static', 'js', 'work-journey.js'), 'r', encoding='utf-8') as handle:
+        journey_script = handle.read()
+    with open(os.path.join(root, 'static', 'js', 'work-calendar-events.js'), 'r', encoding='utf-8') as handle:
+        calendar_events_script = handle.read()
+
+    assert 'employeeSelect?.addEventListener' in journey_script
+    assert 'parseManualTaskMinutes' in journey_script
+    assert "formatValueByType('duration-minutes'" in journey_script
+    assert 'pythonWeekdayOfDate' in calendar_events_script
+    assert '(current.getDay() + 6) % 7' in calendar_events_script
 
 
 def test_agendas_script_supports_legacy_fallback_drag_and_drop():

@@ -207,10 +207,11 @@
         window.WorkJourneyAgendas?.refresh?.();
     }
 
-    function weekdayOfDate(dateText) {
+    function pythonWeekdayOfDate(dateText) {
         if (!dateText) return null;
         const current = new Date(`${dateText}T00:00:00`);
-        return Number.isNaN(current.getTime()) ? null : current.getDay();
+        if (Number.isNaN(current.getTime())) return null;
+        return (current.getDay() + 6) % 7;
     }
 
     async function loadBlockOptions() {
@@ -221,7 +222,7 @@
         if (!response.ok || !payload.success) {
             return;
         }
-        const weekday = weekdayOfDate(document.getElementById('calendarEventDateInput')?.value || anchorDate());
+        const weekday = pythonWeekdayOfDate(document.getElementById('calendarEventDateInput')?.value || anchorDate());
         const currentValue = select.value;
         const options = (payload.blocks || []).filter((block) => {
             const weekdays = Array.isArray(block.weekdays) ? block.weekdays : [];

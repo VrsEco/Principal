@@ -6,7 +6,7 @@ from flask import Blueprint, abort, jsonify, render_template, request, session
 from flask_login import current_user
 from pydantic import ValidationError
 
-from models import Company, Employee, WorkCalendarEvent, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
+from models import Company, Employee, User, WorkCalendarEvent, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
 from schemas.work_journey import (
     WorkCalendarEventCreateSchema,
     WorkCalendarEventUpdateSchema,
@@ -492,7 +492,8 @@ def api_approve_absence(company_id: int, request_id: int):
 
 def _render_work_journey_page(company_id: int, template_name: str = 'modules/my_work/work_journey.html'):
     company = Company.query.get_or_404(company_id)
-    can_manage_all = has_company_full_access(company_id)
+    actor_profile = _current_calendar_profile(company_id)
+    can_manage_all = actor_profile in {'administrator', 'client'}
     employees = Employee.query.filter_by(company_id=company_id, status='active').order_by(Employee.name.asc()).all()
     current_employee_id = _current_employee_id(company_id)
     anchor_date = _parse_date(request.args.get('date')) or date.today()
@@ -505,8 +506,17 @@ def _render_work_journey_page(company_id: int, template_name: str = 'modules/my_
         selected_employee_id = current_employee_id
     if selected_employee_id and not _can_access_employee(company_id, selected_employee_id):
         abort(403)
-    if not can_manage_all and current_employee_id:
-        employees = [employee for employee in employees if employee.id == current_employee_id]
+    employees = [
+        employee
+        for employee in employees
+        if _can_access_employee(company_id, employee.id, employee=employee)
+    ]
+    if selected_employee_id and not any(employee.id == selected_employee_id for employee in employees):
+        selected_employee_id = (
+            current_employee_id
+            if current_employee_id and any(employee.id == current_employee_id for employee in employees)
+            else (employees[0].id if employees else None)
+        )
     selected_employee = next((employee for employee in employees if employee.id == selected_employee_id), None)
     return render_template(
         template_name,
@@ -584,10 +594,52 @@ def _current_employee_id(company_id: int) -> int | None:
 
 
 
-def _can_manage_employee(company_id: int, employee_id: int) -> bool:
-    return bool(has_company_full_access(company_id) or _current_employee_id(company_id) == employee_id)
+def _current_calendar_profile(company_id: int) -> str | None:
+    if not current_user.is_authenticated:
+        return None
+    if not has_company_full_access(company_id):
+        return 'collaborator' if _current_employee_id(company_id) else None
+    user_role = _normalize_calendar_role(getattr(current_user, 'role', None))
+    return 'client' if user_role in {'client', 'cliente'} else 'administrator'
 
 
+def _employee_calendar_profile(company_id: int, employee_id: int, employee: Employee | None = None) -> str | None:
+    employee = employee or Employee.query.filter_by(company_id=company_id, id=employee_id).first()
+    if not employee:
+        return None
 
-def _can_access_employee(company_id: int, employee_id: int) -> bool:
-    return bool(has_company_full_access(company_id) or _current_employee_id(company_id) == employee_id)
+    role_title = _normalize_calendar_role(getattr(getattr(employee, 'role', None), 'title', None) or getattr(employee, 'role_title', None))
+    if role_title in {'admin', 'administrator', 'administrador', 'superuser'}:
+        return 'administrator'
+
+    user_role = _normalize_calendar_role(getattr(employee, 'user_role', None) or getattr(getattr(employee, 'user', None), 'role', None))
+    if not user_role and getattr(employee, 'user_id', None):
+        user = User.query.filter_by(id=employee.user_id).first()
+        user_role = _normalize_calendar_role(getattr(user, 'role', None))
+
+    if user_role in {'admin', 'administrator'}:
+        return 'administrator'
+    if user_role in {'client', 'cliente'}:
+        return 'client'
+    return 'collaborator'
+
+
+def _normalize_calendar_role(value: str | None) -> str:
+    return str(value or '').strip().lower()
+
+
+def _can_manage_employee(company_id: int, employee_id: int, employee: Employee | None = None) -> bool:
+    current_employee_id = _current_employee_id(company_id)
+    if current_employee_id == employee_id:
+        return True
+
+    actor_profile = _current_calendar_profile(company_id)
+    if actor_profile == 'administrator':
+        return True
+    if actor_profile == 'client':
+        return _employee_calendar_profile(company_id, employee_id, employee=employee) == 'collaborator'
+    return False
+
+
+def _can_access_employee(company_id: int, employee_id: int, employee: Employee | None = None) -> bool:
+    return _can_manage_employee(company_id, employee_id, employee=employee)

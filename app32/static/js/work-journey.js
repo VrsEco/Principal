@@ -357,13 +357,35 @@
     renderCheckboxGrid('blockTypesGroup', itemTypes, itemTypes.map((item) => item.value));
   }
 
+  function formatManualTaskMinutes(minutes) {
+    if (window.App32InputFormatters?.formatValueByType) {
+      return window.App32InputFormatters.formatValueByType('duration-minutes', minutes || 60);
+    }
+    return String(minutes || 60);
+  }
+
+  function parseManualTaskMinutes() {
+    const input = document.getElementById('manualTaskMinutesInput');
+    if (!input) return 60;
+    if (window.App32InputFormatters?.parseClockToMinutes) {
+      return window.App32InputFormatters.parseClockToMinutes(input.value || '01:00') || 60;
+    }
+    const raw = String(input.value || '').trim();
+    if (raw.includes(':')) {
+      const [hours, minutes] = raw.split(':').map((part) => Number(part || 0));
+      return Math.max((Number.isFinite(hours) ? hours : 0) * 60 + (Number.isFinite(minutes) ? minutes : 0), 0) || 60;
+    }
+    const parsed = Number(raw || 60);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 60;
+  }
+
   function openManualTaskForm(item = null) {
     manualTaskForm.style.display = 'block';
     document.getElementById('manualTaskIdInput').value = item?.id || '';
     document.getElementById('manualTaskTitleInput').value = item?.title || '';
     document.getElementById('manualTaskDescriptionInput').value = item?.description || '';
     document.getElementById('manualTaskDateInput').value = item?.due_date || selectedDate();
-    document.getElementById('manualTaskMinutesInput').value = item?.estimated_minutes || 60;
+    document.getElementById('manualTaskMinutesInput').value = formatManualTaskMinutes(item?.estimated_minutes || 60);
     document.getElementById('manualTaskPriorityInput').value = item?.priority || 'normal';
     document.getElementById('manualTaskStatusInput').value = item?.status || 'pending';
     document.getElementById('manualTaskBlockInput').value = item?.block_id || '';
@@ -375,7 +397,7 @@
     document.getElementById('manualTaskTitleInput').value = '';
     document.getElementById('manualTaskDescriptionInput').value = '';
     document.getElementById('manualTaskDateInput').value = selectedDate();
-    document.getElementById('manualTaskMinutesInput').value = 60;
+    document.getElementById('manualTaskMinutesInput').value = formatManualTaskMinutes(60);
     document.getElementById('manualTaskPriorityInput').value = 'normal';
     document.getElementById('manualTaskStatusInput').value = 'pending';
     document.getElementById('manualTaskBlockInput').value = '';
@@ -424,7 +446,7 @@
       title: document.getElementById('manualTaskTitleInput').value,
       description: document.getElementById('manualTaskDescriptionInput').value,
       due_date: document.getElementById('manualTaskDateInput').value,
-      estimated_minutes: Number(document.getElementById('manualTaskMinutesInput').value || 60),
+      estimated_minutes: parseManualTaskMinutes(),
       priority: document.getElementById('manualTaskPriorityInput').value,
       status: document.getElementById('manualTaskStatusInput').value,
     };
@@ -544,7 +566,7 @@
   document.getElementById('manualTaskStartBtn').addEventListener('click', () => openManualTaskForm());
   document.getElementById('manualTaskCancelBtn').addEventListener('click', resetManualTaskForm);
   manualTaskForm.addEventListener('submit', saveManualTask);
-  employeeSelect.addEventListener('change', () => {
+  employeeSelect?.addEventListener('change', () => {
     resetManualTaskForm();
     renderFilterContext();
     refreshAll();
