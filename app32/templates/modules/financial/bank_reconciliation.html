@@ -10,6 +10,45 @@
 <span class="current">Conciliação Bancária</span>
 {% endblock %}
 
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="recon-sidebar-subtitle">Conta bancária do workspace, lote e filtros operacionais da coluna 3.</p>
+</div>
+
+<div class="sidebar-content-ws recon-sidebar-filters">
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="workspace-bank-account">Conta bancária do workspace</label>
+        <select id="workspace-bank-account"></select>
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="batch-select">Lote do workspace</label>
+        <select id="batch-select"></select>
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="open-title-due-date-from">Vencimento inicial dos títulos</label>
+        <input id="open-title-due-date-from" type="date">
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="open-title-due-date-to">Vencimento final dos títulos</label>
+        <input id="open-title-due-date-to" type="date">
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="system-search">Buscar no sistema / títulos</label>
+        <input id="system-search" type="search" placeholder="Histórico, documento ou código">
+    </div>
+
+    <div class="recon-sidebar-actions">
+        <button type="button" class="btn btn-primary w-100" onclick="applyWorkspaceFilters()">Atualizar</button>
+        <button type="button" class="btn btn-secondary w-100 mt-2" onclick="clearWorkspaceFilters()">Limpar filtros</button>
+    </div>
+</div>
+{% endblock %}
+
 {% block workspace_content %}
 <div class="recon-page fade-in" data-company-id="{{ company_id or (active_company.id if active_company else '') }}">
     <header class="recon-hero">
@@ -22,7 +61,6 @@
             </p>
             <div class="recon-hero__actions">
                 <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
-                <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar workspace</button>
             </div>
         </div>
         <aside class="recon-hero__aside">
@@ -82,9 +120,6 @@
                 <span class="panel-kicker">Operação assistida</span>
                 <h2 id="workspace-title">Workspace da conciliação</h2>
                 <p id="workspace-subtitle">Selecione uma conta bancária.</p>
-            </div>
-            <div class="workspace-toolbar">
-                <button type="button" class="btn btn-secondary" onclick="openFilterDrawer()">Filtros</button>
             </div>
             <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
         </div>
@@ -157,45 +192,6 @@
     </section>
 </div>
 
-<div id="recon-filter-drawer-backdrop" class="drawer-backdrop" aria-hidden="true" onclick="handleDrawerBackdrop(event)">
-    <aside id="recon-filter-drawer" class="filter-drawer" aria-label="Filtros da conciliação">
-        <div class="filter-drawer__header">
-            <div>
-                <span class="panel-kicker">Filtros</span>
-                <h3>Conta bancária e títulos em aberto</h3>
-                <p class="muted">Use este painel para trocar a conta do workspace e aplicar filtros na coluna 3.</p>
-            </div>
-            <button type="button" class="recon-modal__close" onclick="closeFilterDrawer()" aria-label="Fechar">×</button>
-        </div>
-        <div class="filter-drawer__body">
-            <label>
-                <span>Conta bancária do workspace</span>
-                <select id="workspace-bank-account"></select>
-            </label>
-            <label>
-                <span>Lote do workspace</span>
-                <select id="batch-select"></select>
-            </label>
-            <label>
-                <span>Vencimento inicial dos títulos</span>
-                <input id="open-title-due-date-from" type="date">
-            </label>
-            <label>
-                <span>Vencimento final dos títulos</span>
-                <input id="open-title-due-date-to" type="date">
-            </label>
-            <label>
-                <span>Buscar no sistema / títulos</span>
-                <input id="system-search" type="search" placeholder="Histórico, documento ou código">
-            </label>
-        </div>
-        <div class="filter-drawer__actions">
-            <button type="button" class="btn btn-secondary" onclick="clearWorkspaceFilters()">Limpar filtros</button>
-            <button type="button" class="btn btn-primary" onclick="applyWorkspaceFilters()">Atualizar</button>
-        </div>
-    </aside>
-</div>
-
 <style>
     .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:1rem}
     .recon-hero{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:1rem;border:1px solid var(--border);border-radius:24px;padding:1.35rem;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05));box-shadow:var(--shadow-sm)}
@@ -223,14 +219,14 @@
     .panel-kicker{display:inline-flex;width:max-content;margin-bottom:.4rem;padding:.32rem .6rem;border-radius:999px;background:rgba(37,99,235,.08);color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
     .panel-header h2,.column-header h3{margin:0}
     .panel-header p,.column-header p,.row-meta,.muted{margin:.25rem 0 0;color:var(--text-secondary)}
-    .row-between,.actions-right,.workspace-toolbar,.inline-actions,.filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
-    .row-between,.actions-right,.workspace-toolbar{justify-content:space-between}
+    .row-between,.actions-right,.inline-actions,.filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+    .row-between,.actions-right{justify-content:space-between}
     .panel-toggle.row-between{justify-content:flex-start}
     .summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}
     .summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
     .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .upload-grid label,.workspace-toolbar label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
-    .upload-grid input,.upload-grid select,.workspace-toolbar select,.compact-field input,.allocation-grid input,.entry-form-grid input,.entry-form-grid select,.entry-form-grid textarea{
+    .upload-grid label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
+    .upload-grid input,.upload-grid select,.compact-field input,.allocation-grid input,.entry-form-grid input,.entry-form-grid select,.entry-form-grid textarea{
         background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.85rem .95rem;color:var(--text-primary)
     }
     .upload-dropzone{background:linear-gradient(180deg,rgba(59,130,246,.08),rgba(59,130,246,.03));border:1px dashed rgba(59,130,246,.32);border-radius:18px;padding:1rem}
@@ -240,6 +236,15 @@
     .upload-status--info{background:#dbeafe;color:#1d4ed8}
     .upload-status--success{background:#dcfce7;color:#166534}
     .upload-status--error{background:#fee2e2;color:#b91c1c}
+    .recon-sidebar-subtitle{margin:.35rem 0 0;color:var(--text-secondary)}
+    .recon-sidebar-filters{padding:1rem}
+    .recon-sidebar-field{display:flex;flex-direction:column;align-items:stretch;margin-bottom:1.25rem}
+    .recon-sidebar-field .filter-label{font-size:.72rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:.5rem;display:block;letter-spacing:.05em}
+    .recon-sidebar-filters select,.recon-sidebar-filters input{width:100%;padding:.75rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--surface-secondary);color:var(--text-primary);font-size:.85rem;transition:all .2s}
+    .recon-sidebar-filters select:focus,.recon-sidebar-filters input:focus{border-color:var(--primary);outline:none;background:var(--surface)}
+    .recon-sidebar-actions{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem}
+    .w-100{width:100%;justify-content:center}
+    .mt-2{margin-top:.5rem}
     .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:18px;background:var(--surface-secondary);padding:1rem}
     .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected,.workbench-card.is-selected{border-color:rgba(37,99,235,.68);background:linear-gradient(180deg,rgba(219,234,254,.92),rgba(239,246,255,.98));box-shadow:0 0 0 2px rgba(59,130,246,.18),0 12px 30px rgba(37,99,235,.12)}
     .row-card.is-actionable,.slot-card.is-actionable{border-color:rgba(14,165,233,.26);background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(239,246,255,.84));box-shadow:0 8px 24px rgba(15,23,42,.05)}
@@ -266,14 +271,11 @@
     .board-column--actions{position:sticky;top:1rem}
     .column-header{padding:1rem 1rem 0}
     .column-header h3{font-size:1.05rem}
-    .workspace-toolbar{margin-left:auto;align-items:flex-end;justify-content:flex-end}
-    .workspace-toolbar label{min-width:136px}
-    .workspace-toolbar .btn{align-self:flex-end}
     .panel-toggle-icon{margin-left:auto}
-    .board-toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,320px);gap:1rem;align-items:end;padding:0 1.25rem 1.25rem}
+    .board-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;align-items:end;padding:0 1.25rem 1.25rem}
     .filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
-    .compact-field{min-width:0;justify-self:end;width:100%}
-    .compact-field span{text-align:right}
+    .compact-field{min-width:0;width:100%}
+    .compact-field span{text-align:left}
     .compact-field--hint{padding:.95rem 1rem;border:1px dashed rgba(148,163,184,.5);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.75))}
     .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.7rem .95rem;border-radius:999px;font-weight:700;cursor:pointer;transition:all .18s ease}
     .filter-chip:hover{transform:translateY(-1px);border-color:rgba(37,99,235,.28)}
@@ -300,15 +302,6 @@
     .recon-modal__header h3{margin:0}
     .recon-modal__body{display:flex;flex-direction:column;gap:1rem}
     .recon-modal__close{border:none;background:var(--surface-secondary);border-radius:999px;width:36px;height:36px;cursor:pointer;color:var(--text-primary);font-size:1rem}
-    .drawer-backdrop{position:fixed;inset:0;z-index:78;display:none;justify-content:flex-end;background:rgba(15,23,42,.28)}
-    .drawer-backdrop.is-visible{display:flex}
-    .filter-drawer{width:min(420px,100%);height:100%;background:var(--surface);border-left:1px solid var(--border);box-shadow:-12px 0 40px rgba(15,23,42,.18);display:flex;flex-direction:column;padding:1.25rem;gap:1rem}
-    .filter-drawer__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
-    .filter-drawer__header h3{margin:.15rem 0 0}
-    .filter-drawer__body{display:flex;flex-direction:column;gap:.9rem}
-    .filter-drawer__body label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
-    .filter-drawer__body input,.filter-drawer__body select{background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.85rem .95rem;color:var(--text-primary)}
-    .filter-drawer__actions{display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;margin-top:auto}
     .group-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
     .group-total-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.78));padding:.85rem}
     .group-total-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -324,7 +317,7 @@
     .workbench-card--group{background:linear-gradient(180deg,rgba(243,232,255,.96),rgba(233,213,255,.82));border-color:rgba(147,51,234,.24)}
     .workbench-card--suggestions{background:linear-gradient(180deg,rgba(240,249,255,.96),rgba(224,242,254,.92));border-color:rgba(14,165,233,.28)}
     @media (max-width:1200px){.recon-hero,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}.board-toolbar{grid-template-columns:1fr}}
-    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.workspace-toolbar,.recon-hero__actions{flex-direction:column;align-items:stretch}.workspace-toolbar{margin-left:0}.workspace-toolbar label,.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{grid-template-columns:1fr;padding:0 1rem 1rem}.filter-drawer{width:100%}.filter-drawer__actions{flex-direction:column}}
+    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.recon-hero__actions{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{grid-template-columns:1fr;padding:0 1rem 1rem}}
 </style>
 
 <script>
@@ -961,32 +954,13 @@ async function refreshWorkspace(){
     await openWorkspace(state.selectedBankAccountId, state.selectedBatchId || null);
 }
 
-function openFilterDrawer(){
-    renderAccounts();
-    const backdrop = document.getElementById('recon-filter-drawer-backdrop');
-    backdrop?.classList.add('is-visible');
-    backdrop?.setAttribute('aria-hidden', 'false');
-}
-
-function closeFilterDrawer(){
-    const backdrop = document.getElementById('recon-filter-drawer-backdrop');
-    backdrop?.classList.remove('is-visible');
-    backdrop?.setAttribute('aria-hidden', 'true');
-}
-
-function handleDrawerBackdrop(event){
-    if(event.target?.id === 'recon-filter-drawer-backdrop'){
-        closeFilterDrawer();
-    }
-}
-
 async function applyWorkspaceFilters(){
     const nextBankAccountId = Number(document.getElementById('workspace-bank-account')?.value || 0) || null;
     const nextBatchId = Number(document.getElementById('batch-select')?.value || 0) || null;
     state.openTitleDueDateFrom = document.getElementById('open-title-due-date-from')?.value || '';
     state.openTitleDueDateTo = document.getElementById('open-title-due-date-to')?.value || '';
     state.systemSearch = document.getElementById('system-search')?.value || '';
-    closeFilterDrawer();
+    closeAllSidebars();
     if(nextBankAccountId){
         await openWorkspace(nextBankAccountId, nextBankIdMatchesCurrent(nextBankAccountId) ? nextBatchId : null);
         return;
@@ -1014,7 +988,7 @@ async function clearWorkspaceFilters(){
     state.openTitleDueDateFrom = '';
     state.openTitleDueDateTo = '';
     state.systemSearch = '';
-    closeFilterDrawer();
+    closeAllSidebars();
     await refreshWorkspace();
 }
 

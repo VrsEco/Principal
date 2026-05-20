@@ -1,3 +1,4 @@
+from datetime import date
 from types import SimpleNamespace
 
 import services.financial_reconciliation_workspace_service as workspace_module
@@ -5,37 +6,35 @@ from services.financial_reconciliation_workspace_service import FinancialReconci
 
 
 class _Column:
-    def __eq__(self, other):
-        return ("eq", other)
-
-    def is_(self, other):
-        return ("is", other)
+    def __init__(self, name):
+        self.name = name
 
     def in_(self, values):
-        return ("in", tuple(values))
+        return ("in", self.name, tuple(values))
+
+    def is_(self, value):
+        return ("is", self.name, value)
+
+    def __ge__(self, value):
+        return ("ge", self.name, value)
+
+    def __le__(self, value):
+        return ("le", self.name, value)
 
     def asc(self):
-        return self
+        return ("asc", self.name)
 
     def desc(self):
-        return self
-
-    def between(self, start, end):
-        return ("between", start, end)
-
-    def __ge__(self, other):
-        return ("ge", other)
-
-    def __le__(self, other):
-        return ("le", other)
+        return ("desc", self.name)
 
 
 class _RecordingQuery:
-    def __init__(self):
+    def __init__(self, items):
+        self.items = items
         self.filters = []
 
-    def filter(self, *args, **kwargs):
-        self.filters.extend(args)
+    def filter(self, *criteria):
+        self.filters.extend(criteria)
         return self
 
     def order_by(self, *args, **kwargs):
@@ -45,75 +44,67 @@ class _RecordingQuery:
         return self
 
     def all(self):
-        return []
+        return list(self.items)
 
 
-class _FakeDateExpr:
-    def __init__(self, label):
-        self.label = label
-
-    def between(self, start, end):
-        return ("between", self.label, start, end)
-
-    def asc(self):
-        return self
-
-    def desc(self):
-        return self
-
-
-def test_load_open_titles_accepts_scheduled_entries(monkeypatch):
-    query = _RecordingQuery()
-
+def _install_entry_model(monkeypatch, query):
     class _FakeFinancialEntry:
-        company_id = _Column()
-        deleted_at = _Column()
-        entry_type = _Column()
-        status = _Column()
-        occurred_on = _Column()
-        due_date = _Column()
-        competence_date = _Column()
-        movement_nature = _Column()
-        id = _Column()
+        company_id = _Column("company_id")
+        deleted_at = _Column("deleted_at")
+        entry_type = _Column("entry_type")
+        status = _Column("status")
+        due_date = _Column("due_date")
+        competence_date = _Column("competence_date")
+        id = _Column("id")
 
     _FakeFinancialEntry.query = query
-
     monkeypatch.setattr(workspace_module, "FinancialEntry", _FakeFinancialEntry)
 
-    FinancialReconciliationWorkspaceService._load_open_titles(
-        company_id=9,
+
+def test_load_open_titles_keeps_scheduled_entries_and_positive_remaining_balance(monkeypatch):
+    scheduled_entry = SimpleNamespace(id=11, status="scheduled", remaining_marker="keep")
+    zero_balance_entry = SimpleNamespace(id=12, status="posted", remaining_marker="drop")
+    query = _RecordingQuery([scheduled_entry, zero_balance_entry])
+    _install_entry_model(monkeypatch, query)
+    monkeypatch.setattr(
+        workspace_module.FinancialReconciliationWorkspaceService,
+        "_entry_remaining_amount",
+        lambda entry: 100 if entry.remaining_marker == "keep" else 0,
+    )
+
+    result = FinancialReconciliationWorkspaceService._load_open_titles(
+        company_id=7,
         rows=[],
+        due_date_from=date(2026, 5, 1),
+        due_date_to=date(2026, 5, 31),
     )
 
-    assert ("in", ("scheduled", "posted", "partially_settled")) in query.filters
+    assert [item.id for item in result] == [11]
+    assert ("in", "status", ("scheduled", "posted", "partially_settled")) in query.filters
+    assert ("ge", "due_date", date(2026, 5, 1)) in query.filters
+    assert ("le", "due_date", date(2026, 5, 31)) in query.filters
 
 
-def test_load_open_titles_skips_reference_window_when_due_date_filter_is_explicit(monkeypatch):
-    query = _RecordingQuery()
+def test_load_open_titles_does_not_apply_row_date_or_nature_restrictions(monkeypatch):
+    query = _RecordingQuery([SimpleNamespace(id=21, remaining_marker="keep")])
+    _install_entry_model(monkeypatch, query)
+    monkeypatch.setattr(
+        workspace_module.FinancialReconciliationWorkspaceService,
+        "_entry_remaining_amount",
+        lambda entry: 50,
+    )
 
-    class _FakeFinancialEntry:
-        company_id = _Column()
-        deleted_at = _Column()
-        entry_type = _Column()
-        status = _Column()
-        occurred_on = _FakeDateExpr("occurred_on")
-        due_date = _Column()
-        competence_date = _FakeDateExpr("competence_date")
-        movement_nature = _Column()
-        id = _Column()
-
-    _FakeFinancialEntry.query = query
-
-    monkeypatch.setattr(workspace_module, "FinancialEntry", _FakeFinancialEntry)
-    monkeypatch.setattr(workspace_module, "db", SimpleNamespace(or_=lambda *args: ("or", args)))
+    rows = [
+        SimpleNamespace(occurred_on=date(2026, 5, 18), due_date=date(2026, 5, 20), movement_nature="debit"),
+        SimpleNamespace(occurred_on=date(2026, 5, 19), due_date=None, movement_nature="credit"),
+    ]
 
     FinancialReconciliationWorkspaceService._load_open_titles(
-        company_id=9,
-        rows=[SimpleNamespace(occurred_on=None, due_date="2026-05-01", movement_nature="debit")],
-        due_date_from="2026-01-01",
+        company_id=1,
+        rows=rows,
     )
 
-    assert not any(
-        isinstance(item, tuple) and item and item[0] == "or"
-        for item in query.filters
-    )
+    assert all(not (isinstance(item, tuple) and len(item) > 1 and item[1] == "movement_nature") for item in query.filters)
+    assert all(date(2026, 5, 18) not in item for item in query.filters if isinstance(item, tuple))
+    assert all(date(2026, 5, 19) not in item for item in query.filters if isinstance(item, tuple))
+    assert all(date(2026, 5, 20) not in item for item in query.filters if isinstance(item, tuple))

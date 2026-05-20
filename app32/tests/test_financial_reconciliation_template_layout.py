@@ -4,14 +4,15 @@ from pathlib import Path
 TEMPLATE_PATH = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\bank_reconciliation.html")
 
 
-def test_reconciliation_template_exposes_filter_sidebar_and_apply_action():
+def test_reconciliation_template_uses_standard_right_sidebar_filters():
     content = TEMPLATE_PATH.read_text(encoding="utf-8")
 
-    assert 'openFilterDrawer()' in content
-    assert 'id="recon-filter-drawer"' in content
-    assert 'Atualizar' in content
+    assert "{% block sidebar_right %}" in content
     assert 'workspace-bank-account' in content
     assert 'batch-select' in content
+    assert 'onclick="applyWorkspaceFilters()"' in content
+    assert 'openFilterDrawer()' not in content
+    assert 'id="recon-filter-drawer"' not in content
     assert 'Abrir filtros' not in content
 
 

@@ -244,27 +244,6 @@ class FinancialReconciliationWorkspaceService:
         if due_date_to:
             query = query.filter(FinancialEntry.due_date <= due_date_to)
 
-        reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
-        has_explicit_due_date_filter = bool(due_date_from or due_date_to)
-        if reference_dates and not has_explicit_due_date_filter:
-            start_date = min(reference_dates) - timedelta(days=120)
-            end_date = max(reference_dates) + timedelta(days=120)
-            query = query.filter(
-                db.or_(
-                    FinancialEntry.occurred_on.between(start_date, end_date),
-                    FinancialEntry.due_date.between(start_date, end_date),
-                    FinancialEntry.competence_date.between(start_date, end_date),
-                )
-            )
-
-        movement_natures = {
-            str(item.movement_nature or "").strip().lower()
-            for item in rows
-            if str(item.movement_nature or "").strip()
-        }
-        if len(movement_natures) == 1:
-            query = query.filter(FinancialEntry.movement_nature == next(iter(movement_natures)))
-
         candidates = (
             query.order_by(
                 FinancialEntry.due_date.asc(),
