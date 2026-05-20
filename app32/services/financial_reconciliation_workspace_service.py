@@ -15,7 +15,9 @@ from models.financial import (
     FinancialSettlement,
 )
 from services.financial_reconciliation_service import FinancialReconciliationService
+from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
+from services.financial_title_balance_service import FinancialTitleBalanceService
 
 
 class FinancialReconciliationWorkspaceService:
@@ -103,10 +105,46 @@ class FinancialReconciliationWorkspaceService:
 
     @staticmethod
     def _serialize_open_title(
-        entry: FinancialEntry,
+        entry: FinancialEntry | FinancialSchedule,
         *,
         linked_row_ids: Optional[Sequence[int]] = None,
     ) -> Dict:
+        if isinstance(entry, FinancialSchedule):
+            balance = FinancialTitleBalanceService.calculate_for_schedule(schedule=entry)
+            remaining_amount = float(balance.get("total_open") or balance.get("principal_open") or 0)
+            payload = {
+                "id": -int(entry.id),
+                "financial_entry_id": None,
+                "financial_schedule_id": entry.id,
+                "entry_code": entry.schedule_code,
+                "description": entry.description or entry.name,
+                "document_number": None,
+                "entry_type": entry.entry_type,
+                "movement_nature": entry.movement_nature,
+                "status": entry.status,
+                "due_date": entry.next_due_date.isoformat() if entry.next_due_date else None,
+                "occurred_on": None,
+                "competence_date": entry.competence_date.isoformat() if entry.competence_date else None,
+                "original_amount": float(entry.template_amount or 0),
+                "remaining_amount": remaining_amount,
+                "is_reconciled": False,
+                "linked_row_ids": [],
+                "linked_rows_count": 0,
+                "match_mode": "schedule_open",
+                "navigation_url": f"/financial/schedules/{entry.id}?company_id={entry.company_id}",
+            }
+            payload["title"] = {
+                "schedule_id": entry.id,
+                "schedule_code": entry.schedule_code,
+                "name": entry.name or payload.get("description"),
+                "status": entry.status,
+                "next_due_date": entry.next_due_date.isoformat() if entry.next_due_date else None,
+                "template_amount": float(entry.template_amount or 0),
+                "source": "schedule",
+            }
+            payload["can_title_settle"] = remaining_amount > 0
+            return payload
+
         payload = FinancialReconciliationWorkspaceService._serialize_system_entry(
             entry,
             linked_row_ids=linked_row_ids,
@@ -131,6 +169,11 @@ class FinancialReconciliationWorkspaceService:
             "template_amount": float(getattr(schedule, "template_amount", 0) or payload.get("original_amount") or 0),
             "source": "schedule" if schedule else "entry",
         }
+        payload["financial_schedule_id"] = getattr(schedule, "id", None)
+        if payload.get("financial_schedule_id"):
+            payload["navigation_url"] = f"/financial/schedules/{payload['financial_schedule_id']}?company_id={entry.company_id}"
+        else:
+            payload["navigation_url"] = f"/financial/entries/{entry.id}?company_id={entry.company_id}"
         payload["can_title_settle"] = payload["remaining_amount"] > 0
         return payload
 
@@ -244,7 +287,7 @@ class FinancialReconciliationWorkspaceService:
         if due_date_to:
             query = query.filter(FinancialEntry.due_date <= due_date_to)
 
-        candidates = (
+        entry_candidates = (
             query.order_by(
                 FinancialEntry.due_date.asc(),
                 FinancialEntry.competence_date.asc(),
@@ -253,11 +296,55 @@ class FinancialReconciliationWorkspaceService:
             .limit(200)
             .all()
         )
-        return [
+        open_entry_candidates = [
             entry
-            for entry in candidates
+            for entry in entry_candidates
             if FinancialReconciliationWorkspaceService._entry_remaining_amount(entry) > 0
         ]
+        represented_schedule_ids = {
+            int(entry.financial_schedule_id)
+            for entry in open_entry_candidates
+            if getattr(entry, "financial_schedule_id", None)
+        }
+
+        schedule_query = FinancialSchedule.query.filter(
+            FinancialSchedule.company_id == company_id,
+            FinancialSchedule.deleted_at.is_(None),
+            FinancialSchedule.entry_type.in_(["payable", "receivable"]),
+            FinancialSchedule.status == "active",
+        )
+        if due_date_from:
+            schedule_query = schedule_query.filter(FinancialSchedule.next_due_date >= due_date_from)
+        if due_date_to:
+            schedule_query = schedule_query.filter(FinancialSchedule.next_due_date <= due_date_to)
+
+        open_schedule_candidates = []
+        for schedule in (
+            schedule_query.order_by(
+                FinancialSchedule.next_due_date.asc(),
+                FinancialSchedule.id.desc(),
+            )
+            .limit(200)
+            .all()
+        ):
+            if schedule.id in represented_schedule_ids:
+                continue
+            balance = FinancialTitleBalanceService.calculate_for_schedule(schedule=schedule)
+            if float(balance.get("total_open") or balance.get("principal_open") or 0) <= 0:
+                continue
+            open_schedule_candidates.append(schedule)
+
+        combined_candidates = [*open_entry_candidates, *open_schedule_candidates]
+        combined_candidates.sort(
+            key=lambda item: (
+                getattr(item, "next_due_date", None)
+                or getattr(item, "due_date", None)
+                or getattr(item, "competence_date", None)
+                or date.max,
+                -int(getattr(item, "id", 0) or 0),
+            )
+        )
+        return combined_candidates[:200]
 
     @staticmethod
     def _build_status_message(

@@ -739,7 +739,7 @@ function renderOpenTitleRows(){
                     ${canPreviewDiff ? badge(`Diferença ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn') : badge('Selecione 1 linha bancária', 'warn')}
                 </div>
                 <div class="inline-actions">
-                    <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;">Abrir título</a>
+                    <a class="btn btn-secondary" href="${escapeHtml(item.navigation_url || (`/financial/entries/${item.id}${companyQuery()}`))}" style="text-decoration:none;">Abrir título</a>
                     ${!selected && !disabled ? `<button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOpenTitle(${item.id})">Selecionar</button>` : ''}
                 </div>
             </article>
@@ -1258,7 +1258,8 @@ async function settleSelectedOpenTitle(resolutionStrategy=null){
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
-                financial_entry_id: Number(title.id),
+                financial_entry_id: Number(title.financial_entry_id || 0),
+                financial_schedule_id: Number(title.financial_schedule_id || title.title?.schedule_id || 0) || null,
                 resolution_strategy: resolutionStrategy,
             }),
         });

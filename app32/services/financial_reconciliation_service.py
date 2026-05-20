@@ -18,6 +18,7 @@ from models.financial import (
 )
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_service import FinancialService
+from services.financial_schedule_service import FinancialScheduleService
 from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 
 
@@ -723,6 +724,7 @@ class FinancialReconciliationService:
         *,
         row_id: int,
         financial_entry_id: int,
+        financial_schedule_id: Optional[int] = None,
         company_id: int,
         resolution_strategy: Optional[str] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
@@ -739,8 +741,21 @@ class FinancialReconciliationService:
         if not row:
             return None, "Linha do extrato não encontrada no escopo da empresa."
 
+        resolved_entry_id = int(financial_entry_id or 0)
+        if not resolved_entry_id and financial_schedule_id:
+            generated_entry_result, generated_entry_error = FinancialScheduleService.create_entry_from_schedule(
+                schedule_id=int(financial_schedule_id),
+                company_id=company_id,
+                allowed_company_ids=allowed_company_ids,
+                ignore_bordero_lock=True,
+            )
+            if generated_entry_error:
+                return None, generated_entry_error
+            generated_entry_payload = (generated_entry_result or {}).get("entry") if isinstance(generated_entry_result, dict) else None
+            resolved_entry_id = int((generated_entry_payload or {}).get("id") or 0)
+
         entry = FinancialEntry.query.filter(
-            FinancialEntry.id == financial_entry_id,
+            FinancialEntry.id == resolved_entry_id,
             FinancialEntry.company_id == company_id,
             FinancialEntry.deleted_at.is_(None),
         ).first()

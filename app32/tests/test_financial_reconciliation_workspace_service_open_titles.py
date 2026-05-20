@@ -9,6 +9,9 @@ class _Column:
     def __init__(self, name):
         self.name = name
 
+    def __eq__(self, value):
+        return ("eq", self.name, value)
+
     def in_(self, values):
         return ("in", self.name, tuple(values))
 
@@ -61,11 +64,25 @@ def _install_entry_model(monkeypatch, query):
     monkeypatch.setattr(workspace_module, "FinancialEntry", _FakeFinancialEntry)
 
 
+def _install_schedule_model(monkeypatch, query):
+    class _FakeFinancialSchedule:
+        company_id = _Column("company_id")
+        deleted_at = _Column("deleted_at")
+        entry_type = _Column("entry_type")
+        status = _Column("status")
+        next_due_date = _Column("next_due_date")
+        id = _Column("id")
+
+    _FakeFinancialSchedule.query = query
+    monkeypatch.setattr(workspace_module, "FinancialSchedule", _FakeFinancialSchedule)
+
+
 def test_load_open_titles_keeps_scheduled_entries_and_positive_remaining_balance(monkeypatch):
     scheduled_entry = SimpleNamespace(id=11, status="scheduled", remaining_marker="keep")
     zero_balance_entry = SimpleNamespace(id=12, status="posted", remaining_marker="drop")
     query = _RecordingQuery([scheduled_entry, zero_balance_entry])
     _install_entry_model(monkeypatch, query)
+    _install_schedule_model(monkeypatch, _RecordingQuery([]))
     monkeypatch.setattr(
         workspace_module.FinancialReconciliationWorkspaceService,
         "_entry_remaining_amount",
@@ -88,6 +105,7 @@ def test_load_open_titles_keeps_scheduled_entries_and_positive_remaining_balance
 def test_load_open_titles_does_not_apply_row_date_or_nature_restrictions(monkeypatch):
     query = _RecordingQuery([SimpleNamespace(id=21, remaining_marker="keep")])
     _install_entry_model(monkeypatch, query)
+    _install_schedule_model(monkeypatch, _RecordingQuery([]))
     monkeypatch.setattr(
         workspace_module.FinancialReconciliationWorkspaceService,
         "_entry_remaining_amount",
@@ -108,3 +126,42 @@ def test_load_open_titles_does_not_apply_row_date_or_nature_restrictions(monkeyp
     assert all(date(2026, 5, 18) not in item for item in query.filters if isinstance(item, tuple))
     assert all(date(2026, 5, 19) not in item for item in query.filters if isinstance(item, tuple))
     assert all(date(2026, 5, 20) not in item for item in query.filters if isinstance(item, tuple))
+
+
+def test_load_open_titles_includes_active_schedules_without_generated_entries(monkeypatch):
+    _install_entry_model(monkeypatch, _RecordingQuery([]))
+    schedule_query = _RecordingQuery([
+        SimpleNamespace(
+            id=76,
+            schedule_code="AG-000015",
+            name="Serviços",
+            description="Serviços",
+            status="active",
+            entry_type="payable",
+            movement_nature="debit",
+            next_due_date=date(2026, 5, 15),
+            competence_date=date(2026, 5, 15),
+            template_amount=930.83,
+            company_id=1,
+        )
+    ])
+    _install_schedule_model(monkeypatch, schedule_query)
+    monkeypatch.setattr(
+        workspace_module.FinancialReconciliationWorkspaceService,
+        "_entry_remaining_amount",
+        lambda entry: 0,
+    )
+    monkeypatch.setattr(
+        workspace_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda schedule: {"total_open": 930.83, "principal_open": 930.83},
+    )
+
+    result = FinancialReconciliationWorkspaceService._load_open_titles(
+        company_id=1,
+        rows=[],
+    )
+
+    assert len(result) == 1
+    assert getattr(result[0], "schedule_code", None) == "AG-000015"
+    assert ("eq", "status", "active") in schedule_query.filters

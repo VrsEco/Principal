@@ -1565,6 +1565,7 @@ class FinancialBankReconciliationTitleSettlementResource(Resource):
             company_id=company_id,
             row_id=row_id,
             financial_entry_id=int(payload.get("financial_entry_id") or 0),
+            financial_schedule_id=int(payload.get("financial_schedule_id") or 0) or None,
             resolution_strategy=payload.get("resolution_strategy"),
             allowed_company_ids=get_accessible_company_ids(),
         )
