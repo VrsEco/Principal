@@ -16,6 +16,18 @@ def test_reconciliation_template_uses_standard_right_sidebar_filters():
     assert 'Abrir filtros' not in content
 
 
+def test_reconciliation_template_exposes_bulk_cancel_controls_for_reconciled_tab():
+    content = TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    assert 'id="bank-column-actions"' in content
+    assert "function renderBankColumnActions()" in content
+    assert "function toggleSelectAllVisibleReconciledRows()" in content
+    assert "function cancelSelectedReconciliations()" in content
+    assert "/api/financial/reconciliation/rows/cancel-batch" in content
+    assert "Selecionar todos" in content
+    assert "Cancelar conciliação" in content
+
+
 def test_reconciliation_template_uses_requested_workbench_card_order():
     content = TEMPLATE_PATH.read_text(encoding="utf-8")
 

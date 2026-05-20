@@ -1255,3 +1255,56 @@ class FinancialReconciliationService:
             "released_entry_ids": sorted(set(released_entries)),
             "reason": reason_text,
         }, None
+
+    @staticmethod
+    def cancel_reconciliations_batch(
+        *,
+        row_ids: Sequence[int],
+        company_id: int,
+        reason: Optional[str] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        normalized_row_ids = sorted({int(row_id) for row_id in (row_ids or []) if int(row_id or 0) > 0})
+        if not normalized_row_ids:
+            return None, "Selecione ao menos uma linha conciliada para cancelar."
+
+        succeeded: List[Dict] = []
+        failed: List[Dict] = []
+        total_matches = 0
+        total_settlements = 0
+        released_entry_ids: set[int] = set()
+
+        for row_id in normalized_row_ids:
+            result, error = FinancialReconciliationService.cancel_row_reconciliation(
+                row_id=row_id,
+                company_id=company_id,
+                reason=reason,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if error:
+                failed.append({"row_id": row_id, "error": error})
+                continue
+            succeeded.append(result or {"row_id": row_id})
+            total_matches += int((result or {}).get("reverted_matches") or 0)
+            total_settlements += int((result or {}).get("reverted_settlements") or 0)
+            released_entry_ids.update(int(item) for item in ((result or {}).get("released_entry_ids") or []) if item is not None)
+
+        if not succeeded:
+            first_error = failed[0]["error"] if failed else "Não foi possível cancelar as conciliações selecionadas."
+            return None, first_error
+
+        return {
+            "processed_rows": len(normalized_row_ids),
+            "cancelled_rows": len(succeeded),
+            "failed_rows": len(failed),
+            "reverted_matches": total_matches,
+            "reverted_settlements": total_settlements,
+            "released_entry_ids": sorted(released_entry_ids),
+            "items": succeeded,
+            "errors": failed,
+            "reason": (reason or "").strip() or "Cancelamento manual da conciliação bancária.",
+        }, None

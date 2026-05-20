@@ -1556,6 +1556,22 @@ class FinancialBankReconciliationGroupMatchResource(Resource):
         return result, 200
 
 
+class FinancialBankReconciliationBatchCancelResource(Resource):
+    @permission_required("financial", "edit")
+    def post(self):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationService.cancel_reconciliations_batch(
+            company_id=company_id,
+            row_ids=payload.get("row_ids") or [],
+            reason=payload.get("reason"),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+
 class FinancialBankReconciliationTitleSettlementResource(Resource):
     @permission_required("financial", "edit")
     def post(self, row_id: int):

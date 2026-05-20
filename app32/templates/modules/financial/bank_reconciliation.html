@@ -141,6 +141,7 @@
                             <h3>1. Extrato do banco</h3>
                             <p>Linhas pendentes, sugeridas e conciliadas.</p>
                         </div>
+                        <div id="bank-column-actions" class="inline-actions"></div>
                     </div>
                     <div id="bank-rows-list" class="rows-stack rows-stack--dense"></div>
                 </section>
@@ -634,10 +635,42 @@ function renderBankFilters(){
     `).join('');
 }
 
+function canCancelReconciliationForRow(row){
+    return Boolean(row?.created_entry_id || row?.matches?.confirmed_count);
+}
+
+function canSelectBankRow(row){
+    if(!row) return false;
+    if(state.bankFilter === 'reconciled') return canCancelReconciliationForRow(row);
+    return !(row.created_entry_id || row.matches?.confirmed_count);
+}
+
+function getCancellableVisibleBankRows(){
+    return getVisibleBankRows().filter(canCancelReconciliationForRow);
+}
+
+function renderBankColumnActions(){
+    const container = document.getElementById('bank-column-actions');
+    if(!container) return;
+    if(state.bankFilter !== 'reconciled'){
+        container.innerHTML = '';
+        return;
+    }
+    const visibleRows = getCancellableVisibleBankRows();
+    const visibleIds = new Set(visibleRows.map(item => Number(item.id)));
+    const selectedCount = (state.selectedBankRowIds || []).map(Number).filter(id => visibleIds.has(id)).length;
+    const allSelected = visibleRows.length > 0 && selectedCount === visibleRows.length;
+    container.innerHTML = `
+        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleSelectAllVisibleReconciledRows()">${allSelected ? 'Limpar todos' : 'Selecionar todos'}</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="cancelSelectedReconciliations()" ${selectedCount ? '' : 'disabled'}>Cancelar conciliação</button>
+    `;
+}
+
 function renderBankRows(){
     const container = document.getElementById('bank-rows-list');
     const rows = getVisibleBankRows();
     const selectedIds = new Set((state.selectedBankRowIds || []).map(Number));
+    renderBankColumnActions();
     if(!rows.length){
         container.innerHTML = emptyState('Nenhuma linha encontrada', 'Ajuste o filtro ou importe um novo extrato para continuar a conciliação.');
         return;
@@ -649,7 +682,7 @@ function renderBankRows(){
                     <h4>Linha ${row.row_number}</h4>
                     <p class="row-meta">${escapeHtml(row.description || '-')}</p>
                 </div>
-                <input type="checkbox" ${selectedIds.has(Number(row.id)) ? 'checked' : ''} ${(row.created_entry_id || row.matches?.confirmed_count) && !selectedIds.has(Number(row.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleBankRowSelection(${row.id})">
+                <input type="checkbox" ${selectedIds.has(Number(row.id)) ? 'checked' : ''} ${!canSelectBankRow(row) && !selectedIds.has(Number(row.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleBankRowSelection(${row.id})">
             </div>
             <div class="row-between">
                 <p class="row-meta">Data ${escapeHtml(row.occurred_on || row.due_date || '-')} · Valor ${brl(row.amount)} · Ref. ${escapeHtml(row.bank_reference || '-')}</p>
@@ -1016,6 +1049,10 @@ async function selectBankRow(rowId){
 }
 
 async function toggleBankRowSelection(rowId){
+    const row = (state.workspace?.bank_rows || []).find(item => Number(item.id) === Number(rowId));
+    if(!canSelectBankRow(row) && !(state.selectedBankRowIds || []).map(Number).includes(Number(rowId))){
+        return;
+    }
     const current = new Set((state.selectedBankRowIds || []).map(Number));
     if(current.has(Number(rowId))){
         current.delete(Number(rowId));
@@ -1030,6 +1067,28 @@ async function toggleBankRowSelection(rowId){
         state.selectedOpenTitleId = null;
     } else if(!state.selectedBankRowIds.map(Number).includes(Number(state.activeRowId))){
         state.activeRowId = state.selectedBankRowIds[0];
+    }
+    renderBankRows();
+    renderSystemRows();
+    renderOpenTitleRows();
+    renderWorkbench();
+}
+
+function toggleSelectAllVisibleReconciledRows(){
+    const rows = getCancellableVisibleBankRows();
+    const current = new Set((state.selectedBankRowIds || []).map(Number));
+    const visibleIds = rows.map(item => Number(item.id));
+    const allSelected = visibleIds.length > 0 && visibleIds.every(id => current.has(id));
+    if(allSelected){
+        visibleIds.forEach(id => current.delete(id));
+    } else {
+        visibleIds.forEach(id => current.add(id));
+    }
+    state.selectedBankRowIds = Array.from(current);
+    const nextActive = (state.workspace?.bank_rows || []).find(item => current.has(Number(item.id))) || null;
+    state.activeRowId = nextActive?.id || null;
+    if(!state.activeRowId){
+        state.selectedOpenTitleId = null;
     }
     renderBankRows();
     renderSystemRows();
@@ -1153,6 +1212,31 @@ async function cancelRowReconciliation(){
     state.selectedOpenTitleId = null;
     await loadOverview();
     await refreshWorkspace();
+}
+
+async function cancelSelectedReconciliations(){
+    const rowIds = (state.selectedBankRowIds || []).map(Number).filter(Boolean);
+    if(!rowIds.length){
+        alert('Selecione ao menos um registro conciliado.');
+        return;
+    }
+    const reason = window.prompt('Informe o motivo do cancelamento das conciliações selecionadas:');
+    if(reason === null) return;
+    const result = await api(`/api/financial/reconciliation/rows/cancel-batch${companyQuery()}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ row_ids: rowIds, reason }),
+    });
+    state.selectedBankRowIds = [];
+    state.activeRowId = null;
+    state.selectedEntryIds = [];
+    state.entryAllocations = {};
+    state.selectedOpenTitleId = null;
+    await loadOverview();
+    await refreshWorkspace();
+    if(result?.failed_rows){
+        alert(`Foram canceladas ${result.cancelled_rows || 0} conciliações, mas ${result.failed_rows} falharam.`);
+    }
 }
 
 function toggleCreateEntryForm(){

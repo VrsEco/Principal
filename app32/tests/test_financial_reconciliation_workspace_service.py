@@ -9,8 +9,10 @@ from flask import Flask
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import api.resources.financial as financial_resource_module
+import services.financial_reconciliation_service as reconciliation_module
 import services.financial_reconciliation_workspace_service as workspace_module
 from services.financial_reconciliation_workspace_service import FinancialReconciliationWorkspaceService
+from services.financial_reconciliation_service import FinancialReconciliationService
 
 
 class _Column:
@@ -274,3 +276,39 @@ def test_get_workspace_returns_bank_and_system_buckets(monkeypatch):
     assert len(result["bank_rows_with_suggestion"]) == 1
     assert len(result["system_rows_without_link"]) == 2
     assert result["bank_rows"][0]["matches"]["suggested_count"] == 1
+
+
+def test_cancel_reconciliations_batch_aggregates_success_and_failure(monkeypatch):
+    monkeypatch.setattr(reconciliation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+
+    def _fake_cancel_row_reconciliation(*, row_id, company_id, reason=None, allowed_company_ids=None):
+        if row_id == 10:
+            return {
+                "row_id": 10,
+                "reverted_matches": 1,
+                "reverted_settlements": 2,
+                "released_entry_ids": [501],
+            }, None
+        return None, "Linha sem conciliação ativa."
+
+    monkeypatch.setattr(
+        reconciliation_module.FinancialReconciliationService,
+        "cancel_row_reconciliation",
+        _fake_cancel_row_reconciliation,
+    )
+
+    result, error = FinancialReconciliationService.cancel_reconciliations_batch(
+        row_ids=[10, 11],
+        company_id=1,
+        reason="Teste em lote",
+        allowed_company_ids=[1],
+    )
+
+    assert error is None
+    assert result["processed_rows"] == 2
+    assert result["cancelled_rows"] == 1
+    assert result["failed_rows"] == 1
+    assert result["reverted_matches"] == 1
+    assert result["reverted_settlements"] == 2
+    assert result["released_entry_ids"] == [501]
+    assert result["errors"][0]["row_id"] == 11
