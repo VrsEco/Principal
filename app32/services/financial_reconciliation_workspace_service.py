@@ -245,7 +245,8 @@ class FinancialReconciliationWorkspaceService:
             query = query.filter(FinancialEntry.due_date <= due_date_to)
 
         reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
-        if reference_dates:
+        has_explicit_due_date_filter = bool(due_date_from or due_date_to)
+        if reference_dates and not has_explicit_due_date_filter:
             start_date = min(reference_dates) - timedelta(days=120)
             end_date = max(reference_dates) + timedelta(days=120)
             query = query.filter(

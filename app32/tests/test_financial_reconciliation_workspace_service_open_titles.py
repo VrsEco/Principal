@@ -48,6 +48,20 @@ class _RecordingQuery:
         return []
 
 
+class _FakeDateExpr:
+    def __init__(self, label):
+        self.label = label
+
+    def between(self, start, end):
+        return ("between", self.label, start, end)
+
+    def asc(self):
+        return self
+
+    def desc(self):
+        return self
+
+
 def test_load_open_titles_accepts_scheduled_entries(monkeypatch):
     query = _RecordingQuery()
 
@@ -72,3 +86,34 @@ def test_load_open_titles_accepts_scheduled_entries(monkeypatch):
     )
 
     assert ("in", ("scheduled", "posted", "partially_settled")) in query.filters
+
+
+def test_load_open_titles_skips_reference_window_when_due_date_filter_is_explicit(monkeypatch):
+    query = _RecordingQuery()
+
+    class _FakeFinancialEntry:
+        company_id = _Column()
+        deleted_at = _Column()
+        entry_type = _Column()
+        status = _Column()
+        occurred_on = _FakeDateExpr("occurred_on")
+        due_date = _Column()
+        competence_date = _FakeDateExpr("competence_date")
+        movement_nature = _Column()
+        id = _Column()
+
+    _FakeFinancialEntry.query = query
+
+    monkeypatch.setattr(workspace_module, "FinancialEntry", _FakeFinancialEntry)
+    monkeypatch.setattr(workspace_module, "db", SimpleNamespace(or_=lambda *args: ("or", args)))
+
+    FinancialReconciliationWorkspaceService._load_open_titles(
+        company_id=9,
+        rows=[SimpleNamespace(occurred_on=None, due_date="2026-05-01", movement_nature="debit")],
+        due_date_from="2026-01-01",
+    )
+
+    assert not any(
+        isinstance(item, tuple) and item and item[0] == "or"
+        for item in query.filters
+    )

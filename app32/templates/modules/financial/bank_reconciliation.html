@@ -84,9 +84,7 @@
                 <p id="workspace-subtitle">Selecione uma conta bancária.</p>
             </div>
             <div class="workspace-toolbar">
-                <label><span>Lote</span><select id="batch-select"></select></label>
                 <button type="button" class="btn btn-secondary" onclick="openFilterDrawer()">Filtros</button>
-                <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar</button>
             </div>
             <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
         </div>
@@ -175,6 +173,10 @@
                 <select id="workspace-bank-account"></select>
             </label>
             <label>
+                <span>Lote do workspace</span>
+                <select id="batch-select"></select>
+            </label>
+            <label>
                 <span>Vencimento inicial dos títulos</span>
                 <input id="open-title-due-date-from" type="date">
             </label>
@@ -189,7 +191,7 @@
         </div>
         <div class="filter-drawer__actions">
             <button type="button" class="btn btn-secondary" onclick="clearWorkspaceFilters()">Limpar filtros</button>
-            <button type="button" class="btn btn-primary" onclick="applyWorkspaceFilters()">Aplicar filtros</button>
+            <button type="button" class="btn btn-primary" onclick="applyWorkspaceFilters()">Atualizar</button>
         </div>
     </aside>
 </div>
@@ -829,7 +831,6 @@ function renderWorkbench(){
             <h4>Criar título e baixar</h4>
             <div class="inline-actions">
                 <button type="button" class="btn btn-secondary" onclick="openCreateEntryModal()">Criar lançamento no sistema</button>
-                <button type="button" class="btn btn-secondary" onclick="openFilterDrawer()">Abrir filtros</button>
                 ${row && (row.matches?.confirmed_count || row.created_entry_id) ? '<button type="button" class="btn btn-danger" onclick="cancelRowReconciliation()">Cancelar conciliação da linha em foco</button>' : ''}
             </div>
             <p class="row-meta">Para corrigir lançamento do sistema, abra o título, salve a alteração e retorne para esta conciliação com o mesmo lote selecionado.</p>
@@ -889,12 +890,14 @@ function renderWorkspace(){
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const systemSearchInput = document.getElementById('system-search');
     const workspaceSelect = document.getElementById('workspace-bank-account');
+    const batchSelect = document.getElementById('batch-select');
     if(dueDateFromInput) dueDateFromInput.value = state.openTitleDueDateFrom || '';
     if(dueDateToInput) dueDateToInput.value = state.openTitleDueDateTo || '';
     if(systemSearchInput) systemSearchInput.value = state.systemSearch || '';
     if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
-    const batchSelect = document.getElementById('batch-select');
-    batchSelect.innerHTML = (state.workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id) === String(state.workspace.selected_batch?.id) ? 'selected' : ''}>${escapeHtml(item.batch_code)} · ${escapeHtml(item.source_type)}</option>`).join('');
+    if(batchSelect){
+        batchSelect.innerHTML = (state.workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id) === String(state.workspace.selected_batch?.id) ? 'selected' : ''}>${escapeHtml(item.batch_code)} · ${escapeHtml(item.source_type)}</option>`).join('');
+    }
     renderSummary();
     renderBankFilters();
     renderBankRows();
@@ -955,8 +958,7 @@ async function openWorkspace(bankAccountId, batchId=null){
 
 async function refreshWorkspace(){
     if(!state.selectedBankAccountId) return;
-    const batchId = document.getElementById('batch-select')?.value || null;
-    await openWorkspace(state.selectedBankAccountId, batchId);
+    await openWorkspace(state.selectedBankAccountId, state.selectedBatchId || null);
 }
 
 function openFilterDrawer(){
@@ -980,12 +982,13 @@ function handleDrawerBackdrop(event){
 
 async function applyWorkspaceFilters(){
     const nextBankAccountId = Number(document.getElementById('workspace-bank-account')?.value || 0) || null;
+    const nextBatchId = Number(document.getElementById('batch-select')?.value || 0) || null;
     state.openTitleDueDateFrom = document.getElementById('open-title-due-date-from')?.value || '';
     state.openTitleDueDateTo = document.getElementById('open-title-due-date-to')?.value || '';
     state.systemSearch = document.getElementById('system-search')?.value || '';
     closeFilterDrawer();
     if(nextBankAccountId){
-        await openWorkspace(nextBankAccountId, nextBankAccountId === state.selectedBankAccountId ? state.selectedBatchId : null);
+        await openWorkspace(nextBankAccountId, nextBankIdMatchesCurrent(nextBankAccountId) ? nextBatchId : null);
         return;
     }
     renderSystemRows();
@@ -993,9 +996,15 @@ async function applyWorkspaceFilters(){
     renderWorkbench();
 }
 
+function nextBankIdMatchesCurrent(nextBankAccountId){
+    return String(nextBankAccountId || '') === String(state.selectedBankAccountId || '');
+}
+
 async function clearWorkspaceFilters(){
     const workspaceSelect = document.getElementById('workspace-bank-account');
+    const batchSelect = document.getElementById('batch-select');
     if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
+    if(batchSelect) batchSelect.value = String(state.selectedBatchId || '');
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const searchInput = document.getElementById('system-search');
@@ -1470,10 +1479,6 @@ document.getElementById('upload-form').addEventListener('submit', async (event) 
     } finally {
         setUploadBusy(false);
     }
-});
-
-document.getElementById('batch-select').addEventListener('change', async (event) => {
-    await openWorkspace(state.selectedBankAccountId, Number(event.target.value));
 });
 
 document.getElementById('upload-bank-account').addEventListener('change', async (event) => {

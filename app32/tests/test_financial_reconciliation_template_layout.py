@@ -9,8 +9,10 @@ def test_reconciliation_template_exposes_filter_sidebar_and_apply_action():
 
     assert 'openFilterDrawer()' in content
     assert 'id="recon-filter-drawer"' in content
-    assert 'Aplicar filtros' in content
+    assert 'Atualizar' in content
     assert 'workspace-bank-account' in content
+    assert 'batch-select' in content
+    assert 'Abrir filtros' not in content
 
 
 def test_reconciliation_template_uses_requested_workbench_card_order():
