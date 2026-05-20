@@ -5,6 +5,7 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/company_onboarding_wizard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/company_role_permissions.css') }}">
 {% endblock %}
 
 {% block page_title %}Configurações / Empresas{% endblock %}
@@ -282,6 +283,7 @@
                             <tr>
                                 <th>Cargo</th>
                                 <th>Departamento</th>
+                                <th>Permissões</th>
                                 <th>Planejado</th>
                                 <th style="text-align: right;">Ações</th>
                             </tr>
@@ -580,30 +582,48 @@
 
 <!-- Modal: Adicionar/Editar Cargo -->
 <div id="role-modal" class="modal" style="display: none; align-items: center; justify-content: center;">
-    <div class="modal-content" style="max-width: 500px; border-radius: 32px; padding: 2.5rem;">
+    <div class="modal-content role-modal-content" style="border-radius: 32px; padding: 2.5rem;">
         <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Novo Cargo / Função</h2>
         <p style="color: var(--text-secondary); margin-bottom: 2rem;">Cadastre uma nova função na estrutura
-            organizacional.</p>
+            organizacional e configure a matriz de autorizações por recurso/feature.</p>
 
         <form id="add-role-form" onsubmit="handleAddRole(event)">
             <input type="hidden" id="edit-role-id">
-            <div class="form-group mb-4">
-                <label class="form-label">Título do Cargo</label>
-                <input type="text" id="role-title" class="form-control" placeholder="Ex: Analista Financeiro" required>
+            <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;">
+                <div class="form-group mb-4">
+                    <label class="form-label">Título do Cargo</label>
+                    <input type="text" id="role-title" class="form-control" placeholder="Ex: Analista Financeiro" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Departamento</label>
+                    <input type="text" id="role-department" class="form-control" placeholder="Ex: Financeiro">
+                </div>
+                <div class="form-group mb-4">
+                    <label class="form-label">Headcount Planejado</label>
+                    <input type="text" data-format="integer" id="role-headcount" class="form-control" value="1">
+                </div>
+                <div class="form-group mb-4">
+                    <label class="form-label">Cargo Superior</label>
+                    <select id="role-parent-id" class="form-control">
+                        <option value="">-- Nenhum --</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group mb-3">
-                <label class="form-label">Departamento</label>
-                <input type="text" id="role-department" class="form-control" placeholder="Ex: Financeiro">
-            </div>
-            <div class="form-group mb-4">
-                <label class="form-label">Headcount Planejado</label>
-                <input type="text" data-format="integer" id="role-headcount" class="form-control" value="1">
-            </div>
-            <div class="form-group mb-4">
-                <label class="form-label">Cargo Superior</label>
-                <select id="role-parent-id" class="form-control">
-                    <option value="">-- Nenhum --</option>
-                </select>
+
+            <div class="role-permissions-shell">
+                <div class="role-permissions-toolbar">
+                    <div class="role-permissions-toolbar__copy">
+                        <h3>Matriz de permissões em árvore</h3>
+                        <p>Comece pelo módulo principal, expanda as features e marque as ações liberadas para este cargo. O payload é salvo com compatibilidade para o RBAC atual do tenant.</p>
+                    </div>
+                    <div class="role-permissions-toolbar__actions">
+                        <input type="search" id="role-permission-search" class="form-control role-permissions-search" placeholder="Buscar recurso ou feature">
+                        <button type="button" class="btn btn-secondary" onclick="resetRolePermissionsMatrix()">Limpar matriz</button>
+                    </div>
+                </div>
+
+                <div id="role-permission-summary" class="role-permissions-summary"></div>
+                <div id="role-permission-matrix"></div>
             </div>
 
             <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2.5rem;">
@@ -1029,8 +1049,10 @@
 
 <script>
     const companyId = "{{ company_id or '' }}";
+    window.rolePermissionMatrix = null;
 
     document.addEventListener('DOMContentLoaded', () => {
+        initRolePermissionMatrix();
         if (companyId) {
             loadCompanyData();
             loadUserData();
@@ -1052,6 +1074,27 @@
         document.getElementById('filterCollaboratorHireEnd')?.addEventListener('change', applyCollaboratorsFilters);
         syncCollaboratorsFilterBadge();
     });
+
+    function initRolePermissionMatrix() {
+        if (window.rolePermissionMatrix || !window.CompanyRolePermissionMatrix) return;
+        window.rolePermissionMatrix = new window.CompanyRolePermissionMatrix({
+            mount: document.getElementById('role-permission-matrix'),
+            summaryMount: document.getElementById('role-permission-summary'),
+            searchInput: document.getElementById('role-permission-search'),
+        });
+    }
+
+    async function ensureRolePermissionCatalog() {
+        initRolePermissionMatrix();
+        if (!companyId || !window.rolePermissionMatrix) return;
+        await window.rolePermissionMatrix.ensureCatalog(companyId);
+    }
+
+    function resetRolePermissionsMatrix() {
+        if (window.rolePermissionMatrix) {
+            window.rolePermissionMatrix.reset();
+        }
+    }
 
     function switchTab(tabId) {
         document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
@@ -1151,6 +1194,10 @@
                 <tr>
                     <td><div style="font-weight: 600;">${r.title}</div></td>
                     <td>${r.department || '-'}</td>
+                    <td>
+                        <div style="font-weight: 600;">${r.permission_summary?.actions || 0} ações</div>
+                        <div style="font-size: 0.8rem; color: var(--text-tertiary);">${r.permission_summary?.resources || 0} recursos${r.permission_summary?.highlights?.length ? ' • ' + r.permission_summary.highlights.join(', ') : ''}</div>
+                    </td>
                     <td>${r.headcount_planned || 1}</td>
                     <td style="text-align: right; display: flex; gap: 0.5rem; justify-content: flex-end;">
                         <button class="btn btn-icon" onclick="editRole(${r.id})" title="Editar" style="color: var(--primary);">
@@ -1161,7 +1208,7 @@
                         </button>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="4" style="text-align: center; color: var(--text-tertiary);">Nenhum cargo cadastrado.</td></tr>';
+            `).join('') || '<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary);">Nenhum cargo cadastrado.</td></tr>';
 
             // Populate Employee Role Select
             const empRoleSelect = document.getElementById('emp-role-id');
@@ -1188,7 +1235,7 @@
             }
         } catch (err) {
             console.error(err);
-            document.getElementById('roles-list-body').innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--danger);">Erro ao carregar dados.</td></tr>';
+            document.getElementById('roles-list-body').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Erro ao carregar dados.</td></tr>';
         }
     }
 
@@ -1497,15 +1544,18 @@
 
     function hideAddUserModal() { document.getElementById('user-modal').style.display = 'none'; }
 
-    function showAddRoleModal() {
+    async function showAddRoleModal() {
+        await ensureRolePermissionCatalog();
         document.getElementById('edit-role-id').value = '';
         document.getElementById('add-role-form').reset();
+        resetRolePermissionsMatrix();
         document.getElementById('btn-save-role').textContent = 'Criar Cargo';
         document.getElementById('role-modal').style.display = 'flex';
     }
     function hideAddRoleModal() { document.getElementById('role-modal').style.display = 'none'; }
 
     async function editRole(roleId) {
+        await ensureRolePermissionCatalog();
         const r = await fetch(`/api/companies/${companyId}/roles/${roleId}`);
         const role = await r.json();
         document.getElementById('edit-role-id').value = role.id;
@@ -1513,6 +1563,7 @@
         document.getElementById('role-department').value = role.department || '';
         document.getElementById('role-headcount').value = role.headcount_planned || 1;
         document.getElementById('role-parent-id').value = role.parent_role_id || '';
+        window.rolePermissionMatrix?.setValue(role.permission_flat || role.permissions || {});
         document.getElementById('btn-save-role').textContent = 'Salvar Alterações';
         document.getElementById('role-modal').style.display = 'flex';
     }
@@ -1552,11 +1603,13 @@
         if (btn) btn.disabled = true;
 
         try {
+            await ensureRolePermissionCatalog();
             const data = {
                 title: document.getElementById('role-title').value,
                 department: document.getElementById('role-department').value,
                 headcount_planned: parseInt(document.getElementById('role-headcount').value) || 1,
-                parent_role_id: document.getElementById('role-parent-id').value || null
+                parent_role_id: document.getElementById('role-parent-id').value || null,
+                permissions: window.rolePermissionMatrix ? window.rolePermissionMatrix.getValue() : {}
             };
 
             const roleIdToEdit = document.getElementById('edit-role-id').value;
@@ -1711,5 +1764,6 @@
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', filename='js/company_role_permissions.js') }}"></script>
 <script src="{{ url_for('static', filename='js/company_onboarding_wizard.js') }}"></script>
 {% endblock %}

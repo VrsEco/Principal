@@ -5,6 +5,7 @@ from services.identity.user_employee_orchestrator_service import (
     UserEmployeeOrchestratorService,
 )
 from services.company_onboarding_service import CompanyOnboardingService
+from services.rbac_permission_catalog_service import RbacPermissionCatalogService
 from utils.permissions import can_access_company, is_platform_admin, permission_required
 from flask_login import login_required, current_user
 from utils.logo_processor import resize_and_save_logo, get_logo_url
@@ -12,6 +13,12 @@ from utils.logo_processor import resize_and_save_logo, get_logo_url
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
 companies_bp = Blueprint('companies', __name__)
+
+
+def _ensure_company_access(company_id):
+    if not can_access_company(company_id):
+        return jsonify({"error": "Acesso negado"}), 403
+    return None
 
 @companies_bp.route('/companies')
 @permission_required('companies', 'view')
@@ -46,8 +53,9 @@ def company_edit(company_id):
 @permission_required('companies', 'view')
 def get_company_users(company_id):
     # Security check: User must have access to this company
-    if not can_access_company(company_id):
-        return jsonify({"error": "Acesso negado"}), 403
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
 
     # Display all employees that actually have a user_id vinculated, including inactive ones
     employees = Employee.query.filter(Employee.company_id==company_id, Employee.user_id.isnot(None)).all()
@@ -105,18 +113,34 @@ def add_company_user(company_id):
 @companies_bp.route('/api/companies/<int:company_id>/roles', methods=['GET'])
 @permission_required('companies', 'view')
 def get_company_roles(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
     roles = Role.query.filter_by(company_id=company_id).all()
-    return jsonify([r.to_dict() for r in roles])
+    return jsonify([RbacPermissionCatalogService.serialize_role(r) for r in roles])
+
+
+@companies_bp.route('/api/companies/<int:company_id>/permission-catalog', methods=['GET'])
+@permission_required('companies', 'view')
+def get_company_permission_catalog(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    return jsonify(RbacPermissionCatalogService.get_catalog())
 
 @companies_bp.route('/api/companies/<int:company_id>/roles', methods=['POST'])
 @permission_required('companies', 'edit')
 def add_company_role(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
     try:
         data = request.json
+        data['permissions'] = RbacPermissionCatalogService.normalize_payload(data.get('permissions'))
         role = Role(company_id=company_id, **data)
         db.session.add(role)
         db.session.commit()
-        return jsonify(role.to_dict()), 201
+        return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True)), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
@@ -124,20 +148,28 @@ def add_company_role(company_id):
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>', methods=['PUT', 'GET'])
 @permission_required('companies', 'edit')
 def update_company_role(company_id, role_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
     role = Role.query.filter_by(id=role_id, company_id=company_id).first_or_404()
     if request.method == 'GET':
-        return jsonify(role.to_dict())
+        return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True))
     
     data = request.json
     for key, value in data.items():
         if hasattr(role, key) and key not in ['id', 'company_id']:
+            if key == 'permissions':
+                value = RbacPermissionCatalogService.normalize_payload(value)
             setattr(role, key, value)
     db.session.commit()
-    return jsonify(role.to_dict())
+    return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True))
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>', methods=['DELETE'])
 @permission_required('companies', 'edit')
 def delete_company_role(company_id, role_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
     role = Role.query.filter_by(id=role_id, company_id=company_id).first_or_404()
     db.session.delete(role)
     db.session.commit()

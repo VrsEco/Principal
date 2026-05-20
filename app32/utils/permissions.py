@@ -66,11 +66,17 @@ def _employee_has_permission(employee, resource, action):
         return False
 
     perms = employee.role.permissions if employee.role and employee.role.permissions else {}
-    res_perms = perms.get(resource, [])
-    if isinstance(res_perms, str):
-        res_perms = [res_perms]
-    if action in res_perms:
-        return True
+    try:
+        from services.rbac_permission_catalog_service import RbacPermissionCatalogService
+
+        if RbacPermissionCatalogService.has_permission(perms, resource, action):
+            return True
+    except Exception:
+        res_perms = perms.get(resource, [])
+        if isinstance(res_perms, str):
+            res_perms = [res_perms]
+        if action in res_perms:
+            return True
 
     if action == "view" and resource in _COLLABORATOR_BASELINE_VIEW:
         return True
@@ -308,6 +314,20 @@ def can_model_process(company_id):
     if not current_user.is_authenticated or not company_id:
         return False
     return has_permission(company_id, "processes", "edit") or is_collaborator_in_company(company_id)
+
+
+def can_manage_project_tasks(company_id):
+    """
+    Permite gestão operacional de atividades de projeto para qualquer usuário com
+    edição completa ou, temporariamente, para todos os colaboradores ativos da empresa.
+
+    Guardrail:
+    - sempre exige vínculo explícito com a empresa
+    - nunca amplia para fora do tenant
+    """
+    if not current_user.is_authenticated or not company_id:
+        return False
+    return has_permission(company_id, "projects", "edit") or is_collaborator_in_company(company_id)
 
 
 def admin_required(f):
