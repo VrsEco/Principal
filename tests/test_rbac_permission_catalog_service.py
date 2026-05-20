@@ -14,7 +14,7 @@ def test_normalize_payload_preserves_legacy_and_nested_keys():
     assert normalized["projects"] == ["view", "edit"]
     assert normalized["projects.tasks"] == ["view", "assign"]
     assert normalized["financial"] == ["view"]
-    assert normalized["__schema_version__"] == 2
+    assert normalized["__schema_version__"] == 3
 
 
 def test_tree_for_payload_marks_selected_actions():
@@ -42,3 +42,21 @@ def test_has_permission_uses_flat_map_compatibility():
     assert RbacPermissionCatalogService.has_permission(payload, "projects", "view") is True
     assert RbacPermissionCatalogService.has_permission(payload, "projects.hours", "approve") is True
     assert RbacPermissionCatalogService.has_permission(payload, "projects", "delete") is False
+
+
+def test_catalog_covers_systemic_modules_screens_apis_and_tools():
+    catalog = RbacPermissionCatalogService.get_catalog()
+    node_map = RbacPermissionCatalogService.node_map()
+
+    assert catalog["schema_version"] == 3
+    assert "configure" in {item["key"] for item in catalog["actions"]}
+    assert "execute" in {item["key"] for item in catalog["actions"]}
+    assert len(catalog["roots"]) >= 10
+    assert len(node_map) >= 110
+
+    assert "companies.structure.roles" in node_map
+    assert "financial.screens.budget" in node_map
+    assert "operations.screens.ai_mcp_console" in node_map
+    assert "agents.api.chat" in node_map
+    assert "mcp.catalog.permission_matrix" in node_map
+    assert "integrations.webhooks.telegram" in node_map

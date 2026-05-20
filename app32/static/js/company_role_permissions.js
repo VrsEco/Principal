@@ -7,7 +7,7 @@
       this.catalog = null;
       this.companyId = null;
       this.selected = {};
-      this.expanded = new Set(["projects", "projects.tasks"]);
+      this.expanded = new Set(["companies", "projects", "financial", "operations", "mcp"]);
       this.actionOrder = [];
 
       if (this.searchInput) {
@@ -32,7 +32,7 @@
 
     reset() {
       this.selected = {};
-      this.expanded = new Set(["projects", "projects.tasks"]);
+      this.expanded = new Set(["companies", "projects", "financial", "operations", "mcp"]);
       if (this.searchInput) {
         this.searchInput.value = "";
       }
@@ -135,6 +135,16 @@
       return Object.keys(this.selected).filter((key) => key.startsWith("projects")).length;
     }
 
+    rootDomainCount() {
+      const rootKeys = new Set((this.catalog?.roots || []).map((item) => item.key));
+      const touched = new Set();
+      Object.keys(this.selected).forEach((key) => {
+        const root = key.split(".")[0];
+        if (rootKeys.has(root)) touched.add(root);
+      });
+      return touched.size;
+    }
+
     resourceSelection(node) {
       return new Set(this.selected[node.key] || []);
     }
@@ -152,7 +162,11 @@
         </div>
         <div class="role-permissions-summary__card">
           <strong>${this.projectNodeCount()}</strong>
-          <span>Nós do módulo Projetos ativos</span>
+          <span>Nós ativos em Projetos</span>
+        </div>
+        <div class="role-permissions-summary__card">
+          <strong>${this.rootDomainCount()}</strong>
+          <span>Domínios sistêmicos tocados</span>
         </div>
       `;
     }
