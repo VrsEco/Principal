@@ -775,6 +775,7 @@ function renderOpenTitleRows(){
                     <input type="radio" name="open-title-selection" ${selected ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="selectOpenTitle(${item.id})">
                 </div>
                 <div class="badges">
+                    ${movementNatureBadge(item.movement_nature)}
                     ${badge(item.entry_type === 'payable' ? 'Conta a pagar' : 'Conta a receber', 'mute')}
                     ${badge(item.status || 'posted', 'info')}
                     ${canPreviewDiff ? badge(`Diferença ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn') : badge('Selecione 1 linha bancária', 'warn')}

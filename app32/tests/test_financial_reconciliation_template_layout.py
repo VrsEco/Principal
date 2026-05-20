@@ -51,3 +51,4 @@ def test_reconciliation_template_exposes_entry_and_exit_tags_for_bank_and_system
     assert "badge('Saída', 'danger')" in content
     assert "${movementNatureBadge(row.movement_nature)}" in content
     assert "${movementNatureBadge(item.movement_nature)}" in content
+    assert content.count("${movementNatureBadge(item.movement_nature)}") >= 2
