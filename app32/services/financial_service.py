@@ -540,24 +540,48 @@ class FinancialService:
         payload["signed_amount"] = signed_amount
         payload["amount_direction"] = FinancialService.get_amount_direction(movement_nature)
         payload["display_variant"] = "negative" if signed_amount < 0 else "positive"
-        metadata = payload.get("metadata_json") or {}
-        payload["is_reconciled"] = bool(metadata.get("reconciled"))
+        payload["is_reconciled"] = False
         return payload
 
     @staticmethod
-    def is_entry_reconciled(entry: FinancialEntry) -> bool:
-        metadata = dict(entry.metadata_json or {})
-        if metadata.get("reconciled"):
-            return True
-        return bool(
-            FinancialSettlement.query.filter(
-                FinancialSettlement.company_id == entry.company_id,
-                FinancialSettlement.financial_entry_id == entry.id,
-                FinancialSettlement.deleted_at.is_(None),
-                FinancialSettlement.settlement_status != "cancelled",
-                FinancialSettlement.reconciliation_status.in_(["matched", "reconciled"]),
-            ).first()
+    def _has_reconciled_settlement(settlements: Sequence[FinancialSettlement]) -> bool:
+        for settlement in settlements or []:
+            if getattr(settlement, "deleted_at", None) is not None:
+                continue
+            if str(getattr(settlement, "settlement_status", "") or "").strip().lower() == "cancelled":
+                continue
+            if str(getattr(settlement, "reconciliation_status", "") or "").strip().lower() in {"matched", "reconciled"}:
+                return True
+        return False
+
+    @staticmethod
+    def is_entry_reconciled(
+        entry: FinancialEntry,
+        *,
+        settlements: Optional[Sequence[FinancialSettlement]] = None,
+    ) -> bool:
+        active_settlements = list(settlements or [])
+        if not active_settlements:
+            active_settlements = (
+                FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == entry.company_id,
+                    FinancialSettlement.financial_entry_id == entry.id,
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                ).all()
+            )
+        if not FinancialService._has_reconciled_settlement(active_settlements):
+            return False
+
+        settled_principal = sum(
+            FinancialService._money_decimal(getattr(settlement, "principal_amount", None))
+            for settlement in active_settlements
+            if getattr(settlement, "deleted_at", None) is None
+            and str(getattr(settlement, "settlement_status", "") or "").strip().lower() != "cancelled"
         )
+        original_amount = FinancialService._money_decimal(getattr(entry, "original_amount", None))
+        remaining_amount = original_amount - settled_principal
+        return remaining_amount <= Decimal("0.01")
 
     @staticmethod
     def set_entry_reconciliation_state(
@@ -567,19 +591,9 @@ class FinancialService:
         actor_reason: Optional[str] = None,
     ) -> None:
         metadata = dict(entry.metadata_json or {})
-        metadata["reconciled"] = bool(reconciled)
+        metadata.pop("reconciled", None)
         metadata["reconciliation_updated_reason"] = actor_reason
         entry.metadata_json = metadata
-
-        target_status = "reconciled" if reconciled else "pending"
-        settlements = FinancialSettlement.query.filter(
-            FinancialSettlement.company_id == entry.company_id,
-            FinancialSettlement.financial_entry_id == entry.id,
-            FinancialSettlement.deleted_at.is_(None),
-            FinancialSettlement.settlement_status != "cancelled",
-        ).all()
-        for settlement in settlements:
-            settlement.reconciliation_status = target_status
 
     @staticmethod
     def serialize_entry(entry: FinancialEntry, *, include_children: bool = True) -> Dict[str, Any]:
@@ -607,6 +621,7 @@ class FinancialService:
             .order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc())
             .all()
         )
+        payload["is_reconciled"] = FinancialService.is_entry_reconciled(entry, settlements=settlements)
         schedule = None
         if getattr(entry, "financial_schedule_id", None):
             schedule = FinancialSchedule.query.filter(
@@ -819,6 +834,8 @@ class FinancialService:
             summary["settled_principal_amount"] += float(settlement.principal_amount or 0)
             summary["settled_net_amount"] += float(getattr(settlement, "gross_amount", None) or settlement.net_amount or 0)
             summary["settlement_count"] += 1
+            if str(getattr(settlement, "reconciliation_status", "") or "").strip().lower() in {"matched", "reconciled"}:
+                summary["has_reconciled_settlement"] = True
 
         bank_accounts = {
             item.id: item
@@ -870,6 +887,13 @@ class FinancialService:
             )
             item["latest_settlement_date"] = settlement_summary.get("latest_settlement_date")
             item["settlement_count"] = int(settlement_summary.get("settlement_count", 0) or 0)
+            item["is_reconciled"] = bool(
+                settlement_summary.get("has_reconciled_settlement")
+                and (
+                    FinancialService._money_decimal(item.get("original_amount"))
+                    - FinancialService._money_decimal(item.get("settled_principal_amount"))
+                ) <= Decimal("0.01")
+            )
 
         return serialized_items
 

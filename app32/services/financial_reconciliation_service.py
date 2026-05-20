@@ -160,7 +160,7 @@ class FinancialReconciliationService:
         actor_reason: Optional[str] = None,
     ) -> None:
         metadata = dict(entry.metadata_json or {})
-        metadata["reconciled"] = bool(reconciled)
+        metadata.pop("reconciled", None)
         metadata["reconciliation_updated_reason"] = actor_reason
         entry.metadata_json = metadata
 
