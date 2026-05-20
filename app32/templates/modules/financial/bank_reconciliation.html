@@ -354,6 +354,12 @@ const state = {
 
 function brl(value){ return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(value || 0)); }
 function badge(label, kind='mute'){ return `<span class="badge badge--${kind}">${label}</span>`; }
+function movementNatureBadge(movementNature){
+    const normalized = String(movementNature || '').trim().toLowerCase();
+    if(normalized === 'credit') return badge('Entrada', 'info');
+    if(normalized === 'debit') return badge('Saída', 'danger');
+    return '';
+}
 function formatDateDisplay(value){
     if(!value) return 'Sem histórico';
     const normalized = /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? `${value}T12:00:00` : value;
@@ -687,6 +693,7 @@ function renderBankRows(){
             <div class="row-between">
                 <p class="row-meta">Data ${escapeHtml(row.occurred_on || row.due_date || '-')} · Valor ${brl(row.amount)} · Ref. ${escapeHtml(row.bank_reference || '-')}</p>
                 <div class="badges">
+                    ${movementNatureBadge(row.movement_nature)}
                     ${badge(rowStatusLabel(row), rowStatusKind(row))}
                     ${String(row.id) === String(state.activeRowId) ? badge('Em foco', 'info') : ''}
                 </div>
@@ -728,6 +735,7 @@ function renderSystemRows(){
                 <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onchange="toggleEntrySelection(${item.id})">
             </div>
             <div class="badges">
+                ${movementNatureBadge(item.movement_nature)}
                 ${linkedIds.has(Number(item.id)) ? badge('Já vinculado à linha', 'ok') : ''}
                 ${suggestedIds.has(Number(item.id)) ? badge('Candidato sugerido', 'info') : ''}
                 ${item.linked_rows_count ? badge(`${item.linked_rows_count} linha(s) banco`, 'mute') : badge('Sem vínculo no lote', 'warn')}

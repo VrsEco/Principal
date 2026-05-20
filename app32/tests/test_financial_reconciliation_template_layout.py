@@ -41,3 +41,13 @@ def test_reconciliation_template_uses_requested_workbench_card_order():
 
     positions = [content.index(label) for label in order]
     assert positions == sorted(positions)
+
+
+def test_reconciliation_template_exposes_entry_and_exit_tags_for_bank_and_system_rows():
+    content = TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    assert "function movementNatureBadge(movementNature)" in content
+    assert "badge('Entrada', 'info')" in content
+    assert "badge('Saída', 'danger')" in content
+    assert "${movementNatureBadge(row.movement_nature)}" in content
+    assert "${movementNatureBadge(item.movement_nature)}" in content
