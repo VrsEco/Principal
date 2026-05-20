@@ -35,6 +35,16 @@ Catálogo canônico usado pela matriz de autorizações em árvore dos cargos.
 - tools MCP
 - webhooks e runtimes operacionais
 
+## Presets de autorização
+
+- presets do sistema continuam servindo como baseline reutilizável
+- presets customizados podem ser salvos por empresa, sempre escopados por `company_id`
+- o catálogo entregue para a UI combina:
+  - `preset_groups.system`
+  - `preset_groups.company`
+  - lista consolidada em `presets`
+- presets customizados reutilizam a mesma normalização do payload RBAC canônico
+
 ## Fonte de verdade
 
 - serviço: `C:\GestaoVersus\app32\app32\services\rbac_permission_catalog_service.py`

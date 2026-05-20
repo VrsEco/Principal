@@ -825,12 +825,44 @@ class RbacPermissionCatalogService:
     ]
 
     @classmethod
-    def get_catalog(cls) -> dict[str, Any]:
+    def _decorate_presets(
+        cls,
+        presets: list[dict[str, Any]] | None,
+        *,
+        source: str,
+        is_system: bool,
+    ) -> list[dict[str, Any]]:
+        items = []
+        for preset in presets or []:
+            payload = deepcopy(preset)
+            payload.setdefault("source", source)
+            payload.setdefault("is_system", is_system)
+            payload.setdefault("label", payload.get("name") or payload.get("label"))
+            payload.setdefault("key", payload.get("preset_key") or payload.get("key"))
+            items.append(payload)
+        return items
+
+    @classmethod
+    def get_catalog(
+        cls,
+        *,
+        company_presets: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        system_presets = cls._decorate_presets(cls.PRESETS, source="system", is_system=True)
+        tenant_presets = cls._decorate_presets(
+            company_presets,
+            source="company",
+            is_system=False,
+        )
         return {
             "schema_version": cls.SCHEMA_VERSION,
             "catalog_version": cls.CATALOG_VERSION,
             "actions": deepcopy(cls.ACTIONS),
-            "presets": deepcopy(cls.PRESETS),
+            "presets": system_presets + tenant_presets,
+            "preset_groups": {
+                "system": system_presets,
+                "company": tenant_presets,
+            },
             "roots": deepcopy(cls.CATALOG),
         }
 

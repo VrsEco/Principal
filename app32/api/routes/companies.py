@@ -1,10 +1,20 @@
 from flask import Blueprint, render_template, request, jsonify
-from models import db, Company, Employee, User, Role, CompanyPerformanceSettings
+from models import (
+    db,
+    Company,
+    Employee,
+    User,
+    Role,
+    CompanyPerformanceSettings,
+)
 from services.user_employee_service import UserEmployeeService
 from services.identity.user_employee_orchestrator_service import (
     UserEmployeeOrchestratorService,
 )
 from services.company_onboarding_service import CompanyOnboardingService
+from services.company_role_permission_preset_service import (
+    CompanyRolePermissionPresetService,
+)
 from services.rbac_permission_catalog_service import RbacPermissionCatalogService
 from utils.permissions import can_access_company, is_platform_admin, permission_required
 from flask_login import login_required, current_user
@@ -126,7 +136,92 @@ def get_company_permission_catalog(company_id):
     denied = _ensure_company_access(company_id)
     if denied:
         return denied
-    return jsonify(RbacPermissionCatalogService.get_catalog())
+    company_presets = CompanyRolePermissionPresetService.list_presets(company_id)
+    return jsonify(
+        RbacPermissionCatalogService.get_catalog(company_presets=company_presets)
+    )
+
+
+@companies_bp.route('/api/companies/<int:company_id>/role-permission-presets', methods=['GET'])
+@permission_required('companies', 'view')
+def list_company_role_permission_presets(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    return jsonify(CompanyRolePermissionPresetService.list_presets(company_id))
+
+
+@companies_bp.route('/api/companies/<int:company_id>/role-permission-presets', methods=['POST'])
+@permission_required('companies', 'edit')
+def create_company_role_permission_preset(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        payload = CompanyRolePermissionPresetService.create_preset(
+            company_id,
+            request.json or {},
+            created_by_user_id=getattr(current_user, "id", None),
+        )
+        return jsonify(payload), 201
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/role-permission-presets/<int:preset_id>', methods=['GET'])
+@permission_required('companies', 'view')
+def get_company_role_permission_preset(company_id, preset_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    preset = CompanyRolePermissionPresetService.get_preset(company_id, preset_id)
+    if not preset:
+        return jsonify({"error": "Preset não encontrado"}), 404
+    return jsonify(CompanyRolePermissionPresetService.serialize_preset(preset))
+
+
+@companies_bp.route('/api/companies/<int:company_id>/role-permission-presets/<int:preset_id>', methods=['PUT'])
+@permission_required('companies', 'edit')
+def update_company_role_permission_preset(company_id, preset_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    preset = CompanyRolePermissionPresetService.get_preset(company_id, preset_id)
+    if not preset:
+        return jsonify({"error": "Preset não encontrado"}), 404
+    try:
+        payload = CompanyRolePermissionPresetService.update_preset(
+            preset,
+            request.json or {},
+        )
+        return jsonify(payload)
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/role-permission-presets/<int:preset_id>', methods=['DELETE'])
+@permission_required('companies', 'edit')
+def delete_company_role_permission_preset(company_id, preset_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    preset = CompanyRolePermissionPresetService.get_preset(company_id, preset_id)
+    if not preset:
+        return jsonify({"error": "Preset não encontrado"}), 404
+    try:
+        CompanyRolePermissionPresetService.delete_preset(preset)
+        return jsonify({"success": True})
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/companies/<int:company_id>/roles', methods=['POST'])
 @permission_required('companies', 'edit')

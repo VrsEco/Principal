@@ -5,6 +5,9 @@
       this.summaryMount = options.summaryMount;
       this.searchInput = options.searchInput;
       this.presetSelect = options.presetSelect;
+      this.presetNameInput = options.presetNameInput;
+      this.presetDescriptionInput = options.presetDescriptionInput;
+      this.presetDeleteButton = options.presetDeleteButton;
       this.catalog = null;
       this.companyId = null;
       this.selected = {};
@@ -14,12 +17,15 @@
       if (this.searchInput) {
         this.searchInput.addEventListener("input", () => this.render());
       }
+      if (this.presetSelect) {
+        this.presetSelect.addEventListener("change", () => this.syncPresetEditor());
+      }
     }
 
-    async ensureCatalog(companyId) {
+    async ensureCatalog(companyId, options = {}) {
       if (!this.mount || !companyId) return;
       this.companyId = companyId;
-      if (this.catalog) return;
+      if (this.catalog && !options.force) return;
 
       const response = await fetch(`/api/companies/${companyId}/permission-catalog`);
       if (!response.ok) {
@@ -29,15 +35,46 @@
       this.catalog = await response.json();
       this.actionOrder = (this.catalog.actions || []).map((item) => item.key);
       this.populatePresetSelect();
+      this.syncPresetEditor();
       this.render();
+    }
+
+    presetsBySource(source) {
+      if (this.catalog?.preset_groups?.[source]) return this.catalog.preset_groups[source];
+      return (this.catalog?.presets || []).filter((item) => item.source === source);
     }
 
     populatePresetSelect() {
       if (!this.presetSelect) return;
-      const presets = this.catalog?.presets || [];
-      this.presetSelect.innerHTML =
-        `<option value="">Preset de perfil</option>` +
-        presets.map((preset) => `<option value="${preset.key}">${preset.label}</option>`).join("");
+      const renderOptions = (presets) => presets
+        .map((preset) => `<option value="${preset.key}">${preset.label}</option>`)
+        .join("");
+
+      const systemPresets = renderOptions(this.presetsBySource("system"));
+      const companyPresets = renderOptions(this.presetsBySource("company"));
+
+      this.presetSelect.innerHTML = `
+        <option value="">Preset de perfil</option>
+        ${systemPresets ? `<optgroup label="Presets do sistema">${systemPresets}</optgroup>` : ""}
+        ${companyPresets ? `<optgroup label="Presets da empresa">${companyPresets}</optgroup>` : ""}
+      `;
+    }
+
+    findPreset(presetKey) {
+      return (this.catalog?.presets || []).find((item) => item.key === presetKey) || null;
+    }
+
+    selectedPreset() {
+      return this.findPreset(this.presetSelect?.value);
+    }
+
+    syncPresetEditor() {
+      const preset = this.selectedPreset();
+      if (this.presetNameInput) this.presetNameInput.value = preset?.label || "";
+      if (this.presetDescriptionInput) this.presetDescriptionInput.value = preset?.description || "";
+      if (this.presetDeleteButton) {
+        this.presetDeleteButton.disabled = !(preset && preset.source === "company" && preset.id);
+      }
     }
 
     reset() {
@@ -45,6 +82,7 @@
       this.expanded = new Set(["companies", "projects", "financial", "operations", "mcp"]);
       if (this.searchInput) this.searchInput.value = "";
       if (this.presetSelect) this.presetSelect.value = "";
+      this.syncPresetEditor();
       this.render();
     }
 
@@ -56,6 +94,7 @@
         if (normalized.length) this.selected[resourceKey] = normalized;
       });
       if (this.presetSelect) this.presetSelect.value = "";
+      this.syncPresetEditor();
       this.render();
     }
 
@@ -64,10 +103,60 @@
     }
 
     applyPreset(presetKey) {
-      const preset = (this.catalog?.presets || []).find((item) => item.key === presetKey);
+      const preset = this.findPreset(presetKey);
       if (!preset) return;
       this.setValue(preset.grants || {});
+      if (this.presetSelect) this.presetSelect.value = preset.key;
+      this.syncPresetEditor();
       this.expandTouchedDomains();
+    }
+
+    async saveCompanyPreset() {
+      if (!this.companyId) {
+        throw new Error("Empresa não identificada para salvar o preset.");
+      }
+      const preset = this.selectedPreset();
+      const payload = {
+        name: this.presetNameInput?.value || "",
+        description: this.presetDescriptionInput?.value || "",
+        permissions: this.getValue(),
+      };
+      const isUpdate = preset && preset.source === "company" && preset.id;
+      const url = isUpdate
+        ? `/api/companies/${this.companyId}/role-permission-presets/${preset.id}`
+        : `/api/companies/${this.companyId}/role-permission-presets`;
+      const response = await fetch(url, {
+        method: isUpdate ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Falha ao salvar preset.");
+      }
+      await this.ensureCatalog(this.companyId, { force: true });
+      if (this.presetSelect) this.presetSelect.value = result.key;
+      this.syncPresetEditor();
+      return result;
+    }
+
+    async deleteSelectedCompanyPreset() {
+      const preset = this.selectedPreset();
+      if (!preset || preset.source !== "company" || !preset.id) {
+        throw new Error("Selecione um preset da empresa para excluir.");
+      }
+      const response = await fetch(
+        `/api/companies/${this.companyId}/role-permission-presets/${preset.id}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Falha ao excluir preset.");
+      }
+      if (this.presetSelect) this.presetSelect.value = "";
+      await this.ensureCatalog(this.companyId, { force: true });
+      this.syncPresetEditor();
+      return result;
     }
 
     expandTouchedDomains() {

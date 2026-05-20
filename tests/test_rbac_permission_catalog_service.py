@@ -65,3 +65,23 @@ def test_catalog_covers_systemic_modules_screens_apis_and_tools():
     assert "admin_unidade" in preset_keys
     assert "financeiro" in preset_keys
     assert "auditor_leitura" in preset_keys
+
+
+def test_catalog_merges_company_presets_without_losing_system_presets():
+    company_presets = [
+        {
+            "id": 99,
+            "key": "company_financeiro_ap",
+            "label": "Financeiro AP",
+            "description": "Preset customizado do tenant.",
+            "source": "company",
+            "grants": {"financial.payables": ["view", "edit"]},
+        }
+    ]
+
+    catalog = RbacPermissionCatalogService.get_catalog(company_presets=company_presets)
+
+    assert "preset_groups" in catalog
+    assert any(item["source"] == "system" for item in catalog["preset_groups"]["system"])
+    assert any(item["key"] == "company_financeiro_ap" for item in catalog["preset_groups"]["company"])
+    assert any(item["key"] == "company_financeiro_ap" for item in catalog["presets"])

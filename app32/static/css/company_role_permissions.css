@@ -57,6 +57,20 @@
   margin-bottom: 1rem;
 }
 
+.role-permissions-preset-editor {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.role-permissions-preset-editor__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .role-permissions-summary__card {
   min-width: 170px;
   padding: 0.9rem 1rem;
@@ -219,4 +233,10 @@
   padding: 2rem;
   text-align: center;
   color: var(--text-secondary);
+}
+
+@media (max-width: 980px) {
+  .role-permissions-preset-editor {
+    grid-template-columns: 1fr;
+  }
 }

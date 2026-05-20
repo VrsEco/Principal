@@ -626,6 +626,21 @@
                     </div>
                 </div>
 
+                <div class="role-permissions-preset-editor">
+                    <div class="form-group">
+                        <label class="form-label">Preset da empresa</label>
+                        <input type="text" id="role-permission-preset-name" class="form-control" placeholder="Ex: Financeiro contas a pagar">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descrição do preset</label>
+                        <input type="text" id="role-permission-preset-description" class="form-control" placeholder="Resumo do recorte operacional deste preset">
+                    </div>
+                    <div class="role-permissions-preset-editor__actions">
+                        <button type="button" class="btn btn-secondary" onclick="saveRolePermissionPreset()">Salvar preset da empresa</button>
+                        <button type="button" id="role-permission-preset-delete" class="btn btn-secondary" onclick="deleteSelectedRolePermissionPreset()" disabled>Excluir preset</button>
+                    </div>
+                </div>
+
                 <div id="role-permission-summary" class="role-permissions-summary"></div>
                 <div id="role-permission-matrix"></div>
             </div>
@@ -1086,6 +1101,9 @@
             summaryMount: document.getElementById('role-permission-summary'),
             searchInput: document.getElementById('role-permission-search'),
             presetSelect: document.getElementById('role-permission-preset'),
+            presetNameInput: document.getElementById('role-permission-preset-name'),
+            presetDescriptionInput: document.getElementById('role-permission-preset-description'),
+            presetDeleteButton: document.getElementById('role-permission-preset-delete'),
         });
     }
 
@@ -1105,6 +1123,31 @@
         const presetKey = document.getElementById('role-permission-preset')?.value;
         if (presetKey && window.rolePermissionMatrix) {
             window.rolePermissionMatrix.applyPreset(presetKey);
+        }
+    }
+
+    async function saveRolePermissionPreset() {
+        try {
+            await ensureRolePermissionCatalog();
+            if (!window.rolePermissionMatrix) return;
+            await window.rolePermissionMatrix.saveCompanyPreset();
+            alert('Preset salvo para esta empresa!');
+        } catch (err) {
+            console.error(err);
+            alert(err.message || 'Falha ao salvar preset.');
+        }
+    }
+
+    async function deleteSelectedRolePermissionPreset() {
+        if (!confirm('Deseja excluir este preset da empresa?')) return;
+        try {
+            await ensureRolePermissionCatalog();
+            if (!window.rolePermissionMatrix) return;
+            await window.rolePermissionMatrix.deleteSelectedCompanyPreset();
+            alert('Preset excluído.');
+        } catch (err) {
+            console.error(err);
+            alert(err.message || 'Falha ao excluir preset.');
         }
     }
 
