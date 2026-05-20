@@ -60,3 +60,8 @@ def test_catalog_covers_systemic_modules_screens_apis_and_tools():
     assert "agents.api.chat" in node_map
     assert "mcp.catalog.permission_matrix" in node_map
     assert "integrations.webhooks.telegram" in node_map
+
+    preset_keys = {preset["key"] for preset in catalog["presets"]}
+    assert "admin_unidade" in preset_keys
+    assert "financeiro" in preset_keys
+    assert "auditor_leitura" in preset_keys

@@ -8,7 +8,11 @@ def test_company_role_permissions_ui_contracts_are_present():
 
     assert 'id="role-permission-matrix"' in template
     assert 'id="role-permission-search"' in template
+    assert 'id="role-permission-preset"' in template
     assert '/api/companies/${companyId}/permission-catalog' in script
+    assert 'applyPreset(presetKey)' in script
+    assert 'data-indeterminate="true"' in script or 'data-indeterminate="${indeterminate}"' in script
     assert 'window.rolePermissionMatrix' in script
     assert '.role-permissions-table' in css
     assert '.role-permission-checkbox' in css
+    assert '.role-permission-badge--inherit' in css

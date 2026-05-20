@@ -617,6 +617,10 @@
                         <p>Comece pelo módulo principal, expanda as features e marque as ações liberadas para este cargo. O payload é salvo com compatibilidade para o RBAC atual do tenant.</p>
                     </div>
                     <div class="role-permissions-toolbar__actions">
+                        <select id="role-permission-preset" class="form-control role-permissions-preset">
+                            <option value="">Preset de perfil</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" onclick="applyRolePermissionPreset()">Aplicar preset</button>
                         <input type="search" id="role-permission-search" class="form-control role-permissions-search" placeholder="Buscar recurso ou feature">
                         <button type="button" class="btn btn-secondary" onclick="resetRolePermissionsMatrix()">Limpar matriz</button>
                     </div>
@@ -1081,6 +1085,7 @@
             mount: document.getElementById('role-permission-matrix'),
             summaryMount: document.getElementById('role-permission-summary'),
             searchInput: document.getElementById('role-permission-search'),
+            presetSelect: document.getElementById('role-permission-preset'),
         });
     }
 
@@ -1093,6 +1098,13 @@
     function resetRolePermissionsMatrix() {
         if (window.rolePermissionMatrix) {
             window.rolePermissionMatrix.reset();
+        }
+    }
+
+    function applyRolePermissionPreset() {
+        const presetKey = document.getElementById('role-permission-preset')?.value;
+        if (presetKey && window.rolePermissionMatrix) {
+            window.rolePermissionMatrix.applyPreset(presetKey);
         }
     }
 

@@ -4,6 +4,7 @@
       this.mount = options.mount;
       this.summaryMount = options.summaryMount;
       this.searchInput = options.searchInput;
+      this.presetSelect = options.presetSelect;
       this.catalog = null;
       this.companyId = null;
       this.selected = {};
@@ -27,15 +28,23 @@
 
       this.catalog = await response.json();
       this.actionOrder = (this.catalog.actions || []).map((item) => item.key);
+      this.populatePresetSelect();
       this.render();
+    }
+
+    populatePresetSelect() {
+      if (!this.presetSelect) return;
+      const presets = this.catalog?.presets || [];
+      this.presetSelect.innerHTML =
+        `<option value="">Preset de perfil</option>` +
+        presets.map((preset) => `<option value="${preset.key}">${preset.label}</option>`).join("");
     }
 
     reset() {
       this.selected = {};
       this.expanded = new Set(["companies", "projects", "financial", "operations", "mcp"]);
-      if (this.searchInput) {
-        this.searchInput.value = "";
-      }
+      if (this.searchInput) this.searchInput.value = "";
+      if (this.presetSelect) this.presetSelect.value = "";
       this.render();
     }
 
@@ -44,10 +53,9 @@
       Object.entries(flatPermissions || {}).forEach(([resourceKey, actions]) => {
         if (!Array.isArray(actions)) return;
         const normalized = [...new Set(actions.map((item) => String(item || "").trim()).filter(Boolean))];
-        if (normalized.length) {
-          this.selected[resourceKey] = normalized;
-        }
+        if (normalized.length) this.selected[resourceKey] = normalized;
       });
+      if (this.presetSelect) this.presetSelect.value = "";
       this.render();
     }
 
@@ -55,12 +63,28 @@
       return JSON.parse(JSON.stringify(this.selected));
     }
 
+    applyPreset(presetKey) {
+      const preset = (this.catalog?.presets || []).find((item) => item.key === presetKey);
+      if (!preset) return;
+      this.setValue(preset.grants || {});
+      this.expandTouchedDomains();
+    }
+
+    expandTouchedDomains() {
+      Object.keys(this.selected).forEach((key) => {
+        const parts = key.split(".");
+        let current = "";
+        parts.forEach((part, index) => {
+          current = index === 0 ? part : `${current}.${part}`;
+          this.expanded.add(current);
+        });
+      });
+      this.render();
+    }
+
     toggleNode(resourceKey) {
-      if (this.expanded.has(resourceKey)) {
-        this.expanded.delete(resourceKey);
-      } else {
-        this.expanded.add(resourceKey);
-      }
+      if (this.expanded.has(resourceKey)) this.expanded.delete(resourceKey);
+      else this.expanded.add(resourceKey);
       this.render();
     }
 
@@ -76,11 +100,9 @@
         const current = new Set(this.selected[node.key] || []);
         if (checked) current.add(actionKey);
         else current.delete(actionKey);
-
         if (current.size) this.selected[node.key] = [...current];
         else delete this.selected[node.key];
       }
-
       (node.children || []).forEach((child) => this.applyActionCascade(child, actionKey, checked));
     }
 
@@ -98,13 +120,10 @@
 
     visibleRows() {
       const term = (this.searchInput?.value || "").trim().toLowerCase();
-
       const matches = (node) => {
         const own = `${node.label || ""} ${node.description || ""}`.toLowerCase().includes(term);
         const childMatch = (node.children || []).some((child) => matches(child));
-        if (term && childMatch) {
-          this.expanded.add(node.key);
-        }
+        if (term && childMatch) this.expanded.add(node.key);
         return own || childMatch;
       };
 
@@ -113,9 +132,7 @@
         (nodes || []).forEach((node) => {
           if (term && !matches(node)) return;
           rows.push({ node, depth });
-          if ((node.children || []).length && this.expanded.has(node.key)) {
-            walk(node.children, depth + 1);
-          }
+          if ((node.children || []).length && this.expanded.has(node.key)) walk(node.children, depth + 1);
         });
       };
 
@@ -149,6 +166,38 @@
       return new Set(this.selected[node.key] || []);
     }
 
+    descendantActionCount(node, actionKey) {
+      let count = 0;
+      const walk = (children) => {
+        (children || []).forEach((child) => {
+          if (this.resourceSelection(child).has(actionKey)) count += 1;
+          walk(child.children || []);
+        });
+      };
+      walk(node.children || []);
+      return count;
+    }
+
+    nodeInheritanceMeta(node) {
+      const selected = this.resourceSelection(node);
+      const actionStates = {};
+      let inheritedCount = 0;
+      let partialCount = 0;
+
+      this.actionOrder.forEach((actionKey) => {
+        if (!(node.actions || []).includes(actionKey)) return;
+        const own = selected.has(actionKey);
+        const descendants = this.descendantActionCount(node, actionKey);
+        const inherited = !own && descendants > 0;
+        const partial = own && descendants > 0;
+        if (inherited) inheritedCount += 1;
+        if (partial) partialCount += 1;
+        actionStates[actionKey] = { own, descendants, inherited, partial };
+      });
+
+      return { actionStates, inheritedCount, partialCount };
+    }
+
     renderSummary() {
       if (!this.summaryMount) return;
       this.summaryMount.innerHTML = `
@@ -171,6 +220,12 @@
       `;
     }
 
+    applyIndeterminateStates() {
+      this.mount.querySelectorAll('input[data-indeterminate="true"]').forEach((input) => {
+        input.indeterminate = true;
+      });
+    }
+
     render() {
       if (!this.mount || !this.catalog) return;
       this.renderSummary();
@@ -191,24 +246,45 @@
         const hasChildren = !!(node.children || []).length;
         const expanded = this.expanded.has(node.key);
         const badge = `${selected.size}/${(node.actions || []).length}`;
+        const inheritance = this.nodeInheritanceMeta(node);
 
         const cells = this.actionOrder.map((actionKey) => {
           if (!(node.actions || []).includes(actionKey)) {
             return `<td class="role-permission-cell--disabled">—</td>`;
           }
 
-          const checked = selected.has(actionKey) ? "checked" : "";
+          const state = inheritance.actionStates[actionKey] || {};
+          const checked = state.own ? "checked" : "";
+          const indeterminate = state.inherited ? "true" : "false";
+          const classes = [
+            "role-permission-checkbox",
+            state.inherited ? "role-permission-checkbox--inherited" : "",
+            state.partial ? "role-permission-checkbox--partial" : "",
+          ].filter(Boolean).join(" ");
+          const title = state.inherited
+            ? `Herdado visualmente de ${state.descendants} filho(s) com esta ação`
+            : state.partial
+              ? `Este nó e ${state.descendants} filho(s) possuem esta ação`
+              : "";
+
           return `
-            <td>
+            <td class="${state.inherited ? "role-permission-cell--inherited" : ""}">
               <input
-                class="role-permission-checkbox"
+                class="${classes}"
                 type="checkbox"
                 ${checked}
+                data-indeterminate="${indeterminate}"
+                title="${title}"
                 onchange="window.rolePermissionMatrix.setAction('${node.key}', '${actionKey}', this.checked)"
               >
             </td>
           `;
         }).join("");
+
+        const extraBadges = [
+          inheritance.inheritedCount ? `<span class="role-permission-badge role-permission-badge--inherit">${inheritance.inheritedCount} ação(ões) herdadas visualmente</span>` : "",
+          inheritance.partialCount ? `<span class="role-permission-badge role-permission-badge--partial">${inheritance.partialCount} ação(ões) com filhos ativos</span>` : "",
+        ].join("");
 
         return `
           <tr>
@@ -226,6 +302,7 @@
                   <small>${node.description || ""}</small>
                   <div class="role-permission-node__meta">
                     <span class="role-permission-badge">${badge} ações neste nó</span>
+                    ${extraBadges}
                     <span class="role-permission-badge">${node.key}</span>
                   </div>
                 </div>
@@ -249,6 +326,8 @@
           </table>
         </div>
       `;
+
+      this.applyIndeterminateStates();
     }
   }
 
