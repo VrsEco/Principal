@@ -236,7 +236,7 @@ class FinancialReconciliationWorkspaceService:
             FinancialEntry.company_id == company_id,
             FinancialEntry.deleted_at.is_(None),
             FinancialEntry.entry_type.in_(["payable", "receivable"]),
-            FinancialEntry.status.in_(["posted", "partially_settled"]),
+            FinancialEntry.status.in_(["scheduled", "posted", "partially_settled"]),
         )
 
         if due_date_from:

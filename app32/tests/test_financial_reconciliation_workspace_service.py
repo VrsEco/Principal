@@ -257,6 +257,7 @@ def test_get_workspace_returns_bank_and_system_buckets(monkeypatch):
             "is_reconciled": False,
         },
     )
+    monkeypatch.setattr(workspace_module.FinancialReconciliationWorkspaceService, "_load_open_titles", lambda **kwargs: [])
 
     result, error = FinancialReconciliationWorkspaceService.get_workspace(
         company_id=1,

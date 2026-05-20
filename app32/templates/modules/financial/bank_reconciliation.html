@@ -85,6 +85,7 @@
             </div>
             <div class="workspace-toolbar">
                 <label><span>Lote</span><select id="batch-select"></select></label>
+                <button type="button" class="btn btn-secondary" onclick="openFilterDrawer()">Filtros</button>
                 <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar</button>
             </div>
             <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
@@ -94,23 +95,9 @@
 
             <div class="board-toolbar">
                 <div class="filter-group" id="bank-filter-group"></div>
-                <div class="workspace-toolbar">
-                    <div class="compact-field">
-                        <span>Filtros dos títulos em aberto</span>
-                        <small class="muted">Aplicam-se somente à coluna 3.</small>
-                    </div>
-                    <label class="compact-field">
-                        <span>Vencimento inicial dos títulos</span>
-                        <input id="open-title-due-date-from" type="date">
-                    </label>
-                    <label class="compact-field">
-                        <span>Vencimento final dos títulos</span>
-                        <input id="open-title-due-date-to" type="date">
-                    </label>
-                    <label class="compact-field">
-                        <span>Buscar no sistema / títulos</span>
-                        <input id="system-search" type="search" placeholder="Histórico, documento ou código">
-                    </label>
+                <div class="compact-field compact-field--hint">
+                    <span>Filtros operacionais</span>
+                    <small class="muted">Conta bancária do workspace e filtros dos títulos em aberto agora ficam no painel lateral.</small>
                 </div>
             </div>
 
@@ -170,6 +157,41 @@
         </div>
         <div id="recon-modal-body" class="recon-modal__body"></div>
     </section>
+</div>
+
+<div id="recon-filter-drawer-backdrop" class="drawer-backdrop" aria-hidden="true" onclick="handleDrawerBackdrop(event)">
+    <aside id="recon-filter-drawer" class="filter-drawer" aria-label="Filtros da conciliação">
+        <div class="filter-drawer__header">
+            <div>
+                <span class="panel-kicker">Filtros</span>
+                <h3>Conta bancária e títulos em aberto</h3>
+                <p class="muted">Use este painel para trocar a conta do workspace e aplicar filtros na coluna 3.</p>
+            </div>
+            <button type="button" class="recon-modal__close" onclick="closeFilterDrawer()" aria-label="Fechar">×</button>
+        </div>
+        <div class="filter-drawer__body">
+            <label>
+                <span>Conta bancária do workspace</span>
+                <select id="workspace-bank-account"></select>
+            </label>
+            <label>
+                <span>Vencimento inicial dos títulos</span>
+                <input id="open-title-due-date-from" type="date">
+            </label>
+            <label>
+                <span>Vencimento final dos títulos</span>
+                <input id="open-title-due-date-to" type="date">
+            </label>
+            <label>
+                <span>Buscar no sistema / títulos</span>
+                <input id="system-search" type="search" placeholder="Histórico, documento ou código">
+            </label>
+        </div>
+        <div class="filter-drawer__actions">
+            <button type="button" class="btn btn-secondary" onclick="clearWorkspaceFilters()">Limpar filtros</button>
+            <button type="button" class="btn btn-primary" onclick="applyWorkspaceFilters()">Aplicar filtros</button>
+        </div>
+    </aside>
 </div>
 
 <style>
@@ -250,6 +272,7 @@
     .filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
     .compact-field{min-width:0;justify-self:end;width:100%}
     .compact-field span{text-align:right}
+    .compact-field--hint{padding:.95rem 1rem;border:1px dashed rgba(148,163,184,.5);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.75))}
     .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.7rem .95rem;border-radius:999px;font-weight:700;cursor:pointer;transition:all .18s ease}
     .filter-chip:hover{transform:translateY(-1px);border-color:rgba(37,99,235,.28)}
     .summary-card{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(241,245,249,.78))}
@@ -275,6 +298,15 @@
     .recon-modal__header h3{margin:0}
     .recon-modal__body{display:flex;flex-direction:column;gap:1rem}
     .recon-modal__close{border:none;background:var(--surface-secondary);border-radius:999px;width:36px;height:36px;cursor:pointer;color:var(--text-primary);font-size:1rem}
+    .drawer-backdrop{position:fixed;inset:0;z-index:78;display:none;justify-content:flex-end;background:rgba(15,23,42,.28)}
+    .drawer-backdrop.is-visible{display:flex}
+    .filter-drawer{width:min(420px,100%);height:100%;background:var(--surface);border-left:1px solid var(--border);box-shadow:-12px 0 40px rgba(15,23,42,.18);display:flex;flex-direction:column;padding:1.25rem;gap:1rem}
+    .filter-drawer__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start}
+    .filter-drawer__header h3{margin:.15rem 0 0}
+    .filter-drawer__body{display:flex;flex-direction:column;gap:.9rem}
+    .filter-drawer__body label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
+    .filter-drawer__body input,.filter-drawer__body select{background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.85rem .95rem;color:var(--text-primary)}
+    .filter-drawer__actions{display:flex;gap:.75rem;justify-content:flex-end;flex-wrap:wrap;margin-top:auto}
     .group-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
     .group-total-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.78));padding:.85rem}
     .group-total-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -284,8 +316,13 @@
     .recon-empty-state span{color:var(--text-secondary);max-width:36ch}
     .helper-list{display:flex;flex-direction:column;gap:.55rem}
     .divider{height:1px;background:var(--border);margin:.25rem 0}
+    .workbench-card--selected{background:linear-gradient(180deg,rgba(219,234,254,.96),rgba(239,246,255,.98));border-color:rgba(37,99,235,.32)}
+    .workbench-card--title-settlement{background:linear-gradient(180deg,rgba(236,253,245,.96),rgba(220,252,231,.95));border-color:rgba(22,163,74,.28)}
+    .workbench-card--entry-actions{background:linear-gradient(180deg,rgba(254,249,195,.95),rgba(254,240,138,.78));border-color:rgba(202,138,4,.28)}
+    .workbench-card--group{background:linear-gradient(180deg,rgba(243,232,255,.96),rgba(233,213,255,.82));border-color:rgba(147,51,234,.24)}
+    .workbench-card--suggestions{background:linear-gradient(180deg,rgba(240,249,255,.96),rgba(224,242,254,.92));border-color:rgba(14,165,233,.28)}
     @media (max-width:1200px){.recon-hero,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}.board-toolbar{grid-template-columns:1fr}}
-    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.workspace-toolbar,.recon-hero__actions{flex-direction:column;align-items:stretch}.workspace-toolbar{margin-left:0}.workspace-toolbar label,.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{grid-template-columns:1fr;padding:0 1rem 1rem}}
+    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.workspace-toolbar,.recon-hero__actions{flex-direction:column;align-items:stretch}.workspace-toolbar{margin-left:0}.workspace-toolbar label,.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{grid-template-columns:1fr;padding:0 1rem 1rem}.filter-drawer{width:100%}.filter-drawer__actions{flex-direction:column}}
 </style>
 
 <script>
@@ -302,6 +339,7 @@ function resolveCompanyId(){
 let companyId = resolveCompanyId();
 const state = {
     accounts: [],
+    uploadBankAccountId: null,
     selectedBankAccountId: null,
     selectedBatchId: null,
     workspace: null,
@@ -538,8 +576,10 @@ function getVisibleBankRows(){
 
 function renderAccounts(){
     const uploadSelect = document.getElementById('upload-bank-account');
+    const workspaceSelect = document.getElementById('workspace-bank-account');
     if(!state.accounts.length){
         if(uploadSelect) uploadSelect.innerHTML = '<option value="">Nenhuma conta disponível</option>';
+        if(workspaceSelect) workspaceSelect.innerHTML = '<option value="">Nenhuma conta disponível</option>';
         renderHero();
         return;
     }
@@ -547,10 +587,20 @@ function renderAccounts(){
     if(!selectedExists){
         state.selectedBankAccountId = Number(state.accounts[0]?.bank_account?.id || 0) || null;
     }
+    const uploadSelectedExists = state.accounts.some((item) => String(item.bank_account.id) === String(state.uploadBankAccountId));
+    if(!uploadSelectedExists){
+        state.uploadBankAccountId = state.selectedBankAccountId;
+    }
     if(uploadSelect){
         uploadSelect.innerHTML = '<option value="">Selecione</option>' + state.accounts.map(item => `<option value="${item.bank_account.id}">${escapeHtml(item.bank_account.name)}</option>`).join('');
+        if(state.uploadBankAccountId){
+            uploadSelect.value = String(state.uploadBankAccountId);
+        }
+    }
+    if(workspaceSelect){
+        workspaceSelect.innerHTML = '<option value="">Selecione</option>' + state.accounts.map(item => `<option value="${item.bank_account.id}">${escapeHtml(item.bank_account.name)}</option>`).join('');
         if(state.selectedBankAccountId){
-            uploadSelect.value = String(state.selectedBankAccountId);
+            workspaceSelect.value = String(state.selectedBankAccountId);
         }
     }
     renderHero();
@@ -735,7 +785,7 @@ function renderWorkbench(){
     const groupSummary = getGroupSummary();
     const differenceKind = Math.abs(groupSummary.difference) < 0.01 ? 'ok' : 'warn';
     container.innerHTML = `
-        <section class="workbench-card is-selected">
+        <section class="workbench-card workbench-card--selected is-selected">
             <h4>Registros bancários selecionados</h4>
             <p><strong>${selectedRows.length} linha(s) no conjunto</strong></p>
             <div class="helper-list">
@@ -749,28 +799,13 @@ function renderWorkbench(){
                 ${badge(`Total sistema ${brl(groupSummary.systemTotal)}`, 'mute')}
                 ${badge(`Diferença ${brl(groupSummary.difference)}`, differenceKind)}
             </div>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-secondary" onclick="refreshWorkspace()">Atualizar workspace</button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelectedBankRows()">Limpar banco</button>
+            </div>
         </section>
 
-        <section class="workbench-card">
-            <h4>Sugestões automáticas da linha em foco</h4>
-            ${row ? `<p class="row-meta">Linha ${row.row_number}: ${escapeHtml(row.description || '-')}</p>` : ''}
-            ${candidatePayload.items?.length ? `
-                <div class="helper-list">
-                    ${candidatePayload.items.map(item => `
-                        <div>
-                            <p><strong>${escapeHtml(item.entry.entry_code || `Lançamento ${item.entry.id}`)}</strong> · ${brl(item.entry.original_amount)}</p>
-                            <p class="row-meta">Score ${(Number(item.score || 0) * 100).toFixed(1)}% · ${escapeHtml(item.reason || '-')}</p>
-                            <div class="inline-actions">
-                                <button type="button" class="btn btn-secondary" onclick="toggleEntrySelection(${item.entry.id})">Adicionar à seleção</button>
-                                ${item.entry.id === row.match?.financial_entry_id && row.match?.match_status !== 'confirmed' ? `<button type="button" class="btn btn-primary" onclick="confirmSuggestedMatch(${row.match.id})">Confirmar sugestão principal</button>` : ''}
-                            </div>
-                        </div>
-                    `).join('<div class="divider"></div>')}
-                </div>
-            ` : '<p class="muted">Sem candidatos carregados para esta linha.</p>'}
-        </section>
-
-        <section class="workbench-card">
+        <section class="workbench-card workbench-card--title-settlement">
             <h4>Baixa de título em aberto</h4>
             <p class="row-meta">Fluxo exclusivo 1x1: selecione exatamente uma linha bancária e um título em aberto para efetuar a baixa usando a data e o valor do extrato.</p>
             <div class="group-totals">
@@ -790,8 +825,18 @@ function renderWorkbench(){
             </div>
         </section>
 
-        <section class="workbench-card">
-            <h4>Conciliação do conjunto</h4>
+        <section class="workbench-card workbench-card--entry-actions">
+            <h4>Criar título e baixar</h4>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-secondary" onclick="openCreateEntryModal()">Criar lançamento no sistema</button>
+                <button type="button" class="btn btn-secondary" onclick="openFilterDrawer()">Abrir filtros</button>
+                ${row && (row.matches?.confirmed_count || row.created_entry_id) ? '<button type="button" class="btn btn-danger" onclick="cancelRowReconciliation()">Cancelar conciliação da linha em foco</button>' : ''}
+            </div>
+            <p class="row-meta">Para corrigir lançamento do sistema, abra o título, salve a alteração e retorne para esta conciliação com o mesmo lote selecionado.</p>
+        </section>
+
+        <section class="workbench-card workbench-card--group">
+            <h4>Conciliação em conjunto</h4>
             <p class="row-meta">Selecione uma ou mais linhas bancárias e um ou mais lançamentos do sistema. O backend valida o total antes de confirmar.</p>
             <div class="group-totals">
                 <div class="group-total-card"><span>Banco</span><strong>${brl(groupSummary.bankTotal)}</strong></div>
@@ -799,19 +844,30 @@ function renderWorkbench(){
                 <div class="group-total-card"><span>Diferença</span><strong>${brl(groupSummary.difference)}</strong></div>
             </div>
             <div class="inline-actions">
-                <button type="button" class="btn btn-primary" onclick="confirmSelectedMatches()" ${!state.selectedEntryIds.length ? 'disabled' : ''}>Confirmar conjunto</button>
+                <button type="button" class="btn btn-primary" onclick="confirmSelectedMatches()" ${!state.selectedEntryIds.length ? 'disabled' : ''}>Conciliar conjunto</button>
                 <button type="button" class="btn btn-secondary" onclick="clearSelectedEntries()">Limpar sistema</button>
                 <button type="button" class="btn btn-secondary" onclick="clearSelectedBankRows()">Limpar banco</button>
             </div>
         </section>
 
-        <section class="workbench-card">
-            <h4>Ações da conciliação</h4>
-            <div class="inline-actions">
-                <button type="button" class="btn btn-secondary" onclick="openCreateEntryModal()">Criar lançamento no sistema</button>
-                ${row && (row.matches?.confirmed_count || row.created_entry_id) ? '<button type="button" class="btn btn-danger" onclick="cancelRowReconciliation()">Cancelar conciliação da linha em foco</button>' : ''}
-            </div>
-            <p class="row-meta">Para corrigir lançamento do sistema, abra o título, salve a alteração e retorne para esta conciliação com o mesmo lote selecionado.</p>
+        <section class="workbench-card workbench-card--suggestions">
+            <h4>Sugestões automáticas da linha em foco</h4>
+            ${row ? `<p class="row-meta">Linha ${row.row_number}: ${escapeHtml(row.description || '-')}</p>` : ''}
+            ${candidatePayload.items?.length ? `
+                <div class="helper-list">
+                    ${candidatePayload.items.map(item => `
+                        <div>
+                            <p><strong>${escapeHtml(item.entry.entry_code || `Lançamento ${item.entry.id}`)}</strong> · ${brl(item.entry.original_amount)}</p>
+                            <p class="row-meta">Score ${(Number(item.score || 0) * 100).toFixed(1)}% · ${escapeHtml(item.reason || '-')}</p>
+                            <div class="inline-actions">
+                                <button type="button" class="btn btn-secondary" onclick="toggleEntrySelection(${item.entry.id})">Adicionar à seleção</button>
+                                ${item.entry.id === row.match?.financial_entry_id && row.match?.match_status !== 'confirmed' ? `<button type="button" class="btn btn-primary" onclick="confirmSuggestedMatch(${row.match.id})">Confirmar sugestão principal</button>` : ''}
+                                <a class="btn btn-secondary" href="/financial/entries/${item.entry.id}${companyQuery()}" style="text-decoration:none;">Abrir lançamento</a>
+                            </div>
+                        </div>
+                    `).join('<div class="divider"></div>')}
+                </div>
+            ` : '<p class="muted">Sem candidatos carregados para esta linha.</p>'}
         </section>
     `;
 }
@@ -831,8 +887,12 @@ function renderWorkspace(){
         : 'Nenhum lote vinculado a esta conta.';
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
+    const systemSearchInput = document.getElementById('system-search');
+    const workspaceSelect = document.getElementById('workspace-bank-account');
     if(dueDateFromInput) dueDateFromInput.value = state.openTitleDueDateFrom || '';
     if(dueDateToInput) dueDateToInput.value = state.openTitleDueDateTo || '';
+    if(systemSearchInput) systemSearchInput.value = state.systemSearch || '';
+    if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
     const batchSelect = document.getElementById('batch-select');
     batchSelect.innerHTML = (state.workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id) === String(state.workspace.selected_batch?.id) ? 'selected' : ''}>${escapeHtml(item.batch_code)} · ${escapeHtml(item.source_type)}</option>`).join('');
     renderSummary();
@@ -883,6 +943,7 @@ async function openWorkspace(bankAccountId, batchId=null){
         due_date_from: state.openTitleDueDateFrom || null,
         due_date_to: state.openTitleDueDateTo || null,
     })}`);
+    state.selectedBatchId = state.workspace?.selected_batch?.id || batchId || null;
     state.openTitleDueDateFrom = state.workspace?.filters?.due_date_from || state.openTitleDueDateFrom || '';
     state.openTitleDueDateTo = state.workspace?.filters?.due_date_to || state.openTitleDueDateTo || '';
     const preferredRow = (state.workspace.bank_rows_without_link || [])[0] || (state.workspace.bank_rows_with_suggestion || [])[0] || (state.workspace.bank_rows || [])[0] || null;
@@ -896,6 +957,56 @@ async function refreshWorkspace(){
     if(!state.selectedBankAccountId) return;
     const batchId = document.getElementById('batch-select')?.value || null;
     await openWorkspace(state.selectedBankAccountId, batchId);
+}
+
+function openFilterDrawer(){
+    renderAccounts();
+    const backdrop = document.getElementById('recon-filter-drawer-backdrop');
+    backdrop?.classList.add('is-visible');
+    backdrop?.setAttribute('aria-hidden', 'false');
+}
+
+function closeFilterDrawer(){
+    const backdrop = document.getElementById('recon-filter-drawer-backdrop');
+    backdrop?.classList.remove('is-visible');
+    backdrop?.setAttribute('aria-hidden', 'true');
+}
+
+function handleDrawerBackdrop(event){
+    if(event.target?.id === 'recon-filter-drawer-backdrop'){
+        closeFilterDrawer();
+    }
+}
+
+async function applyWorkspaceFilters(){
+    const nextBankAccountId = Number(document.getElementById('workspace-bank-account')?.value || 0) || null;
+    state.openTitleDueDateFrom = document.getElementById('open-title-due-date-from')?.value || '';
+    state.openTitleDueDateTo = document.getElementById('open-title-due-date-to')?.value || '';
+    state.systemSearch = document.getElementById('system-search')?.value || '';
+    closeFilterDrawer();
+    if(nextBankAccountId){
+        await openWorkspace(nextBankAccountId, nextBankAccountId === state.selectedBankAccountId ? state.selectedBatchId : null);
+        return;
+    }
+    renderSystemRows();
+    renderOpenTitleRows();
+    renderWorkbench();
+}
+
+async function clearWorkspaceFilters(){
+    const workspaceSelect = document.getElementById('workspace-bank-account');
+    if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
+    const dueDateFromInput = document.getElementById('open-title-due-date-from');
+    const dueDateToInput = document.getElementById('open-title-due-date-to');
+    const searchInput = document.getElementById('system-search');
+    if(dueDateFromInput) dueDateFromInput.value = '';
+    if(dueDateToInput) dueDateToInput.value = '';
+    if(searchInput) searchInput.value = '';
+    state.openTitleDueDateFrom = '';
+    state.openTitleDueDateTo = '';
+    state.systemSearch = '';
+    closeFilterDrawer();
+    await refreshWorkspace();
 }
 
 function setBankFilter(filterKey){
@@ -1305,7 +1416,7 @@ document.getElementById('upload-form').addEventListener('submit', async (event) 
     syncUploadSourceFromFile();
 
     const formData = new FormData(form);
-    const bankAccountId = Number(formData.get('bank_account_id') || state.selectedBankAccountId || 0);
+    const bankAccountId = Number(formData.get('bank_account_id') || state.uploadBankAccountId || state.selectedBankAccountId || 0);
     const fileInput = document.getElementById('upload-file');
     const selectedFile = fileInput?.files?.[0] || null;
     const batchCode = String(formData.get('batch_code') || '').trim();
@@ -1346,6 +1457,7 @@ document.getElementById('upload-form').addEventListener('submit', async (event) 
             : '';
         showUploadStatus(`Extrato enviado com sucesso. Lote ${payload.batch.batch_code}.${reconciliationSummary}${reconciliationWarning}`, 'success');
         form.reset();
+        state.uploadBankAccountId = bankAccountId;
         state.selectedBankAccountId = bankAccountId;
         initializeUploadForm();
         await loadOverview();
@@ -1366,32 +1478,13 @@ document.getElementById('batch-select').addEventListener('change', async (event)
 
 document.getElementById('upload-bank-account').addEventListener('change', async (event) => {
     const bankAccountId = Number(event.target.value || 0);
-    state.selectedBankAccountId = bankAccountId || null;
+    state.uploadBankAccountId = bankAccountId || null;
     renderAccounts();
-    if(bankAccountId){
-        await openWorkspace(bankAccountId);
-    }
 });
 
 document.getElementById('upload-file').addEventListener('change', () => {
     syncUploadSourceFromFile();
     ensureUploadBatchCode();
-});
-
-document.getElementById('system-search').addEventListener('input', (event) => {
-    state.systemSearch = event.target.value || '';
-    renderSystemRows();
-    renderOpenTitleRows();
-});
-
-document.getElementById('open-title-due-date-from').addEventListener('change', async (event) => {
-    state.openTitleDueDateFrom = event.target.value || '';
-    await refreshWorkspace();
-});
-
-document.getElementById('open-title-due-date-to').addEventListener('change', async (event) => {
-    state.openTitleDueDateTo = event.target.value || '';
-    await refreshWorkspace();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
