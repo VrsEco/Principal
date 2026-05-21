@@ -139,6 +139,8 @@ def candidate_slots_for_item(
     period_start: date,
     period_end: date,
 ) -> list[tuple[date, WorkJourneyBlock | None, int | None]]:
+    preferred_block_id = item.block_id if item.item_type in {'manual', 'process_instance'} and item.block_id else None
+
     if item.item_type == 'meeting':
         meeting_date = item.due_date or item.occurrence_date
         if not meeting_date or meeting_date not in blocks_by_day:
@@ -150,7 +152,6 @@ def candidate_slots_for_item(
 
     planning_start = resolve_planning_start(period_start, period_end)
     if is_overdue_for_period(item, period_start, period_end):
-        preferred_block_id = item.block_id if item.item_type == 'manual' and item.block_id else None
         return expand_blocks_for_dates(
             item.item_type,
             blocks_by_day,
@@ -178,7 +179,13 @@ def candidate_slots_for_item(
 
     preferred_date = item.occurrence_date or item.due_date or period_start
     preferred_date = max(planning_start, min(preferred_date, period_end))
-    return expand_blocks_for_dates(item.item_type, blocks_by_day, [preferred_date], reverse_within_day=False)
+    return expand_blocks_for_dates(
+        item.item_type,
+        blocks_by_day,
+        [preferred_date],
+        reverse_within_day=False,
+        preferred_block_id=preferred_block_id,
+    )
 
 
 def expand_blocks_for_dates(

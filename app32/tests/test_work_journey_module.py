@@ -892,6 +892,49 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Horas/Info' in process_instance_template
 
 
+def test_allocate_process_instance_respects_bound_block_preference(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *_args, **_kwargs: 0)
+
+    target_day = date(2026, 4, 6)
+    agenda = SimpleNamespace(id=13, company_id=9, employee_id=3, anchor_date=target_day)
+    item = SimpleNamespace(
+        id=64,
+        item_type='process_instance',
+        block_id=402,
+        status='pending',
+        due_date=target_day,
+        occurrence_date=target_day,
+        estimated_minutes=60,
+        metadata_json={},
+    )
+    first_block = SimpleNamespace(
+        id=401,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    preferred_block = SimpleNamespace(
+        id=402,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {target_day: [first_block, preferred_block]},
+        defaultdict(int),
+        target_day,
+        target_day,
+    )
+
+    assert len(entries) == 1
+    assert entries[0].block_id == 402
+
+
 def test_calendar_scripts_support_collaborator_without_employee_selector():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'static', 'js', 'work-journey.js'), 'r', encoding='utf-8') as handle:
