@@ -94,13 +94,23 @@
   }
 
   function findItem(itemId) {
+    const overdue = (state.agenda?.overdue_items || []).find((item) => Number(item.id) === Number(itemId));
+    if (overdue) {
+      return { item: overdue, day: null, block: null, scope: 'overdue' };
+    }
+
+    const rootUnassigned = (state.agenda?.unassigned_items || []).find((item) => Number(item.id) === Number(itemId));
+    if (rootUnassigned) {
+      return { item: rootUnassigned, day: null, block: null, scope: 'unassigned' };
+    }
+
     for (const day of state.agenda?.days || []) {
       for (const block of day.blocks || []) {
         const found = (block.items || []).find((item) => Number(item.id) === Number(itemId));
-        if (found) return { item: found, day, block };
+        if (found) return { item: found, day, block, scope: 'block' };
       }
       const unassigned = (day.unassigned_items || []).find((item) => Number(item.id) === Number(itemId));
-      if (unassigned) return { item: unassigned, day, block: null };
+      if (unassigned) return { item: unassigned, day, block: null, scope: 'unassigned' };
     }
     return null;
   }

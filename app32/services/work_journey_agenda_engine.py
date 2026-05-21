@@ -208,7 +208,7 @@ def expand_blocks_for_dates(
         compatible = [
             block
             for block in blocks_by_day.get(current, [])
-            if block.block_mode == 'operational'
+            if block.block_mode in {'operational', 'buffer'}
             and item_type in (block.accepted_item_types or [])
             and (preferred_block_id is None or block.id == preferred_block_id)
         ]

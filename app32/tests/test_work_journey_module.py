@@ -1049,6 +1049,43 @@ def test_allocate_non_overdue_process_instance_into_next_compatible_future_block
     ]
 
 
+def test_allocate_process_instance_into_buffer_block_when_it_accepts_type(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *_args, **_kwargs: 0)
+
+    monday = date(2026, 4, 6)
+    agenda = SimpleNamespace(id=23, company_id=9, employee_id=3, anchor_date=monday)
+    item = SimpleNamespace(
+        id=67,
+        item_type='process_instance',
+        block_id=None,
+        status='pending',
+        due_date=monday,
+        occurrence_date=monday,
+        estimated_minutes=60,
+        metadata_json={},
+    )
+    buffer_block = SimpleNamespace(
+        id=701,
+        block_mode='buffer',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {monday: [buffer_block]},
+        defaultdict(int),
+        monday,
+        monday,
+    )
+
+    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
+        (monday, 701, 60),
+    ]
+
+
 def test_allocate_process_instance_respects_bound_block_preference_across_future_days(monkeypatch):
     monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *_args, **_kwargs: 0)
 
@@ -1137,6 +1174,9 @@ def test_agendas_scripts_support_drag_between_columns_and_blocks():
     assert 'data-list-scope="${listScope}"' in render_script
     assert 'source_scope: state.draggingScope || null' in agendas_script
     assert '/work-journey/agendas/items/' in agendas_script
+    assert "state.agenda?.overdue_items || []" in agendas_script
+    assert "state.agenda?.unassigned_items || []" in agendas_script
+    assert 'data-dropzone="block" data-block-id="${blockId}"' in render_script
 
 
 def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypatch):
