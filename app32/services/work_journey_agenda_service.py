@@ -43,6 +43,7 @@ def get_work_journey_agenda(
 ) -> dict[str, Any]:
     employee = ensure_employee(company_id, employee_id)
     agenda = _get_or_build_agenda(company_id, employee.id, anchor, _normalize_scope(scope), force_regenerate)
+    db.session.commit()
     return _serialize(agenda, employee)
 
 

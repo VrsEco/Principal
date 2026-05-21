@@ -751,6 +751,26 @@ def test_move_work_journey_agenda_item_accepts_target_block_id_alias(monkeypatch
     assert commits == ['commit', 'commit']
 
 
+def test_get_work_journey_agenda_persists_snapshot_before_serializing(monkeypatch):
+    employee = SimpleNamespace(id=3, name='Ana')
+    agenda = SimpleNamespace(id=11)
+    commits = []
+
+    class _Session:
+        def commit(self):
+            commits.append('commit')
+
+    monkeypatch.setattr(work_journey_agenda_service, 'ensure_employee', lambda company_id, employee_id: employee)
+    monkeypatch.setattr(work_journey_agenda_service, '_get_or_build_agenda', lambda *args, **kwargs: agenda)
+    monkeypatch.setattr(work_journey_agenda_service, '_serialize', lambda agenda_obj, employee_obj: {'agenda_id': agenda_obj.id})
+    monkeypatch.setattr(work_journey_agenda_service, 'db', SimpleNamespace(session=_Session()))
+
+    payload = work_journey_agenda_service.get_work_journey_agenda(9, 3, date(2026, 4, 6), 'week', False)
+
+    assert payload['agenda_id'] == 11
+    assert commits == ['commit']
+
+
 def test_generate_agenda_route_accepts_legacy_date_alias_without_extra_validation_error(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
