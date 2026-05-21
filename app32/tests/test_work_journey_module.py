@@ -906,9 +906,8 @@ def test_overdue_item_inside_current_week_starts_from_today_blocks(monkeypatch):
         date(2026, 4, 11),
     )
 
-    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
-        (thursday, 302, 60),
-        (friday, 303, 120),
+    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes, entry.is_over_capacity, entry.overflow_minutes) for entry in entries] == [
+        (friday, 303, 180, True, 60),
     ]
 
 
@@ -1134,6 +1133,52 @@ def test_allocate_process_instance_respects_bound_block_preference_across_future
     assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
         (wednesday, 602, 60),
     ]
+
+
+def test_allocate_item_keeps_single_card_when_no_block_has_full_capacity(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *_args, **_kwargs: 0)
+
+    monday = date(2026, 4, 6)
+    agenda = SimpleNamespace(id=24, company_id=9, employee_id=3, anchor_date=monday)
+    item = SimpleNamespace(
+        id=68,
+        item_type='project_task',
+        block_id=None,
+        status='pending',
+        due_date=monday,
+        occurrence_date=monday,
+        estimated_minutes=150,
+        metadata_json={},
+    )
+    first_block = SimpleNamespace(
+        id=801,
+        block_mode='operational',
+        accepted_item_types=['project_task'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    second_block = SimpleNamespace(
+        id=802,
+        block_mode='buffer',
+        accepted_item_types=['project_task'],
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {monday: [first_block, second_block]},
+        defaultdict(int),
+        monday,
+        monday,
+    )
+
+    assert len(entries) == 1
+    assert entries[0].block_id == 801
+    assert entries[0].allocated_minutes == 150
+    assert entries[0].is_over_capacity is True
+    assert entries[0].overflow_minutes == 90
 
 
 def test_calendar_scripts_support_collaborator_without_employee_selector():

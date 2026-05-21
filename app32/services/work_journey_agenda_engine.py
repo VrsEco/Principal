@@ -88,8 +88,7 @@ def allocate_item(
     if not compatible_slots:
         return [build_unassigned_entry(agenda, item, candidates[0][0], remaining)]
 
-    entries: list[WorkJourneyAgendaItem] = []
-    last_day, last_block = compatible_slots[-1]
+    best_available_slot: tuple[date, WorkJourneyBlock, int] | None = None
     for target_day, target_block in compatible_slots:
         key = (target_day, target_block.id)
         capacity = duration_minutes(target_block.start_time, target_block.end_time)
@@ -97,40 +96,46 @@ def allocate_item(
         if available <= 0:
             continue
 
-        allocation = min(remaining, available)
-        entries.append(
-            build_entry(
-                agenda,
-                item,
-                planned_date=target_day,
-                block=target_block,
-                allocated_minutes=allocation,
-                position_index=next_position_for_group(agenda.id, target_day, target_block.id),
-                is_fixed=False,
-                is_over_capacity=False,
-                overflow_minutes=0,
-            )
-        )
-        used_capacity[key] += allocation
-        remaining -= allocation
-        if remaining <= 0:
-            return entries
+        if best_available_slot is None or available > best_available_slot[2]:
+            best_available_slot = (target_day, target_block, available)
 
-    used_capacity[(last_day, last_block.id)] += remaining
-    entries.append(
+        if available >= remaining:
+            used_capacity[key] += remaining
+            return [
+                build_entry(
+                    agenda,
+                    item,
+                    planned_date=target_day,
+                    block=target_block,
+                    allocated_minutes=remaining,
+                    position_index=next_position_for_group(agenda.id, target_day, target_block.id),
+                    is_fixed=False,
+                    is_over_capacity=False,
+                    overflow_minutes=0,
+                )
+            ]
+
+    if best_available_slot is None:
+        target_day, target_block = compatible_slots[0]
+        available = 0
+    else:
+        target_day, target_block, available = best_available_slot
+
+    overflow = max(remaining - available, 0)
+    used_capacity[(target_day, target_block.id)] += remaining
+    return [
         build_entry(
             agenda,
             item,
-            planned_date=last_day,
-            block=last_block,
+            planned_date=target_day,
+            block=target_block,
             allocated_minutes=remaining,
-            position_index=next_position_for_group(agenda.id, last_day, last_block.id),
+            position_index=next_position_for_group(agenda.id, target_day, target_block.id),
             is_fixed=False,
-            is_over_capacity=True,
-            overflow_minutes=remaining,
+            is_over_capacity=overflow > 0,
+            overflow_minutes=overflow,
         )
-    )
-    return entries
+    ]
 
 
 def candidate_slots_for_item(
