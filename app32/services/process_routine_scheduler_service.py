@@ -57,6 +57,25 @@ def parse_daily_time(value: Optional[str]) -> Optional[time]:
         return None
 
 
+def resolve_routine_start_time(routine: Routine) -> Optional[time]:
+    start_time = parse_daily_time(getattr(routine, "start_time", None))
+    if start_time is not None:
+        return start_time
+
+    schedule_type = normalize_schedule_value(getattr(routine, "schedule_type", None))
+    if schedule_type == "daily":
+        return parse_daily_time(getattr(routine, "schedule_value", None))
+    return None
+
+
+def is_routine_time_due(routine: Routine, now: Optional[datetime] = None) -> bool:
+    current = get_scheduler_now(now)
+    routine_time = resolve_routine_start_time(routine)
+    if routine_time is None:
+        return False
+    return current.hour == routine_time.hour and current.minute == routine_time.minute
+
+
 def is_routine_due(routine: Routine, now: Optional[datetime] = None) -> bool:
     current = get_scheduler_now(now)
     schedule_type = normalize_schedule_value(getattr(routine, "schedule_type", None))
@@ -66,8 +85,7 @@ def is_routine_due(routine: Routine, now: Optional[datetime] = None) -> bool:
         return False
 
     if schedule_type == "daily":
-        daily_time = parse_daily_time(schedule_value)
-        return daily_time is not None and current.hour == daily_time.hour and current.minute == daily_time.minute
+        return is_routine_time_due(routine, current)
 
     if schedule_type == "weekly":
         selected_days = {
@@ -75,7 +93,7 @@ def is_routine_due(routine: Routine, now: Optional[datetime] = None) -> bool:
             for token in schedule_value.split(",")
             if token.strip() in WEEKDAY_ALIASES
         }
-        return current.weekday() in selected_days
+        return current.weekday() in selected_days and is_routine_time_due(routine, current)
 
     if schedule_type == "monthly":
         try:
@@ -83,7 +101,7 @@ def is_routine_due(routine: Routine, now: Optional[datetime] = None) -> bool:
         except (TypeError, ValueError):
             return False
         last_day = _last_day_of_month(current.year, current.month)
-        return current.day == min(day, last_day)
+        return current.day == min(day, last_day) and is_routine_time_due(routine, current)
 
     if schedule_type == "quarterly":
         try:
@@ -101,7 +119,7 @@ def is_routine_due(routine: Routine, now: Optional[datetime] = None) -> bool:
             return False
 
         last_day = _last_day_of_month(current.year, current.month)
-        return current.day == min(day, last_day)
+        return current.day == min(day, last_day) and is_routine_time_due(routine, current)
 
     if schedule_type == "yearly":
         try:
@@ -115,14 +133,14 @@ def is_routine_due(routine: Routine, now: Optional[datetime] = None) -> bool:
             return False
 
         last_day = _last_day_of_month(current.year, month)
-        return current.day == min(day, last_day)
+        return current.day == min(day, last_day) and is_routine_time_due(routine, current)
 
     if schedule_type == "specific":
         try:
             target_date = datetime.strptime(schedule_value, "%Y-%m-%d").date()
         except ValueError:
             return False
-        return current.date() == target_date
+        return current.date() == target_date and is_routine_time_due(routine, current)
 
     return False
 

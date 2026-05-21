@@ -40,8 +40,6 @@ def _should_run_runtime_bootstrap(config_name: str) -> bool:
         return _env_flag("APP_BOOTSTRAP_RUNTIME_SERVICES", default=True)
     if _is_migration_command():
         return False
-    if config_name == "production":
-        return False
     return True
 
 
@@ -642,7 +640,7 @@ def register_api_resources(api):
         ProcessBpmnAiAssistantResource,
         ProcessRoutineListResource, ProcessRoutineResource,
         ProcessScheduleListResource,
-        ProcessStepListResource, ProcessStepResource,
+        ProcessStepListResource, ProcessStepResource, ProcessStepAIDraftResource,
         ProcessInstanceListResource, ProcessInstanceResource,
         ProcessInstanceWorkLogResource, ProcessInstanceRuntimeResource,
         ProcessInstanceTimelineResource, ProcessInstanceOverlayResource,
@@ -821,6 +819,7 @@ def register_api_resources(api):
     api.add_resource(ProcessScheduleListResource, '/api/process-schedules')
     api.add_resource(ProcessStepListResource, '/api/process-steps')
     api.add_resource(ProcessStepResource, '/api/process-steps/<int:step_id>')
+    api.add_resource(ProcessStepAIDraftResource, '/api/process-steps/<int:step_id>/ai-draft')
     api.add_resource(ProcessInstanceListResource, '/api/process-instances', '/api/companies/<int:company_id>/process-instances')
     api.add_resource(ProcessInstanceResource, '/api/process-instances/<int:instance_id>')
     api.add_resource(ProcessInstanceWorkLogResource, '/api/process-instances/<int:instance_id>/work-logs')

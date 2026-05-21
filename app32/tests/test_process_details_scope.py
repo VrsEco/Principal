@@ -238,6 +238,21 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'indicator-process-card' not in content
 
 
+def test_process_details_template_supports_pop_step_video_workflow():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'Vídeo curto do passo' in content
+    assert 'uploadStepVideo(' in content
+    assert 'captureCurrentVideoFrame(' in content
+    assert 'readVideoMetadata(file)' in content
+    assert 'removeStepVideo(' in content
+    assert 'generateStepDescriptionDraft(' in content
+    assert 'Narração / contexto do operador' in content
+    assert 'video/mp4,video/webm' in content
+
+
 def test_process_details_template_uses_renderer_font_config_for_xml_fallback():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:

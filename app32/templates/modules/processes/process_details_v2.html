@@ -2142,6 +2142,42 @@
                                 </div>
                             </div>
                             <div class="step-paste-status" id="step-paste-status-${s.id}">Edite o passo e cole um print com Ctrl+V para anexar automaticamente.</div>
+                            <div class="step-video-status" id="step-video-status-${s.id}" style="font-size: 0.78rem; color: var(--text-tertiary); margin: 0.4rem 0 0.75rem 0;">
+                                ${s.video_path
+                                    ? `Vídeo curto vinculado (${escapeHtml(formatVideoDuration(s.video_duration_seconds))}).`
+                                    : `Você também pode anexar um vídeo curto (MP4/WebM, até 2 minutos) para representar este passo.`}
+                            </div>
+
+                            <div class="step-video-shell" style="border: 1px dashed var(--border); border-radius: 10px; padding: 0.9rem; background: #f8fafc; margin-bottom: 0.85rem;">
+                                <div style="display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                                    <div>
+                                        <strong style="font-size: 0.88rem; color: var(--text-primary);">Vídeo curto do passo</strong>
+                                        <div style="font-size: 0.75rem; color: var(--text-tertiary);">Use um vídeo curto por passo para mostrar a execução correta.</div>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <input type="file" id="step-video-file-${s.id}" class="step-video-file-input" accept="video/mp4,video/webm" style="display:none" onchange="uploadStepVideo(${s.id}, this)" disabled>
+                                        <label for="step-video-file-${s.id}" class="btn btn-secondary btn-sm step-video-file-label" style="pointer-events: none; opacity: 0.65;">
+                                            🎬 ${s.video_path ? 'Trocar vídeo' : 'Adicionar vídeo'}
+                                        </label>
+                                        <button type="button" class="btn btn-secondary btn-sm step-video-action" data-step-action="generate-description" onclick="generateStepDescriptionDraft(${s.id})" disabled>✨ Gerar descrição</button>
+                                        <button type="button" class="btn btn-secondary btn-sm step-video-action" data-requires-video="1" onclick="captureCurrentVideoFrame(${s.id})" ${s.video_path ? '' : 'disabled'}>🖼️ Usar frame atual</button>
+                                        <button type="button" class="btn btn-secondary btn-sm step-video-action" data-requires-video="1" onclick="removeStepVideo(${s.id})" ${s.video_path ? '' : 'disabled'} style="color:#ef4444;">🗑️ Remover vídeo</button>
+                                    </div>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:0.35rem; margin-bottom:0.75rem;">
+                                    <label class="pop-field-label" style="margin-bottom:0;">Narração / contexto do operador</label>
+                                    <textarea id="step-narration-${s.id}" class="form-control form-control-sm" rows="3" disabled placeholder="Explique rapidamente o que está sendo feito neste passo e quais decisões o operador toma.">${s.video_narration || ''}</textarea>
+                                </div>
+                                ${s.video_path ? `
+                                    <video id="step-video-${s.id}" controls preload="metadata" src="${escapeHtml(uploadUrl(s.video_path))}" style="width: 100%; max-width: 560px; border-radius: 8px; background: #0f172a;">
+                                        Seu navegador não conseguiu reproduzir o vídeo deste passo.
+                                    </video>
+                                ` : `
+                                    <div style="padding: 1rem; text-align: center; color: var(--text-tertiary); font-size: 0.84rem;">
+                                        Nenhum vídeo anexado. Ao editar o passo, envie um vídeo curto e depois capture o frame mais útil como print.
+                                    </div>
+                                `}
+                            </div>
 
                             <div class="entry-preview ${s.layout || 'single'}" style="background: #fff; border-radius: 8px;">
                                 <div class="entry-image-preview" style="width: ${s.image_width || 280}px; border-right: ${s.layout === 'dual' ? '1px solid var(--border)' : 'none'};">
@@ -2193,6 +2229,14 @@
 
     function renderBpmnBindingBadge(r) {
         return '';
+    }
+
+    function formatVideoDuration(totalSeconds) {
+        const seconds = Number(totalSeconds || 0);
+        if (!Number.isFinite(seconds) || seconds <= 0) return 'até 2 min';
+        const minutes = Math.floor(seconds / 60);
+        const remainder = Math.floor(seconds % 60);
+        return `${minutes}:${String(remainder).padStart(2, '0')}`;
     }
 
 
@@ -2299,6 +2343,13 @@
             fileLabel.style.pointerEvents = 'auto';
             fileLabel.style.color = 'var(--primary)';
         }
+
+        step.querySelectorAll('.step-video-file-input').forEach(el => el.disabled = false);
+        step.querySelectorAll('.step-video-file-label').forEach(el => {
+            el.style.pointerEvents = 'auto';
+            el.style.opacity = '1';
+        });
+        refreshStepVideoActionState(id);
     }
 
     async function saveStepChanges(id) {
@@ -2307,7 +2358,8 @@
         const data = {
             description: document.getElementById(`step-desc-${id}`).value,
             layout: document.getElementById(`step-layout-${id}`).value,
-            image_width: imgPreview ? parseInt(imgPreview.style.width) : 280
+            image_width: imgPreview ? parseInt(imgPreview.style.width) : 280,
+            video_narration: document.getElementById(`step-narration-${id}`)?.value || ''
         };
         try {
             const res = await fetch(`/api/process-steps/${id}`, {
@@ -2366,6 +2418,11 @@
         await uploadStepImageFile(id, input.files[0], { input });
     }
 
+    async function uploadStepVideo(id, input) {
+        if (!input.files || !input.files[0]) return;
+        await uploadStepVideoFile(id, input.files[0], { input });
+    }
+
     async function uploadStepImageFile(id, file, options = {}) {
         if (!file || !String(file.type || '').startsWith('image/')) return;
 
@@ -2404,6 +2461,89 @@
         }
     }
 
+    async function uploadStepVideoFile(id, file, options = {}) {
+        try {
+            const metadata = await readVideoMetadata(file);
+            if (metadata.durationSeconds > 120) {
+                throw new Error('O vídeo do POP deve ter no máximo 2 minutos.');
+            }
+
+            const formData = new FormData();
+            formData.append('video', file);
+            formData.append('video_duration_seconds', String(metadata.durationSeconds));
+            updateStepVideoStatus(id, `Enviando vídeo (${formatVideoDuration(metadata.durationSeconds)})...`);
+
+            const res = await fetch(`/api/process-steps/${id}`, {
+                method: 'PUT',
+                body: formData
+            });
+            if (!res.ok) {
+                const err = await safeJson(res);
+                throw new Error(err.error || err.message || 'Falha ao enviar vídeo');
+            }
+
+            await fetchRoutines();
+            renderRoutines();
+            setTimeout(() => {
+                enableStepEdit(id);
+                updateStepVideoStatus(id, 'Vídeo anexado. Posicione no frame desejado e use “Usar frame atual”.');
+            }, 120);
+        } catch (err) {
+            console.error(err);
+            updateStepVideoStatus(id, `Erro ao enviar vídeo: ${err.message}`);
+            alert(`Erro ao enviar vídeo: ${err.message}`);
+        } finally {
+            if (options.input) options.input.value = '';
+        }
+    }
+
+    function readVideoMetadata(file) {
+        return new Promise((resolve, reject) => {
+            const objectUrl = URL.createObjectURL(file);
+            const probe = document.createElement('video');
+            probe.preload = 'metadata';
+            probe.muted = true;
+            probe.playsInline = true;
+            probe.onloadedmetadata = () => {
+                const durationSeconds = Math.max(0, Math.round(probe.duration || 0));
+                URL.revokeObjectURL(objectUrl);
+                resolve({ durationSeconds });
+            };
+            probe.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Não foi possível ler a duração do vídeo.'));
+            };
+            probe.src = objectUrl;
+        });
+    }
+
+    async function captureCurrentVideoFrame(id) {
+        const video = document.getElementById(`step-video-${id}`);
+        if (!video) {
+            alert('Anexe um vídeo antes de capturar um frame.');
+            return;
+        }
+        if (video.readyState < 2) {
+            alert('Aguarde o vídeo carregar para capturar o frame.');
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) {
+            alert('Não foi possível gerar o print deste frame.');
+            return;
+        }
+
+        const file = ensureNamedImageFile(blob, `frame-passo-${id}-${Date.now()}.png`);
+        await uploadStepImageFile(id, file, { fromVideoFrame: true });
+    }
+
     function ensureNamedImageFile(file, fallbackName) {
         if (file.name) return file;
         try {
@@ -2416,6 +2556,24 @@
     function updateStepPasteStatus(id, message) {
         const status = document.getElementById(`step-paste-status-${id}`);
         if (status) status.textContent = message;
+    }
+
+    function updateStepVideoStatus(id, message) {
+        const status = document.getElementById(`step-video-status-${id}`);
+        if (status) status.textContent = message;
+    }
+
+    function refreshStepVideoActionState(id) {
+        const step = document.getElementById(`step-${id}`);
+        if (!step) return;
+        const hasVideo = !!step.querySelector(`#step-video-${id}`);
+        step.querySelectorAll('.step-video-action').forEach((el) => {
+            if (el.dataset.requiresVideo === '1') {
+                el.disabled = !hasVideo;
+            } else {
+                el.disabled = false;
+            }
+        });
     }
 
     function getClipboardImageFile(event) {
@@ -2452,6 +2610,56 @@
 
     async function safeJson(res) {
         try { return await res.json(); } catch (_) { return {}; }
+    }
+
+    async function removeStepVideo(id) {
+        if (!confirm('Remover o vídeo deste passo?')) return;
+        const formData = new FormData();
+        formData.append('remove_video', '1');
+
+        try {
+            const res = await fetch(`/api/process-steps/${id}`, {
+                method: 'PUT',
+                body: formData
+            });
+            if (!res.ok) {
+                const err = await safeJson(res);
+                throw new Error(err.error || err.message || 'Falha ao remover vídeo');
+            }
+            await fetchRoutines();
+            renderRoutines();
+            setTimeout(() => enableStepEdit(id), 120);
+        } catch (err) {
+            console.error(err);
+            alert(`Erro ao remover vídeo: ${err.message}`);
+        }
+    }
+
+    async function generateStepDescriptionDraft(id) {
+        updateStepVideoStatus(id, 'Gerando descrição inicial do passo...');
+        try {
+            const res = await fetch(`/api/process-steps/${id}/ai-draft`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apply_to_step: true })
+            });
+            const payload = await safeJson(res);
+            if (!res.ok) {
+                throw new Error(payload.error || payload.message || 'Falha ao gerar descrição');
+            }
+
+            const desc = payload?.draft?.suggested_description || '';
+            const warnings = Array.isArray(payload?.draft?.warnings) ? payload.draft.warnings : [];
+            const descInput = document.getElementById(`step-desc-${id}`);
+            if (descInput) descInput.value = desc;
+            updateStepVideoStatus(id, warnings.length
+                ? `Descrição sugerida aplicada. Atenção: ${warnings[0]}`
+                : 'Descrição sugerida aplicada ao passo.');
+        } catch (err) {
+            console.error(err);
+            updateStepVideoStatus(id, `Erro ao gerar descrição: ${err.message}`);
+            alert(`Erro ao gerar descrição: ${err.message}`);
+        }
     }
 
     async function removeStepImage(id) {

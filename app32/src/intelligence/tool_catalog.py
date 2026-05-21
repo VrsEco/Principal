@@ -31,6 +31,8 @@ from src.core.mcp_integration_request_tools import register_integration_request_
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
+from src.core.mcp_process_flow_tools import register_process_flow_tools
+from src.core.mcp_process_pop_tools import register_process_pop_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
 from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
@@ -246,6 +248,22 @@ class ToolCatalog:
 
 _supplemental_mcp_tools = (
     SimpleNamespace(
+        name="analyze_process_flow_copilot_tool",
+        description="Analisa o fluxo BPMN do processo e aponta gaps de lane, POP, gateways e oportunidades de automação/conexão.",
+    ),
+    SimpleNamespace(
+        name="suggest_process_flow_activity_automation_tool",
+        description="Sugere rascunhos de automação, conexão APP32/MCP/API e intervenção humana para uma atividade BPMN específica.",
+    ),
+    SimpleNamespace(
+        name="get_process_pop_step_media_context_tool",
+        description="Retorna o contexto multimídia de um passo POP, incluindo vídeo curto, print e próximos passos recomendados.",
+    ),
+    SimpleNamespace(
+        name="draft_process_pop_step_description_tool",
+        description="Gera um rascunho inicial da descrição de um passo POP usando narração, vídeo curto, print e contexto da atividade.",
+    ),
+    SimpleNamespace(
         name="get_work_journey_board_tool",
         description="Retorna o quadro operacional da jornada por blocos de um colaborador.",
     ),
@@ -393,6 +411,8 @@ catalog = ToolCatalog(
         register_instruction_registry_tools,
         register_operational_readiness_tools,
         register_permission_matrix_tools,
+        register_process_flow_tools,
+        register_process_pop_tools,
         register_profile_contract_tools,
         register_release_checklist_tools,
         register_sapiens_activation_tools,

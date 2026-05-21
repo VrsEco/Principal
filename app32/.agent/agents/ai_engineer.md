@@ -9,6 +9,7 @@ Projetar e integrar capacidades de IA e workflows agentes no padrão Versus.
 - RAG
 - prompts de especialistas
 - intent routing e fallback controlado do Sapiens
+- copilotos de modelagem BPMN com sugestão de automação/conexão sem substituir revisão humana
 
 ## Regras centrais
 - consumir dados reais preferencialmente via MCP

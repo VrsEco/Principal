@@ -1,4 +1,4 @@
-version: "2026-05-08.1"
+version: "2026-05-20.3"
 owner: "sapiens-mcp"
 description: "Catálogo resumido e seguro para bootstrap do MCP Sapiens."
 bootstrap:
@@ -81,6 +81,61 @@ features:
       - "ops"
     detalhe_disponivel: true
     guia_ref: "features/processos_acompanhamento.md"
+
+  - id: "processos_copiloto_fluxo"
+    nome: "Copiloto de Fluxo BPMN"
+    dominio: "processes"
+    objetivo: "Analisar fluxo BPMN, apontar gaps de lanes/POPs/gateways e sugerir automações ou conexões APP32/internet com revisão humana."
+    quando_usar:
+      - "revisar modelagem de fluxo"
+      - "identificar atividades automatizáveis"
+      - "sugerir conexões com APP32, MCP, APIs ou apps externos"
+    entradas:
+      obrigatorias:
+        - "company_id"
+        - "processo_id"
+      opcionais:
+        - "bpmn_element_id"
+        - "objetivo"
+        - "diagram_status"
+    saidas:
+      - "analise_do_fluxo"
+      - "candidatos_de_automacao"
+      - "candidatos_de_integracao"
+      - "alertas_de_revisao_humana"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: true
+    guia_ref: "features/processos_copiloto_fluxo.md"
+
+  - id: "processos_pop_copilot"
+    nome: "POP Copilot com Vídeo Curto"
+    dominio: "processes"
+    objetivo: "Apoiar a construção de POPs por passo com vídeo curto, print derivado do frame e contexto MCP multimídia."
+    quando_usar:
+      - "documentar um passo com vídeo curto"
+      - "capturar print a partir do vídeo"
+      - "orientar revisão humana do passo POP"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "step_id"
+        - "video_mp4_ou_webm"
+        - "descricao_do_passo"
+        - "narracao_do_operador"
+    saidas:
+      - "contexto_multimidia_do_passo"
+      - "duracao_do_video"
+      - "acoes_recomendadas"
+      - "print_do_frame_atual"
+      - "rascunho_inicial_da_descricao"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: true
+    guia_ref: "features/processos_pop_copilot.md"
 
   - id: "financeiro_fluxo_caixa"
     nome: "Fluxo de Caixa"

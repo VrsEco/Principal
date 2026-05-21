@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from models import db, ProjectTask, Project
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_task_schema, project_tasks_schema
-from utils.permissions import has_company_full_access, has_permission, permission_required
+from utils.permissions import can_manage_project_tasks, has_company_full_access, has_permission, permission_required
 from datetime import datetime
 from services.project_task_due_date_change_service import (
     ProjectTaskDueDateChangeService,
@@ -190,6 +190,42 @@ def _validate_limited_task_update_payload(data):
         return False, extra_fields
     return True, set()
 
+
+def _get_project_company_id(project_id):
+    project = Project.query.filter_by(id=project_id).first()
+    return int(project.company_id) if project and getattr(project, 'company_id', None) else None
+
+
+def _user_can_create_task(company_id, project_id):
+    if not company_id or not project_id:
+        return False
+    project = Project.query.filter_by(id=project_id, company_id=company_id).first()
+    if not project:
+        return False
+    return can_manage_project_tasks(company_id)
+
+
+def _validate_company_employee(company_id, employee_id, *, required=False):
+    if employee_id in (None, ''):
+        return None if not required else False
+
+    from models.employee import Employee
+
+    employee = Employee.query.filter_by(company_id=company_id, id=employee_id, status='active').first()
+    return employee
+
+
+def _normalize_task_assignment_payload(company_id, data):
+    normalized = dict(data or {})
+    employee_id = normalized.get('employee_id')
+    employee = _validate_company_employee(company_id, employee_id) if employee_id else None
+    if employee_id and not employee:
+        raise ValidationError({'employee_id': ['Colaborador inválido para a empresa informada.']})
+    if employee:
+        normalized['employee_id'] = employee.id
+        normalized['who'] = employee.name
+    return normalized
+
 class ProjectTaskListResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id):
@@ -246,11 +282,16 @@ class ProjectTaskListResource(Resource):
             
         return dumped_tasks, 200
 
-    @permission_required('projects', 'edit')
+    @permission_required('projects', 'view')
     def post(self, project_id):
         """Create a new task for a project."""
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id() or _get_project_company_id(project_id)
+        if not _user_can_create_task(company_id, project_id):
+            return {"error": "Permission denied: create on projects"}, 403
         try:
-            data = request.get_json()
+            data = _normalize_task_assignment_payload(company_id, request.get_json())
             data['project_id'] = project_id
             
             # Basic validation check
@@ -587,10 +628,15 @@ class ProjectTaskCollaboratorListResource(Resource):
         collaborators = ProjectActivityCollaborator.query.filter_by(activity_id=task_id, is_deleted=False).all()
         return [c.to_dict() for c in collaborators], 200
 
-    @permission_required('projects', 'edit')
+    @permission_required('projects', 'view')
     def post(self, project_id, task_id):
         """Add or update a collaborator/hours for a task."""
         from models.project import ProjectActivityCollaborator
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id() or _get_project_company_id(project_id)
+        if not _user_can_create_task(company_id, project_id):
+            return {"error": "Permission denied: edit on projects"}, 403
         try:
             data = request.get_json()
             employee_id = data.get('employee_id')
@@ -601,11 +647,15 @@ class ProjectTaskCollaboratorListResource(Resource):
             if not employee_id:
                 return {"error": "Employee ID is required"}, 400
 
+            employee = _validate_company_employee(company_id, employee_id, required=True)
+            if not employee:
+                return {"error": "Colaborador inválido para a empresa informada."}, 400
+
             # Check if already exists for this role? Or just add a new entry (log style)
             # APP31 seems to treat this as a log of work.
             collaborator = ProjectActivityCollaborator(
                 activity_id=task_id,
-                employee_id=employee_id,
+                employee_id=employee.id,
                 role=role,
                 worked_hours=hours,
                 notes=notes
@@ -625,10 +675,15 @@ class ProjectTaskCollaboratorListResource(Resource):
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProjectTaskCollaboratorResource(Resource):
-    @permission_required('projects', 'edit')
+    @permission_required('projects', 'view')
     def delete(self, project_id, task_id, collaborator_id):
         """Delete a specific work log entry for a task."""
         from models.project import ProjectActivityCollaborator
+        from .project import get_request_company_id
+
+        company_id = get_request_company_id() or _get_project_company_id(project_id)
+        if not _user_can_create_task(company_id, project_id):
+            return {"error": "Permission denied: edit on projects"}, 403
         try:
             collab = ProjectActivityCollaborator.query.filter_by(
                 id=collaborator_id, activity_id=task_id

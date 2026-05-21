@@ -1,0 +1,528 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Portal de Processos | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('work_journey.work_journey_redirect') }}">Calendário</a>
+<span class="sep">/</span>
+<span class="current">Portal de Processos</span>
+{% endblock %}
+
+{% block navbar_actions %}{% endblock %}
+
+{% block workspace_content %}
+<div
+    class="process-portal-page"
+    id="processPortalPage"
+    data-company-id="{{ company_id }}"
+    data-summary-url="{{ url_for('processes.api_process_portal_summary', company_id=company_id) }}"
+    data-detail-url-base="{{ url_for('processes.api_process_portal_process_detail', company_id=company_id, process_id=0)[:-1] }}"
+>
+    <section class="portal-hero">
+        <div>
+            <span class="portal-eyebrow">Portal Publicado</span>
+            <h1>Processos da {{ company.name }}</h1>
+            <p>Mapa visual, fluxo publicado, POP, vídeos, rotinas, indicadores e SPEC para IA em uma experiência única e elegante.</p>
+        </div>
+        <div class="portal-hero__stats" id="portalHeroStats">
+            <div class="hero-stat"><strong>--</strong><span>Processos</span></div>
+            <div class="hero-stat"><strong>--</strong><span>Liberados</span></div>
+            <div class="hero-stat"><strong>--</strong><span>Fluxos publicados</span></div>
+        </div>
+    </section>
+
+    <section class="portal-shell">
+        <aside class="portal-map-panel card">
+            <div class="panel-header">
+                <div>
+                    <span class="panel-eyebrow">Mapa</span>
+                    <h2>Arquitetura de Processos</h2>
+                </div>
+            </div>
+            <div id="portalMapTree" class="portal-map-tree">
+                <div class="portal-empty">Carregando mapa publicado...</div>
+            </div>
+        </aside>
+
+        <main class="portal-viewer-panel">
+            <div class="card portal-process-stage">
+                <div class="portal-process-head">
+                    <div>
+                        <span class="panel-eyebrow">Fluxo Publicado</span>
+                        <h2 id="portalProcessTitle">Selecione um processo</h2>
+                        <p id="portalProcessSubtitle">Escolha um item liberado no mapa à esquerda para visualizar o fluxo, os POPs e os materiais publicados.</p>
+                    </div>
+                    <div class="portal-head-badges" id="portalHeadBadges"></div>
+                </div>
+                <div id="portalBindingHints" class="portal-binding-hints"></div>
+                <div id="portalFlowViewer" class="portal-flow-viewer">
+                    <div class="portal-empty portal-empty--large">Nenhum processo selecionado.</div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="portal-sidebar">
+            <div class="card portal-sidebar-card">
+                <div class="panel-header">
+                    <div>
+                        <span class="panel-eyebrow">Materiais</span>
+                        <h2>Biblioteca do Processo</h2>
+                    </div>
+                </div>
+                <div class="portal-actions" id="portalActionButtons">
+                    <button class="portal-action" disabled>POP</button>
+                    <button class="portal-action" disabled>Vídeos</button>
+                    <button class="portal-action" disabled>Rotinas</button>
+                    <button class="portal-action" disabled>Indicadores</button>
+                    <button class="portal-action" disabled>SPEC para IA</button>
+                    <button class="portal-action" disabled>Book</button>
+                </div>
+            </div>
+
+            <div class="card portal-sidebar-card">
+                <div class="panel-header">
+                    <div>
+                        <span class="panel-eyebrow">Resumo</span>
+                        <h2>Indicadores Rápidos</h2>
+                    </div>
+                </div>
+                <div id="portalQuickStats" class="portal-quick-stats">
+                    <div class="quick-stat"><span>POP</span><strong>--</strong></div>
+                    <div class="quick-stat"><span>Rotinas</span><strong>--</strong></div>
+                    <div class="quick-stat"><span>Indicadores</span><strong>--</strong></div>
+                    <div class="quick-stat"><span>SPEC IA</span><strong>--</strong></div>
+                </div>
+                <div class="portal-notes" id="portalNotes">Sem processo selecionado.</div>
+            </div>
+        </aside>
+    </section>
+</div>
+
+<div class="portal-modal" id="processPortalModal" hidden>
+    <div class="portal-modal__backdrop" data-close-modal="1"></div>
+    <div class="portal-modal__dialog">
+        <div class="portal-modal__header">
+            <div>
+                <span class="panel-eyebrow" id="portalModalEyebrow">Detalhe</span>
+                <h3 id="portalModalTitle">Conteúdo</h3>
+            </div>
+            <button class="portal-modal__close" data-close-modal="1">&times;</button>
+        </div>
+        <div class="portal-modal__content" id="portalModalContent"></div>
+    </div>
+</div>
+
+<style>
+    .process-portal-page { display:flex; flex-direction:column; gap:1rem; }
+    .portal-hero {
+        display:grid; grid-template-columns: 2fr 1fr; gap:1rem; padding:1.5rem;
+        border-radius:24px; background:linear-gradient(135deg, #0f172a 0%, #1e3a8a 48%, #2563eb 100%); color:#fff;
+        box-shadow:0 20px 60px rgba(15, 23, 42, 0.18);
+    }
+    .portal-eyebrow,.panel-eyebrow { display:inline-flex; font-size:.72rem; text-transform:uppercase; letter-spacing:.14em; font-weight:700; opacity:.8; margin-bottom:.4rem; }
+    .portal-hero h1 { margin:0; font-size:2rem; }
+    .portal-hero p { margin:.45rem 0 0; max-width:72ch; color:rgba(255,255,255,.82); }
+    .portal-hero__stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; align-self:end; }
+    .hero-stat { padding:1rem; border-radius:18px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); backdrop-filter:blur(10px); }
+    .hero-stat strong { display:block; font-size:1.25rem; }
+    .hero-stat span { display:block; font-size:.78rem; color:rgba(255,255,255,.76); margin-top:.2rem; }
+    .portal-shell { display:grid; grid-template-columns: 320px minmax(0, 1fr) 320px; gap:1rem; align-items:start; }
+    .card { background:var(--surface, #fff); border:1px solid var(--border, #e2e8f0); border-radius:24px; box-shadow:0 10px 30px rgba(15,23,42,.06); }
+    .portal-map-panel,.portal-sidebar-card,.portal-process-stage { padding:1rem; }
+    .panel-header h2 { margin:.15rem 0 0; font-size:1.05rem; }
+    .portal-map-tree { display:flex; flex-direction:column; gap:.85rem; margin-top:1rem; max-height:72vh; overflow:auto; padding-right:.25rem; }
+    .portal-area { border:1px solid #dbeafe; border-radius:20px; overflow:hidden; background:#f8fbff; }
+    .portal-area__head { padding:.85rem 1rem; color:#fff; font-weight:700; }
+    .portal-area__body { padding:.8rem; display:flex; flex-direction:column; gap:.75rem; }
+    .portal-macro { border:1px solid var(--border, #e2e8f0); background:#fff; border-radius:18px; padding:.8rem; }
+    .portal-macro__head { display:flex; justify-content:space-between; gap:.5rem; margin-bottom:.65rem; }
+    .portal-macro__title { font-weight:700; font-size:.92rem; color:var(--text-primary,#0f172a); }
+    .portal-macro__owner { font-size:.72rem; color:var(--text-secondary,#64748b); }
+    .portal-process-list { display:flex; flex-direction:column; gap:.5rem; }
+    .portal-process-card {
+        border:1px solid #e2e8f0; background:#fff; border-radius:16px; padding:.8rem; text-align:left; cursor:pointer;
+        transition:.18s ease; width:100%;
+    }
+    .portal-process-card:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(37,99,235,.08); border-color:#93c5fd; }
+    .portal-process-card.is-active { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+    .portal-process-card.is-disabled { cursor:not-allowed; background:#f8fafc; opacity:.72; }
+    .portal-process-card__title { font-weight:700; color:#0f172a; font-size:.9rem; }
+    .portal-process-card__meta { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem; }
+    .portal-chip { display:inline-flex; align-items:center; gap:.35rem; padding:.28rem .6rem; border-radius:999px; font-size:.7rem; font-weight:700; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .portal-process-card__stats { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.55rem; }
+    .portal-pill { padding:.2rem .5rem; border-radius:999px; font-size:.68rem; background:#f1f5f9; color:#475569; }
+    .portal-process-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+    .portal-process-head h2 { margin:.15rem 0; font-size:1.4rem; color:#0f172a; }
+    .portal-process-head p { margin:0; color:#64748b; }
+    .portal-head-badges { display:flex; flex-wrap:wrap; gap:.5rem; justify-content:flex-end; }
+    .portal-binding-hints { display:flex; flex-wrap:wrap; gap:.5rem; margin:1rem 0 .7rem; min-height:1.5rem; }
+    .portal-binding-tag {
+        padding:.38rem .72rem; border-radius:999px; border:1px solid #dbeafe; background:#eff6ff; color:#1d4ed8; font-size:.74rem;
+        cursor:pointer; font-weight:700;
+    }
+    .portal-flow-viewer {
+        min-height:62vh; border-radius:20px; background:linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+        border:1px solid #dbeafe; padding:1rem; overflow:auto;
+    }
+    .portal-flow-viewer img, .portal-flow-viewer iframe { width:100%; min-height:58vh; border:none; border-radius:16px; background:#fff; }
+    .portal-flow-svg svg { width:100%; height:auto; }
+    .portal-flow-svg [data-element-id].has-pop-binding .djs-visual > :first-child,
+    .portal-flow-svg g.has-pop-binding .djs-visual > :first-child {
+        stroke:#7c3aed !important; stroke-width:3px !important; cursor:pointer;
+    }
+    .portal-flow-svg g.has-pop-binding:hover .djs-visual > :first-child { filter:drop-shadow(0 0 4px rgba(124,58,237,.45)); }
+    .portal-actions { display:grid; grid-template-columns:1fr; gap:.6rem; margin-top:1rem; }
+    .portal-action {
+        border:none; border-radius:16px; padding:.95rem 1rem; font-weight:700; text-align:left; color:#0f172a;
+        background:linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border:1px solid #dbeafe; cursor:pointer;
+    }
+    .portal-action[disabled] { opacity:.55; cursor:not-allowed; }
+    .portal-quick-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:.6rem; margin-top:1rem; }
+    .quick-stat { padding:.8rem; border-radius:18px; background:#f8fafc; border:1px solid #e2e8f0; }
+    .quick-stat span { display:block; font-size:.72rem; color:#64748b; }
+    .quick-stat strong { display:block; margin-top:.15rem; font-size:1rem; color:#0f172a; }
+    .portal-notes { margin-top:.9rem; padding:.9rem; border-radius:18px; background:#f8fafc; color:#475569; min-height:90px; }
+    .portal-empty { color:#64748b; text-align:center; padding:2rem 1rem; }
+    .portal-empty--large { padding:8rem 1rem; }
+    .portal-modal[hidden] { display:none; }
+    .portal-modal { position:fixed; inset:0; z-index:9999; }
+    .portal-modal__backdrop { position:absolute; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(8px); }
+    .portal-modal__dialog {
+        position:relative; z-index:2; width:min(1100px, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto;
+        margin:1rem auto; background:#fff; border-radius:28px; box-shadow:0 30px 80px rgba(15,23,42,.28);
+    }
+    .portal-modal__header { display:flex; justify-content:space-between; gap:1rem; padding:1.1rem 1.25rem; border-bottom:1px solid #e2e8f0; position:sticky; top:0; background:#fff; z-index:3; }
+    .portal-modal__header h3 { margin:.15rem 0 0; }
+    .portal-modal__close { font-size:2rem; line-height:1; border:none; background:none; cursor:pointer; color:#64748b; }
+    .portal-modal__content { padding:1.25rem; }
+    .portal-grid { display:grid; gap:1rem; }
+    .portal-grid--cards { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); }
+    .portal-content-card { border:1px solid #e2e8f0; border-radius:20px; padding:1rem; background:#fff; }
+    .portal-content-card h4 { margin:0 0 .45rem; }
+    .portal-content-card p { margin:0; color:#475569; }
+    .portal-step-media { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:.85rem; }
+    .portal-step-media img,.portal-step-media video { width:100%; border-radius:16px; background:#0f172a; }
+    .portal-spec-block { padding:1rem; border-radius:18px; background:#f8fafc; border:1px solid #e2e8f0; }
+    .portal-spec-block pre { white-space:pre-wrap; word-break:break-word; margin:.5rem 0 0; font-family:inherit; font-size:.86rem; color:#334155; }
+    @media (max-width: 1200px) { .portal-shell { grid-template-columns:1fr; } .portal-hero { grid-template-columns:1fr; } }
+</style>
+
+<script>
+(() => {
+    const root = document.getElementById('processPortalPage');
+    if (!root) return;
+
+    const state = { summary: null, current: null, activeProcessId: null };
+    const summaryUrl = root.dataset.summaryUrl;
+    const detailBase = root.dataset.detailUrlBase;
+
+    const heroStats = document.getElementById('portalHeroStats');
+    const tree = document.getElementById('portalMapTree');
+    const title = document.getElementById('portalProcessTitle');
+    const subtitle = document.getElementById('portalProcessSubtitle');
+    const badges = document.getElementById('portalHeadBadges');
+    const flow = document.getElementById('portalFlowViewer');
+    const hints = document.getElementById('portalBindingHints');
+    const actions = document.getElementById('portalActionButtons');
+    const quickStats = document.getElementById('portalQuickStats');
+    const notes = document.getElementById('portalNotes');
+    const modal = document.getElementById('processPortalModal');
+    const modalTitle = document.getElementById('portalModalTitle');
+    const modalEyebrow = document.getElementById('portalModalEyebrow');
+    const modalContent = document.getElementById('portalModalContent');
+
+    function esc(value) {
+        return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+    }
+
+    async function init() {
+        const res = await fetch(summaryUrl, { headers: { Accept: 'application/json' } });
+        const payload = await res.json();
+        if (!res.ok || !payload.ok) {
+            tree.innerHTML = '<div class="portal-empty">Não foi possível carregar o portal publicado.</div>';
+            return;
+        }
+        state.summary = payload.data;
+        renderHero(payload.data.summary);
+        renderTree(payload.data.areas || []);
+        const firstAvailable = (payload.data.areas || [])
+            .flatMap(area => area.macros || [])
+            .flatMap(macro => macro.processes || [])
+            .find(item => item.has_access);
+        if (firstAvailable) loadProcess(firstAvailable.id);
+    }
+
+    function renderHero(summary) {
+        heroStats.innerHTML = `
+            <div class="hero-stat"><strong>${summary.total_processes || 0}</strong><span>Processos</span></div>
+            <div class="hero-stat"><strong>${summary.accessible_processes || 0}</strong><span>Liberados</span></div>
+            <div class="hero-stat"><strong>${summary.published_flows || 0}</strong><span>Fluxos publicados</span></div>
+        `;
+    }
+
+    function renderTree(areas) {
+        if (!areas.length) {
+            tree.innerHTML = '<div class="portal-empty">Nenhum processo publicado encontrado nesta empresa.</div>';
+            return;
+        }
+        tree.innerHTML = areas.map(area => `
+            <section class="portal-area">
+                <div class="portal-area__head" style="background:${esc(area.color || '#2563eb')}">
+                    ${esc(area.code ? `${area.code} · ${area.name}` : area.name)}
+                </div>
+                <div class="portal-area__body">
+                    ${(area.macros || []).map(macro => `
+                        <article class="portal-macro">
+                            <div class="portal-macro__head">
+                                <div>
+                                    <div class="portal-macro__title">${esc(macro.code ? `${macro.code} · ${macro.name}` : macro.name)}</div>
+                                    <div class="portal-macro__owner">${esc(macro.owner || 'Sem dono formal')}</div>
+                                </div>
+                            </div>
+                            <div class="portal-process-list">
+                                ${(macro.processes || []).map(process => `
+                                    <button
+                                        class="portal-process-card ${process.has_access ? '' : 'is-disabled'} ${state.activeProcessId === process.id ? 'is-active' : ''}"
+                                        data-process-id="${process.id}"
+                                        ${process.has_access ? '' : 'disabled'}
+                                        title="${esc(process.access_label)}"
+                                    >
+                                        <div class="portal-process-card__title">${esc(process.display_name)}</div>
+                                        <div class="portal-process-card__meta">
+                                            <span class="portal-chip" style="background:${esc(process.stage.color)}22;color:${esc(process.stage.color)};border-color:${esc(process.stage.color)}33;">${esc(process.stage.label)}</span>
+                                            <span class="portal-chip" style="background:${esc(process.performance.color)}16;color:${esc(process.performance.color)};border-color:${esc(process.performance.color)}22;">${esc(process.performance.label)}</span>
+                                        </div>
+                                        <div class="portal-process-card__stats">
+                                            <span class="portal-pill">POP ${process.stats.pop_count || 0}</span>
+                                            <span class="portal-pill">ROT ${process.stats.routine_count || 0}</span>
+                                            <span class="portal-pill">IND ${process.stats.indicator_count || 0}</span>
+                                            <span class="portal-pill">IA ${process.stats.spec_count || 0}</span>
+                                        </div>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        `).join('');
+
+        tree.querySelectorAll('[data-process-id]').forEach(button => {
+            button.addEventListener('click', () => loadProcess(Number(button.dataset.processId)));
+        });
+    }
+
+    async function loadProcess(processId) {
+        state.activeProcessId = processId;
+        renderTree(state.summary?.areas || []);
+        flow.innerHTML = '<div class="portal-empty portal-empty--large">Carregando fluxo publicado...</div>';
+        const res = await fetch(`${detailBase}${processId}`, { headers: { Accept: 'application/json' } });
+        const payload = await res.json();
+        if (!res.ok || !payload.ok) {
+            flow.innerHTML = `<div class="portal-empty portal-empty--large">${esc(payload.error || 'Não foi possível carregar o processo.')}</div>`;
+            return;
+        }
+        state.current = payload.data;
+        renderCurrent();
+    }
+
+    function renderCurrent() {
+        const data = state.current;
+        title.textContent = data.code ? `${data.code} · ${data.name}` : data.name;
+        subtitle.textContent = data.description || 'Processo publicado sem descrição complementar.';
+        badges.innerHTML = `
+            <span class="portal-chip" style="background:${data.stage.color}22;color:${data.stage.color};border-color:${data.stage.color}33;">${esc(data.stage.label)}</span>
+            <span class="portal-chip" style="background:${data.performance.color}16;color:${data.performance.color};border-color:${data.performance.color}22;">${esc(data.performance.label)}</span>
+            <span class="portal-chip">${esc(data.area?.name || 'Sem área')}</span>
+            <span class="portal-chip">${esc(data.macro?.name || 'Sem macroprocesso')}</span>
+        `;
+        hints.innerHTML = (data.pop_bindings || []).length
+            ? data.pop_bindings.map(item => `<button class="portal-binding-tag" data-binding-id="${esc(item.bpmn_element_id)}">POP · ${esc(item.routine_code || item.bpmn_element_name)}</button>`).join('')
+            : '';
+        hints.querySelectorAll('[data-binding-id]').forEach(button => {
+            button.addEventListener('click', () => openBinding(button.dataset.bindingId));
+        });
+        renderFlow(data.flow);
+        renderActions(data);
+        quickStats.innerHTML = `
+            <div class="quick-stat"><span>POP</span><strong>${data.stats.pop_count || 0}</strong></div>
+            <div class="quick-stat"><span>Rotinas</span><strong>${data.stats.routine_count || 0}</strong></div>
+            <div class="quick-stat"><span>Indicadores</span><strong>${data.stats.indicator_count || 0}</strong></div>
+            <div class="quick-stat"><span>SPEC IA</span><strong>${data.stats.spec_count || 0}</strong></div>
+        `;
+        notes.textContent = data.notes || 'Sem observações adicionais publicadas para este processo.';
+    }
+
+    function renderFlow(flowData) {
+        if (flowData?.bpmn_flow?.svg_snapshot) {
+            flow.innerHTML = `<div class="portal-flow-svg">${flowData.bpmn_flow.svg_snapshot}</div>`;
+            installFlowBindings();
+            return;
+        }
+        const docUrl = flowData?.flow_document_url;
+        const ext = (flowData?.flow_document_extension || '').toLowerCase();
+        if (docUrl && ['png','jpg','jpeg','webp','gif','svg'].includes(ext)) {
+            flow.innerHTML = `<img src="${esc(docUrl)}" alt="Fluxo publicado">`;
+            return;
+        }
+        if (docUrl && ext === 'pdf') {
+            flow.innerHTML = `<iframe src="${esc(docUrl)}"></iframe>`;
+            return;
+        }
+        flow.innerHTML = '<div class="portal-empty portal-empty--large">Este processo ainda não possui um fluxo publicado visualizável.</div>';
+    }
+
+    function installFlowBindings() {
+        const svgRoot = flow.querySelector('svg');
+        if (!svgRoot) return;
+        (state.current?.pop_bindings || []).forEach(binding => {
+            const node = svgRoot.querySelector(`[data-element-id="${CSS.escape(binding.bpmn_element_id || '')}"]`);
+            if (!node) return;
+            node.classList.add('has-pop-binding');
+            node.addEventListener('click', () => openBinding(binding.bpmn_element_id));
+        });
+    }
+
+    function renderActions(data) {
+        const hasPop = (data.pop_activities || []).length > 0;
+        const hasVideos = (data.videos || []).length > 0;
+        const hasRoutines = (data.routines || []).length > 0;
+        const hasIndicators = (data.indicators || []).length > 0;
+        const hasSpecs = (data.ai_specs?.contracts || []).length > 0 || !!data.ai_specs?.flow_copilot_analysis;
+        actions.innerHTML = `
+            <button class="portal-action" ${hasPop ? '' : 'disabled'} data-action="pop">📋 POP Publicado</button>
+            <button class="portal-action" ${hasVideos ? '' : 'disabled'} data-action="videos">🎬 Vídeos</button>
+            <button class="portal-action" ${hasRoutines ? '' : 'disabled'} data-action="routines">📅 Rotinas</button>
+            <button class="portal-action" ${hasIndicators ? '' : 'disabled'} data-action="indicators">📈 Indicadores</button>
+            <button class="portal-action" ${hasSpecs ? '' : 'disabled'} data-action="specs">🤖 SPEC para IA</button>
+            <button class="portal-action" data-action="book">📘 Book do Processo</button>
+        `;
+        actions.querySelectorAll('[data-action]').forEach(button => {
+            button.addEventListener('click', () => openAction(button.dataset.action));
+        });
+    }
+
+    function openBinding(bindingId) {
+        const binding = (state.current?.pop_bindings || []).find(item => item.bpmn_element_id === bindingId);
+        if (!binding) return;
+        if (binding.routine_id) {
+            const activity = (state.current?.pop_activities || []).find(item => item.id === binding.routine_id);
+            if (activity) {
+                showModal(`POP · ${activity.code || binding.bpmn_element_name}`, 'Atividade vinculada ao fluxo', renderPopActivities([activity]));
+                return;
+            }
+        }
+        showModal(`Atividade ${binding.bpmn_element_name}`, 'Vínculo do fluxo', `<div class="portal-spec-block">O fluxo indica um vínculo POP para <strong>${esc(binding.bpmn_element_name)}</strong>, mas a atividade publicada ainda não foi concluída.</div>`);
+    }
+
+    function openAction(action) {
+        if (!state.current) return;
+        const data = state.current;
+        if (action === 'pop') showModal('POP Publicado', 'Atividades e passos operacionais', renderPopActivities(data.pop_activities || []));
+        if (action === 'videos') showModal('Vídeos do Processo', 'Clipes operacionais publicados', renderVideos(data.videos || []));
+        if (action === 'routines') showModal('Rotinas do Processo', 'Agenda operacional vinculada', renderRoutines(data.routines || []));
+        if (action === 'indicators') showModal('Indicadores do Processo', 'Medição e acompanhamento', renderIndicators(data.indicators || []));
+        if (action === 'specs') showModal('SPEC para IA', 'Contratos e leitura do copiloto de fluxo', renderSpecs(data.ai_specs || {}));
+        if (action === 'book') window.open(data.flow?.book_url, '_blank', 'noopener');
+    }
+
+    function renderPopActivities(items) {
+        if (!items.length) return '<div class="portal-empty">Nenhuma atividade POP publicada.</div>';
+        return `<div class="portal-grid">${items.map(activity => `
+            <article class="portal-content-card">
+                <h4>${esc(activity.code ? `${activity.code} · ${activity.name}` : activity.name)}</h4>
+                <p>${esc(activity.description || 'Sem descrição complementar.')}</p>
+                <div class="portal-grid" style="margin-top:1rem;">
+                    ${(activity.entries || []).map((entry, idx) => `
+                        <div class="portal-spec-block">
+                            <strong>${idx + 1}. ${esc(entry.name || 'Passo')}</strong>
+                            <pre>${esc(entry.text_content || 'Sem detalhamento publicado para este passo.')}</pre>
+                            ${(entry.image_url || entry.video_url) ? `
+                                <div class="portal-step-media">
+                                    ${entry.image_url ? `<img src="${esc(entry.image_url)}" alt="${esc(entry.name || 'Passo')}">` : '<div></div>'}
+                                    ${entry.video_url ? `<video src="${esc(entry.video_url)}" controls></video>` : '<div></div>'}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </article>
+        `).join('')}</div>`;
+    }
+
+    function renderVideos(items) {
+        if (!items.length) return '<div class="portal-empty">Nenhum vídeo publicado neste processo.</div>';
+        return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+            <article class="portal-content-card">
+                <h4>${esc(item.activity_name || 'Atividade')}</h4>
+                <p>${esc(item.step_name || 'Passo publicado')}</p>
+                <div class="portal-step-media" style="grid-template-columns:1fr;">
+                    <video src="${esc(item.video_url)}" controls></video>
+                </div>
+                ${item.video_narration ? `<pre>${esc(item.video_narration)}</pre>` : ''}
+            </article>
+        `).join('')}</div>`;
+    }
+
+    function renderRoutines(items) {
+        if (!items.length) return '<div class="portal-empty">Nenhuma rotina vinculada.</div>';
+        return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+            <article class="portal-content-card">
+                <h4>${esc(item.code ? `${item.code} · ${item.name}` : item.name)}</h4>
+                <p>${esc(item.schedule_label || 'Sem frequência definida')}</p>
+                <p style="margin-top:.6rem;"><strong>Prazo:</strong> ${esc(String((item.deadline_days || 0)))} dia(s) / ${esc(String((item.deadline_hours || 0)))} hora(s)</p>
+                <p style="margin-top:.45rem;"><strong>Equipe:</strong> ${esc((item.collaborators || []).map(c => c.employee_name).join(', ') || 'Sem equipe vinculada')}</p>
+            </article>
+        `).join('')}</div>`;
+    }
+
+    function renderIndicators(items) {
+        if (!items.length) return '<div class="portal-empty">Nenhum indicador publicado para este processo.</div>';
+        return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+            <article class="portal-content-card">
+                <h4>${esc(item.name || 'Indicador')}</h4>
+                <p>${esc(item.group_name || 'Sem grupo')} · ${esc(item.unit || 'sem unidade')}</p>
+                <p style="margin-top:.6rem;"><strong>Atual:</strong> ${esc(item.current_value || '—')}</p>
+                <p><strong>Meta:</strong> ${esc(item.goal_value || '—')}</p>
+            </article>
+        `).join('')}</div>`;
+    }
+
+    function renderSpecs(specs) {
+        const contracts = specs.contracts || [];
+        const blocks = [];
+        if (contracts.length) {
+            blocks.push(`<div class="portal-grid">${contracts.map(item => `
+                <article class="portal-content-card">
+                    <h4>${esc(item.bpmn_element_id || 'Atividade BPMN')}</h4>
+                    <p><strong>Modo:</strong> ${esc(item.execution_mode || 'manual')}</p>
+                    <p><strong>Interação:</strong> ${esc(item.interaction_mode || '—')}</p>
+                    <pre>${esc(item.spec_summary?.instruction || JSON.stringify(item.spec_summary || {}, null, 2))}</pre>
+                </article>
+            `).join('')}</div>`);
+        }
+        if (specs.flow_copilot_analysis) {
+            blocks.push(`<div class="portal-spec-block"><strong>Copiloto de Fluxo</strong><pre>${esc(JSON.stringify(specs.flow_copilot_analysis, null, 2))}</pre></div>`);
+        }
+        return blocks.join('') || '<div class="portal-empty">Nenhuma SPEC para IA publicada.</div>';
+    }
+
+    function showModal(titleText, eyebrowText, html) {
+        modalTitle.textContent = titleText;
+        modalEyebrow.textContent = eyebrowText;
+        modalContent.innerHTML = html;
+        modal.hidden = false;
+    }
+
+    modal.addEventListener('click', (event) => {
+        if (event.target.closest('[data-close-modal="1"]')) modal.hidden = true;
+    });
+
+    init().catch(() => {
+        tree.innerHTML = '<div class="portal-empty">Falha ao inicializar o portal publicado.</div>';
+    });
+})();
+</script>
+{% endblock %}

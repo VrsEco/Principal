@@ -229,6 +229,9 @@ class ProcessStep(db.Model):
     expected_result = db.Column(db.Text, nullable=True)
     layout = db.Column(db.String(50), default='single') # single, dual
     image_path = db.Column(db.String(255), nullable=True)
+    video_path = db.Column(db.String(255), nullable=True)
+    video_duration_seconds = db.Column(db.Integer, nullable=True)
+    video_narration = db.Column(db.Text, nullable=True)
     image_width = db.Column(db.Integer, default=280)
     order_index = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

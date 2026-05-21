@@ -5,6 +5,7 @@ from services.process_routine_scheduler_service import (
     build_automatic_instance_code,
     calculate_due_date_for_routine,
     is_routine_due,
+    resolve_routine_start_time,
 )
 
 
@@ -14,6 +15,7 @@ def _routine(**overrides):
         "process_id": 12,
         "schedule_type": "weekly",
         "schedule_value": "segunda,quarta",
+        "start_time": "00:01",
         "deadline_days": 0,
         "deadline_hours": 0,
         "deadline_date": None,
@@ -24,24 +26,31 @@ def _routine(**overrides):
 
 
 def test_is_routine_due_supports_daily_time_precision():
-    routine = _routine(schedule_type="daily", schedule_value="09:15")
+    routine = _routine(schedule_type="daily", schedule_value="09:15", start_time=None)
 
     assert is_routine_due(routine, datetime(2026, 3, 11, 9, 15))
     assert not is_routine_due(routine, datetime(2026, 3, 11, 9, 14))
 
 
 def test_is_routine_due_supports_weekly_portuguese_days():
-    routine = _routine(schedule_type="weekly", schedule_value="quarta,sexta")
+    routine = _routine(schedule_type="weekly", schedule_value="quarta,sexta", start_time="08:00")
 
     assert is_routine_due(routine, datetime(2026, 3, 11, 8, 0))
+    assert not is_routine_due(routine, datetime(2026, 3, 11, 8, 1))
     assert not is_routine_due(routine, datetime(2026, 3, 12, 8, 0))
 
 
 def test_is_routine_due_supports_monthly_quarterly_yearly_and_specific():
-    assert is_routine_due(_routine(schedule_type="monthly", schedule_value="31"), datetime(2026, 2, 28, 0, 0))
-    assert is_routine_due(_routine(schedule_type="quarterly", schedule_value="3-31"), datetime(2026, 3, 31, 0, 0))
-    assert is_routine_due(_routine(schedule_type="yearly", schedule_value="29/02"), datetime(2026, 2, 28, 0, 0))
-    assert is_routine_due(_routine(schedule_type="specific", schedule_value="2026-03-11"), datetime(2026, 3, 11, 10, 0))
+    assert is_routine_due(_routine(schedule_type="monthly", schedule_value="31", start_time="00:00"), datetime(2026, 2, 28, 0, 0))
+    assert is_routine_due(_routine(schedule_type="quarterly", schedule_value="3-31", start_time="00:00"), datetime(2026, 3, 31, 0, 0))
+    assert is_routine_due(_routine(schedule_type="yearly", schedule_value="29/02", start_time="00:00"), datetime(2026, 2, 28, 0, 0))
+    assert is_routine_due(_routine(schedule_type="specific", schedule_value="2026-03-11", start_time="10:00"), datetime(2026, 3, 11, 10, 0))
+    assert not is_routine_due(_routine(schedule_type="specific", schedule_value="2026-03-11", start_time="10:00"), datetime(2026, 3, 11, 10, 1))
+
+
+def test_resolve_routine_start_time_uses_start_time_and_daily_fallback():
+    assert resolve_routine_start_time(_routine(schedule_type="weekly", start_time="06:30")).strftime("%H:%M") == "06:30"
+    assert resolve_routine_start_time(_routine(schedule_type="daily", schedule_value="09:45", start_time=None)).strftime("%H:%M") == "09:45"
 
 
 def test_build_automatic_instance_code_is_deterministic_per_day():

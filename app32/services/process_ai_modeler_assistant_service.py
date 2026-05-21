@@ -7,6 +7,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.intelligence.llm import llm_expert
 from src.intelligence.tool_catalog import catalog
+from services.ai_automation_registry_service import AIAutomationRegistryService
+from services.integration_catalog_service import IntegrationCatalogService
+from services.process_flow_copilot_service import build_activity_automation_context
 from services.process_execution_mode_service import get_execution_mode_catalog, get_execution_templates
 
 
@@ -25,6 +28,11 @@ class BPMNAIAssistantSuggestion(BaseModel):
     allowed_decisions: list[str] = Field(default_factory=list)
     decision_routes: dict[str, str] = Field(default_factory=dict)
     output_schema: dict[str, Any] = Field(default_factory=dict)
+    recommended_template_keys: list[str] = Field(default_factory=list)
+    automation_candidates: list[dict[str, Any]] = Field(default_factory=list)
+    integration_candidates: list[dict[str, Any]] = Field(default_factory=list)
+    requires_human_review: bool = Field(default=True)
+    human_review_reason: str = Field(default="")
     notes: list[str] = Field(default_factory=list)
 
 
@@ -42,6 +50,14 @@ class ProcessAIModelerAssistantService:
             for tool in catalog.get_langchain_tools()
         ]
         tool_items.sort(key=lambda item: item["name"])
+        try:
+            integration_catalog = IntegrationCatalogService.build_catalog()
+        except Exception:
+            integration_catalog = {"summary": {"total": 0, "available": 0, "planned": 0, "discovery": 0}, "integrations": []}
+        try:
+            automation_registry = AIAutomationRegistryService.build_registry(None)
+        except Exception:
+            automation_registry = {"summary": {}, "automations": []}
         return {
             "task_operation_options": list(cls.TASK_OPERATION_OPTIONS),
             "gateway_operation_options": list(cls.GATEWAY_OPERATION_OPTIONS),
@@ -51,6 +67,8 @@ class ProcessAIModelerAssistantService:
             "tool_items": tool_items,
             "execution_modes": get_execution_mode_catalog(),
             "templates": get_execution_templates(),
+            "integration_catalog": integration_catalog,
+            "automation_registry": automation_registry,
         }
 
     @classmethod
@@ -87,6 +105,8 @@ class ProcessAIModelerAssistantService:
             "objective": objective,
             "current_config": current_config,
             "next_candidates": next_candidates,
+            "process_id": data.get("process_id"),
+            "company_id": data.get("company_id"),
         }
 
     @classmethod
@@ -95,6 +115,7 @@ class ProcessAIModelerAssistantService:
         objective = payload["objective"]
         current = payload["current_config"]
         next_candidates = payload["next_candidates"]
+        automation_context = cls._resolve_automation_context(payload)
         if semantic_type == "ai_gateway":
             decisions = cls._infer_decisions(next_candidates)
             return {
@@ -117,6 +138,11 @@ class ProcessAIModelerAssistantService:
                         "reasoning_summary": {"type": "string"},
                     },
                 },
+                "recommended_template_keys": ["ai_route_gateway"],
+                "automation_candidates": [],
+                "integration_candidates": [],
+                "requires_human_review": True,
+                "human_review_reason": "Gateway continua exigindo revisão humana para semântica de split/join e fallback operacional.",
                 "notes": [
                     "Mantenha decisões críticas com fallback humano.",
                     "Prefira rotas fechadas e auditáveis.",
@@ -124,6 +150,13 @@ class ProcessAIModelerAssistantService:
             }
 
         suggested_tools = cls._suggest_tools(objective)
+        automation_candidates = list((automation_context or {}).get("automation_candidates") or [])
+        integration_candidates = list((automation_context or {}).get("integration_candidates") or [])
+        recommended_template_keys = [
+            item.get("template_key")
+            for item in automation_candidates
+            if item.get("template_key")
+        ]
         return {
             "summary": "Task de IA configurada para interpretação estruturada com schema e fallback governado.",
             "execution_mode": "ai_task",
@@ -144,6 +177,13 @@ class ProcessAIModelerAssistantService:
                     "warnings": {"type": "array"},
                 },
             },
+            "recommended_template_keys": recommended_template_keys,
+            "automation_candidates": automation_candidates,
+            "integration_candidates": integration_candidates,
+            "requires_human_review": True,
+            "human_review_reason": (
+                "A recomendação do copiloto é um rascunho de contrato; humano ainda precisa validar layout, lane, semântica BPMN e governança da integração."
+            ),
             "notes": [
                 "Prefira saída JSON rígida.",
                 "Se usar tools MCP, mantenha allowlist mínima.",
@@ -183,6 +223,22 @@ class ProcessAIModelerAssistantService:
         if any(keyword in text for keyword in ("fornecedor", "cliente", "cadastro")):
             suggestions.append("query_database")
         return list(dict.fromkeys(suggestions))
+
+    @classmethod
+    def _resolve_automation_context(cls, payload: dict[str, Any]) -> dict[str, Any] | None:
+        process_id = payload.get("process_id")
+        company_id = payload.get("company_id")
+        element_id = payload.get("element_id")
+        if not process_id or not company_id or not element_id:
+            return None
+        try:
+            return build_activity_automation_context(
+                company_id=int(company_id),
+                process_id=int(process_id),
+                bpmn_element_id=str(element_id),
+            )
+        except Exception:
+            return None
 
     @classmethod
     def _build_messages(cls, payload: dict[str, Any], heuristic: dict[str, Any]) -> list[dict[str, str]]:
@@ -228,4 +284,9 @@ class ProcessAIModelerAssistantService:
                     if item.get("decision")
                 }
                 merged["allowed_decisions"] = [item["decision"] for item in allowed_decisions if item.get("decision")]
+        merged.setdefault("recommended_template_keys", [])
+        merged.setdefault("automation_candidates", [])
+        merged.setdefault("integration_candidates", [])
+        merged.setdefault("requires_human_review", True)
+        merged.setdefault("human_review_reason", "Validação humana ainda obrigatória.")
         return merged

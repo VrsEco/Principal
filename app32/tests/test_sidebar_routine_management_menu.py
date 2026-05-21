@@ -28,6 +28,10 @@ def _build_app():
     def processes_list():
         return "ok"
 
+    @processes_bp.route("/process-portal")
+    def process_portal_redirect():
+        return "ok"
+
     @processes_bp.route("/process-routines")
     def process_routines_redirect():
         return "ok"
@@ -95,6 +99,7 @@ def test_routine_menu_structure_matches_sidebar_tree():
     assert "Gestão de Processos" in html
     assert "Arquitetura de Processos" in html
     assert "Modelagem de Processos" in html
+    assert "Portal de Processos" in html
     assert "Rotina de Processos" in html
     assert "Instâncias de Processos" in html
     assert "Gestão de Projetos" in html

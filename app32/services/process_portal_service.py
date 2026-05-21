@@ -1,0 +1,596 @@
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import Any
+
+from sqlalchemy import and_, func, or_
+from sqlalchemy.orm import joinedload
+
+from models import (
+    Company,
+    Indicator,
+    MacroProcess,
+    Process,
+    ProcessActivityExecutionContract,
+    ProcessBpmnDiagram,
+    ProcessInstance,
+    ProcessRoutine,
+    ProcessStep,
+    Routine,
+    RoutineCollaborator,
+    db,
+)
+from services.process_book_service import (
+    _compose_process_title,
+    _extract_extension,
+    _resolve_asset_url,
+    build_process_book_context,
+    _join_non_empty,
+)
+from services.process_bpmn_service import sanitize_svg_snapshot, serialize_flow_snapshot
+from services.process_flow_copilot_service import build_process_flow_copilot_analysis
+
+
+PROCESS_SOURCE_MODULES = ("processo", "process")
+
+KANBAN_STAGE_META = {
+    "inbox": {"label": "Fora de escopo", "color": "#94a3b8"},
+    "designing": {"label": "Desenho", "color": "#60a5fa"},
+    "deploying": {"label": "Implantação", "color": "#2563eb"},
+    "stabilizing": {"label": "Estabilização", "color": "#a855f7"},
+    "stable": {"label": "Estável", "color": "#4f46e5"},
+}
+
+PERFORMANCE_META = {
+    "critical": {"label": "Crítico", "color": "#ef4444"},
+    "below": {"label": "Abaixo", "color": "#f59e0b"},
+    "satisfactory": {"label": "Satisfatório", "color": "#10b981"},
+}
+
+
+class ProcessPortalAccessError(PermissionError):
+    """Acesso negado ao processo no portal publicado."""
+
+
+def build_process_portal_summary(
+    company_id: int,
+    *,
+    current_employee_id: int | None,
+    can_manage_all: bool,
+) -> dict[str, Any]:
+    company = Company.query.filter_by(id=company_id).first()
+    if not company:
+        raise ValueError("Empresa não encontrada.")
+
+    processes = (
+        Process.query.options(joinedload(Process.macro).joinedload(MacroProcess.area))
+        .filter(Process.company_id == company_id)
+        .order_by(Process.order_index.asc(), Process.id.asc())
+        .all()
+    )
+
+    process_ids = [process.id for process in processes]
+    accessible_process_ids = _resolve_accessible_process_ids(
+        company_id=company_id,
+        process_ids=process_ids,
+        current_employee_id=current_employee_id,
+        can_manage_all=can_manage_all,
+    )
+
+    pop_counts = _aggregate_counts(
+        db.session.query(ProcessRoutine.process_id, func.count(ProcessRoutine.id))
+        .filter(ProcessRoutine.company_id == company_id)
+        .filter(ProcessRoutine.process_id.in_(process_ids or [0]))
+        .group_by(ProcessRoutine.process_id)
+        .all()
+    )
+    routine_counts = _aggregate_counts(
+        db.session.query(Routine.process_id, func.count(Routine.id))
+        .filter(Routine.company_id == company_id)
+        .filter(Routine.process_id.in_(process_ids or [0]))
+        .group_by(Routine.process_id)
+        .all()
+    )
+    indicator_counts = _load_indicator_counts(company_id=company_id, process_ids=process_ids)
+    spec_counts = _aggregate_counts(
+        db.session.query(
+            ProcessActivityExecutionContract.process_id,
+            func.count(ProcessActivityExecutionContract.id),
+        )
+        .filter(ProcessActivityExecutionContract.company_id == company_id)
+        .filter(ProcessActivityExecutionContract.is_active.is_(True))
+        .filter(ProcessActivityExecutionContract.process_id.in_(process_ids or [0]))
+        .group_by(ProcessActivityExecutionContract.process_id)
+        .all()
+    )
+    published_diagram_ids = {
+        row[0]
+        for row in db.session.query(ProcessBpmnDiagram.process_id)
+        .filter(ProcessBpmnDiagram.company_id == company_id)
+        .filter(ProcessBpmnDiagram.status == "published")
+        .filter(ProcessBpmnDiagram.process_id.in_(process_ids or [0]))
+        .all()
+    }
+    video_process_ids = {
+        row[0]
+        for row in db.session.query(ProcessRoutine.process_id)
+        .join(ProcessStep, ProcessStep.routine_id == ProcessRoutine.id)
+        .filter(ProcessRoutine.company_id == company_id)
+        .filter(ProcessRoutine.process_id.in_(process_ids or [0]))
+        .filter(ProcessStep.video_path.isnot(None))
+        .distinct()
+        .all()
+    }
+
+    areas_map: dict[int, dict[str, Any]] = {}
+    for process in processes:
+        macro = getattr(process, "macro", None)
+        area = getattr(macro, "area", None) if macro else None
+        area_key = getattr(area, "id", 0) or 0
+        if area_key not in areas_map:
+            areas_map[area_key] = {
+                "id": area_key,
+                "name": getattr(area, "name", None) or "Sem área",
+                "code": getattr(area, "code", None),
+                "color": getattr(area, "color", None) or "#2563eb",
+                "macros": {},
+            }
+
+        macros = areas_map[area_key]["macros"]
+        macro_key = getattr(macro, "id", 0) or 0
+        if macro_key not in macros:
+            macros[macro_key] = {
+                "id": macro_key,
+                "name": getattr(macro, "name", None) or "Sem macroprocesso",
+                "code": getattr(macro, "code", None),
+                "owner": getattr(macro, "owner", None),
+                "processes": [],
+            }
+
+        has_access = process.id in accessible_process_ids
+        macros[macro_key]["processes"].append(
+            {
+                "id": process.id,
+                "name": process.name,
+                "code": process.code,
+                "display_name": _compose_process_title(process.code, process.name, fallback=process.name),
+                "has_access": has_access,
+                "access_label": "Disponível" if has_access else "Sem vínculo operacional",
+                "stage": _build_stage_meta(process.kanban_stage),
+                "performance": _build_performance_meta(process.performance_level),
+                "stats": {
+                    "pop_count": pop_counts.get(process.id, 0),
+                    "routine_count": routine_counts.get(process.id, 0),
+                    "indicator_count": indicator_counts.get(process.id, 0),
+                    "spec_count": spec_counts.get(process.id, 0),
+                    "has_published_flow": process.id in published_diagram_ids,
+                    "has_video": process.id in video_process_ids,
+                },
+            }
+        )
+
+    areas = []
+    for area in sorted(areas_map.values(), key=lambda item: ((item.get("code") or ""), item.get("name") or "")):
+        macros = list(area["macros"].values())
+        macros.sort(key=lambda item: ((item.get("code") or ""), item.get("name") or ""))
+        for macro in macros:
+            macro["processes"].sort(key=lambda item: ((item.get("code") or ""), item.get("name") or ""))
+        area["macros"] = macros
+        areas.append(area)
+
+    return {
+        "company": {
+            "id": company.id,
+            "name": company.name,
+            "client_code": getattr(company, "client_code", None),
+        },
+        "summary": {
+            "total_processes": len(processes),
+            "accessible_processes": len(accessible_process_ids),
+            "published_flows": len(published_diagram_ids),
+        },
+        "areas": areas,
+    }
+
+
+def build_process_portal_process_detail(
+    company_id: int,
+    process_id: int,
+    *,
+    current_employee_id: int | None,
+    can_manage_all: bool,
+    request_root: str | None = None,
+) -> dict[str, Any]:
+    process = (
+        Process.query.options(joinedload(Process.macro).joinedload(MacroProcess.area))
+        .filter(Process.company_id == company_id, Process.id == process_id)
+        .first()
+    )
+    if not process:
+        raise ValueError("Processo não encontrado para a empresa ativa.")
+
+    accessible_process_ids = _resolve_accessible_process_ids(
+        company_id=company_id,
+        process_ids=[process.id],
+        current_employee_id=current_employee_id,
+        can_manage_all=can_manage_all,
+    )
+    if process.id not in accessible_process_ids:
+        raise ProcessPortalAccessError("Você não possui vínculo com este processo publicado.")
+
+    context = build_process_book_context(
+        process_id=process.id,
+        company_id=company_id,
+        request_root=request_root,
+    )
+
+    diagram = _get_latest_portal_diagram(company_id=company_id, process_id=process.id)
+    flow_payload = serialize_flow_snapshot(diagram)
+    flow_document_url = _resolve_asset_url(getattr(process, "flow_document", None), root_url=(request_root or "").rstrip("/"))
+
+    contracts = (
+        ProcessActivityExecutionContract.query.filter_by(
+            company_id=company_id,
+            process_id=process.id,
+            is_active=True,
+        )
+        .order_by(
+            ProcessActivityExecutionContract.bpmn_element_id.asc().nulls_last(),
+            ProcessActivityExecutionContract.version.desc(),
+            ProcessActivityExecutionContract.id.desc(),
+        )
+        .all()
+    )
+    contract_payload = [_serialize_contract(item) for item in contracts]
+
+    flow_copilot = None
+    try:
+        flow_copilot = build_process_flow_copilot_analysis(company_id=company_id, process_id=process.id)
+    except Exception:
+        flow_copilot = None
+
+    pop_activities = _load_portal_pop_activities(
+        company_id=company_id,
+        process_id=process.id,
+        request_root=request_root,
+    )
+    pop_by_bpmn = _index_pop_activities_by_bpmn(company_id=company_id, process_id=process.id)
+    pop_bindings = []
+    pop_candidates = ((diagram.metadata_json or {}).get("pop_candidates") or []) if diagram else []
+    for candidate in pop_candidates:
+        element_id = str(candidate.get("code") or candidate.get("id") or "").strip()
+        routine = pop_by_bpmn.get(element_id)
+        pop_bindings.append(
+            {
+                "bpmn_element_id": element_id,
+                "bpmn_element_name": candidate.get("name") or element_id,
+                "routine_id": routine.get("id") if routine else None,
+                "routine_code": routine.get("code") if routine else None,
+                "routine_name": routine.get("name") if routine else None,
+                "has_video": bool(routine and routine.get("has_video")),
+            }
+        )
+
+    indicators = list(context.get("indicators") or [])
+    routines = list(context.get("routines") or [])
+    videos = _collect_video_entries(pop_activities)
+
+    macro = getattr(process, "macro", None)
+    area = getattr(macro, "area", None) if macro else None
+    return {
+        "id": process.id,
+        "company_id": process.company_id,
+        "name": process.name,
+        "code": process.code,
+        "description": process.description,
+        "responsible": process.responsible,
+        "macro": {
+            "id": getattr(macro, "id", None),
+            "name": getattr(macro, "name", None),
+            "code": getattr(macro, "code", None),
+            "owner": getattr(macro, "owner", None),
+        },
+        "area": {
+            "id": getattr(area, "id", None),
+            "name": getattr(area, "name", None),
+            "code": getattr(area, "code", None),
+            "color": getattr(area, "color", None),
+        },
+        "stage": _build_stage_meta(process.kanban_stage),
+        "performance": _build_performance_meta(process.performance_level),
+        "flow": {
+            "bpmn_flow": flow_payload,
+            "flow_document_url": flow_document_url,
+            "flow_document_extension": _extract_extension(getattr(process, "flow_document", None)),
+            "book_url": f"/processes/{process.id}/book",
+            "export_bpmn_url": f"/api/processes/{process.id}/bpmn-diagram/export?status=published",
+        },
+        "stats": {
+            "pop_count": len(pop_activities),
+            "routine_count": len(routines),
+            "indicator_count": len(indicators),
+            "spec_count": len(contract_payload),
+            "video_count": len(videos),
+        },
+        "pop_activities": pop_activities,
+        "routines": routines,
+        "indicators": indicators,
+        "ai_specs": {
+            "contracts": contract_payload,
+            "flow_copilot_analysis": flow_copilot,
+        },
+        "videos": videos,
+        "pop_bindings": pop_bindings,
+        "notes": process.notes,
+    }
+
+
+def _aggregate_counts(rows: list[tuple[int | None, int]]) -> dict[int, int]:
+    payload: dict[int, int] = {}
+    for key, value in rows:
+        if key is None:
+            continue
+        payload[int(key)] = int(value or 0)
+    return payload
+
+
+def _load_indicator_counts(*, company_id: int, process_ids: list[int]) -> dict[int, int]:
+    if not process_ids:
+        return {}
+
+    rows = (
+        db.session.query(
+            Indicator.source_id.label("process_id"),
+            func.count(Indicator.id).label("total"),
+        )
+        .filter(Indicator.company_id == company_id)
+        .filter(Indicator.is_active.is_(True))
+        .filter(Indicator.source_module.in_(PROCESS_SOURCE_MODULES))
+        .filter(Indicator.source_id.in_(process_ids))
+        .group_by(Indicator.source_id)
+        .all()
+    )
+
+    payload = _aggregate_counts([(row.process_id, row.total) for row in rows])
+    direct_rows = (
+        db.session.query(Indicator.process_id, func.count(Indicator.id))
+        .filter(Indicator.company_id == company_id)
+        .filter(Indicator.is_active.is_(True))
+        .filter(Indicator.process_id.in_(process_ids))
+        .group_by(Indicator.process_id)
+        .all()
+    )
+    for process_id, total in direct_rows:
+        if process_id is None:
+            continue
+        payload[int(process_id)] = payload.get(int(process_id), 0) + int(total or 0)
+    return payload
+
+
+def _resolve_accessible_process_ids(
+    *,
+    company_id: int,
+    process_ids: list[int],
+    current_employee_id: int | None,
+    can_manage_all: bool,
+) -> set[int]:
+    if not process_ids:
+        return set()
+    if can_manage_all or not current_employee_id:
+        return set(process_ids) if can_manage_all else set()
+
+    accessible: set[int] = set(
+        row[0]
+        for row in db.session.query(Process.id)
+        .filter(Process.company_id == company_id)
+        .filter(Process.id.in_(process_ids))
+        .filter(
+            or_(
+                Process.owner_employee_id == current_employee_id,
+                Process.responsible_id == current_employee_id,
+            )
+        )
+        .all()
+    )
+    accessible.update(
+        row[0]
+        for row in db.session.query(Routine.process_id)
+        .join(RoutineCollaborator, RoutineCollaborator.routine_id == Routine.id)
+        .filter(Routine.company_id == company_id)
+        .filter(Routine.process_id.in_(process_ids))
+        .filter(RoutineCollaborator.employee_id == current_employee_id)
+        .distinct()
+        .all()
+        if row[0] is not None
+    )
+    accessible.update(
+        row[0]
+        for row in db.session.query(ProcessInstance.process_id)
+        .filter(ProcessInstance.company_id == company_id)
+        .filter(ProcessInstance.process_id.in_(process_ids))
+        .filter(
+            or_(
+                ProcessInstance.owner_employee_id == current_employee_id,
+                ProcessInstance.responsible_id == current_employee_id,
+                ProcessInstance.executor_id == current_employee_id,
+            )
+        )
+        .distinct()
+        .all()
+        if row[0] is not None
+    )
+    return accessible
+
+
+def _build_stage_meta(value: str | None) -> dict[str, str]:
+    key = str(value or "inbox").strip().lower()
+    meta = KANBAN_STAGE_META.get(key, KANBAN_STAGE_META["inbox"])
+    return {"key": key, "label": meta["label"], "color": meta["color"]}
+
+
+def _build_performance_meta(value: str | None) -> dict[str, str]:
+    key = str(value or "").strip().lower()
+    meta = PERFORMANCE_META.get(key, {"label": "Não informado", "color": "#64748b"})
+    return {"key": key, "label": meta["label"], "color": meta["color"]}
+
+
+def _get_latest_portal_diagram(*, company_id: int, process_id: int) -> ProcessBpmnDiagram | None:
+    published = (
+        ProcessBpmnDiagram.query.filter_by(
+            company_id=company_id,
+            process_id=process_id,
+            status="published",
+        )
+        .order_by(ProcessBpmnDiagram.updated_at.desc(), ProcessBpmnDiagram.id.desc())
+        .first()
+    )
+    if published:
+        return published
+    return (
+        ProcessBpmnDiagram.query.filter_by(
+            company_id=company_id,
+            process_id=process_id,
+            status="draft",
+        )
+        .order_by(ProcessBpmnDiagram.updated_at.desc(), ProcessBpmnDiagram.id.desc())
+        .first()
+    )
+
+
+def _serialize_contract(contract: ProcessActivityExecutionContract) -> dict[str, Any]:
+    payload = contract.to_dict()
+    payload["spec_summary"] = _summarize_contract_spec(payload)
+    return payload
+
+
+def _summarize_contract_spec(payload: dict[str, Any]) -> dict[str, Any]:
+    ai_config = payload.get("ai_config_json") or {}
+    mcp_config = payload.get("mcp_config_json") or {}
+    ui_schema = payload.get("ui_schema_json") or {}
+    return {
+        "execution_mode": payload.get("execution_mode"),
+        "interaction_mode": payload.get("interaction_mode"),
+        "tool_source": ai_config.get("tool_source"),
+        "instruction": ai_config.get("instruction"),
+        "allowed_tools": ai_config.get("allowed_tools") or [],
+        "route_name": payload.get("route_name"),
+        "mcp_tool": mcp_config.get("tool_name") or mcp_config.get("server_name"),
+        "open_in": ui_schema.get("open_in"),
+    }
+
+
+def _index_pop_activities_by_bpmn(*, company_id: int, process_id: int) -> dict[str, dict[str, Any]]:
+    routines = (
+        ProcessRoutine.query.filter(
+            ProcessRoutine.company_id == company_id,
+            ProcessRoutine.process_id == process_id,
+            ProcessRoutine.bpmn_element_id.isnot(None),
+            or_(ProcessRoutine.is_active.is_(True), ProcessRoutine.is_active.is_(None)),
+        )
+        .order_by(ProcessRoutine.order_index.asc(), ProcessRoutine.id.asc())
+        .all()
+    )
+    if not routines:
+        return {}
+
+    routine_ids = [routine.id for routine in routines]
+    video_routine_ids = {
+        row[0]
+        for row in db.session.query(ProcessStep.routine_id)
+        .filter(ProcessStep.routine_id.in_(routine_ids))
+        .filter(ProcessStep.video_path.isnot(None))
+        .distinct()
+        .all()
+        if row[0] is not None
+    }
+    payload = {}
+    for routine in routines:
+        payload[str(routine.bpmn_element_id)] = {
+            "id": routine.id,
+            "code": routine.code,
+            "name": routine.name,
+            "has_video": routine.id in video_routine_ids,
+        }
+    return payload
+
+
+def _collect_video_entries(pop_activities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    videos: list[dict[str, Any]] = []
+    for activity in pop_activities:
+        for entry in activity.get("entries") or []:
+            video_url = entry.get("video_url")
+            if not video_url:
+                continue
+            videos.append(
+                {
+                    "activity_name": activity.get("name"),
+                    "step_name": entry.get("name"),
+                    "video_url": video_url,
+                    "video_duration_seconds": entry.get("video_duration_seconds"),
+                    "video_narration": entry.get("video_narration"),
+                }
+            )
+    return videos
+
+
+def _load_portal_pop_activities(
+    *,
+    company_id: int,
+    process_id: int,
+    request_root: str | None,
+) -> list[dict[str, Any]]:
+    root_url = (request_root or "").rstrip("/")
+    routines = (
+        ProcessRoutine.query.filter(
+            ProcessRoutine.company_id == company_id,
+            ProcessRoutine.process_id == process_id,
+            or_(ProcessRoutine.is_active.is_(True), ProcessRoutine.is_active.is_(None)),
+        )
+        .order_by(ProcessRoutine.order_index.asc(), ProcessRoutine.id.asc())
+        .all()
+    )
+    if not routines:
+        return []
+
+    routine_ids = [routine.id for routine in routines]
+    steps = (
+        ProcessStep.query.filter(ProcessStep.routine_id.in_(routine_ids))
+        .order_by(ProcessStep.routine_id.asc(), ProcessStep.order_index.asc(), ProcessStep.id.asc())
+        .all()
+    )
+    steps_by_routine: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for step in steps:
+        steps_by_routine[int(step.routine_id)].append(
+            {
+                "id": step.id,
+                "name": step.name,
+                "description": step.description,
+                "expected_result": step.expected_result,
+                "layout": step.layout or "single",
+                "image_url": _resolve_asset_url(step.image_path, root_url=root_url),
+                "video_url": _resolve_asset_url(step.video_path, root_url=root_url),
+                "video_duration_seconds": step.video_duration_seconds,
+                "video_narration": step.video_narration,
+                "text_content": _join_non_empty(
+                    [
+                        step.description,
+                        f"Resultado esperado: {step.expected_result}" if step.expected_result else None,
+                    ]
+                ),
+            }
+        )
+
+    payload = []
+    for routine in routines:
+        entries = steps_by_routine.get(routine.id, [])
+        payload.append(
+            {
+                "id": routine.id,
+                "code": routine.code or "-",
+                "name": routine.name,
+                "description": routine.description,
+                "bpmn_element_id": routine.bpmn_element_id,
+                "entries": entries,
+            }
+        )
+    return payload

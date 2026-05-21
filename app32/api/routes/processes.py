@@ -16,6 +16,11 @@ from database import get_db
 from models import db, Company, Process, ProcessInstance, Employee, Indicator
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
+from services.process_portal_service import (
+    ProcessPortalAccessError,
+    build_process_portal_process_detail,
+    build_process_portal_summary,
+)
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company, can_model_process
 
 processes_bp = Blueprint('processes', __name__)
@@ -278,6 +283,67 @@ def process_map():
     return render_template('modules/processes/process_map_v2.html', 
                            company_id=company_id, 
                            is_collaborator=is_collaborator)
+
+
+@processes_bp.route('/process-portal')
+@permission_required('processes', 'view')
+def process_portal_redirect():
+    company_id = session.get('active_company_id')
+    if not company_id and current_user.is_authenticated:
+        company_id = get_default_company_id()
+        if company_id:
+            session['active_company_id'] = company_id
+    if company_id:
+        return redirect(url_for('processes.process_portal_page', company_id=company_id))
+    return redirect(url_for('my_work.my_work'))
+
+
+@processes_bp.route('/companies/<int:company_id>/process-portal')
+@permission_required('processes', 'view')
+def process_portal_page(company_id):
+    company = Company.query.get_or_404(company_id)
+    session['active_company_id'] = company_id
+    current_employee = _get_current_company_employee(company_id)
+    return render_template(
+        'modules/processes/process_portal.html',
+        company=company,
+        company_id=company_id,
+        is_collaborator=is_collaborator_in_company(company_id),
+        current_employee_id=current_employee.id if current_employee else None,
+    )
+
+
+@processes_bp.route('/api/companies/<int:company_id>/process-portal', methods=['GET'])
+@permission_required('processes', 'view')
+def api_process_portal_summary(company_id):
+    session['active_company_id'] = company_id
+    current_employee = _get_current_company_employee(company_id)
+    payload = build_process_portal_summary(
+        company_id,
+        current_employee_id=current_employee.id if current_employee else None,
+        can_manage_all=bool(has_company_full_access(company_id)),
+    )
+    return jsonify({"ok": True, "data": payload})
+
+
+@processes_bp.route('/api/companies/<int:company_id>/process-portal/processes/<int:process_id>', methods=['GET'])
+@permission_required('processes', 'view')
+def api_process_portal_process_detail(company_id, process_id):
+    session['active_company_id'] = company_id
+    current_employee = _get_current_company_employee(company_id)
+    try:
+        payload = build_process_portal_process_detail(
+            company_id,
+            process_id,
+            current_employee_id=current_employee.id if current_employee else None,
+            can_manage_all=bool(has_company_full_access(company_id)),
+            request_root=request.url_root,
+        )
+    except ProcessPortalAccessError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 403
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    return jsonify({"ok": True, "data": payload})
 
 @processes_bp.route('/process-map/compact')
 @permission_required('processes', 'view')

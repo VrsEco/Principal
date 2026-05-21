@@ -144,43 +144,27 @@ def _get_or_build_agenda(company_id: int, employee_id: int, anchor: date, scope:
         db.session.flush()
         force_regenerate = True
 
+    if force_regenerate:
+        _build_agenda_snapshot(agenda)
+        return agenda
+
     if agenda.status == 'locked':
-        _append_new_unassigned_items_for_locked_agenda(agenda)
-        recompute_agenda_summary(agenda)
-        db.session.commit()
+        _refresh_locked_agenda_snapshot(agenda)
         return agenda
 
     _build_agenda_snapshot(agenda)
-    db.session.commit()
     return agenda
 
 
-def _append_new_unassigned_items_for_locked_agenda(agenda: WorkJourneyAgenda) -> None:
-    period_start, period_end = clamp_period(agenda.scope, agenda.anchor_date)
-    sync_work_journey_items(agenda.company_id, agenda.employee_id, period_start, period_end)
-    source_items = load_source_items(agenda.company_id, agenda.employee_id, period_start, period_end)
-    existing_keys = {entry.journey_item_id for entry in agenda.items if entry.journey_item_id}
-    for item in source_items:
-        if item.id in existing_keys:
-            continue
-        planned_date = item.occurrence_date or item.due_date or agenda.anchor_date
-        db.session.add(
-            WorkJourneyAgendaItem(
-                agenda_id=agenda.id,
-                company_id=agenda.company_id,
-                employee_id=agenda.employee_id,
-                journey_item_id=item.id,
-                block_id=None,
-                planned_date=planned_date,
-                position_index=next_position_for_group(agenda.id, planned_date, None),
-                allocated_minutes=int(item.estimated_minutes or 0),
-                overflow_minutes=0,
-                is_fixed=False,
-                is_over_capacity=False,
-                manual_override=False,
-                metadata_json={'new_after_lock': True},
-            )
-        )
+def _refresh_locked_agenda_snapshot(agenda: WorkJourneyAgenda) -> None:
+    locked_at = agenda.locked_at
+    locked_by_user_id = agenda.locked_by_user_id
+    _build_agenda_snapshot(agenda)
+    agenda.status = 'locked'
+    agenda.locked_at = locked_at
+    agenda.locked_by_user_id = locked_by_user_id
+    agenda.updated_at = datetime.utcnow()
+    db.session.add(agenda)
 
 
 def _build_agenda_snapshot(agenda: WorkJourneyAgenda) -> None:

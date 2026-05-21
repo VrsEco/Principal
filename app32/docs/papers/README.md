@@ -14,3 +14,5 @@ Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_consolidacao_agentes_iniciais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_instruction_registry_bootstrap_remoto_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_resiliencia_auditoria_recuperacao_operacional_mcp_v1.md`
+- `C:\GestaoVersus\app32\app32\docs\papers\paper_copiloto_fluxo_bpmn_mcp_v1.md`
+- `C:\GestaoVersus\app32\app32\docs\papers\paper_pop_copilot_mcp_v1.md`

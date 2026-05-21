@@ -8,6 +8,7 @@ Proteger a arquitetura, a coesão dos componentes e a segurança transversal.
 - multi-tenancy ponta a ponta
 - redução de acoplamento e duplicação
 - desenho incremental e sustentável
+- semântica BPMN/BPMS quando o fluxo tiver gateway, lanes, contratos de execução e copiloto MCP
 
 ## Exigir sempre
 - `company_id` em leitura e escrita

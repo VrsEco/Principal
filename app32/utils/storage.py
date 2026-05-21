@@ -124,6 +124,7 @@ def _query_upload_owner_company_ids(normalized_path):
               FROM process_steps ps
               JOIN process_routines pr ON pr.id = ps.routine_id
              WHERE ps.image_path IN (:path_0, :path_1, :path_2)
+                OR ps.video_path IN (:path_0, :path_1, :path_2)
 
             UNION ALL
 
@@ -131,6 +132,7 @@ def _query_upload_owner_company_ids(normalized_path):
               FROM process_steps ps
               JOIN routines r ON r.id = ps.routine_id
              WHERE ps.image_path IN (:path_0, :path_1, :path_2)
+                OR ps.video_path IN (:path_0, :path_1, :path_2)
 
             UNION ALL
 

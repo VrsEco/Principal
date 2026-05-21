@@ -13,6 +13,7 @@ Consulte este arquivo quando precisar entender o escopo de cada papel. As instru
 
 ### @ARQUITETO
 Lidera desenho, boundary, segurança e auditoria transversal.
+Também lidera semântica de Fluxo BPMN quando houver gateways, split/join, lanes e contratos de execução.
 
 ### @FRONTEND
 Cuida de templates, Tailwind, UX e impressão.
@@ -25,6 +26,7 @@ Cuida da regra de negócio determinística.
 
 ### @AI_ENGINEER
 Cuida de LangGraph, RAG, agentes e integrações MCP.
+No copiloto de fluxo, sugere automações APP32/MCP/API sem remover a necessidade de validação humana.
 
 ## Notas de governança MCP
 - @BACKEND_API responde pela coerência entre capability publicada, surface, contrato e policy

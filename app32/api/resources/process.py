@@ -51,10 +51,16 @@ from services.process_bpmn_service import (
     serialize_flow_snapshot,
     upsert_process_bpmn_diagram,
 )
+from services.process_pop_media_service import (
+    POP_VIDEO_MAX_DURATION_SECONDS,
+    coerce_video_duration_seconds,
+    validate_step_video_upload,
+)
 from services.process_bpmn_pop_binding_service import (
     open_or_create_pop_activity_for_bpmn,
     serialize_pop_binding,
 )
+from services.process_pop_copilot_service import suggest_process_pop_step_description
 from services.process_execution_runtime_service import (
     apply_runtime_defaults,
     build_instance_timeline,
@@ -75,6 +81,7 @@ from services.process_execution_mode_service import (
     normalize_execution_mode,
 )
 from services.process_ai_modeler_assistant_service import ProcessAIModelerAssistantService
+from services.process_flow_copilot_service import build_process_flow_copilot_analysis
 from services.process_ai_runtime_service import (
     execute_ai_contract,
     should_auto_run_ai_execution,
@@ -368,7 +375,7 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
                 """
                 SELECT id, routine_id, name, description, expected_result,
                        COALESCE(order_index, 0) AS order_index,
-                       image_path, image_width, layout
+                       image_path, image_width, layout, video_path, video_duration_seconds, video_narration
                 FROM process_steps
                 WHERE routine_id IN ({placeholders})
                 ORDER BY COALESCE(order_index,0), id
@@ -386,6 +393,9 @@ def fetch_pop_routines(process_id: int, include_schedules: bool = False):
                     "image_path": row[6],
                     "image_width": row[7],
                     "layout": row[8],
+                    "video_path": row[9],
+                    "video_duration_seconds": row[10],
+                    "video_narration": row[11],
                 }
                 for row in cursor.fetchall()
             ]
@@ -571,7 +581,7 @@ def fetch_pop_routine_by_id(routine_id: int):
         """
         SELECT id, routine_id, name, description, expected_result,
                COALESCE(order_index, 0) AS order_index,
-               image_path, image_width
+               image_path, image_width, layout, video_path, video_duration_seconds, video_narration
         FROM process_steps
         WHERE routine_id = %s
         ORDER BY COALESCE(order_index,0), id
@@ -1662,6 +1672,9 @@ class ProcessResource(Resource):
                 return _dump_process_with_bpmn_flow(process), 200
         except ValidationError as err:
             return {"errors": err.messages}, 400
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -1945,10 +1958,23 @@ class ProcessBpmnAiAssistantResource(Resource):
         process = _get_process_with_access(process_id, action='view', sync_session=True)
         if not process:
             return {"error": "Permission denied: view on processes"}, 403
+        flow_copilot = None
+        try:
+            flow_copilot = build_process_flow_copilot_analysis(
+                company_id=process.company_id,
+                process_id=process.id,
+            )
+        except Exception:
+            current_app.logger.exception(
+                "Erro ao montar análise do copiloto de fluxo process_id=%s company_id=%s",
+                process.id,
+                process.company_id,
+            )
         return {
             "ok": True,
             "catalog": ProcessAIModelerAssistantService.build_catalog(),
             "execution_modes": get_execution_mode_catalog(),
+            "flow_copilot_analysis": flow_copilot,
         }, 200
 
     @permission_required('processes', 'view')
@@ -2014,6 +2040,9 @@ class ProcessRoutineListResource(Resource):
             return resp, 201
         except ValidationError as err:
             return {"errors": err.messages}, 400
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -2154,6 +2183,8 @@ class ProcessStepListResource(Resource):
                 layout = request.form.get('layout', 'single')
                 image_width = request.form.get('image_width', 280)
                 order_index = request.form.get('order_index', 0)
+                video_duration_seconds = coerce_video_duration_seconds(request.form.get('video_duration_seconds'))
+                video_narration = request.form.get('video_narration')
                 
                 step = ProcessStep(
                     routine_id=routine_id,
@@ -2162,12 +2193,23 @@ class ProcessStepListResource(Resource):
                     expected_result=expected_result,
                     layout=layout,
                     image_width=int(image_width),
-                    order_index=int(order_index)
+                    order_index=int(order_index),
+                    video_duration_seconds=video_duration_seconds,
+                    video_narration=video_narration,
                 )
 
                 file = request.files.get('image')
                 if file and file.filename:
                     step.image_path = save_file(file, subfolder='pop')
+
+                video_file = request.files.get('video')
+                if video_file and video_file.filename:
+                    validate_step_video_upload(
+                        video_file,
+                        duration_seconds=video_duration_seconds,
+                        content_length=request.content_length,
+                    )
+                    step.video_path = save_file(video_file, subfolder='pop/video')
                 
                 db.session.add(step)
                 db.session.commit()
@@ -2181,6 +2223,9 @@ class ProcessStepListResource(Resource):
                 return process_step_schema.dump(step), 201
         except ValidationError as err:
             return {"errors": err.messages}, 400
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -2203,11 +2248,21 @@ class ProcessStepResource(Resource):
                 if 'layout' in request.form: step.layout = request.form.get('layout')
                 if 'image_width' in request.form: step.image_width = int(request.form.get('image_width'))
                 if 'order_index' in request.form: step.order_index = int(request.form.get('order_index'))
+                if 'video_duration_seconds' in request.form:
+                    step.video_duration_seconds = coerce_video_duration_seconds(request.form.get('video_duration_seconds'))
+                if 'video_narration' in request.form:
+                    step.video_narration = request.form.get('video_narration')
                 
                 remove_image = request.form.get('remove_image') == '1'
                 if remove_image and step.image_path:
                     delete_file(step.image_path)
                     step.image_path = None
+
+                remove_video = request.form.get('remove_video') == '1'
+                if remove_video and step.video_path:
+                    delete_file(step.video_path)
+                    step.video_path = None
+                    step.video_duration_seconds = None
 
                 file = request.files.get('image')
                 if file and file.filename:
@@ -2216,6 +2271,17 @@ class ProcessStepResource(Resource):
                         delete_file(step.image_path)
                     
                     step.image_path = save_file(file, subfolder='pop')
+
+                video_file = request.files.get('video')
+                if video_file and video_file.filename:
+                    validate_step_video_upload(
+                        video_file,
+                        duration_seconds=step.video_duration_seconds,
+                        content_length=request.content_length,
+                    )
+                    if step.video_path:
+                        delete_file(step.video_path)
+                    step.video_path = save_file(video_file, subfolder='pop/video')
                 
                 db.session.commit()
                 return process_step_schema.dump(step), 200
@@ -2227,8 +2293,45 @@ class ProcessStepResource(Resource):
                 return process_step_schema.dump(step), 200
         except ValidationError as err:
             return {"errors": err.messages}, 400
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except Exception as e:
             db.session.rollback()
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessStepAIDraftResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, step_id):
+        step = ProcessStep.query.get_or_404(step_id)
+        routine = ProcessRoutine.query.filter_by(id=step.routine_id).first()
+        if not routine:
+            return {"error": "Atividade POP não encontrada para este passo."}, 404
+        if not has_permission(routine.company_id, 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+
+        data = request.get_json(silent=True) or {}
+        apply_to_step = bool(data.get('apply_to_step'))
+
+        try:
+            payload = suggest_process_pop_step_description(
+                company_id=int(routine.company_id),
+                step_id=int(step_id),
+            )
+            draft = dict(payload.get("draft") or {})
+            if apply_to_step and draft.get("suggested_description"):
+                step.description = draft.get("suggested_description")
+                if not step.expected_result and draft.get("suggested_expected_result"):
+                    step.expected_result = draft.get("suggested_expected_result")
+                db.session.commit()
+            return {"ok": True, **payload, "applied": apply_to_step}, 200
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao gerar rascunho IA do passo POP step_id=%s", step_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
@@ -2237,6 +2340,8 @@ class ProcessStepResource(Resource):
         try:
             if step.image_path:
                 delete_file(step.image_path)
+            if step.video_path:
+                delete_file(step.video_path)
             db.session.delete(step)
             db.session.commit()
             return {"message": "Step deleted successfully"}, 200
