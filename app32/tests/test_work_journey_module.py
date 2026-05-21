@@ -545,7 +545,7 @@ def test_serialize_item_adds_app32_display_code(monkeypatch):
 
 def test_work_journey_source_urls_point_to_specific_origin_items():
     assert work_journey_sync.build_project_task_source_url(77, 501) == '/projects/77/manage?activity_id=501&from=work-journey'
-    assert work_journey_sync.build_process_instance_source_url(9, 310) == '/companies/9/process-instances?instance_id=310&from=work-journey'
+    assert work_journey_sync.build_process_instance_source_url(9, 310) == '/my-work/process-instance/310?company_id=9&from=work-journey'
     assert work_journey_sync.build_meeting_source_url(9, 44) == '/meetings/company/9/meeting/44/report?from=work-journey'
 
 
@@ -935,6 +935,97 @@ def test_allocate_process_instance_respects_bound_block_preference(monkeypatch):
     assert entries[0].block_id == 402
 
 
+def test_allocate_non_overdue_process_instance_into_next_compatible_future_block(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *_args, **_kwargs: 0)
+
+    monday = date(2026, 4, 6)
+    tuesday = date(2026, 4, 7)
+    agenda = SimpleNamespace(id=21, company_id=9, employee_id=3, anchor_date=monday)
+    item = SimpleNamespace(
+        id=65,
+        item_type='process_instance',
+        block_id=None,
+        status='pending',
+        due_date=monday,
+        occurrence_date=monday,
+        estimated_minutes=90,
+        metadata_json={},
+    )
+    tuesday_block = SimpleNamespace(
+        id=501,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {
+            monday: [],
+            tuesday: [tuesday_block],
+        },
+        defaultdict(int),
+        monday,
+        tuesday,
+    )
+
+    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
+        (tuesday, 501, 90),
+    ]
+
+
+def test_allocate_process_instance_respects_bound_block_preference_across_future_days(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_engine, 'next_position_for_group', lambda *_args, **_kwargs: 0)
+
+    monday = date(2026, 4, 6)
+    tuesday = date(2026, 4, 7)
+    wednesday = date(2026, 4, 8)
+    agenda = SimpleNamespace(id=22, company_id=9, employee_id=3, anchor_date=monday)
+    item = SimpleNamespace(
+        id=66,
+        item_type='process_instance',
+        block_id=602,
+        status='pending',
+        due_date=monday,
+        occurrence_date=monday,
+        estimated_minutes=60,
+        metadata_json={},
+    )
+    other_block = SimpleNamespace(
+        id=601,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(8, 0),
+        end_time=time(9, 0),
+    )
+    preferred_block = SimpleNamespace(
+        id=602,
+        block_mode='operational',
+        accepted_item_types=['process_instance'],
+        start_time=time(9, 0),
+        end_time=time(10, 0),
+    )
+
+    entries = work_journey_agenda_engine.allocate_item(
+        item,
+        agenda,
+        {
+            monday: [other_block],
+            tuesday: [other_block],
+            wednesday: [other_block, preferred_block],
+        },
+        defaultdict(int),
+        monday,
+        wednesday,
+    )
+
+    assert [(entry.planned_date, entry.block_id, entry.allocated_minutes) for entry in entries] == [
+        (wednesday, 602, 60),
+    ]
+
+
 def test_calendar_scripts_support_collaborator_without_employee_selector():
     root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     with open(os.path.join(root, 'static', 'js', 'work-journey.js'), 'r', encoding='utf-8') as handle:
@@ -958,6 +1049,21 @@ def test_agendas_script_supports_legacy_fallback_drag_and_drop():
     assert '/work-journey/items/${source.item.id}' in agendas_script
     assert 'source.item.agenda_item_id || source.item.id' in agendas_script
     assert "return 'week';" in agendas_script
+
+
+def test_agendas_scripts_support_drag_between_columns_and_blocks():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+        agendas_script = handle.read()
+    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
+        render_script = handle.read()
+
+    assert 'data-dropzone="block"' in render_script
+    assert 'data-dropzone="day"' in render_script
+    assert 'data-dropzone="unassigned"' in render_script
+    assert 'data-list-scope="${listScope}"' in render_script
+    assert 'source_scope: state.draggingScope || null' in agendas_script
+    assert '/work-journey/agendas/items/' in agendas_script
 
 
 def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypatch):

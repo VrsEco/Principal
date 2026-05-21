@@ -179,6 +179,14 @@ def candidate_slots_for_item(
 
     preferred_date = item.occurrence_date or item.due_date or period_start
     preferred_date = max(planning_start, min(preferred_date, period_end))
+    if item.item_type in {'manual', 'process_instance'}:
+        return expand_blocks_for_dates(
+            item.item_type,
+            blocks_by_day,
+            list(range_dates(preferred_date, period_end)),
+            reverse_within_day=False,
+            preferred_block_id=preferred_block_id,
+        )
     return expand_blocks_for_dates(
         item.item_type,
         blocks_by_day,
