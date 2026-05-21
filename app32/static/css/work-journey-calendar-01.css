@@ -269,3 +269,163 @@
     min-width: 296px;
   }
 }
+
+/* Paleta DEV v2 — foco em contraste suave para uso contínuo */
+.journey-app--calendar01 {
+  --calendar01-day-bg: linear-gradient(180deg, #f7f2ff 0%, #ffffff 100%);
+  --calendar01-day-border: rgba(167, 139, 250, 0.28);
+  --calendar01-day-shadow: 0 10px 26px rgba(109, 40, 217, 0.08);
+  --calendar01-day-title: #5b21b6;
+  --calendar01-day-eyebrow: #7c3aed;
+
+  --calendar01-block-green-bg: linear-gradient(180deg, #effcf4 0%, #ffffff 100%);
+  --calendar01-block-green-border: rgba(52, 168, 83, 0.28);
+  --calendar01-block-green-fill: linear-gradient(90deg, #34a853, #86efac);
+
+  --calendar01-block-gray-bg: linear-gradient(180deg, #f4f7fb 0%, #ffffff 100%);
+  --calendar01-block-gray-border: rgba(148, 163, 184, 0.35);
+  --calendar01-block-gray-fill: linear-gradient(90deg, #94a3b8, #cbd5e1);
+
+  --calendar01-block-yellow-bg: linear-gradient(180deg, #fff8e1 0%, #ffffff 100%);
+  --calendar01-block-yellow-border: rgba(217, 119, 6, 0.30);
+  --calendar01-block-yellow-fill: linear-gradient(90deg, #f4b400, #fde68a);
+
+  --calendar01-card-blue-bg: linear-gradient(180deg, #f3f9ff 0%, #eaf3ff 100%);
+  --calendar01-card-blue-border: rgba(96, 165, 250, 0.32);
+  --calendar01-card-blue-accent: #60a5fa;
+  --calendar01-card-red-bg: linear-gradient(180deg, #fff5f5 0%, #ffecec 100%);
+  --calendar01-card-red-border: rgba(239, 68, 68, 0.30);
+  --calendar01-card-red-accent: #ef4444;
+  --calendar01-card-white-bg: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --calendar01-card-white-border: rgba(203, 213, 225, 0.55);
+  --calendar01-card-white-accent: #e2e8f0;
+  --calendar01-card-code-bg: rgba(191, 219, 254, 0.55);
+  --calendar01-card-code-text: #1d4ed8;
+}
+
+.journey-app--calendar01 .agenda-day-column,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column {
+  background: var(--calendar01-day-bg);
+  border-color: var(--calendar01-day-border);
+  box-shadow: var(--calendar01-day-shadow);
+}
+
+.journey-app--calendar01 .agenda-day-column:nth-child(4n + 1),
+.journey-app--calendar01 .agenda-day-column:nth-child(4n + 2),
+.journey-app--calendar01 .agenda-day-column:nth-child(4n + 3),
+.journey-app--calendar01 .agenda-day-column:nth-child(4n + 4) {
+  background: var(--calendar01-day-bg);
+}
+
+.journey-app--calendar01 .agenda-day-column__eyebrow,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__eyebrow {
+  color: var(--calendar01-day-eyebrow);
+}
+
+.journey-app--calendar01 .agenda-day-column__title,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column__title {
+  color: var(--calendar01-day-title);
+}
+
+.journey-app--calendar01 .agenda-day-column--today,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--today {
+  border-color: rgba(124, 58, 237, 0.46);
+  box-shadow: 0 14px 30px rgba(124, 58, 237, 0.12);
+}
+
+.journey-app--calendar01 .agenda-day-column--today .agenda-day-column__title,
+.journey-tabpanel[data-panel="agendas"] .agenda-day-column--today .agenda-day-column__title {
+  color: #6d28d9;
+}
+
+.journey-app--calendar01 .agenda-block--operational {
+  background: var(--calendar01-block-green-bg);
+  border-color: var(--calendar01-block-green-border);
+}
+
+.journey-app--calendar01 .agenda-block--operational .agenda-block__progress-fill {
+  background: var(--calendar01-block-green-fill);
+}
+
+.journey-app--calendar01 .agenda-block--reserved_full {
+  background: var(--calendar01-block-gray-bg);
+  border-color: var(--calendar01-block-gray-border);
+}
+
+.journey-app--calendar01 .agenda-block--reserved_full .agenda-block__progress-fill {
+  background: var(--calendar01-block-gray-fill);
+}
+
+.journey-app--calendar01 .agenda-block--buffer {
+  background: var(--calendar01-block-yellow-bg);
+  border-color: var(--calendar01-block-yellow-border);
+}
+
+.journey-app--calendar01 .agenda-block--buffer .agenda-block__progress-fill {
+  background: var(--calendar01-block-yellow-fill);
+}
+
+.journey-app--calendar01 .agenda-card,
+.journey-app--calendar01 .agenda-card--process,
+.journey-app--calendar01 .agenda-card--project,
+.journey-app--calendar01 .agenda-card--meeting,
+.journey-app--calendar01 .agenda-card--manual,
+.journey-app--calendar01 .journey-list-item.agenda-feed-card {
+  background: var(--calendar01-card-blue-bg);
+  border-color: var(--calendar01-card-blue-border);
+  border-left: 4px solid var(--calendar01-card-blue-accent);
+  border-left-color: var(--calendar01-card-blue-accent);
+}
+
+.journey-app--calendar01 .agenda-card.is-overdue,
+.journey-app--calendar01 .agenda-card .agenda-card__status.is-danger,
+.journey-app--calendar01 .agenda-card--side-overdue {
+  color: inherit;
+}
+
+.journey-app--calendar01 .agenda-card[data-source-day=""],
+.journey-app--calendar01 .agenda-card[data-source-day=""] .agenda-card__title,
+.journey-app--calendar01 .agenda-card[data-source-day=""] .agenda-card__date {
+  color: inherit;
+}
+
+.journey-app--calendar01 .agenda-card:has(.agenda-card__status.is-danger),
+.journey-app--calendar01 .agenda-card--side-overdue {
+  background: var(--calendar01-card-red-bg);
+  border-color: var(--calendar01-card-red-border);
+  border-left-color: var(--calendar01-card-red-accent);
+}
+
+.journey-app--calendar01 .agenda-card:not(:has(.agenda-card__date)) {
+  background: var(--calendar01-card-white-bg);
+  border-color: var(--calendar01-card-white-border);
+  border-left-color: var(--calendar01-card-white-accent);
+}
+
+.journey-app--calendar01 .agenda-card:not(:has(.agenda-card__date)) .agenda-card__code {
+  background: rgba(241, 245, 249, 0.95);
+  color: #475569;
+  border-color: rgba(203, 213, 225, 0.45);
+}
+
+.journey-app--calendar01 .agenda-card__code {
+  background: var(--calendar01-card-code-bg);
+  color: var(--calendar01-card-code-text);
+  border-color: rgba(96, 165, 250, 0.22);
+}
+
+.journey-app--calendar01 .agenda-card__date,
+.journey-app--calendar01 .agenda-feed-card__meta {
+  color: #2563eb;
+}
+
+.journey-app--calendar01 .agenda-card__meta-chip--source {
+  background: rgba(191, 219, 254, 0.52);
+  color: #1d4ed8;
+  border-color: rgba(96, 165, 250, 0.24);
+}
+
+.journey-app--calendar01 .agenda-feed-card__description,
+.journey-app--calendar01 .agenda-feed-card__origin {
+  color: #516074;
+}

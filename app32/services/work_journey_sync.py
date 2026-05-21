@@ -191,7 +191,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
 
 def sync_project_tasks(company_id: int, employee_id: int, period_start: date, period_end: date) -> None:
     tasks = (
-        ProjectTask.query.options(joinedload(ProjectTask.project))
+        ProjectTask.query
         .filter(ProjectTask.employee_id == employee_id)
         .filter(ProjectTask.project.has(company_id=company_id))
         .filter(
@@ -203,13 +203,12 @@ def sync_project_tasks(company_id: int, employee_id: int, period_start: date, pe
         .all()
     )
     for task in tasks:
-        project = task.project
         metadata = {
             'source_label': 'Atividade de projeto',
-            'source_code': task.code,
+            'source_code': None,
             'project_id': task.project_id,
-            'project_name': project.name if project else None,
-            'project_code': project.code if project else None,
+            'project_name': None,
+            'project_code': None,
             'manual_assignment': current_manual_assignment(company_id, 'project_task', task.id),
             'source_url': build_project_task_source_url(task.project_id, task.id),
         }
@@ -406,10 +405,10 @@ def prune_missing_source_items(company_id: int, employee_id: int) -> int:
 
     valid_project_task_ids = {
         int(task.id)
-        for task in ProjectTask.query.options(joinedload(ProjectTask.project))
+        for task in ProjectTask.query
         .filter(ProjectTask.id.in_(list(grouped_ids['project_task'] or {-1})))
+        .filter(ProjectTask.project.has(company_id=company_id))
         .all()
-        if getattr(task, 'project', None) is not None and getattr(task.project, 'company_id', None) == company_id
     }
     valid_process_instance_ids = {
         int(instance.id)
