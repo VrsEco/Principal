@@ -685,7 +685,7 @@
             </div>
             <div class="form-group mb-4">
                 <label class="form-label">Horas Semanais</label>
-                <input type="text" data-format="hours-decimal" id="emp-weekly-hours" class="form-control" value="40:00">
+                <input type="text" data-format="hours-decimal" id="emp-weekly-hours" class="form-control" placeholder="40:00">
             </div>
             <div class="modal-actions-row" style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" class="btn btn-secondary" style="flex: 1;"
@@ -1772,6 +1772,8 @@
     function showEmployeeModal() {
         document.getElementById('edit-employee-id').value = '';
         document.getElementById('employee-form').reset();
+        document.getElementById('emp-status').value = 'active';
+        document.getElementById('emp-weekly-hours').value = '';
         document.getElementById('employee-modal').style.display = 'flex';
     }
 
@@ -1785,16 +1787,26 @@
         document.getElementById('emp-role-id').value = emp.role_id || '';
         document.getElementById('emp-department').value = emp.department || '';
         document.getElementById('emp-status').value = emp.status || 'active';
+        document.getElementById('emp-weekly-hours').value = window.App32InputFormatters
+            ? window.App32InputFormatters.formatValueByType('hours-decimal', emp.weekly_hours ?? '')
+            : (emp.weekly_hours ?? '');
         document.getElementById('employee-modal').style.display = 'flex';
     }
 
     async function handleEmployeeSubmit(e) {
         if (e) e.preventDefault();
+        const weeklyHoursInput = document.getElementById('emp-weekly-hours');
+        const weeklyHoursValue = String(weeklyHoursInput.value || '').trim();
         const data = {
             name: document.getElementById('emp-name').value,
             role_id: document.getElementById('emp-role-id').value || null,
             department: document.getElementById('emp-department').value,
-            status: document.getElementById('emp-status').value
+            status: document.getElementById('emp-status').value,
+            weekly_hours: weeklyHoursValue === ''
+                ? null
+                : (window.App32InputFormatters
+                    ? Number(window.App32InputFormatters.normalizeForSubmit(weeklyHoursInput))
+                    : Number(weeklyHoursValue))
         };
         const empId = document.getElementById('edit-employee-id').value;
         const url = empId ? `/api/companies/${companyId}/employees/${empId}` : `/api/companies/${companyId}/employees`;
