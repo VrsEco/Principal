@@ -101,7 +101,8 @@ def move_work_journey_agenda_item(
     if entry.planned_date != target_date and not payload.get('confirm_date_change'):
         raise WorkJourneyError('Confirme a alteração de data antes de mover a tarefa para outro dia.')
 
-    target_block = _resolve_target_block(company_id, employee.id, target_date, entry.journey_item.item_type, payload.get('block_id'))
+    requested_block_id = payload.get('target_block_id', payload.get('block_id'))
+    target_block = _resolve_target_block(company_id, employee.id, target_date, entry.journey_item.item_type, requested_block_id)
     target_block_id = target_block.id if target_block else None
     shift_positions_before_insert(agenda.id, target_date, target_block_id, int(payload.get('position_index') or 0), exclude_item_id=entry.id)
 

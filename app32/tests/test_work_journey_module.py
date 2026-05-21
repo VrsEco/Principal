@@ -678,6 +678,79 @@ def test_move_agenda_item_uses_persisted_entry_without_rebuilding(monkeypatch):
     assert payload['agenda_id'] == 11
 
 
+def test_move_work_journey_agenda_item_accepts_target_block_id_alias(monkeypatch):
+    employee = SimpleNamespace(id=3, company_id=9)
+    agenda = SimpleNamespace(id=11, status='suggested')
+    journey_item = SimpleNamespace(id=51, item_type='project_task')
+    entry = SimpleNamespace(
+        id=55,
+        company_id=9,
+        employee_id=3,
+        agenda=agenda,
+        journey_item=journey_item,
+        journey_item_id=51,
+        planned_date=date(2026, 4, 6),
+        block_id=None,
+        position_index=0,
+        manual_override=False,
+        metadata_json={},
+        updated_at=None,
+    )
+    target_block = SimpleNamespace(id=88)
+    commits = []
+    captured = {}
+
+    class _Session:
+        def add(self, *_args, **_kwargs):
+            return None
+
+        def commit(self):
+            commits.append('commit')
+
+    monkeypatch.setattr(work_journey_agenda_service, 'ensure_employee', lambda company_id, employee_id: employee)
+    monkeypatch.setattr(
+        work_journey_agenda_service,
+        'WorkJourneyAgendaItem',
+        SimpleNamespace(query=_FakeAgendaMoveQuery(entry), journey_item=object(), agenda=object()),
+    )
+    monkeypatch.setattr(work_journey_agenda_service, 'joinedload', lambda value: value)
+    def _fake_resolve_target_block(company_id, employee_id, target_date, item_type, block_id):
+        captured['resolve'] = (company_id, employee_id, target_date, item_type, block_id)
+        return target_block
+
+    monkeypatch.setattr(work_journey_agenda_service, '_resolve_target_block', _fake_resolve_target_block)
+    monkeypatch.setattr(work_journey_agenda_service, 'shift_positions_before_insert', lambda *args, **kwargs: captured.setdefault('shift', args))
+    monkeypatch.setattr(work_journey_agenda_service, 'apply_date_change_to_source', lambda item, target_date: captured.setdefault('target_date', target_date))
+    monkeypatch.setattr(work_journey_agenda_service, 'recompute_agenda_summary', lambda agenda_obj: captured.setdefault('agenda_id', agenda_obj.id))
+    monkeypatch.setattr(
+        work_journey_agenda_service,
+        '_serialize',
+        lambda agenda_obj, employee_obj: {'agenda_id': agenda_obj.id, 'planned_date': entry.planned_date.isoformat(), 'block_id': entry.block_id},
+    )
+    monkeypatch.setattr(work_journey_agenda_service, 'db', SimpleNamespace(session=_Session()))
+
+    payload = work_journey_agenda_service.move_work_journey_agenda_item(
+        9,
+        3,
+        date(2026, 4, 6),
+        'week',
+        55,
+        {
+            'target_date': date(2026, 4, 7),
+            'target_block_id': 88,
+            'source_scope': 'block',
+            'confirm_date_change': True,
+            'position_index': 0,
+        },
+    )
+
+    assert captured['resolve'] == (9, 3, date(2026, 4, 7), 'project_task', 88)
+    assert entry.planned_date == date(2026, 4, 7)
+    assert entry.block_id == 88
+    assert payload['block_id'] == 88
+    assert commits == ['commit', 'commit']
+
+
 def test_generate_agenda_route_accepts_legacy_date_alias_without_extra_validation_error(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'
