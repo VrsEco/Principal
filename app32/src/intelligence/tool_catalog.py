@@ -42,6 +42,7 @@ from src.core.mcp_squad_runtime_tools import register_squad_runtime_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
 from src.core.mcp_tool_freeze_tools import register_tool_freeze_tools
 from src.core.mcp_usage_dashboard_tools import register_usage_dashboard_tools
+from src.core.mcp_work_journey_analytics_tools import register_work_journey_analytics_tools
 from src.core.mcp_work_journey_tools import register_work_journey_tools
 from src.intelligence.tooling.registry import ToolCapabilityRegistry
 from src.intelligence.tooling.capabilities import ToolScope
@@ -303,6 +304,62 @@ _supplemental_mcp_tools = (
         name="move_work_journey_agenda_item_tool",
         description="Move item da agenda materializada dentro da jornada operacional.",
     ),
+    SimpleNamespace(
+        name="generate_work_journey_agenda_tool",
+        description="Gera ou regenera a agenda materializada da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="lock_work_journey_agenda_tool",
+        description="Trava a agenda materializada da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="unlock_work_journey_agenda_tool",
+        description="Destrava a agenda materializada da jornada operacional.",
+    ),
+    SimpleNamespace(
+        name="list_routine_journey_bindings_tool",
+        description="Lista vínculos entre rotinas operacionais, colaboradores e blocos elegíveis.",
+    ),
+    SimpleNamespace(
+        name="save_routine_journey_binding_tool",
+        description="Cria ou atualiza vínculo entre rotina operacional e bloco da jornada.",
+    ),
+    SimpleNamespace(
+        name="list_employee_process_routines_for_journey_tool",
+        description="Lista rotinas de processo que o colaborador precisa encaixar na jornada.",
+    ),
+    SimpleNamespace(
+        name="list_work_calendar_events_tool",
+        description="Lista eventos do calendário operacional respeitando o escopo do colaborador.",
+    ),
+    SimpleNamespace(
+        name="create_work_calendar_event_tool",
+        description="Cria evento do calendário operacional com validação de visibilidade MCP.",
+    ),
+    SimpleNamespace(
+        name="update_work_calendar_event_tool",
+        description="Atualiza evento do calendário operacional com validação de visibilidade MCP.",
+    ),
+    SimpleNamespace(
+        name="delete_work_calendar_event_tool",
+        description="Exclui evento do calendário operacional com validação de visibilidade MCP.",
+    ),
+    SimpleNamespace(
+        name="list_work_journey_task_inventory_tool",
+        description="Lista tarefas da jornada classificadas em alocadas, não alocadas e atrasadas.",
+    ),
+    SimpleNamespace(
+        name="get_work_journey_capacity_report_tool",
+        description="Retorna capacidade operacional, capacidade tomada, ociosa e sobrecarga por colaborador/bloco.",
+    ),
+    SimpleNamespace(
+        name="get_process_routines_analysis_tool",
+        description="Retorna a análise operacional da página process-routines/analysis.",
+    ),
+    SimpleNamespace(
+        name="get_efficiency_collaborators_analysis_tool",
+        description="Retorna a análise de eficiência por colaborador da página efficiency-analysis.",
+    ),
     *tuple(
         SimpleNamespace(
             name=tool_name,
@@ -422,6 +479,7 @@ catalog = ToolCatalog(
         register_surface_playbook_tools,
         register_tool_freeze_tools,
         register_usage_dashboard_tools,
+        register_work_journey_analytics_tools,
         register_work_journey_tools,
         )
         if registrar is not None

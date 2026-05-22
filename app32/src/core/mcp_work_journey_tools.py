@@ -4,6 +4,7 @@ from datetime import date
 from typing import Any, Optional
 
 from app import create_app
+from models import RoutineJourneyBinding, WorkJourneyAgendaItem, WorkJourneyBlock, WorkJourneyItem, WorkJourneyRule
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
@@ -60,6 +61,7 @@ from services.work_journey_agenda_service import (
     move_work_journey_agenda_item,
     unlock_work_journey_agenda,
 )
+from services.work_journey_mcp_access_service import ensure_employee_mutation_allowed, resolve_actor_scope
 
 
 def _run(callback, *args, **kwargs) -> Any:
@@ -125,57 +127,121 @@ def register_work_journey_tools(mcp) -> None:
     @mcp.tool()
     def get_work_journey_board_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'day') -> dict:
         """Retorna o quadro operacional da jornada por blocos de um colaborador."""
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
         anchor = date.fromisoformat(anchor_date)
-        query = WorkJourneyBoardQuery(company_id=company_id, employee_id=employee_id, anchor_date=anchor, scope=scope)
-        payload = _run(get_work_journey_board, company_id, employee_id, anchor, scope)
+        scoped_employee_id = actor_scope.employee_ids[0]
+        query = WorkJourneyBoardQuery(company_id=actor_scope.company_id, employee_id=scoped_employee_id, anchor_date=anchor, scope=scope)
+        payload = _run(get_work_journey_board, actor_scope.company_id, scoped_employee_id, anchor, scope)
         return _build_work_journey_board_envelope(payload or {}, query)
 
     @mcp.tool()
     def list_work_journey_blocks_tool(company_id: int, employee_id: int) -> dict:
         """Lista os blocos de jornada de um colaborador."""
-        return {'blocks': _run(list_employee_blocks, company_id, employee_id)}
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
+        return {'blocks': _run(list_employee_blocks, actor_scope.company_id, actor_scope.employee_ids[0])}
 
     @mcp.tool()
     def save_work_journey_block_tool(company_id: int, payload: dict, block_id: Optional[int] = None) -> dict:
         """Cria ou atualiza um bloco da jornada operacional."""
         schema = WorkJourneyUpdateSchema if block_id else WorkJourneyCreateSchema
         data = schema.model_validate(payload).model_dump()
-        return {'block': _run(save_block, company_id, data, block_id)}
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(data["employee_id"]),
+            payload={"company_id": company_id, **payload},
+        )
+        return {'block': _run(save_block, resolved_company_id, data, block_id)}
 
     @mcp.tool()
     def delete_work_journey_block_tool(company_id: int, block_id: int) -> dict:
         """Exclui um bloco da jornada operacional."""
-        _run(delete_block, company_id, block_id)
+        block = _run(lambda: WorkJourneyBlock.query.filter_by(company_id=company_id, id=block_id).first())
+        if not block:
+            return _error_envelope(operation='block.delete', message='Bloco não encontrado.', code='work_journey_block_not_found')
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(block.employee_id),
+            payload={"company_id": company_id, "employee_id": int(block.employee_id)},
+        )
+        _run(delete_block, resolved_company_id, block_id)
         return {'success': True}
 
     @mcp.tool()
     def list_work_journey_rules_tool(company_id: int, employee_id: int) -> dict:
         """Lista as obrigações recorrentes configuradas para a jornada do colaborador."""
-        return {'rules': _run(list_employee_rules, company_id, employee_id)}
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
+        return {'rules': _run(list_employee_rules, actor_scope.company_id, actor_scope.employee_ids[0])}
 
     @mcp.tool()
     def save_work_journey_rule_tool(company_id: int, payload: dict, rule_id: Optional[int] = None) -> dict:
         """Cria ou atualiza uma obrigação recorrente da jornada operacional."""
         schema = WorkJourneyRuleUpdateSchema if rule_id else WorkJourneyRuleCreateSchema
         data = schema.model_validate(payload).model_dump(exclude_unset=True)
-        return {'rule': _run(save_rule, company_id, data, rule_id)}
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(data["employee_id"]),
+            payload={"company_id": company_id, **payload},
+        )
+        return {'rule': _run(save_rule, resolved_company_id, data, rule_id)}
 
     @mcp.tool()
     def delete_work_journey_rule_tool(company_id: int, rule_id: int) -> dict:
         """Exclui uma obrigação recorrente da jornada operacional."""
-        _run(delete_rule, company_id, rule_id)
+        rule = _run(lambda: WorkJourneyRule.query.filter_by(company_id=company_id, id=rule_id).first())
+        if not rule:
+            return _error_envelope(operation='rule.delete', message='Obrigação recorrente não encontrada.', code='work_journey_rule_not_found')
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(rule.employee_id),
+            payload={"company_id": company_id, "employee_id": int(rule.employee_id)},
+        )
+        _run(delete_rule, resolved_company_id, rule_id)
         return {'success': True}
 
     @mcp.tool()
     def update_work_journey_item_tool(company_id: int, item_id: int, payload: dict) -> dict:
         """Atualiza status, bloco ou esforço real de uma tarefa da jornada."""
+        item = _run(lambda: WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first())
+        if not item:
+            return _error_envelope(operation='item.update', message='Tarefa da jornada não encontrada.', code='work_journey_item_not_found')
         data = WorkJourneyItemUpdateSchema.model_validate(payload).model_dump(exclude_unset=True)
-        return {'item': _run(update_work_item, company_id, item_id, data)}
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(item.employee_id),
+            payload={"company_id": company_id, "employee_id": int(item.employee_id), **payload},
+        )
+        return {'item': _run(update_work_item, resolved_company_id, item_id, data)}
 
     @mcp.tool()
     def list_work_journey_manual_tasks_tool(company_id: int, employee_id: int) -> dict:
         """Lista todas as tarefas avulsas cadastradas para um colaborador na jornada operacional."""
-        return {'data': _run(list_manual_tasks, company_id, employee_id)}
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
+        return {'data': _run(list_manual_tasks, actor_scope.company_id, actor_scope.employee_ids[0])}
 
     @mcp.tool()
     def create_work_journey_manual_task_tool(company_id: int, payload: dict) -> dict:
@@ -185,12 +251,27 @@ def register_work_journey_tools(mcp) -> None:
         Para criação, informe `due_date`.
         """
         data = WorkJourneyManualTaskCreateSchema.model_validate(payload).model_dump()
-        return {'item': _run(create_manual_task, company_id, data)}
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(data["employee_id"]),
+            payload={"company_id": company_id, **payload},
+        )
+        return {'item': _run(create_manual_task, resolved_company_id, data)}
 
     @mcp.tool()
     def delete_work_journey_manual_task_tool(company_id: int, item_id: int) -> dict:
         """Exclui uma tarefa avulsa criada diretamente na jornada."""
-        _run(delete_work_item, company_id, item_id)
+        item = _run(lambda: WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first())
+        if not item:
+            return _error_envelope(operation='manual_task.delete', message='Tarefa avulsa não encontrada.', code='work_journey_manual_task_not_found')
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(item.employee_id),
+            payload={"company_id": company_id, "employee_id": int(item.employee_id)},
+        )
+        _run(delete_work_item, resolved_company_id, item_id)
         return {'success': True}
 
     @mcp.tool()
@@ -233,50 +314,108 @@ def register_work_journey_tools(mcp) -> None:
     @mcp.tool()
     def get_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week', force_regenerate: bool = False) -> dict:
         """Retorna a agenda materializada diária ou semanal da jornada do colaborador."""
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
         anchor = date.fromisoformat(anchor_date)
-        return {'data': _run(get_work_journey_agenda, company_id, employee_id, anchor, scope, force_regenerate)}
+        return {'data': _run(get_work_journey_agenda, actor_scope.company_id, actor_scope.employee_ids[0], anchor, scope, force_regenerate)}
 
     @mcp.tool()
     def generate_work_journey_agenda_tool(company_id: int, payload: dict) -> dict:
         """Gera ou regenera a agenda materializada da jornada do colaborador."""
         data = WorkJourneyAgendaGenerateSchema.model_validate(payload).model_dump()
-        return {'data': _run(get_work_journey_agenda, company_id, data['employee_id'], data['anchor_date'], data['scope'], True)}
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(data["employee_id"]),
+            payload={"company_id": company_id, **payload},
+        )
+        return {'data': _run(get_work_journey_agenda, resolved_company_id, data['employee_id'], data['anchor_date'], data['scope'], True)}
 
     @mcp.tool()
     def lock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week', user_id: Optional[int] = None) -> dict:
         """Trava a agenda da jornada para impedir novas alterações manuais."""
+        resolved_company_id, execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
         anchor = date.fromisoformat(anchor_date)
-        return {'data': _run(lock_work_journey_agenda, company_id, employee_id, anchor, scope, user_id)}
+        return {'data': _run(lock_work_journey_agenda, resolved_company_id, employee_id, anchor, scope, user_id or execution_context.user_id)}
 
     @mcp.tool()
     def unlock_work_journey_agenda_tool(company_id: int, employee_id: int, anchor_date: str, scope: str = 'week') -> dict:
         """Cancela o travamento da agenda da jornada."""
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
         anchor = date.fromisoformat(anchor_date)
-        return {'data': _run(unlock_work_journey_agenda, company_id, employee_id, anchor, scope)}
+        return {'data': _run(unlock_work_journey_agenda, resolved_company_id, employee_id, anchor, scope)}
 
     @mcp.tool()
     def move_work_journey_agenda_item_tool(company_id: int, employee_id: int, anchor_date: str, scope: str, agenda_item_id: int, payload: dict) -> dict:
         """Move uma tarefa entre blocos ou dias da agenda materializada."""
+        agenda_item = _run(lambda: WorkJourneyAgendaItem.query.filter_by(company_id=company_id, id=agenda_item_id).first())
+        if not agenda_item:
+            return _error_envelope(operation='agenda.move', message='Item da agenda não encontrado.', code='work_journey_agenda_item_not_found')
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(agenda_item.employee_id),
+            payload={"company_id": company_id, "employee_id": int(agenda_item.employee_id), **payload},
+        )
         data = WorkJourneyAgendaMoveSchema.model_validate(payload).model_dump(exclude_unset=True)
         data['target_date'] = data.get('target_date') or date.fromisoformat(anchor_date)
         anchor = date.fromisoformat(anchor_date)
-        return {'data': _run(move_work_journey_agenda_item, company_id, employee_id, anchor, scope, agenda_item_id, data)}
+        return {'data': _run(move_work_journey_agenda_item, resolved_company_id, int(agenda_item.employee_id), anchor, scope, agenda_item_id, data)}
 
     @mcp.tool()
     def list_routine_journey_bindings_tool(company_id: int, routine_id: int) -> dict:
         """Lista, por executor, os blocos elegíveis e o vínculo atual entre uma rotina e a jornada operacional."""
-        return {'data': _run(list_routine_bindings_context, company_id, routine_id)}
+        data = _run(list_routine_bindings_context, company_id, routine_id)
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            include_all=True,
+            payload={"company_id": company_id, "include_all": True},
+        )
+        if not actor_scope.privileged:
+            allowed = set(actor_scope.employee_ids)
+            data["collaborators"] = [
+                row for row in (data.get("collaborators") or [])
+                if int(row.get("employee_id") or 0) in allowed
+            ]
+        return {'data': data}
 
     @mcp.tool()
     def save_routine_journey_binding_tool(company_id: int, routine_id: int, payload: dict) -> dict:
         """Cria, atualiza ou remove o vínculo entre rotina operacional, colaborador executor e bloco de jornada."""
         data = RoutineJourneyBindingUpsertSchema.model_validate(payload).model_dump(exclude_unset=True)
-        return {'binding': _run(save_routine_binding, company_id, routine_id, data['employee_id'], data.get('block_id'), data.get('notes'))}
+        resolved_company_id, _execution_context = _run(
+            ensure_employee_mutation_allowed,
+            company_id=company_id,
+            employee_id=int(data["employee_id"]),
+            payload={"company_id": company_id, **payload},
+        )
+        return {'binding': _run(save_routine_binding, resolved_company_id, routine_id, data['employee_id'], data.get('block_id'), data.get('notes'))}
 
     @mcp.tool()
     def list_employee_process_routines_for_journey_tool(company_id: int, employee_id: int) -> dict:
         """Lista as rotinas operacionais de processo que um colaborador precisa encaixar na jornada."""
-        return {'data': _run(list_employee_process_routines, company_id, employee_id)}
+        actor_scope = _run(
+            resolve_actor_scope,
+            company_id=company_id,
+            employee_id=employee_id,
+            payload={"company_id": company_id, "employee_id": employee_id},
+        )
+        return {'data': _run(list_employee_process_routines, actor_scope.company_id, actor_scope.employee_ids[0])}
 
 
 WorkJourneyCreateSchema = WorkJourneyBlockCreateSchema
