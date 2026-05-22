@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
-from models import db, Company, Process, ProcessInstance, Employee, Indicator
+from models import db, Company, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
 from services.process_portal_service import (
@@ -21,6 +21,7 @@ from services.process_portal_service import (
     build_process_portal_process_detail,
     build_process_portal_summary,
 )
+from utils.indicator_filters import PROCESS_SOURCE_MODULES, indicator_supports_source_context
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company, can_model_process
 
 processes_bp = Blueprint('processes', __name__)
@@ -39,6 +40,155 @@ def _process_bpmn_modeler_asset_version() -> str:
         return '1'
     latest_mtime = max(int(path.stat().st_mtime) for path in existing)
     return str(latest_mtime)
+
+
+def _build_process_map_compact_context(company_id: int, *, area_id: int | None = None, macro_id: int | None = None):
+    """
+    Contexto único do MP-2 para evitar drift entre:
+    - /process-map/compact
+    - /companies/<company_id>/process-portal
+    """
+    if not company_id:
+        raise ValueError("Nenhuma empresa ativa selecionada.")
+
+    db_helper = get_db()
+    company = Company.query.get(company_id)
+    if not company:
+        raise LookupError(f"Empresa com ID {company_id} não encontrada.")
+
+    map_data = db_helper.get_process_map(company_id)
+
+    process_ids = []
+    for area in map_data.get('areas', []):
+        for macro in area.get('macros', []):
+            for p in macro.get('processes', []):
+                if p.get('id'):
+                    process_ids.append(int(p['id']))
+
+    routine_counts = {}
+    indicator_counts = {}
+    spec_counts = {}
+    published_flow_ids = set()
+
+    if process_ids:
+        for process_id, total in (
+            db.session.query(ProcessRoutine.process_id, db.func.count(ProcessRoutine.id))
+            .filter(ProcessRoutine.company_id == company_id)
+            .filter(ProcessRoutine.process_id.in_(process_ids))
+            .group_by(ProcessRoutine.process_id)
+            .all()
+        ):
+            if process_id is not None:
+                routine_counts[int(process_id)] = int(total or 0)
+
+        for process_id, total in (
+            db.session.query(Routine.process_id, db.func.count(Routine.id))
+            .filter(Routine.company_id == company_id)
+            .filter(Routine.process_id.in_(process_ids))
+            .group_by(Routine.process_id)
+            .all()
+        ):
+            if process_id is not None:
+                routine_counts[int(process_id)] = routine_counts.get(int(process_id), 0) + int(total or 0)
+
+        if indicator_supports_source_context():
+            for process_id, total in (
+                db.session.query(Indicator.source_id, db.func.count(Indicator.id))
+                .filter(Indicator.company_id == company_id)
+                .filter(Indicator.is_active.is_(True))
+                .filter(Indicator.source_module.in_(PROCESS_SOURCE_MODULES))
+                .filter(Indicator.source_id.in_(process_ids))
+                .group_by(Indicator.source_id)
+                .all()
+            ):
+                if process_id is not None:
+                    indicator_counts[int(process_id)] = int(total or 0)
+
+        for process_id, total in (
+            db.session.query(Indicator.process_id, db.func.count(Indicator.id))
+            .filter(Indicator.company_id == company_id)
+            .filter(Indicator.is_active.is_(True))
+            .filter(Indicator.process_id.in_(process_ids))
+            .group_by(Indicator.process_id)
+            .all()
+        ):
+            if process_id is not None:
+                indicator_counts[int(process_id)] = indicator_counts.get(int(process_id), 0) + int(total or 0)
+
+        for process_id, total in (
+            db.session.query(ProcessActivityExecutionContract.process_id, db.func.count(ProcessActivityExecutionContract.id))
+            .filter(ProcessActivityExecutionContract.company_id == company_id)
+            .filter(ProcessActivityExecutionContract.is_active.is_(True))
+            .filter(ProcessActivityExecutionContract.process_id.in_(process_ids))
+            .group_by(ProcessActivityExecutionContract.process_id)
+            .all()
+        ):
+            if process_id is not None:
+                spec_counts[int(process_id)] = int(total or 0)
+
+        published_flow_ids = {
+            int(process_id)
+            for (process_id,) in (
+                db.session.query(ProcessBpmnDiagram.process_id)
+                .filter(ProcessBpmnDiagram.company_id == company_id)
+                .filter(ProcessBpmnDiagram.status == 'published')
+                .filter(ProcessBpmnDiagram.process_id.in_(process_ids))
+                .distinct()
+                .all()
+            )
+            if process_id is not None
+        }
+
+    if area_id:
+        map_data['areas'] = [a for a in map_data.get('areas', []) if a['id'] == area_id]
+    if macro_id:
+        for area in map_data.get('areas', []):
+            area['macros'] = [m for m in area.get('macros', []) if m['id'] == macro_id]
+
+    def get_stage_color(stage):
+        colors = {
+            'inbox': '#cbd5e1', 'designing': '#93c5fd', 'deploying': '#3b82f6',
+            'stabilizing': '#a855f7', 'stable': '#6366f1'
+        }
+        return colors.get(stage, '#cbd5e1')
+
+    def get_perf_color(perf):
+        colors = {
+            'critical': '#ef4444', 'below': '#f59e0b', 'satisfactory': '#10b981'
+        }
+        return colors.get(perf, '#f1f5f9')
+
+    for area in map_data.get('areas', []):
+        area['display_name'] = f"{area.get('code', '')} - {area.get('name', '')}" if area.get('code') else area.get('name', '')
+
+        for macro in area.get('macros', []):
+            macro['display_name'] = f"{macro.get('code', '')} - {macro.get('name', '')}" if macro.get('code') else macro.get('name', '')
+
+            for p in macro.get('processes', []):
+                p['display_name'] = f"{p.get('code', '')} - {p.get('name', '')}" if p.get('code') else p.get('name', '')
+                p['stage_color'] = get_stage_color(p.get('kanban_stage'))
+                p['perf_color'] = get_perf_color(p.get('performance_level'))
+                process_id = int(p.get('id') or 0)
+                p['portal_stats'] = {
+                    'flow_count': 1 if process_id in published_flow_ids else 0,
+                    'routine_count': int(routine_counts.get(process_id, 0)),
+                    'indicator_count': int(indicator_counts.get(process_id, 0)),
+                    'spec_count': int(spec_counts.get(process_id, 0)),
+                }
+                p['has_portal_assets'] = any([
+                    p['portal_stats']['flow_count'] > 0,
+                    p['portal_stats']['routine_count'] > 0,
+                    p['portal_stats']['indicator_count'] > 0,
+                    p['portal_stats']['spec_count'] > 0,
+                ])
+
+    return {
+        'company': company,
+        'company_name': company.name,
+        'areas': map_data.get('areas', []),
+        'now': datetime.now().strftime('%d/%m/%Y %H:%M'),
+        'is_collaborator': is_collaborator_in_company(company_id),
+    }
 
 
 def _coerce_optional_int(value, default=0):
@@ -301,15 +451,30 @@ def process_portal_redirect():
 @processes_bp.route('/companies/<int:company_id>/process-portal')
 @permission_required('processes', 'view')
 def process_portal_page(company_id):
-    company = Company.query.get_or_404(company_id)
     session['active_company_id'] = company_id
-    current_employee = _get_current_company_employee(company_id)
+    try:
+        context = _build_process_map_compact_context(company_id)
+    except ValueError as exc:
+        return str(exc), 400
+    except LookupError as exc:
+        return str(exc), 404
+
     return render_template(
-        'modules/processes/process_portal.html',
+        'modules/processes/process_portal_compact.html',
+        **context,
+    )
+
+
+@processes_bp.route('/companies/<int:company_id>/process-portal/processes/<int:process_id>')
+@permission_required('processes', 'view')
+def process_portal_process_page(company_id, process_id):
+    session['active_company_id'] = company_id
+    company = Company.query.get_or_404(company_id)
+    return render_template(
+        'modules/processes/process_portal_process_detail.html',
         company=company,
         company_id=company_id,
-        is_collaborator=is_collaborator_in_company(company_id),
-        current_employee_id=current_employee.id if current_employee else None,
+        process_id=process_id,
     )
 
 
@@ -343,6 +508,13 @@ def api_process_portal_process_detail(company_id, process_id):
         return jsonify({"ok": False, "error": str(exc)}), 403
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception:
+        current_app.logger.exception(
+            "Erro ao montar detalhe do portal de processos company_id=%s process_id=%s",
+            company_id,
+            process_id,
+        )
+        return jsonify({"ok": False, "error": PUBLIC_ERROR_MESSAGE}), 500
     return jsonify({"ok": True, "data": payload})
 
 @processes_bp.route('/process-map/compact')
@@ -366,54 +538,22 @@ def process_map_compact():
     area_id = request.args.get('area_id', type=int)
     macro_id = request.args.get('macro_id', type=int)
         
-    db_helper = get_db()
-    company = Company.query.get(company_id)
-    if not company:
-        return f"Empresa com ID {company_id} não encontrada.", 404
-        
-    map_data = db_helper.get_process_map(company_id)
-    
-    # Apply filters if provided
-    if area_id:
-        map_data['areas'] = [a for a in map_data.get('areas', []) if a['id'] == area_id]
-    if macro_id:
-        for area in map_data.get('areas', []):
-            area['macros'] = [m for m in area.get('macros', []) if m['id'] == macro_id]
-    
-    # Helper for colors
-    def get_stage_color(stage):
-        colors = {
-            'inbox': '#cbd5e1', 'designing': '#93c5fd', 'deploying': '#3b82f6',
-            'stabilizing': '#a855f7', 'stable': '#6366f1'
-        }
-        return colors.get(stage, '#cbd5e1')
-
-    def get_perf_color(perf):
-        colors = {
-            'critical': '#ef4444', 'below': '#f59e0b', 'satisfactory': '#10b981'
-        }
-        return colors.get(perf, '#f1f5f9')
-
-    # Enrich data with colors and formatted names for the template
-    for area in map_data.get('areas', []):
-        area['display_name'] = f"{area.get('code', '')} - {area.get('name', '')}" if area.get('code') else area.get('name', '')
-        
-        for macro in area.get('macros', []):
-            macro['display_name'] = f"{macro.get('code', '')} - {macro.get('name', '')}" if macro.get('code') else macro.get('name', '')
-            
-            for p in macro.get('processes', []):
-                p['display_name'] = f"{p.get('code', '')} - {p.get('name', '')}" if p.get('code') else p.get('name', '')
-                p['stage_color'] = get_stage_color(p.get('kanban_stage'))
-                p['perf_color'] = get_perf_color(p.get('performance_level'))
-
-    is_collaborator = is_collaborator_in_company(company_id)
+    try:
+        context = _build_process_map_compact_context(company_id, area_id=area_id, macro_id=macro_id)
+    except ValueError as exc:
+        return str(exc), 400
+    except LookupError as exc:
+        return str(exc), 404
 
     return render_template(
         'modules/processes/process_map_compact_view.html',
-        company_name=company.name if company else "Empresa",
-        areas=map_data.get('areas', []),
-        now=datetime.now().strftime('%d/%m/%Y %H:%M'),
-        is_collaborator=is_collaborator
+        **context,
+        page_title='Mapa de Processos',
+        toolbar_title='Mapa de Processos',
+        heading_title='Mapa de Processos',
+        subtitle_company_name=context['company_name'],
+        show_close_button=True,
+        show_back_button=False,
     )
 
 @processes_bp.route('/processes/<int:process_id>')

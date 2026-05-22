@@ -3,12 +3,14 @@ from __future__ import annotations
 from datetime import datetime
 import re
 from typing import Any
+from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
-from models import db, Process, ProcessBpmnDiagram
+from models import Company, db, Process, ProcessBpmnDiagram
 
 
 VALID_BPMN_STATUSES = {"draft", "published", "archived"}
+SVG_NS = "http://www.w3.org/2000/svg"
 
 
 def sanitize_svg_snapshot(svg: str | None) -> str | None:
@@ -20,6 +22,112 @@ def sanitize_svg_snapshot(svg: str | None) -> str | None:
     cleaned = re.sub(r"\s+on[a-zA-Z]+\s*=\s*(['\"]).*?\1", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
     cleaned = re.sub(r"javascript:", "", cleaned, flags=re.IGNORECASE)
     return cleaned
+
+
+def _parse_svg_dimension(value: str | None, fallback: float) -> float:
+    if value is None:
+        return fallback
+
+    match = re.match(r"^\s*([0-9]+(?:\.[0-9]+)?)", str(value))
+    if not match:
+        return fallback
+
+    try:
+        return float(match.group(1))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _split_svg_viewbox(root: ET.Element) -> tuple[float, float, float, float]:
+    raw_viewbox = (root.get("viewBox") or "").strip()
+    parts = raw_viewbox.replace(",", " ").split()
+    if len(parts) == 4:
+        try:
+            return tuple(float(part) for part in parts)  # type: ignore[return-value]
+        except ValueError:
+            pass
+
+    width = _parse_svg_dimension(root.get("width"), 1200.0)
+    height = _parse_svg_dimension(root.get("height"), 800.0)
+    return 0.0, 0.0, width, height
+
+
+def build_bpmn_participant_metadata_label(
+    *,
+    company_name: str,
+    process_code: str,
+    process_name: str,
+    version: int,
+    published_at: datetime | None,
+    status: str,
+) -> str:
+    date_label = ''
+    if published_at:
+        date_label = published_at.strftime('%d/%m/%Y')
+    elif status == 'published':
+        date_label = datetime.utcnow().strftime('%d/%m/%Y')
+
+    label = (
+        f"{(company_name.strip() or 'Empresa').upper()} | "
+        f"{(process_code.strip() or 'Sem código')} - "
+        f"{(process_name.strip() or 'Processo sem nome').upper()} | "
+        f"V{int(version or 0):02d}"
+    )
+    if date_label:
+        label = f"{label} - {date_label}"
+    return label
+
+
+def sync_bpmn_participant_metadata(
+    bpmn_xml: str | None,
+    *,
+    company_name: str,
+    process_code: str,
+    process_name: str,
+    version: int,
+    published_at: datetime | None,
+    status: str,
+) -> str | None:
+    if not bpmn_xml or ('<bpmn:definitions' not in str(bpmn_xml) and '<definitions' not in str(bpmn_xml)):
+        return bpmn_xml
+
+    namespaces = {
+        'bpmn': 'http://www.omg.org/spec/BPMN/20100524/MODEL',
+    }
+    try:
+        root = ET.fromstring(bpmn_xml)
+    except ET.ParseError:
+        return bpmn_xml
+
+    participant_nodes = root.findall('.//bpmn:participant', namespaces)
+    if not participant_nodes:
+        participant_nodes = root.findall('.//participant')
+    if not participant_nodes:
+        return bpmn_xml
+
+    label = build_bpmn_participant_metadata_label(
+        company_name=company_name,
+        process_code=process_code,
+        process_name=process_name,
+        version=version,
+        published_at=published_at,
+        status=status,
+    )
+    participant_nodes[0].set('name', label)
+    return ET.tostring(root, encoding='unicode')
+
+
+def decorate_bpmn_svg_snapshot(
+    svg: str | None,
+    *,
+    company_name: str,
+    process_code: str,
+    process_name: str,
+    version: int,
+    published_at: datetime | None,
+    status: str,
+) -> str | None:
+    return svg
 
 
 def serialize_flow_snapshot(diagram: ProcessBpmnDiagram | None) -> dict[str, Any] | None:
@@ -188,9 +296,27 @@ def upsert_process_bpmn_diagram(
         )
         diagram.published_at = datetime.utcnow()
 
+    company_name = (
+        db.session.query(Company.name)
+        .filter(Company.id == process.company_id)
+        .scalar()
+        or "Empresa"
+    )
+
+    resolved_version = int(getattr(diagram, "version", 0) or 0)
+    synced_bpmn_xml = sync_bpmn_participant_metadata(
+        bpmn_xml,
+        company_name=company_name,
+        process_code=str(getattr(process, "code", "") or ""),
+        process_name=str(getattr(process, "name", "") or ""),
+        version=resolved_version,
+        published_at=diagram.published_at,
+        status=status,
+    ) or bpmn_xml
+
     diagram.status = status
     diagram.name = str(payload.get("name") or process.name or "Diagrama BPMN").strip()
-    diagram.bpmn_xml = bpmn_xml
+    diagram.bpmn_xml = synced_bpmn_xml
     diagram.svg_snapshot = payload.get("svg_snapshot")
     diagram.png_snapshot = payload.get("png_snapshot")
     diagram.metadata_json = payload.get("metadata_json") if isinstance(payload.get("metadata_json"), dict) else {}

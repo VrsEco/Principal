@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Processos - Detalhe | {{ company.name }}</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --surface: #ffffff;
+            --surface-secondary: #f8fafc;
+            --border: #dbeafe;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            --shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1.2rem;
+            background: rgba(255,255,255,.94);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .toolbar__title { font-size: 1rem; font-weight: 800; }
+        .toolbar__actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+        .btn, .btn:visited {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: .65rem 1rem; border-radius: 12px; border: 1px solid #cbd5e1;
+            background: #fff; color: var(--text-primary); text-decoration: none;
+            font-size: .88rem; font-weight: 700;
+        }
+        .btn:hover { background: #f8fafc; }
+
+        .page {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 1.25rem;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 2.2fr) minmax(360px, 1fr);
+            gap: 1rem;
+            padding: 1.5rem;
+            border-radius: 28px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: #fff;
+            box-shadow: var(--shadow);
+        }
+        .hero__eyebrow {
+            font-size: .72rem; text-transform: uppercase; letter-spacing: .16em; font-weight: 800; opacity: .82;
+        }
+        .hero h1 { margin-top: .35rem; font-size: 2rem; font-weight: 800; }
+        .hero p { margin-top: .55rem; max-width: 72ch; color: rgba(255,255,255,.86); }
+        .hero__stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .75rem;
+            align-self: end;
+        }
+        .hero-stat {
+            padding: 1rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,.18);
+            background: rgba(255,255,255,.14);
+            backdrop-filter: blur(10px);
+        }
+        .hero-stat strong { display: block; font-size: 1.6rem; }
+        .hero-stat span { display: block; margin-top: .25rem; font-size: .78rem; color: rgba(255,255,255,.84); }
+
+        .content-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 340px;
+            gap: 1rem;
+            align-items: start;
+            margin-top: 1rem;
+            transition: grid-template-columns .2s ease;
+        }
+        .content-shell.is-collapsed { grid-template-columns: minmax(0, 1fr) 84px; }
+
+        .card {
+            background: #fff;
+            border-radius: 28px;
+            border: 1px solid #dbeafe;
+            box-shadow: 0 12px 36px rgba(37,99,235,.08);
+        }
+
+        .viewer-card { padding: 1.25rem; }
+        .viewer-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .viewer-label {
+            display: inline-flex;
+            margin-bottom: .5rem;
+            font-size: .76rem;
+            font-weight: 800;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: #334155;
+        }
+        .viewer-title {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.15;
+        }
+        .viewer-subline {
+            margin-top: .55rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: .4rem;
+            align-items: center;
+            color: #64748b;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        .viewer-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            justify-content: flex-end;
+        }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            padding: .42rem .74rem;
+            border-radius: 999px;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: .76rem;
+            font-weight: 800;
+        }
+        .flow-viewer {
+            min-height: 62vh;
+            border-radius: 24px;
+            border: 1px solid #dbeafe;
+            background: linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+            padding: 1rem;
+            overflow: auto;
+        }
+        .flow-viewer img, .flow-viewer iframe { width: 100%; min-height: 58vh; border: none; border-radius: 18px; background: #fff; }
+        .flow-viewer svg { width: 100%; height: auto; }
+        .portal-empty {
+            min-height: 48vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #64748b;
+            font-size: 1.05rem;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 84px;
+        }
+        .sidebar-card { overflow: hidden; }
+        .sidebar-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            padding: 1rem 1rem 0;
+        }
+        .sidebar-toggle {
+            width: 42px; height: 42px; border-radius: 14px;
+            border: 1px solid #bfdbfe; background: #eff6ff; color: #1d4ed8;
+            font-size: 1rem; font-weight: 800; cursor: pointer;
+        }
+        .sidebar-content {
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+            padding: 1rem;
+        }
+        .content-shell.is-collapsed .sidebar-content { display: none; }
+        .content-shell.is-collapsed .sidebar-toolbar { padding-bottom: 1rem; justify-content: center; }
+        .content-shell.is-collapsed .sidebar-toggle { transform: rotate(180deg); }
+
+        .action-btn {
+            border: 1px solid #dbeafe;
+            background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+            color: #0f172a;
+            border-radius: 18px;
+            padding: 1rem;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        .action-btn[disabled] { opacity: .55; cursor: not-allowed; }
+
+        .portal-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 80; }
+        .portal-modal[hidden] { display: none !important; }
+        .portal-modal__backdrop { position: absolute; inset: 0; background: rgba(15,23,42,.62); }
+        .portal-modal__dialog {
+            position: relative; width: min(1100px, calc(100vw - 2rem)); max-height: 88vh; overflow: auto;
+            background: #fff; border-radius: 24px; box-shadow: 0 30px 80px rgba(15,23,42,.35); padding: 1.25rem;
+        }
+        .portal-modal__header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+        .portal-modal__header h3 { margin: 0; font-size: 1.35rem; }
+        .portal-modal__close { border: none; background: #f1f5f9; width: 42px; height: 42px; border-radius: 14px; font-size: 1.5rem; cursor: pointer; }
+        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+        .portal-grid--cards { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        .portal-content-card { border: 1px solid #e2e8f0; border-radius: 20px; padding: 1rem; background: #fff; }
+        .portal-content-card h4 { margin: 0 0 .45rem; }
+        .portal-content-card p { margin: 0; color: #475569; }
+        .portal-step-media { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: .85rem; }
+        .portal-step-media img, .portal-step-media video { width: 100%; border-radius: 16px; background: #0f172a; }
+        .portal-step-media [data-previewable] { cursor: zoom-in; }
+        .portal-spec-block { padding: 1rem; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .portal-spec-block pre { white-space: pre-wrap; word-break: break-word; margin: .5rem 0 0; font-family: inherit; font-size: .86rem; color: #334155; }
+        .portal-modal--media { z-index: 90; }
+        .portal-modal--media .portal-modal__dialog {
+            width: calc(100vw - 2rem);
+            max-width: none;
+            max-height: calc(100vh - 2rem);
+            padding: 1rem;
+        }
+        .portal-modal--media .portal-modal__header { margin-bottom: .75rem; }
+        .portal-media-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: min(78vh, 860px);
+            border-radius: 20px;
+            background: #020617;
+            overflow: hidden;
+        }
+        .portal-media-preview img,
+        .portal-media-preview video {
+            width: 100%;
+            max-height: calc(100vh - 10rem);
+            object-fit: contain;
+            background: #020617;
+        }
+
+        @media (max-width: 1200px) {
+            .hero, .content-shell, .content-shell.is-collapsed { grid-template-columns: 1fr; }
+            .hero__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .sidebar { position: static; }
+        }
+        @media (max-width: 768px) {
+            .hero__stats { grid-template-columns: 1fr 1fr; }
+            .viewer-head { flex-direction: column; }
+            .viewer-badges { justify-content: flex-start; }
+            .portal-step-media { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar__title">Portal de Processos - {{ company.name }}</div>
+        <div class="toolbar__actions">
+            <a class="btn" href="{{ url_for('processes.process_portal_page', company_id=company_id) }}">← Voltar aos Processos</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <section class="hero">
+            <div>
+                <span class="hero__eyebrow">Portal Publicado</span>
+                <h1 id="heroProcessName">Carregando processo...</h1>
+                <p>Fluxos, materiais operacionais e referências publicadas do processo em uma superfície dedicada do portal.</p>
+            </div>
+            <div class="hero__stats" id="heroStats">
+                <div class="hero-stat"><strong>-</strong><span>POP</span></div>
+                <div class="hero-stat"><strong>-</strong><span>Rotinas</span></div>
+                <div class="hero-stat"><strong>-</strong><span>Indicadores</span></div>
+                <div class="hero-stat"><strong>-</strong><span>SPEC IA</span></div>
+            </div>
+        </section>
+
+        <section class="content-shell" id="contentShell">
+            <main class="card viewer-card">
+                <div class="viewer-head">
+                    <div>
+                        <span class="viewer-label">Fluxo Publicado</span>
+                        <div class="viewer-title" id="processTitle">Carregando...</div>
+                        <div class="viewer-subline" id="processSubline">
+                            <span>Carregando estágio e desempenho...</span>
+                        </div>
+                    </div>
+                    <div class="viewer-badges" id="processBadges"></div>
+                </div>
+
+                <div class="flow-viewer" id="flowViewer">
+                    <div class="portal-empty">Carregando fluxo publicado...</div>
+                </div>
+            </main>
+
+            <aside class="sidebar">
+                <div class="card sidebar-card">
+                    <div class="sidebar-toolbar">
+                        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-expanded="true">◂</button>
+                    </div>
+                    <div class="sidebar-content" id="actionButtons">
+                        <button class="action-btn">▶️ Iniciar instância</button>
+                        <button class="action-btn" disabled>📋 POP Publicado</button>
+                        <button class="action-btn" disabled>🎬 Vídeos</button>
+                        <button class="action-btn" disabled>📅 Rotinas</button>
+                        <button class="action-btn" disabled>📈 Indicadores</button>
+                        <button class="action-btn" disabled>🤖 SPEC para IA</button>
+                        <button class="action-btn" disabled>📘 Book do Processo</button>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </div>
+
+    <div class="portal-modal" id="processPortalModal" hidden>
+        <div class="portal-modal__backdrop" data-close-modal="1"></div>
+        <div class="portal-modal__dialog">
+            <div class="portal-modal__header">
+                <div>
+                    <span class="viewer-label" id="portalModalEyebrow">Detalhe</span>
+                    <h3 id="portalModalTitle">Conteúdo</h3>
+                </div>
+                <button class="portal-modal__close" data-close-modal="1">&times;</button>
+            </div>
+            <div class="portal-modal__content" id="portalModalContent"></div>
+        </div>
+    </div>
+
+    <div class="portal-modal portal-modal--media" id="portalMediaModal" hidden>
+        <div class="portal-modal__backdrop" data-close-media-modal="1"></div>
+        <div class="portal-modal__dialog">
+            <div class="portal-modal__header">
+                <div>
+                    <span class="viewer-label">Visualização ampliada</span>
+                    <h3 id="portalMediaModalTitle">Mídia</h3>
+                </div>
+                <button class="portal-modal__close" data-close-media-modal="1">&times;</button>
+            </div>
+            <div class="portal-media-preview" id="portalMediaModalContent"></div>
+        </div>
+    </div>
+
+    <script>
+    (() => {
+        const companyId = {{ company_id|tojson }};
+        const processId = {{ process_id|tojson }};
+        const detailUrl = {{ url_for('processes.api_process_portal_process_detail', company_id=company_id, process_id=process_id)|tojson }};
+        const loginUrl = {{ url_for('auth.login', next=request.path)|tojson }};
+
+        const heroProcessName = document.getElementById('heroProcessName');
+        const heroStats = document.getElementById('heroStats');
+        const processTitle = document.getElementById('processTitle');
+        const processSubline = document.getElementById('processSubline');
+        const processBadges = document.getElementById('processBadges');
+        const flowViewer = document.getElementById('flowViewer');
+        const actionButtons = document.getElementById('actionButtons');
+        const contentShell = document.getElementById('contentShell');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const modal = document.getElementById('processPortalModal');
+        const modalTitle = document.getElementById('portalModalTitle');
+        const modalEyebrow = document.getElementById('portalModalEyebrow');
+        const modalContent = document.getElementById('portalModalContent');
+        const mediaModal = document.getElementById('portalMediaModal');
+        const mediaModalTitle = document.getElementById('portalMediaModalTitle');
+        const mediaModalContent = document.getElementById('portalMediaModalContent');
+        const storageKey = `gv_portal_process_sidebar_${companyId}_${processId}`;
+
+        const state = { current: null, sidebarCollapsed: false };
+
+        function esc(value) {
+            return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+        }
+
+        function cardValue(value) {
+            return Number(value || 0) > 0 ? String(value) : '-';
+        }
+
+        function isAuthenticationFailure(res, payload, rawText) {
+            const message = String(payload?.error || payload?.message || '').trim().toLowerCase();
+            if (res.status === 401) return true;
+            if (message.includes('authentication required')) return true;
+            if (message.includes('autentica')) return true;
+            if (res.redirected && /\/login(?:[/?#]|$)/i.test(res.url || '')) return true;
+            if ((rawText || '').includes('<form') && (rawText || '').toLowerCase().includes('entrar no sistema')) return true;
+            return false;
+        }
+
+        function renderAuthRequired() {
+            const html = `
+                <div class="portal-empty" style="flex-direction:column; gap:.85rem; min-height:280px;">
+                    <strong>Sessão expirada ou não autenticada.</strong>
+                    <a class="btn" href="${esc(loginUrl)}">Entrar novamente</a>
+                </div>
+            `;
+            flowViewer.innerHTML = html;
+            heroProcessName.textContent = 'Sessão necessária';
+            processTitle.textContent = 'Sessão necessária';
+            processSubline.innerHTML = '<span>Entre novamente para visualizar o processo.</span>';
+            processBadges.innerHTML = '';
+            actionButtons.innerHTML = '';
+        }
+
+        async function fetchPortalJson(url) {
+            const res = await fetch(url, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+            let payload = null;
+            let rawText = '';
+            if (contentType.includes('application/json')) payload = await res.json().catch(() => null);
+            else rawText = await res.text().catch(() => '');
+
+            if (isAuthenticationFailure(res, payload, rawText)) {
+                renderAuthRequired();
+                return { ok: false, authFailed: true, payload };
+            }
+            return { ok: res.ok && !!payload?.ok, authFailed: false, payload };
+        }
+
+        function setSidebarCollapsed(collapsed) {
+            state.sidebarCollapsed = !!collapsed;
+            contentShell.classList.toggle('is-collapsed', state.sidebarCollapsed);
+            sidebarToggle.setAttribute('aria-expanded', String(!state.sidebarCollapsed));
+            sidebarToggle.textContent = state.sidebarCollapsed ? '▸' : '◂';
+            try { localStorage.setItem(storageKey, state.sidebarCollapsed ? '1' : '0'); } catch (_) {}
+        }
+
+        function restoreSidebarState() {
+            try { setSidebarCollapsed(localStorage.getItem(storageKey) === '1'); }
+            catch (_) { setSidebarCollapsed(false); }
+        }
+
+        function renderFlow(flowData) {
+            if (flowData?.bpmn_flow?.svg_snapshot) {
+                flowViewer.innerHTML = `<div>${flowData.bpmn_flow.svg_snapshot}</div>`;
+                return;
+            }
+            const docUrl = flowData?.flow_document_url;
+            const ext = (flowData?.flow_document_extension || '').toLowerCase();
+            if (docUrl && ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg'].includes(ext)) {
+                flowViewer.innerHTML = `<img src="${esc(docUrl)}" alt="Fluxo publicado">`;
+                return;
+            }
+            if (docUrl && ext === 'pdf') {
+                flowViewer.innerHTML = `<iframe src="${esc(docUrl)}"></iframe>`;
+                return;
+            }
+            flowViewer.innerHTML = '<div class="portal-empty">Este processo ainda não possui um fluxo publicado visualizável.</div>';
+        }
+
+        function renderStats(data) {
+            const stats = data?.stats || {};
+            heroStats.innerHTML = `
+                <div class="hero-stat"><strong>${cardValue(stats.pop_count)}</strong><span>POP</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.routine_count)}</strong><span>Rotinas</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.indicator_count)}</strong><span>Indicadores</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.spec_count)}</strong><span>SPEC IA</span></div>
+            `;
+        }
+
+        function renderHeader(data) {
+            const composed = data.code ? `${data.code} · ${data.name}` : data.name;
+            heroProcessName.textContent = data.name || 'Processo';
+            processTitle.textContent = composed;
+            processSubline.innerHTML = `
+                <span>${esc(data.stage?.label || 'Fora de escopo')}</span>
+                <span> - </span>
+                <span>${esc(data.performance?.label || 'Desempenho')}</span>
+            `;
+            processBadges.innerHTML = `
+                <span class="chip" style="background:${esc(data.stage?.color || '#e2e8f0')}22;color:${esc(data.stage?.color || '#64748b')};border-color:${esc(data.stage?.color || '#64748b')}33;">${esc(data.stage?.label || 'Fora de escopo')}</span>
+                <span class="chip" style="background:${esc(data.performance?.color || '#e2e8f0')}16;color:${esc(data.performance?.color || '#64748b')};border-color:${esc(data.performance?.color || '#64748b')}22;">${esc(data.performance?.label || 'Não informado')}</span>
+            `;
+        }
+
+        function renderActions(data) {
+            const hasPop = (data.pop_activities || []).length > 0;
+            const hasVideos = (data.videos || []).length > 0;
+            const hasRoutines = (data.routines || []).length > 0;
+            const hasIndicators = (data.indicators || []).length > 0;
+            const hasSpecs = (data.ai_specs?.contracts || []).length > 0 || !!data.ai_specs?.flow_copilot_analysis;
+            actionButtons.innerHTML = `
+                <button class="action-btn" data-action="start-instance">▶️ Iniciar instância</button>
+                <button class="action-btn" ${hasPop ? '' : 'disabled'} data-action="pop">📋 POP Publicado</button>
+                <button class="action-btn" ${hasVideos ? '' : 'disabled'} data-action="videos">🎬 Vídeos</button>
+                <button class="action-btn" ${hasRoutines ? '' : 'disabled'} data-action="routines">📅 Rotinas</button>
+                <button class="action-btn" ${hasIndicators ? '' : 'disabled'} data-action="indicators">📈 Indicadores</button>
+                <button class="action-btn" ${hasSpecs ? '' : 'disabled'} data-action="specs">🤖 SPEC para IA</button>
+                <button class="action-btn" data-action="book">📘 Book do Processo</button>
+            `;
+            actionButtons.querySelectorAll('[data-action]').forEach(button => {
+                button.addEventListener('click', () => openAction(button.dataset.action));
+            });
+        }
+
+        async function startInstance() {
+            if (!state.current) return;
+            const processLabel = state.current.code ? `${state.current.code} · ${state.current.name}` : (state.current.name || 'processo');
+            if (!confirm(`Confirmar início da execução: ${processLabel}?`)) return;
+
+            try {
+                const res = await fetch(`/api/companies/${companyId}/process-instances`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        process_id: processId,
+                        title: processLabel,
+                        status: 'in_progress',
+                        company_id: companyId,
+                        due_date: new Date().toISOString().split('T')[0],
+                        trigger_type: 'manual'
+                    })
+                });
+
+                if (res.ok) {
+                    window.location.href = `/companies/${companyId}/process-instances`;
+                    return;
+                }
+
+                const err = await res.json().catch(() => ({}));
+                alert('Erro ao iniciar instância: ' + (err.error || err.message || 'erro desconhecido'));
+            } catch (error) {
+                console.error(error);
+                alert('Erro de conexão ao iniciar a instância.');
+            }
+        }
+
+        function renderPopActivities(items) {
+            if (!items.length) return '<div class="portal-empty" style="min-height:180px;">Nenhuma atividade POP publicada.</div>';
+            return `<div class="portal-grid">${items.map(activity => `
+                <article class="portal-content-card">
+                    <h4>${esc(activity.code ? `${activity.code} · ${activity.name}` : activity.name)}</h4>
+                    <p>${esc(activity.description || 'Sem descrição complementar.')}</p>
+                    <div class="portal-grid" style="margin-top:1rem;">
+                        ${(activity.entries || []).map((entry, idx) => `
+                            <div class="portal-spec-block">
+                                <strong>${idx + 1}. ${esc(entry.name || 'Passo')}</strong>
+                                <pre>${esc(entry.text_content || 'Sem detalhamento publicado para este passo.')}</pre>
+                                ${(entry.image_url || entry.video_url) ? `
+                                    <div class="portal-step-media">
+                                        ${entry.image_url ? `<img src="${esc(entry.image_url)}" alt="${esc(entry.name || 'Passo')}" data-previewable="1" data-preview-type="image" data-preview-src="${esc(entry.image_url)}" data-preview-title="${esc(entry.name || 'Imagem do passo')}">` : '<div></div>'}
+                                        ${entry.video_url ? `<video src="${esc(entry.video_url)}" controls preload="metadata" data-previewable="1" data-preview-type="video" data-preview-src="${esc(entry.video_url)}" data-preview-title="${esc(entry.name || 'Vídeo do passo')}"></video>` : '<div></div>'}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </article>
+            `).join('')}</div>`;
+        }
+
+        function renderVideos(items) {
+            if (!items.length) return '<div class="portal-empty" style="min-height:180px;">Nenhum vídeo publicado neste processo.</div>';
+            return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+                <article class="portal-content-card">
+                    <h4>${esc(item.activity_name || 'Atividade')}</h4>
+                    <p>${esc(item.step_name || 'Passo publicado')}</p>
+                    <div class="portal-step-media" style="grid-template-columns:1fr;">
+                        <video src="${esc(item.video_url)}" controls preload="metadata" data-previewable="1" data-preview-type="video" data-preview-src="${esc(item.video_url)}" data-preview-title="${esc(item.step_name || item.activity_name || 'Vídeo do processo')}"></video>
+                    </div>
+                    ${item.video_narration ? `<pre>${esc(item.video_narration)}</pre>` : ''}
+                </article>
+            `).join('')}</div>`;
+        }
+
+        function renderRoutines(items) {
+            if (!items.length) return '<div class="portal-empty" style="min-height:180px;">Nenhuma rotina vinculada.</div>';
+            return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+                <article class="portal-content-card">
+                    <h4>${esc(item.code ? `${item.code} · ${item.name}` : item.name)}</h4>
+                    <p>${esc(item.schedule_summary || item.schedule_label || 'Sem frequência definida')}</p>
+                    <p style="margin-top:.6rem;"><strong>Prazo:</strong> ${esc(String((item.deadline_days || 0)))} dia(s) / ${esc(String((item.deadline_hours || 0)))} hora(s)</p>
+                    ${item.deadline_date ? `<p style="margin-top:.45rem;"><strong>Data limite:</strong> ${esc(item.deadline_date)}</p>` : ''}
+                    <p style="margin-top:.45rem;"><strong>Equipe:</strong> ${esc((item.collaborators || []).map(c => c.employee_name).join(', ') || 'Sem equipe vinculada')}</p>
+                </article>
+            `).join('')}</div>`;
+        }
+
+        function renderIndicators(items) {
+            if (!items.length) return '<div class="portal-empty" style="min-height:180px;">Nenhum indicador publicado para este processo.</div>';
+            return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+                <article class="portal-content-card">
+                    <h4>${esc(item.name || 'Indicador')}</h4>
+                    <p>${esc(item.group_name || 'Sem grupo')} · ${esc(item.unit || 'sem unidade')}</p>
+                    <p style="margin-top:.6rem;"><strong>Atual:</strong> ${esc(item.current_value || '—')}</p>
+                    <p><strong>Meta:</strong> ${esc(item.goal_value || '—')}</p>
+                </article>
+            `).join('')}</div>`;
+        }
+
+        function renderSpecs(specs) {
+            const contracts = specs.contracts || [];
+            const blocks = [];
+            if (contracts.length) {
+                blocks.push(`<div class="portal-grid">${contracts.map(item => `
+                    <article class="portal-content-card">
+                        <h4>${esc(item.bpmn_element_id || 'Atividade BPMN')}</h4>
+                        <p><strong>Modo:</strong> ${esc(item.execution_mode || 'manual')}</p>
+                        <p><strong>Interação:</strong> ${esc(item.interaction_mode || '—')}</p>
+                        <pre>${esc(item.spec_summary?.instruction || JSON.stringify(item.spec_summary || {}, null, 2))}</pre>
+                    </article>
+                `).join('')}</div>`);
+            }
+            if (specs.flow_copilot_analysis) {
+                blocks.push(`<div class="portal-spec-block"><strong>Copiloto de Fluxo</strong><pre>${esc(JSON.stringify(specs.flow_copilot_analysis, null, 2))}</pre></div>`);
+            }
+            return blocks.join('') || '<div class="portal-empty" style="min-height:180px;">Nenhuma SPEC para IA publicada.</div>';
+        }
+
+        function showModal(titleText, eyebrowText, html) {
+            modalTitle.textContent = titleText;
+            modalEyebrow.textContent = eyebrowText;
+            modalContent.innerHTML = html;
+            modal.hidden = false;
+        }
+
+        function showMediaModal(type, src, titleText) {
+            if (!src) return;
+            mediaModalTitle.textContent = titleText || (type === 'video' ? 'Vídeo' : 'Imagem');
+            mediaModalContent.innerHTML = type === 'video'
+                ? `<video src="${esc(src)}" controls autoplay playsinline></video>`
+                : `<img src="${esc(src)}" alt="${esc(titleText || 'Imagem ampliada')}">`;
+            mediaModal.hidden = false;
+        }
+
+        function closeMediaModal() {
+            const activeVideo = mediaModalContent.querySelector('video');
+            if (activeVideo) {
+                activeVideo.pause();
+                activeVideo.currentTime = 0;
+            }
+            mediaModalContent.innerHTML = '';
+            mediaModal.hidden = true;
+        }
+
+        function openAction(action) {
+            if (!state.current) return;
+            const data = state.current;
+            if (action === 'start-instance') { startInstance(); return; }
+            if (action === 'pop') showModal('POP Publicado', 'Atividades e passos operacionais', renderPopActivities(data.pop_activities || []));
+            if (action === 'videos') showModal('Vídeos do Processo', 'Clipes operacionais publicados', renderVideos(data.videos || []));
+            if (action === 'routines') showModal('Rotinas do Processo', 'Agenda operacional vinculada', renderRoutines(data.routines || []));
+            if (action === 'indicators') showModal('Indicadores do Processo', 'Medição e acompanhamento', renderIndicators(data.indicators || []));
+            if (action === 'specs') showModal('SPEC para IA', 'Contratos e leitura do copiloto de fluxo', renderSpecs(data.ai_specs || {}));
+            if (action === 'book') window.open(data.flow?.book_url, '_blank', 'noopener');
+        }
+
+        async function init() {
+            restoreSidebarState();
+            const result = await fetchPortalJson(detailUrl);
+            if (result.authFailed) return;
+            if (!result.ok) {
+                flowViewer.innerHTML = `<div class="portal-empty">${esc(result.payload?.error || 'Não foi possível carregar o processo.')}</div>`;
+                return;
+            }
+            state.current = result.payload.data;
+            renderStats(state.current);
+            renderHeader(state.current);
+            renderFlow(state.current.flow);
+            renderActions(state.current);
+        }
+
+        sidebarToggle.addEventListener('click', () => setSidebarCollapsed(!state.sidebarCollapsed));
+        modal.addEventListener('click', (event) => {
+            if (event.target.closest('[data-close-modal="1"]')) modal.hidden = true;
+        });
+        modalContent.addEventListener('click', (event) => {
+            const previewEl = event.target.closest('[data-previewable="1"]');
+            if (!previewEl) return;
+            showMediaModal(
+                previewEl.dataset.previewType,
+                previewEl.dataset.previewSrc,
+                previewEl.dataset.previewTitle
+            );
+        });
+        mediaModal.addEventListener('click', (event) => {
+            if (event.target.closest('[data-close-media-modal="1"]')) closeMediaModal();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            if (!mediaModal.hidden) {
+                closeMediaModal();
+                return;
+            }
+            if (!modal.hidden) modal.hidden = true;
+        });
+
+        init().catch(() => {
+            flowViewer.innerHTML = '<div class="portal-empty">Falha ao inicializar o detalhe do processo.</div>';
+        });
+    })();
+    </script>
+</body>
+</html>

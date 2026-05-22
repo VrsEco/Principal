@@ -100,3 +100,37 @@ def test_indicator_list_resource_filters_process_by_direct_or_source_link(monkey
     assert 'indicators.process_id' in condition_repr
     assert 'indicators.source_module' in condition_repr
     assert 'indicators.source_id' in condition_repr
+
+
+def test_indicator_form_template_supports_query_prefill_for_process_context():
+    template_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__),
+        '..',
+        'templates',
+        'modules',
+        'indicators',
+        'indicator_form_v2.html',
+    ))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'function applyQueryContextDefaults()' in content
+    assert "const processId = params.get('process_id');" in content
+    assert "const resolvedModule = sourceModule || (processId ? 'processo' : (projectId ? 'projeto' : ''));" in content
+    assert "labelEl.textContent = 'Processo Vinculado';" in content
+
+
+def test_process_details_template_links_new_indicator_to_current_process():
+    template_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__),
+        '..',
+        'templates',
+        'modules',
+        'processes',
+        'process_details_v2.html',
+    ))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert "url_for('indicators.indicator_new') }}?source_module=processo&source_id={{ process.id }}" in content
+    assert 'Novo indicador deste processo' in content

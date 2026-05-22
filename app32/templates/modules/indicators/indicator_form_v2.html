@@ -238,7 +238,7 @@
     <div class="section-body">
         <div class="form-grid-2">
             <div>
-                <label class="field-label">Fonte / Módulo *</label>
+                <label class="field-label">Origem / Contexto principal *</label>
                 <select class="field-select" id="source_module" name="source_module" required onchange="updateSourceUI(this.value)">
                     <option value="manual">Entrada Manual</option>
                     <option value="system_score">Pontuação do Sistema (Efficiency Score)</option>
@@ -249,11 +249,11 @@
                 </select>
             </div>
             <div id="sourceObjectFilter" style="display:none;">
-                <label class="field-label">Objeto Específico</label>
+                <label class="field-label" id="sourceObjectLabel">Objeto Vinculado</label>
                 <select class="field-select" id="source_id_select" name="source_id">
                     <option value="">Todos (geral)</option>
                 </select>
-                <p class="field-hint">Vazio = aplica para todos os registros do módulo.</p>
+                <p class="field-hint" id="sourceObjectHint">Selecione o processo, projeto ou planejamento que este indicador representa.</p>
             </div>
         </div>
     </div>
@@ -428,7 +428,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (indicatorId) {
         await loadIndicatorData(indicatorId);
+        return;
     }
+
+    applyQueryContextDefaults();
 });
 
 function populateTreeSelect() {
@@ -463,6 +466,8 @@ function populateEmployeeSelect() {
 function updateSourceUI(val, initialId = null) {
     const filterDiv = document.getElementById('sourceObjectFilter');
     const sel = document.getElementById('source_id_select');
+    const labelEl = document.getElementById('sourceObjectLabel');
+    const hintEl = document.getElementById('sourceObjectHint');
     sel.innerHTML = '<option value="">Todos (geral)</option>';
 
     if (val === 'manual' || val === 'system_score') {
@@ -476,12 +481,18 @@ function updateSourceUI(val, initialId = null) {
     let labelFn = item => item.name;
 
     if (val === 'projeto') {
+        if (labelEl) labelEl.textContent = 'Projeto Vinculado';
+        if (hintEl) hintEl.textContent = 'Escolha o projeto ao qual este indicador deve ficar associado.';
         items = PROJECTS_DATA;
         labelFn = item => `[${item.code || item.id}] ${item.name}`;
     } else if (val === 'processo') {
+        if (labelEl) labelEl.textContent = 'Processo Vinculado';
+        if (hintEl) hintEl.textContent = 'Escolha o processo ao qual este indicador deve ficar associado.';
         items = PROCESSES_DATA;
         labelFn = item => `[${item.code || item.id}] ${item.name}`;
     } else if (val === 'okr') {
+        if (labelEl) labelEl.textContent = 'Planejamento / OKR Vinculado';
+        if (hintEl) hintEl.textContent = 'Escolha o planejamento/OKR ao qual este indicador deve ficar associado.';
         items = OKRS_DATA;
         labelFn = item => item.name;
     } else if (val === 'ocorrencia') {
@@ -527,6 +538,25 @@ function updateScopeUI(val, initialId = null) {
     }
 }
 
+function applyQueryContextDefaults() {
+    const params = new URLSearchParams(window.location.search);
+    const sourceModule = params.get('source_module');
+    const sourceId = params.get('source_id');
+    const processId = params.get('process_id');
+    const projectId = params.get('project_id');
+
+    const resolvedModule = sourceModule || (processId ? 'processo' : (projectId ? 'projeto' : ''));
+    const resolvedId = sourceId || processId || projectId;
+
+    if (!resolvedModule) return;
+
+    const sourceModuleField = document.getElementById('source_module');
+    if (sourceModuleField) {
+        sourceModuleField.value = resolvedModule;
+    }
+    updateSourceUI(resolvedModule, resolvedId);
+}
+
 // ──────────────────────────────────────────
 // Load indicator data for EDIT mode
 // ──────────────────────────────────────────
@@ -558,7 +588,8 @@ async function loadIndicatorData(id) {
         }
 
         // Source module dynamic UI
-        updateSourceUI(data.source_module, data.source_id);
+        const sourceContextId = data.source_id || data.process_id || data.project_id || null;
+        updateSourceUI(data.source_module, sourceContextId);
 
         // Scope dynamic UI
         updateScopeUI(data.source_scope, data.source_id);

@@ -54,8 +54,10 @@ from services.process_bpmn_service import (
 from services.process_pop_media_service import (
     POP_VIDEO_MAX_DURATION_SECONDS,
     coerce_video_duration_seconds,
+    save_pop_video,
     validate_step_video_upload,
 )
+from utils.indicator_filters import build_indicator_process_filter
 from services.process_bpmn_pop_binding_service import (
     open_or_create_pop_activity_for_bpmn,
     serialize_pop_binding,
@@ -90,6 +92,48 @@ from services.work_journey_sync import sync_process_instance_item
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 PROCESS_SOURCE_MODULES = ("processo", "process")
+
+
+def _format_schedule_trigger_value(schedule_type: str | None, schedule_value: str | None, start_time: str | None = None) -> str:
+    normalized_type = str(schedule_type or "").strip().lower()
+    raw_value = str(schedule_value or "").strip()
+    raw_start_time = str(start_time or "").strip()
+
+    if normalized_type == "daily":
+        return raw_start_time or raw_value or "--"
+
+    if normalized_type == "weekly":
+        return raw_value or raw_start_time or "--"
+
+    if normalized_type == "monthly":
+        try:
+            day = int(raw_value)
+            return f"Dia {day}"
+        except (TypeError, ValueError):
+            return raw_value or "--"
+
+    if normalized_type == "quarterly":
+        try:
+            month_in_quarter_raw, day_raw = raw_value.split("-", 1)
+            month_in_quarter = int(month_in_quarter_raw)
+            day = int(day_raw)
+            return f"Mês {month_in_quarter} do tri · Dia {day}"
+        except (AttributeError, TypeError, ValueError):
+            return raw_value or "--"
+
+    if normalized_type == "yearly":
+        try:
+            day_raw, month_raw = raw_value.split("/", 1)
+            day = int(day_raw)
+            month = int(month_raw)
+            return f"{day:02d}/{month:02d}"
+        except (AttributeError, TypeError, ValueError):
+            return raw_value or "--"
+
+    if normalized_type == "specific":
+        return raw_value or "--"
+
+    return raw_value or raw_start_time or "--"
 
 
 def _normalize_macro_owner_from_employee(data: dict, company_id: int | None, *, required: bool = False) -> str | None:
@@ -150,15 +194,7 @@ def _build_linked_process_indicator_query(company_id: int, process_id: int):
     return (
         Indicator.query
         .filter_by(company_id=company_id)
-        .filter(
-            or_(
-                Indicator.process_id == process_id,
-                and_(
-                    Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
-                    Indicator.source_id == process_id,
-                ),
-            )
-        )
+        .filter(build_indicator_process_filter(process_id))
     )
 
 
@@ -2209,7 +2245,7 @@ class ProcessStepListResource(Resource):
                         duration_seconds=video_duration_seconds,
                         content_length=request.content_length,
                     )
-                    step.video_path = save_file(video_file, subfolder='pop/video')
+                    step.video_path = save_pop_video(video_file, subfolder='pop/video')
                 
                 db.session.add(step)
                 db.session.commit()
@@ -2281,7 +2317,7 @@ class ProcessStepResource(Resource):
                     )
                     if step.video_path:
                         delete_file(step.video_path)
-                    step.video_path = save_file(video_file, subfolder='pop/video')
+                    step.video_path = save_pop_video(video_file, subfolder='pop/video')
                 
                 db.session.commit()
                 return process_step_schema.dump(step), 200
@@ -2296,6 +2332,21 @@ class ProcessStepResource(Resource):
         except ValueError as err:
             db.session.rollback()
             return {"error": str(err)}, 400
+        except Exception as e:
+            db.session.rollback()
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'delete')
+    def delete(self, step_id):
+        step = ProcessStep.query.get_or_404(step_id)
+        try:
+            if step.image_path:
+                delete_file(step.image_path)
+            if step.video_path:
+                delete_file(step.video_path)
+            db.session.delete(step)
+            db.session.commit()
+            return {"message": "Step deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -2332,21 +2383,6 @@ class ProcessStepAIDraftResource(Resource):
         except Exception:
             db.session.rollback()
             current_app.logger.exception("Erro ao gerar rascunho IA do passo POP step_id=%s", step_id)
-            return {"error": PUBLIC_ERROR_MESSAGE}, 500
-
-    @permission_required('processes', 'delete')
-    def delete(self, step_id):
-        step = ProcessStep.query.get_or_404(step_id)
-        try:
-            if step.image_path:
-                delete_file(step.image_path)
-            if step.video_path:
-                delete_file(step.video_path)
-            db.session.delete(step)
-            db.session.commit()
-            return {"message": "Step deleted successfully"}, 200
-        except Exception as e:
-            db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 class ProcessScheduleListResource(Resource):
@@ -2426,6 +2462,11 @@ class ProcessScheduleListResource(Resource):
                         elif isinstance(v, Decimal):
                             r[k] = float(v)
 
+                    r['trigger_value'] = _format_schedule_trigger_value(
+                        r.get('schedule_type'),
+                        r.get('schedule_value'),
+                        r.get('start_time'),
+                    )
                     r['team'] = collaborators_by_routine.get(r['id'], [])
 
             return routines, 200

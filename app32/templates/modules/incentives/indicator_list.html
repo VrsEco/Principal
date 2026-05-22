@@ -207,6 +207,18 @@
                                         <strong>Módulo:</strong> {{ ind.source_module }}
                                     </div>
                                     <div class="ind-meta-item">
+                                        <strong>Vínculo:</strong>
+                                        {% if ind.source_module == 'processo' %}
+                                            {{ (ind.process.code ~ ' - ' if ind.process and ind.process.code else '') ~ (ind.process.name if ind.process else ('Processo #' ~ (ind.process_id or ind.source_id or 'N/D'))) }}
+                                        {% elif ind.source_module == 'projeto' %}
+                                            {{ 'Projeto #' ~ (ind.project_id or ind.source_id or 'N/D') }}
+                                        {% elif ind.source_module == 'okr' %}
+                                            {{ 'Planejamento / OKR' }}
+                                        {% else %}
+                                            Geral
+                                        {% endif %}
+                                    </div>
+                                    <div class="ind-meta-item">
                                         <strong>Resp:</strong> {{ ind.responsible.name if ind.responsible else 'Nenhum' }}
                                     </div>
                                     <div class="ind-meta-item">

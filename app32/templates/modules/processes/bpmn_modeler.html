@@ -34,6 +34,7 @@
   class="bpmn-modeler-shell"
   data-process-id="{{ process.id }}"
   data-company-id="{{ company_id }}"
+  data-company-name="{{ company.name if company else '' }}"
   data-process-name="{{ process.name }}"
   data-process-code="{{ process.code or '' }}"
 >

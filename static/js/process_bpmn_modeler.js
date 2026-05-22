@@ -3,6 +3,7 @@
   if (!root) return;
 
   const processId = root.dataset.processId;
+  const companyName = root.dataset.companyName || 'Empresa';
   const processName = root.dataset.processName || 'Processo';
   const processCode = root.dataset.processCode || '';
   const statusEl = document.getElementById('bpmnSaveStatus');
@@ -170,6 +171,7 @@
       await importXml(currentDiagram.bpmn_xml);
       installAiInspector();
       updateMeta();
+      synchronizeParticipantMetadataBand();
       setStatus('Pronto para modelar', 'Use a paleta BPMN no canvas.');
     } catch (err) {
       console.error('[APP32 BPMN] init error', err);
@@ -185,13 +187,15 @@
     const status = currentDiagram.status || 'unsaved';
     const updated = currentDiagram.updated_at ? new Date(currentDiagram.updated_at).toLocaleString('pt-BR') : 'não salvo';
     if (metaEl) metaEl.textContent = `Versão ${version} · ${status} · ${updated}`;
+    synchronizeParticipantMetadataBand();
   }
 
   async function saveDiagram(status) {
     if (!modeler) return;
     setStatus(status === 'published' ? 'Publicando...' : 'Salvando...');
     try {
-      const codeResult = normalizeActivityCodes({ silent: true });
+      const codeResult = normalizeActivityCodes({ silent: true, statusOverride: status });
+      synchronizeParticipantMetadataBand({ statusOverride: status });
       const [{ xml }, { svg }] = await Promise.all([
         modeler.saveXML({ format: true }),
         modeler.saveSVG()
@@ -402,6 +406,7 @@
 
   async function exportSvg() {
     if (!modeler) return;
+    synchronizeParticipantMetadataBand();
     const { svg } = await modeler.saveSVG();
     downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');
   }
@@ -440,6 +445,7 @@
         version: currentDiagram ? currentDiagram.version : 0,
         bpmn_xml: xml
       };
+      synchronizeParticipantMetadataBand();
       setStatus('BPMN importado', 'Revise o fluxo e salve o rascunho no APP32.');
     } catch (err) {
       console.error('[APP32 BPMN] import error', err);
@@ -1326,10 +1332,11 @@
     }
 
     if (!assignments.length) {
+      synchronizeParticipantMetadataBand({ statusOverride: opts.statusOverride });
       if (!opts.silent) {
         setStatus(
           'Atividades já codificadas',
-          `Todas as atividades já seguem o padrão ${processCode}.NN e já exibem o código no rótulo.`
+          `Todas as atividades já seguem o padrão ${processCode}.NN e a faixa vertical do participante foi atualizada.`
         );
       }
       return { changed: 0 };
@@ -1343,13 +1350,63 @@
       });
     }
 
+    synchronizeParticipantMetadataBand({ statusOverride: opts.statusOverride });
     if (!opts.silent) {
       setStatus(
         'Atividades codificadas',
-        `${assignments.length} atividade(s) convertida(s) para o padrão ${processCode}.NN.`
+        `${assignments.length} atividade(s) convertida(s) para o padrão ${processCode}.NN. A faixa vertical do participante foi sincronizada no formato padrão.`
       );
     }
     return { changed: assignments.length };
+  }
+
+  function synchronizeParticipantMetadataBand(options) {
+    if (!modeler) return { changed: 0, skipped: 'modeler_not_ready' };
+    const participant = getPrimaryParticipant();
+    if (!participant) return { changed: 0, skipped: 'participant_not_found' };
+
+    const modeling = modeler.get('modeling');
+    const nextName = buildParticipantMetadataLabel(options);
+    const currentName = String(participant.businessObject?.name || '').trim();
+    if (currentName === nextName) return { changed: 0 };
+
+    modeling.updateProperties(participant, { name: nextName });
+    return { changed: 1, participantId: participant.id };
+  }
+
+  function buildParticipantMetadataLabel(options) {
+    const opts = options || {};
+    const version = String(resolveDisplayVersion(opts.statusOverride)).padStart(2, '0');
+    const dateLabel = buildParticipantDateLabel(opts.statusOverride);
+    return `${String(companyName || 'Empresa').toUpperCase()} | ${processCode || 'Sem código'} - ${String(processName || 'Processo sem nome').toUpperCase()} | V${version}${dateLabel ? ` - ${dateLabel}` : ''}`;
+  }
+
+  function resolveDisplayVersion(statusOverride) {
+    const currentVersion = Number((currentDiagram && currentDiagram.version) || 0);
+    if (currentVersion > 0) return currentVersion;
+    if (statusOverride === 'published' || statusOverride === 'draft') return 1;
+    return 0;
+  }
+
+  function buildParticipantDateLabel(statusOverride) {
+    const effectiveStatus = statusOverride || (currentDiagram && currentDiagram.status) || 'unsaved';
+    const publishedAt = currentDiagram && currentDiagram.published_at;
+    if (publishedAt) return new Date(publishedAt).toLocaleDateString('pt-BR');
+    if (effectiveStatus === 'published') return new Date().toLocaleDateString('pt-BR');
+    return '';
+  }
+
+  function getPrimaryParticipant() {
+    if (!modeler) return null;
+    const registry = modeler.get('elementRegistry');
+    const participants = registry.filter((element) => element?.businessObject?.$type === 'bpmn:Participant');
+    if (!participants.length) return null;
+    return participants.sort((left, right) => {
+      const leftArea = (Number(left.width) || 0) * (Number(left.height) || 0);
+      const rightArea = (Number(right.width) || 0) * (Number(right.height) || 0);
+      if (leftArea !== rightArea) return rightArea - leftArea;
+      return compareElementsByCanvasPosition(left, right);
+    })[0];
   }
 
   function getSemanticActivityCode(element) {
@@ -1542,8 +1599,16 @@
     if (withoutExactCode !== cleanValue) return withoutExactCode;
 
     if (!processCode) return cleanValue;
-    const genericCodePrefix = new RegExp(`^${escapeRegExp(processCode)}\\.\\d{2}\\s*[-–—:]\\s*`);
-    return cleanValue.replace(genericCodePrefix, '').trim();
+    const currentProcessCodePrefix = new RegExp(`^${escapeRegExp(processCode)}(?:\\.[A-Z0-9]+)+\\s*[-–—:]\\s*`, 'i');
+    const withoutCurrentProcessCode = cleanValue.replace(currentProcessCodePrefix, '').trim();
+    if (withoutCurrentProcessCode !== cleanValue) return withoutCurrentProcessCode;
+
+    const hierarchicalCodePrefix = /^[A-Z0-9]+(?:\.[A-Z0-9]+)+\s*[-–—:]\s*/i;
+    const withoutHierarchicalCode = cleanValue.replace(hierarchicalCodePrefix, '').trim();
+    if (withoutHierarchicalCode !== cleanValue) return withoutHierarchicalCode;
+
+    const simpleNumericCodePrefix = new RegExp(`^${escapeRegExp(processCode)}\\.\\d{2}\\s*[-–—:]\\s*`, 'i');
+    return cleanValue.replace(simpleNumericCodePrefix, '').trim();
   }
 
   function defaultActivityNameFromCode(code) {

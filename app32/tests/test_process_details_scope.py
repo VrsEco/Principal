@@ -168,6 +168,7 @@ def test_bpmn_modeler_template_cache_busts_served_assets():
 
     assert "filename='css/process_bpmn_modeler.css', v=asset_version" in content
     assert "filename='js/process_bpmn_modeler.js', v=asset_version" in content
+    assert 'data-company-name="{{ company.name if company else \'\' }}"' in content
 
 
 def test_bpmn_modeler_keeps_saved_layout_on_import():
@@ -181,6 +182,12 @@ def test_bpmn_modeler_keeps_saved_layout_on_import():
     assert 'fontSize: 16.5,' in content
     assert 'svg_snapshot: svg,' in content
     assert "downloadText(`${safeFileName(processName)}.svg`, svg, 'image/svg+xml');" in content
+    assert 'function synchronizeParticipantMetadataBand(options)' in content
+    assert 'function buildParticipantMetadataLabel(options)' in content
+    assert 'function buildParticipantDateLabel(statusOverride)' in content
+    assert 'function getPrimaryParticipant()' in content
+    assert "const companyName = root.dataset.companyName || 'Empresa';" in content
+    assert 'A faixa vertical do participante foi sincronizada no formato padrão.' in content
     assert "eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);" in content
     assert "eventBus.on('commandStack.shape.replace.postExecute', preserveContextShapeOnReplace);" in content
     assert 'preserveOperationalActivityShapeSize(oldShape, newShape)' in content
@@ -247,6 +254,8 @@ def test_process_details_template_supports_pop_step_video_workflow():
     assert 'uploadStepVideo(' in content
     assert 'captureCurrentVideoFrame(' in content
     assert 'readVideoMetadata(file)' in content
+    assert 'Enviando vídeo sem validação local da duração...' in content
+    assert 'Não foi possível ler metadados do vídeo no navegador. Prosseguindo com o envio.' in content
     assert 'removeStepVideo(' in content
     assert 'generateStepDescriptionDraft(' in content
     assert 'Narração / contexto do operador' in content
@@ -294,6 +303,33 @@ def test_serialize_flow_snapshot_includes_bpmn_xml_for_ssr_payload():
     assert payload is not None
     assert payload['bpmn_xml'] == '<bpmn:definitions id="Defs_1"></bpmn:definitions>'
     assert payload['svg_snapshot'] == '<svg><rect width="10" height="10"/></svg>'
+
+
+def test_sync_bpmn_participant_metadata_updates_primary_participant_name():
+    from datetime import datetime
+    from services.process_bpmn_service import sync_bpmn_participant_metadata
+
+    bpmn_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_1" processRef="Process_1" name="Pool legado" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" isExecutable="false" />
+</bpmn:definitions>"""
+
+    synced = sync_bpmn_participant_metadata(
+        bpmn_xml,
+        company_name='Gas Evolution',
+        process_code='AB.C.3.1.1',
+        process_name='GERIR CONTRATAÇÕES',
+        version=1,
+        published_at=datetime(2026, 4, 20, 10, 0, 0),
+        status='published',
+    )
+
+    assert synced is not None
+    assert 'Pool legado' not in synced
+    assert 'GAS EVOLUTION | AB.C.3.1.1 - GERIR CONTRATAÇÕES | V01 - 20/04/2026' in synced
 
 
 def test_process_details_template_exposes_back_to_kanban_action():

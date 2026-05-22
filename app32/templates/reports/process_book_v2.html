@@ -429,11 +429,6 @@
       page: process-flow-landscape;
     }
 
-    .pop-section {
-      break-before: page;
-      page-break-before: always;
-    }
-
     .step-header {
       font-size: 10px;
       font-weight: 800;
@@ -592,23 +587,136 @@
         box-shadow: none;
         overflow: visible;
         background: transparent;
+        break-before: auto !important;
+        page-break-before: auto !important;
+        break-after: auto !important;
+        page-break-after: auto !important;
       }
       .page-inner {
         padding: 0;
         min-height: auto;
       }
       .first-page { min-height: auto; }
-      .flow-frame {
-        min-height: 235mm;
+      .panel {
+        padding: 12px 14px;
+        border-radius: 14px;
+      }
+      .detail-grid,
+      .stats-column,
+      .mini-list,
+      .step-list,
+      .routine-meta-grid,
+      .indicator-meta-grid {
+        gap: 6px;
+      }
+      .detail-card,
+      .mini-item,
+      .activity-card,
+      .routine-card,
+      .indicator-card,
+      .step-card {
+        padding: 8px 9px;
+        border-radius: 10px;
+      }
+      .activity-card,
+      .routine-card,
+      .indicator-card {
+        margin-bottom: 8px;
+      }
+      .section-page .section-header {
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+      }
+      .activity-name,
+      .routine-name,
+      .indicator-name {
+        font-size: 15px;
+      }
+      .activity-description,
+      .routine-description,
+      .indicator-description,
+      .step-text,
+      .collaborators-table th,
+      .collaborators-table td,
+      .indicators-table th,
+      .indicators-table td {
+        font-size: 10.5px;
+        line-height: 1.35;
       }
       .section-flow {
         page: process-flow-landscape;
+        width: calc(297mm - 16mm);
+        height: calc(210mm - 16mm);
+        max-height: calc(210mm - 16mm);
+        overflow: hidden;
+        break-before: auto !important;
+        page-break-before: auto !important;
+        break-after: auto !important;
+        page-break-after: auto !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .section-flow .page-inner {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
       }
       .section-flow .flow-panel {
-        min-height: calc(210mm - 16mm);
+        display: block;
+        height: 100%;
+        min-height: 0;
+        width: 100%;
+        padding: 0;
+        border-radius: 0;
+        border: 0;
       }
       .section-flow .flow-frame {
-        min-height: 154mm;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 2mm;
+        border-radius: 10px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .section-flow .section-header {
+        margin-bottom: 3mm !important;
+        padding-bottom: 0 !important;
+        border-bottom: 0 !important;
+        flex: 0 0 auto;
+      }
+      .section-flow .section-title-wrap h2 {
+        font-size: 16px;
+      }
+      .section-flow .section-title-wrap p {
+        margin-top: 1mm;
+        font-size: 9px;
+        line-height: 1.2;
+      }
+      .section-flow .bpmn-svg {
+        min-height: 0;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .section-flow .bpmn-svg svg {
+        width: auto;
+        height: auto !important;
+        min-height: 0;
+        max-width: 100%;
+        max-height: 100%;
+      }
+      .section-page {
+        break-before: page;
+        page-break-before: always;
+      }
+      .section-flow + .section-page {
+        break-before: auto;
+        page-break-before: auto;
       }
       .panel, .detail-card, .mini-item, .activity-card, .routine-card, .indicator-card, .step-card {
         box-shadow: none !important;
@@ -712,18 +820,6 @@
     <section class="page section-flow">
       <div class="page-inner">
         <div class="panel flow-panel">
-          <div class="section-header" style="border-bottom:0; padding-bottom:0; margin-bottom:10px;">
-            <div class="section-title-wrap">
-              <h2>Fluxo do processo</h2>
-              <p>
-                Fluxo em página exclusiva, em paisagem, para melhor leitura e impressão.
-                {% if first_page.bpmn_svg %}
-                  BPMN {{ first_page.bpmn_status }} · versão {{ first_page.bpmn_version }}.
-                {% endif %}
-              </p>
-            </div>
-          </div>
-
           <div class="flow-frame">
             {% if first_page.bpmn_svg %}
               <div class="bpmn-svg">

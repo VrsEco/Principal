@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Processos Versus</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --surface: #ffffff;
+            --surface-secondary: #f8fafc;
+            --border: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-tertiary: #94a3b8;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 8px 24px rgb(15 23 42 / 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Inter", "Segoe UI", sans-serif;
+            background: #f8fafc;
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.25rem;
+            background: rgba(255,255,255,.96);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .toolbar-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn, .btn:visited {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.95rem;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .btn:hover { background: var(--surface-secondary); }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .viewer-viewport {
+            padding: 1rem 1.25rem 1.5rem;
+            min-height: calc(100vh - 64px);
+        }
+
+        .map-shell {
+            max-width: 1700px;
+            margin: 0 auto;
+            background: transparent;
+        }
+
+        .page-head {
+            padding: 0 0 .75rem;
+            border-bottom: 0;
+            background: transparent;
+        }
+
+        .page-head h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .legend-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .legend-groups {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-group {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-title {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+        }
+
+        .legend-items {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .legend-sep {
+            width: 1px;
+            height: 14px;
+            background: #cbd5e1;
+        }
+
+        .indicator-stage {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .indicator-perf {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+
+        .mp2-view {
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+            padding: 0;
+            background: transparent;
+        }
+
+        .mp2-area-section {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--surface);
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+        }
+
+        .mp2-area-sidebar {
+            width: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 1rem 0;
+            flex-shrink: 0;
+        }
+
+        .mp2-area-name {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .mp2-macros-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        .mp2-macro-box {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            background: #dbe4f0;
+            display: flex;
+            flex-direction: column;
+            min-height: 120px;
+        }
+
+        .mp2-macro-title {
+            font-size: 0.75rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+            color: #0f3f8c;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.4rem;
+            text-transform: uppercase;
+        }
+
+        .mp2-macro-box .macro-footer {
+            font-size: 0.75rem;
+        }
+
+        .mp2-processes-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .mp2-process-card {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.5rem 0.55rem 0.5rem 0.85rem;
+            display: flex;
+            align-items: stretch;
+            gap: 0.6rem;
+            min-height: 58px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .mp2-process-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 7px;
+            border-radius: 6px 0 0 6px;
+        }
+
+        .mp2-process-card--enabled {
+            border-color: #60a5fa;
+            background: linear-gradient(180deg, #f8fbff 0%, #dbeafe 100%);
+            box-shadow: 0 1px 0 rgba(255,255,255,.95), 0 0 0 1px rgba(37,99,235,.14);
+            animation: none;
+        }
+
+        .mp2-process-card--enabled::before {
+            background: #2563eb;
+        }
+
+        .mp2-process-card:hover {
+            border-color: #2563eb;
+            background: linear-gradient(180deg, #eff6ff 0%, #bfdbfe 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(37,99,235,.18);
+        }
+
+        .mp2-process-card--disabled {
+            border-color: #cbd5e1;
+            background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+            opacity: 1;
+            transition: none;
+            transform: none;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .mp2-process-card--disabled::before {
+            background: #94a3b8;
+            width: 6px;
+        }
+
+        .mp2-process-badges {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            padding-right: 0.5rem;
+            border-right: 1px solid var(--border);
+        }
+
+        .mp2-process-name {
+            flex: 1;
+            font-size: 0.75rem;
+            font-weight: 700;
+            line-height: 1.3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-primary);
+        }
+
+        .mp2-process-card--enabled .mp2-process-name {
+            color: #1e3a8a;
+        }
+
+        .mp2-process-card--disabled .mp2-process-name {
+            color: #64748b;
+        }
+
+        .macro-footer {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #0f3f8c;
+            text-align: center;
+            padding-top: 0.55rem;
+            margin-top: auto;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-note {
+            padding: 0.9rem 1.25rem 1.1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            font-weight: 700;
+            background: #fff;
+        }
+
+        @media (max-width: 900px) {
+            .mp2-macros-grid { grid-template-columns: 1fr; }
+            .mp2-processes-list { grid-template-columns: 1fr; }
+            .toolbar { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .toolbar-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toolbar">
+        <div class="toolbar-title">Portal de Processos Versus</div>
+        <div class="toolbar-actions">
+            <a class="btn" href="{{ url_for('my_work.my_work') }}">← Voltar</a>
+        </div>
+    </div>
+
+    <div class="viewer-viewport">
+        <div class="map-shell">
+            <div class="page-head">
+                <h1>Mapa de Processos - {{ company_name }}</h1>
+
+                <div class="legend-row">
+                    <div class="legend-groups">
+                        <div class="legend-group">
+                            <span class="legend-title">Modelagem:</span>
+                            <div class="legend-items">
+                                <span class="indicator-stage" style="background:#cbd5e1;"></span> Fora
+                                <span class="indicator-stage" style="background:#93c5fd;"></span> Desenho
+                                <span class="indicator-stage" style="background:#3b82f6;"></span> Implantação
+                                <span class="indicator-stage" style="background:#a855f7;"></span> Estabilização
+                                <span class="indicator-stage" style="background:#6366f1;"></span> Estabilizado
+                            </div>
+                        </div>
+
+                        <div class="legend-sep"></div>
+
+                        <div class="legend-group">
+                            <span class="legend-title">Desempenho:</span>
+                            <div class="legend-items">
+                                <span class="indicator-perf" style="background:#ef4444;"></span> Crítico
+                                <span class="indicator-perf" style="background:#f59e0b;"></span> Abaixo
+                                <span class="indicator-perf" style="background:#10b981;"></span> Satisfatório
+                            </div>
+                        </div>
+
+                        <div class="legend-sep"></div>
+
+                        <div class="legend-group">
+                            <span class="legend-title">Incentivo:</span>
+                            <div class="legend-items">
+                                <span style="font-size:.9rem; line-height:1;">🏆</span> Plano de Incentivo Ativo
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="legend-title">Gerado em: {{ now }}</div>
+                </div>
+            </div>
+
+            <div class="mp2-view">
+                {% if not areas %}
+                <div style="padding:4rem; text-align:center; color:var(--text-tertiary); background:white; border-radius:16px;">
+                    Nenhum dado encontrado para o portal de processos.
+                </div>
+                {% else %}
+                {% for area in areas %}
+                <div class="mp2-area-section" style="border-color: {{ area.color or '#3b82f6' }};">
+                    <div class="mp2-area-sidebar" style="background: {{ area.color or '#3b82f6' }};">
+                        <div class="mp2-area-name">{{ area.display_name }}</div>
+                    </div>
+                    <div class="mp2-macros-grid">
+                        {% for macro in area.macros %}
+                        <div class="mp2-macro-box">
+                            <div class="mp2-macro-title">{{ macro.display_name }}</div>
+                            <div class="mp2-processes-list">
+                                {% if macro.processes %}
+                                    {% for p in macro.processes %}
+                                    {% if p.has_portal_assets %}
+                                    <a class="mp2-process-card mp2-process-card--enabled"
+                                       href="{{ url_for('processes.process_portal_process_page', company_id=company.id, process_id=p.id) }}">
+                                        <div class="mp2-process-badges">
+                                            <div class="indicator-stage" style="background: {{ p.stage_color }}; box-shadow: 0 0 0 4px {{ p.stage_color }}22;"></div>
+                                            <div class="indicator-perf" style="background: {{ p.perf_color }}; box-shadow: 0 0 0 3px {{ p.perf_color }}1f;"></div>
+                                        </div>
+                                        <div class="mp2-process-name">{{ p.display_name }}</div>
+                                    </a>
+                                    {% else %}
+                                    <div class="mp2-process-card mp2-process-card--disabled" aria-disabled="true">
+                                        <div class="mp2-process-badges">
+                                            <div class="indicator-stage" style="background: #cbd5e1;"></div>
+                                            <div class="indicator-perf" style="background: #e2e8f0;"></div>
+                                        </div>
+                                        <div class="mp2-process-name">{{ p.display_name }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="mp2-process-card" style="grid-column:1/-1; justify-content:center;">
+                                        <div class="mp2-process-name">Sem processos</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="macro-footer">Dono: {{ macro.owner or '-' }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="footer-note">
+                <span>Versus Gestão Corporativa - Todos os direitos reservados - www.gestaoversus.com.br</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

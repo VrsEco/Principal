@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
 
 from models import (
@@ -29,9 +29,10 @@ from services.process_book_service import (
 )
 from services.process_bpmn_service import sanitize_svg_snapshot, serialize_flow_snapshot
 from services.process_flow_copilot_service import build_process_flow_copilot_analysis
-
-
-PROCESS_SOURCE_MODULES = ("processo", "process")
+from utils.indicator_filters import (
+    PROCESS_SOURCE_MODULES,
+    indicator_supports_source_context,
+)
 
 KANBAN_STAGE_META = {
     "inbox": {"label": "Fora de escopo", "color": "#94a3b8"},
@@ -338,20 +339,21 @@ def _load_indicator_counts(*, company_id: int, process_ids: list[int]) -> dict[i
     if not process_ids:
         return {}
 
-    rows = (
-        db.session.query(
-            Indicator.source_id.label("process_id"),
-            func.count(Indicator.id).label("total"),
+    payload: dict[int, int] = {}
+    if indicator_supports_source_context():
+        rows = (
+            db.session.query(
+                Indicator.source_id.label("process_id"),
+                func.count(Indicator.id).label("total"),
+            )
+            .filter(Indicator.company_id == company_id)
+            .filter(Indicator.is_active.is_(True))
+            .filter(Indicator.source_module.in_(PROCESS_SOURCE_MODULES))
+            .filter(Indicator.source_id.in_(process_ids))
+            .group_by(Indicator.source_id)
+            .all()
         )
-        .filter(Indicator.company_id == company_id)
-        .filter(Indicator.is_active.is_(True))
-        .filter(Indicator.source_module.in_(PROCESS_SOURCE_MODULES))
-        .filter(Indicator.source_id.in_(process_ids))
-        .group_by(Indicator.source_id)
-        .all()
-    )
-
-    payload = _aggregate_counts([(row.process_id, row.total) for row in rows])
+        payload = _aggregate_counts([(row.process_id, row.total) for row in rows])
     direct_rows = (
         db.session.query(Indicator.process_id, func.count(Indicator.id))
         .filter(Indicator.company_id == company_id)

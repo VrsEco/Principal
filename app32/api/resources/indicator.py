@@ -2,7 +2,6 @@ from flask import request
 from flask_restful import Resource
 from marshmallow import ValidationError
 import logging
-from sqlalchemy import and_, or_
 logger = logging.getLogger(__name__)
 from models import db, IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
 from schemas.indicator import (
@@ -13,11 +12,15 @@ from schemas.indicator import (
 )
 
 from utils.permissions import permission_required
+from utils.indicator_filters import (
+    PROCESS_SOURCE_MODULES,
+    PROJECT_SOURCE_MODULES,
+    build_indicator_process_filter,
+    build_indicator_project_filter,
+)
 
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
-PROCESS_SOURCE_MODULES = ("processo", "process")
-PROJECT_SOURCE_MODULES = ("projeto", "project")
 
 def get_request_company_id():
     from flask import session
@@ -108,26 +111,10 @@ def _sync_indicator_context_links(data, current_indicator=None):
 
 def _apply_indicator_context_filters(query, process_id=None, project_id=None):
     if process_id is not None:
-        query = query.filter(
-            or_(
-                Indicator.process_id == process_id,
-                and_(
-                    Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
-                    Indicator.source_id == process_id,
-                ),
-            )
-        )
+        query = query.filter(build_indicator_process_filter(process_id))
 
     if project_id is not None:
-        query = query.filter(
-            or_(
-                Indicator.project_id == project_id,
-                and_(
-                    Indicator.source_module.in_(PROJECT_SOURCE_MODULES),
-                    Indicator.source_id == project_id,
-                ),
-            )
-        )
+        query = query.filter(build_indicator_project_filter(project_id))
 
     return query
 

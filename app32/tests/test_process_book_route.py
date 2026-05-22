@@ -96,3 +96,13 @@ def test_process_book_template_keeps_published_snapshot_without_runtime_bpmn_mut
     assert '{{ first_page.bpmn_svg|safe }}' in content
     assert 'function prepareBpmnBookFlow()' not in content
     assert 'const BOOK_BPMN_TASK_FONT_SCALE = 1.5;' not in content
+    assert '.pop-section {' not in content
+    assert '.section-flow .page-inner {' in content
+    assert 'break-after: auto !important;' in content
+    assert 'page-break-after: auto !important;' in content
+    assert 'height: calc(210mm - 16mm);' in content
+    assert 'display: block;' in content
+    assert 'max-height: 100%;' in content
+    assert '.section-flow + .section-page {' in content
+    assert '<h2>Fluxo do processo</h2>' not in content
+    assert 'Fluxo em página exclusiva, em paisagem, para melhor leitura e impressão.' not in content

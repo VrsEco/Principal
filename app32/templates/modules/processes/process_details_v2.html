@@ -169,6 +169,16 @@
                     <h2 class="text-h2">Indicadores do Processo</h2>
                     <p class="process-section__description">Acompanhe os indicadores vinculados a este processo em uma listagem compacta, no mesmo padrão visual das instâncias do APP32.</p>
                 </div>
+                <div class="process-section__actions">
+                    <a href="{{ url_for('indicators.indicator_new') }}?source_module=processo&source_id={{ process.id }}"
+                       class="btn btn-secondary btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Novo indicador deste processo
+                    </a>
+                </div>
             </div>
             <div class="process-section__body">
                 <div class="process-indicators-list" id="indicatorsGrid">
@@ -2463,15 +2473,25 @@
 
     async function uploadStepVideoFile(id, file, options = {}) {
         try {
-            const metadata = await readVideoMetadata(file);
-            if (metadata.durationSeconds > 120) {
+            let metadata = null;
+            try {
+                metadata = await readVideoMetadata(file);
+            } catch (metadataError) {
+                console.warn('Não foi possível ler metadados do vídeo no navegador. Prosseguindo com o envio.', metadataError);
+            }
+
+            if (metadata && metadata.durationSeconds > 120) {
                 throw new Error('O vídeo do POP deve ter no máximo 2 minutos.');
             }
 
             const formData = new FormData();
             formData.append('video', file);
-            formData.append('video_duration_seconds', String(metadata.durationSeconds));
-            updateStepVideoStatus(id, `Enviando vídeo (${formatVideoDuration(metadata.durationSeconds)})...`);
+            if (metadata && Number.isFinite(metadata.durationSeconds)) {
+                formData.append('video_duration_seconds', String(metadata.durationSeconds));
+                updateStepVideoStatus(id, `Enviando vídeo (${formatVideoDuration(metadata.durationSeconds)})...`);
+            } else {
+                updateStepVideoStatus(id, 'Enviando vídeo sem validação local da duração...');
+            }
 
             const res = await fetch(`/api/process-steps/${id}`, {
                 method: 'PUT',

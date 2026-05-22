@@ -1,0 +1,242 @@
+.role-modal-content {
+  max-width: 1240px !important;
+  width: min(1240px, calc(100vw - 3rem));
+  max-height: calc(100vh - 3rem);
+  overflow: auto;
+}
+
+.role-permissions-shell {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+}
+
+.role-permissions-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.role-permissions-toolbar__copy {
+  flex: 1 1 340px;
+}
+
+.role-permissions-toolbar__copy h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.role-permissions-toolbar__copy p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.role-permissions-toolbar__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.role-permissions-search {
+  min-width: 280px;
+}
+
+.role-permissions-preset {
+  min-width: 220px;
+}
+
+.role-permissions-summary {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.role-permissions-preset-editor {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.role-permissions-preset-editor__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.role-permissions-summary__card {
+  min-width: 170px;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-secondary);
+}
+
+.role-permissions-summary__card strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+.role-permissions-summary__card span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  margin-top: 0.25rem;
+}
+
+.role-permissions-table-shell {
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: white;
+}
+
+.role-permissions-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1160px;
+}
+
+.role-permissions-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-secondary);
+  z-index: 2;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.role-permissions-table th,
+.role-permissions-table td {
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.8rem 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.role-permissions-table th:first-child,
+.role-permissions-table td:first-child {
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 1;
+  text-align: left;
+  min-width: 380px;
+}
+
+.role-permissions-table thead th:first-child {
+  background: var(--surface-secondary);
+  z-index: 3;
+}
+
+.role-permission-row__name {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.role-permission-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  margin-top: 0.1rem;
+}
+
+.role-permission-toggle:hover {
+  background: var(--surface-secondary);
+}
+
+.role-permission-toggle[disabled] {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.role-permission-node__copy strong {
+  display: block;
+  font-size: 0.96rem;
+  color: var(--text-primary);
+}
+
+.role-permission-node__copy small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+.role-permission-node__meta {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+}
+
+.role-permission-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: rgba(31, 85, 213, 0.08);
+  color: var(--primary);
+}
+
+.role-permission-badge--inherit {
+  background: rgba(22, 163, 74, 0.1);
+  color: #166534;
+}
+
+.role-permission-badge--partial {
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+}
+
+.role-permission-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.role-permission-checkbox--inherited {
+  accent-color: #16a34a;
+}
+
+.role-permission-checkbox--partial {
+  accent-color: #d97706;
+}
+
+.role-permission-cell--disabled {
+  color: var(--text-tertiary);
+  opacity: 0.4;
+}
+
+.role-permission-cell--inherited {
+  background: rgba(22, 163, 74, 0.04);
+}
+
+.role-permission-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 980px) {
+  .role-permissions-preset-editor {
+    grid-template-columns: 1fr;
+  }
+}

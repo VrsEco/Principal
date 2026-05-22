@@ -564,7 +564,7 @@
       .sort((left, right) => String(left.planned_start_time || '').localeCompare(String(right.planned_start_time || '')) || String(left.display_title || '').localeCompare(String(right.display_title || '')));
 
     return `
-      <article class="agenda-block ${collapsed ? 'is-collapsed' : ''} agenda-block--${block.block_mode || 'operational'}" data-agenda-block="${blockId}" data-agenda-day="${day.date}">
+      <article class="agenda-block ${collapsed ? 'is-collapsed' : ''} agenda-block--${block.block_mode || 'operational'}" data-agenda-block="${blockId}" data-agenda-day="${day.date}" data-dropzone="block" data-block-id="${blockId}">
         <header class="agenda-block__header">
           <button
             type="button"
@@ -596,7 +596,7 @@
         <div class="agenda-block__progress">
           <span class="agenda-block__progress-fill ${overload > 0 ? 'is-overload' : ''}" style="width:${fill}%"></span>
         </div>
-        <div class="agenda-block__content ${collapsed ? 'is-hidden' : ''}" data-dropzone="block" data-agenda-day="${day.date}" data-block-id="${blockId}" aria-hidden="${collapsed ? 'true' : 'false'}">
+        <div class="agenda-block__content ${collapsed ? 'is-hidden' : ''}" aria-hidden="${collapsed ? 'true' : 'false'}">
           ${cards.length ? cards.map((item) => renderAgendaCard(item, { day: day.date, blockId }, locked, false, 'block')).join('') : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhum evento neste bloco.</div>'}
         </div>
       </article>

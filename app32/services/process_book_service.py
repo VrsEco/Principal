@@ -22,6 +22,7 @@ from models import (
     RoutineCollaborator,
 )
 from services.process_bpmn_service import sanitize_svg_snapshot
+from utils.indicator_filters import build_indicator_process_filter
 
 
 STRUCTURING_LABELS = {
@@ -48,7 +49,22 @@ SCHEDULE_LABELS = {
     "specific": "Data específica",
 }
 
-PROCESS_SOURCE_MODULES = ("processo", "process")
+WEEKDAY_LABELS = {
+    "monday": "Segunda",
+    "tuesday": "Terça",
+    "wednesday": "Quarta",
+    "thursday": "Quinta",
+    "friday": "Sexta",
+    "saturday": "Sábado",
+    "sunday": "Domingo",
+    "mon": "Seg",
+    "tue": "Ter",
+    "wed": "Qua",
+    "thu": "Qui",
+    "fri": "Sex",
+    "sat": "Sáb",
+    "sun": "Dom",
+}
 
 POP_IMAGE_WIDTH_DEFAULT = 280
 POP_IMAGE_WIDTH_MIN = 140
@@ -297,6 +313,9 @@ def _load_routines(*, process_id: int, company_id: int) -> list[dict[str, Any]]:
                 "schedule_type": routine.schedule_type,
                 "schedule_label": SCHEDULE_LABELS.get((routine.schedule_type or "").lower(), routine.schedule_type or "Não definido"),
                 "schedule_value": routine.schedule_value,
+                "start_time": routine.start_time,
+                "schedule_detail": _format_schedule_detail(routine.schedule_type, routine.schedule_value, routine.start_time),
+                "schedule_summary": _format_schedule_summary(routine.schedule_type, routine.schedule_value, routine.start_time),
                 "deadline_days": routine.deadline_days or 0,
                 "deadline_hours": routine.deadline_hours or 0,
                 "deadline_date": routine.deadline_date.strftime("%d/%m/%Y") if routine.deadline_date else None,
@@ -312,15 +331,7 @@ def _load_indicators(*, process_id: int, company_id: int) -> list[dict[str, Any]
     indicators = (
         Indicator.query.options(joinedload(Indicator.group))
         .filter(Indicator.company_id == company_id)
-        .filter(
-            or_(
-                Indicator.process_id == process_id,
-                and_(
-                    Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
-                    Indicator.source_id == process_id,
-                ),
-            )
-        )
+        .filter(build_indicator_process_filter(process_id))
         .order_by(Indicator.code.asc(), Indicator.id.asc())
         .all()
     )
@@ -378,6 +389,79 @@ def _resolve_asset_url(path: str | None, *, root_url: str) -> str | None:
     if normalized.startswith("uploads/") or normalized.startswith("static/"):
         return f"{root_url}/{normalized}" if root_url else f"/{normalized}"
     return f"{root_url}/uploads/{normalized}" if root_url else f"/uploads/{normalized}"
+
+
+def _format_schedule_summary(schedule_type: str | None, schedule_value: str | None, start_time: str | None = None) -> str:
+    label = SCHEDULE_LABELS.get((schedule_type or "").strip().lower(), schedule_type or "Não definido")
+    detail = _format_schedule_detail(schedule_type, schedule_value, start_time)
+    if not detail:
+        return label
+    return f"{label} · {detail}"
+
+
+def _format_schedule_detail(schedule_type: str | None, schedule_value: str | None, start_time: str | None = None) -> str | None:
+    normalized_type = str(schedule_type or "").strip().lower()
+    raw_value = str(schedule_value or "").strip()
+    raw_start_time = str(start_time or "").strip()
+    time_suffix = f" às {raw_start_time}" if raw_start_time else ""
+
+    if normalized_type == "daily":
+        return raw_start_time or None
+
+    if normalized_type == "weekly":
+        weekdays = ", ".join(_normalize_weekday_label(part) for part in raw_value.split(",") if str(part).strip())
+        return f"{weekdays}{time_suffix}" if weekdays else (raw_start_time or None)
+
+    if normalized_type == "monthly":
+        try:
+            day = int(raw_value)
+            return f"Dia {day}{time_suffix}"
+        except (TypeError, ValueError):
+            return f"{raw_value}{time_suffix}" if raw_value else (raw_start_time or None)
+
+    if normalized_type == "quarterly":
+        try:
+            month_in_quarter_raw, day_raw = raw_value.split("-", 1)
+            month_in_quarter = int(month_in_quarter_raw)
+            day = int(day_raw)
+            return f"Mês {month_in_quarter} do trimestre · Dia {day}{time_suffix}"
+        except (AttributeError, TypeError, ValueError):
+            return f"{raw_value}{time_suffix}" if raw_value else (raw_start_time or None)
+
+    if normalized_type == "yearly":
+        try:
+            day_raw, month_raw = raw_value.split("/", 1)
+            day = int(day_raw)
+            month = int(month_raw)
+            return f"{day:02d}/{month:02d}{time_suffix}"
+        except (AttributeError, TypeError, ValueError):
+            return f"{raw_value}{time_suffix}" if raw_value else (raw_start_time or None)
+
+    if normalized_type == "specific":
+        formatted_date = _format_specific_schedule_date(raw_value)
+        if formatted_date:
+            return f"{formatted_date}{time_suffix}"
+        return f"{raw_value}{time_suffix}" if raw_value else (raw_start_time or None)
+
+    return f"{raw_value}{time_suffix}" if raw_value else (raw_start_time or None)
+
+
+def _format_specific_schedule_date(raw_value: str) -> str | None:
+    if not raw_value:
+        return None
+    normalized = raw_value[:10]
+    try:
+        parsed = datetime.strptime(normalized, "%Y-%m-%d")
+    except ValueError:
+        return None
+    return parsed.strftime("%d/%m/%Y")
+
+
+def _normalize_weekday_label(value: str) -> str:
+    normalized = str(value or "").strip()
+    if not normalized:
+        return ""
+    return WEEKDAY_LABELS.get(normalized.lower(), normalized)
 
 
 def _extract_extension(path: str | None) -> str:

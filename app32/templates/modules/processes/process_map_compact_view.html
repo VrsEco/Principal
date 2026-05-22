@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa de Processos - {{ company_name }}</title>
+    <title>{{ page_title or 'Mapa de Processos' }} - {{ company_name }}</title>
     <style>
         :root {
             --primary: #3b82f6;
@@ -410,7 +410,7 @@
 <body>
     <div class="toolbar">
         <div class="toolbar-title">
-            <span>Mapa de Processos - {{ company_name }}</span>
+            <span>{{ toolbar_title or 'Mapa de Processos' }} - {{ company_name }}</span>
         </div>
 
         <div class="toolbar-actions">
@@ -428,9 +428,17 @@
                 <span>🖨️ Imprimir Mapa</span>
             </button>
 
+            {% if show_back_button %}
+            <a class="btn" href="{{ back_url or '/my-work' }}" title="{{ back_label or 'Voltar' }}">
+                <span>{{ back_label or '← Voltar' }}</span>
+            </a>
+            {% endif %}
+
+            {% if show_close_button is not defined or show_close_button %}
             <button class="btn" onclick="window.close()" title="Fechar Aba">
                 <span>✕ Fechar</span>
             </button>
+            {% endif %}
         </div>
     </div>
 
@@ -442,7 +450,7 @@
                 <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 0.4rem;">
                     <h1
                         style="font-size: 1.25rem; font-weight: 800; color: #1e293b; text-transform: uppercase; margin: 0; text-align: center;">
-                        Mapa de Processos - {{ company_name }}
+                        {{ heading_title or 'Mapa de Processos' }} - {{ subtitle_company_name or company_name }}
                     </h1>
                 </div>
 
@@ -499,6 +507,21 @@
                                         class="indicator-perf"
                                         style="background: #10b981; width: 8px; height: 8px; border: 0.5px solid rgba(0,0,0,0.1);"></span>
                                     Sat.</div>
+                            </div>
+                        </div>
+
+                        <div style="width: 1px; height: 12px; background: #cbd5e1;"></div>
+
+                        <!-- Incentivo -->
+                        <div style="display: flex; align-items: center; gap: 0.4rem;">
+                            <span
+                                style="font-size: 0.6rem; font-weight: 700; color: #475569; text-transform: uppercase;">Incentivo:</span>
+                            <div
+                                style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.65rem; font-weight: 600;">
+                                <div style="display: flex; align-items: center; gap: 0.15rem;">
+                                    <span style="font-size: 0.85rem; line-height: 1;">🏆</span>
+                                    Plano de Incentivo Ativo
+                                </div>
                             </div>
                         </div>
                     </div>

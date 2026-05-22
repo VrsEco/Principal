@@ -13,6 +13,9 @@ class _FakeCompanyQuery:
     def __init__(self, company_obj):
         self.company_obj = company_obj
 
+    def get(self, company_id):
+        return self.company_obj
+
     def get_or_404(self, company_id):
         return self.company_obj
 
@@ -39,9 +42,8 @@ def test_process_portal_page_syncs_active_company(monkeypatch):
         active_company_id = session['active_company_id']
 
     assert active_company_id == 22
-    assert response['template'] == 'modules/processes/process_portal.html'
+    assert response['template'] == 'modules/processes/process_portal_compact.html'
     assert response['context']['company'].id == 22
-    assert response['context']['current_employee_id'] == 91
 
 
 def test_process_portal_summary_route_uses_company_scope(monkeypatch):
@@ -86,6 +88,26 @@ def test_process_portal_detail_route_translates_access_error(monkeypatch):
     assert status == 403
     assert payload['ok'] is False
     assert payload['error'] == 'Sem vínculo'
+
+
+def test_process_portal_detail_route_translates_unexpected_error(monkeypatch):
+    app = _build_app()
+
+    monkeypatch.setattr(process_routes, '_get_current_company_employee', lambda company_id: SimpleNamespace(id=18))
+    monkeypatch.setattr(process_routes, 'has_company_full_access', lambda company_id: False)
+
+    def _raise_unexpected(*args, **kwargs):
+        raise NameError('and_ is not defined')
+
+    monkeypatch.setattr(process_routes, 'build_process_portal_process_detail', _raise_unexpected)
+
+    with app.test_request_context('/api/companies/9/process-portal/processes/22'):
+        response, status = process_routes.api_process_portal_process_detail.__wrapped__(9, 22)
+        payload = response.get_json()
+
+    assert status == 500
+    assert payload['ok'] is False
+    assert payload['error'] == process_routes.PUBLIC_ERROR_MESSAGE
 
 
 def test_process_portal_template_contains_visual_portal_sections():

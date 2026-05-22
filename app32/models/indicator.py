@@ -128,6 +128,7 @@ class Indicator(db.Model):
     tree_node = db.relationship('IndicatorTree', backref='indicators', lazy=True)
     group = db.relationship('IndicatorGroup', backref='indicators', lazy=True)
     process = db.relationship('Process', backref='indicators', lazy=True)
+    project = db.relationship('Project', backref='indicators', lazy=True)
     responsible = db.relationship("Employee", foreign_keys=[responsible_id], backref="indicators_managed")
     goals = db.relationship("IndicatorGoal", backref="indicator", lazy="dynamic", cascade="all, delete-orphan")
     routine = db.relationship("Routine", backref="indicators", lazy=True)

@@ -405,6 +405,30 @@ def create_app(config_name=None):
                             conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN impact_type VARCHAR(20) DEFAULT 'multiplier'"))
                         if "order_index" not in incentive_rule_columns:
                             conn.execute(text("ALTER TABLE incentive_rules ADD COLUMN order_index INTEGER DEFAULT 0"))
+                if "process_activity_execution_contracts" in table_names:
+                    process_contract_columns = {col["name"] for col in inspector.get_columns("process_activity_execution_contracts")}
+                    with db.engine.begin() as conn:
+                        if "ai_config_json" not in process_contract_columns:
+                            conn.execute(text("ALTER TABLE process_activity_execution_contracts ADD COLUMN ai_config_json JSONB"))
+                            print("DEBUG: process_activity_execution_contracts.ai_config_json column added successfully.")
+                if "user_logs" in table_names:
+                    user_log_columns = {col["name"] for col in inspector.get_columns("user_logs")}
+                    with db.engine.begin() as conn:
+                        if "plan_id" not in user_log_columns:
+                            conn.execute(text("ALTER TABLE user_logs ADD COLUMN plan_id TEXT"))
+                            print("DEBUG: user_logs.plan_id column added successfully.")
+                if "process_steps" in table_names:
+                    process_step_columns = {col["name"] for col in inspector.get_columns("process_steps")}
+                    with db.engine.begin() as conn:
+                        if "video_path" not in process_step_columns:
+                            conn.execute(text("ALTER TABLE process_steps ADD COLUMN video_path VARCHAR(255)"))
+                            print("DEBUG: process_steps.video_path column added successfully.")
+                        if "video_duration_seconds" not in process_step_columns:
+                            conn.execute(text("ALTER TABLE process_steps ADD COLUMN video_duration_seconds INTEGER"))
+                            print("DEBUG: process_steps.video_duration_seconds column added successfully.")
+                        if "video_narration" not in process_step_columns:
+                            conn.execute(text("ALTER TABLE process_steps ADD COLUMN video_narration TEXT"))
+                            print("DEBUG: process_steps.video_narration column added successfully.")
                 if {"users", "employees"}.issubset(table_names):
                     stats = _backfill_user_channel_contacts()
                     print(
