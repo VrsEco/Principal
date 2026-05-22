@@ -15,7 +15,9 @@ def test_build_prompt_includes_activation_and_fallback_pattern():
     )
 
     assert "ative o Sapiens" in content
-    assert "◆ SAPIENS · Gestão Versus ● ativo" in content
+    assert "Sapiens On" in content
+    assert "resolve_app32_sapiens_activation_tool" in content
+    assert "Quer ver instruções mais completas?" in content
     assert "Este cliente não suporta ativação automática do Sapiens." in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content
 

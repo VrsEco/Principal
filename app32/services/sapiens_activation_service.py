@@ -52,6 +52,92 @@ class SapiensActivationService:
     DEFAULT_SELECTION_PROMPT = "Com qual squad você vai trabalhar? Cliente / Consultor / Engenharia"
 
     @classmethod
+    def build_session_welcome_short(
+        cls,
+        *,
+        user_id: int | None,
+        role_label: str | None,
+        company_id: int | None,
+        company_label: str | None = None,
+    ) -> str:
+        role_text = role_label or "não definido"
+        company_text = company_label or (f"ID {company_id}" if company_id is not None else "não definida")
+        user_text = user_id if user_id is not None else "-"
+        return (
+            "Sessão Sapiens iniciada com sucesso!\n\n"
+            "Você está conectado ao sistema e eu posso te ajudar nestas áreas:\n\n"
+            "- Squad de Agentes\n"
+            "  Mostrar quem são eles, como eles funcionam e como eles podem te ajudar.\n\n"
+            "- Como usar a IA com o sistema\n"
+            "  Te mostrar como a IA, você e o Versus APP se relacionam para que possamos tirar o máximo proveito das capacidades de cada um desses atores.\n\n"
+            "- Gestão da Rotina\n"
+            "  Te ajudar com tarefas, agenda, prioridades e acompanhamento do dia a dia.\n\n"
+            "- Gestão Financeira\n"
+            "  Te apoiar em consultas, análises e controles financeiros disponíveis para o seu acesso.\n\n"
+            "- Gestão Estratégica\n"
+            "  Te ajudar a entender metas, indicadores, planos e projetos estratégicos.\n\n"
+            "- Gestão Comercial\n"
+            "  Te apoiar no acompanhamento, interpretação e ações comerciais para alcance das metas e objetivos.\n\n"
+            "- Sistema\n"
+            "  Te orientar sobre configurações, integrações, permissões e recursos técnicos.\n\n"
+            "- Meu Perfil\n"
+            "  Te mostrar informações do seu perfil, preferências e contexto de acesso.\n\n"
+            "- Usos Transversais\n"
+            "  Te orientar sobre como utilizar o sistema utilizando várias rotinas e cruzamento de dados ao mesmo tempo.\n\n"
+            "- Análises e Relatórios\n"
+            "  Te ajudar a consultar e interpretar relatórios, indicadores e resumos.\n\n"
+            f"Resumo do seu contexto atual:\n- Usuário: ID {user_text}\n- Perfil: {role_text}\n- Empresa: {company_text}\n\n"
+            "Quer ver instruções mais completas?"
+        )
+
+    @classmethod
+    def build_session_welcome_full(
+        cls,
+        *,
+        user_id: int | None,
+        role_label: str | None,
+        company_id: int | None,
+        company_label: str | None = None,
+    ) -> str:
+        role_text = role_label or "não definido"
+        company_text = company_label or (f"ID {company_id}" if company_id is not None else "não definida")
+        user_text = user_id if user_id is not None else "-"
+        return (
+            "Sessão Sapiens iniciada com sucesso!\n\n"
+            "Estou conectado ao seu ambiente e pronto para te ajudar a usar melhor o sistema, encontrar informações, explicar áreas do Versus APP e apoiar suas atividades dentro do que estiver disponível no seu acesso.\n\n"
+            "Áreas em que posso te ajudar:\n\n"
+            "- Squad de Agentes\n"
+            "  Mostrar quem são eles, como eles funcionam e como eles podem te ajudar.\n\n"
+            "- Como usar a IA com o sistema\n"
+            "  Te mostrar como a IA, você e o Versus APP se relacionam para que possamos tirar o máximo proveito das capacidades de cada um desses atores.\n\n"
+            "- Gestão da Rotina\n"
+            "  Te ajudar com tarefas, agenda, prioridades, acompanhamento e organização da execução do dia a dia.\n\n"
+            "- Gestão Financeira\n"
+            "  Te apoiar em consultas, leituras financeiras, análises e controles disponíveis conforme seu perfil de acesso.\n\n"
+            "- Gestão Estratégica\n"
+            "  Te ajudar a entender planos, metas, indicadores, direcionadores e projetos estratégicos.\n\n"
+            "- Gestão Comercial\n"
+            "  Te apoiar no acompanhamento, interpretação e ações comerciais para alcance das metas e objetivos.\n\n"
+            "- Sistema\n"
+            "  Te orientar sobre configurações, permissões, integrações, auditoria e funcionamento técnico das áreas administrativas do APP.\n\n"
+            "- Meu Perfil\n"
+            "  Te mostrar informações do seu perfil, preferências, contexto de acesso e dados disponíveis para você.\n\n"
+            "- Usos Transversais\n"
+            "  Te orientar sobre como utilizar o sistema utilizando várias rotinas e cruzamento de dados ao mesmo tempo.\n\n"
+            "- Análises e Relatórios\n"
+            "  Te ajudar a localizar, consultar e interpretar relatórios, resumos, indicadores e leituras analíticas.\n\n"
+            f"Seu contexto atual:\n- Usuário: ID {user_text}\n- Perfil: {role_text}\n- Empresa: {company_text}\n\n"
+            "Exemplos de pedidos que você pode fazer agora:\n"
+            "- Quero conhecer o Squad de Agentes.\n"
+            "- Me explique como a IA funciona junto com o Versus APP.\n"
+            "- Quais tarefas eu tenho hoje?\n"
+            "- Me mostre o que eu consigo fazer na Gestão Financeira.\n"
+            "- Quero entender a Gestão Estratégica.\n"
+            "- Quais análises e relatórios eu consigo consultar?\n"
+            "- Me explique meu perfil e meu contexto de acesso."
+        )
+
+    @classmethod
     def normalize_squad(cls, squad: str | None) -> str | None:
         normalized = str(squad or "").strip().lower()
         if not normalized:
@@ -136,6 +222,16 @@ class SapiensActivationService:
         startup_tools = list(
             MCPConnectionSnippetService.RUNTIME_PROFILES.get(selected["runtime_profile"], {}).get("startup_tools", [])
         )
+        activation_welcome_short = cls.build_session_welcome_short(
+            user_id=None,
+            role_label=role,
+            company_id=company_id,
+        )
+        activation_welcome_full = cls.build_session_welcome_full(
+            user_id=None,
+            role_label=role,
+            company_id=company_id,
+        )
         return {
             "selection_required": False,
             "available_squads": available,
@@ -145,6 +241,8 @@ class SapiensActivationService:
             "session_title": selected["activation_status"],
             "session_badge": selected["session_badge"],
             "activation_message": f"{selected['activation_status']}.",
+            "activation_welcome_short": activation_welcome_short,
+            "activation_welcome_full": activation_welcome_full,
             "startup_tools": startup_tools,
             "surface": runtime_spec.default_surface if runtime_spec else None,
             "harness_key": runtime_spec.default_harness_key if runtime_spec else None,

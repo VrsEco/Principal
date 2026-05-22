@@ -184,7 +184,8 @@ def test_ai_mcp_connection_snippet_api_returns_prompt(monkeypatch):
     payload = response.get_json()
     assert payload["success"] is True
     assert payload["mode"] == "ai_prompt"
-    assert "◆ SAPIENS · Gestão Versus ● ativo" in payload["content"]
+    assert "resolve_app32_sapiens_activation_tool" in payload["content"]
+    assert "Quer ver instruções mais completas?" in payload["content"]
     assert "Este cliente não suporta ativação automática do Sapiens." in payload["content"]
     assert '"auth_type": "bearer"' in payload["source_json"]
 

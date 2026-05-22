@@ -1097,34 +1097,11 @@ class UserMcpTokenService:
         resolved_company_id: int | None,
         company_label: str | None,
     ) -> str:
-        role_label = getattr(user, "role", None) or "não definido"
-        company_text = company_label or (str(resolved_company_id) if resolved_company_id is not None else "não definida")
-        user_id = getattr(user, "id", None) or "-"
-        return (
-            "Sessão Sapiens iniciada com sucesso!\n\n"
-            "Você está conectado ao sistema e eu posso te ajudar nestas áreas:\n\n"
-            "- Squad de Agentes\n"
-            "  Mostrar quem são eles, como eles funcionam e como eles podem te ajudar.\n\n"
-            "- Como usar a IA com o sistema\n"
-            "  Te mostrar como a IA, você e o Versus APP se relacionam para que possamos tirar o máximo proveito das capacidades de cada um desses atores.\n\n"
-            "- Gestão da Rotina\n"
-            "  Te ajudar com tarefas, agenda, prioridades e acompanhamento do dia a dia.\n\n"
-            "- Gestão Financeira\n"
-            "  Te apoiar em consultas, análises e controles financeiros disponíveis para o seu acesso.\n\n"
-            "- Gestão Estratégica\n"
-            "  Te ajudar a entender metas, indicadores, planos e projetos estratégicos.\n\n"
-            "- Gestão Comercial\n"
-            "  Te apoiar no acompanhamento, interpretação e ações comerciais para alcance das metas e objetivos.\n\n"
-            "- Sistema\n"
-            "  Te orientar sobre configurações, integrações, permissões e recursos técnicos.\n\n"
-            "- Meu Perfil\n"
-            "  Te mostrar informações do seu perfil, preferências e contexto de acesso.\n\n"
-            "- Usos Transversais\n"
-            "  Te orientar sobre como utilizar o sistema utilizando várias rotinas e cruzamento de dados ao mesmo tempo.\n\n"
-            "- Análises e Relatórios\n"
-            "  Te ajudar a consultar e interpretar relatórios, indicadores e resumos.\n\n"
-            f"Resumo do seu contexto atual:\n- Usuário: ID {user_id}\n- Perfil: {role_label}\n- Empresa: {company_text}\n\n"
-            "Quer ver instruções mais completas?"
+        return SapiensActivationService.build_session_welcome_short(
+            user_id=getattr(user, "id", None),
+            role_label=getattr(user, "role", None),
+            company_id=resolved_company_id,
+            company_label=company_label,
         )
 
     @classmethod
@@ -1135,42 +1112,11 @@ class UserMcpTokenService:
         resolved_company_id: int | None,
         company_label: str | None,
     ) -> str:
-        role_label = getattr(user, "role", None) or "não definido"
-        company_text = company_label or (str(resolved_company_id) if resolved_company_id is not None else "não definida")
-        user_id = getattr(user, "id", None) or "-"
-        return (
-            "Sessão Sapiens iniciada com sucesso!\n\n"
-            "Estou conectado ao seu ambiente e pronto para te ajudar a usar melhor o sistema, encontrar informações, explicar áreas do Versus APP e apoiar suas atividades dentro do que estiver disponível no seu acesso.\n\n"
-            "Áreas em que posso te ajudar:\n\n"
-            "- Squad de Agentes\n"
-            "  Mostrar quem são eles, como eles funcionam e como eles podem te ajudar.\n\n"
-            "- Como usar a IA com o sistema\n"
-            "  Te mostrar como a IA, você e o Versus APP se relacionam para que possamos tirar o máximo proveito das capacidades de cada um desses atores.\n\n"
-            "- Gestão da Rotina\n"
-            "  Te ajudar com tarefas, agenda, prioridades, acompanhamento e organização da execução do dia a dia.\n\n"
-            "- Gestão Financeira\n"
-            "  Te apoiar em consultas, leituras financeiras, análises e controles disponíveis conforme seu perfil de acesso.\n\n"
-            "- Gestão Estratégica\n"
-            "  Te ajudar a entender planos, metas, indicadores, direcionadores e projetos estratégicos.\n\n"
-            "- Gestão Comercial\n"
-            "  Te apoiar no acompanhamento, interpretação e ações comerciais para alcance das metas e objetivos.\n\n"
-            "- Sistema\n"
-            "  Te orientar sobre configurações, permissões, integrações, auditoria e funcionamento técnico das áreas administrativas do APP.\n\n"
-            "- Meu Perfil\n"
-            "  Te mostrar informações do seu perfil, preferências, contexto de acesso e dados disponíveis para você.\n\n"
-            "- Usos Transversais\n"
-            "  Te orientar sobre como utilizar o sistema utilizando várias rotinas e cruzamento de dados ao mesmo tempo.\n\n"
-            "- Análises e Relatórios\n"
-            "  Te ajudar a localizar, consultar e interpretar relatórios, resumos, indicadores e leituras analíticas.\n\n"
-            f"Seu contexto atual:\n- Usuário: ID {user_id}\n- Perfil: {role_label}\n- Empresa: {company_text}\n\n"
-            "Exemplos de pedidos que você pode fazer agora:\n"
-            "- Quero conhecer o Squad de Agentes.\n"
-            "- Me explique como a IA funciona junto com o Versus APP.\n"
-            "- Quais tarefas eu tenho hoje?\n"
-            "- Me mostre o que eu consigo fazer na Gestão Financeira.\n"
-            "- Quero entender a Gestão Estratégica.\n"
-            "- Quais análises e relatórios eu consigo consultar?\n"
-            "- Me explique meu perfil e meu contexto de acesso."
+        return SapiensActivationService.build_session_welcome_full(
+            user_id=getattr(user, "id", None),
+            role_label=getattr(user, "role", None),
+            company_id=resolved_company_id,
+            company_label=company_label,
         )
 
     @classmethod

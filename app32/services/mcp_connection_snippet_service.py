@@ -22,8 +22,7 @@ class MCPConnectionSnippetService:
             "startup_tools": [
                 "bootstrap_session_context",
                 "describe_app32_available_sapiens_squads_tool",
-                "list_user_app32_capabilities",
-                "describe_app32_surface_playbooks_tool",
+                "resolve_app32_sapiens_activation_tool",
             ],
             "routing_note": "Se você pedir para registrar, abrir card, encaminhar ao squad ou anotar uma melhoria, eu devo usar a tool request_engineering_suggestion.",
         },
@@ -108,6 +107,7 @@ class MCPConnectionSnippetService:
         experience_label = profile["experience_label"]
         canonical_label = profile["canonical_label"]
         cli_command = profile["cli_command"]
+        is_generic_sapiens = normalized["profile"] == "sapiens_default"
 
         lines = [
             f"Quero que você {profile['activation_subject']}",
@@ -137,18 +137,15 @@ class MCPConnectionSnippetService:
                 f"4. Se este cliente permitir alias textual, configure também o comando simples `{cli_command}`.",
                 "5. Explique que a entrada começa pelo agente coordenador do squad e pode rotear internamente para especialistas conforme a necessidade.",
                 "5.1. Se o profile for `squad_cliente`, explique também que a família inicial oficial é composta por Coordenador, Comercial, Operacional e Adm/Financeiro, com economia de tokens por padrão.",
-                f"6. Assim que a conexão MCP estiver ativa, execute primeiro as tools de startup: {startup_tools}.",
-                "6.1. Use `resolve_app32_instruction_bundle_tool` para carregar o bundle mínimo, versionado e cacheável da sessão.",
-                "6.2. Use `describe_app32_squad_runtime_tool` como contrato operacional curto do squad antes de agir.",
-                "6.3. Antes de operar, trate profile contracts, surface/domain playbooks, release checklist, tool freeze e onboarding externo como discovery obrigatório.",
-                f"7. Ao ativar, use esta mensagem inicial do {experience_label}:",
-                "",
-                "◆ SAPIENS · Gestão Versus ● ativo",
-                "",
-                f"Olá! Sou o {experience_label}, assistente virtual da Versus.",
-                "Estamos conectados ao Sistema de Gestão Versus — pode começar.",
-                "",
-                "Se você encontrar algum bug, tiver uma observação ou sugestão, me avise que eu registro um card formal para o Squad de Engenharia.",
+                f"6. Assim que a conexão MCP estiver ativa, siga o fluxo oficial usando: {startup_tools}.",
+                "6.1. Se o profile for `sapiens_default`, rode `bootstrap_session_context`, depois `describe_app32_available_sapiens_squads_tool`, pergunte o squad quando houver mais de um disponível e então rode `resolve_app32_sapiens_activation_tool`.",
+                "6.2. Depois de `resolve_app32_sapiens_activation_tool`, execute integralmente a `startup_tools` retornada pelo payload resolvido, sem depender de ToolSearch manual.",
+                "6.3. Se o payload resolvido trouxer `activation_welcome_short`, use essa mensagem como resposta inicial da sessão.",
+                "6.4. Termine essa primeira resposta com a pergunta exata `Quer ver instruções mais completas?` e, se o usuário responder positivamente, mostre `activation_welcome_full`.",
+                "6.5. Em reconexão ou restauração de sessão, repita o mesmo fluxo oficial e reapresente `activation_welcome_short` em vez de um resumo técnico genérico.",
+                "6.6. Use `resolve_app32_instruction_bundle_tool` para carregar o bundle mínimo, versionado e cacheável da sessão.",
+                "6.7. Use `describe_app32_squad_runtime_tool` como contrato operacional curto do squad antes de agir.",
+                "6.8. Antes de operar, trate profile contracts, surface/domain playbooks, release checklist, tool freeze e onboarding externo como discovery obrigatório.",
                 profile["routing_note"],
                 "",
                 "8. Se este cliente não suportar configuração automática, atalho, agente ou integração MCP nativa, responda exatamente assim:",
@@ -166,6 +163,11 @@ class MCPConnectionSnippetService:
                 "5. Se não suportar, mostrar a resposta padrão",
             ]
         )
+        if is_generic_sapiens:
+            lines.insert(
+                lines.index("Sua tarefa:") + 1,
+                "Observação: nesta entrada genérica o comando oficial deve reconhecer `Sapiens On`, `sapiens on` e `/sapiens-on` como equivalentes.",
+            )
         return "\n".join(lines)
 
     @classmethod
