@@ -1090,6 +1090,90 @@ class UserMcpTokenService:
         )
 
     @classmethod
+    def _build_sapiens_session_welcome_short(
+        cls,
+        *,
+        user: User,
+        resolved_company_id: int | None,
+        company_label: str | None,
+    ) -> str:
+        role_label = getattr(user, "role", None) or "não definido"
+        company_text = company_label or (str(resolved_company_id) if resolved_company_id is not None else "não definida")
+        user_id = getattr(user, "id", None) or "-"
+        return (
+            "Sessão Sapiens iniciada com sucesso!\n\n"
+            "Você está conectado ao sistema e eu posso te ajudar nestas áreas:\n\n"
+            "- Squad de Agentes\n"
+            "  Mostrar quem são eles, como eles funcionam e como eles podem te ajudar.\n\n"
+            "- Como usar a IA com o sistema\n"
+            "  Te mostrar como a IA, você e o Versus APP se relacionam para que possamos tirar o máximo proveito das capacidades de cada um desses atores.\n\n"
+            "- Gestão da Rotina\n"
+            "  Te ajudar com tarefas, agenda, prioridades e acompanhamento do dia a dia.\n\n"
+            "- Gestão Financeira\n"
+            "  Te apoiar em consultas, análises e controles financeiros disponíveis para o seu acesso.\n\n"
+            "- Gestão Estratégica\n"
+            "  Te ajudar a entender metas, indicadores, planos e projetos estratégicos.\n\n"
+            "- Gestão Comercial\n"
+            "  Te apoiar no acompanhamento, interpretação e ações comerciais para alcance das metas e objetivos.\n\n"
+            "- Sistema\n"
+            "  Te orientar sobre configurações, integrações, permissões e recursos técnicos.\n\n"
+            "- Meu Perfil\n"
+            "  Te mostrar informações do seu perfil, preferências e contexto de acesso.\n\n"
+            "- Usos Transversais\n"
+            "  Te orientar sobre como utilizar o sistema utilizando várias rotinas e cruzamento de dados ao mesmo tempo.\n\n"
+            "- Análises e Relatórios\n"
+            "  Te ajudar a consultar e interpretar relatórios, indicadores e resumos.\n\n"
+            f"Resumo do seu contexto atual:\n- Usuário: ID {user_id}\n- Perfil: {role_label}\n- Empresa: {company_text}\n\n"
+            "Quer ver instruções mais completas?"
+        )
+
+    @classmethod
+    def _build_sapiens_session_welcome_full(
+        cls,
+        *,
+        user: User,
+        resolved_company_id: int | None,
+        company_label: str | None,
+    ) -> str:
+        role_label = getattr(user, "role", None) or "não definido"
+        company_text = company_label or (str(resolved_company_id) if resolved_company_id is not None else "não definida")
+        user_id = getattr(user, "id", None) or "-"
+        return (
+            "Sessão Sapiens iniciada com sucesso!\n\n"
+            "Estou conectado ao seu ambiente e pronto para te ajudar a usar melhor o sistema, encontrar informações, explicar áreas do Versus APP e apoiar suas atividades dentro do que estiver disponível no seu acesso.\n\n"
+            "Áreas em que posso te ajudar:\n\n"
+            "- Squad de Agentes\n"
+            "  Mostrar quem são eles, como eles funcionam e como eles podem te ajudar.\n\n"
+            "- Como usar a IA com o sistema\n"
+            "  Te mostrar como a IA, você e o Versus APP se relacionam para que possamos tirar o máximo proveito das capacidades de cada um desses atores.\n\n"
+            "- Gestão da Rotina\n"
+            "  Te ajudar com tarefas, agenda, prioridades, acompanhamento e organização da execução do dia a dia.\n\n"
+            "- Gestão Financeira\n"
+            "  Te apoiar em consultas, leituras financeiras, análises e controles disponíveis conforme seu perfil de acesso.\n\n"
+            "- Gestão Estratégica\n"
+            "  Te ajudar a entender planos, metas, indicadores, direcionadores e projetos estratégicos.\n\n"
+            "- Gestão Comercial\n"
+            "  Te apoiar no acompanhamento, interpretação e ações comerciais para alcance das metas e objetivos.\n\n"
+            "- Sistema\n"
+            "  Te orientar sobre configurações, permissões, integrações, auditoria e funcionamento técnico das áreas administrativas do APP.\n\n"
+            "- Meu Perfil\n"
+            "  Te mostrar informações do seu perfil, preferências, contexto de acesso e dados disponíveis para você.\n\n"
+            "- Usos Transversais\n"
+            "  Te orientar sobre como utilizar o sistema utilizando várias rotinas e cruzamento de dados ao mesmo tempo.\n\n"
+            "- Análises e Relatórios\n"
+            "  Te ajudar a localizar, consultar e interpretar relatórios, resumos, indicadores e leituras analíticas.\n\n"
+            f"Seu contexto atual:\n- Usuário: ID {user_id}\n- Perfil: {role_label}\n- Empresa: {company_text}\n\n"
+            "Exemplos de pedidos que você pode fazer agora:\n"
+            "- Quero conhecer o Squad de Agentes.\n"
+            "- Me explique como a IA funciona junto com o Versus APP.\n"
+            "- Quais tarefas eu tenho hoje?\n"
+            "- Me mostre o que eu consigo fazer na Gestão Financeira.\n"
+            "- Quero entender a Gestão Estratégica.\n"
+            "- Quais análises e relatórios eu consigo consultar?\n"
+            "- Me explique meu perfil e meu contexto de acesso."
+        )
+
+    @classmethod
     def list_accessible_companies(cls, user: User) -> list[dict[str, Any]]:
         with cls._ensure_app_context():
             if is_platform_admin(user=user):
@@ -1511,6 +1595,16 @@ class UserMcpTokenService:
                 companies=companies,
                 resolved_company_id=resolved_company_id,
             )
+            activation_welcome_short = cls._build_sapiens_session_welcome_short(
+                user=user,
+                resolved_company_id=resolved_company_id,
+                company_label=display_name,
+            )
+            activation_welcome_full = cls._build_sapiens_session_welcome_full(
+                user=user,
+                resolved_company_id=resolved_company_id,
+                company_label=display_name,
+            )
             token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
             url = f"{public_base}/mcp/{resolved_surface}/"
             if resolved_surface != "user" and resolved_company_id:
@@ -1668,13 +1762,19 @@ class UserMcpTokenService:
                     f"4. Se houver mais de um squad, pergunte exatamente: `{activation_selection_prompt or 'Com qual squad você vai trabalhar?'}`.\n"
                     f"5. Rode `resolve_app32_sapiens_activation_tool` com o squad escolhido ou resolvido.\n"
                     "6. Execute a startup sequence retornada em `startup_tools`, na ordem, para pré-carregar schema e contexto.\n"
-                    "7. Se o fluxo funcionar, responda com a mensagem de ativação e mantenha o squad ativo nesta sessão.\n\n"
+                    "7. Se o fluxo funcionar, responda primeiro com a mensagem curta de boas-vindas, em linguagem acessível e sem jargão técnico, e mantenha o squad ativo nesta sessão.\n"
+                    "8. Termine essa primeira resposta com a pergunta exata: `Quer ver instruções mais completas?`\n"
+                    "9. Se o usuário responder positivamente, por exemplo `sim`, `quero`, `mostre` ou equivalente, responda com a versão completa das instruções.\n\n"
                     "Startup sequence esperada após a escolha do squad:\n"
                     + "\n".join([f"- {item}" for item in session_lifecycle["startup_tools"]])
                     + "\n\n"
                     f"Badge esperado: `{session_lifecycle['session_badge'] or runtime_config['experience_label'] + ' On'}`.\n"
                     "Antes de responder à primeira pergunta operacional do usuário, exponha explicitamente a identidade e o escopo resolvidos nesta sessão:\n"
                     f"{identity_summary_text}\n\n"
+                    "Mensagem curta obrigatória de boas-vindas:\n"
+                    f"{activation_welcome_short}\n\n"
+                    "Mensagem completa para usar somente se o usuário pedir mais detalhes:\n"
+                    f"{activation_welcome_full}\n\n"
                     "Se o runtime suportar título/badge de sessão, aplique esse badge no canto superior esquerdo ou no título visível da conversa.\n"
                     "Quando o usuário digitar `Sapiens Off` ou um off explícito do squad, remova o badge, descarte o bundle/contexto do squad e mantenha a sessão aberta.\n"
                     "Depois disso, responda à demanda do usuário.\n\n"
@@ -1747,6 +1847,8 @@ class UserMcpTokenService:
                 "activation_commands_install_command": activation_commands_install_command,
                 "identity": identity,
                 "identity_summary_text": identity_summary_text,
+                "activation_welcome_short": activation_welcome_short,
+                "activation_welcome_full": activation_welcome_full,
                 "session_badge": session_lifecycle["session_badge"],
                 "startup_tools": session_lifecycle["startup_tools"],
                 "preflight_tools": session_lifecycle["preflight_tools"],
