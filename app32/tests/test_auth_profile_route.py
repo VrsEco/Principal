@@ -38,6 +38,7 @@ def _build_app():
     app.register_blueprint(auth_route.auth_bp)
     app.jinja_env.globals['url_for'] = lambda endpoint, **values: '/' + endpoint.replace('.', '/')
     app.jinja_env.globals['has_permission'] = lambda *args, **kwargs: False
+    app.jinja_env.globals['static_asset_version'] = lambda *args, **kwargs: 'test'
     return app
 
 
@@ -148,23 +149,30 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
 
     html = response.get_data(as_text=True)
     assert response.status_code == 200
+    assert 'Dados e comunicação' in html
     assert 'Instalar Squad' in html
-    assert '1. Escolher CLI' in html
-    assert '2. Gerar token' in html
-    assert '3. Instalar' in html
-    assert 'Squad que será instalado' in html
-    assert 'Em qual CLI você vai instalar?' in html
-    assert 'Claude Code / aba Code do Desktop' in html
-    assert 'Sapiens Cliente' in html
-    assert 'Ver detalhes técnicos desta instalação' in html
-    assert 'aba Code' in html
-    assert 'aba Chat' in html
-    assert 'Instalação via CLI' in html
+    assert 'Segurança' in html
+    assert 'id="profile-data-panel" class="profile-tab-panel is-active"' in html
+    assert 'id="profile-mcp-panel" class="profile-tab-panel"' in html
+    assert 'id="profile-security-panel" class="profile-tab-panel"' in html
+    assert 'Instalação em uma página' in html
+    assert 'Escolha da ferramenta' in html
+    assert 'Claude' in html
+    assert 'Antigravity' in html
+    assert 'Codex' in html
+    assert 'Genérica' in html
+    assert 'Escolha o Squad' in html
+    assert 'Cliente' in html
+    assert 'Token' in html
+    assert 'Criar token' in html
+    assert 'Renovar' in html
+    assert 'Revogar' in html
+    assert 'Instalação via Prompt' in html
     assert 'Instalação via PowerShell' in html
-    assert 'Ver contexto avançado do squad' in html
+    assert 'Instalação Técnica' in html
+    assert 'Copiar Comando' in html
     assert 'Copie seu token agora' in html
     assert '.mcp-token-modal__dialog' in html
-    assert 'Seu perfil atual instala apenas o Sapiens Cliente' in html
     assert 'data-choice-value="squad_versus"' not in html
     assert 'data-choice-value="engineering"' not in html
 
@@ -190,8 +198,8 @@ def test_profile_get_shows_consultor_and_cliente_for_consultant(monkeypatch):
 
     html = response.get_data(as_text=True)
     assert response.status_code == 200
-    assert 'Sapiens Cliente' in html
-    assert 'Sapiens Consultor' in html
+    assert 'Cliente' in html
+    assert 'Versus' in html
     assert 'data-choice-value="engineering"' not in html
 
 
@@ -216,7 +224,9 @@ def test_profile_get_shows_all_squads_for_admin(monkeypatch):
 
     html = response.get_data(as_text=True)
     assert response.status_code == 200
-    assert 'Seu perfil atual pode instalar Sapiens Cliente, Sapiens Consultor e Sapiens Engenharia.' in html
-    assert 'Sapiens Cliente' in html
-    assert 'Sapiens Consultor' in html
-    assert 'Sapiens Engenharia' in html
+    assert 'Cliente' in html
+    assert 'Versus' in html
+    assert 'Engenharia' in html
+    assert 'data-choice-value="squad_cliente"' in html
+    assert 'data-choice-value="squad_versus"' in html
+    assert 'data-choice-value="engineering"' in html

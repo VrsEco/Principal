@@ -1,27 +1,24 @@
 {% extends "layouts/app.html" %}
 
-{% block title %}Meu Perfil - Versus{% endblock %}
-{% block page_title %}Configurações / Meu Perfil{% endblock %}
+{% block title %}Instalar Sapiens - Versus{% endblock %}
+{% block page_title %}Perfil / Instalar Sapiens{% endblock %}
 
 {% block content %}
-<div style="max-width: 1100px; margin: 0 auto; padding-bottom: 5rem;">
-    <div style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap;">
-        <div>
-            <h1 class="text-h1">Meu Perfil</h1>
-            <p class="text-subtitle">Atualize seus dados básicos, canais de comunicação e credenciais de acesso.</p>
-        </div>
-        <div style="display: flex; gap: 1rem; align-items: center;">
-            <a href="{{ url_for('my_work.my_work') }}" class="btn btn-secondary" data-ref="06">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                </svg>
-                Voltar
-            </a>
-        </div>
-    </div>
+{% set role_key = (user.role if user else '') %}
+{% set can_install_all_squads = role_key in ['admin', 'administrator'] %}
+{% set can_install_versus = can_install_all_squads or role_key == 'consultant' %}
 
-    <div id="alert-container"></div>
+<div class="mcp-profile-shell">
+    <header class="mcp-profile-hero">
+        <div>
+            <span class="mcp-profile-eyebrow">Sapiens MCP</span>
+            <h1>Instalação em uma página</h1>
+            <p>Escolha a ferramenta, o squad, gere o token e copie o comando final.</p>
+        </div>
+        <a href="{{ url_for('my_work.my_work') }}" class="btn btn-secondary">Voltar</a>
+    </header>
+
+    <div id="mcp-token-alert-container"></div>
 
     <div class="profile-tabs" role="tablist" aria-label="Seções do perfil">
         <button type="button" class="profile-tab is-active" data-tab-target="profile-data-panel">Dados e comunicação</button>
@@ -32,758 +29,352 @@
     {% set summary_channels = ((user.summary_delivery_channels if user and user.summary_delivery_channels else 'telegram').split(',')) %}
 
     <section id="profile-data-panel" class="profile-tab-panel is-active">
-        <div style="display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr); gap: 1.5rem; align-items: start;">
-            <div style="display: grid; gap: 1.5rem;">
-            <div class="card" style="border-radius: 24px;">
-                <div class="card-body" style="display: grid; gap: 1.5rem;">
-                    <div>
-                        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Dados cadastrais e comunicação</h2>
-                        <p style="color: var(--text-tertiary); margin: 0;">As informações abaixo são usadas nas tarefas, reuniões, mensagens e resumos do Sapiens.</p>
-                    </div>
-
-                    <form id="profileForm" style="display: grid; gap: 1.25rem;">
-                        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;">
-                            <div class="filter-field">
-                                <label>Nome</label>
-                                <input type="text" class="form-control" id="name" name="name" value="{{ user.name if user else '' }}" required data-ref="02">
-                                <small style="color: var(--text-tertiary);">Use o nome que deve aparecer nos registros internos.</small>
-                            </div>
-                            <div class="filter-field">
-                                <label>E-mail</label>
-                                <input type="email" class="form-control" id="email" name="email" value="{{ user.email if user else '' }}" disabled data-ref="03">
-                                <small style="color: var(--text-tertiary);">O e-mail é o identificador do seu acesso.</small>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;">
-                            <div class="filter-field">
-                                <label>WhatsApp</label>
-                                <input type="text" class="form-control" id="whatsapp" name="whatsapp" value="{{ user.whatsapp if user else '' }}" placeholder="Ex.: 55 71 99999-9999" inputmode="numeric" data-ref="09">
-                                <small style="color: var(--text-tertiary);">Máscara visual; no envio o sistema salva apenas os números.</small>
-                            </div>
-                            <div class="filter-field">
-                                <label>Telegram ID</label>
-                                <input type="text" class="form-control" id="telegram" name="telegram" value="{{ user.telegram if user else '' }}" placeholder="Ex.: 123456789" inputmode="numeric" data-ref="10">
-                                <small style="color: var(--text-tertiary);">Informe o ID numérico do seu usuário no Telegram.</small>
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;">
-                            <div class="filter-field">
-                                <label>Instagram (ID ou @usuário)</label>
-                                <input type="text" class="form-control" id="instagram" name="instagram" value="{{ user.instagram if user else '' }}" placeholder="Ex.: @empresa ou 1784..." data-ref="11">
-                                <small style="color: var(--text-tertiary);">Aceita @usuário ou identificador técnico.</small>
-                            </div>
-                            <div class="filter-field">
-                                <label>Perfil</label>
-                                <input type="text" class="form-control" id="role" value="{% if user %}{{ 'Administrador' if user.role == 'admin' else 'Colaborador' if user.role in ['collaborator', 'consultant'] else 'Cliente' }}{% endif %}" disabled data-ref="04">
-                                <small style="color: var(--text-tertiary);">O perfil é controlado pela administração.</small>
-                            </div>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Canais do resumo diário (08:00)</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-                                <label style="display:flex; align-items:center; gap:0.55rem; padding:0.75rem 0.9rem; border:1px solid var(--border); border-radius:10px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <input type="checkbox" name="summary_delivery_channels" value="telegram" {% if 'telegram' in summary_channels %}checked{% endif %}>
-                                    <span>Telegram</span>
-                                </label>
-                                <label style="display:flex; align-items:center; gap:0.55rem; padding:0.75rem 0.9rem; border:1px solid var(--border); border-radius:10px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <input type="checkbox" name="summary_delivery_channels" value="whatsapp" {% if 'whatsapp' in summary_channels %}checked{% endif %}>
-                                    <span>WhatsApp</span>
-                                </label>
-                                <label style="display:flex; align-items:center; gap:0.55rem; padding:0.75rem 0.9rem; border:1px solid var(--border); border-radius:10px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <input type="checkbox" name="summary_delivery_channels" value="email" {% if 'email' in summary_channels %}checked{% endif %}>
-                                    <span>E-mail</span>
-                                </label>
-                            </div>
-                            <small style="color: var(--text-tertiary);">Se nenhum canal for marcado, o sistema mantém Telegram como padrão.</small>
-                        </div>
-
-                        <div style="display: flex; justify-content: flex-end;">
-                            <button type="submit" class="btn btn-primary" data-ref="01">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
-                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                    <polyline points="7 3 7 8 15 8"></polyline>
-                                </svg>
-                                Salvar alterações
-                            </button>
-                        </div>
-                    </form>
+        <div class="mcp-profile-card profile-tab-card">
+            <div class="mcp-section-head">
+                <span>1</span>
+                <div>
+                    <h2>Dados e comunicação</h2>
+                    <p>Dados mínimos usados nos registros internos e nos canais do Sapiens.</p>
                 </div>
             </div>
-            </div>
-
-            <div style="display: grid; gap: 1.5rem;">
-            <div class="card" style="border-radius: 24px;">
-                <div class="card-body" style="display: grid; gap: 1rem;">
-                    <div>
-                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Resumo operacional</h2>
-                        <p style="color: var(--text-tertiary); margin: 0;">Referências rápidas para uso do seu perfil no APP32.</p>
+            <div id="alert-container"></div>
+            <form id="profileForm" class="profile-form">
+                <div class="profile-form-grid">
+                    <div class="profile-field">
+                        <label for="name">Nome</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ user.name if user else '' }}" required>
                     </div>
-                    <div style="display: grid; gap: 0.75rem;">
-                        <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
-                            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">Canal principal</div>
-                            <div style="font-size: 0.92rem; color: var(--text-secondary);">{{ user.email if user else 'Não informado' }}</div>
-                        </div>
-                        <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
-                            <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.25rem;">Resumo diário</div>
-                            <div style="font-size: 0.92rem; color: var(--text-secondary);">Enviado às 08:00 nos canais marcados nesta tela.</div>
-                        </div>
+                    <div class="profile-field">
+                        <label for="email">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email if user else '' }}" disabled>
+                    </div>
+                    <div class="profile-field">
+                        <label for="whatsapp">WhatsApp</label>
+                        <input type="text" class="form-control" id="whatsapp" name="whatsapp" value="{{ user.whatsapp if user else '' }}" placeholder="55 71 99999-9999" inputmode="numeric">
+                    </div>
+                    <div class="profile-field">
+                        <label for="telegram">Telegram ID</label>
+                        <input type="text" class="form-control" id="telegram" name="telegram" value="{{ user.telegram if user else '' }}" placeholder="123456789" inputmode="numeric">
+                    </div>
+                    <div class="profile-field">
+                        <label for="instagram">Instagram</label>
+                        <input type="text" class="form-control" id="instagram" name="instagram" value="{{ user.instagram if user else '' }}" placeholder="@usuario">
+                    </div>
+                    <div class="profile-field">
+                        <label for="role">Perfil</label>
+                        <input type="text" class="form-control" id="role" value="{% if user %}{{ 'Administrador' if user.role == 'admin' else 'Colaborador' if user.role in ['collaborator', 'consultant'] else 'Cliente' }}{% endif %}" disabled>
                     </div>
                 </div>
-            </div>
-            </div>
+                <div class="profile-field">
+                    <label>Canais do resumo diário</label>
+                    <div class="profile-check-grid">
+                        <label><input type="checkbox" name="summary_delivery_channels" value="telegram" {% if 'telegram' in summary_channels %}checked{% endif %}> Telegram</label>
+                        <label><input type="checkbox" name="summary_delivery_channels" value="whatsapp" {% if 'whatsapp' in summary_channels %}checked{% endif %}> WhatsApp</label>
+                        <label><input type="checkbox" name="summary_delivery_channels" value="email" {% if 'email' in summary_channels %}checked{% endif %}> E-mail</label>
+                    </div>
+                </div>
+                <div class="profile-form-actions">
+                    <button type="submit" class="btn btn-primary">Salvar alterações</button>
+                </div>
+            </form>
         </div>
     </section>
 
     <section id="profile-mcp-panel" class="profile-tab-panel">
-        {% set role_key = (user.role if user else '') %}
-        {% set can_install_all_squads = role_key in ['admin', 'administrator'] %}
-        <div style="max-width: 860px; display: grid; gap: 1.5rem;">
-            <div class="card" style="border-radius: 24px;">
-                <div class="card-body" style="display: grid; gap: 1rem;">
-                    <div>
-                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Instalar Sapiens no seu CLI</h2>
-                        <p style="color: var(--text-tertiary); margin: 0;">Fluxo simples: escolha o CLI, gere o token e copie um comando único de instalação. Se precisar, abra o modo técnico ao lado.</p>
-                    </div>
-
-                    <div id="mcp-token-alert-container"></div>
-
-                    <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0;">
-                        <span class="badge" style="background:rgba(37,99,235,0.12); color:#1d4ed8;">1. Escolher CLI</span>
-                        <span class="badge" style="background:rgba(15,23,42,0.08); color:var(--text-secondary);">2. Gerar token</span>
-                        <span class="badge" style="background:rgba(15,23,42,0.08); color:var(--text-secondary);">3. Instalar</span>
-                    </div>
-
-                    <section id="mcp-step-config-panel" class="mcp-step-panel is-active" style="display:grid; gap:1rem;">
-                        <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo 1 — Escolher o CLI</div>
-                            <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
-                                <li>Escolha em qual CLI você vai instalar.</li>
-                                <li>O APP32 resolve runtime, squad e surface automaticamente.</li>
-                                <li>Depois você gera o token e copia um comando único.</li>
-                            </ol>
-                        </div>
-
-                        <div>
-                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Em qual CLI você vai instalar?</h3>
-                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">O instalador sempre baixa o script oficial online e grava a configuração no próprio cliente escolhido, sem depender deste computador ou de outro CLI.</p>
-                        </div>
-
-                        <div class="filter-field">
-                            <div class="mcp-choice-grid" id="mcpRuntimeChoices">
-                                <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
-                                    <strong>Claude Code / aba Code do Desktop</strong>
-                                    <span>Runtime canônico do Sapiens Cliente. Usa MCP HTTP nativo via claude mcp add e registry do Claude Code.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
-                                    <strong>Codex</strong>
-                                    <span>Instala no arquivo nativo do Codex e usa o CLI oficial para validar a conexão.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
-                                    <strong>Antigravity</strong>
-                                    <span>Instala no MCP nativo do Antigravity com bridge HTTP e configuração própria do cliente.</span>
-                                </button>
-                                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
-                                    <strong>Outro cliente MCP</strong>
-                                    <span>Fluxo guiado com fallback para modo avançado.</span>
-                                </button>
-                            </div>
-                            <small style="color: var(--text-tertiary);">Cada runtime tem uma família canônica: Claude → Sapiens Cliente, Antigravity → Sapiens Consultor, Codex → Sapiens Engenharia.</small>
-                        </div>
-
-                        <details style="border:1px solid rgba(15,23,42,0.08); border-radius:14px; padding:0.9rem 1rem; background:var(--bg-body);">
-                            <summary style="cursor:pointer; font-weight:700; color:var(--text-main);">Ver detalhes técnicos desta instalação</summary>
-                            <div style="display:grid; gap:1rem; margin-top:1rem;">
-                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <div id="mcpSelectionGuideTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como essa combinação vai funcionar</div>
-                                    <div id="mcpSelectionGuideText" style="font-size: 0.92rem; line-height: 1.55;">
-                                        Você está configurando o Sapiens Cliente para uso no Claude Code ou na aba Code do Claude Desktop. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e como registrar o MCP HTTP no registry real do Claude Code.
-                                    </div>
-                                </div>
-
-                                <div style="padding: 1rem; border: 1px solid rgba(245, 158, 11, 0.28); border-radius: 14px; background: rgba(245, 158, 11, 0.08); color: var(--text-secondary);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Importante para clientes Claude</div>
-                                    <div style="font-size: 0.92rem; line-height: 1.55;">
-                                        Se você estiver usando o Claude Desktop, faça este fluxo na <strong>aba Code</strong>. A aba <strong>Chat</strong> / Connectors usa outra superfície e não é o caminho canônico para o MCP local do APP32.
-                                    </div>
-                                </div>
-
-                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Resumo da instalação</div>
-                                    <pre id="mcpOnboardingSummaryText" style="margin:0; white-space:pre-wrap; font-size:0.92rem; line-height:1.55; color:var(--text-secondary); font-family:inherit;">O APP32 vai consolidar aqui o checklist de onboarding, menor privilégio, discovery obrigatório e guardrails operacionais da combinação escolhida.</pre>
-                                </div>
-
-                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">O que o instalador vai fazer</div>
-                                    <ol id="mcpGuidedStepsList" style="margin: 0; padding-left: 1rem; display: grid; gap: 0.45rem; font-size: 0.92rem; line-height: 1.55;">
-                                        <li>Escolha o cliente de IA acima.</li>
-                                        <li>Gere ou renove o token.</li>
-                                        <li>Siga aqui o passo a passo para criar a conexão MCP.</li>
-                                    </ol>
-                                </div>
-
-                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Dados técnicos resolvidos pelo APP32</div>
-                                    <div id="mcpGuidedFields" style="display:grid; gap:0.55rem;">
-                                        <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                            <div style="font-weight: 700; color: var(--text-main);">Nome da conexão</div>
-                                            <div style="font-size: 0.86rem; color: var(--text-tertiary);">Sapiens Cliente</div>
-                                        </div>
-                                    </div>
-                                    <div id="mcpValidationPromptBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
-                                        <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Teste inicial recomendado</div>
-                                        <div id="mcpValidationPromptText" style="font-size:0.9rem; color:var(--text-secondary);">Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com bootstrap_session_context, describe_app32_available_sapiens_squads_tool e resolve_app32_sapiens_activation_tool.</div>
-                                    </div>
-                                </div>
-
-                                <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Comandos oficiais de ativação</div>
-                                    <p style="margin: 0 0 0.65rem; font-size: 0.92rem; line-height: 1.55;">No Claude Code ou na aba Code do Claude Desktop, a ativação oficial agora reconhece tanto <strong>texto livre</strong> quanto <strong>slash commands</strong>. <code>Sapiens On</code>, <code>sapiens on</code> e <code>/sapiens-on</code> devem iniciar o mesmo fluxo.</p>
-                                    <div id="mcpActivationCommandsList" style="display:grid; gap:0.55rem;">
-                                        <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                            <div style="font-weight: 700; color: var(--text-main);">Sapiens On</div>
-                                            <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entrada textual oficial. Inicia conexão, bootstrap, escolha de squad e startup sequence.</div>
-                                        </div>
-                                        <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                            <div style="font-weight: 700; color: var(--text-main);">/sapiens-cliente-on</div>
-                                            <div style="font-size: 0.86rem; color: var(--text-tertiary);">Atalho direto do Sapiens Cliente para sessões com squad único ou ativação explícita.</div>
-                                        </div>
-                                    </div>
-                                    <div id="mcpActivationCommandsInstallBox" style="margin-top:0.75rem; padding:0.75rem 0.85rem; border:1px dashed rgba(37, 99, 235, 0.35); border-radius:12px; background:rgba(37, 99, 235, 0.04);">
-                                        <div style="font-weight:700; color:var(--text-main); margin-bottom:0.2rem;">Comandos locais opcionais</div>
-                                        <div id="mcpActivationCommandsInstallText" style="font-size:0.9rem; color:var(--text-secondary); word-break: break-word;">Use o script canônico do APP32 para gravar os comandos oficiais de ativação no Claude Code ou na aba Code do Claude Desktop.</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-
-                        <div class="card" style="border-radius: 24px;">
-                            <div class="card-body" style="display: grid; gap: 1rem;">
-                                <div>
-                                    <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Token de acesso MCP</h3>
-                                    <p id="mcpTokenHelpText" style="color: var(--text-tertiary); margin: 0;">Gere o token, copie o comando único e cole no CLI escolhido. O APP32 já embute o contexto necessário nesta instalação.</p>
-                                </div>
-
-                                <div style="display:grid; gap:0.75rem;">
-                                    <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
-                                        <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Status do token</div>
-                                        <div id="mcpTokenStatusText" style="font-size: 0.92rem; color: var(--text-secondary);">Carregando status...</div>
-                                    </div>
-                                    <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 14px; background: var(--bg-body);">
-                                        <div style="font-weight: 600; color: var(--text-main); margin-bottom: 0.35rem;">Último uso</div>
-                                        <div id="mcpTokenLastUsageText" style="font-size: 0.92rem; color: var(--text-secondary);">Aguardando leitura do token.</div>
-                                    </div>
-                                </div>
-
-                                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
-                                    <button type="button" class="btn btn-primary" id="generateMcpTokenButton">Gerar token</button>
-                                    <button type="button" class="btn btn-secondary" id="renewMcpTokenButton">Renovar token</button>
-                                    <button type="button" class="btn btn-danger" id="revokeMcpTokenButton">Revogar token</button>
-                                </div>
-                                <small id="mcpTokenFootnoteText" style="color: var(--text-tertiary); margin-top:-0.25rem;">O token é pessoal. Ele não fica preso a uma empresa específica e não será mostrado novamente depois que a janela de cópia for fechada.</small>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section id="mcp-step-squad-panel" class="mcp-step-panel is-active" style="display:grid; gap:1rem;">
-                        <div style="padding: 1rem; border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 14px; background: rgba(37, 99, 235, 0.05); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Passo 2 — Gerar token e instalar</div>
-                            <ol style="margin: 0; padding-left: 1rem; display: grid; gap: 0.35rem;">
-                                <li>Revise qual squad será publicado.</li>
-                                <li>Se quiser, defina empresa padrão e nome desta instalação.</li>
-                                <li>Gere o token, copie o comando e cole no CLI escolhido.</li>
-                            </ol>
-                        </div>
-
-                        <div>
-                            <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Squad que será instalado</h3>
-                            <p style="color: var(--text-tertiary); margin: 0; font-size: 0.92rem;">Escolha qual versão do Sapiens será publicada. A instalação final será personalizada conforme o squad e o cliente de IA selecionados.</p>
-                        </div>
-
-                        <div class="filter-field">
-                            {% if can_install_all_squads %}
-                                <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                    <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                        <strong>Sapiens Cliente</strong>
-                                        <span>Squad Cliente com coordenador e roteamento automático.</span>
-                                    </button>
-                                    <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
-                                        <strong>Sapiens Consultor</strong>
-                                        <span>Squad Versus para uso consultivo e rollout assistido.</span>
-                                    </button>
-                                    <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="engineering">
-                                        <strong>Sapiens Engenharia</strong>
-                                        <span>Squad de Engenharia para uso técnico e diagnóstico controlado.</span>
-                                    </button>
-                                </div>
-                                <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente, Sapiens Consultor e Sapiens Engenharia.</small>
-                            {% elif role_key == 'consultant' %}
-                                <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                    <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                        <strong>Sapiens Cliente</strong>
-                                        <span>Squad Cliente com menor privilégio e operação assistida.</span>
-                                    </button>
-                                    <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
-                                        <strong>Sapiens Consultor</strong>
-                                        <span>Squad Versus com governança consultiva e rollout assistido.</span>
-                                    </button>
-                                </div>
-                                <small style="color: var(--text-tertiary);">Seu perfil atual pode instalar Sapiens Cliente e Sapiens Consultor. Sapiens Engenharia fica restrito à administração.</small>
-                            {% else %}
-                                <div class="mcp-choice-grid" id="mcpSquadChoices">
-                                    <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
-                                        <strong>Sapiens Cliente</strong>
-                                        <span>Disponível para o seu perfil, com menor privilégio e entrada pelo coordenador.</span>
-                                    </button>
-                                </div>
-                                <small style="color: var(--text-tertiary);">Seu perfil atual instala apenas o Sapiens Cliente. Sapiens Consultor e Sapiens Engenharia ficam disponíveis somente para perfis autorizados.</small>
-                            {% endif %}
-                            <small id="mcpSquadRuntimeHint" style="color: var(--text-tertiary); display:block; margin-top:0.55rem;">O runtime escolhido pode travar esta seleção para manter a combinação oficial de runtime, squad e surface.</small>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Empresa padrão (opcional)</label>
-                            <select id="mcpCompanyId" class="form-control"></select>
-                            <small style="color: var(--text-tertiary);">Escolher empresa aqui é opcional. Se deixar em branco, o Sapiens abre em escopo dinâmico: leituras pessoais podem cruzar empresas autorizadas e ações específicas pedem empresa só quando necessário.</small>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Nome desta instalação (opcional)</label>
-                            <input type="text" class="form-control" id="mcpClientName" placeholder="Ex.: Claude do notebook comercial">
-                        </div>
-
-                        <div class="mcp-summary-grid">
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Cliente / CLI</div>
-                            <div class="mcp-summary-value" id="mcpResolvedRuntime">Claude Code / aba Code do Desktop</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Nome visível</div>
-                            <div class="mcp-summary-value" id="mcpResolvedSquad">Sapiens Cliente</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Família canônica</div>
-                            <div class="mcp-summary-value" id="mcpResolvedFamily">Squad Cliente</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Perfil técnico</div>
-                            <div class="mcp-summary-value" id="mcpResolvedProfile">squad_cliente</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Surface</div>
-                            <div class="mcp-summary-value" id="mcpResolvedSurface">user</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Disponibilidade</div>
-                            <div class="mcp-summary-value" id="mcpInstallAvailability">Instalação guiada</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Comando sugerido</div>
-                            <div class="mcp-summary-value" id="mcpResolvedCommand">sapiens cliente on</div>
-                        </div>
-                        <div class="mcp-summary-card">
-                            <div class="mcp-summary-label">Agente de entrada</div>
-                            <div class="mcp-summary-value" id="mcpResolvedEntryAgent">Harness Coordenador do Squad Cliente</div>
-                        </div>
-                        </div>
-
-                        <details style="border:1px solid rgba(15,23,42,0.08); border-radius:14px; padding:0.9rem 1rem; background:var(--bg-body);">
-                            <summary style="cursor:pointer; font-weight:700; color:var(--text-main);">Ver contexto avançado do squad</summary>
-                            <div style="display:grid; gap:1rem; margin-top:1rem;">
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div id="mcpOfficialCompositionTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Família inicial oficial do Squad Cliente</div>
-                            <div id="mcpOfficialPhaseText" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.5rem;">
-                                Entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.
-                            </div>
-                            <div id="mcpOfficialAgentsList" style="display: grid; gap: 0.45rem;">
-                                <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main);">Agente Coordenador</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">porta de entrada, triagem e roteamento econômico</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div id="mcpAudienceTitle" style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quem vai te atender no Sapiens Cliente</div>
-                            <div id="mcpAudienceIntro" style="font-size: 0.92rem; line-height: 1.55; margin-bottom: 0.75rem;">
-                                Você instala uma única entrada chamada <strong>Sapiens Cliente</strong>. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.
-                            </div>
-                            <div id="mcpAudienceFlow" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.65rem;">
-                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Coordenador</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Entende seu pedido, organiza o atendimento e chama o especialista certo.</div>
-                                </div>
-                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Comercial</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com clientes, propostas, negociação, preço e oportunidades.</div>
-                                </div>
-                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Operacional</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com tarefas, prioridades, rotina, organização e execução.</div>
-                                </div>
-                                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">Administrativo/Financeiro</div>
-                                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como a instalação funciona</div>
-                            <div style="font-size: 0.92rem; line-height: 1.55;">
-                                A instalação publica uma entrada do <strong>Sapiens</strong> no seu cliente/CLI. Essa entrada começa pelo <strong>agente coordenador</strong> do squad e usa o <strong>harness inicial</strong> resolvido automaticamente pelo APP32. Depois disso, o próprio Sapiens pode rotear a conversa para especialistas internos quando necessário.
-                            </div>
-                            <ol style="margin: 0.75rem 0 0; padding-left: 1rem; display: grid; gap: 0.35rem; font-size: 0.9rem;">
-                                <li>Você instala apenas o <strong>Sapiens Cliente</strong>.</li>
-                                <li>O atendimento sempre começa pelo <strong>Coordenador</strong>.</li>
-                                <li>Se necessário, o Coordenador chama <strong>Comercial</strong>, <strong>Operacional</strong> ou <strong>Administrativo/Financeiro</strong>.</li>
-                                <li>Para você, continua sendo uma única conversa, simples e contínua.</li>
-                            </ol>
-                        </div>
-
-                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Badge da sessão ativa</div>
-                                <div id="mcpSessionBadgeText" style="font-size: 0.92rem; line-height: 1.55;">Sapiens Cliente On</div>
-                            </div>
-                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Pré-flight e startup</div>
-                                <div id="mcpStartupToolsList" style="font-size: 0.92rem; line-height: 1.55;">bootstrap_session_context → describe_app32_available_sapiens_squads_tool → resolve_app32_sapiens_activation_tool</div>
-                            </div>
-                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Escolha de squad</div>
-                                <div id="mcpSquadSelectionText" style="font-size: 0.92rem; line-height: 1.55;">Se houver um único squad autorizado, o Sapiens ativa sem perguntar.</div>
-                            </div>
-                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Empresa na sessão</div>
-                                <div id="mcpCompanyContextText" style="font-size: 0.92rem; line-height: 1.55;">Empresa padrão é opcional. Leituras pessoais podem operar em escopo multiempresa.</div>
-                            </div>
-                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Quando pedir empresa</div>
-                                <div id="mcpCompanyWritePolicyText" style="font-size: 0.92rem; line-height: 1.55;">O Sapiens pede empresa apenas em ações específicas, mutações ou ambiguidades.</div>
-                            </div>
-                            <div style="padding: 1rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 14px; background: var(--bg-body); color: var(--text-secondary);">
-                                <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Como encerrar</div>
-                                <div id="mcpOffCommandsList" style="font-size: 0.92rem; line-height: 1.55;">Sapiens Off / Sapiens Cliente Off</div>
-                            </div>
-                        </div>
-                            </div>
-                        </details>
-
-                        <div style="display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap:wrap;">
-                            <button type="button" class="btn btn-primary" id="buildMcpCliInstallButton">Instalação via CLI</button>
-                            <button type="button" class="btn btn-secondary" id="copyMcpInstallCommandButton">Instalação via PowerShell</button>
-                        </div>
-
-                        <div class="filter-field" style="margin-top:-0.25rem;">
-                            <label>Saída pronta para copiar</label>
-                            <textarea id="mcpConfigOutput" class="form-control" rows="12" readonly placeholder="Depois de gerar ou renovar o token, escolha Instalação via CLI ou Instalação via PowerShell."></textarea>
-                            <small id="mcpInstructionText" style="color: var(--text-tertiary);">Fluxo recomendado: gerar token, copiar a instalação desejada e colar no cliente correto.</small>
-                        </div>
-
-                        <details style="border:1px solid rgba(15,23,42,0.08); border-radius:14px; padding:0.9rem 1rem; background:var(--bg-body);">
-                            <summary style="cursor:pointer; font-weight:700; color:var(--text-main);">Modo técnico</summary>
-                            <div style="display:grid; gap:0.75rem; margin-top:1rem;">
-                                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:flex-end;">
-                                    <button type="button" class="btn btn-secondary" id="buildMcpActivationButton">Ver instruções detalhadas</button>
-                                    <button type="button" class="btn btn-secondary" id="buildMcpTechnicalButton">Ver configuração técnica</button>
-                                    <button type="button" class="btn btn-secondary" id="copyMcpConfigButton">Copiar conteúdo</button>
-                                </div>
-                            </div>
-                        </details>
-                    </div>
-                    </section>
+    <main class="mcp-profile-flow" aria-label="Fluxo de instalação Sapiens MCP">
+        <section class="mcp-profile-card" aria-labelledby="runtime-title">
+            <div class="mcp-section-head">
+                <span>1</span>
+                <div>
+                    <h2 id="runtime-title">Escolha da ferramenta</h2>
+                    <p>Defina onde o Sapiens será instalado.</p>
                 </div>
             </div>
-        </div>
+            <div class="mcp-choice-grid" id="mcpRuntimeChoices">
+                <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
+                    <strong>Claude</strong>
+                    <small>Claude Code / Desktop Code</small>
+                </button>
+                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
+                    <strong>Antigravity</strong>
+                    <small>Cliente MCP via bridge</small>
+                </button>
+                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="codex">
+                    <strong>Codex</strong>
+                    <small>Configuração nativa do Codex</small>
+                </button>
+                <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="other">
+                    <strong>Genérica</strong>
+                    <small>URL + Bearer token</small>
+                </button>
+            </div>
+        </section>
+
+        <section class="mcp-profile-card" aria-labelledby="squad-title">
+            <div class="mcp-section-head">
+                <span>2</span>
+                <div>
+                    <h2 id="squad-title">Escolha o Squad</h2>
+                    <p>O backend valida a permissão do seu perfil.</p>
+                </div>
+            </div>
+            <div class="mcp-choice-grid" id="mcpSquadChoices">
+                <button type="button" class="mcp-choice-card is-active" data-choice-group="squad" data-choice-value="squad_cliente">
+                    <strong>Cliente</strong>
+                    <small>Operação do cliente com menor privilégio</small>
+                </button>
+                {% if can_install_versus %}
+                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="squad_versus">
+                    <strong>Versus</strong>
+                    <small>Consultoria, governança e rollout</small>
+                </button>
+                {% endif %}
+                {% if can_install_all_squads %}
+                <button type="button" class="mcp-choice-card" data-choice-group="squad" data-choice-value="engineering">
+                    <strong>Engenharia</strong>
+                    <small>Diagnóstico técnico e suporte avançado</small>
+                </button>
+                {% endif %}
+            </div>
+            <p class="mcp-microcopy" id="mcpSquadRuntimeHint">Cliente, Versus e Engenharia aparecem conforme a permissão do usuário.</p>
+            <div class="mcp-compact-form">
+                <label for="mcpCompanyId">Empresa padrão</label>
+                <select id="mcpCompanyId" class="form-control"></select>
+                <small>Opcional para Cliente. Obrigatória quando a surface resolvida exigir escopo privilegiado.</small>
+            </div>
+        </section>
+
+        <section class="mcp-profile-card" aria-labelledby="token-title">
+            <div class="mcp-section-head">
+                <span>3</span>
+                <div>
+                    <h2 id="token-title">Token</h2>
+                    <p>Criar, renovar ou revogar sua credencial MCP pessoal.</p>
+                </div>
+            </div>
+            <div class="mcp-token-grid">
+                <div class="mcp-token-status">
+                    <span>Status</span>
+                    <strong id="mcpTokenStatusText">Carregando...</strong>
+                </div>
+                <div class="mcp-token-status">
+                    <span>Último uso</span>
+                    <strong id="mcpTokenLastUsageText">Aguardando leitura.</strong>
+                </div>
+            </div>
+            <div class="mcp-token-actions">
+                <button type="button" class="btn btn-primary" id="generateMcpTokenButton">Criar token</button>
+                <button type="button" class="btn btn-secondary" id="renewMcpTokenButton">Renovar</button>
+                <button type="button" class="btn btn-danger" id="revokeMcpTokenButton">Revogar</button>
+            </div>
+            <p class="mcp-microcopy" id="mcpTokenHelpText">O token aparece uma única vez ao criar ou renovar.</p>
+        </section>
+
+        <section class="mcp-profile-card" aria-labelledby="install-title">
+            <div class="mcp-section-head">
+                <span>4</span>
+                <div>
+                    <h2 id="install-title">Instalação</h2>
+                    <p>Escolha o formato indispensável para copiar.</p>
+                </div>
+            </div>
+            <div class="mcp-install-options" role="tablist" aria-label="Tipo de instalação">
+                <button type="button" class="mcp-install-pill is-active" data-install-mode="prompt">Instalação via Prompt</button>
+                <button type="button" class="mcp-install-pill" data-install-mode="powershell">Instalação via PowerShell</button>
+                <button type="button" class="mcp-install-pill" data-install-mode="technical">Instalação Técnica</button>
+            </div>
+            <div class="mcp-summary-grid" aria-label="Resumo técnico mínimo">
+                <div><span>Ferramenta</span><strong id="mcpResolvedRuntime">Claude</strong></div>
+                <div><span>Squad</span><strong id="mcpResolvedSquad">Cliente</strong></div>
+                <div><span>Surface</span><strong id="mcpResolvedSurface">user</strong></div>
+                <div><span>Perfil</span><strong id="mcpResolvedProfile">squad_cliente</strong></div>
+                <div><span>Disponibilidade</span><strong id="mcpInstallAvailability">Carregando</strong></div>
+                <div><span>Ativação</span><strong id="mcpResolvedCommand">Sapiens On</strong></div>
+            </div>
+        </section>
+
+        <section class="mcp-profile-card mcp-profile-card--command" aria-labelledby="command-title">
+            <div class="mcp-section-head">
+                <span>5</span>
+                <div>
+                    <h2 id="command-title">Copiar Comando</h2>
+                    <p id="mcpInstructionText">Gere o conteúdo e copie para a ferramenta escolhida.</p>
+                </div>
+            </div>
+            <textarea id="mcpConfigOutput" class="form-control mcp-command-output" rows="10" readonly placeholder="Selecione ferramenta, squad e tipo de instalação para montar o comando."></textarea>
+            <div class="mcp-command-actions">
+                <button type="button" class="btn btn-secondary" id="buildMcpConfigButton">Atualizar</button>
+                <button type="button" class="btn btn-primary" id="copyMcpConfigButton">Copiar Comando</button>
+            </div>
+        </section>
+    </main>
     </section>
 
-    <div id="mcpTokenModal" class="mcp-token-modal" hidden>
-        <div class="mcp-token-modal__backdrop" data-close-token-modal="true"></div>
-        <div class="mcp-token-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mcpTokenModalTitle">
-            <h3 id="mcpTokenModalTitle" style="margin: 0 0 0.5rem; font-size: 1.05rem; font-weight: 700; color: var(--text-main);">Copie seu token agora</h3>
-            <p style="margin: 0 0 1rem; color: var(--text-secondary);">Esse token entra no comando único gerado nesta tela. Ele não será mostrado novamente depois que esta janela for fechada. Copie agora e guarde em local seguro.</p>
-            <textarea id="mcpTokenModalValue" class="form-control" rows="4" readonly></textarea>
-            <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1rem; flex-wrap:wrap;">
-                <button type="button" class="btn btn-secondary" id="copyMcpTokenModalButton">Copiar token</button>
-                <button type="button" class="btn btn-primary" id="closeMcpTokenModalButton">Fechar</button>
-            </div>
-        </div>
-    </div>
-
     <section id="profile-security-panel" class="profile-tab-panel">
-        <div style="max-width: 860px;">
-            <div class="card" style="border-radius: 24px;">
-                <div class="card-body" style="display: grid; gap: 1.25rem;">
-                    <div>
-                        <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.35rem;">Segurança de acesso</h2>
-                        <p style="color: var(--text-tertiary); margin: 0;">Atualize sua senha com validação visual de força.</p>
-                    </div>
-
-                    <div id="password-alert-container"></div>
-
-                    <form id="changePasswordForm" style="display: grid; gap: 1rem;">
-                        <div class="filter-field">
-                            <label>Senha atual</label>
-                            <div style="position: relative;">
-                                <input type="password" class="form-control" id="currentPassword" name="old_password" required autocomplete="current-password" style="padding-right: 42px;">
-                                <button type="button" class="password-toggle" data-target="currentPassword" aria-label="Mostrar ou ocultar senha atual">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Nova senha</label>
-                            <div style="position: relative;">
-                                <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="6" autocomplete="new-password" style="padding-right: 42px;">
-                                <button type="button" class="password-toggle" data-target="newPassword" aria-label="Mostrar ou ocultar nova senha">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            <div style="display:grid; gap:8px; margin-top: 0.35rem;">
-                                <div style="width:100%; height:8px; border-radius:999px; background:#e2e8f0; overflow:hidden;">
-                                    <div id="passwordStrengthFill" style="height:100%; width:0; border-radius:999px; background:#cbd5e1; transition: width .2s ease, background .2s ease;"></div>
-                                </div>
-                                <p id="passwordStrengthText" style="margin:0; font-size:12px; color: var(--text-tertiary);">Força da senha: informe uma nova senha.</p>
-                            </div>
-                            <small style="color: var(--text-tertiary);">Use pelo menos 6 caracteres e combine letras, números e símbolos.</small>
-                        </div>
-
-                        <div class="filter-field">
-                            <label>Confirmar nova senha</label>
-                            <div style="position: relative;">
-                                <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required minlength="6" autocomplete="new-password" style="padding-right: 42px;">
-                                <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Mostrar ou ocultar confirmação de senha">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; justify-content: flex-end;">
-                            <button type="submit" class="btn btn-primary" data-ref="08">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
-                                    <path d="M12 15v4"></path>
-                                    <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
-                                    <rect x="4" y="11" width="16" height="10" rx="2"></rect>
-                                </svg>
-                                Alterar senha
-                            </button>
-                        </div>
-                    </form>
+        <div class="mcp-profile-card profile-tab-card">
+            <div class="mcp-section-head">
+                <span>3</span>
+                <div>
+                    <h2>Segurança</h2>
+                    <p>Atualize sua senha mantendo o acesso protegido.</p>
                 </div>
             </div>
+            <div id="password-alert-container"></div>
+            <form id="changePasswordForm" class="profile-form">
+                <div class="profile-field">
+                    <label for="currentPassword">Senha atual</label>
+                    <div class="password-field-wrap">
+                        <input type="password" class="form-control" id="currentPassword" name="old_password" required autocomplete="current-password">
+                        <button type="button" class="password-toggle" data-target="currentPassword" aria-label="Mostrar ou ocultar senha atual">👁</button>
+                    </div>
+                </div>
+                <div class="profile-field">
+                    <label for="newPassword">Nova senha</label>
+                    <div class="password-field-wrap">
+                        <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="6" autocomplete="new-password">
+                        <button type="button" class="password-toggle" data-target="newPassword" aria-label="Mostrar ou ocultar nova senha">👁</button>
+                    </div>
+                    <div class="password-strength">
+                        <div><span id="passwordStrengthFill"></span></div>
+                        <small id="passwordStrengthText">Força da senha: informe uma nova senha.</small>
+                    </div>
+                </div>
+                <div class="profile-field">
+                    <label for="confirmPassword">Confirmar nova senha</label>
+                    <div class="password-field-wrap">
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required minlength="6" autocomplete="new-password">
+                        <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Mostrar ou ocultar confirmação de senha">👁</button>
+                    </div>
+                </div>
+                <div class="profile-form-actions">
+                    <button type="submit" class="btn btn-primary">Alterar senha</button>
+                </div>
+            </form>
         </div>
     </section>
 </div>
 
+<div id="mcpTokenModal" class="mcp-token-modal" hidden>
+    <div class="mcp-token-modal__backdrop" data-close-token-modal="true"></div>
+    <div class="mcp-token-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="mcpTokenModalTitle">
+        <h3 id="mcpTokenModalTitle">Copie seu token agora</h3>
+        <p>Ele será inserido nos comandos desta página, mas não será exibido novamente depois que esta janela for fechada.</p>
+        <textarea id="mcpTokenModalValue" class="form-control" rows="4" readonly></textarea>
+        <div class="mcp-modal-actions">
+            <button type="button" class="btn btn-secondary" id="copyMcpTokenModalButton">Copiar token</button>
+            <button type="button" class="btn btn-primary" id="closeMcpTokenModalButton">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <style>
-    .profile-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .profile-tab {
-        border: 1px solid var(--border);
-        background: var(--card-bg, #fff);
-        color: var(--text-secondary);
-        border-radius: 999px;
-        padding: 0.8rem 1.1rem;
-        font-size: 0.92rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all .2s ease;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-    }
-
-    .profile-tab.is-active {
-        color: #fff;
-        background: linear-gradient(135deg, #2563eb, #1d4ed8);
-        border-color: transparent;
-    }
-
-    .profile-tab-panel {
-        display: none;
-    }
-
-    .profile-tab-panel.is-active {
-        display: block;
-    }
-
-    .mcp-step-panel {
-        display: grid !important;
-    }
-
-    .mcp-step-tab {
-        display: none !important;
-    }
-
-    .mcp-token-modal[hidden] {
-        display: none !important;
-    }
-
-    .mcp-token-modal {
-        position: fixed;
-        inset: 0;
-        z-index: 1200;
-        display: grid;
-        place-items: center;
-        padding: 1.25rem;
-    }
-
-    .mcp-token-modal__backdrop {
-        position: absolute;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.56);
-        backdrop-filter: blur(2px);
-    }
-
-    .mcp-token-modal__dialog {
-        position: relative;
-        z-index: 1;
-        width: min(100%, 640px);
-        padding: 1.25rem;
-        border-radius: 20px;
-        border: 1px solid rgba(15, 23, 42, 0.08);
-        background: var(--card-bg, #fff);
-        box-shadow: 0 24px 80px rgba(15, 23, 42, 0.2);
-    }
-
-    .password-toggle {
-        position: absolute;
-        top: 50%;
-        right: 12px;
-        transform: translateY(-50%);
-        border: none;
-        background: transparent;
-        color: var(--text-tertiary);
-        cursor: pointer;
-        padding: 0;
-        width: 24px;
-        height: 24px;
-    }
-
-    .profile-alert {
-        padding: 12px 14px;
-        border-radius: 12px;
-        border: 1px solid transparent;
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-
-    .profile-alert--success {
-        background: #dcfce7;
-        color: #166534;
-        border-color: #bbf7d0;
-    }
-
-    .profile-alert--error {
-        background: #fee2e2;
-        color: #991b1b;
-        border-color: #fecaca;
-    }
-
-    .mcp-choice-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 0.75rem;
-    }
-
-    .mcp-choice-card {
-        text-align: left;
-        border: 1px solid var(--border);
-        background: var(--card-bg, #fff);
-        border-radius: 16px;
-        padding: 0.95rem 1rem;
-        cursor: pointer;
-        display: grid;
-        gap: 0.35rem;
-        color: var(--text-secondary);
-        transition: all .2s ease;
-    }
-
-    .mcp-choice-card strong {
-        color: var(--text-main);
-        font-size: 0.95rem;
-    }
-
-    .mcp-choice-card span {
-        font-size: 0.82rem;
-        line-height: 1.35;
-    }
-
-    .mcp-choice-card.is-active {
-        border-color: #2563eb;
-        background: rgba(37, 99, 235, 0.08);
-        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
-    }
-
-    .mcp-choice-card.is-disabled,
-    .mcp-choice-card:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-        background: rgba(148, 163, 184, 0.08);
-        border-style: dashed;
-    }
-
-    .mcp-summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 0.75rem;
-    }
-
-    .mcp-summary-card {
-        padding: 0.85rem 0.95rem;
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        background: var(--bg-body);
-        display: grid;
-        gap: 0.2rem;
-    }
-
-    .mcp-summary-label {
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-tertiary);
-    }
-
-    .mcp-summary-value {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: var(--text-main);
-        line-height: 1.3;
-    }
-
-    @media (max-width: 900px) {
-        div[style*='grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr)'] {
-            grid-template-columns: 1fr !important;
-        }
-    }
-
-    @media (max-width: 640px) {
-        div[style*='grid-template-columns: repeat(2, minmax(0, 1fr))'] {
-            grid-template-columns: 1fr !important;
-        }
-
-        div[style*='justify-content: flex-end;'] .btn {
-            width: 100%;
-        }
-    }
+    .mcp-profile-shell { width: 100%; max-width: 1120px; min-width: 0; margin: 0 auto; padding: 0 1rem 4rem; box-sizing: border-box; overflow-x: clip; }
+    .mcp-profile-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; padding: 1.25rem; border: 1px solid rgba(15, 23, 42, .08); border-radius: 28px; background: linear-gradient(135deg, rgba(37, 99, 235, .1), rgba(255, 255, 255, .92)); }
+    .mcp-profile-eyebrow { display: inline-flex; margin-bottom: .45rem; color: #1d4ed8; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .mcp-profile-hero h1, .mcp-section-head h2, .mcp-token-modal__dialog h3 { margin: 0; color: var(--text-main); }
+    .mcp-profile-hero h1 { font-size: clamp(1.65rem, 3vw, 2.35rem); font-weight: 800; letter-spacing: -.04em; }
+    .mcp-profile-hero p, .mcp-section-head p, .mcp-microcopy, .mcp-token-modal__dialog p, .mcp-compact-form small, #mcpInstructionText { margin: 0; color: var(--text-tertiary); line-height: 1.45; overflow-wrap: anywhere; word-break: break-word; }
+    .profile-tabs { display: flex; flex-wrap: wrap; gap: .75rem; margin: 0 0 1rem; }
+    .profile-tab { border: 1px solid var(--border); background: var(--card-bg, #fff); color: var(--text-secondary); border-radius: 999px; padding: .78rem 1rem; font-weight: 800; cursor: pointer; transition: all .18s ease; }
+    .profile-tab.is-active { border-color: transparent; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; }
+    .profile-tab-panel { display: none; min-width: 0; }
+    .profile-tab-panel.is-active { display: block; }
+    .profile-tab-card { max-width: 860px; }
+    .profile-form { display: grid; gap: 1rem; }
+    .profile-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .profile-field { display: grid; gap: .4rem; min-width: 0; }
+    .profile-field label { color: var(--text-main); font-weight: 700; font-size: .9rem; }
+    .profile-check-grid { display: flex; flex-wrap: wrap; gap: .65rem; }
+    .profile-check-grid label { display: inline-flex; align-items: center; gap: .45rem; padding: .7rem .85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body, #f8fafc); color: var(--text-secondary); }
+    .profile-form-actions { display: flex; justify-content: flex-end; }
+    .password-field-wrap { position: relative; min-width: 0; }
+    .password-field-wrap input { padding-right: 42px; }
+    .password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; }
+    .password-strength { display: grid; gap: .35rem; margin-top: .35rem; }
+    .password-strength > div { width: 100%; height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    #passwordStrengthFill { display: block; width: 0; height: 100%; border-radius: 999px; background: #cbd5e1; transition: width .2s ease, background .2s ease; }
+    .mcp-profile-flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; min-width: 0; }
+    .mcp-profile-card { min-width: 0; display: grid; gap: 1rem; padding: 1.15rem; border: 1px solid rgba(15, 23, 42, .08); border-radius: 24px; background: var(--card-bg, #fff); box-shadow: 0 18px 45px rgba(15, 23, 42, .05); overflow: hidden; }
+    .mcp-profile-card--command { grid-column: 1 / -1; }
+    .mcp-section-head { display: flex; align-items: flex-start; gap: .85rem; }
+    .mcp-section-head > span { flex: 0 0 auto; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .88rem; font-weight: 800; }
+    .mcp-section-head h2 { font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; }
+    .mcp-section-head p, .mcp-microcopy, .mcp-compact-form small { font-size: .9rem; }
+    .mcp-choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; }
+    .mcp-choice-card, .mcp-install-pill { border: 1px solid var(--border); background: var(--bg-body, #f8fafc); color: var(--text-secondary); cursor: pointer; transition: all .18s ease; }
+    .mcp-choice-card { min-width: 0; min-height: 92px; text-align: left; border-radius: 18px; padding: .95rem; display: grid; align-content: start; gap: .35rem; overflow-wrap: anywhere; }
+    .mcp-choice-card strong { color: var(--text-main); font-size: .98rem; }
+    .mcp-choice-card small { color: var(--text-tertiary); line-height: 1.35; }
+    .mcp-choice-card.is-active, .mcp-install-pill.is-active { border-color: rgba(37, 99, 235, .45); background: rgba(37, 99, 235, .08); box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .16); }
+    .mcp-choice-card.is-disabled, .mcp-choice-card:disabled { opacity: .5; cursor: not-allowed; border-style: dashed; }
+    .mcp-compact-form { display: grid; gap: .4rem; }
+    .mcp-compact-form label { color: var(--text-main); font-weight: 700; font-size: .9rem; }
+    .mcp-token-grid, .mcp-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; }
+    .mcp-token-status, .mcp-summary-grid > div { min-width: 0; display: grid; gap: .25rem; padding: .85rem; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-body, #f8fafc); }
+    .mcp-token-status span, .mcp-summary-grid span { color: var(--text-tertiary); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .mcp-token-status strong, .mcp-summary-grid strong { overflow-wrap: anywhere; color: var(--text-main); font-size: .92rem; line-height: 1.35; }
+    .mcp-token-actions, .mcp-command-actions, .mcp-modal-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; min-width: 0; }
+    .mcp-install-options { display: flex; flex-wrap: wrap; gap: .65rem; }
+    .mcp-install-pill { max-width: 100%; white-space: normal; border-radius: 999px; padding: .72rem .95rem; font-weight: 800; font-size: .88rem; }
+    .mcp-command-output { width: 100%; max-width: 100%; box-sizing: border-box; min-height: 220px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .86rem; line-height: 1.55; resize: vertical; overflow: auto; white-space: pre; }
+    .profile-alert { padding: 12px 14px; border-radius: 14px; border: 1px solid transparent; font-size: 13px; font-weight: 700; margin-bottom: 1rem; }
+    .profile-alert--success { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .profile-alert--error { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .mcp-token-modal[hidden] { display: none !important; }
+    .mcp-token-modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 1.25rem; }
+    .mcp-token-modal__backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .56); backdrop-filter: blur(2px); }
+    .mcp-token-modal__dialog { position: relative; z-index: 1; width: min(100%, 640px); display: grid; gap: .85rem; padding: 1.25rem; border-radius: 22px; border: 1px solid rgba(15, 23, 42, .08); background: var(--card-bg, #fff); box-shadow: 0 24px 80px rgba(15, 23, 42, .2); }
+    @media (max-width: 860px) { .mcp-profile-hero, .mcp-section-head { align-items: flex-start; } .mcp-profile-hero { flex-direction: column; } .mcp-profile-flow, .profile-form-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .mcp-profile-shell { padding-inline: .75rem; } .mcp-profile-card, .mcp-profile-hero { border-radius: 20px; padding: 1rem; } .mcp-token-actions .btn, .mcp-command-actions .btn, .mcp-modal-actions .btn, .profile-form-actions .btn, .mcp-install-pill, .profile-tab { width: 100%; justify-content: center; } }
 </style>
 
 <script>
+    const mcpCompanySelect = document.getElementById('mcpCompanyId');
+    const mcpStatusText = document.getElementById('mcpTokenStatusText');
+    const mcpLastUsageText = document.getElementById('mcpTokenLastUsageText');
+    const mcpConfigOutput = document.getElementById('mcpConfigOutput');
+    const mcpInstructionText = document.getElementById('mcpInstructionText');
+    const generateMcpTokenButton = document.getElementById('generateMcpTokenButton');
+    const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
+    const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
+    const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
+    const buildMcpConfigButton = document.getElementById('buildMcpConfigButton');
+    const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
+    const mcpResolvedSquad = document.getElementById('mcpResolvedSquad');
+    const mcpResolvedSurface = document.getElementById('mcpResolvedSurface');
+    const mcpResolvedProfile = document.getElementById('mcpResolvedProfile');
+    const mcpInstallAvailability = document.getElementById('mcpInstallAvailability');
+    const mcpResolvedCommand = document.getElementById('mcpResolvedCommand');
+    const mcpSquadRuntimeHint = document.getElementById('mcpSquadRuntimeHint');
+    const mcpTokenHelpText = document.getElementById('mcpTokenHelpText');
+    const mcpTokenModal = document.getElementById('mcpTokenModal');
+    const mcpTokenModalValue = document.getElementById('mcpTokenModalValue');
+    const copyMcpTokenModalButton = document.getElementById('copyMcpTokenModalButton');
+    const closeMcpTokenModalButton = document.getElementById('closeMcpTokenModalButton');
+    let latestMcpPlaintextToken = null;
+    let selectedMcpRuntime = 'claude';
+    let selectedMcpSquad = 'squad_cliente';
+    let selectedInstallMode = 'prompt';
+
+    function escapeHTML(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
     function renderAlert(containerId, success, message) {
         const container = document.getElementById(containerId);
         if (!container) return;
-        container.innerHTML = `<div class="profile-alert ${success ? 'profile-alert--success' : 'profile-alert--error'}">${message}</div>`;
+        container.innerHTML = `<div class="profile-alert ${success ? 'profile-alert--success' : 'profile-alert--error'}">${escapeHTML(message)}</div>`;
+    }
+
+    function formatDateTime(value) {
+        if (!value) return 'Não informado';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleString('pt-BR');
     }
 
     function normalizeDigits(value) {
@@ -815,84 +406,24 @@
         return { width: '100%', label: 'Força da senha: forte', color: '#16a34a' };
     }
 
-    const whatsappInput = document.getElementById('whatsapp');
-    if (whatsappInput) {
-        whatsappInput.value = formatWhatsapp(whatsappInput.value);
-        whatsappInput.addEventListener('input', () => {
-            whatsappInput.value = formatWhatsapp(whatsappInput.value);
-        });
+    function updatePasswordStrength() {
+        const fill = document.getElementById('passwordStrengthFill');
+        const text = document.getElementById('passwordStrengthText');
+        const input = document.getElementById('newPassword');
+        if (!fill || !text || !input) return;
+        const meta = getPasswordStrengthMeta(input.value);
+        fill.style.width = meta.width;
+        fill.style.background = meta.color;
+        text.textContent = meta.label;
     }
 
-    const telegramInput = document.getElementById('telegram');
-    if (telegramInput) {
-        telegramInput.addEventListener('input', () => {
-            telegramInput.value = normalizeDigits(telegramInput.value);
+    function activateProfileTab(targetId) {
+        document.querySelectorAll('.profile-tab').forEach((button) => {
+            button.classList.toggle('is-active', button.getAttribute('data-tab-target') === targetId);
         });
-    }
-
-    const passwordStrengthFill = document.getElementById('passwordStrengthFill');
-    const passwordStrengthText = document.getElementById('passwordStrengthText');
-    const newPasswordInput = document.getElementById('newPassword');
-    const mcpCompanySelect = document.getElementById('mcpCompanyId');
-    const mcpStatusText = document.getElementById('mcpTokenStatusText');
-    const mcpLastUsageText = document.getElementById('mcpTokenLastUsageText');
-    const mcpConfigOutput = document.getElementById('mcpConfigOutput');
-    const mcpClientNameInput = document.getElementById('mcpClientName');
-    const generateMcpTokenButton = document.getElementById('generateMcpTokenButton');
-    const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
-    const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
-    const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
-    const buildMcpCliInstallButton = document.getElementById('buildMcpCliInstallButton');
-    const copyMcpInstallCommandButton = document.getElementById('copyMcpInstallCommandButton');
-    const buildMcpActivationButton = document.getElementById('buildMcpActivationButton');
-    const buildMcpTechnicalButton = document.getElementById('buildMcpTechnicalButton');
-    const mcpInstructionText = document.getElementById('mcpInstructionText');
-    const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
-    const mcpResolvedSquad = document.getElementById('mcpResolvedSquad');
-    const mcpResolvedFamily = document.getElementById('mcpResolvedFamily');
-    const mcpResolvedProfile = document.getElementById('mcpResolvedProfile');
-    const mcpResolvedSurface = document.getElementById('mcpResolvedSurface');
-    const mcpInstallAvailability = document.getElementById('mcpInstallAvailability');
-    const mcpResolvedCommand = document.getElementById('mcpResolvedCommand');
-    const mcpResolvedEntryAgent = document.getElementById('mcpResolvedEntryAgent');
-    const mcpSelectionGuideTitle = document.getElementById('mcpSelectionGuideTitle');
-    const mcpSelectionGuideText = document.getElementById('mcpSelectionGuideText');
-    const mcpOnboardingSummaryText = document.getElementById('mcpOnboardingSummaryText');
-    const mcpGuidedStepsList = document.getElementById('mcpGuidedStepsList');
-    const mcpGuidedFields = document.getElementById('mcpGuidedFields');
-    const mcpValidationPromptText = document.getElementById('mcpValidationPromptText');
-    const mcpActivationCommandsList = document.getElementById('mcpActivationCommandsList');
-    const mcpActivationCommandsInstallText = document.getElementById('mcpActivationCommandsInstallText');
-    const mcpSessionBadgeText = document.getElementById('mcpSessionBadgeText');
-    const mcpStartupToolsList = document.getElementById('mcpStartupToolsList');
-    const mcpSquadSelectionText = document.getElementById('mcpSquadSelectionText');
-    const mcpCompanyContextText = document.getElementById('mcpCompanyContextText');
-    const mcpCompanyWritePolicyText = document.getElementById('mcpCompanyWritePolicyText');
-    const mcpOffCommandsList = document.getElementById('mcpOffCommandsList');
-    const mcpOfficialCompositionTitle = document.getElementById('mcpOfficialCompositionTitle');
-    const mcpOfficialPhaseText = document.getElementById('mcpOfficialPhaseText');
-    const mcpOfficialAgentsList = document.getElementById('mcpOfficialAgentsList');
-    const mcpAudienceTitle = document.getElementById('mcpAudienceTitle');
-    const mcpAudienceIntro = document.getElementById('mcpAudienceIntro');
-    const mcpAudienceFlow = document.getElementById('mcpAudienceFlow');
-    const mcpSquadRuntimeHint = document.getElementById('mcpSquadRuntimeHint');
-    const mcpTokenHelpText = document.getElementById('mcpTokenHelpText');
-    const mcpTokenFootnoteText = document.getElementById('mcpTokenFootnoteText');
-    const mcpTokenModal = document.getElementById('mcpTokenModal');
-    const mcpTokenModalValue = document.getElementById('mcpTokenModalValue');
-    const copyMcpTokenModalButton = document.getElementById('copyMcpTokenModalButton');
-    const closeMcpTokenModalButton = document.getElementById('closeMcpTokenModalButton');
-
-    let mcpStatusCache = null;
-    let latestMcpPlaintextToken = null;
-    let selectedMcpRuntime = 'claude';
-    let selectedMcpSquad = 'squad_cliente';
-
-    function formatDateTime(value) {
-        if (!value) return 'Não informado';
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return value;
-        return date.toLocaleString('pt-BR');
+        document.querySelectorAll('.profile-tab-panel').forEach((panel) => {
+            panel.classList.toggle('is-active', panel.id === targetId);
+        });
     }
 
     function setCompanyOptions(companies, selectedCompanyId) {
@@ -902,13 +433,24 @@
             mcpCompanySelect.innerHTML = '<option value="">Nenhuma empresa disponível</option>';
             return;
         }
-        const emptySelected = selectedCompanyId === null || selectedCompanyId === undefined ? 'selected' : '';
-        const options = ['<option value="" ' + emptySelected + '>Sem empresa padrão</option>'];
+        const options = [`<option value="" ${selectedCompanyId ? '' : 'selected'}>Sem empresa padrão</option>`];
         items.forEach((company) => {
             const selected = String(company.id) === String(selectedCompanyId) ? 'selected' : '';
-            options.push(`<option value="${company.id}" ${selected}>${company.label}</option>`);
+            options.push(`<option value="${escapeHTML(company.id)}" ${selected}>${escapeHTML(company.label)}</option>`);
         });
         mcpCompanySelect.innerHTML = options.join('');
+    }
+
+    function syncChoiceButtons(group, value) {
+        document.querySelectorAll(`[data-choice-group="${group}"]`).forEach((button) => {
+            button.classList.toggle('is-active', button.getAttribute('data-choice-value') === value);
+        });
+    }
+
+    function syncInstallModeButtons() {
+        document.querySelectorAll('[data-install-mode]').forEach((button) => {
+            button.classList.toggle('is-active', button.getAttribute('data-install-mode') === selectedInstallMode);
+        });
     }
 
     function setChoiceDisabled(button, disabled) {
@@ -917,52 +459,20 @@
         button.classList.toggle('is-disabled', Boolean(disabled));
     }
 
-    function syncSquadButtonsForRuntime(resolvedConfig) {
-        const locked = Boolean(resolvedConfig && resolvedConfig.runtime_locked);
-        const blocked = Boolean(resolvedConfig && resolvedConfig.runtime_blocked);
-        const activeSquad = resolvedConfig && resolvedConfig.squad ? resolvedConfig.squad : selectedMcpSquad;
+    function syncSquadButtonsForConfig(config) {
+        const blocked = Boolean(config && config.runtime_blocked);
+        const activeSquad = config && config.squad ? config.squad : selectedMcpSquad;
         document.querySelectorAll('[data-choice-group="squad"]').forEach((button) => {
             const value = button.getAttribute('data-choice-value');
-            setChoiceDisabled(button, blocked || (locked && value !== activeSquad));
+            setChoiceDisabled(button, blocked || (config && config.runtime_locked && value !== activeSquad));
         });
-        if (mcpSquadRuntimeHint) {
-            if (blocked) {
-                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'Seu perfil atual não pode instalar este squad no CLI escolhido.';
-            } else if (resolvedConfig && resolvedConfig.requires_company_selection) {
-                mcpSquadRuntimeHint.textContent = 'Esta combinação usa surface privilegiada. Escolha uma empresa padrão antes de gerar a instalação.';
-            } else {
-                mcpSquadRuntimeHint.textContent = resolvedConfig.runtime_note || 'Qualquer CLI pode receber qualquer squad autorizado ao seu perfil.';
-            }
-        }
-    }
-
-    function renderMcpStatus(status) {
-        mcpStatusCache = status || null;
-        if (!mcpStatusText || !mcpLastUsageText) return;
-        const active = Boolean(status && status.has_active_token);
-        const label = active
-            ? `Ativo • vence em ${formatDateTime(status.expires_at)}${status.days_to_expire !== null && status.days_to_expire !== undefined ? ` (${status.days_to_expire} dia(s))` : ''}`
-            : 'Sem token ativo. Gere ou renove para conectar um cliente remoto.';
-        mcpStatusText.textContent = label;
-        mcpLastUsageText.textContent = active
-            ? `Token ${status.token_masked || '-'} • último uso: ${formatDateTime(status.last_used_at)} • cliente: ${status.last_client_name || 'não identificado'}`
-            : 'Nenhum uso registrado.';
-        setCompanyOptions(status ? status.companies : [], status ? status.last_company_id : null);
-    }
-
-    async function loadMcpTokenStatus(showError = false) {
-        try {
-            const response = await fetch('{{ url_for('auth.profile_mcp_token_status') }}');
-            const data = await response.json();
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || 'Falha ao carregar status do token MCP.');
-            }
-            renderMcpStatus(data.data);
-        } catch (error) {
-            if (showError) {
-                renderAlert('mcp-token-alert-container', false, `Erro ao carregar token MCP: ${error.message}`);
-            }
-            if (mcpStatusText) mcpStatusText.textContent = 'Não foi possível carregar o status agora.';
+        if (!mcpSquadRuntimeHint) return;
+        if (blocked) {
+            mcpSquadRuntimeHint.textContent = config.runtime_note || 'Combinação indisponível para seu perfil.';
+        } else if (config && config.requires_company_selection) {
+            mcpSquadRuntimeHint.textContent = 'Escolha uma empresa padrão para publicar esta surface com isolamento por tenant.';
+        } else {
+            mcpSquadRuntimeHint.textContent = config?.runtime_note || 'Combinação liberada para o seu perfil.';
         }
     }
 
@@ -970,7 +480,7 @@
         return {
             company_id: mcpCompanySelect && mcpCompanySelect.value ? Number(mcpCompanySelect.value) : null,
             surface: 'user',
-            client_name: mcpClientNameInput ? mcpClientNameInput.value.trim() : null,
+            client_name: null,
             runtime: selectedMcpRuntime,
             squad: selectedMcpSquad,
         };
@@ -983,9 +493,7 @@
     function injectLatestTokenIntoConfig(config) {
         if (!config || !latestMcpPlaintextToken) return config;
         const replacePlaceholder = (value) => String(value || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', latestMcpPlaintextToken);
-        const rawJson = config.json && typeof config.json === 'object'
-            ? { ...config.json, token: latestMcpPlaintextToken }
-            : config.json;
+        const rawJson = config.json && typeof config.json === 'object' ? { ...config.json, token: latestMcpPlaintextToken } : config.json;
         return {
             ...config,
             text: replacePlaceholder(config.text),
@@ -997,343 +505,85 @@
             activation_prompt: replacePlaceholder(config.activation_prompt),
             guided_install_text: replacePlaceholder(config.guided_install_text),
             onboarding_summary_text: replacePlaceholder(config.onboarding_summary_text),
-            harness_summary_text: replacePlaceholder(config.harness_summary_text),
-            smoke_guided_text: replacePlaceholder(config.smoke_guided_text),
             copy_install_command_text: replacePlaceholder(config.copy_install_command_text),
         };
     }
 
-    function getSquadUiCopy(resolvedConfig) {
-        const squad = resolvedConfig && resolvedConfig.squad ? resolvedConfig.squad : 'squad_cliente';
-        const runtimeLabel = resolvedConfig && resolvedConfig.runtime_label ? resolvedConfig.runtime_label : 'o cliente de IA escolhido';
-        const runtime = resolvedConfig && resolvedConfig.runtime ? resolvedConfig.runtime : 'claude';
-        const isClaudeDesktop = runtime === 'claude';
-        if (squad === 'squad_versus') {
-            return {
-                guideTitle: 'Como essa combinação vai funcionar',
-                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Consultor'} para uso no ${runtimeLabel}. Esta instalação é voltada para trabalho consultivo, governança e rollout assistido, com uso controlado pela Versus.${isClaudeDesktop ? ' Use a aba Code do Claude Desktop. A conexão MCP deve ser registrada via claude mcp add no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação).' : ''}`,
-                compositionTitle: 'Composição oficial do Sapiens Consultor',
-                phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação consultiva com especialistas de estratégia, operação, performance, finanças e auditoria conforme o caso.`,
-                audienceTitle: 'Quem opera no Sapiens Consultor',
-                audienceIntro: 'Você instala uma única entrada consultiva. A partir dela, o atendimento começa por coordenação consultiva e pode acionar especialistas da Versus quando a demanda exigir análise estrutural, governança ou revisão estratégica.',
-                audienceCards: [
-                    { title: 'Coordenação consultiva', summary: 'Entende o caso, define a linha de análise e organiza os especialistas certos.' },
-                    { title: 'Estratégia e operação', summary: 'Apoia decisões estruturais, processos, posicionamento e evolução do negócio.' },
-                    { title: 'Finanças e auditoria', summary: 'Atua em leitura crítica, governança e temas sensíveis com maior controle.' },
-                ],
-            };
+    function outputForMode(config, mode) {
+        if (!config) return '';
+        if (mode === 'powershell') {
+            return config.powershell_install_command || config.copy_install_command_text || config.install_command || config.guided_install_text || config.instruction_text || '';
         }
-        if (squad === 'engineering') {
-            return {
-                guideTitle: 'Como essa combinação vai funcionar',
-                guideText: `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Engenharia'} para uso no ${runtimeLabel}. Esta instalação é técnica e controlada, pensada para diagnóstico, arquitetura, implementação e suporte avançado.${isClaudeDesktop ? ' Use a aba Code do Claude Desktop. A conexão MCP deve ser registrada via claude mcp add no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação).' : ''}`,
-                compositionTitle: 'Composição oficial do Sapiens Engenharia',
-                phaseText: `${resolvedConfig.availability_label || 'Instalação guiada controlada'}: entrada por coordenação técnica com roteamento para arquitetura, backend, AI engineering, dados e QA conforme a necessidade.`,
-                audienceTitle: 'Quem opera no Sapiens Engenharia',
-                audienceIntro: 'Você instala uma única entrada técnica. O atendimento começa por coordenação de engenharia e pode acionar especialistas internos para investigação, implementação, testes e diagnóstico profundo.',
-                audienceCards: [
-                    { title: 'Coordenação técnica', summary: 'Classifica o problema e direciona para a especialidade certa.' },
-                    { title: 'Arquitetura e backend', summary: 'Apoia desenho técnico, APIs, serviços, integrações e regras críticas.' },
-                    { title: 'AI, dados e qualidade', summary: 'Apoia agentes, MCP, banco de dados, testes, validação e excelência técnica.' },
-                ],
-            };
+        if (mode === 'technical') {
+            return config.technical_config_text || `${config.text || ''}\n\nJSON:\n${JSON.stringify(config.json || {}, null, 2)}`;
         }
-        return {
-            guideTitle: 'Como essa combinação vai funcionar',
-            guideText: isClaudeDesktop
-                ? `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. Neste cliente, a conexão MCP usa o registry nativo do Claude Code (~/.claude.json ou equivalente gerenciado da instalação). Use a aba Code do Claude Desktop, não a aba Chat. O APP32 prepara a URL, o token, o comando claude mcp add e o prompt de ativação canônico.`
-                : `Você está configurando o ${resolvedConfig.experience_label || 'Sapiens Cliente'} para uso no ${runtimeLabel}. A tela vai orientar qual agente entra primeiro, quais especialistas fazem parte dessa instalação e qual é o melhor tipo de configuração para o cliente escolhido.`,
-            compositionTitle: 'Família inicial oficial do Squad Cliente',
-            phaseText: resolvedConfig.official_phase_label
-                ? `${resolvedConfig.official_phase_label}: entrada pelo Agente Coordenador com roteamento para Comercial, Operacional e Adm/Financeiro.`
-                : 'A instalação publica a entrada padrão do squad com o harness inicial resolvido automaticamente pelo APP32.',
-            audienceTitle: 'Quem vai te atender no Sapiens Cliente',
-            audienceIntro: 'Você instala uma única entrada chamada Sapiens Cliente. Depois disso, ele entende sua solicitação e chama internamente o especialista certo para te ajudar, sem que você precise escolher manualmente quem vai atuar.',
-            audienceCards: [
-                { title: 'Coordenador', summary: 'Entende seu pedido, organiza o atendimento e chama o especialista certo.' },
-                { title: 'Comercial', summary: 'Ajuda com clientes, propostas, negociação, preço e oportunidades.' },
-                { title: 'Operacional', summary: 'Ajuda com tarefas, prioridades, rotina, organização e execução.' },
-                { title: 'Administrativo/Financeiro', summary: 'Ajuda com alertas, vencimentos, organização administrativa e contexto financeiro seguro.' },
-            ],
-        };
+        return config.activation_prompt || config.guided_install_text || config.cli_install_text || config.instruction_text || '';
     }
 
-    function renderMcpConfig(config, mode = 'activation') {
-        if (!mcpConfigOutput) return;
-        if (!config) {
-            mcpConfigOutput.value = '';
+    function renderMcpStatus(status) {
+        const active = Boolean(status && status.has_active_token);
+        if (mcpStatusText) {
+            mcpStatusText.textContent = active ? `Ativo • vence em ${formatDateTime(status.expires_at)}` : 'Sem token ativo.';
+        }
+        if (mcpLastUsageText) {
+            mcpLastUsageText.textContent = active ? `${status.token_masked || '-'} • ${formatDateTime(status.last_used_at)} • ${status.last_client_name || 'sem cliente'}` : 'Nenhum uso registrado.';
+        }
+        setCompanyOptions(status ? status.companies : [], status ? (status.last_company_id || status.default_company_id) : null);
+    }
+
+    function renderMcpConfig(config) {
+        const resolvedConfig = injectLatestTokenIntoConfig(config);
+        if (!resolvedConfig) {
+            if (mcpConfigOutput) mcpConfigOutput.value = '';
             return;
         }
-        const resolvedConfig = injectLatestTokenIntoConfig(config);
-        if (resolvedConfig && resolvedConfig.squad) {
+        if (resolvedConfig.squad) {
             selectedMcpSquad = resolvedConfig.squad;
             syncChoiceButtons('squad', selectedMcpSquad);
         }
         if (mcpResolvedRuntime) mcpResolvedRuntime.textContent = resolvedConfig.runtime_label || '-';
         if (mcpResolvedSquad) mcpResolvedSquad.textContent = resolvedConfig.experience_label || resolvedConfig.squad_label || '-';
-        if (mcpResolvedFamily) mcpResolvedFamily.textContent = resolvedConfig.squad_label || '-';
-        if (mcpResolvedProfile) mcpResolvedProfile.textContent = resolvedConfig.resolved_profile || '-';
         if (mcpResolvedSurface) mcpResolvedSurface.textContent = resolvedConfig.resolved_surface || '-';
+        if (mcpResolvedProfile) mcpResolvedProfile.textContent = resolvedConfig.resolved_profile || '-';
         if (mcpInstallAvailability) mcpInstallAvailability.textContent = resolvedConfig.availability_label || '-';
-        if (mcpResolvedCommand) mcpResolvedCommand.textContent = resolvedConfig.command_alias || '-';
-        if (mcpResolvedEntryAgent) mcpResolvedEntryAgent.textContent = resolvedConfig.harness_label || 'Harness inicial não resolvido';
-        const uiCopy = getSquadUiCopy(resolvedConfig);
-        if (mcpSelectionGuideTitle) mcpSelectionGuideTitle.textContent = uiCopy.guideTitle;
-        if (mcpSelectionGuideText) mcpSelectionGuideText.textContent = uiCopy.guideText;
-        if (mcpOnboardingSummaryText) {
-            mcpOnboardingSummaryText.textContent = resolvedConfig.onboarding_summary_text
-                || 'Checklist de onboarding indisponível para esta combinação.';
-        }
-        if (mcpGuidedStepsList && Array.isArray(resolvedConfig.guided_install_steps) && resolvedConfig.guided_install_steps.length) {
-            mcpGuidedStepsList.innerHTML = resolvedConfig.guided_install_steps
-                .map((step) => `<li>${step}</li>`)
-                .join('');
-        }
-        if (mcpGuidedFields && Array.isArray(resolvedConfig.guided_connection_fields) && resolvedConfig.guided_connection_fields.length) {
-            mcpGuidedFields.innerHTML = resolvedConfig.guided_connection_fields
-                .map((field) => `
-                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                        <div style="font-weight: 700; color: var(--text-main);">${field.label}</div>
-                        <div style="font-size: 0.86rem; color: var(--text-tertiary); word-break: break-word;">${field.value}</div>
-                    </div>
-                `)
-                .join('');
-        }
-        if (mcpValidationPromptText) {
-            mcpValidationPromptText.textContent = resolvedConfig.validation_prompt || 'Digite Sapiens On (ou /sapiens-on) e confirme o fluxo com bootstrap_session_context, describe_app32_available_sapiens_squads_tool e resolve_app32_sapiens_activation_tool.';
-        }
-        if (mcpActivationCommandsList && Array.isArray(resolvedConfig.activation_commands) && resolvedConfig.activation_commands.length) {
-            mcpActivationCommandsList.innerHTML = resolvedConfig.activation_commands
-                .map((item) => `
-                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                        <div style="font-weight: 700; color: var(--text-main);">${item.command}</div>
-                        <div style="font-size: 0.86rem; color: var(--text-tertiary);">${item.summary}</div>
-                    </div>
-                `)
-                .join('');
-        }
-        if (mcpSessionBadgeText) {
-            mcpSessionBadgeText.textContent = resolvedConfig.session_badge || 'Badge não informado';
-        }
-        if (mcpStartupToolsList) {
-            const sequence = [
-                ...(Array.isArray(resolvedConfig.preflight_tools) ? resolvedConfig.preflight_tools : []),
-                resolvedConfig.activation_tool || null,
-                ...(Array.isArray(resolvedConfig.startup_tools) ? resolvedConfig.startup_tools : []),
-            ].filter(Boolean);
-            mcpStartupToolsList.textContent = sequence.length ? sequence.join(' → ') : 'Sequência não informada';
-        }
-        if (mcpSquadSelectionText) {
-            mcpSquadSelectionText.textContent = resolvedConfig.requires_squad_selection
-                ? `Há mais de um squad autorizado. O Sapiens pergunta: ${resolvedConfig.activation_selection_prompt || 'Com qual squad você vai trabalhar?'}`
-                : 'Há apenas um squad autorizado. O Sapiens ativa sem perguntar e baixa somente este squad.';
-        }
-        if (mcpCompanyContextText) {
-            mcpCompanyContextText.textContent = resolvedConfig.company_context_rules?.read_scope
-                || 'Empresa padrão é opcional. Leituras pessoais podem operar em escopo multiempresa.';
-        }
-        if (mcpCompanyWritePolicyText) {
-            mcpCompanyWritePolicyText.textContent = resolvedConfig.company_context_rules?.write_scope
-                || 'O Sapiens pede empresa apenas em ações específicas, mutações ou ambiguidades.';
-        }
-        if (mcpOffCommandsList && Array.isArray(resolvedConfig.deactivation_commands) && resolvedConfig.deactivation_commands.length) {
-            mcpOffCommandsList.textContent = resolvedConfig.deactivation_commands.map((item) => item.command).join(' / ');
-        }
-        if (mcpActivationCommandsInstallText) {
-            mcpActivationCommandsInstallText.textContent = resolvedConfig.activation_commands_install_command
-                ? `Script sugerido: ${resolvedConfig.activation_commands_install_command}`
-                : 'Este cliente não usa instalação automática de comandos slash.';
-        }
-        if (mcpOfficialCompositionTitle) mcpOfficialCompositionTitle.textContent = uiCopy.compositionTitle;
-        if (mcpOfficialPhaseText) {
-            mcpOfficialPhaseText.textContent = uiCopy.phaseText;
-        }
-        if (mcpAudienceTitle) mcpAudienceTitle.textContent = uiCopy.audienceTitle;
-        if (mcpAudienceIntro) mcpAudienceIntro.textContent = uiCopy.audienceIntro;
-        if (mcpAudienceFlow && Array.isArray(uiCopy.audienceCards) && uiCopy.audienceCards.length) {
-            mcpAudienceFlow.innerHTML = uiCopy.audienceCards.map((card) => `
-                <div style="padding: 0.8rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                    <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.2rem;">${card.title}</div>
-                    <div style="font-size: 0.86rem; color: var(--text-tertiary);">${card.summary}</div>
-                </div>
-            `).join('');
-        }
-        if (mcpOfficialAgentsList) {
-            const officialAgents = Array.isArray(resolvedConfig.official_agents) ? resolvedConfig.official_agents : [];
-            const harnesses = Array.isArray(resolvedConfig.available_harnesses) ? resolvedConfig.available_harnesses : [];
-            if (officialAgents.length) {
-                mcpOfficialAgentsList.innerHTML = officialAgents.map((agent) => `
-                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                        <div style="font-weight: 700; color: var(--text-main);">${agent.label}</div>
-                        <div style="font-size: 0.86rem; color: var(--text-tertiary);">${agent.summary}</div>
-                    </div>
-                `).join('');
-            } else {
-                mcpOfficialAgentsList.innerHTML = harnesses.map((harness) => `
-                    <div style="padding: 0.7rem 0.85rem; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-body);">
-                        <div style="font-weight: 700; color: var(--text-main);">${harness.label}</div>
-                        <div style="font-size: 0.86rem; color: var(--text-tertiary);">${harness.business_role || ''}</div>
-                    </div>
-                `).join('');
-            }
+        if (mcpResolvedCommand) mcpResolvedCommand.textContent = resolvedConfig.command_alias || 'Sapiens On';
+        if (mcpInstructionText) mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Conteúdo pronto para copiar.';
+        if (mcpTokenHelpText) {
+            mcpTokenHelpText.textContent = resolvedConfig.supports_personal_token
+                ? 'O token é pessoal e aparece uma única vez ao criar ou renovar.'
+                : 'Esta combinação usa rollout controlado; gere somente o comando/instrução permitido.';
         }
         if (generateMcpTokenButton) generateMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
         if (renewMcpTokenButton) renewMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
-        if (revokeMcpTokenButton) revokeMcpTokenButton.disabled = !resolvedConfig.supports_personal_token;
-        if (mcpTokenHelpText) {
-            mcpTokenHelpText.textContent = resolvedConfig.supports_personal_token
-                ? 'Gere o token, escolha Instalação via CLI ou Instalação via PowerShell e cole no destino correto.'
-                : 'Esta instalação usa rollout controlado. O código acima continua guiando a configuração, mas a credencial final pode ser provisionada pela Versus ou por administrador autorizado.';
-        }
-        if (mcpTokenFootnoteText) {
-            mcpTokenFootnoteText.textContent = resolvedConfig.supports_personal_token
-                ? 'O token é pessoal. Ele não fica preso a uma empresa específica e não será mostrado novamente depois que a janela de cópia for fechada.'
-                : 'Para este perfil, mantenha a instalação guiada e combine a credencial final com a equipe autorizada antes de concluir o uso.';
-        }
-        if (mcpInstructionText) {
-            mcpInstructionText.textContent = resolvedConfig.instruction_text || 'Use a instalação guiada quando disponível.';
-        }
-        syncSquadButtonsForRuntime(resolvedConfig);
-        if (buildMcpCliInstallButton) buildMcpCliInstallButton.disabled = !String(resolvedConfig.cli_install_text || '').trim();
-        if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.disabled = !String(resolvedConfig.powershell_install_command || resolvedConfig.copy_install_command_text || resolvedConfig.install_command || '').trim();
-        if (mode === 'technical') {
-            mcpConfigOutput.value = resolvedConfig.technical_config_text || `${resolvedConfig.text}
-
-JSON:
-${JSON.stringify(resolvedConfig.json, null, 2)}`;
-            return;
-        }
-        if (mode === 'cli') {
-            mcpConfigOutput.value = resolvedConfig.cli_install_text || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
-            return;
-        }
-        if (mode === 'command') {
-            mcpConfigOutput.value = resolvedConfig.powershell_install_command || resolvedConfig.copy_install_command_text || resolvedConfig.install_command || resolvedConfig.guided_install_text || resolvedConfig.instruction_text || '';
-            return;
-        }
-        mcpConfigOutput.value = resolvedConfig.guided_install_text || resolvedConfig.activation_prompt || resolvedConfig.instruction_text || resolvedConfig.install_command || '';
+        syncSquadButtonsForConfig(resolvedConfig);
+        syncInstallModeButtons();
+        if (mcpConfigOutput) mcpConfigOutput.value = outputForMode(resolvedConfig, selectedInstallMode);
     }
 
-    async function buildMcpConfig(mode = 'activation', showSuccessAlert = true) {
+    async function loadMcpTokenStatus(showError = false) {
+        try {
+            const response = await fetch('{{ url_for('auth.profile_mcp_token_status') }}');
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao carregar status do token MCP.');
+            renderMcpStatus(data.data);
+        } catch (error) {
+            if (showError) renderAlert('mcp-token-alert-container', false, error.message);
+            if (mcpStatusText) mcpStatusText.textContent = 'Não foi possível carregar o token.';
+        }
+    }
+
+    async function buildMcpConfig(showSuccessAlert = false) {
         const response = await fetch('{{ url_for('auth.profile_mcp_token_config') }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(buildMcpConfigPayload()),
         });
         const data = await response.json();
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || 'Falha ao montar configuração MCP.');
-        }
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao montar configuração MCP.');
         const resolvedData = injectLatestTokenIntoConfig(data.data);
-        if (data.data) {
-            renderMcpConfig(resolvedData, mode);
-        }
-        if (showSuccessAlert) {
-            const messagesByMode = {
-                activation: 'Instruções de instalação prontas.',
-                cli: 'Instalação via CLI pronta.',
-                command: 'Comando de instalação pronto.',
-                technical: 'Modo técnico pronto.',
-            };
-            const message = messagesByMode[mode] || 'Conteúdo MCP pronto.';
-            renderAlert('mcp-token-alert-container', true, message);
-        }
+        renderMcpConfig(resolvedData);
+        if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, 'Comando atualizado.');
         return resolvedData;
-    }
-
-    async function runMcpTokenAction(url, successMessage) {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(buildMcpTokenPayload()),
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-            throw new Error(data.message || 'Falha na operação do token MCP.');
-        }
-        latestMcpPlaintextToken = data.data && data.data.token ? data.data.token : latestMcpPlaintextToken;
-        if (data.data && data.data.token) {
-            openMcpTokenModal(data.data.token);
-        }
-        if (data.data && data.data.status) {
-            renderMcpStatus(data.data.status);
-        } else if (data.data) {
-            renderMcpStatus(data.data);
-        }
-        if (data.data && data.data.config) {
-            renderMcpConfig(data.data.config, 'activation');
-        } else {
-            renderMcpConfig(null);
-        }
-        if (latestMcpPlaintextToken) {
-            try {
-                await buildMcpConfig('activation', false);
-            } catch (error) {
-                console.warn('Falha ao remontar configuração MCP após emissão do token:', error);
-            }
-        }
-        renderAlert('mcp-token-alert-container', true, successMessage || data.message || 'Operação concluída.');
-    }
-
-    function updatePasswordStrength() {
-        if (!passwordStrengthFill || !passwordStrengthText || !newPasswordInput) return;
-        const meta = getPasswordStrengthMeta(newPasswordInput.value);
-        passwordStrengthFill.style.width = meta.width;
-        passwordStrengthFill.style.background = meta.color;
-        passwordStrengthText.textContent = meta.label;
-    }
-
-    if (newPasswordInput) {
-        newPasswordInput.addEventListener('input', updatePasswordStrength);
-        updatePasswordStrength();
-    }
-
-    function activateProfileTab(targetId) {
-        document.querySelectorAll('.profile-tab').forEach((button) => {
-            if (button.hasAttribute('data-mcp-step-target')) return;
-            button.classList.toggle('is-active', button.getAttribute('data-tab-target') === targetId);
-        });
-        document.querySelectorAll('.profile-tab-panel').forEach((panel) => {
-            panel.classList.toggle('is-active', panel.id === targetId);
-        });
-    }
-
-    document.querySelectorAll('.profile-tab').forEach((button) => {
-        if (button.hasAttribute('data-mcp-step-target')) return;
-        button.addEventListener('click', () => {
-            const targetId = button.getAttribute('data-tab-target');
-            activateProfileTab(targetId);
-        });
-    });
-
-    function activateMcpStep(targetId) {
-        document.querySelectorAll('.mcp-step-tab').forEach((button) => {
-            button.classList.toggle('is-active', button.getAttribute('data-mcp-step-target') === targetId);
-        });
-        document.querySelectorAll('.mcp-step-panel').forEach((panel) => {
-            panel.classList.toggle('is-active', panel.id === targetId);
-        });
-    }
-
-    document.querySelectorAll('.mcp-step-tab').forEach((button) => {
-        button.addEventListener('click', () => {
-            const targetId = button.getAttribute('data-mcp-step-target');
-            activateMcpStep(targetId);
-        });
-    });
-
-    function syncChoiceButtons(group, value) {
-        document.querySelectorAll(`[data-choice-group="${group}"]`).forEach((button) => {
-            button.classList.toggle('is-active', button.getAttribute('data-choice-value') === value);
-        });
-    }
-
-    function updateMcpActionLabels() {
-        if (buildMcpCliInstallButton) buildMcpCliInstallButton.textContent = 'Instalação via CLI';
-        if (buildMcpActivationButton) buildMcpActivationButton.textContent = 'Ver instruções detalhadas';
-        if (copyMcpInstallCommandButton) copyMcpInstallCommandButton.textContent = 'Instalação via PowerShell';
-        if (buildMcpTechnicalButton) buildMcpTechnicalButton.textContent = 'Ver modo técnico';
-        if (copyMcpConfigButton) copyMcpConfigButton.textContent = 'Copiar conteúdo';
     }
 
     function openMcpTokenModal(token) {
@@ -1349,63 +599,82 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         document.body.style.overflow = '';
     }
 
+    async function runMcpTokenAction(url, successMessage) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildMcpTokenPayload()),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha na operação do token MCP.');
+        latestMcpPlaintextToken = data.data && data.data.token ? data.data.token : latestMcpPlaintextToken;
+        if (data.data && data.data.token) openMcpTokenModal(data.data.token);
+        if (data.data && data.data.status) renderMcpStatus(data.data.status);
+        if (data.data && data.data.config) renderMcpConfig(data.data.config);
+        await buildMcpConfig(false).catch(() => {});
+        renderAlert('mcp-token-alert-container', true, successMessage || data.message || 'Operação concluída.');
+    }
+
+    async function copyText(value) {
+        const text = String(value || '');
+        if (!text.trim()) throw new Error('Nada para copiar.');
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        temp.setAttribute('readonly', '');
+        temp.style.position = 'fixed';
+        temp.style.left = '-9999px';
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+    }
+
     document.querySelectorAll('[data-choice-group="runtime"]').forEach((button) => {
         button.addEventListener('click', async () => {
             selectedMcpRuntime = button.getAttribute('data-choice-value') || 'claude';
             syncChoiceButtons('runtime', selectedMcpRuntime);
-            updateMcpActionLabels();
-            try {
-                await buildMcpConfig('activation', false);
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
+            try { await buildMcpConfig(false); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     });
 
     document.querySelectorAll('[data-choice-group="squad"]').forEach((button) => {
         button.addEventListener('click', async () => {
+            if (button.disabled) return;
             selectedMcpSquad = button.getAttribute('data-choice-value') || 'squad_cliente';
             syncChoiceButtons('squad', selectedMcpSquad);
-            updateMcpActionLabels();
-            try {
-                await buildMcpConfig('activation', false);
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
+            try { await buildMcpConfig(false); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
+        });
+    });
+
+    document.querySelectorAll('[data-install-mode]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            selectedInstallMode = button.getAttribute('data-install-mode') || 'prompt';
+            syncInstallModeButtons();
+            try { await buildMcpConfig(false); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     });
 
     if (mcpCompanySelect) {
         mcpCompanySelect.addEventListener('change', async () => {
-            try {
-                await buildMcpConfig('activation', false);
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
+            try { await buildMcpConfig(false); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
 
     if (generateMcpTokenButton) {
         generateMcpTokenButton.addEventListener('click', async () => {
-            try {
-                activateProfileTab('profile-mcp-panel');
-                activateMcpStep('mcp-step-config-panel');
-                await runMcpTokenAction('{{ url_for('auth.generate_profile_mcp_token') }}', 'Token MCP gerado com sucesso. Copie-o na janela aberta e depois gere o código para IA.');
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
+            try { await runMcpTokenAction('{{ url_for('auth.generate_profile_mcp_token') }}', 'Token criado. Copie o token e o comando final.'); }
+            catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
 
     if (renewMcpTokenButton) {
         renewMcpTokenButton.addEventListener('click', async () => {
-            try {
-                activateProfileTab('profile-mcp-panel');
-                activateMcpStep('mcp-step-config-panel');
-                await runMcpTokenAction('{{ url_for('auth.renew_profile_mcp_token') }}', 'Token MCP renovado com sucesso. Copie-o na janela aberta e atualize sua instalação.');
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
+            try { await runMcpTokenAction('{{ url_for('auth.renew_profile_mcp_token') }}', 'Token renovado. Atualize sua instalação com o novo comando.'); }
+            catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
 
@@ -1414,165 +683,126 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
             try {
                 const response = await fetch('{{ url_for('auth.revoke_profile_mcp_token') }}', { method: 'POST' });
                 const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.message || 'Falha ao revogar token MCP.');
-                }
+                if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao revogar token MCP.');
                 latestMcpPlaintextToken = null;
                 renderMcpStatus(data.data);
-                renderMcpConfig(null);
-                renderAlert('mcp-token-alert-container', true, 'Token MCP revogado com sucesso.');
+                await buildMcpConfig(false).catch(() => {});
+                renderAlert('mcp-token-alert-container', true, 'Token revogado.');
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
         });
     }
 
-
-    if (buildMcpActivationButton) {
-        buildMcpActivationButton.addEventListener('click', async () => {
-            try {
-                await buildMcpConfig('activation', true);
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
-        });
-    }
-
-    if (buildMcpCliInstallButton) {
-        buildMcpCliInstallButton.addEventListener('click', async () => {
-            try {
-                const config = await buildMcpConfig('cli', false);
-                const resolvedConfig = injectLatestTokenIntoConfig(config);
-                const cliText = String((resolvedConfig && resolvedConfig.cli_install_text) || '').trim();
-                if (!cliText) {
-                    renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe instalação via CLI.');
-                    return;
-                }
-                await navigator.clipboard.writeText(cliText);
-                renderAlert('mcp-token-alert-container', true, 'Instalação via CLI copiada para a área de transferência.');
-                renderMcpConfig(resolvedConfig, 'cli');
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
-        });
-    }
-
-    if (copyMcpInstallCommandButton) {
-        copyMcpInstallCommandButton.addEventListener('click', async () => {
-            try {
-                const config = await buildMcpConfig('command', false);
-                const resolvedConfig = injectLatestTokenIntoConfig(config);
-                const installCommand = String((resolvedConfig && (resolvedConfig.powershell_install_command || resolvedConfig.copy_install_command_text || resolvedConfig.install_command)) || '').trim();
-                if (!installCommand) {
-                    renderAlert('mcp-token-alert-container', false, 'Esta combinação não expõe instalação via PowerShell.');
-                    return;
-                }
-                await navigator.clipboard.writeText(installCommand);
-                renderAlert('mcp-token-alert-container', true, 'Instalação via PowerShell copiada para a área de transferência.');
-                renderMcpConfig(resolvedConfig, 'command');
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
-        });
-    }
-
-    if (buildMcpTechnicalButton) {
-        buildMcpTechnicalButton.addEventListener('click', async () => {
-            try {
-                await buildMcpConfig('technical', true);
-            } catch (error) {
-                renderAlert('mcp-token-alert-container', false, error.message);
-            }
+    if (buildMcpConfigButton) {
+        buildMcpConfigButton.addEventListener('click', async () => {
+            try { await buildMcpConfig(true); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
 
     if (copyMcpConfigButton) {
         copyMcpConfigButton.addEventListener('click', async () => {
-            if (!mcpConfigOutput || !mcpConfigOutput.value.trim()) {
-                renderAlert('mcp-token-alert-container', false, 'Gere ou renove o token para copiar a configuração completa.');
-                return;
-            }
             try {
-                await navigator.clipboard.writeText(mcpConfigOutput.value);
-                renderAlert('mcp-token-alert-container', true, 'Configuração MCP copiada para a área de transferência.');
+                if (!mcpConfigOutput || !mcpConfigOutput.value.trim()) await buildMcpConfig(false);
+                await copyText(mcpConfigOutput.value);
+                renderAlert('mcp-token-alert-container', true, 'Comando copiado.');
             } catch (error) {
-                renderAlert('mcp-token-alert-container', false, `Falha ao copiar configuração: ${error.message}`);
+                renderAlert('mcp-token-alert-container', false, error.message);
             }
         });
     }
 
-    document.querySelectorAll('.password-toggle').forEach((button) => {
+    document.querySelectorAll('.profile-tab').forEach((button) => {
         button.addEventListener('click', () => {
-            const targetId = button.getAttribute('data-target');
-            const input = document.getElementById(targetId);
-            const icon = button.querySelector('i');
-            if (!input || !icon) return;
-            const isPassword = input.type === 'password';
-            input.type = isPassword ? 'text' : 'password';
-            icon.classList.toggle('fa-eye', !isPassword);
-            icon.classList.toggle('fa-eye-slash', isPassword);
+            const targetId = button.getAttribute('data-tab-target');
+            if (targetId) activateProfileTab(targetId);
         });
     });
 
-    document.getElementById('profileForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const summaryDeliveryChannels = Array.from(document.querySelectorAll('input[name="summary_delivery_channels"]:checked')).map(input => input.value);
-        const formData = {
-            name: document.getElementById('name').value.trim(),
-            whatsapp: normalizeDigits(document.getElementById('whatsapp').value),
-            telegram: normalizeDigits(document.getElementById('telegram').value),
-            instagram: document.getElementById('instagram').value.trim(),
-            summary_delivery_channels: summaryDeliveryChannels,
-        };
-        try {
-            const response = await fetch('{{ url_for('auth.profile') }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-            const data = await response.json();
-            renderAlert('alert-container', data.success, data.message || (data.success ? 'Perfil atualizado com sucesso!' : 'Erro ao atualizar perfil.'));
-            if (data.success) {
-                setTimeout(() => { document.getElementById('alert-container').innerHTML = ''; }, 3000);
-            }
-        } catch (error) {
-            renderAlert('alert-container', false, `Erro ao atualizar perfil: ${error.message}`);
-        }
+    const whatsappInput = document.getElementById('whatsapp');
+    if (whatsappInput) {
+        whatsappInput.value = formatWhatsapp(whatsappInput.value);
+        whatsappInput.addEventListener('input', () => {
+            whatsappInput.value = formatWhatsapp(whatsappInput.value);
+        });
+    }
+
+    const telegramInput = document.getElementById('telegram');
+    if (telegramInput) {
+        telegramInput.addEventListener('input', () => {
+            telegramInput.value = normalizeDigits(telegramInput.value);
+        });
+    }
+
+    const newPasswordInput = document.getElementById('newPassword');
+    if (newPasswordInput) {
+        newPasswordInput.addEventListener('input', updatePasswordStrength);
+        updatePasswordStrength();
+    }
+
+    document.querySelectorAll('.password-toggle').forEach((button) => {
+        button.addEventListener('click', () => {
+            const input = document.getElementById(button.getAttribute('data-target'));
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+        });
     });
 
-    document.getElementById('changePasswordForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const payload = {
-            old_password: document.getElementById('currentPassword').value,
-            new_password: document.getElementById('newPassword').value,
-            confirm_password: document.getElementById('confirmPassword').value
-        };
-        if (payload.new_password !== payload.confirm_password) {
-            renderAlert('password-alert-container', false, 'Nova senha e confirmação não coincidem.');
-            return;
-        }
-        try {
-            const response = await fetch('{{ url_for('auth.change_password') }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            renderAlert('password-alert-container', data.success, data.message || (data.success ? 'Senha alterada com sucesso!' : 'Erro ao alterar senha.'));
-            if (data.success) {
-                this.reset();
-                updatePasswordStrength();
-                document.querySelectorAll('input[type="password"]').forEach((input) => { input.type = 'password'; });
-                document.querySelectorAll('.password-toggle i').forEach((icon) => {
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
+    const profileForm = document.getElementById('profileForm');
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const payload = {
+                name: document.getElementById('name')?.value.trim() || '',
+                whatsapp: normalizeDigits(document.getElementById('whatsapp')?.value || ''),
+                telegram: normalizeDigits(document.getElementById('telegram')?.value || ''),
+                instagram: document.getElementById('instagram')?.value.trim() || '',
+                summary_delivery_channels: Array.from(document.querySelectorAll('input[name="summary_delivery_channels"]:checked')).map((input) => input.value),
+            };
+            try {
+                const response = await fetch('{{ url_for('auth.profile') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
                 });
-                setTimeout(() => { document.getElementById('password-alert-container').innerHTML = ''; }, 4000);
+                const data = await response.json();
+                renderAlert('alert-container', data.success, data.message || (data.success ? 'Perfil atualizado com sucesso.' : 'Erro ao atualizar perfil.'));
+            } catch (error) {
+                renderAlert('alert-container', false, `Erro ao atualizar perfil: ${error.message}`);
             }
-        } catch (error) {
-            renderAlert('password-alert-container', false, `Erro ao alterar senha: ${error.message}`);
-        }
-    });
+        });
+    }
+
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const payload = {
+                old_password: document.getElementById('currentPassword')?.value || '',
+                new_password: document.getElementById('newPassword')?.value || '',
+                confirm_password: document.getElementById('confirmPassword')?.value || '',
+            };
+            if (payload.new_password !== payload.confirm_password) {
+                renderAlert('password-alert-container', false, 'Nova senha e confirmação não coincidem.');
+                return;
+            }
+            try {
+                const response = await fetch('{{ url_for('auth.change_password') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                renderAlert('password-alert-container', data.success, data.message || (data.success ? 'Senha alterada com sucesso.' : 'Erro ao alterar senha.'));
+                if (data.success) {
+                    changePasswordForm.reset();
+                    updatePasswordStrength();
+                }
+            } catch (error) {
+                renderAlert('password-alert-container', false, `Erro ao alterar senha: ${error.message}`);
+            }
+        });
+    }
 
     document.querySelectorAll('[data-close-token-modal="true"]').forEach((element) => {
         element.addEventListener('click', closeMcpTokenModal);
@@ -1580,15 +810,16 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
 
     if (copyMcpTokenModalButton) {
         copyMcpTokenModalButton.addEventListener('click', async () => {
-            if (!mcpTokenModalValue || !mcpTokenModalValue.value) return;
-            await navigator.clipboard.writeText(mcpTokenModalValue.value);
-            renderAlert('mcp-token-alert-container', true, 'Token copiado. Cole em um local seguro antes de fechar a janela.');
+            try {
+                await copyText(mcpTokenModalValue ? mcpTokenModalValue.value : '');
+                renderAlert('mcp-token-alert-container', true, 'Token copiado.');
+            } catch (error) {
+                renderAlert('mcp-token-alert-container', false, error.message);
+            }
         });
     }
 
-    if (closeMcpTokenModalButton) {
-        closeMcpTokenModalButton.addEventListener('click', closeMcpTokenModal);
-    }
+    if (closeMcpTokenModalButton) closeMcpTokenModalButton.addEventListener('click', closeMcpTokenModal);
 
     if (window.location.hash === '#mcp-token') {
         activateProfileTab('profile-mcp-panel');
@@ -1596,10 +827,8 @@ ${JSON.stringify(resolvedConfig.json, null, 2)}`;
         activateProfileTab('profile-security-panel');
     }
 
-    updateMcpActionLabels();
-
     loadMcpTokenStatus().finally(() => {
-        buildMcpConfig('activation', false).catch(() => {});
+        buildMcpConfig(false).catch((error) => renderAlert('mcp-token-alert-container', false, error.message));
     });
 </script>
 {% endblock %}

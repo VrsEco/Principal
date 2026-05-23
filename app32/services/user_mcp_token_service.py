@@ -45,7 +45,7 @@ RUNTIME_LABELS = {
     "claude": "Claude Code / aba Code do Claude Desktop",
     "codex": "Codex",
     "antigravity": "Antigravity",
-    "other": "Outro cliente MCP",
+    "other": "Genérica",
 }
 SQUAD_LABELS = {
     "squad_cliente": "Squad Cliente",
