@@ -52,6 +52,13 @@ class SapiensActivationService:
     DEFAULT_SELECTION_PROMPT = "Com qual squad você vai trabalhar? Cliente / Consultor / Engenharia"
 
     @classmethod
+    def build_session_welcome_opening(cls) -> str:
+        return (
+            "Sapiens (Versus) disponível. Como posso te ajudar?\n"
+            "Ou caso queira te mostro as instruções de uso."
+        )
+
+    @classmethod
     def build_session_welcome_short(
         cls,
         *,
@@ -222,6 +229,7 @@ class SapiensActivationService:
         startup_tools = list(
             MCPConnectionSnippetService.RUNTIME_PROFILES.get(selected["runtime_profile"], {}).get("startup_tools", [])
         )
+        activation_welcome_opening = cls.build_session_welcome_opening()
         activation_welcome_short = cls.build_session_welcome_short(
             user_id=None,
             role_label=role,
@@ -241,6 +249,7 @@ class SapiensActivationService:
             "session_title": selected["activation_status"],
             "session_badge": selected["session_badge"],
             "activation_message": f"{selected['activation_status']}.",
+            "activation_welcome_opening": activation_welcome_opening,
             "activation_welcome_short": activation_welcome_short,
             "activation_welcome_full": activation_welcome_full,
             "startup_tools": startup_tools,

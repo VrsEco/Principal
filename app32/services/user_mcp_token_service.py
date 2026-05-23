@@ -1546,6 +1546,7 @@ class UserMcpTokenService:
                 resolved_company_id=resolved_company_id,
                 company_label=display_name,
             )
+            activation_welcome_opening = SapiensActivationService.build_session_welcome_opening()
             activation_welcome_full = cls._build_sapiens_session_welcome_full(
                 user=user,
                 resolved_company_id=resolved_company_id,
@@ -1708,19 +1709,21 @@ class UserMcpTokenService:
                     f"4. Se houver mais de um squad, pergunte exatamente: `{activation_selection_prompt or 'Com qual squad você vai trabalhar?'}`.\n"
                     f"5. Rode `resolve_app32_sapiens_activation_tool` com o squad escolhido ou resolvido.\n"
                     "6. Execute a startup sequence retornada em `startup_tools`, na ordem, para pré-carregar schema e contexto.\n"
-                    "7. Se o fluxo funcionar, responda primeiro com a mensagem curta de boas-vindas, em linguagem acessível e sem jargão técnico, e mantenha o squad ativo nesta sessão.\n"
-                    "8. Termine essa primeira resposta com a pergunta exata: `Quer ver instruções mais completas?`\n"
-                    "9. Se o usuário responder positivamente, por exemplo `sim`, `quero`, `mostre` ou equivalente, responda com a versão completa das instruções.\n\n"
+                    "7. Se o fluxo funcionar, responda primeiro com a mensagem inicial mínima de boas-vindas, em linguagem acessível e sem jargão técnico, e mantenha o squad ativo nesta sessão.\n"
+                    "8. Se o usuário pedir instruções, mostre a versão inicial das instruções.\n"
+                    "9. Se depois disso o usuário pedir mais detalhes, responda com a versão completa das instruções.\n\n"
                     "Startup sequence esperada após a escolha do squad:\n"
                     + "\n".join([f"- {item}" for item in session_lifecycle["startup_tools"]])
                     + "\n\n"
                     f"Badge esperado: `{session_lifecycle['session_badge'] or runtime_config['experience_label'] + ' On'}`.\n"
                     "Antes de responder à primeira pergunta operacional do usuário, exponha explicitamente a identidade e o escopo resolvidos nesta sessão:\n"
                     f"{identity_summary_text}\n\n"
-                    "Mensagem curta obrigatória de boas-vindas:\n"
-                    f"{activation_welcome_short}\n\n"
-                    "Mensagem completa para usar somente se o usuário pedir mais detalhes:\n"
-                    f"{activation_welcome_full}\n\n"
+                      "Mensagem inicial mínima obrigatória de boas-vindas:\n"
+                      f"{activation_welcome_opening}\n\n"
+                      "Versão inicial das instruções para usar se o usuário pedir instruções:\n"
+                      f"{activation_welcome_short}\n\n"
+                      "Mensagem completa para usar somente se o usuário pedir mais detalhes:\n"
+                      f"{activation_welcome_full}\n\n"
                     "Se o runtime suportar título/badge de sessão, aplique esse badge no canto superior esquerdo ou no título visível da conversa.\n"
                     "Quando o usuário digitar `Sapiens Off` ou um off explícito do squad, remova o badge, descarte o bundle/contexto do squad e mantenha a sessão aberta.\n"
                     "Depois disso, responda à demanda do usuário.\n\n"
@@ -1793,6 +1796,7 @@ class UserMcpTokenService:
                 "activation_commands_install_command": activation_commands_install_command,
                 "identity": identity,
                 "identity_summary_text": identity_summary_text,
+                "activation_welcome_opening": activation_welcome_opening,
                 "activation_welcome_short": activation_welcome_short,
                 "activation_welcome_full": activation_welcome_full,
                 "session_badge": session_lifecycle["session_badge"],

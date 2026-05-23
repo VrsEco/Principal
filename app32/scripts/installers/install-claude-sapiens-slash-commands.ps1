@@ -90,9 +90,9 @@ Regras obrigatórias desta ativação:
 3. Rode `bootstrap_session_context`.
 4. Rode `resolve_app32_sapiens_activation_tool` com `squad=cliente`.
 5. Execute integralmente a `startup_tools` retornada, na ordem.
-5.1. Se o payload trouxer `activation_welcome_short`, use exatamente essa mensagem na primeira resposta.
-5.2. Termine a primeira resposta com a pergunta exata `Quer ver instruções mais completas?`.
-5.3. Se o usuário responder positivamente, mostre `activation_welcome_full`.
+5.1. Se o payload trouxer `activation_welcome_opening`, use exatamente essa mensagem na primeira resposta.
+5.2. Se o usuário pedir instruções, mostre `activation_welcome_short`.
+5.3. Se depois o usuário pedir mais detalhes, mostre `activation_welcome_full`.
 6. Não invente ativação, não simule tool e não responda consulta operacional sem MCP real.
 7. Reconheça também `Sapiens Cliente On`, `sapiens cliente on` e `/sapiens-cliente-on` como a mesma ativação.
 8. Se a conexão MCP não estiver disponível nesta sessão, responda exatamente:
@@ -122,9 +122,9 @@ Regras obrigatórias desta ativação:
 3. Rode `bootstrap_session_context`.
 4. Rode `resolve_app32_sapiens_activation_tool` com `squad=consultor`.
 5. Execute integralmente a `startup_tools` retornada, na ordem.
-5.1. Se o payload trouxer `activation_welcome_short`, use exatamente essa mensagem na primeira resposta.
-5.2. Termine a primeira resposta com a pergunta exata `Quer ver instruções mais completas?`.
-5.3. Se o usuário responder positivamente, mostre `activation_welcome_full`.
+5.1. Se o payload trouxer `activation_welcome_opening`, use exatamente essa mensagem na primeira resposta.
+5.2. Se o usuário pedir instruções, mostre `activation_welcome_short`.
+5.3. Se depois o usuário pedir mais detalhes, mostre `activation_welcome_full`.
 6. Não invente ativação, não simule tool e não responda consulta operacional sem MCP real.
 7. Reconheça também `Sapiens Consultor On`, `sapiens consultor on` e `/sapiens-consultor-on` como a mesma ativação.
 8. Se a conexão MCP não estiver disponível nesta sessão, responda exatamente:
@@ -153,9 +153,9 @@ Regras obrigatórias desta ativação:
 3. Rode `bootstrap_session_context`.
 4. Rode `resolve_app32_sapiens_activation_tool` com `squad=engenharia`.
 5. Execute integralmente a `startup_tools` retornada, na ordem.
-5.1. Se o payload trouxer `activation_welcome_short`, use exatamente essa mensagem na primeira resposta.
-5.2. Termine a primeira resposta com a pergunta exata `Quer ver instruções mais completas?`.
-5.3. Se o usuário responder positivamente, mostre `activation_welcome_full`.
+5.1. Se o payload trouxer `activation_welcome_opening`, use exatamente essa mensagem na primeira resposta.
+5.2. Se o usuário pedir instruções, mostre `activation_welcome_short`.
+5.3. Se depois o usuário pedir mais detalhes, mostre `activation_welcome_full`.
 6. Não invente ativação, não simule tool e não responda consulta operacional sem MCP real.
 7. Reconheça também `Sapiens Engenharia On`, `sapiens engenharia on` e `/sapiens-engenharia-on` como a mesma ativação.
 8. Se a conexão MCP não estiver disponível nesta sessão, responda exatamente:
@@ -189,9 +189,9 @@ Os squads instalados nesta máquina são: **{0}**.
 5. Pergunte exatamente ao usuário: `Com qual squad você vai trabalhar? Cliente / Consultor / Engenharia`
 6. Quando o usuário responder, rode `resolve_app32_sapiens_activation_tool` com o squad escolhido.
 7. Execute integralmente a `startup_tools` retornada, na ordem, sem depender de ToolSearch manual.
-7.1. Se o payload trouxer `activation_welcome_short`, use exatamente essa mensagem na primeira resposta.
-7.2. Termine a primeira resposta com a pergunta exata `Quer ver instruções mais completas?`.
-7.3. Se o usuário responder positivamente, mostre `activation_welcome_full`.
+7.1. Se o payload trouxer `activation_welcome_opening`, use exatamente essa mensagem na primeira resposta.
+7.2. Se o usuário pedir instruções, mostre `activation_welcome_short`.
+7.3. Se depois o usuário pedir mais detalhes, mostre `activation_welcome_full`.
 8. Nunca assuma automaticamente quando houver mais de um Squad possível.
 9. Não exija empresa na abertura da sessão. Use empresa padrão apenas se já existir contexto explícito.
 10. Para leituras pessoais transversais, opere em todas as empresas autorizadas e responda agrupando por empresa quando houver múltiplas.
@@ -227,9 +227,9 @@ Reconheça `Sapiens On`, `sapiens on` e `/sapiens-on` como a entrada desta ativa
 Rode `bootstrap_session_context`, depois `describe_app32_available_sapiens_squads_tool`, em seguida `resolve_app32_sapiens_activation_tool` e execute a `startup_tools` retornada.
 Não pergunte squad: existe apenas um disponível e você deve baixar somente este.
 Não exija empresa na abertura da sessão. Leituras pessoais podem operar no escopo autorizado; ações específicas pedem empresa apenas quando necessário.
-Se o payload trouxer `activation_welcome_short`, use exatamente essa mensagem na primeira resposta.
-Termine a primeira resposta com a pergunta exata `Quer ver instruções mais completas?`.
-Se o usuário responder positivamente, mostre `activation_welcome_full`.
+Se o payload trouxer `activation_welcome_opening`, use exatamente essa mensagem na primeira resposta.
+Se o usuário pedir instruções, mostre `activation_welcome_short`.
+Se depois o usuário pedir mais detalhes, mostre `activation_welcome_full`.
 Execute integralmente o fluxo equivalente a `{1}` e confirme a ativação ao usuário.
 
 Use a primeira linha de confirmação exatamente no formato `{0} Ativado`.

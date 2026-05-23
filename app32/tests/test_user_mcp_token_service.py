@@ -67,6 +67,8 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert "resolve_app32_sapiens_activation_tool" in config["activation_prompt"]
     assert "resolve_app32_instruction_bundle_tool" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
+    assert "Sapiens (Versus) disponível. Como posso te ajudar?" in config["activation_prompt"]
+    assert config["activation_welcome_opening"].startswith("Sapiens (Versus) disponível.")
     assert "Autenticação: Bearer Token" in config["activation_prompt"]
     assert "describe_app32_squad_runtime_tool" in config["activation_prompt"]
     assert '"transport": "http"' in config["technical_config_text"]

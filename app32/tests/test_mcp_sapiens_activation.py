@@ -57,6 +57,7 @@ def test_resolve_sapiens_activation_returns_cliente_payload():
     assert payload["data"]["session_title"] == "Sapiens Cliente Ativado"
     assert payload["data"]["session_badge"] == "Sapiens Cliente On"
     assert payload["data"]["startup_tools"][0] == "bootstrap_session_context"
+    assert payload["data"]["activation_welcome_opening"].startswith("Sapiens (Versus) disponível.")
     assert payload["data"]["activation_welcome_short"].startswith("Sessão Sapiens iniciada com sucesso!")
     assert "Quer ver instruções mais completas?" in payload["data"]["activation_welcome_short"]
     assert payload["data"]["activation_welcome_full"].startswith("Sessão Sapiens iniciada com sucesso!")
