@@ -544,9 +544,64 @@ def test_serialize_item_adds_app32_display_code(monkeypatch):
 
 
 def test_work_journey_source_urls_point_to_specific_origin_items():
-    assert work_journey_sync.build_project_task_source_url(77, 501) == '/projects/77/manage?activity_id=501&from=work-journey'
+    assert work_journey_sync.build_project_task_source_url(77, 501) == '/my-work/project-task/501?from=project'
     assert work_journey_sync.build_process_instance_source_url(9, 310) == '/my-work/process-instance/310?company_id=9&from=work-journey'
     assert work_journey_sync.build_meeting_source_url(9, 44) == '/meetings/company/9/meeting/44/report?from=work-journey'
+
+
+def test_calendar_event_project_task_url_prefers_hours_info_even_with_legacy_metadata():
+    event = SimpleNamespace(
+        company_id=9,
+        source_type='project_task',
+        source_id=501,
+        metadata_json={'source_url': '/projects/77/manage?activity_id=501&from=work-journey'},
+    )
+
+    assert work_journey_agenda_presenter._event_source_url(event) == '/my-work/project-task/501?from=project'
+
+
+def test_agenda_entry_project_task_url_prefers_hours_info_even_with_legacy_metadata(monkeypatch):
+    monkeypatch.setattr(work_journey_agenda_presenter, 'build_item_display_code', lambda item: 'AA.J.214')
+    task_item = SimpleNamespace(
+        id=999,
+        company_id=9,
+        item_type='project_task',
+        source_id=214,
+        title='Atividade de projeto',
+        description='',
+        status='pending',
+        priority='normal',
+        due_date=date(2026, 4, 6),
+        occurrence_date=date(2026, 4, 6),
+        worked_minutes=0,
+        estimated_minutes=30,
+        metadata_json={'source_url': '/projects/77/manage?activity_id=214&from=work-journey'},
+        block=None,
+    )
+    entry = SimpleNamespace(
+        id=10,
+        agenda_id=2,
+        company_id=9,
+        employee_id=3,
+        journey_item_id=999,
+        block_id=None,
+        planned_date=date(2026, 4, 6),
+        position_index=0,
+        allocated_minutes=30,
+        planned_start_minutes=None,
+        planned_end_minutes=None,
+        overflow_minutes=0,
+        is_fixed=False,
+        is_over_capacity=False,
+        manual_override=False,
+        metadata_json={},
+        block=None,
+        journey_item=task_item,
+    )
+
+    payload = work_journey_agenda_presenter.serialize_agenda_entry(entry)
+
+    assert payload['source_url'] == '/my-work/project-task/214?from=project'
 
 
 def test_get_work_journey_board_excludes_completed_items(monkeypatch):
@@ -955,7 +1010,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
-    assert journey_template.count("v='20260524-manual-events-actions-1'") == 3
+    assert journey_template.count("v='20260524-taxonomia-tarefas-1'") == 5
     assert 'work-calendar-events.js' in journey_template
     assert 'journeySearchInput' in journey_template
     assert 'journeyApplyFiltersBtn' in journey_template
@@ -966,11 +1021,11 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Planejamento operacional' in agendas_panel
     assert 'processInstanceCardsPanel' in agendas_panel
     assert 'processInstanceCardsList' in agendas_panel
-    assert 'Evento operacional derivado' in agendas_panel or 'processInstanceCardsList' in agendas_panel
+    assert 'Tarefa operacional derivada' in agendas_panel or 'processInstanceCardsList' in agendas_panel
     assert 'calendarEventsList' in agendas_panel
     assert 'calendarEventBlockInput' in agendas_panel
     assert 'agendaBoardContainer' in agendas_panel
-    assert 'A primeira coluna exibe eventos operacionais atrasados' in agendas_panel
+    assert 'A primeira coluna exibe tarefas operacionais atrasadas' in agendas_panel
     assert 'agendaSummaryCards' not in agendas_panel
     assert 'agendaMetaLine' not in agendas_panel
     assert 'agendaSearchStatus' not in agendas_panel

@@ -101,4 +101,4 @@ def test_sync_project_tasks_reconciles_completed_link_with_canonical_code(monkey
     assert captured["status"] == "completed"
     assert captured["metadata"]["source_code"] == "AA.J.2.1"
     assert captured["metadata"]["project_code"] == "AA.J.2"
-    assert captured["metadata"]["source_url"] == "/projects/32/manage?activity_id=238&from=work-journey"
+    assert captured["metadata"]["source_url"] == "/my-work/project-task/238?from=project"

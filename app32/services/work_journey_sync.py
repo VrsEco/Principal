@@ -31,9 +31,9 @@ def build_process_instance_source_url(company_id: int, instance_id: int | None) 
 
 
 def build_project_task_source_url(project_id: int | None, task_id: int | None) -> str | None:
-    if not project_id or not task_id:
+    if not task_id:
         return None
-    return f'/projects/{project_id}/manage?activity_id={task_id}&from=work-journey'
+    return f'/my-work/project-task/{task_id}?from=project'
 
 
 def build_meeting_source_url(company_id: int, meeting_id: int | None) -> str | None:

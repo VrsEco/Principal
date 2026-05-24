@@ -15,6 +15,7 @@ from services.work_journey_helpers import (
     duration_minutes,
 )
 from services.work_journey_sync import (
+    build_project_task_source_url,
     load_period_items,
     prune_missing_source_items,
     propagate_item_status,
@@ -214,18 +215,18 @@ def sync_work_journey_items(company_id: int, employee_id: int, period_start: dat
 def update_work_item(company_id: int, item_id: int, payload: dict[str, Any]) -> dict[str, Any]:
     item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
     if not item:
-        raise WorkJourneyError('Evento não encontrado.')
+        raise WorkJourneyError('Tarefa não encontrada.')
 
     if 'block_id' in payload:
         block_id = payload.get('block_id')
         if block_id:
             block = WorkJourneyBlock.query.filter_by(company_id=company_id, id=block_id, employee_id=item.employee_id).first()
             if not block:
-                raise WorkJourneyError('Bloco inválido para o colaborador do evento.')
+                raise WorkJourneyError('Bloco inválido para o colaborador da tarefa.')
             if block.block_mode == 'reserved_full':
-                raise WorkJourneyError('Blocos com capacidade ocupada não aceitam eventos.')
+                raise WorkJourneyError('Blocos com capacidade ocupada não aceitam tarefas.')
             if item.item_type not in (block.accepted_item_types or []):
-                raise WorkJourneyError('O bloco informado não aceita este tipo de evento.')
+                raise WorkJourneyError('O bloco informado não aceita este tipo de tarefa.')
             item.block_id = block.id
         else:
             item.block_id = None
@@ -284,7 +285,7 @@ def create_manual_task(company_id: int, payload: dict[str, Any]) -> dict[str, An
         if not block:
             raise WorkJourneyError('Bloco inválido para o colaborador informado.')
         if block.block_mode == 'reserved_full':
-            raise WorkJourneyError('Blocos com capacidade ocupada não aceitam eventos.')
+            raise WorkJourneyError('Blocos com capacidade ocupada não aceitam tarefas.')
         if 'manual' not in (block.accepted_item_types or []):
             raise WorkJourneyError('O bloco informado não aceita evento avulso.')
 
@@ -315,7 +316,7 @@ def create_manual_task(company_id: int, payload: dict[str, Any]) -> dict[str, An
 def delete_work_item(company_id: int, item_id: int) -> None:
     item = WorkJourneyItem.query.filter_by(company_id=company_id, id=item_id).first()
     if not item:
-        raise WorkJourneyError('Evento não encontrado.')
+        raise WorkJourneyError('Tarefa não encontrada.')
     if item.item_type != 'manual' or item.source_id or item.rule_id:
         raise WorkJourneyError('Somente eventos avulsos podem ser excluídos diretamente na jornada.')
     db.session.delete(item)
@@ -379,7 +380,11 @@ def serialize_item(item: WorkJourneyItem) -> dict[str, Any]:
     payload['status_label'] = STATUS_LABELS.get(item.status, item.status)
     payload['is_overdue'] = bool(item.due_date and item.due_date < date.today() and item.status != 'completed')
     payload['source_label'] = (item.metadata_json or {}).get('source_label')
-    payload['source_url'] = (item.metadata_json or {}).get('source_url')
+    payload['source_url'] = (
+        build_project_task_source_url(None, item.source_id or item.id)
+        if item.item_type == 'project_task'
+        else (item.metadata_json or {}).get('source_url')
+    )
     payload['block_name'] = item.block.name if getattr(item, 'block', None) else None
     payload['display_code'] = display_code
     payload['display_title'] = f'{display_code} - {item.title}' if display_code else item.title

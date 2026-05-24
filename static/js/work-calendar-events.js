@@ -40,7 +40,7 @@
         const listEl = document.getElementById('calendarEventsList');
         if (!listEl || !companyId || !selectedEmployeeId()) return;
         const range = weekRange(anchorDate());
-        listEl.innerHTML = '<div class="journey-item-empty">Carregando eventos...</div>';
+        listEl.innerHTML = '<div class="journey-item-empty">Carregando tarefas...</div>';
         const params = new URLSearchParams({
             employee_id: String(selectedEmployeeId()),
             start_date: range.start,
@@ -55,7 +55,7 @@
         const response = await fetch(`/api/companies/${companyId}/work-journey/calendar/events?${params.toString()}`);
         const payload = await response.json();
         if (!response.ok || !payload.success) {
-            listEl.innerHTML = `<div class="journey-item-empty">${payload.message || 'Erro ao carregar eventos.'}</div>`;
+            listEl.innerHTML = `<div class="journey-item-empty">${payload.message || 'Erro ao carregar tarefas.'}</div>`;
             return;
         }
         renderEvents(payload.data || []);
@@ -67,12 +67,12 @@
         if (!listEl) return;
         if (summaryEl) {
             summaryEl.innerHTML = `
-                <span class="badge-pill">${events.length} evento(s)</span>
+                <span class="badge-pill">${events.length} tarefa(s)</span>
                 <span class="badge-pill">${events.filter(event => event.status === 'done').length} concluído(s)</span>
             `;
         }
         if (!events.length) {
-            listEl.innerHTML = '<div class="journey-item-empty">Nenhum evento neste período.</div>';
+            listEl.innerHTML = '<div class="journey-item-empty">Nenhuma tarefa neste período.</div>';
             return;
         }
         listEl.innerHTML = events.map((event) => `
@@ -94,13 +94,13 @@
                 </div>
                 <div class="agenda-feed-card__footer">
                     <div class="agenda-feed-card__origin">
-                        Origem: ${escapeHtml(event.source_label || 'Evento livre')}
+                        Origem: ${escapeHtml(event.source_label || 'Evento Avulso')}
                         ${event.source_code ? ` • ${escapeHtml(event.source_code)}` : ''}
                         ${event.source_title ? ` • ${escapeHtml(event.source_title)}` : ''}
                         ${event.block_name ? ` • Bloco: ${escapeHtml(event.block_name)}` : ''}
                     </div>
                     <div class="agenda-feed-card__actions">
-                        ${event.source_url ? `<a class="btn btn-secondary btn-sm" href="${event.source_url}">Abrir origem</a>` : ''}
+                        ${event.source_url ? `<a class="btn btn-secondary btn-sm" href="${event.source_url}">${event.source_type === 'project_task' ? '+Horas/Info' : 'Abrir origem'}</a>` : ''}
                         <button type="button" class="btn btn-secondary btn-sm" data-calendar-edit="${event.id}">Editar</button>
                         <button type="button" class="btn btn-outline btn-sm" data-calendar-delete="${event.id}">Excluir</button>
                     </div>
@@ -169,7 +169,7 @@
             source_id: (bootstrap.sourceType && bootstrap.sourceId) ? bootstrap.sourceId : null,
         };
         if (!payload.title || !payload.event_date) {
-            showMessage('Informe título e data do evento.', 'error');
+            showMessage('Informe título e data da tarefa.', 'error');
             return;
         }
         const url = eventId
@@ -183,26 +183,26 @@
         });
         const result = await response.json();
         if (!response.ok || !result.success) {
-            showMessage(result.message || 'Erro ao salvar evento.', 'error');
+            showMessage(result.message || 'Erro ao salvar tarefa.', 'error');
             return;
         }
         toggleForm(false);
-        showMessage('Evento salvo com sucesso.');
+        showMessage('Tarefa salva com sucesso.');
         await fetchEvents();
         window.WorkJourneyAgendas?.refresh?.();
     }
 
     async function removeEvent(eventId) {
-        if (!confirm('Deseja excluir este evento do calendário?')) return;
+        if (!confirm('Deseja excluir esta tarefa do calendário?')) return;
         const response = await fetch(`/api/companies/${companyId}/work-journey/calendar/events/${eventId}`, {
             method: 'DELETE',
         });
         const result = await response.json();
         if (!response.ok || !result.success) {
-            showMessage(result.message || 'Erro ao excluir evento.', 'error');
+            showMessage(result.message || 'Erro ao excluir tarefa.', 'error');
             return;
         }
-        showMessage('Evento removido.');
+        showMessage('Tarefa removida.');
         await fetchEvents();
         window.WorkJourneyAgendas?.refresh?.();
     }
@@ -256,7 +256,7 @@
         if (!form) return;
         const sourceHint = document.getElementById('calendarEventSourceHint');
         if (sourceHint && bootstrap.sourceType && bootstrap.sourceType !== 'manual' && bootstrap.sourceId) {
-            sourceHint.textContent = `Novo evento vinculado a ${bootstrap.sourceType === 'project_task' ? 'atividade de projeto' : 'instância de processo'} #${bootstrap.sourceId}.`;
+            sourceHint.textContent = `Nova tarefa vinculada à ${bootstrap.sourceType === 'project_task' ? 'atividade de projeto' : 'instância de processo'} #${bootstrap.sourceId}.`;
         }
         document.getElementById('calendarEventStartBtn')?.addEventListener('click', () => {
             resetForm();

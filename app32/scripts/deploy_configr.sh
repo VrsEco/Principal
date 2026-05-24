@@ -12,6 +12,13 @@ WWW="$BASE/www"
 APP="$WWW/app32"
 PYTHON="$BASE/.virtualenv/3.12/bin/python"
 PIP="$BASE/.virtualenv/3.12/bin/pip"
+DEPLOY_STDOUT_LOG="$APP/deploy_stdout.txt"
+DEPLOY_STDERR_LOG="$APP/deploy_stderr.txt"
+
+mkdir -p "$APP"
+: > "$DEPLOY_STDOUT_LOG"
+: > "$DEPLOY_STDERR_LOG"
+exec > >(tee "$DEPLOY_STDOUT_LOG") 2> >(tee "$DEPLOY_STDERR_LOG" >&2)
 
 echo "----------------------------------------------------"
 echo "🚀 INICIANDO ATUALIZAÇÃO: $(date)"

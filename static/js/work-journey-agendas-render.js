@@ -16,6 +16,10 @@
   };
 
   function normalizeItem(item) {
+    const sourceRefId = item.source_ref_id || item.source_id || null;
+    const sourceUrl = item.item_type === 'project_task' && sourceRefId
+      ? `/my-work/project-task/${sourceRefId}?from=project`
+      : (item.source_url || '');
     return {
       id: item.id,
       event_id: item.event_id || null,
@@ -31,12 +35,12 @@
       estimated_minutes: Number(item.estimated_minutes || 0),
       worked_minutes: Number(item.worked_minutes || 0),
       source_label: item.source_label || '',
-      source_url: item.source_url || '',
+      source_url: sourceUrl,
       due_date: item.due_date || null,
       occurrence_date: item.occurrence_date || null,
       block_id: item.block_id || null,
       agenda_date: item.agenda_date || item.planned_date || item.due_date || item.occurrence_date || null,
-      source_id: item.source_id || null,
+      source_id: item.source_id || sourceRefId,
       is_overdue: Boolean(item.is_overdue),
       can_drag: item.item_type !== 'meeting',
       display_code: item.display_code || item.code || item.source_code || '',
@@ -295,7 +299,7 @@
       ['Carga prevista', formatMinutes(summary.planned_minutes)],
       ['Carga realizada', formatMinutes(summary.worked_minutes)],
       ['Sobrecarga', formatMinutes(summary.overload_minutes)],
-      ['Eventos', summary.event_count || 0],
+      ['Tarefas', summary.event_count || 0],
       ['Não alocadas', summary.unassigned_count || 0],
       ['Concluídas', summary.completed_count || 0],
       ['Pendentes', summary.pending_count || 0],
@@ -353,11 +357,11 @@
               <span class="badge-pill">${escapeHtml(currentActivity.activity_status_label || 'Aguardando ativação')}</span>
               <span class="badge-pill">${escapeHtml(currentActivity.activity_execution_mode_label || 'Sem execução ativa')}</span>
               ${card.agenda_entry_count ? `<span class="badge-pill">${card.agenda_entry_count} alocação(ões)</span>` : ''}
-              ${card.linked_event_count ? `<span class="badge-pill">${card.linked_event_count} evento(s)</span>` : ''}
+              ${card.linked_event_count ? `<span class="badge-pill">${card.linked_event_count} tarefa(s)</span>` : ''}
             </div>
             ${linkedTask.title ? `
               <div class="agenda-instance-card__task-link">
-                <span class="agenda-instance-card__metric-label">Evento operacional derivado</span>
+                <span class="agenda-instance-card__metric-label">Tarefa operacional derivada</span>
                 <strong>${escapeHtml(linkedTask.title)}</strong>
                 <span class="text-secondary">${escapeHtml(linkedTask.due_label || 'Sem prazo operacional definido')}</span>
               </div>
@@ -411,7 +415,7 @@
         <header class="agenda-day-column__header">
           <div class="agenda-day-column__heading">
             <span class="agenda-day-column__eyebrow">Prioridade</span>
-            <h3 class="agenda-day-column__title">Eventos operacionais atrasados</h3>
+            <h3 class="agenda-day-column__title">Tarefas operacionais atrasadas</h3>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -422,7 +426,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} eventos</span>
+            <span class="agenda-day-column__badge badge-pill badge-pill--danger">${activityCount} tarefas</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -437,7 +441,7 @@
         <div class="agenda-day-column__body ${collapsed ? 'is-hidden' : ''}" aria-hidden="${collapsed ? 'true' : 'false'}">
           ${activityCount
             ? overdueItems.map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: item.block_id || null }, locked, false, 'overdue')).join('')
-            : '<div class="agenda-empty-state">Nenhum evento operacional atrasado no contexto selecionado.</div>'}
+            : '<div class="agenda-empty-state">Nenhuma tarefa operacional atrasada no contexto selecionado.</div>'}
         </div>
       </section>
     `;
@@ -456,7 +460,7 @@
           <div class="agenda-day-column__heading">
             <span class="agenda-day-column__eyebrow">Backlog</span>
             <h3 class="agenda-day-column__title">Não alocadas</h3>
-            <p class="agenda-day-column__meta">Itens sem bloco definido. Arraste para um dia ou bloco conforme a necessidade.</p>
+            <p class="agenda-day-column__meta">Tarefas sem bloco definido. Arraste para um dia ou bloco conforme a necessidade.</p>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -467,7 +471,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} eventos</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -484,7 +488,7 @@
             ? [...unassignedItems, ...unassignedEvents]
               .sort((left, right) => String(left.planned_start_time || '').localeCompare(String(right.planned_start_time || '')) || String(left.display_title || '').localeCompare(String(right.display_title || '')))
               .map((item) => renderAgendaCard(item, { day: item.agenda_date || item.due_date || item.occurrence_date || '', blockId: null }, locked, true, 'unassigned')).join('')
-            : '<div class="agenda-empty-state">Nenhum evento fora dos blocos.</div>'}
+            : '<div class="agenda-empty-state">Nenhuma tarefa fora dos blocos.</div>'}
         </div>
       </section>
     `;
@@ -497,12 +501,6 @@
     const blockCount = blocks.length;
     const activityCount = blocks.reduce((sum, block) => sum + ((block.items || []).length) + ((block.events || []).length), 0);
     const collapsedLabel = day.subtitle || 'Dia';
-    const daySummary = buildDaySummary(day);
-    const dayMeta = [
-      `Carga Prevista: ${formatCapacityMinutes(daySummary.planned_minutes)}`,
-      `Carga Realizada: ${formatCapacityMinutes(daySummary.worked_minutes)}`,
-      `Sobrecarga: ${formatCapacityMinutes(daySummary.overload_minutes)}`,
-    ].join(' | ');
 
     return `
       <section class="agenda-day-column ${collapsed ? 'is-collapsed' : ''} ${day.is_today ? 'agenda-day-column--today' : ''}" data-agenda-day="${day.date}" data-agenda-day-key="${dayKey}">
@@ -510,7 +508,6 @@
           <div class="agenda-day-column__heading">
             <span class="agenda-day-column__eyebrow">${day.subtitle || 'Dia'}</span>
             <h3 class="agenda-day-column__title">${day.label}</h3>
-            <p class="agenda-day-column__meta">${dayMeta}</p>
           </div>
           <div class="agenda-day-column__collapsed-title" aria-hidden="${collapsed ? 'false' : 'true'}">
             <span class="agenda-day-column__collapsed-label">${collapsedLabel}</span>
@@ -521,7 +518,7 @@
           </div>
           <div class="agenda-day-column__actions">
             <span class="agenda-day-column__badge badge-pill">${blockCount} blocos</span>
-            <span class="agenda-day-column__badge badge-pill">${activityCount} eventos</span>
+            <span class="agenda-day-column__badge badge-pill">${activityCount} tarefas</span>
             <button
               type="button"
               class="agenda-day-column__toggle"
@@ -586,8 +583,8 @@
                 <span class="agenda-block__detail-item">${occupancyLabel}: ${occupancyValue}</span>
               </div>
               <div class="agenda-block__detail-line">
-                <span class="agenda-block__detail-item">Ativ.: ${formatMinutes(block.planned_task_minutes || 0)}</span>
-                <span class="agenda-block__detail-item">Eventos: ${formatMinutes(block.planned_event_minutes || 0)}</span>
+                <span class="agenda-block__detail-item">Tarefas: ${formatMinutes(block.planned_task_minutes || 0)}</span>
+                <span class="agenda-block__detail-item">Agenda: ${formatMinutes(block.planned_event_minutes || 0)}</span>
                 <span class="agenda-block__detail-item ${overload > 0 ? 'is-overload' : ''}">${blockStatus}</span>
               </div>
             </div>
@@ -597,7 +594,7 @@
           <span class="agenda-block__progress-fill ${overload > 0 ? 'is-overload' : ''}" style="width:${fill}%"></span>
         </div>
         <div class="agenda-block__content ${collapsed ? 'is-hidden' : ''}" aria-hidden="${collapsed ? 'true' : 'false'}">
-          ${cards.length ? cards.map((item) => renderAgendaCard(item, { day: day.date, blockId }, locked, false, 'block')).join('') : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhum evento neste bloco.</div>'}
+          ${cards.length ? cards.map((item) => renderAgendaCard(item, { day: day.date, blockId }, locked, false, 'block')).join('') : '<div class="agenda-empty-state agenda-empty-state--compact">Nenhuma tarefa neste bloco.</div>'}
         </div>
       </article>
     `;
@@ -608,7 +605,7 @@
     if (item.item_type === 'meeting') warnings.push('Alterar no módulo de reuniões');
     if (locked && listScope === 'block') warnings.push('Agenda travada');
     if (item.source_warning) warnings.push(item.source_warning);
-    if (item.is_overdue) warnings.push(item.item_kind === 'calendar_event' ? 'Evento vencido' : 'Evento operacional atrasado');
+    if (item.is_overdue) warnings.push(item.item_kind === 'calendar_event' ? 'Tarefa vencida' : 'Tarefa operacional atrasada');
     if (item.item_kind === 'calendar_event' && item.execution_notes) warnings.push(item.execution_notes);
 
     const dateLabel = item.agenda_date || item.due_date || item.occurrence_date || '';
@@ -617,6 +614,7 @@
       item.estimated_minutes ? { value: formatMinutes(item.estimated_minutes), kind: 'effort' } : null,
       item.planned_window_label ? { value: item.planned_window_label, kind: 'window' } : null,
     ].filter(Boolean);
+    const sourceActionLabel = item.item_type === 'project_task' ? '+Horas/Info' : 'Abrir origem';
 
     return `
       <article
@@ -645,7 +643,7 @@
         ${item.description ? `<p class="agenda-card__desc">${item.description}</p>` : ''}
         ${warnings.length ? `<div class="agenda-card__warning">${warnings.join(' · ')}</div>` : ''}
         <div class="agenda-card__actions">
-          ${item.source_url && item.item_type !== 'meeting' ? `<a class="btn btn-secondary btn-sm" href="${item.source_url}" target="_blank" rel="noopener">Abrir origem</a>` : ''}
+          ${item.source_url && item.item_type !== 'meeting' ? `<a class="btn btn-secondary btn-sm" href="${item.source_url}" target="_blank" rel="noopener">${sourceActionLabel}</a>` : ''}
           ${item.item_type === 'meeting' ? `<button type="button" class="btn btn-secondary btn-sm" data-action="meeting-hint" disabled>Resolver no módulo de reuniões</button>` : ''}
         </div>
       </article>

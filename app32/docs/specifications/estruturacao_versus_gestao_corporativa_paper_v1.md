@@ -1,7 +1,7 @@
 # Estruturação Versus Gestão Corporativa
 
 ## Status
-Paper v3 para amadurecimento executivo, arquitetural e operacional antes da execução.
+Paper v4 para amadurecimento executivo, metodológico, arquitetural e operacional antes da execução.
 
 ## Natureza do documento
 Este paper tem função de:
@@ -28,6 +28,8 @@ A diretriz central é:
 - o processamento cognitivo principal do Squad de Work deve acontecer em runtimes externos, como CLI, Claude, Antigravity e equivalentes autorizados
 - a Versus deve amadurecer primeiro seu operating model antes de transformar a arquitetura em execução técnica ampla
 - a arquitetura de agentes deve contemplar duas famílias complementares: agentes do Squad Versus e agentes do Squad Cliente
+- a arquitetura consultiva deve contemplar também um **Conselho PME de Reestruturação**, com especialistas de estratégia, finanças, pessoas, comercial, operações, processos, negociação, jurídico e marketing
+- esse Conselho PME não deve ser tratado como “mais um chat de agentes”, mas como parte da metodologia de estruturação e reestruturação empresarial da Versus, sustentada pelo APP32/MCP quando houver estado operacional
 
 ---
 
@@ -39,6 +41,8 @@ Para fins deste projeto, adotam-se os seguintes nomes institucionais:
 - `Squad Versus` — conjunto de agentes da Versus voltado a método, estrutura, governança, controladoria, auditoria e visão consultiva
 - `Squad Cliente` — conjunto de agentes da empresa cliente voltado a contexto local, rotina, operação interna e execução assistida
 - `Squad de Engenharia` — conjunto técnico já existente, responsável por evolução estrutural, correções, sustentação técnica e implementação
+- `Conselho PME` — composição consultiva do `Squad Versus` para diagnóstico, estruturação e reestruturação de pequenas e médias empresas
+- `Diagnóstico PME 360` — leitura integrada da empresa cliente nos domínios de estratégia, pessoas, processos, projetos, financeiro, comercial, operações, riscos e governança
 
 Esses nomes devem prevalecer no paper, na arquitetura e na comunicação executiva do projeto.
 
@@ -221,6 +225,81 @@ Arquitetura-base sugerida:
 - `auditor_versus`
 - `feedback_coach_versus` (fase posterior)
 
+### 5.1-A Conselho PME de Reestruturação
+Além da arquitetura-base do `Squad Versus`, a Versus deve reconhecer uma composição consultiva específica para estruturação e reestruturação de pequenas e médias empresas.
+
+Essa composição deve funcionar como **Conselho PME**, isto é, uma malha de especialistas acionada pelo `Squad Versus` quando houver necessidade de diagnóstico empresarial amplo, priorização de intervenções ou desenho de plano mestre.
+
+#### Agentes especialistas do Conselho PME
+
+| Agente | Papel consultivo | Domínio principal |
+|---|---|---|
+| `alex_reeves` | CEO / Orquestrador estratégico | síntese, priorização e Plano Mestre de Reestruturação |
+| `ruth_nakamura` | CFO / Finanças e Tesouraria | caixa, margem, dívida, precificação, DRE, fluxo de caixa e risco financeiro |
+| `marcus_webb` | CHRO / Pessoas e Cultura | liderança, estrutura organizacional, talentos, cultura, motivação e capacidade humana |
+| `sofia_andrade` | CSO / Estratégia e Inovação | posicionamento, modelo de negócio, OKRs, vantagem competitiva e iniciativas estratégicas |
+| `lorenzo_vega` | CCO / Comercial e Vendas | pipeline, carteira, proposta, preço, negociação, receita e crescimento |
+| `diego_ramos` | COO / Operações | gargalos, capacidade operacional, qualidade, produtividade, OTIF e continuidade |
+| `kai_osei` | Processos e Sistemas | processos, POPs, BPMN, automação, matriz de decisão e rastreabilidade |
+| `yara_castillo` | Negociação e Conflitos | BATNA, ZOPA, renegociação, conflito societário, clientes, bancos e fornecedores |
+| `helena_dragan` | Jurídico e Compliance | riscos societários, trabalhistas, contratos, tributário, LGPD e passivos jurídicos |
+| `felix_moreira` | Marketing e Posicionamento | marca, mensagem, canais, CAC, LTV, conteúdo, demanda e posicionamento |
+
+#### Regra de enquadramento
+Esses agentes devem ser lidos como **especialistas metodológicos do Squad Versus**, e não como operadores livres do APP32.
+
+Eles podem:
+- diagnosticar;
+- comparar alternativas;
+- apontar riscos;
+- estruturar planos;
+- recomendar cadências;
+- produzir artefatos consultivos.
+
+Eles não devem:
+- executar mutações sensíveis sem human gate;
+- substituir decisão do dono da empresa;
+- substituir advogado, contador, banco, RH formal ou consultor humano quando houver responsabilidade profissional direta;
+- acessar dados por fora do APP32/MCP quando houver capability canônica;
+- operar sem `company_id`, surface correta e trilha de auditoria.
+
+### 5.1-B Modos oficiais de acionamento do Conselho PME
+
+O Conselho PME deve nascer com três modos conceituais:
+
+#### Modo 1 — Diagnóstico Completo
+Usado quando a empresa precisa de leitura ampla antes de intervir.
+
+Fluxo esperado:
+1. `alex_reeves` recebe o briefing e delimita escopo.
+2. Especialistas avaliam seus domínios.
+3. `alex_reeves` consolida semáforo, achados e interdependências.
+4. O `Squad Versus` transforma a síntese em plano, artefatos, projetos, processos e rotinas dentro do APP32 quando aprovado.
+
+#### Modo 2 — Especialista Específico
+Usado quando o problema já está circunscrito.
+
+Exemplos:
+- dívida e caixa: `ruth_nakamura` + `yara_castillo`;
+- desmotivação e liderança: `marcus_webb`;
+- processo comercial: `lorenzo_vega` + `kai_osei`;
+- expansão, franquia ou novo mercado: `sofia_andrade` + `ruth_nakamura` + `helena_dragan`;
+- gargalo operacional: `diego_ramos` + `kai_osei`.
+
+#### Modo 3 — War Room
+Usado quando há risco imediato de sobrevivência ou ruptura.
+
+Gatilhos típicos:
+- caixa inferior a 30 dias;
+- perda de cliente acima de 30% da receita;
+- conflito societário grave;
+- passivo trabalhista ou tributário relevante;
+- saída de pessoa-chave;
+- colapso operacional de entrega.
+
+Regra:
+O War Room deve priorizar estabilização, caixa, risco e decisões de curto prazo. Crescimento e sofisticação ficam subordinados à sobrevivência.
+
 ### 5.2 Regras estruturais
 
 #### Regra 1
@@ -237,6 +316,12 @@ Agentes de auditoria devem ser desenhados como `read-only` por princípio.
 
 #### Regra 5
 Agentes não devem ser inventados por estética de prompt; devem nascer de papéis reais do operating model da Versus.
+
+#### Regra 6
+Agentes especialistas do Conselho PME devem operar como **papéis consultivos versionados**, com metadados claros de domínio, surface permitida, autonomia, human gate, artefatos esperados e limites profissionais.
+
+#### Regra 7
+Quando houver dado operacional do APP32, a análise consultiva deve seguir MCP First. Quando faltar dado, o agente deve declarar a lacuna e solicitar evidência, e não preencher o vazio com suposição.
 
 ---
 
@@ -316,25 +401,40 @@ A Versus passa a operar não apenas com “agentes da Versus”, mas com uma mal
 ### 8.1 Comercial
 - `commercial_cliente`
 - `strategist_versus` ou futura derivação de crescimento
+- Conselho PME: `lorenzo_vega`, `felix_moreira`, `ruth_nakamura` quando houver margem, preço, CAC/LTV ou rentabilidade comercial
 
 ### 8.2 Operacional
 - `operational_cliente`
 - `operations_versus`
 - `business_architect_versus`
+- Conselho PME: `diego_ramos`, `kai_osei`, `ruth_nakamura` quando houver impacto em custo, capacidade ou caixa
 
 ### 8.3 Administrativo / Financeiro
 - `admfin_cliente`
 - `finance_versus`
 - `auditor_versus`
+- Conselho PME: `ruth_nakamura`, `yara_castillo`, `helena_dragan` quando houver dívida, renegociação, passivo ou risco jurídico-financeiro
 
 ### 8.4 Estratégico
 - `strategic_cliente`
 - `strategist_versus`
 - `pmo_controller_versus`
+- Conselho PME: `alex_reeves`, `sofia_andrade`, `felix_moreira`, `ruth_nakamura`
 
 ### 8.5 Auditoria
 - `auditor_cliente`
 - `auditor_versus`
+- Conselho PME: `helena_dragan`, `ruth_nakamura`, `kai_osei`
+
+### 8.5-A Pessoas e Cultura
+- `pessoas_capacidade_cliente` (fase posterior)
+- `feedback_coach_versus` (fase posterior)
+- Conselho PME: `marcus_webb`, com apoio de `ruth_nakamura` para custo total de pessoas e de `kai_osei` para RACI/processos
+
+### 8.5-B Jurídico, Negociação e Riscos
+- `auditor_versus`
+- `finance_versus`
+- Conselho PME: `helena_dragan`, `yara_castillo`, `ruth_nakamura`, `alex_reeves`
 
 ### 8.6 Observação importante
 O par por domínio não significa simetria de autoridade. Significa complementaridade funcional.
@@ -439,6 +539,66 @@ A orquestração passa a responder também:
 - quando a atividade é coproduzida
 - como resolver divergência entre contexto local e método
 - quem aprova, quem executa e quem audita
+- quando o Conselho PME deve ser acionado
+- qual especialista PME pode apenas analisar, qual pode preparar minuta e qual exige confirmação humana antes de qualquer ação
+- como transformar parecer consultivo em artefato operacional rastreável dentro do APP32
+
+---
+
+## 11-A Diagnóstico PME 360 e plano mestre de reestruturação
+
+### 11-A.1 Tese
+A metodologia Versus deve possuir uma capacidade explícita de **Diagnóstico PME 360**, conectando o raciocínio consultivo do Conselho PME com os dados, capabilities e evidências do APP32.
+
+O diagnóstico não deve ser apenas uma conversa. Deve virar artefato rastreável.
+
+### 11-A.2 Domínios mínimos do diagnóstico
+O Diagnóstico PME 360 deve avaliar, no mínimo:
+
+- Planejamento Estratégico;
+- Pessoas, liderança, cultura e capacidade;
+- Processos e sistemas;
+- Projetos e execução;
+- Financeiro e controladoria;
+- Comercial, vendas e marketing;
+- Operações e qualidade;
+- jurídico, compliance e riscos;
+- governança, cadência e maturidade de gestão.
+
+### 11-A.3 Saídas esperadas
+O Conselho PME deve produzir artefatos padronizados:
+
+- Laudo de Saúde Organizacional;
+- Semáforo por domínio;
+- Top 3 achados por área;
+- Riscos críticos;
+- Quick wins;
+- Plano Mestre de Reestruturação;
+- Scorecard Executivo;
+- Backlog de iniciativas;
+- cadência recomendada de 30, 90, 180 e 365 dias;
+- critérios de sucesso.
+
+### 11-A.4 Integração com APP32
+Quando aprovado pelo humano responsável, o plano deve ser materializado no APP32 como:
+
+- plano estratégico;
+- OKRs e indicadores;
+- projetos e tarefas;
+- processos/BPMN/POPs;
+- orçamento e acompanhamento financeiro;
+- reuniões de cadência;
+- evidências e pareceres;
+- solicitações de engenharia quando houver gap de capability.
+
+### 11-A.5 Regra de sensibilidade
+Diagnóstico financeiro, jurídico, pessoas, negociação, desligamento, dívida, preço e comunicação externa são temas sensíveis.
+
+Nesses casos:
+- `surface user` não deve ser usada como atalho;
+- leituras privilegiadas devem usar `admin` ou `analytics`, conforme policy;
+- mutações exigem human gate quando houver risco;
+- o agente deve deixar claro quando está recomendando, preparando ou executando.
 
 ---
 
@@ -472,6 +632,7 @@ Atuar como núcleo consultivo, metodológico e governante da arquitetura de gest
 - `performance_analyst_versus`
 - `finance_versus`
 - `auditor_versus`
+- Conselho PME: `alex_reeves`, `ruth_nakamura`, `marcus_webb`, `sofia_andrade`, `lorenzo_vega`, `diego_ramos`, `kai_osei`, `yara_castillo`, `helena_dragan`, `felix_moreira`
 
 ### 12.3 Squad Cliente
 #### Missão
@@ -982,11 +1143,46 @@ Deve ser a interface oficial de execução dos agentes.
 ### Veredito
 A Ferramenta não pode evoluir só por acúmulo de features. Ela precisa evoluir como plataforma coerente da metodologia Versus.
 
+### Leitura atual de maturidade do APP32/MCP
+O APP32 já apresenta boa base para:
+
+- processos;
+- BPMN/POP;
+- projetos;
+- rotina e jornada operacional;
+- financeiro/controladoria;
+- indicadores;
+- MCP, surfaces e governança técnica.
+
+Mas ainda precisa amadurecer para sustentar plenamente a reestruturação PME em:
+
+- Diagnóstico PME 360;
+- CRM e pipeline comercial;
+- gestão de pessoas estratégica;
+- organograma, competências, RACI e PDI;
+- marketing e posicionamento;
+- jurídico/compliance como registro de risco e não como parecer jurídico formal;
+- governança integrada de transformação;
+- catálogo MCP canônico para `commercial`, `people`, `legal`, `marketing`, `diagnostic` e `transformation`.
+
 ## 16.3 Agentes
 São a workforce digital da Versus e da empresa cliente.
 
 ### Veredito
 Devem ser especializados, auditáveis, governados e coerentes com a capacidade real do APP32.
+
+### Veredito complementar
+O Conselho PME amplia a força metodológica da Versus, mas aumenta o risco de sobreposição e autonomia indevida.
+
+Portanto, cada agente consultivo deve nascer com:
+- domínio canônico;
+- surface permitida;
+- tools permitidas;
+- riscos;
+- human gates;
+- artefatos esperados;
+- limites de atuação;
+- critérios de escalonamento para Squad Cliente, Squad Versus ou Engenharia.
 
 ## 16.4 Orquestração
 É a camada que transforma componentes em sistema.
@@ -1006,6 +1202,8 @@ Itens que devem compor a arquitetura oficial-alvo:
 - MCP como interface canônica dos agentes
 - runtime externo como cérebro do Squad
 - arquitetura dual de agentes: Squad Versus + Squad Cliente
+- Conselho PME como composição consultiva especializada do Squad Versus
+- Diagnóstico PME 360 como capability metodológica e operacional
 - coprodução humano + agente como parte do operating model
 - orquestração externa como camada principal de reasoning
 
@@ -1031,6 +1229,10 @@ Itens que dependem de amadurecimento adicional:
 - feedback coach com domínio próprio de people/performance mais maduro
 - política formal de governança de tokens, runtime e auditoria por ambiente
 - maturação da família completa de agentes do cliente por domínio
+- catálogo canônico de CRM/comercial
+- domínio de pessoas estratégico
+- domínio de diagnóstico e transformação PME
+- modelo formal de War Room com trilha, cadência e gate humano
 
 ---
 
@@ -1071,6 +1273,8 @@ Precisa existir um mapa inicial de:
 - capabilities já maduras
 - capabilities faltantes
 - capabilities legadas a revisar
+- capabilities necessárias para o Diagnóstico PME 360
+- capabilities necessárias para Conselho PME, CRM, people, legal, marketing e transformation
 
 ### C5 — Fronteiras de execução definidas
 Precisa estar claro:
@@ -1083,6 +1287,9 @@ Precisa estar claro:
 - o que é mutação operacional
 - o que é papel do Squad Cliente
 - o que é papel do Squad Versus
+- o que é papel do Conselho PME
+- quais recomendações do Conselho PME podem virar ação operacional
+- quais exigem validação do dono, consultor, jurídico, financeiro ou engenharia
 
 ---
 
@@ -1099,6 +1306,11 @@ Este paper ainda precisa amadurecer resposta para as questões abaixo:
 8. Como será a evolução incremental do Squad sem quebrar a governança?
 9. Quais agentes do cliente entram primeiro por domínio?
 10. Como será a política de precedência e arbitragem em conflitos entre agente do cliente e agente da Versus?
+11. Como o Conselho PME será versionado como composição do Squad Versus sem virar coleção de prompts soltos?
+12. Qual será o contrato oficial do Diagnóstico PME 360?
+13. Como o APP32 representará laudos, pareceres, planos mestres, riscos e recomendações agentic?
+14. Quais domínios terão capability canônica própria: `commercial`, `people`, `legal`, `marketing`, `diagnostic`, `transformation`?
+15. Como impedir que recomendações jurídicas, financeiras, de pessoas e negociação ultrapassem o limite consultivo sem human gate?
 
 ---
 
@@ -1125,6 +1337,15 @@ O APP32 deve deixar de ser visto como local principal de inferência e ser conso
 ### H7
 A dualidade de agentes Squad Versus + Squad Cliente aumenta aderência, autonomia e qualidade da execução quando as fronteiras são claras.
 
+### H8
+O Conselho PME aumenta a qualidade da reestruturação quando opera como composição governada do Squad Versus, e não como agentes autônomos livres.
+
+### H9
+O Diagnóstico PME 360 deve ser o principal artefato de entrada da metodologia de reestruturação, conectando dados do APP32/MCP, evidências humanas e julgamento consultivo dos agentes especialistas.
+
+### H10
+Os maiores gaps atuais para a metodologia Versus não estão no conceito de agentes, mas na materialização operacional de CRM/comercial, pessoas estratégico, diagnóstico integrado e governança de transformação dentro do APP32/MCP.
+
 ---
 
 ## 21. Roadmap de amadurecimento
@@ -1143,13 +1364,24 @@ A dualidade de agentes Squad Versus + Squad Cliente aumenta aderência, autonomi
 - inventariar capabilities do APP32/MCP
 - classificar por maturidade e risco
 - identificar gaps para agentes externos
+- explicitar cobertura atual por domínio PME: estratégia, pessoas, processos, projetos, financeiro, comercial, operações, jurídico, marketing e transformação
+- decidir quais domínios devem virar capability canônica MCP
 
 ### Etapa D — Arquitetura operacional dos agentes
 - definir agentes oficiais do Squad Versus
 - definir família inicial de agentes do Squad Cliente
+- definir o Conselho PME como composição consultiva do Squad Versus
 - definir limites por agente
 - definir policy de surfaces e human gates
 - definir modelo de coprodução humano + agente
+
+### Etapa D.1 — Diagnóstico PME 360
+- definir contrato do laudo
+- definir semáforo por domínio
+- definir artefatos de saída
+- definir tools MCP necessárias
+- definir human gates para finanças, jurídico, pessoas e negociação
+- definir como o plano mestre vira projetos, processos, orçamento, indicadores e reuniões no APP32
 
 ### Etapa E — Só então execução técnica
 - abrir cards de execução
@@ -1251,6 +1483,51 @@ A Versus não deve distribuir no harness do cliente o coração completo de sua 
 
 ### Regra
 O **Squad Cliente** deve receber capacidade operacional assistida, e não o segredo completo do modelo de negócio da Versus.
+
+---
+
+## 22.4 Decisão complementar — Conselho PME como camada metodológica do Squad Versus
+Fica definido, em nível de paper, que os especialistas de reestruturação PME devem ser incorporados como **Conselho PME do Squad Versus**.
+
+### Consequência
+O Conselho PME não é:
+- novo squad paralelo;
+- substituto do Squad Cliente;
+- substituto do consultor humano;
+- runtime interno obrigatório do APP32;
+- conjunto de automações livres.
+
+O Conselho PME é:
+- composição consultiva;
+- protocolo de diagnóstico e deliberação;
+- fonte de artefatos metodológicos;
+- camada de apoio ao consultor Versus;
+- consumidor governado de dados via APP32/MCP.
+
+### Regra
+Quando o Conselho PME produzir recomendação, o APP32 deve registrar a trilha entre:
+- pergunta/briefing;
+- dados consultados;
+- especialistas acionados;
+- conclusão;
+- decisão humana;
+- ação operacional criada;
+- resultado posterior.
+
+---
+
+## 22.5 Decisão complementar — gaps funcionais priorizados
+Com base na leitura atual do APP32/MCP, os gaps metodológicos mais relevantes para a reestruturação PME são:
+
+1. `diagnostic`: Diagnóstico PME 360, laudo, score e plano mestre;
+2. `commercial`: CRM, pipeline, oportunidades, propostas, forecast, CAC/LTV e carteira;
+3. `people`: organograma, cargos, competências, RACI, PDI, desempenho, sucessão e cultura;
+4. `transformation`: portfólio de iniciativas, benefícios, riscos, dependências e cadência;
+5. `legal`: registro de riscos, obrigações, contratos e compliance, sem substituir atuação jurídica formal;
+6. `marketing`: posicionamento, mensagem, canais, geração de demanda e marca.
+
+### Regra
+Esses gaps devem ser tratados como evolução de capabilities e MCP, não como simples prompts de agentes.
 
 ---
 

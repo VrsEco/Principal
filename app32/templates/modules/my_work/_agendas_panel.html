@@ -2,10 +2,10 @@
     <div class="journey-panel__header journey-panel__header--tab">
         <div>
             <h2 class="journey-section-title">Calendário</h2>
-            <p class="journey-section-subtitle">Painel visual da semana operacional, com visão rápida de capacidade, status da agenda e eventos relevantes.</p>
+            <p class="journey-section-subtitle">Painel visual da semana operacional, com visão rápida de capacidade, status da agenda e tarefas relevantes.</p>
         </div>
         <div class="agenda-actions">
-            <button id="calendarEventStartBtn" class="btn btn-secondary">📅 Novo evento</button>
+            <button id="calendarEventStartBtn" class="btn btn-secondary">📅 Nova tarefa</button>
             <button id="manualTaskStartBtn" class="btn btn-secondary">➕ Evento Avulso</button>
             <button id="agendaRefreshBtn" class="btn btn-secondary">Atualizar agenda</button>
             <button id="agendaGenerateBtn" class="btn btn-primary">Gerar sugestão</button>
@@ -32,15 +32,15 @@
                     <div id="processInstanceCardsList" class="agenda-instance-card-grid"></div>
                 </div>
             </section>
-            <section class="journey-list-card agenda-section-card agenda-collapse-panel" data-collapse-panel="calendar-events" data-collapse-label="Eventos do calendário">
+            <section class="journey-list-card agenda-section-card agenda-collapse-panel" data-collapse-panel="calendar-events" data-collapse-label="Tarefas do calendário">
                 <div class="journey-list-card__header agenda-collapse-panel__header">
                     <div>
-                        <h3>Eventos do calendário</h3>
+                        <h3>Tarefas do calendário</h3>
                         <p>Compromissos livres e execuções vinculadas. Use este espaço para organizar análises, follow-ups e compromissos do dia.</p>
                     </div>
                     <div class="agenda-collapse-panel__actions">
                         <div id="calendarEventsSummary" class="journey-badges"></div>
-                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="calendar-events" aria-expanded="true" aria-label="Colapsar Eventos do calendário">▾</button>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="calendar-events" aria-expanded="true" aria-label="Colapsar Tarefas do calendário">▾</button>
                     </div>
                 </div>
                 <div class="agenda-collapse-panel__body" data-collapse-body>
@@ -48,8 +48,8 @@
                         <input type="hidden" id="calendarEventIdInput">
                         <div class="journey-card-heading">
                             <div>
-                                <h3>Evento de calendário</h3>
-                                <p id="calendarEventSourceHint">Crie um evento livre ou vinculado para organizar a execução.</p>
+                                <h3>Tarefa de calendário</h3>
+                                <p id="calendarEventSourceHint">Crie uma tarefa livre ou vinculada para organizar a execução.</p>
                             </div>
                         </div>
                         <div class="journey-inline-grid">
@@ -99,7 +99,7 @@
                             <select id="calendarEventBlockInput" class="form-control">
                                 <option value="">Sem bloco</option>
                             </select>
-                            <small class="journey-sidebar-hint">Quando vinculado a um bloco, o evento também reforça a ocupação operacional do período.</small>
+                            <small class="journey-sidebar-hint">Quando vinculado a um bloco, a tarefa também reforça a ocupação operacional do período.</small>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Descrição</label>
@@ -111,7 +111,7 @@
                         </div>
                         <div class="journey-form-actions">
                             <button type="button" class="btn btn-secondary" id="calendarEventCancelBtn">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Salvar evento</button>
+                            <button type="submit" class="btn btn-primary">Salvar tarefa</button>
                         </div>
                     </form>
                     <div id="calendarEventsList"></div>
@@ -121,7 +121,7 @@
                 <div class="agenda-board-header agenda-collapse-panel__header">
                     <div>
                         <h3 class="journey-section-title">Planejamento operacional</h3>
-                        <p class="journey-section-subtitle">A primeira coluna exibe eventos operacionais atrasados e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
+                        <p class="journey-section-subtitle">A primeira coluna exibe tarefas operacionais atrasadas e, em seguida, a semana inicia no domingo. Use essa visão para distribuir a capacidade operacional do colaborador.</p>
                     </div>
                     <div class="agenda-board-header__actions agenda-collapse-panel__actions">
                         <span id="agendaLockBadge" class="agenda-status-pill agenda-status-pill--draft">Agenda não travada</span>
@@ -151,7 +151,7 @@
                 </div>
                 <div class="journey-sidecard">
                     <div class="journey-sidecard__header">
-                        <h3>Eventos do período</h3>
+                        <h3>Tarefas do período</h3>
                     </div>
                     <div id="journeyPeriodContainer" class="journey-sidecard__content"></div>
                 </div>

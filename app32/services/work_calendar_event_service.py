@@ -181,28 +181,28 @@ def suggest_employee_for_source(company_id: int, source_type: str, source_id: in
 def _load_event(company_id: int, event_id: int) -> WorkCalendarEvent:
     event = WorkCalendarEvent.query.filter_by(company_id=company_id, id=event_id).first()
     if not event:
-        raise WorkJourneyError("Evento de calendário não encontrado.")
+        raise WorkJourneyError("Tarefa de calendário não encontrada.")
     return event
 
 
 def _normalize_source_type(value: str | None) -> str:
     normalized = str(value or "manual").strip().lower()
     if normalized not in ALLOWED_SOURCE_TYPES:
-        raise WorkJourneyError("Tipo de origem do evento inválido.")
+        raise WorkJourneyError("Tipo de origem da tarefa inválido.")
     return normalized
 
 
 def _normalize_status(value: str | None) -> str:
     normalized = str(value or "planned").strip().lower()
     if normalized not in ALLOWED_STATUSES:
-        raise WorkJourneyError("Status do evento inválido.")
+        raise WorkJourneyError("Status da tarefa inválido.")
     return normalized
 
 
 def _normalize_priority(value: str | None) -> str:
     normalized = str(value or "normal").strip().lower()
     if normalized not in ALLOWED_PRIORITIES:
-        raise WorkJourneyError("Prioridade do evento inválida.")
+        raise WorkJourneyError("Prioridade da tarefa inválida.")
     return normalized
 
 
@@ -210,7 +210,7 @@ def _validate_source(company_id: int, source_type: str, source_id: int | None) -
     if source_type == "manual":
         return
     if not source_id:
-        raise WorkJourneyError("Informe a origem do evento.")
+        raise WorkJourneyError("Informe a origem da tarefa.")
     if source_type == "project_task":
         task_exists = (
             ProjectTask.query.filter(ProjectTask.id == source_id)
@@ -260,7 +260,7 @@ def _resolve_source_context(company_id: int, source_type: str, source_id: int | 
                 "source_owner_employee_name": _employee_name(company_id, source_owner_employee_id),
             }
     return {
-        "source_label": "Evento livre" if source_type == "manual" else source_type,
+        "source_label": "Evento Avulso" if source_type == "manual" else source_type,
         "source_code": None,
         "source_title": None,
         "source_url": None,
@@ -279,9 +279,9 @@ def _resolve_block(company_id: int, employee_id: int, block_id: int | None, targ
         is_active=True,
     ).first()
     if not block:
-        raise WorkJourneyError("Bloco do evento não encontrado para o colaborador.")
+        raise WorkJourneyError("Bloco da tarefa não encontrado para o colaborador.")
     if target_date.weekday() not in (block.weekdays_json or []):
-        raise WorkJourneyError("O bloco informado não está ativo para o dia do evento.")
+        raise WorkJourneyError("O bloco informado não está ativo para o dia da tarefa.")
     return block
 
 

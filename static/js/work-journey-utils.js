@@ -1,6 +1,6 @@
 (() => {
   const itemTypes = [
-    { value: 'manual', label: 'Tarefa Avulsa' },
+    { value: 'manual', label: 'Evento Avulso' },
     { value: 'process_instance', label: 'Instância de Processo' },
     { value: 'project_task', label: 'Atividade de Projeto' },
     { value: 'meeting', label: 'Reunião' },

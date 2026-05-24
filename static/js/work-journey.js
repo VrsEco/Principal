@@ -161,6 +161,7 @@
 
   function itemActions(item) {
     const worked = item.worked_minutes || 0;
+    const sourceActionLabel = item.item_type === 'project_task' ? '+Horas/Info' : 'Abrir origem';
     return `
       <div class="journey-item-card__actions">
         <button class="btn btn-secondary btn-sm" data-action="start-item" data-id="${item.id}">Iniciar</button>
@@ -168,7 +169,7 @@
         <button class="btn btn-secondary btn-sm" data-action="move-item" data-id="${item.id}">Mover bloco</button>
         <button class="btn btn-secondary btn-sm" data-action="transfer-item" data-id="${item.id}">Transferir</button>
         ${item.item_type === 'manual' ? `<button class="btn btn-secondary btn-sm" data-action="edit-manual-item" data-id="${item.id}">Editar</button><button class="btn btn-secondary btn-sm" data-action="delete-manual-item" data-id="${item.id}">Excluir</button>` : ''}
-        ${item.source_url ? `<a class="btn btn-secondary btn-sm" href="${item.source_url}">Abrir origem</a>` : ''}
+        ${item.source_url ? `<a class="btn btn-secondary btn-sm" href="${item.source_url}">${sourceActionLabel}</a>` : ''}
       </div>
     `;
   }
@@ -197,9 +198,9 @@
   }
 
   function emptyBlockMessage(block) {
-    if (block.block_mode === 'reserved_full') return 'Bloco reservado integralmente. O período fica protegido e não recebe eventos.';
+    if (block.block_mode === 'reserved_full') return 'Bloco reservado integralmente. O período fica protegido e não recebe tarefas.';
     if (block.block_mode === 'buffer') return 'Janela livre para urgências, encaixes manuais e reorganização do dia.';
-    return 'Nenhum evento sugerido para este bloco.';
+    return 'Nenhuma tarefa sugerida para este bloco.';
   }
 
   function renderBoard() {
@@ -234,9 +235,9 @@
         </div>
         <div class="journey-block__items">${(block.items || []).length ? block.items.map(itemCard).join('') : `<div class="journey-item-empty">${emptyBlockMessage(block)}</div>`}</div>
       </section>
-    `).join('') : `<div class="journey-item-empty">${searchTerm ? 'Nenhum bloco ou evento corresponde à busca aplicada.' : 'Nenhum bloco ativo para o dia selecionado.'}</div>`;
+    `).join('') : `<div class="journey-item-empty">${searchTerm ? 'Nenhum bloco ou tarefa corresponde à busca aplicada.' : 'Nenhum bloco ativo para o dia selecionado.'}</div>`;
 
-    unassignedContainer.innerHTML = unassigned.length ? unassigned.map(itemCard).join('') : '<div class="journey-item-empty">Sem eventos fora dos blocos.</div>';
+    unassignedContainer.innerHTML = unassigned.length ? unassigned.map(itemCard).join('') : '<div class="journey-item-empty">Sem tarefas fora dos blocos.</div>';
 
     const periodItems = searchTerm
       ? (state.board?.period_items || []).filter((item) => itemMatchesSearch(item))
@@ -249,7 +250,7 @@
         </div>
         <div class="journey-badges">${itemBadges(item)}</div>
       </div>
-    `).join('') : '<div class="journey-item-empty">Sem eventos no período.</div>';
+    `).join('') : '<div class="journey-item-empty">Sem tarefas no período.</div>';
 
     bindItemActions();
   }
@@ -323,7 +324,7 @@
       <div class="journey-list-item">
         <div class="journey-list-item__top">
           <div>
-            <strong>${transfer.item?.title || 'Evento'}</strong>
+            <strong>${transfer.item?.title || 'Tarefa'}</strong>
             <div class="text-secondary small">${transfer.from_employee_name || '-'} → ${transfer.to_employee_name || '-'}</div>
           </div>
           <div class="journey-item-card__actions">

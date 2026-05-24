@@ -8,6 +8,7 @@ from models import Employee, WorkCalendarEvent, WorkJourneyAgenda, WorkJourneyAg
 from services.work_journey_base import is_actionable_status
 from services.work_journey_helpers import BLOCK_MODE_LABELS, ITEM_TYPE_LABELS, STATUS_LABELS, WEEKDAY_LABELS, block_chronology_key, clamp_period, duration_minutes
 from services.work_journey_service import build_item_display_code
+from services.work_journey_sync import build_process_instance_source_url, build_project_task_source_url
 
 ITEM_TYPE_COLORS = {
     'process_instance': {'bg': '#dbeafe', 'border': '#2563eb', 'text': '#1e3a8a'},
@@ -18,7 +19,7 @@ ITEM_TYPE_COLORS = {
 
 
 EVENT_SOURCE_LABELS = {
-    'manual': 'Evento livre',
+    'manual': 'Evento Avulso',
     'process_instance': 'Instância de processo',
     'project_task': 'Atividade de projeto',
 }
@@ -211,7 +212,7 @@ def serialize_agenda_entry(entry: WorkJourneyAgendaItem) -> dict[str, Any]:
         'display_code': display_code,
         'display_title': f'{display_code} - {item.title}' if item and display_code else (item.title if item else 'Tarefa indisponível'),
         'source_label': metadata.get('source_label'),
-        'source_url': metadata.get('source_url'),
+        'source_url': _entry_source_url(item, metadata),
         'source_type': item.item_type if item else 'manual',
         'source_ref_id': item.source_id or item.id if item else None,
         'can_drag': bool(item and item.item_type != 'meeting'),
@@ -273,7 +274,7 @@ def serialize_calendar_event_for_agenda(event: WorkCalendarEvent) -> dict[str, A
         'source_title': source_title,
         'can_drag': False,
         'can_move': False,
-        'source_warning': 'Evento de calendário: movimente pelo formulário do Calendário.',
+        'source_warning': 'Tarefa de calendário: movimente pelo formulário do Calendário.',
         'meeting_locked': False,
         'item_type_colors': ITEM_TYPE_COLORS.get(event.source_type, ITEM_TYPE_COLORS['manual']),
         'new_after_lock': False,
@@ -369,7 +370,21 @@ def _event_status_label(status: str) -> str:
 
 
 def _event_source_url(event: WorkCalendarEvent) -> str | None:
+    if event.source_type == 'project_task' and event.source_id:
+        return build_project_task_source_url(None, event.source_id)
+    if event.source_type == 'process_instance' and event.source_id:
+        return build_process_instance_source_url(event.company_id, event.source_id)
     metadata = dict(event.metadata_json or {})
+    return metadata.get('source_url')
+
+
+def _entry_source_url(item: Any, metadata: dict[str, Any]) -> str | None:
+    if not item:
+        return None
+    if getattr(item, 'item_type', None) == 'project_task':
+        return build_project_task_source_url(None, getattr(item, 'source_id', None) or getattr(item, 'id', None))
+    if getattr(item, 'item_type', None) == 'process_instance' and getattr(item, 'source_id', None):
+        return build_process_instance_source_url(getattr(item, 'company_id', None), getattr(item, 'source_id', None))
     return metadata.get('source_url')
 
 

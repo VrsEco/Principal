@@ -14,7 +14,7 @@
         <div class="journey-hero__content">
             <div>
                 <h1 class="journey-hero__title">Calendário Operacional do Colaborador</h1>
-                <p class="journey-hero__subtitle">Calendário de: <strong>{{ selected_employee_name or 'Colaborador não definido' }}</strong> — agenda operacional com eventos livres e vinculados a processos, projetos, reuniões e execuções do dia a dia.</p>
+                <p class="journey-hero__subtitle">Calendário de: <strong>{{ selected_employee_name or 'Colaborador não definido' }}</strong> — agenda operacional com tarefas vinculadas a atividades de projetos, instâncias de processos, reuniões e eventos avulsos.</p>
             </div>
             <div class="journey-hero__actions">
                 <a class="btn btn-secondary" href="{{ url_for('work_journey_report.work_journey_report_page', company_id=company.id, employee_id=selected_employee_id) }}">Relatório gerencial</a>
@@ -71,7 +71,7 @@
                     <div class="form-group">
                         <label class="form-label">Comportamento do bloco</label>
                         <select id="blockModeInput" class="form-control">
-                            <option value="operational">Operacional · recebe eventos automaticamente</option>
+                            <option value="operational">Operacional · recebe tarefas automaticamente</option>
                             <option value="reserved_full">Capacidade ocupada · bloqueia o período</option>
                             <option value="buffer">Vazio / Buffer · mantém janela livre para urgências</option>
                         </select>
@@ -174,7 +174,7 @@
                 <div class="journey-list-card__header">
                     <div>
                         <h3>Solicitações de transferência</h3>
-                        <p>Pedidos pendentes e aprovados vinculados às atividades da jornada.</p>
+                        <p>Pedidos pendentes e aprovados vinculados às tarefas da jornada.</p>
                     </div>
                 </div>
                 <div id="journeyTransferList"></div>
@@ -185,7 +185,7 @@
             <div class="journey-panel__header journey-panel__header--tab">
                 <div>
                     <h2 class="journey-section-title">Eventos Avulsos</h2>
-                    <p class="journey-section-subtitle">Acompanhe todos os eventos avulsos cadastrados para o colaborador, com histórico de execução e impacto na capacidade planejada/realizada.</p>
+                    <p class="journey-section-subtitle">Acompanhe os eventos avulsos cadastrados para o colaborador, tratados como tarefas na capacidade planejada/realizada.</p>
                 </div>
                 <button id="manualTaskTabStartBtn" class="btn btn-primary">➕ Novo evento avulso</button>
             </div>
@@ -194,7 +194,7 @@
                 <div class="journey-card-heading">
                     <div>
                         <h3>Evento Avulso no Bloco</h3>
-                        <p>Registre urgências, apoios pontuais ou qualquer trabalho fora de processos, projetos e reuniões.</p>
+                        <p>Registre urgências, apoios pontuais ou qualquer tarefa fora de atividades de projetos, instâncias de processos e reuniões.</p>
                     </div>
                 </div>
                 <div class="journey-inline-grid">
@@ -253,7 +253,7 @@
                 <div class="journey-list-card__header">
                     <div>
                         <h3>Cadastro consolidado</h3>
-                        <p>Os eventos avulsos abaixo entram na capacidade operacional do colaborador conforme sua data e esforço realizado.</p>
+                        <p>Os eventos avulsos abaixo entram como tarefas na capacidade operacional do colaborador conforme sua data e esforço realizado.</p>
                     </div>
                     <div id="manualTasksSummary" class="journey-badges"></div>
                 </div>
@@ -272,7 +272,7 @@
         <div class="journey-sidebar-card__headline">
             <div>
                 <h2 class="journey-section-title">Filtros</h2>
-                <p class="journey-section-subtitle">Contexto operacional da semana e busca global sobre eventos e blocos.</p>
+                <p class="journey-section-subtitle">Contexto operacional da semana e busca global sobre tarefas e blocos.</p>
             </div>
             <span id="journeyFiltersCount" class="badge-pill badge-pill--success">0 ativos</span>
         </div>
@@ -316,7 +316,7 @@
             <div class="form-group">
                 <label class="form-label">Busca livre</label>
                 <textarea id="journeySearchInput" class="form-control" rows="4" placeholder="Buscar por código, título, descrição, bloco, status, origem, datas ou qualquer outro campo..."></textarea>
-                <small class="journey-sidebar-hint">A busca percorre todos os campos textuais dos eventos e dos blocos carregados na tela.</small>
+                <small class="journey-sidebar-hint">A busca percorre todos os campos textuais das tarefas e dos blocos carregados na tela.</small>
             </div>
         </div>
 
@@ -329,7 +329,7 @@
     <section class="journey-sidebar-card journey-sidebar-card--muted">
         <h3 class="journey-section-title">Escopo da busca</h3>
         <ul class="journey-sidebar-checklist">
-            <li>Títulos, descrições e códigos dos eventos</li>
+            <li>Títulos, descrições e códigos das tarefas</li>
             <li>Nome, descrição e janela horária dos blocos</li>
             <li>Status, origem, datas e metadados visíveis</li>
         </ul>
@@ -351,11 +351,11 @@
         sourceId: {{ source_id|tojson }},
     };
 </script>
-<script src="{{ url_for('static', filename='js/work-journey-utils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/work-journey.js', v='20260524-manual-events-actions-1') }}"></script>
-<script src="{{ url_for('static', filename='js/work-journey-agendas-render.js', v='20260524-manual-events-actions-1') }}"></script>
-<script src="{{ url_for('static', filename='js/work-journey-agendas.js', v='20260524-manual-events-actions-1') }}"></script>
-<script src="{{ url_for('static', filename='js/work-calendar-events.js') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-utils.js', v='20260524-taxonomia-tarefas-1') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey.js', v='20260524-taxonomia-tarefas-1') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-agendas-render.js', v='20260524-taxonomia-tarefas-1') }}"></script>
+<script src="{{ url_for('static', filename='js/work-journey-agendas.js', v='20260524-taxonomia-tarefas-1') }}"></script>
+<script src="{{ url_for('static', filename='js/work-calendar-events.js', v='20260524-taxonomia-tarefas-1') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-routines.js') }}"></script>
 <script src="{{ url_for('static', filename='js/work-journey-manual-tasks.js') }}"></script>
 {% endblock %}
