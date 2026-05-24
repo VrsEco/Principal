@@ -190,31 +190,50 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
 
 
 def sync_project_tasks(company_id: int, employee_id: int, period_start: date, period_end: date) -> None:
+    # Reconciliar também itens já projetados: uma atividade concluída ou sem
+    # responsável deixa de entrar no filtro operacional, mas sua projeção não
+    # pode continuar ativa/desatualizada no calendário.
+    linked_task_ids = [
+        int(item.source_id)
+        for item in (
+            WorkJourneyItem.query
+            .filter(
+                WorkJourneyItem.company_id == company_id,
+                WorkJourneyItem.employee_id == employee_id,
+                WorkJourneyItem.item_type == 'project_task',
+                WorkJourneyItem.source_id.isnot(None),
+            )
+            .all()
+        )
+        if item.source_id
+    ]
+    active_assignment_filter = and_(
+        ProjectTask.employee_id == employee_id,
+        or_(
+            ProjectTask.due_date.between(period_start, period_end),
+            and_(ProjectTask.due_date < period_start, ProjectTask.stage.in_(['inbox', 'waiting', 'executing', 'pending', 'suspended'])),
+        ),
+    )
     tasks = (
         ProjectTask.query
-        .filter(ProjectTask.employee_id == employee_id)
         .filter(ProjectTask.project.has(company_id=company_id))
-        .filter(
-            or_(
-                ProjectTask.due_date.between(period_start, period_end),
-                and_(ProjectTask.due_date < period_start, ProjectTask.stage.in_(['inbox', 'waiting', 'executing', 'pending', 'suspended'])),
-            )
-        )
+        .filter(or_(active_assignment_filter, ProjectTask.id.in_(linked_task_ids or [-1])))
         .all()
     )
     for task in tasks:
+        project = task.project
         metadata = {
             'source_label': 'Atividade de projeto',
-            'source_code': None,
+            'source_code': task.code,
             'project_id': task.project_id,
-            'project_name': None,
-            'project_code': None,
+            'project_name': project.name if project else None,
+            'project_code': project.code if project else None,
             'manual_assignment': current_manual_assignment(company_id, 'project_task', task.id),
             'source_url': build_project_task_source_url(task.project_id, task.id),
         }
         upsert_source_item(
             company_id=company_id,
-            employee_id=employee_id,
+            employee_id=task.employee_id or employee_id,
             item_type='project_task',
             source_id=task.id,
             title=task.what,
