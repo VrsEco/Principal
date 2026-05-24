@@ -955,6 +955,7 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'data-tab="agendas"' in journey_template
     assert 'work-journey-agendas.js' in journey_template
     assert 'work-journey-agendas-render.js' in journey_template
+    assert journey_template.count("v='20260524-manual-events-actions-1'") == 3
     assert 'work-calendar-events.js' in journey_template
     assert 'journeySearchInput' in journey_template
     assert 'journeyApplyFiltersBtn' in journey_template
