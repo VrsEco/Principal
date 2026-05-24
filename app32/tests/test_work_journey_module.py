@@ -960,6 +960,8 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'journeyApplyFiltersBtn' in journey_template
     assert 'journeyClearFiltersBtn' in journey_template
     assert 'journeyScopeSelect' not in journey_template
+    assert journey_template.index('data-panel="manual-tasks"') < journey_template.index('id="journeyManualTaskForm"')
+    assert 'journeyManualTaskForm' not in agendas_panel
     assert 'Planejamento operacional' in agendas_panel
     assert 'processInstanceCardsPanel' in agendas_panel
     assert 'processInstanceCardsList' in agendas_panel
@@ -1211,6 +1213,7 @@ def test_calendar_scripts_support_collaborator_without_employee_selector():
     assert 'employeeSelect?.addEventListener' in journey_script
     assert 'parseManualTaskMinutes' in journey_script
     assert "formatValueByType('duration-minutes'" in journey_script
+    assert "activateTab('manual-tasks')" in journey_script
     assert 'pythonWeekdayOfDate' in calendar_events_script
     assert '(current.getDay() + 6) % 7' in calendar_events_script
 
@@ -1242,6 +1245,22 @@ def test_agendas_scripts_support_drag_between_columns_and_blocks():
     assert "state.agenda?.overdue_items || []" in agendas_script
     assert "state.agenda?.unassigned_items || []" in agendas_script
     assert 'data-dropzone="block" data-block-id="${blockId}"' in render_script
+
+
+def test_agenda_manual_cards_expose_edit_and_complete_actions():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+        agendas_script = handle.read()
+    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
+        render_script = handle.read()
+
+    assert 'journey_item_id: item.journey_item_id || null' in render_script
+    assert 'data-action="edit-manual-agenda-item"' in render_script
+    assert 'data-action="complete-manual-agenda-item"' in render_script
+    assert 'manualJourneyItemFromAction' in agendas_script
+    assert '/work-journey/items/${item.id}' in agendas_script
+    assert "body: JSON.stringify({ status: 'completed' })" in agendas_script
+    assert 'openManualTaskForm?.(item)' in agendas_script
 
 
 def test_agenda_presenter_materializes_reserved_and_operational_blocks(monkeypatch):

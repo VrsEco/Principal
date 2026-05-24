@@ -115,6 +115,36 @@
     return null;
   }
 
+  function manualJourneyItemFromAction(actionButton) {
+    const source = findItem(actionButton.dataset.agendaItemId);
+    if (!source?.item || source.item.item_kind === 'calendar_event' || source.item.item_type !== 'manual') return null;
+    const journeyItemId = Number(actionButton.dataset.journeyItemId || source.item.journey_item_id || source.item.id);
+    if (!journeyItemId) return null;
+    return {
+      ...source.item,
+      id: journeyItemId,
+      due_date: source.item.due_date || source.item.agenda_date || source.item.occurrence_date,
+    };
+  }
+
+  async function completeManualAgendaItem(actionButton) {
+    const item = manualJourneyItemFromAction(actionButton);
+    if (!item) {
+      toast('Evento avulso não localizado para conclusão.');
+      return;
+    }
+    try {
+      await api(`/api/companies/${companyId}/work-journey/items/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
+      toast('Evento avulso concluído.');
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+
   function updateControls() {
     const agenda = state.agenda;
     const locked = Boolean(agenda?.locked);
@@ -461,6 +491,15 @@
 
       const blockToggle = event.target.closest('[data-agenda-toggle]');
       if (blockToggle) toggleBlock(blockToggle);
+
+      const editManualItem = event.target.closest('[data-action="edit-manual-agenda-item"]');
+      if (editManualItem) {
+        const item = manualJourneyItemFromAction(editManualItem);
+        if (item) window.WorkJourneyPage?.openManualTaskForm?.(item);
+      }
+
+      const completeManualItem = event.target.closest('[data-action="complete-manual-agenda-item"]');
+      if (completeManualItem) completeManualAgendaItem(completeManualItem);
     });
 
     document.addEventListener('click', (event) => {

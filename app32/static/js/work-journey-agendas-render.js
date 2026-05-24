@@ -18,6 +18,8 @@
   function normalizeItem(item) {
     return {
       id: item.id,
+      agenda_item_id: item.agenda_item_id || null,
+      journey_item_id: item.journey_item_id || null,
       event_id: item.event_id || null,
       item_kind: item.item_kind || 'journey_item',
       title: item.title,
@@ -645,6 +647,10 @@
         ${item.description ? `<p class="agenda-card__desc">${item.description}</p>` : ''}
         ${warnings.length ? `<div class="agenda-card__warning">${warnings.join(' · ')}</div>` : ''}
         <div class="agenda-card__actions">
+          ${item.item_kind !== 'calendar_event' && item.item_type === 'manual' ? `
+            <button type="button" class="btn btn-secondary btn-sm" data-action="edit-manual-agenda-item" data-agenda-item-id="${item.id}" data-journey-item-id="${item.journey_item_id || item.id}">Editar</button>
+            ${item.status !== 'completed' ? `<button type="button" class="btn btn-primary btn-sm" data-action="complete-manual-agenda-item" data-agenda-item-id="${item.id}" data-journey-item-id="${item.journey_item_id || item.id}">Concluir</button>` : ''}
+          ` : ''}
           ${item.source_url && item.item_type !== 'meeting' ? `<a class="btn btn-secondary btn-sm" href="${item.source_url}" target="_blank" rel="noopener">Abrir origem</a>` : ''}
           ${item.item_type === 'meeting' ? `<button type="button" class="btn btn-secondary btn-sm" data-action="meeting-hint" disabled>Resolver no módulo de reuniões</button>` : ''}
         </div>
