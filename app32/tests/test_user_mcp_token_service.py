@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 import base64
+import contextlib
+import os
+import sys
 
 import services.user_mcp_token_service as token_service_module
 
@@ -29,6 +32,37 @@ def test_build_notification_body_for_d3_contains_renewal_instruction():
     assert "3 dias" in subject
     assert "/profile" in html_body
     assert "renove o token" in whatsapp_message.lower()
+
+
+def test_ensure_app_context_disables_bootstrap_when_creating_mcp_token_app(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    captured = {}
+
+    class FakeApp:
+        def app_context(self):
+            return contextlib.nullcontext()
+
+    def fake_create_app(config_name):
+        captured["config_name"] = config_name
+        captured["APP_BOOTSTRAP_DB_SCHEMA"] = os.environ.get("APP_BOOTSTRAP_DB_SCHEMA")
+        captured["APP_BOOTSTRAP_RUNTIME_SERVICES"] = os.environ.get("APP_BOOTSTRAP_RUNTIME_SERVICES")
+        return FakeApp()
+
+    monkeypatch.delenv("APP_BOOTSTRAP_DB_SCHEMA", raising=False)
+    monkeypatch.delenv("APP_BOOTSTRAP_RUNTIME_SERVICES", raising=False)
+    monkeypatch.setattr(token_service_module, "has_app_context", lambda: False)
+    monkeypatch.setitem(sys.modules, "app", SimpleNamespace(create_app=fake_create_app))
+
+    with service._ensure_app_context():
+        pass
+
+    assert captured == {
+        "config_name": "production",
+        "APP_BOOTSTRAP_DB_SCHEMA": "0",
+        "APP_BOOTSTRAP_RUNTIME_SERVICES": "0",
+    }
+    assert os.environ.get("APP_BOOTSTRAP_DB_SCHEMA") is None
+    assert os.environ.get("APP_BOOTSTRAP_RUNTIME_SERVICES") is None
 
 
 def test_build_client_config_uses_trailing_slash(monkeypatch):

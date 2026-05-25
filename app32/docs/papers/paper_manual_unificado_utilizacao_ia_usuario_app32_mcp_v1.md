@@ -752,6 +752,30 @@ Gestão da Rotina
 - **parcialmente coberto** no MCP com boa base para evolução;
 - bom candidato para ser um dos primeiros ramos formalizados.
 
+#### 10.3.1. Agenda / jornada — coerência entre APP e MCP
+
+Na agenda operacional do APP, a camada visual pode reorganizar a leitura do usuário em seções como:
+- instâncias de processos;
+- atividades de projetos;
+- reuniões;
+- eventos avulsos;
+- planejamento operacional.
+
+Essa organização é **semântica de UI**, não contrato canônico de tool.
+
+Para este ramo, a regra de coerência é:
+- mudanças de ordem, rótulo, colapso padrão, cor e agrupamento visual **não obrigam** mudança de tool MCP;
+- mudanças de payload, permissão, surface, shape de entrada/saída ou risco operacional **obrigam** revisão de catálogo e contrato MCP;
+- a IA deve explicar a agenda no vocabulário do APP, mas operar no vocabulário canônico do domínio.
+
+No estado atual, a agenda MCP já comporta itens operacionais como:
+- `process_instance`
+- `project_task`
+- `meeting`
+- `manual`
+
+Portanto, a evolução recente do calendário reforça uma diretriz importante: **UI pedagógica pode evoluir sem forçar alteração imediata do contrato MCP**, desde que a intenção operacional permaneça a mesma.
+
 ### 10.4. Gestão Financeira
 
 **Objetivo do ramo**  
@@ -1241,6 +1265,15 @@ A UI ensina uma coisa, a IA fala outra.
 ### 16.2. Drift entre APP e MCP
 
 O fluxo do APP existe, mas a capability MCP não representa a mesma intenção operacional.
+
+Nem toda mudança no APP caracteriza esse drift.
+
+Exemplo importante: quando a agenda operacional muda apenas a organização visual — nomes de seções, ordem, cards e colapso padrão — sem alterar payload, permissão, surface ou semântica da ação, o efeito é de **apresentação**, não de contrato.
+
+O drift real aparece quando:
+- o APP passa a ensinar uma intenção operacional nova que a tool MCP não consegue representar;
+- a UI passa a depender de dados que o contrato MCP não expõe;
+- a IA, ao usar o catálogo, perde a capacidade de explicar corretamente o fluxo que o usuário vê no APP.
 
 ### 16.3. Manual humano sem governança operacional
 

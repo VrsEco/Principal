@@ -40,5 +40,7 @@ os.environ.setdefault("APP32_MCP_HTTP_PORT", "8101")
 os.environ.setdefault("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
 os.environ.setdefault("APP32_MCP_CLIENT", "claude_remote_connector")
 os.environ.setdefault("APP32_MCP_CONNECTOR", "claude_remote_connector")
+os.environ.setdefault("APP_BOOTSTRAP_DB_SCHEMA", "0")
+os.environ.setdefault("APP_BOOTSTRAP_RUNTIME_SERVICES", "0")
 runpy.run_module("src.core.mcp_http_server", run_name="__main__")
 PY

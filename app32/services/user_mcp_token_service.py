@@ -99,6 +99,24 @@ class UserMcpTokenService:
 
     @staticmethod
     @contextmanager
+    def _mcp_app_context_bootstrap_disabled() -> Iterator[None]:
+        """Evita subir workers/scheduler ao criar app apenas para resolver token MCP."""
+
+        names = ("APP_BOOTSTRAP_DB_SCHEMA", "APP_BOOTSTRAP_RUNTIME_SERVICES")
+        previous = {name: os.environ.get(name) for name in names}
+        os.environ.setdefault("APP_BOOTSTRAP_DB_SCHEMA", "0")
+        os.environ.setdefault("APP_BOOTSTRAP_RUNTIME_SERVICES", "0")
+        try:
+            yield
+        finally:
+            for name, value in previous.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+
+    @staticmethod
+    @contextmanager
     def _ensure_app_context() -> Iterator[None]:
         if has_app_context():
             yield
@@ -106,7 +124,8 @@ class UserMcpTokenService:
 
         from app import create_app
 
-        app = create_app("production")
+        with UserMcpTokenService._mcp_app_context_bootstrap_disabled():
+            app = create_app("production")
         with app.app_context():
             yield
 

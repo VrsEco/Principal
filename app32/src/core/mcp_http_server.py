@@ -5,6 +5,13 @@ import os
 import sys
 from typing import Any
 
+# O runtime MCP HTTP não deve inicializar workers/scheduler Flask ao resolver
+# tokens pessoais DB-backed. Esse processo precisa ser stateless e enxuto;
+# caso contrário cada resolução de token pode consumir conexões PostgreSQL
+# desnecessárias e impactar o login web.
+os.environ.setdefault("APP_BOOTSTRAP_DB_SCHEMA", "0")
+os.environ.setdefault("APP_BOOTSTRAP_RUNTIME_SERVICES", "0")
+
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
