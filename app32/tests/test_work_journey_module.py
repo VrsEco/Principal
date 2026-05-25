@@ -1021,6 +1021,13 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'Planejamento operacional' in agendas_panel
     assert 'processInstanceCardsPanel' in agendas_panel
     assert 'processInstanceCardsList' in agendas_panel
+    assert 'Instâncias de Processos' in agendas_panel
+    assert 'projectActivityCardsPanel' in agendas_panel
+    assert 'Atividades de Projetos' in agendas_panel
+    assert 'meetingCardsPanel' in agendas_panel
+    assert 'Reuniões' in agendas_panel
+    assert 'data-collapse-panel="manual-events"' in agendas_panel
+    assert 'Eventos Avulsos' in agendas_panel
     assert 'Tarefa operacional derivada' in agendas_panel or 'processInstanceCardsList' in agendas_panel
     assert 'calendarEventsList' in agendas_panel
     assert 'calendarEventBlockInput' in agendas_panel
@@ -1034,6 +1041,10 @@ def test_templates_expose_work_journey_entrypoints():
     assert 'agendaPdfBtn' in agendas_panel
     assert 'agendaScopeSelect' not in agendas_panel
     assert 'agendaLockBadge' in agendas_panel
+    assert agendas_panel.index('processInstanceCardsPanel') < agendas_panel.index('projectActivityCardsPanel')
+    assert agendas_panel.index('projectActivityCardsPanel') < agendas_panel.index('meetingCardsPanel')
+    assert agendas_panel.index('meetingCardsPanel') < agendas_panel.index('calendarEventsList')
+    assert agendas_panel.index('calendarEventsList') < agendas_panel.index('agendaBoardContainer')
     assert '/calendar' in my_work_template
     assert 'Planejamento na Jornada' in routine_app32_template
     assert '/api/routines/${routineId}/journey-bindings' in routine_app32_template
@@ -1272,6 +1283,8 @@ def test_calendar_scripts_support_collaborator_without_employee_selector():
     assert "activateTab('manual-tasks')" in journey_script
     assert 'pythonWeekdayOfDate' in calendar_events_script
     assert '(current.getDay() + 6) % 7' in calendar_events_script
+    assert "String(event.source_type || 'manual').toLowerCase() === 'manual'" in calendar_events_script
+    assert 'agenda-instance-card agenda-typed-card agenda-typed-card--manual' in calendar_events_script
 
 
 def test_agendas_script_supports_legacy_fallback_drag_and_drop():
@@ -1283,6 +1296,23 @@ def test_agendas_script_supports_legacy_fallback_drag_and_drop():
     assert '/work-journey/items/${source.item.id}' in agendas_script
     assert 'source.item.agenda_item_id || source.item.id' in agendas_script
     assert "return 'week';" in agendas_script
+
+
+def test_agendas_sections_default_collapsed_and_render_typed_cards():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas.js'), 'r', encoding='utf-8') as handle:
+        agendas_script = handle.read()
+    with open(os.path.join(root, 'static', 'js', 'work-journey-agendas-render.js'), 'r', encoding='utf-8') as handle:
+        render_script = handle.read()
+
+    assert "DEFAULT_COLLAPSED_PANELS = ['process-instances', 'project-activities', 'meetings', 'manual-events']" in agendas_script
+    assert "renderTypedAgendaSection({" in agendas_script
+    assert "itemType: 'project_task'" in agendas_script
+    assert "itemType: 'meeting'" in agendas_script
+    assert 'collectTypedAgendaItems' in render_script
+    assert 'renderTypedAgendaCards' in render_script
+    assert "eyebrow: 'Atividade de projeto'" in render_script
+    assert "eyebrow: 'Reunião'" in render_script
 
 
 def test_agendas_scripts_support_drag_between_columns_and_blocks():

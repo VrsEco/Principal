@@ -15,6 +15,33 @@
     low: 3,
   };
 
+  const SECTION_CONFIG = {
+    project_task: {
+      eyebrow: 'Atividade de projeto',
+      dateLabel: 'Prazo / agenda',
+      effortLabel: 'Esforço previsto',
+      detailLabel: 'Contexto da atividade',
+      empty: 'Nenhuma atividade de projeto no período atual.',
+      sourceActionLabel: '+Horas/Info',
+    },
+    meeting: {
+      eyebrow: 'Reunião',
+      dateLabel: 'Data / janela',
+      effortLabel: 'Duração prevista',
+      detailLabel: 'Contexto da reunião',
+      empty: 'Nenhuma reunião no período atual.',
+      sourceActionLabel: 'Abrir reunião',
+    },
+    manual: {
+      eyebrow: 'Evento avulso',
+      dateLabel: 'Data / janela',
+      effortLabel: 'Duração prevista',
+      detailLabel: 'Detalhes do evento',
+      empty: 'Nenhum evento avulso no período atual.',
+      sourceActionLabel: 'Abrir origem',
+    },
+  };
+
   function normalizeItem(item) {
     const sourceRefId = item.source_ref_id || item.source_id || null;
     const sourceUrl = item.item_type === 'project_task' && sourceRefId
@@ -136,6 +163,40 @@
     });
 
     return items;
+  }
+
+  function uniqueAgendaItems(items) {
+    const seen = new Set();
+    const unique = [];
+    (items || []).forEach((item) => {
+      if (!item) return;
+      const kind = item.item_kind || 'journey_item';
+      const key = kind === 'calendar_event'
+        ? `event:${item.event_id || item.id}`
+        : `item:${item.journey_item_id || item.id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      unique.push(item);
+    });
+    return unique;
+  }
+
+  function collectTypedAgendaItems(agenda, itemType) {
+    const normalizedType = String(itemType || '').trim().toLowerCase();
+    if (!agenda || !normalizedType) return [];
+
+    const candidates = [
+      ...collectAgendaItems(agenda.days || []),
+      ...(agenda.overdue_items || []),
+      ...(agenda.unassigned_items || []),
+      ...(agenda.unassigned_events || []),
+      ...(agenda.calendar_events || []),
+    ];
+
+    return sortAgendaItems(uniqueAgendaItems(candidates).filter((item) => {
+      const itemTypeValue = String(item.item_type || item.source_type || '').trim().toLowerCase();
+      return itemTypeValue === normalizedType;
+    }));
   }
 
   function sortAgendaItems(items) {
@@ -378,6 +439,97 @@
     }).join('');
   }
 
+  function renderTypedAgendaCards(items, itemType) {
+    const config = SECTION_CONFIG[itemType] || SECTION_CONFIG.manual;
+    if (!Array.isArray(items) || !items.length) {
+      return `<div class="agenda-empty-state">${escapeHtml(config.empty)}</div>`;
+    }
+
+    return items.map((item) => renderTypedAgendaCard(item, itemType, config)).join('');
+  }
+
+  function renderTypedAgendaCard(item, itemType, config) {
+    const dateLabel = formatDateDisplay(item.agenda_date || item.planned_date || item.due_date || item.occurrence_date || item.event_date);
+    const windowLabel = item.planned_window_label || [item.planned_start_time, item.planned_end_time].filter(Boolean).join(' → ');
+    const durationValue = Number(item.estimated_minutes || item.allocated_minutes || item.duration_minutes || 0);
+    const durationLabel = durationValue > 0 ? safeFormatMinutes(durationValue) : 'Sem duração';
+    const blockLabel = item.block_name || item.block_name_snapshot || 'Sem bloco';
+    const sourceTitle = item.source_title || item.source_label || item.item_type_label || config.eyebrow;
+    const sourceCode = item.display_code || item.source_code || '';
+    const cardClass = item.is_overdue ? 'agenda-instance-card agenda-typed-card agenda-instance-card--overdue' : 'agenda-instance-card agenda-typed-card';
+    const description = item.description || item.execution_notes || '';
+    const statusClass = item.status === 'completed' || item.status === 'done' ? 'badge-pill--success' : item.is_overdue ? 'badge-pill--danger' : '';
+
+    return `
+      <article class="${cardClass}" data-typed-agenda-card="${escapeHtml(itemType)}" data-item-kind="${escapeHtml(item.item_kind || 'journey_item')}">
+        <div class="agenda-instance-card__header">
+          <div>
+            <span class="agenda-instance-card__eyebrow">${escapeHtml(config.eyebrow)}</span>
+            <h3 class="agenda-instance-card__title">${escapeHtml(item.display_title || item.title || sourceTitle)}</h3>
+            ${sourceCode ? `<div class="agenda-instance-card__code">${escapeHtml(sourceCode)}</div>` : ''}
+            <div class="agenda-instance-card__process">${escapeHtml(sourceTitle)}</div>
+          </div>
+          <div class="agenda-instance-card__badges">
+            <span class="badge-pill ${statusClass}">${escapeHtml(item.status_label || item.status || 'Status')}</span>
+            ${item.priority ? `<span class="badge-pill">${escapeHtml(item.priority_label || item.priority)}</span>` : ''}
+          </div>
+        </div>
+        <div class="agenda-instance-card__meta">
+          <div class="agenda-instance-card__metric">
+            <span class="agenda-instance-card__metric-label">${escapeHtml(config.dateLabel)}</span>
+            <span class="${item.is_overdue ? 'agenda-instance-card__metric-value agenda-instance-card__metric-value--danger' : 'agenda-instance-card__metric-value'}">${escapeHtml([dateLabel, windowLabel].filter(Boolean).join(' · ') || 'Sem data definida')}</span>
+          </div>
+          <div class="agenda-instance-card__metric">
+            <span class="agenda-instance-card__metric-label">${escapeHtml(config.effortLabel)}</span>
+            <span class="agenda-instance-card__metric-value">${escapeHtml(durationLabel)}</span>
+          </div>
+        </div>
+        <div class="agenda-instance-card__activity">
+          <span class="agenda-instance-card__eyebrow">${escapeHtml(config.detailLabel)}</span>
+          <h4 class="agenda-instance-card__activity-title">${escapeHtml(description || item.title || sourceTitle || 'Sem descrição adicional')}</h4>
+          <div class="agenda-instance-card__activity-meta">
+            <span class="badge-pill">${escapeHtml(blockLabel)}</span>
+            ${item.source_label ? `<span class="badge-pill">${escapeHtml(item.source_label)}</span>` : ''}
+            ${item.employee_name ? `<span class="badge-pill">${escapeHtml(item.employee_name)}</span>` : ''}
+          </div>
+        </div>
+        <div class="agenda-instance-card__footer">
+          <span class="text-secondary">${escapeHtml(item.source_warning || item.execution_notes || '')}</span>
+          <div class="agenda-typed-card__actions">
+            ${renderTypedAgendaCardActions(item, itemType, config)}
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderTypedAgendaCardActions(item, itemType, config) {
+    if (item.item_kind === 'calendar_event') {
+      const eventId = item.event_id || String(item.id || '').replace(/^event-/, '');
+      return `
+        ${item.source_url ? `<a class="btn btn-secondary btn-sm" href="${escapeHtml(item.source_url)}">${escapeHtml(config.sourceActionLabel)}</a>` : ''}
+        ${itemType === 'manual' ? `<button type="button" class="btn btn-secondary btn-sm" data-calendar-edit="${escapeHtml(eventId)}">Editar</button>` : ''}
+        ${itemType === 'manual' ? `<button type="button" class="btn btn-outline btn-sm" data-calendar-delete="${escapeHtml(eventId)}">Excluir</button>` : ''}
+      `;
+    }
+
+    if (itemType === 'manual') {
+      return `
+        <button type="button" class="btn btn-secondary btn-sm" data-action="edit-manual-agenda-item" data-agenda-item-id="${escapeHtml(item.id)}" data-journey-item-id="${escapeHtml(item.journey_item_id || item.id)}">Editar</button>
+        ${item.status !== 'completed' ? `<button type="button" class="btn btn-primary btn-sm" data-action="complete-manual-agenda-item" data-agenda-item-id="${escapeHtml(item.id)}" data-journey-item-id="${escapeHtml(item.journey_item_id || item.id)}">Concluir</button>` : ''}
+      `;
+    }
+
+    if (item.source_url) {
+      return `<a class="btn btn-secondary btn-sm" href="${escapeHtml(item.source_url)}" target="_blank" rel="noopener">${escapeHtml(config.sourceActionLabel)}</a>`;
+    }
+
+    if (itemType === 'meeting') {
+      return '<button type="button" class="btn btn-secondary btn-sm" data-action="meeting-hint" disabled>Resolver no módulo de reuniões</button>';
+    }
+    return '';
+  }
+
   function escapeHtml(value) {
     return String(value || '')
       .replaceAll('&', '&amp;')
@@ -385,6 +537,18 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
+  }
+
+  function safeFormatMinutes(minutes) {
+    return typeof formatMinutes === 'function' ? formatMinutes(minutes) : formatCapacityMinutes(minutes);
+  }
+
+  function formatDateDisplay(value) {
+    if (!value) return '';
+    const raw = String(value).slice(0, 10);
+    const parts = raw.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return raw;
   }
 
   function renderAgendaHTML(agenda, collapsedState, locked) {
@@ -663,6 +827,8 @@
     buildSummaryFromDays,
     renderSummaryCards,
     renderProcessInstanceCards,
+    collectTypedAgendaItems,
+    renderTypedAgendaCards,
     renderAgendaHTML,
     renderDayColumn,
     renderBlock,

@@ -40,7 +40,7 @@
         const listEl = document.getElementById('calendarEventsList');
         if (!listEl || !companyId || !selectedEmployeeId()) return;
         const range = weekRange(anchorDate());
-        listEl.innerHTML = '<div class="journey-item-empty">Carregando tarefas...</div>';
+        listEl.innerHTML = '<div class="journey-item-empty">Carregando eventos avulsos...</div>';
         const params = new URLSearchParams({
             employee_id: String(selectedEmployeeId()),
             start_date: range.start,
@@ -65,55 +65,75 @@
         const listEl = document.getElementById('calendarEventsList');
         const summaryEl = document.getElementById('calendarEventsSummary');
         if (!listEl) return;
+        const visibleEvents = (events || []).filter((event) => String(event.source_type || 'manual').toLowerCase() === 'manual');
         if (summaryEl) {
             summaryEl.innerHTML = `
-                <span class="badge-pill">${events.length} tarefa(s)</span>
-                <span class="badge-pill">${events.filter(event => event.status === 'done').length} concluído(s)</span>
+                <span class="badge-pill">${visibleEvents.length} evento(s)</span>
+                <span class="badge-pill">${visibleEvents.filter(event => event.status === 'done').length} concluído(s)</span>
             `;
         }
-        if (!events.length) {
-            listEl.innerHTML = '<div class="journey-item-empty">Nenhuma tarefa neste período.</div>';
+        if (!visibleEvents.length) {
+            listEl.innerHTML = '<div class="journey-item-empty">Nenhum evento avulso neste período.</div>';
             return;
         }
-        listEl.innerHTML = events.map((event) => `
-            <article class="journey-list-item agenda-feed-card">
-                <div class="journey-list-item__top">
-                    <div class="agenda-feed-card__main">
-                        <strong class="agenda-feed-card__title">${escapeHtml(event.title || '')}</strong>
-                        <div class="agenda-feed-card__meta">
-                            ${formatDate(event.event_date)}${event.start_time ? ` • ${event.start_time}` : ''}${event.end_time ? ` → ${event.end_time}` : ''}
-                        </div>
+        listEl.innerHTML = visibleEvents.map(renderEventCard).join('');
+
+        listEl.querySelectorAll('[data-calendar-edit]').forEach((button) => {
+            button.addEventListener('click', () => startEdit(visibleEvents.find(event => event.id === Number(button.dataset.calendarEdit))));
+        });
+        listEl.querySelectorAll('[data-calendar-delete]').forEach((button) => {
+            button.addEventListener('click', () => removeEvent(Number(button.dataset.calendarDelete)));
+        });
+    }
+
+    function renderEventCard(event) {
+        const dateLabel = [
+            formatDate(event.event_date),
+            event.start_time ? `${event.start_time}${event.end_time ? ` → ${event.end_time}` : ''}` : '',
+        ].filter(Boolean).join(' · ');
+        const durationLabel = event.duration_label || 'Sem duração';
+        const statusClass = event.status === 'done' ? 'badge-pill--success' : '';
+        return `
+            <article class="agenda-instance-card agenda-typed-card agenda-typed-card--manual">
+                <div class="agenda-instance-card__header">
+                    <div>
+                        <span class="agenda-instance-card__eyebrow">Evento avulso</span>
+                        <h3 class="agenda-instance-card__title">${escapeHtml(event.title || 'Evento sem título')}</h3>
+                        <div class="agenda-instance-card__code">${escapeHtml(event.source_label || 'Evento Avulso')}</div>
+                        <div class="agenda-instance-card__process">${escapeHtml(event.block_name || 'Sem bloco vinculado')}</div>
                     </div>
-                    <div class="agenda-feed-card__badges">
-                        <span class="badge-pill">${escapeHtml(event.status_label || event.status || '')}</span>
-                        <span class="badge-pill">${escapeHtml(event.priority_label || event.priority || '')}</span>
+                    <div class="agenda-instance-card__badges">
+                        <span class="badge-pill ${statusClass}">${escapeHtml(event.status_label || event.status || 'Status')}</span>
+                        <span class="badge-pill">${escapeHtml(event.priority_label || event.priority || 'Prioridade')}</span>
                     </div>
                 </div>
-                <div class="agenda-feed-card__description">
-                    ${event.description ? escapeHtml(event.description) : 'Sem descrição.'}
-                </div>
-                <div class="agenda-feed-card__footer">
-                    <div class="agenda-feed-card__origin">
-                        Origem: ${escapeHtml(event.source_label || 'Evento Avulso')}
-                        ${event.source_code ? ` • ${escapeHtml(event.source_code)}` : ''}
-                        ${event.source_title ? ` • ${escapeHtml(event.source_title)}` : ''}
-                        ${event.block_name ? ` • Bloco: ${escapeHtml(event.block_name)}` : ''}
+                <div class="agenda-instance-card__meta">
+                    <div class="agenda-instance-card__metric">
+                        <span class="agenda-instance-card__metric-label">Data / janela</span>
+                        <span class="agenda-instance-card__metric-value">${escapeHtml(dateLabel || 'Sem data definida')}</span>
                     </div>
-                    <div class="agenda-feed-card__actions">
-                        ${event.source_url ? `<a class="btn btn-secondary btn-sm" href="${event.source_url}">${event.source_type === 'project_task' ? '+Horas/Info' : 'Abrir origem'}</a>` : ''}
+                    <div class="agenda-instance-card__metric">
+                        <span class="agenda-instance-card__metric-label">Duração prevista</span>
+                        <span class="agenda-instance-card__metric-value">${escapeHtml(durationLabel)}</span>
+                    </div>
+                </div>
+                <div class="agenda-instance-card__activity">
+                    <span class="agenda-instance-card__eyebrow">Detalhes do evento</span>
+                    <h4 class="agenda-instance-card__activity-title">${event.description ? escapeHtml(event.description) : 'Sem descrição adicional.'}</h4>
+                    <div class="agenda-instance-card__activity-meta">
+                        <span class="badge-pill">${escapeHtml(event.owner_employee_name || event.employee_name || 'Colaborador')}</span>
+                        ${event.execution_notes ? `<span class="badge-pill">${escapeHtml(event.execution_notes)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="agenda-instance-card__footer">
+                    <span class="text-secondary">Origem: ${escapeHtml(event.source_label || 'Evento Avulso')}</span>
+                    <div class="agenda-typed-card__actions">
                         <button type="button" class="btn btn-secondary btn-sm" data-calendar-edit="${event.id}">Editar</button>
                         <button type="button" class="btn btn-outline btn-sm" data-calendar-delete="${event.id}">Excluir</button>
                     </div>
                 </div>
             </article>
-        `).join('');
-
-        listEl.querySelectorAll('[data-calendar-edit]').forEach((button) => {
-            button.addEventListener('click', () => startEdit(events.find(event => event.id === Number(button.dataset.calendarEdit))));
-        });
-        listEl.querySelectorAll('[data-calendar-delete]').forEach((button) => {
-            button.addEventListener('click', () => removeEvent(Number(button.dataset.calendarDelete)));
-        });
+        `;
     }
 
     function startEdit(event) {

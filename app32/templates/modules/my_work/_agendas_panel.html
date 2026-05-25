@@ -17,39 +17,69 @@
 
     <div class="agenda-layout">
         <div class="agenda-main">
-            <section id="processInstanceCardsPanel" class="journey-list-card agenda-section-card agenda-collapse-panel" data-collapse-panel="process-instances" data-collapse-label="Instâncias em destaque" style="display:none;">
+            <section id="processInstanceCardsPanel" class="journey-list-card agenda-section-card agenda-collapse-panel is-collapsed" data-collapse-panel="process-instances" data-collapse-label="Instâncias de Processos">
                 <div class="journey-list-card__header agenda-collapse-panel__header">
                     <div>
-                        <h3>Instâncias em destaque</h3>
+                        <h3>Instâncias de Processos</h3>
                         <p>Veja o prazo macro da instância e a atividade atual para reduzir ambiguidade entre o caso e a execução do momento.</p>
                     </div>
                     <div class="agenda-collapse-panel__actions">
                         <div id="processInstanceCardsSummary" class="journey-badges"></div>
-                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="process-instances" aria-expanded="true" aria-label="Colapsar Instâncias em destaque">▾</button>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="process-instances" aria-expanded="false" aria-label="Expandir Instâncias de Processos">▾</button>
                     </div>
                 </div>
-                <div class="agenda-collapse-panel__body" data-collapse-body>
+                <div class="agenda-collapse-panel__body is-hidden" data-collapse-body>
                     <div id="processInstanceCardsList" class="agenda-instance-card-grid"></div>
                 </div>
             </section>
-            <section class="journey-list-card agenda-section-card agenda-collapse-panel" data-collapse-panel="calendar-events" data-collapse-label="Tarefas do calendário">
+            <section id="projectActivityCardsPanel" class="journey-list-card agenda-section-card agenda-collapse-panel is-collapsed" data-collapse-panel="project-activities" data-collapse-label="Atividades de Projetos">
                 <div class="journey-list-card__header agenda-collapse-panel__header">
                     <div>
-                        <h3>Tarefas do calendário</h3>
-                        <p>Compromissos livres e execuções vinculadas. Use este espaço para organizar análises, follow-ups e compromissos do dia.</p>
+                        <h3>Atividades de Projetos</h3>
+                        <p>Tarefas de projetos com prazo, esforço previsto e vínculo direto para horas/informações da atividade.</p>
+                    </div>
+                    <div class="agenda-collapse-panel__actions">
+                        <div id="projectActivityCardsSummary" class="journey-badges"></div>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="project-activities" aria-expanded="false" aria-label="Expandir Atividades de Projetos">▾</button>
+                    </div>
+                </div>
+                <div class="agenda-collapse-panel__body is-hidden" data-collapse-body>
+                    <div id="projectActivityCardsList" class="agenda-instance-card-grid agenda-typed-card-grid"></div>
+                </div>
+            </section>
+            <section id="meetingCardsPanel" class="journey-list-card agenda-section-card agenda-collapse-panel is-collapsed" data-collapse-panel="meetings" data-collapse-label="Reuniões">
+                <div class="journey-list-card__header agenda-collapse-panel__header">
+                    <div>
+                        <h3>Reuniões</h3>
+                        <p>Compromissos vindos do módulo de reuniões, com janela, status e origem preservados na agenda operacional.</p>
+                    </div>
+                    <div class="agenda-collapse-panel__actions">
+                        <div id="meetingCardsSummary" class="journey-badges"></div>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="meetings" aria-expanded="false" aria-label="Expandir Reuniões">▾</button>
+                    </div>
+                </div>
+                <div class="agenda-collapse-panel__body is-hidden" data-collapse-body>
+                    <div id="meetingCardsList" class="agenda-instance-card-grid agenda-typed-card-grid"></div>
+                </div>
+            </section>
+            <section class="journey-list-card agenda-section-card agenda-collapse-panel is-collapsed" data-collapse-panel="manual-events" data-collapse-label="Eventos Avulsos">
+                <div class="journey-list-card__header agenda-collapse-panel__header">
+                    <div>
+                        <h3>Eventos Avulsos</h3>
+                        <p>Compromissos livres sem vínculo com projeto, processo ou reunião. Use este espaço para organizar análises, follow-ups e apoios pontuais.</p>
                     </div>
                     <div class="agenda-collapse-panel__actions">
                         <div id="calendarEventsSummary" class="journey-badges"></div>
-                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="calendar-events" aria-expanded="true" aria-label="Colapsar Tarefas do calendário">▾</button>
+                        <button type="button" class="agenda-sidecard__toggle" data-collapse-toggle="manual-events" aria-expanded="false" aria-label="Expandir Eventos Avulsos">▾</button>
                     </div>
                 </div>
-                <div class="agenda-collapse-panel__body" data-collapse-body>
+                <div class="agenda-collapse-panel__body is-hidden" data-collapse-body>
                     <form id="calendarEventForm" class="journey-form-card journey-form-card--inline agenda-inline-form" style="display:none;">
                         <input type="hidden" id="calendarEventIdInput">
                         <div class="journey-card-heading">
                             <div>
-                                <h3>Tarefa de calendário</h3>
-                                <p id="calendarEventSourceHint">Crie uma tarefa livre ou vinculada para organizar a execução.</p>
+                                <h3>Evento avulso</h3>
+                                <p id="calendarEventSourceHint">Crie um compromisso livre para organizar a execução.</p>
                             </div>
                         </div>
                         <div class="journey-inline-grid">

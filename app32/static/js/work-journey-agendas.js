@@ -16,11 +16,20 @@
   const processInstanceCardsPanel = document.getElementById('processInstanceCardsPanel');
   const processInstanceCardsList = document.getElementById('processInstanceCardsList');
   const processInstanceCardsSummary = document.getElementById('processInstanceCardsSummary');
+  const projectActivityCardsPanel = document.getElementById('projectActivityCardsPanel');
+  const projectActivityCardsList = document.getElementById('projectActivityCardsList');
+  const projectActivityCardsSummary = document.getElementById('projectActivityCardsSummary');
+  const meetingCardsPanel = document.getElementById('meetingCardsPanel');
+  const meetingCardsList = document.getElementById('meetingCardsList');
+  const meetingCardsSummary = document.getElementById('meetingCardsSummary');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
   const statusBadge = document.getElementById('agendaLockBadge');
   const metaLine = document.getElementById('agendaMetaLine');
   const searchStatus = document.getElementById('agendaSearchStatus');
+
+  const DEFAULT_COLLAPSED_PANELS = ['process-instances', 'project-activities', 'meetings', 'manual-events'];
+  const COLLAPSE_DEFAULTS_VERSION = 'sections-v2';
 
   const state = {
     agenda: null,
@@ -63,14 +72,24 @@
     ].join(':');
   }
 
-  function readPersistedSet(name) {
+  function readPersistedSet(name, defaultValues = []) {
     try {
       const raw = localStorage.getItem(`${getStorageKeyBase()}:${name}`);
-      if (!raw) return new Set();
+      if (!raw) return new Set(defaultValues);
       const values = JSON.parse(raw);
-      return new Set(Array.isArray(values) ? values : []);
+      const parsed = new Set(Array.isArray(values) ? values : []);
+      if (name === 'collapsedPanels') {
+        const defaultsMarkerKey = `${getStorageKeyBase()}:collapsedPanelsDefaultsVersion`;
+        const marker = localStorage.getItem(defaultsMarkerKey);
+        if (marker !== COLLAPSE_DEFAULTS_VERSION) {
+          defaultValues.forEach((value) => parsed.add(value));
+          parsed.delete('operational-planning');
+          localStorage.setItem(defaultsMarkerKey, COLLAPSE_DEFAULTS_VERSION);
+        }
+      }
+      return parsed;
     } catch (_error) {
-      return new Set();
+      return new Set(defaultValues);
     }
   }
 
@@ -212,6 +231,24 @@
     }
 
     renderProcessInstanceCards(agenda, searchTerm);
+    renderTypedAgendaSection({
+      panel: projectActivityCardsPanel,
+      list: projectActivityCardsList,
+      summary: projectActivityCardsSummary,
+      agenda,
+      searchTerm,
+      itemType: 'project_task',
+      summaryLabel: 'atividade(s)',
+    });
+    renderTypedAgendaSection({
+      panel: meetingCardsPanel,
+      list: meetingCardsList,
+      summary: meetingCardsSummary,
+      agenda,
+      searchTerm,
+      itemType: 'meeting',
+      summaryLabel: 'reunião(ões)',
+    });
 
     if (searchStatus) {
       searchStatus.hidden = !searchTerm;
@@ -247,12 +284,24 @@
       }, searchTerm))
       : cards;
 
-    processInstanceCardsPanel.style.display = filteredCards.length ? '' : 'none';
+    processInstanceCardsPanel.style.display = '';
     processInstanceCardsList.innerHTML = renderer.renderProcessInstanceCards(filteredCards);
     if (processInstanceCardsSummary) {
-      processInstanceCardsSummary.innerHTML = filteredCards.length
-        ? `<span class="badge-pill">${filteredCards.length} instância(s)</span>`
-        : '';
+      processInstanceCardsSummary.innerHTML = `<span class="badge-pill">${filteredCards.length} instância(s)</span>`;
+    }
+  }
+
+  function renderTypedAgendaSection({ panel, list, summary, agenda, searchTerm, itemType, summaryLabel }) {
+    if (!panel || !list || !renderer.collectTypedAgendaItems) return;
+    const items = renderer.collectTypedAgendaItems(agenda, itemType);
+    const filteredItems = searchTerm
+      ? items.filter((item) => utils.searchIncludes(item, searchTerm))
+      : items;
+
+    panel.style.display = '';
+    list.innerHTML = renderer.renderTypedAgendaCards(filteredItems, itemType);
+    if (summary) {
+      summary.innerHTML = `<span class="badge-pill">${filteredItems.length} ${summaryLabel}</span>`;
     }
   }
 
@@ -529,7 +578,7 @@
     state.storageKey = getStorageKeyBase();
     state.collapsedBlocks = readPersistedSet('collapsedBlocks');
     state.collapsedDays = readPersistedSet('collapsedDays');
-    state.collapsedPanels = readPersistedSet('collapsedPanels');
+    state.collapsedPanels = readPersistedSet('collapsedPanels', DEFAULT_COLLAPSED_PANELS);
 
     try {
       const response = await api(`/api/companies/${companyId}/work-journey/agendas?employee_id=${employeeId}&date=${selectedDate()}&scope=${currentScope()}`);
