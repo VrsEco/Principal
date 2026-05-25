@@ -30,6 +30,7 @@
 
   const DEFAULT_COLLAPSED_PANELS = ['process-instances', 'project-activities', 'meetings', 'manual-events'];
   const COLLAPSE_DEFAULTS_VERSION = 'sections-v2';
+  const COLLAPSED_DAYS_DEFAULTS_VERSION = 'operational-planning-v1';
 
   const state = {
     agenda: null,
@@ -288,6 +289,44 @@
     processInstanceCardsList.innerHTML = renderer.renderProcessInstanceCards(filteredCards);
     if (processInstanceCardsSummary) {
       processInstanceCardsSummary.innerHTML = `<span class="badge-pill">${filteredCards.length} instância(s)</span>`;
+    }
+  }
+
+  function normalizeIsoDate(value) {
+    const raw = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+  }
+
+  function todayIsoDate() {
+    return normalizeIsoDate(bootstrap.today) || new Date().toISOString().slice(0, 10);
+  }
+
+  function defaultCollapsedDayKeys(agenda) {
+    const defaults = new Set(['overdue']);
+    const today = todayIsoDate();
+
+    (agenda?.days || []).forEach((day) => {
+      const dayDate = normalizeIsoDate(day?.date);
+      const dayKey = day?.key || day?.date;
+      if (dayDate && dayKey && dayDate < today) {
+        defaults.add(dayKey);
+      }
+    });
+
+    return defaults;
+  }
+
+  function applyCollapsedDayDefaults(agenda) {
+    try {
+      const defaultsMarkerKey = `${getStorageKeyBase()}:collapsedDaysDefaultsVersion`;
+      const marker = localStorage.getItem(defaultsMarkerKey);
+      if (marker === COLLAPSED_DAYS_DEFAULTS_VERSION) return;
+
+      defaultCollapsedDayKeys(agenda).forEach((value) => state.collapsedDays.add(value));
+      writePersistedSet('collapsedDays', state.collapsedDays);
+      localStorage.setItem(defaultsMarkerKey, COLLAPSED_DAYS_DEFAULTS_VERSION);
+    } catch (_error) {
+      defaultCollapsedDayKeys(agenda).forEach((value) => state.collapsedDays.add(value));
     }
   }
 
@@ -588,6 +627,7 @@
         employeeId,
         companyId,
       });
+      applyCollapsedDayDefaults(state.agenda);
       state.legacyFallback = false;
     } catch (error) {
       if (!forceFallback) {
@@ -622,6 +662,7 @@
             employeeId,
             companyId,
           });
+          applyCollapsedDayDefaults(state.agenda);
           state.legacyFallback = true;
         } catch (fallbackError) {
           state.agenda = null;

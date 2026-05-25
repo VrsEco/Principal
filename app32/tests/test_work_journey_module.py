@@ -1306,6 +1306,10 @@ def test_agendas_sections_default_collapsed_and_render_typed_cards():
         render_script = handle.read()
 
     assert "DEFAULT_COLLAPSED_PANELS = ['process-instances', 'project-activities', 'meetings', 'manual-events']" in agendas_script
+    assert "const COLLAPSED_DAYS_DEFAULTS_VERSION = 'operational-planning-v1';" in agendas_script
+    assert "const defaults = new Set(['overdue']);" in agendas_script
+    assert 'if (dayDate && dayKey && dayDate < today)' in agendas_script
+    assert 'applyCollapsedDayDefaults(state.agenda);' in agendas_script
     assert "renderTypedAgendaSection({" in agendas_script
     assert "itemType: 'project_task'" in agendas_script
     assert "itemType: 'meeting'" in agendas_script
