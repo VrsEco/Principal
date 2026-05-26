@@ -1,7 +1,7 @@
 """create process portal publications
 
 Revision ID: 20260520_2300
-Revises: 20260520_1700_add_video_narration_to_process_steps
+Revises: 20260520_1700
 Create Date: 2026-05-20 23:00:00
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 revision = "20260520_2300"
-down_revision = "20260520_1700_add_video_narration_to_process_steps"
+down_revision = "20260520_1700"
 branch_labels = None
 depends_on = None
 

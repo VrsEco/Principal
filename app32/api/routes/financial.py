@@ -1,6 +1,6 @@
 import io
 
-from flask import Blueprint, abort, redirect, render_template, request, send_file, session
+from flask import Blueprint, abort, flash, redirect, render_template, request, send_file, session
 from flask_login import current_user
 
 from models import Company, FinancialEntry, FinancialSchedule
@@ -15,6 +15,7 @@ from models.process import Process
 from models.project import Project
 from services.financial_import_service import FinancialImportService
 from services.financial_budget_import_service import FinancialBudgetImportService
+from services.financial_local_automation_service import FinancialLocalAutomationService
 from utils.permissions import get_default_company_id, has_permission, permission_required
 
 
@@ -405,13 +406,54 @@ def financial_schedules_page():
 @permission_required("financial", "view")
 def financial_schedule_form_page(schedule_id: int | None = None):
     company = get_active_company()
+    schedule = _get_schedule_with_access(schedule_id) if schedule_id else None
     return render_template(
         "modules/financial/schedules.html",
         company=company,
         company_id=company.id if company else None,
         schedule_id=schedule_id,
+        schedule=schedule,
+        schedule_automations=FinancialLocalAutomationService.list_schedule_automations(schedule) if schedule else [],
+        schedule_automation_templates=FinancialLocalAutomationService.get_schedule_automation_template_options() if schedule else [],
         initial_entry_type=(request.args.get("entry_type") or "").strip().lower(),
     )
+
+
+@financial_bp.route("/financial/schedules/<int:schedule_id>/automations", methods=["POST"])
+@permission_required("financial", "view")
+def financial_schedule_automation_action(schedule_id: int):
+    schedule = _get_schedule_with_access(schedule_id)
+    if not has_permission(schedule.company_id, "financial", "edit"):
+        abort(403, description="Acesso negado para editar automações do título financeiro.")
+
+    try:
+        if request.form.get("pause_automation_id"):
+            FinancialLocalAutomationService.update_schedule_automation_status(
+                schedule=schedule,
+                automation_id=int(request.form["pause_automation_id"]),
+                activate=False,
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Automação financeira pausada.", "success")
+        elif request.form.get("activate_automation_id"):
+            FinancialLocalAutomationService.update_schedule_automation_status(
+                schedule=schedule,
+                automation_id=int(request.form["activate_automation_id"]),
+                activate=True,
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Automação financeira ativada.", "success")
+        else:
+            automation = FinancialLocalAutomationService.create_schedule_automation(
+                schedule=schedule,
+                template_key=request.form.get("automation_template_key"),
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash(f"Automação '{automation.name}' criada.", "success")
+    except Exception as exc:
+        flash(f"Falha ao processar automação financeira: {exc}", "error")
+
+    return redirect(f"/financial/schedules/{schedule.id}?company_id={schedule.company_id}", code=302)
 
 
 @financial_bp.route("/financial/borderos")

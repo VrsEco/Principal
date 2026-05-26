@@ -37,6 +37,11 @@ Portanto:
 - **BPMS** é a camada de orquestração operacional;
 - **Shell de execução** é a experiência unificada de trabalho.
 
+Complemento oficial:
+
+> Faturamento e renovação contratuais são nativos do domínio.  
+> O BPMS não é a origem dessas regras; ele apenas consome, aprova ou acompanha quando necessário.
+
 ---
 
 ## 3. Fronteira entre domínio e BPMS
@@ -75,6 +80,21 @@ Portanto:
 - timeline;
 - shell única de controle e execução.
 
+## 3.3. Pertence ao motor corporativo de eventos e regras
+
+- detecção de eventos;
+- avaliação de gatilhos;
+- despacho de ações;
+- idempotência;
+- reversão;
+- trilha de execução;
+- integração entre domínio e BPMS.
+
+Regra:
+
+> O motor não calcula a regra de negócio.  
+> Ele chama o serviço do domínio correto.
+
 ---
 
 ## 4. Agregados principais do núcleo de contratos
@@ -107,6 +127,7 @@ Campos mínimos esperados:
 
 - `company_id`
 - `party_id`
+- `contracting_legal_entity_id`
 - `code`
 - `title`
 - `status`
@@ -162,11 +183,21 @@ Condições fiscais e retenções.
 
 Exemplos:
 
+- PJ contratada = PJ emissora da NF;
+- modo de integração `manual` | `api` | `spreadsheet`;
+- código do serviço;
+- item da lista de serviço;
+- natureza da operação;
 - natureza fiscal;
 - retenções;
 - parâmetros tributários;
 - observações fiscais;
 - vínculo futuro com fiscal/faturamento/financeiro.
+
+Regra oficial:
+
+> O contrato deve definir explicitamente a **PJ contratada**.  
+> A mesma PJ será usada como **emissora fiscal**, para manter aderência jurídica e fiscal entre contrato e nota.
 
 ## 4.7. `contract_trigger`
 
@@ -180,6 +211,82 @@ Exemplos:
 - competência;
 - data de renovação;
 - alertas.
+
+## 4.9. `contract_native_billing`
+
+Representa a competência nativa gerada pelo contrato.
+
+Campos esperados:
+
+- `company_id`
+- `contract_id`
+- `competence_start`
+- `competence_end`
+- `issue_date`
+- `due_date`
+- `gross_amount`
+- `net_amount`
+- snapshot fiscal
+
+## 4.10. Integração financeira nativa do contrato
+
+O faturamento nativo do contrato deve materializar:
+
+- **título principal bruto** no financeiro;
+- **títulos satélite** para retenções e tributos;
+- **políticas configuráveis** por natureza do satélite;
+- **baixa por evento** com rastreabilidade.
+
+Entidades complementares:
+
+- `financial_satellite_policies`
+- `financial_schedule_links`
+- `financial_satellite_executions`
+
+Regra oficial:
+
+> O contrato não liquida nada diretamente.  
+> Ele apenas gera o faturamento.  
+> O financeiro materializa principal, satélites e eventos de baixa.
+
+- `company_id`
+- `contract_id`
+- `party_id`
+- `billing_code`
+- `competence_start`
+- `competence_end`
+- `issue_date`
+- `due_date`
+- `gross_amount`
+- `net_amount`
+- `idempotency_key`
+- `status`
+
+## 4.10. `contract_native_billing_item`
+
+Snapshot dos itens faturados naquela competência.
+
+---
+
+## 4-A. Catálogo unificado de automações
+
+Automações do motor e do BPMS devem ficar visíveis no mesmo lugar.
+
+Campos mínimos do catálogo:
+
+- `automation_origin` = `bpms` | `event_engine`
+- `domain_key`
+- `trigger_event`
+- `action_key`
+- `execution_mode`
+- `status`
+- `next_execution_at`
+- `last_execution_at`
+
+Regra:
+
+> O usuário enxerga uma fila única de automações.  
+> A diferença entre motor e BPMS é técnica, não de experiência.
 
 ## 4.8. `contract_document`
 

@@ -1,0 +1,78 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}PJ Contratada / Emissora{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<span class="sep">/</span>
+<span class="current">PJ Contratada / Emissora</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Cadastros fiscais do contrato</p>
+            <h1>PJ Contratada / Emissora</h1>
+            <p class="subtitle">Cadastre as pessoas jurídicas que poderão ser usadas como contratada e emissora fiscal.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>
+        </div>
+    </header>
+
+    <section class="grid-two">
+        <form method="post" class="panel form-panel">
+            <input type="hidden" name="entity_id" value="{{ selected_entity.id if selected_entity else '' }}">
+            <div class="panel-header"><h2>{{ 'Editar PJ' if selected_entity else 'Nova PJ' }}</h2></div>
+            <div class="panel-body form-grid">
+                <label><span>Código</span><input type="text" name="code" value="{{ selected_entity.code if selected_entity else '' }}"></label>
+                <label><span>CNPJ</span><input type="text" name="cnpj" value="{{ selected_entity.cnpj if selected_entity else '' }}" required></label>
+                <label class="full-width"><span>Razão social</span><input type="text" name="legal_name" value="{{ selected_entity.legal_name if selected_entity else '' }}" required></label>
+                <label><span>Nome fantasia</span><input type="text" name="trade_name" value="{{ selected_entity.trade_name if selected_entity else '' }}"></label>
+                <label><span>Inscrição municipal</span><input type="text" name="municipal_registration" value="{{ selected_entity.municipal_registration if selected_entity else '' }}"></label>
+                <label><span>Inscrição estadual</span><input type="text" name="state_registration" value="{{ selected_entity.state_registration if selected_entity else '' }}"></label>
+                <label><span>Regime tributário</span><input type="text" name="tax_regime" value="{{ selected_entity.tax_regime if selected_entity else '' }}"></label>
+                <label><span>CNAE</span><input type="text" name="cnae" value="{{ selected_entity.cnae if selected_entity else '' }}"></label>
+                <label><span>Cidade base</span><input type="text" name="service_city" value="{{ selected_entity.service_city if selected_entity else '' }}"></label>
+                <label><span>UF</span><input type="text" name="uf" value="{{ selected_entity.uf if selected_entity else '' }}"></label>
+                <label><span>Provedor NFS-e</span><input type="text" name="nfs_provider" value="{{ selected_entity.nfs_provider if selected_entity else '' }}"></label>
+                <label><span>Modo integração</span>
+                    <select name="integration_mode">
+                        <option value="manual" {% if not selected_entity or selected_entity.integration_mode == 'manual' %}selected{% endif %}>Manual</option>
+                        <option value="api" {% if selected_entity and selected_entity.integration_mode == 'api' %}selected{% endif %}>API</option>
+                        <option value="spreadsheet" {% if selected_entity and selected_entity.integration_mode == 'spreadsheet' %}selected{% endif %}>Planilha</option>
+                    </select>
+                </label>
+                <label><span>Perfil API</span><input type="number" name="api_profile_id" value="{{ selected_entity.api_profile_id if selected_entity and selected_entity.api_profile_id else '' }}"></label>
+                <label><span>Perfil planilha</span><input type="number" name="spreadsheet_profile_id" value="{{ selected_entity.spreadsheet_profile_id if selected_entity and selected_entity.spreadsheet_profile_id else '' }}"></label>
+            </div>
+            <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar PJ</button></div>
+        </form>
+
+        <div class="panel">
+            <div class="panel-header"><h2>PJs cadastradas</h2></div>
+            <div class="panel-body">
+                {% if legal_entities %}
+                <div class="list-stack">
+                    {% for item in legal_entities %}
+                    <article class="list-item">
+                        <div>
+                            <strong><a href="/contracts/legal-entities?company_id={{ company_id }}&entity_id={{ item.id }}">{{ item.code }} · {{ item.legal_name }}</a></strong>
+                            <small>{{ item.cnpj }} · {{ item.integration_mode }}{% if item.nfs_provider %} · {{ item.nfs_provider }}{% endif %}</small>
+                        </div>
+                        <span class="mini-badge {{ 'active' if item.is_active else '' }}">{{ 'Ativa' if item.is_active else 'Inativa' }}</span>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-state">Nenhuma PJ cadastrada.</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

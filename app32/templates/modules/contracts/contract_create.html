@@ -14,14 +14,9 @@
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
-            <p class="eyebrow">Cadastro inicial</p>
+            <p class="eyebrow">Wizard operacional</p>
             <h1>Novo contrato</h1>
-            <p class="subtitle">O contrato nasce pelo núcleo mínimo e, após salvar, abre o shell completo com abas core e capability.</p>
-            <div class="context-badges">
-                <span class="mini-badge active">core</span>
-                <span class="mini-badge active">capability</span>
-                <span class="mini-badge">tenant-safe</span>
-            </div>
+            <p class="subtitle">Fluxo guiado para criar o contrato sem expor a complexidade do backoffice. Depois do primeiro save, o cockpit assume o restante.</p>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>
@@ -46,20 +41,22 @@
 
         <div class="shell-main">
             <nav class="tab-nav">
-                {% for tab in tabs %}
-                <span class="tab-link {{ 'active' if loop.first else '' }} disabled">
-                    {{ tab.label }}
-                    <span class="scope-dot scope-{{ tab.scope }}"></span>
-                </span>
-                {% endfor %}
+                <span class="tab-link active disabled">1. Cliente</span>
+                <span class="tab-link disabled">2. Dados do contrato</span>
+                <span class="tab-link disabled">3. Datas críticas</span>
+                <span class="tab-link disabled">4. Revisão</span>
             </nav>
 
             <form method="post" class="panel form-panel">
                 <div class="panel-header">
-                    <h2>Resumo inicial</h2>
+                    <h2>Cadastro inicial guiado</h2>
                     <span class="scope-pill scope-core">core</span>
                 </div>
                 <div class="panel-body form-grid">
+                    <div class="wizard-step full-width">
+                        <h3>1. Cliente</h3>
+                        <p class="field-hint">Selecione primeiro o cliente e confirme o responsável comercial.</p>
+                    </div>
                     <label class="full-width">
                         <span>Título do contrato</span>
                         <input type="text" name="title" required>
@@ -74,6 +71,19 @@
                         </select>
                         <small class="field-hint">A lista exibe apenas favorecidos marcados como cliente.</small>
                     </label>
+                    <label>
+                        <span>Gestor do contrato</span>
+                        <select name="manager_employee_id">
+                            <option value="">Selecione</option>
+                            {% for employee in managers %}
+                            <option value="{{ employee.id }}">{{ employee.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <div class="wizard-step full-width">
+                        <h3>2. Dados do contrato</h3>
+                        <p class="field-hint">Informe apenas o essencial para abrir a operação.</p>
+                    </div>
                     <label>
                         <span>Tipo de contrato</span>
                         <input type="text" name="contract_type" placeholder="Prestação de serviço, fornecimento...">
@@ -109,14 +119,46 @@
                         <span>Regra de vencimento</span>
                         <input type="text" name="due_rule" placeholder="30 dias após faturamento...">
                     </label>
+                    <div class="wizard-step full-width">
+                        <h3>3. Datas críticas</h3>
+                        <p class="field-hint">Essas datas alimentam renovação, reajuste e encerramento do contrato.</p>
+                    </div>
+                    <label>
+                        <span>Início dos serviços</span>
+                        <input type="date" name="service_start_at">
+                    </label>
+                    <label>
+                        <span>Fim dos serviços</span>
+                        <input type="date" name="service_end_at">
+                    </label>
+                    <label>
+                        <span>Data de renovação</span>
+                        <input type="date" name="renewal_date">
+                    </label>
+                    <label>
+                        <span>Data de reajuste</span>
+                        <input type="date" name="adjustment_date">
+                    </label>
+                    <label>
+                        <span>Data de finalização</span>
+                        <input type="date" name="termination_date">
+                    </label>
+                    <label>
+                        <span>Motivo final esperado</span>
+                        <input type="text" name="end_reason" placeholder="renovação, encerramento, cancelamento...">
+                    </label>
+                    <div class="wizard-step full-width">
+                        <h3>4. Revisão</h3>
+                        <p class="field-hint">O cockpit abrirá em seguida para itens, faturamento, fiscal, observações, cláusulas e histórico.</p>
+                    </div>
                     <label class="full-width">
                         <span>Observações</span>
                         <textarea name="notes" rows="4"></textarea>
                     </label>
                 </div>
                 <div class="panel-footer">
-                    <span class="field-hint">Após criar o núcleo, o sistema abre as abas: Cliente, Itens, Faturamento, Periodicidade, Fiscal, Cobrança, Observações, Revisão e capabilities de PDF/assinado.</span>
-                    <button class="btn btn-primary" type="submit">Criar contrato e abrir shell</button>
+                    <span class="field-hint">Após criar, o cockpit abre diretamente para completar o contrato com fluidez operacional.</span>
+                    <button class="btn btn-primary" type="submit">Criar contrato e abrir cockpit</button>
                 </div>
             </form>
 

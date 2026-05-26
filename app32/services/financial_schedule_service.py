@@ -205,7 +205,11 @@ class FinancialScheduleService:
         if not schedule:
             return None, "Título Financeiro não encontrado no escopo da empresa."
 
-        return FinancialScheduleService._serialize_schedule(schedule, include_related_entries=True), None
+        return FinancialScheduleService._serialize_schedule(
+            schedule,
+            include_related_entries=True,
+            include_summary=True,
+        ), None
 
     @staticmethod
     def build_budget_document_schedule_payload(
@@ -1028,6 +1032,21 @@ class FinancialScheduleService:
         if settlement_error:
             return None, settlement_error
 
+        satellite_execution = None
+        settlement_metadata = dict((settlement_payload or {}).get("metadata_json") or {})
+        if not settlement_metadata.get("skip_contract_satellite_engine"):
+            try:
+                from services.contract_financial_service import ContractFinancialService
+
+                satellite_execution = ContractFinancialService.handle_schedule_settlement_event(
+                    company_id=company_id,
+                    schedule_id=schedule.id,
+                    settlement=settlement,
+                )
+            except Exception as exc:
+                logger.exception("Erro ao aplicar motor de satélites do contrato no título %s", schedule.id)
+                satellite_execution = {"executed": 0, "error": str(exc)}
+
         return {
             "entry": FinancialService.serialize_entry(entry),
             "settlement": FinancialService.serialize_settlement(
@@ -1037,6 +1056,7 @@ class FinancialScheduleService:
                 include_components=True,
             ),
             "created_entry": bool(entry_result.get("created")) if isinstance(entry_result, dict) else False,
+            "satellite_execution": satellite_execution,
         }, None
 
     @staticmethod

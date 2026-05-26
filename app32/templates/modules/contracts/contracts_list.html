@@ -14,43 +14,105 @@
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
-            <p class="eyebrow">Cadastro operacional</p>
+            <p class="eyebrow">Carteira contratual</p>
             <h1>Contratos</h1>
-            <p class="subtitle">Gerencie o núcleo do contrato e evolua cada registro pelas abas canônicas do módulo.</p>
+            <p class="subtitle">Lista operacional para localizar rápido o contrato certo, enxergar a próxima ação e abrir o cockpit sem ruído.</p>
         </div>
         <div class="page-actions">
-            <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Voltar</a>
+            <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Workspace</a>
             <a class="btn btn-primary" href="/contracts/new?company_id={{ company_id }}">Novo contrato</a>
         </div>
     </header>
 
+    <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Total</span><strong>{{ kpis.total }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Ativos</span><strong>{{ kpis.active }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Com renovação</span><strong>{{ kpis.renewing }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Sem faturamento</span><strong>{{ kpis.pending_billing }}</strong></article>
+    </section>
+
+    <form method="get" class="panel form-panel compact-filter-panel">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <div class="panel-header">
+            <h2>Filtros rápidos</h2>
+            <button class="btn btn-secondary" type="submit">Aplicar</button>
+        </div>
+        <div class="panel-body form-grid">
+            <label>
+                <span>Busca</span>
+                <input type="text" name="search" value="{{ filters.search or '' }}" placeholder="Código, título ou cliente">
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    <option value="">Todos</option>
+                    {% for status in ['draft', 'active', 'signed', 'implanting', 'inactive', 'closed'] %}
+                    <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Cliente</span>
+                <select name="party_id">
+                    <option value="">Todos</option>
+                    {% for party in parties %}
+                    <option value="{{ party.id }}" {% if filters.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Gestor</span>
+                <select name="manager_employee_id">
+                    <option value="">Todos</option>
+                    {% for employee in managers %}
+                    <option value="{{ employee.id }}" {% if filters.manager_employee_id == employee.id %}selected{% endif %}>{{ employee.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+    </form>
+
     <div class="panel">
+        <div class="panel-header">
+            <h2>Lista operacional</h2>
+            <span class="mini-badge">{{ contracts|length }} resultado(s)</span>
+        </div>
         <div class="panel-body">
             {% if contracts %}
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Código</th>
-                        <th>Título</th>
-                        <th>Favorecido</th>
+                        <th>Contrato</th>
+                        <th>Cliente</th>
                         <th>Status</th>
-                        <th>Periodicidade</th>
+                        <th>Gestor</th>
+                        <th>Datas críticas</th>
+                        <th>Próxima ação</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for contract in contracts %}
+                    {% set next_action = contract_next_action(contract) %}
                     <tr>
-                        <td><a href="/contracts/{{ contract.id }}?company_id={{ company_id }}">{{ contract.code }}</a></td>
-                        <td>{{ contract.title }}</td>
+                        <td>
+                            <a href="/contracts/{{ contract.id }}?company_id={{ company_id }}"><strong>{{ contract.code }}</strong></a>
+                            <div>{{ contract.title }}</div>
+                        </td>
                         <td>{{ contract.party.name if contract.party else '-' }}</td>
-                        <td><span class="badge">{{ contract.status }}</span></td>
-                        <td>{{ contract.periodicity or '-' }}</td>
+                        <td><span class="badge {{ 'badge-inactive' if contract_status_group(contract) == 'inactive' else 'badge-active' }}">{{ contract.status }}</span></td>
+                        <td>{{ contract.manager_employee.name if contract.manager_employee else '-' }}</td>
+                        <td>
+                            <div><small>Renovação: {{ contract.renewal_date.strftime('%d/%m/%Y') if contract.renewal_date else '-' }}</small></div>
+                            <div><small>Reajuste: {{ contract.adjustment_date.strftime('%d/%m/%Y') if contract.adjustment_date else '-' }}</small></div>
+                            <div><small>Fim: {{ contract.termination_date.strftime('%d/%m/%Y') if contract.termination_date else '-' }}</small></div>
+                        </td>
+                        <td><span class="mini-badge {{ next_action.tone }}">{{ next_action.label }}</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
             {% else %}
-            <p class="empty-state">Nenhum contrato cadastrado ainda.</p>
+            <p class="empty-state">Nenhum contrato encontrado com os filtros informados.</p>
             {% endif %}
         </div>
     </div>

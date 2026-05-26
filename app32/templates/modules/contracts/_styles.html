@@ -21,9 +21,13 @@
     .stat-card strong { font-size:1.75rem; color:var(--text-primary); }
     .list-stack { display:flex; flex-direction:column; gap:.75rem; }
     .list-item { display:flex; align-items:center; justify-content:space-between; gap:1rem; border:1px solid var(--border); border-radius:14px; padding:.9rem 1rem; color:inherit; text-decoration:none; background:var(--surface-secondary); }
+    .list-item-column { align-items:flex-start; }
     .list-item strong { display:block; }
     .list-item small { color:var(--text-secondary); }
+    .list-item-text { margin:.45rem 0 0; color:var(--text-primary); white-space:pre-wrap; }
     .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.3rem .65rem; background:var(--primary-light); color:var(--primary); font-size:.75rem; font-weight:700; text-transform:lowercase; }
+    .badge-active { background:#ecfeff; color:#0f766e; }
+    .badge-inactive { background:#f1f5f9; color:#475569; }
     .empty-state { color:var(--text-secondary); margin:0; }
     .data-table { width:100%; border-collapse:collapse; }
     .data-table th, .data-table td { text-align:left; padding:.85rem .65rem; border-bottom:1px solid var(--border); vertical-align:top; }
@@ -42,6 +46,7 @@
     .list-item-form { margin:0; }
     .field-hint { color:var(--text-secondary); font-size:.82rem; }
     .checkbox-inline-wrap { display:flex; gap:1rem; flex-wrap:wrap; }
+    .checkbox-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin-top:.35rem; }
     .role-preview, .context-badges { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem; }
     .mini-badge { display:inline-flex; align-items:center; border-radius:999px; padding:.25rem .65rem; background:var(--surface-secondary); color:var(--text-secondary); border:1px solid var(--border); font-size:.72rem; font-weight:700; }
     .mini-badge.active { background:#ecfeff; color:#0f766e; border-color:#99f6e4; }
@@ -68,11 +73,23 @@
     .review-card.ok { border-color:#86efac; background:#f0fdf4; }
     .review-card.pending { border-color:#fcd34d; background:#fffbeb; }
     .soft-panel { margin-top:1rem; }
+    .compact-filter-panel .panel-body { padding-top:.75rem; }
+    .wizard-step { padding:.85rem 1rem; border:1px dashed var(--border); border-radius:14px; background:var(--surface-secondary); }
+    .wizard-step h3 { margin:0 0 .25rem; font-size:1rem; }
+    .timeline-stack { display:flex; flex-direction:column; gap:.85rem; }
+    .timeline-item { border-left:3px solid var(--primary); padding-left:.85rem; }
+    .timeline-item p { margin:.35rem 0 0; color:var(--text-primary); }
+    .native-schedule-stack { margin-top:1rem; }
+    .mini-badge.warning { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+    .mini-badge.info { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+    .mini-badge.success { background:#ecfdf5; color:#047857; border-color:#a7f3d0; }
+    .mini-badge.neutral { background:#f8fafc; color:#475569; border-color:#e2e8f0; }
+    .contract-next-action { margin-top:.3rem; color:var(--primary); font-weight:600; }
     @media (max-width: 960px) {
         .contracts-page { padding:0 1rem 1.25rem; }
         .stats-grid, .grid-two, .form-grid { grid-template-columns:1fr; }
         .contracts-header { flex-direction:column; }
-        .contract-shell-grid, .review-grid, .info-grid { grid-template-columns:1fr; }
+        .contract-shell-grid, .review-grid, .info-grid, .checkbox-grid { grid-template-columns:1fr; }
         .shell-sidebar { position:static; }
     }
 </style>

@@ -220,6 +220,67 @@
                     </footer>
                 </form>
             </section>
+
+            {% if schedule %}
+            <section class="sched-card financial-automation-card">
+                <div class="sched-section-head">
+                    <div>
+                        <span class="sched-section-eyebrow">Automações locais</span>
+                        <h2>Automações do título financeiro</h2>
+                        <p>Crie aqui as automações específicas do título. Todas também aparecem na Central de Automações.</p>
+                    </div>
+                    <a class="btn btn-secondary" href="/ai-automation-mesh">Abrir central</a>
+                </div>
+
+                <div class="sched-automation-grid">
+                    <form method="post" action="/financial/schedules/{{ schedule.id }}/automations?company_id={{ company_id }}" class="sched-automation-form">
+                        <label class="field">
+                            <span>Modelo pronto</span>
+                            <select name="automation_template_key" required>
+                                <option value="">Selecione</option>
+                                {% for item in schedule_automation_templates %}
+                                <option value="{{ item.key }}">{{ item.label }} — {{ item.description }}</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <button type="submit" class="btn btn-primary">Criar automação</button>
+                    </form>
+
+                    <div class="sched-automation-list">
+                        {% if schedule_automations %}
+                        {% for item in schedule_automations %}
+                        <article class="sched-automation-item">
+                            <div>
+                                <strong>{{ item.name }}</strong>
+                                <small>
+                                    {{ item.origin_type }} · {{ item.trigger_type }} · próxima:
+                                    {{ item.next_execution_at.strftime('%d/%m/%Y %H:%M') if item.next_execution_at else '-' }}
+                                </small>
+                                <p>
+                                    Status: {{ item.status }}
+                                    {% if item.rules.first() %}
+                                    · Regra: {{ item.rules.first().rule_code }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <form method="post" action="/financial/schedules/{{ schedule.id }}/automations?company_id={{ company_id }}" class="inline-actions">
+                                {% if item.is_active %}
+                                <input type="hidden" name="pause_automation_id" value="{{ item.id }}">
+                                <button type="submit" class="btn btn-danger">Pausar</button>
+                                {% else %}
+                                <input type="hidden" name="activate_automation_id" value="{{ item.id }}">
+                                <button type="submit" class="btn btn-primary">Ativar</button>
+                                {% endif %}
+                            </form>
+                        </article>
+                        {% endfor %}
+                        {% else %}
+                        <div class="empty-state">Nenhuma automação cadastrada para este título financeiro.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
         </main>
     </section>
 </div>
@@ -312,6 +373,24 @@
         </form>
     </div>
 </div>
+
+<style>
+    .financial-automation-card { margin-top: 1rem; }
+    .sched-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+    .sched-section-eyebrow { display:inline-block; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; margin-bottom:.4rem; }
+    .sched-section-head h2 { margin:0; }
+    .sched-section-head p { margin:.35rem 0 0; color:var(--text-secondary); }
+    .sched-automation-grid { display:grid; grid-template-columns: minmax(280px, 360px) 1fr; gap:1rem; }
+    .sched-automation-form, .sched-automation-list { background: var(--surface-secondary); border:1px solid var(--border); border-radius:18px; padding:1rem; }
+    .sched-automation-form { display:flex; flex-direction:column; gap:.9rem; }
+    .sched-automation-list { display:flex; flex-direction:column; gap:.8rem; }
+    .sched-automation-item { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; border:1px solid var(--border); border-radius:14px; padding:.9rem; background:var(--surface); }
+    .sched-automation-item small, .sched-automation-item p { color:var(--text-secondary); margin:.2rem 0 0; }
+    @media (max-width: 980px) {
+        .sched-automation-grid { grid-template-columns: 1fr; }
+        .sched-section-head { flex-direction:column; }
+    }
+</style>
 
 <div id="attachment-preview-modal" class="modal-shell hidden" aria-hidden="true">
     <div class="modal-backdrop" onclick="closeAttachmentPreview()"></div>

@@ -47,6 +47,11 @@ Complemento de governança:
 > O BPMN do processo “Novo Contrato” não deve ser confundido com o módulo de contratos.  
 > O fluxo descobre e orquestra a necessidade; o domínio de contratos concentra o cadastro e as regras nucleares do negócio.
 
+Decisão complementar:
+
+> Faturamento e renovação não nascem no BPMN.  
+> Eles nascem no domínio de contratos e podem ser expostos ao BPMS como eventos, exceções ou aprovações.
+
 Este desenho deve seguir a esteira oficial:
 
 1. modelar o processo;
@@ -179,6 +184,22 @@ Exemplos:
 - **Validar / Editar Contrato**
 - **Gerar PDF**
 - **Contrato Assinado**
+
+## 6.2-A. Visibilidade de automações
+
+Automações do contrato devem aparecer no mesmo catálogo operacional usado pelo BPMS.
+
+Exemplos:
+
+- faturamento nativo por competência;
+- renovação nativa;
+- aprovação BPMS para exceção;
+- rotina visual do processo.
+
+Regra:
+
+> A UI mostra uma fila única de automações e sua origem.  
+> O usuário não deve navegar em dois lugares diferentes para entender a operação.
 
 ### Estado aplicado no MVP atual
 

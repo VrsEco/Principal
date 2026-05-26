@@ -48,12 +48,13 @@
                                 </div>
                             </a>
                         </summary>
-                        <div class="contract-tree-children">
+                    <div class="contract-tree-children">
                             {% if node.contracts %}
                                 {% for contract in node.contracts %}
                                 {% set start_date = contract_start_date(contract) %}
+                                {% set next_action = contract_next_action(contract) %}
                                 <a class="contract-leaf-card {{ 'active' if selected_contract and selected_contract.id == contract.id else '' }}"
-                                   href="/contracts/new?company_id={{ company_id }}&contract_id={{ contract.id }}&party_id={{ node.party.id }}">
+                                   href="/contracts/{{ contract.id }}?company_id={{ company_id }}">
                                     <div class="contract-leaf-head">
                                         <strong>{{ contract.code }}</strong>
                                         <span class="badge {{ 'badge-inactive' if contract_status_group(contract) == 'inactive' else 'badge-active' }}">{{ contract_status_label(contract) }}</span>
@@ -63,6 +64,7 @@
                                         Início: {{ start_date.strftime('%d/%m/%Y') if start_date else '-' }}
                                         · Últ. fat.: {{ contract.last_billing_at.strftime('%d/%m/%Y') if contract.last_billing_at else '-' }}
                                     </small>
+                                    <small class="contract-next-action">{{ next_action.label }}</small>
                                 </a>
                                 {% endfor %}
                             {% else %}
@@ -80,15 +82,13 @@
 
         <main class="panel contract-workspace-main">
             {% if selected_contract %}
-            <form method="post" class="contract-workspace-form">
-                <input type="hidden" name="section" value="resumo">
-                <input type="hidden" name="contract_id" value="{{ selected_contract.id }}">
+            <div class="contract-workspace-form">
                 <div class="panel-header">
                     <div>
                         <h2>{{ selected_contract.code }} · {{ selected_contract.title }}</h2>
                         <small class="field-hint">Resumo operacional do contrato selecionado.</small>
                     </div>
-                    <a class="btn btn-secondary" href="/contracts/{{ selected_contract.id }}?company_id={{ company_id }}">Abrir shell completo</a>
+                    <a class="btn btn-primary" href="/contracts/{{ selected_contract.id }}?company_id={{ company_id }}">Abrir cockpit</a>
                 </div>
                 <div class="panel-body contract-summary-stack">
                     <section class="summary-kpis">
@@ -107,6 +107,10 @@
                         <article class="stat-card">
                             <span class="stat-label">Último faturamento</span>
                             <strong>{{ selected_contract.last_billing_at.strftime('%d/%m/%Y') if selected_contract.last_billing_at else '-' }}</strong>
+                        </article>
+                        <article class="stat-card">
+                            <span class="stat-label">Próxima ação</span>
+                            <strong>{{ contract_next_action(selected_contract).label }}</strong>
                         </article>
                     </section>
                     <section class="summary-grid">
@@ -132,65 +136,21 @@
                         </article>
                     </section>
                 </div>
-                <div class="panel-body form-grid">
-                    <label class="full-width">
-                        <span>Título do contrato</span>
-                        <input type="text" name="title" value="{{ selected_contract.title }}" required>
-                    </label>
-                    <label>
-                        <span>Cliente</span>
-                        <select name="party_id" required>
-                            {% for party in parties %}
-                            <option value="{{ party.id }}" {% if selected_contract.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Status</span>
-                        <select name="status">
-                            <option value="active" {% if contract_status_group(selected_contract) == 'active' %}selected{% endif %}>Ativo</option>
-                            <option value="inactive" {% if contract_status_group(selected_contract) == 'inactive' %}selected{% endif %}>Inativo</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Tipo de contrato</span>
-                        <input type="text" name="contract_type" value="{{ selected_contract.contract_type or '' }}">
-                    </label>
-                    <label>
-                        <span>Moeda</span>
-                        <input type="text" name="currency_code" value="{{ selected_contract.currency_code or 'BRL' }}">
-                    </label>
-                    <label>
-                        <span>Início</span>
-                        <input type="date" name="service_start_at" value="{{ selected_contract.service_start_at.isoformat() if selected_contract.service_start_at else '' }}">
-                    </label>
-                    <label>
-                        <span>Último faturamento</span>
-                        <input type="date" name="last_billing_at" value="{{ selected_contract.last_billing_at.isoformat() if selected_contract.last_billing_at else '' }}">
-                    </label>
-                    <label>
-                        <span>Periodicidade</span>
-                        <select name="periodicity">
-                            <option value="">Selecione</option>
-                            {% for value, label in [('monthly', 'Mensal'), ('weekly', 'Semanal'), ('quarterly', 'Trimestral'), ('semiannual', 'Semestral'), ('annual', 'Anual')] %}
-                            <option value="{{ value }}" {% if selected_contract.periodicity == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Regra de vencimento</span>
-                        <input type="text" name="due_rule" value="{{ selected_contract.due_rule or '' }}">
-                    </label>
-                    <label class="full-width">
-                        <span>Observações</span>
-                        <textarea name="notes" rows="4">{{ selected_contract.notes or '' }}</textarea>
-                    </label>
+                <div class="panel-body form-grid readonly-summary-grid">
+                    <div class="info-card"><span class="stat-label">Cliente</span><strong>{{ selected_contract.party.name if selected_contract.party else '-' }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Status</span><strong>{{ contract_status_label(selected_contract) }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Tipo</span><strong>{{ selected_contract.contract_type or '-' }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Moeda</span><strong>{{ selected_contract.currency_code or 'BRL' }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Início</span><strong>{{ selected_contract.service_start_at.strftime('%d/%m/%Y') if selected_contract.service_start_at else '-' }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Regra de vencimento</span><strong>{{ selected_contract.due_rule or '-' }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Data de renovação</span><strong>{{ selected_contract.renewal_date.strftime('%d/%m/%Y') if selected_contract.renewal_date else '-' }}</strong></div>
+                    <div class="info-card"><span class="stat-label">Data de reajuste</span><strong>{{ selected_contract.adjustment_date.strftime('%d/%m/%Y') if selected_contract.adjustment_date else '-' }}</strong></div>
+                    <div class="info-card full-width"><span class="stat-label">Observações</span><strong>{{ selected_contract.notes or 'Sem observações.' }}</strong></div>
                 </div>
                 <div class="panel-footer">
-                    <span class="field-hint">Resumo operacional centralizado neste workspace; o detalhamento por abas segue no shell completo.</span>
-                    <button class="btn btn-primary" type="submit">Salvar resumo</button>
+                    <span class="field-hint">Este workspace serve para triagem. A edição detalhada acontece no cockpit do contrato.</span>
                 </div>
-            </form>
+            </div>
             {% elif selected_party %}
             <form method="post" class="contract-workspace-form">
                 <input type="hidden" name="section" value="create_contract">

@@ -701,6 +701,155 @@ class FinancialSchedule(db.Model):
         }
 
 
+class FinancialSatellitePolicy(db.Model):
+    __tablename__ = "financial_satellite_policies"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "policy_code", name="uq_financial_satellite_policies_company_code"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    contract_id = db.Column(db.Integer, db.ForeignKey("contracts.id"), index=True)
+    policy_code = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(160), nullable=False)
+    satellite_nature = db.Column(db.String(40), nullable=False, index=True)
+    principal_effect_mode = db.Column(db.String(50), nullable=False, default="none")
+    satellite_effect_mode = db.Column(db.String(50), nullable=False, default="open_until_manual")
+    trigger_event = db.Column(db.String(40), nullable=False, default="on_manual_release")
+    settlement_scope = db.Column(db.String(30), nullable=False, default="full")
+    auto_apply = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    bank_account_id = db.Column(db.Integer, db.ForeignKey("financial_bank_accounts.id"), index=True)
+    chart_account_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), index=True)
+    notes = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    bank_account = db.relationship("FinancialBankAccount", foreign_keys=[bank_account_id])
+    chart_account = db.relationship("FinancialChartAccount", foreign_keys=[chart_account_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "contract_id": self.contract_id,
+            "policy_code": self.policy_code,
+            "name": self.name,
+            "satellite_nature": self.satellite_nature,
+            "principal_effect_mode": self.principal_effect_mode,
+            "satellite_effect_mode": self.satellite_effect_mode,
+            "trigger_event": self.trigger_event,
+            "settlement_scope": self.settlement_scope,
+            "auto_apply": bool(self.auto_apply),
+            "bank_account_id": self.bank_account_id,
+            "chart_account_id": self.chart_account_id,
+            "notes": self.notes,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialScheduleLink(db.Model):
+    __tablename__ = "financial_schedule_links"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "company_id",
+            "parent_schedule_id",
+            "child_schedule_id",
+            name="uq_financial_schedule_links_company_parent_child",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    parent_schedule_id = db.Column(db.Integer, db.ForeignKey("financial_schedules.id"), nullable=False, index=True)
+    child_schedule_id = db.Column(db.Integer, db.ForeignKey("financial_schedules.id"), nullable=False, index=True)
+    policy_id = db.Column(db.Integer, db.ForeignKey("financial_satellite_policies.id"), index=True)
+    link_type = db.Column(db.String(30), nullable=False, default="satellite", index=True)
+    title_nature = db.Column(db.String(40), nullable=False, index=True)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    parent_schedule = db.relationship("FinancialSchedule", foreign_keys=[parent_schedule_id])
+    child_schedule = db.relationship("FinancialSchedule", foreign_keys=[child_schedule_id])
+    policy = db.relationship("FinancialSatellitePolicy", foreign_keys=[policy_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "parent_schedule_id": self.parent_schedule_id,
+            "child_schedule_id": self.child_schedule_id,
+            "policy_id": self.policy_id,
+            "link_type": self.link_type,
+            "title_nature": self.title_nature,
+            "metadata_json": self.metadata_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class FinancialSatelliteExecution(db.Model):
+    __tablename__ = "financial_satellite_executions"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "company_id",
+            "policy_id",
+            "child_schedule_id",
+            "trigger_settlement_id",
+            "trigger_event",
+            name="uq_financial_satellite_exec_company_policy_child_trigger",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    policy_id = db.Column(db.Integer, db.ForeignKey("financial_satellite_policies.id"), nullable=False, index=True)
+    parent_schedule_id = db.Column(db.Integer, db.ForeignKey("financial_schedules.id"), nullable=False, index=True)
+    child_schedule_id = db.Column(db.Integer, db.ForeignKey("financial_schedules.id"), nullable=False, index=True)
+    trigger_settlement_id = db.Column(db.Integer, db.ForeignKey("financial_settlements.id"), index=True)
+    parent_compensation_settlement_id = db.Column(db.Integer, db.ForeignKey("financial_settlements.id"), index=True)
+    child_settlement_id = db.Column(db.Integer, db.ForeignKey("financial_settlements.id"), index=True)
+    trigger_event = db.Column(db.String(40), nullable=False, index=True)
+    executed_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0)
+    execution_status = db.Column(db.String(30), nullable=False, default="success", index=True)
+    executed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reversed_at = db.Column(db.DateTime)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+
+    policy = db.relationship("FinancialSatellitePolicy", foreign_keys=[policy_id])
+    parent_schedule = db.relationship("FinancialSchedule", foreign_keys=[parent_schedule_id])
+    child_schedule = db.relationship("FinancialSchedule", foreign_keys=[child_schedule_id])
+    trigger_settlement = db.relationship("FinancialSettlement", foreign_keys=[trigger_settlement_id])
+    parent_compensation_settlement = db.relationship(
+        "FinancialSettlement",
+        foreign_keys=[parent_compensation_settlement_id],
+    )
+    child_settlement = db.relationship("FinancialSettlement", foreign_keys=[child_settlement_id])
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "policy_id": self.policy_id,
+            "parent_schedule_id": self.parent_schedule_id,
+            "child_schedule_id": self.child_schedule_id,
+            "trigger_settlement_id": self.trigger_settlement_id,
+            "parent_compensation_settlement_id": self.parent_compensation_settlement_id,
+            "child_settlement_id": self.child_settlement_id,
+            "trigger_event": self.trigger_event,
+            "executed_amount": float(self.executed_amount or 0),
+            "execution_status": self.execution_status,
+            "executed_at": self.executed_at.isoformat() if self.executed_at else None,
+            "reversed_at": self.reversed_at.isoformat() if self.reversed_at else None,
+            "metadata_json": self.metadata_json or {},
+        }
+
+
 class FinancialBordero(db.Model):
     __tablename__ = "financial_borderos"
     __table_args__ = (

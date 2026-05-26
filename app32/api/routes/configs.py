@@ -12,6 +12,7 @@ from services.ai_capabilities_central_service import AICapabilitiesCentralServic
 from services.ai_frontend_hub_service import AIFrontendHubService
 from services.ai_mcp_console_service import AIMCPConsoleService
 from services.ai_automation_registry_service import AIAutomationRegistryService
+from services.automation_registry_service import AutomationRegistryService
 from services.instruction_registry_service import InstructionRegistryService
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
@@ -338,8 +339,23 @@ def ai_capability_inventory_page():
 @login_required
 def ai_automation_mesh_page():
     active_company = _resolve_active_company()
-    _require_ai_admin_access(getattr(active_company, "id", None))
-    return _render_ai_config_page("automation_mesh", active_company)
+    company_id = getattr(active_company, "id", None)
+    _require_ai_admin_access(company_id)
+    filters = {
+        'module_key': request.args.get('module_key'),
+        'origin_type': request.args.get('origin_type'),
+        'status': request.args.get('status'),
+        'search': request.args.get('search'),
+        'only_error': request.args.get('only_error'),
+        'only_approval': request.args.get('only_approval'),
+    }
+    registry = AutomationRegistryService.build_registry_snapshot(company_id, filters, limit=request.args.get('limit', type=int) or 200)
+    return render_template(
+        'modules/operations/automation_registry.html',
+        active_company=active_company,
+        registry=registry,
+        filters=registry.get('filters') or {},
+    )
 
 @configs_bp.route('/configs/system')
 @login_required
@@ -721,6 +737,28 @@ def get_sapiens_factory_context():
         'inventory': AICapabilityInventoryService.build_inventory(active_company),
         'automation_registry': AIAutomationRegistryService.build_registry(active_company),
     })
+
+
+@configs_bp.route('/api/configs/automation-registry', methods=['GET'])
+@login_required
+def get_automation_registry():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, 'id', None)
+    if not _can_access_ai_mcp_console(company_id):
+        return jsonify({'success': False, 'error': 'Acesso negado à Central de Automações.'}), 403
+
+    filters = {
+        'module_key': request.args.get('module_key'),
+        'origin_type': request.args.get('origin_type'),
+        'status': request.args.get('status'),
+        'entity_type': request.args.get('entity_type'),
+        'entity_id': request.args.get('entity_id'),
+        'search': request.args.get('search'),
+        'only_error': request.args.get('only_error'),
+        'only_approval': request.args.get('only_approval'),
+    }
+    snapshot = AutomationRegistryService.build_registry_snapshot(company_id, filters, limit=request.args.get('limit', type=int) or 200)
+    return jsonify({'success': True, 'registry': snapshot})
 
 
 @configs_bp.route('/api/configs/ai/factory/capabilities', methods=['GET'])
