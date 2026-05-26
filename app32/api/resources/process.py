@@ -39,6 +39,8 @@ from models import (
     Routine,
     Occurrence,
     FinancialAutomationRule,
+    ProcessBpmsAnalysis,
+    ProcessPortalPublicationGrant,
 )
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, permission_required, can_model_process
 from utils.sql_execution import execute_formatted_query
@@ -515,6 +517,8 @@ def _get_process_delete_blockers(process: Process) -> dict[str, int]:
         'linked_indicators_count': _build_linked_process_indicator_query(company_id, process_id),
         'linked_occurrences_count': Occurrence.query.filter_by(company_id=company_id, process_id=process_id),
         'linked_financial_automations_count': FinancialAutomationRule.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_bpms_analyses_count': ProcessBpmsAnalysis.query.filter_by(company_id=company_id, process_id=process_id),
+        'linked_portal_grants_count': ProcessPortalPublicationGrant.query.filter_by(company_id=company_id, process_id=process_id),
     }
 
     blockers = {}
@@ -551,6 +555,8 @@ def _build_process_delete_conflict(process: Process, blockers: dict[str, int]):
         'linked_indicators_count': 'indicador(es)',
         'linked_occurrences_count': 'ocorrência(s)',
         'linked_financial_automations_count': 'automação(ões) financeira(s)',
+        'linked_bpms_analyses_count': 'análise(s) BPMS',
+        'linked_portal_grants_count': 'vínculo(s) de acesso no portal de processos',
     }
     blocker_summary = ", ".join(
         f"{count} {labels[key]}"
