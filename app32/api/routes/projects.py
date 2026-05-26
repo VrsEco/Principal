@@ -92,6 +92,7 @@ def project_manage(project_id):
     """Project management (Kanban) page"""
     project, company = _get_project_page_with_access(project_id)
     is_collaborator = is_collaborator_in_company(company.id) if company else False
+    can_edit_tasks = has_permission(company.id, 'projects', 'edit') if company else False
     
     # Define stages for Kanban
     stages = [
@@ -107,7 +108,8 @@ def project_manage(project_id):
                            project=project, 
                            company=company,
                            stages=stages,
-                           is_collaborator=is_collaborator)
+                           is_collaborator=is_collaborator,
+                           can_edit_tasks=can_edit_tasks)
 
 @projects_bp.route('/projects/analysis')
 @permission_required('projects', 'view')
@@ -115,6 +117,7 @@ def project_analysis():
     """Project analysis (All tasks Kanban) page"""
     company = get_active_company()
     is_collaborator = is_collaborator_in_company(company.id) if company else False
+    can_edit_tasks = has_permission(company.id, 'projects', 'edit') if company else False
     
     # Define stages for Kanban
     stages = [
@@ -129,7 +132,8 @@ def project_analysis():
     return render_template('modules/projects/project_analysis.html', 
                            company=company,
                            stages=stages,
-                           is_collaborator=is_collaborator)
+                           is_collaborator=is_collaborator,
+                           can_edit_tasks=can_edit_tasks)
 
 
 @projects_bp.route('/api/projects/<int:project_id>/summary-options')

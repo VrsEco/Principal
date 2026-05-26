@@ -575,7 +575,7 @@
             </svg>
             Atualizar
         </button>
-        {% if not is_collaborator %}<button class="btn btn-primary btn-with-icon" onclick="openTaskModal()">
+        {% if can_edit_tasks %}<button class="btn btn-primary btn-with-icon" onclick="openTaskModal()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -833,6 +833,7 @@
 <script>
     const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
     const IS_COLLABORATOR = {{ 'true' if is_collaborator else 'false' }};
+    const CAN_EDIT_TASKS = {{ 'true' if can_edit_tasks else 'false' }};
     let allTasks = [];
     let allProjects = [];
     let employeeNames = {};
@@ -841,7 +842,7 @@
     let pendingDrop = null;
 
     window.BacklogHumanGate?.configure({
-        isReadOnly: IS_COLLABORATOR,
+        isReadOnly: !CAN_EDIT_TASKS,
         getTaskById: (taskId) => allTasks.find((task) => Number(task.id) === Number(taskId)),
         afterOperation: async ({ taskId }) => {
             await loadTasks();
@@ -1058,7 +1059,7 @@
         card.className = 'kanban-card-ws';
         const isHumanGateTask = isBacklogHumanGateTask(task);
         const humanGateCardHtml = window.BacklogHumanGate ? window.BacklogHumanGate.renderCardSection(task) : '';
-        card.draggable = !IS_COLLABORATOR && !isHumanGateTask;
+        card.draggable = CAN_EDIT_TASKS && !isHumanGateTask;
         card.dataset.id = task.id;
         card.classList.add(`prio-${task.priority || 'normal'}`);
         if (isHumanGateTask) {
@@ -1066,7 +1067,7 @@
         }
 
         card.ondragstart = (e) => {
-            if (isHumanGateTask || IS_COLLABORATOR) {
+            if (isHumanGateTask || !CAN_EDIT_TASKS) {
                 e.preventDefault();
                 return false;
             }
@@ -1299,8 +1300,8 @@
     const taskForm = document.getElementById('taskForm');
 
     function openTaskModal(taskId = null) {
-        if (IS_COLLABORATOR && !taskId) {
-            alert('Colaborador não pode criar novas atividades nesta tela.');
+        if (!CAN_EDIT_TASKS && !taskId) {
+            alert('Você não tem permissão para criar novas atividades nesta tela.');
             return;
         }
         const modalTitle = document.getElementById('modalTitle');
@@ -1339,7 +1340,7 @@
 
             workLogSection.style.display = isHumanGateTask ? 'none' : 'block';
             diaryLogSection.style.display = isHumanGateTask ? 'none' : 'block';
-            deleteButton.style.display = (!IS_COLLABORATOR && !isHumanGateTask) ? 'block' : 'none';
+            deleteButton.style.display = (CAN_EDIT_TASKS && !isHumanGateTask) ? 'block' : 'none';
 
             currentTaskLogs = currentTask.logs || [];
             renderDiaryLogs();
@@ -1357,9 +1358,9 @@
             mountBacklogHumanGateSection(null);
         }
         mountBacklogHumanGateSection(currentTask);
-        if (saveButton) saveButton.style.display = (!IS_COLLABORATOR && !isHumanGateTask) ? 'inline-flex' : 'none';
-        if (deleteButton && (!taskId || IS_COLLABORATOR || isHumanGateTask)) deleteButton.style.display = 'none';
-        setTaskFieldsReadOnly(IS_COLLABORATOR || isHumanGateTask);
+        if (saveButton) saveButton.style.display = (CAN_EDIT_TASKS && !isHumanGateTask) ? 'inline-flex' : 'none';
+        if (deleteButton && (!taskId || !CAN_EDIT_TASKS || isHumanGateTask)) deleteButton.style.display = 'none';
+        setTaskFieldsReadOnly(!CAN_EDIT_TASKS || isHumanGateTask);
         taskModal.classList.add('open');
     }
 
@@ -1369,8 +1370,8 @@
     }
 
     async function submitTask() {
-        if (IS_COLLABORATOR) {
-            alert('Colaborador não pode salvar atividades nesta tela.');
+        if (!CAN_EDIT_TASKS) {
+            alert('Você não tem permissão para salvar atividades nesta tela.');
             return;
         }
         const taskId = document.getElementById('taskId').value;
@@ -1418,8 +1419,8 @@
     }
 
     async function deleteTask(taskId) {
-        if (IS_COLLABORATOR) {
-            alert('Colaborador não pode excluir atividades nesta tela.');
+        if (!CAN_EDIT_TASKS) {
+            alert('Você não tem permissão para excluir atividades nesta tela.');
             return;
         }
         if (!confirm('Excluir esta atividade permanentemente?')) return;
