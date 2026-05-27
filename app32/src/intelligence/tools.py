@@ -809,7 +809,7 @@ def get_tasks_today(scope: str = "me"):
 
 
 @tool
-def create_project(company_id: int, name: str, description: str = None, responsible_name: str = None, start_date: str = None, due_date: str = None):
+def create_project(company_id: int, name: str, description: str = None, responsible_name: str = None, start_date: str = None, due_date: str = None, okr_links: list[int] = None):
     """
     Cria um projeto tenant-safe via MCP e retorna o código no padrão EMPRESA.J.ID.
     """
@@ -820,6 +820,7 @@ def create_project(company_id: int, name: str, description: str = None, responsi
         responsible_name=responsible_name,
         start_date=start_date,
         due_date=due_date,
+        okr_links=okr_links,
     )
 
 

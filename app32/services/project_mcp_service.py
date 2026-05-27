@@ -6,6 +6,7 @@ from typing import Any
 
 from models import db
 from models.company import Company
+from models import OKRArea, OKRGlobal
 from models.project import Project
 from services.project_task_service import ProjectTaskService
 
@@ -37,8 +38,57 @@ class ProjectMCPService:
             "deadline",
             "notes",
             "priority",
+            "okr_links",
         }
     )
+
+    @staticmethod
+    def _normalize_okr_links(value: Any, *, company_id: int) -> list[int] | None:
+        if value in (None, ""):
+            return None
+        if not isinstance(value, (list, tuple, set)):
+            raise ValueError("okr_links deve ser uma lista de IDs de OKR.")
+
+        normalized: list[int] = []
+        for item in value:
+            try:
+                normalized.append(int(item))
+            except Exception as exc:
+                raise ValueError("okr_links deve conter apenas inteiros.") from exc
+
+        if not normalized:
+            return []
+
+        global_ids = {
+            row[0]
+            for row in (
+                OKRGlobal.query.filter(
+                    OKRGlobal.company_id == int(company_id),
+                    OKRGlobal.id.in_(normalized),
+                )
+                .with_entities(OKRGlobal.id)
+                .all()
+            )
+        }
+        area_ids = {
+            row[0]
+            for row in (
+                OKRArea.query.filter(
+                    OKRArea.company_id == int(company_id),
+                    OKRArea.id.in_(normalized),
+                )
+                .with_entities(OKRArea.id)
+                .all()
+            )
+        }
+        allowed_ids = global_ids | area_ids
+        missing = [okr_id for okr_id in normalized if okr_id not in allowed_ids]
+        if missing:
+            raise ValueError(
+                "Os seguintes IDs em okr_links não pertencem à empresa informada ou não existem: "
+                + ", ".join(str(item) for item in missing)
+            )
+        return normalized
 
     @staticmethod
     def _serialize_project(project: Project) -> dict[str, Any]:
@@ -95,6 +145,7 @@ class ProjectMCPService:
         responsible_name: str | None = None,
         start_date: str | None = None,
         due_date: str | None = None,
+        okr_links: list[int] | None = None,
     ) -> tuple[dict[str, Any] | None, str | None]:
         normalized_name = str(name or "").strip()
         if not normalized_name:
@@ -113,6 +164,14 @@ class ProjectMCPService:
         if parsed_start_date and parsed_due_date and parsed_due_date < parsed_start_date:
             return None, "due_date não pode ser menor que start_date."
 
+        try:
+            normalized_okr_links = ProjectMCPService._normalize_okr_links(
+                okr_links,
+                company_id=int(company_id),
+            )
+        except ValueError as exc:
+            return None, str(exc)
+
         project = Project(
             company_id=int(company_id),
             name=normalized_name,
@@ -121,6 +180,7 @@ class ProjectMCPService:
             start_date=parsed_start_date,
             end_date=parsed_due_date,
             status="planned",
+            okr_links=normalized_okr_links,
         )
         db.session.add(project)
         db.session.commit()
@@ -199,6 +259,14 @@ class ProjectMCPService:
             project.notes = str(normalized_changes["notes"]).strip() or None
         if "priority" in normalized_changes:
             project.priority = str(normalized_changes["priority"]).strip() or project.priority
+        if "okr_links" in normalized_changes:
+            try:
+                project.okr_links = ProjectMCPService._normalize_okr_links(
+                    normalized_changes.get("okr_links"),
+                    company_id=int(company_id),
+                )
+            except ValueError as exc:
+                return None, str(exc)
 
         if "start_date" in normalized_changes:
             parsed_start_date, start_date_error = ProjectTaskService.parse_due_date(normalized_changes.get("start_date"))

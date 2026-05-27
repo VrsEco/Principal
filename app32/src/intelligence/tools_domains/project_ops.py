@@ -112,6 +112,7 @@ def create_project(
     responsible_name: str | None = None,
     start_date: str | None = None,
     due_date: str | None = None,
+    okr_links: list[int] | None = None,
 ):
     resolved_company_id = int(company_id or get_active_company_id() or 0) or None
     principal, decision = _authorize_project_mcp(
@@ -139,6 +140,7 @@ def create_project(
         responsible_name=responsible_name,
         start_date=start_date,
         due_date=due_date,
+        okr_links=okr_links,
     )
     if error:
         return {"success": False, "error": error}
