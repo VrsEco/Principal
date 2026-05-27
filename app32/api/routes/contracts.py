@@ -351,6 +351,7 @@ def contracts_dashboard():
         "periodicity_options": ContractService.get_periodicity_options(),
         "competence_rule_options": ContractService.get_competence_rule_options(),
         "renewal_rule_options": ContractService.get_renewal_rule_options(),
+        "due_rule_reference_options": ContractService.get_due_rule_reference_options(),
         "parties": parties,
         "active_tab": active_tab,
     }
