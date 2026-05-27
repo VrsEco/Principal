@@ -559,6 +559,108 @@ def update_plan_section(plan_id: int, section_key: str, status: str = 'completed
 
 
 @tool
+def create_global_okr(
+    objective: str,
+    okr_type: str,
+    company_id: int = None,
+    plan_id: int = None,
+    owner: str = None,
+    deadline: str = None,
+    observations: str = None,
+    directionals: list[int] = None,
+):
+    """
+    Cria um OKR global tenant-safe no módulo de gerenciamento estratégico.
+    """
+    return strategy_ops_domain.create_global_okr(
+        objective=objective,
+        okr_type=okr_type,
+        company_id=company_id,
+        plan_id=plan_id,
+        owner=owner,
+        deadline=deadline,
+        observations=observations,
+        directionals=directionals,
+    )
+
+
+@tool
+def create_area_okr(
+    objective: str,
+    okr_type: str,
+    company_id: int = None,
+    plan_id: int = None,
+    department: str = None,
+    owner: str = None,
+    deadline: str = None,
+    observations: str = None,
+    linked_okr_ids: list[int] = None,
+):
+    """
+    Cria um OKR por área tenant-safe no módulo de gerenciamento estratégico.
+    """
+    return strategy_ops_domain.create_area_okr(
+        objective=objective,
+        okr_type=okr_type,
+        company_id=company_id,
+        plan_id=plan_id,
+        department=department,
+        owner=owner,
+        deadline=deadline,
+        observations=observations,
+        linked_okr_ids=linked_okr_ids,
+    )
+
+
+@tool
+def create_global_key_result(
+    okr_global_id: int,
+    label: str,
+    company_id: int = None,
+    metric: str = None,
+    target: str = None,
+    deadline: str = None,
+    owner: str = None,
+):
+    """
+    Cria um Key Result para um OKR global tenant-safe.
+    """
+    return strategy_ops_domain.create_global_key_result(
+        okr_global_id=okr_global_id,
+        label=label,
+        company_id=company_id,
+        metric=metric,
+        target=target,
+        deadline=deadline,
+        owner=owner,
+    )
+
+
+@tool
+def create_area_key_result(
+    okr_area_id: int,
+    label: str,
+    company_id: int = None,
+    metric: str = None,
+    target: str = None,
+    deadline: str = None,
+    owner: str = None,
+):
+    """
+    Cria um Key Result para um OKR por área tenant-safe.
+    """
+    return strategy_ops_domain.create_area_key_result(
+        okr_area_id=okr_area_id,
+        label=label,
+        company_id=company_id,
+        metric=metric,
+        target=target,
+        deadline=deadline,
+        owner=owner,
+    )
+
+
+@tool
 def get_my_work(scope: str = 'me', company_ids: str = None, search_term: str = None):
     """
     Retorna a lista de atividades (Projetos e Processos) pendentes para o usuário logado.
@@ -1079,6 +1181,10 @@ tools = [
     get_plan_diagnostics,
     get_plan_diagnostics_read_model,
     update_plan_section,
+    create_global_okr,
+    create_area_okr,
+    create_global_key_result,
+    create_area_key_result,
     # Fase 1 — My Work & Users
     get_my_work,
     list_my_companies,

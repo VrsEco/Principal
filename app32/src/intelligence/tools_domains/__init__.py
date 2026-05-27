@@ -1,7 +1,15 @@
 """Módulos de domínio das tools do Sapiens/MCP."""
 
 from .work_ops import get_my_work
-from .strategy_ops import get_plan_diagnostics, list_plans, update_plan_section
+from .strategy_ops import (
+    create_area_key_result,
+    create_area_okr,
+    create_global_key_result,
+    create_global_okr,
+    get_plan_diagnostics,
+    list_plans,
+    update_plan_section,
+)
 from .analytics_ops import (
     get_plan_diagnostics_read_model,
     get_projects_execution_risk_read_model,
@@ -53,6 +61,10 @@ __all__ = [
     "get_plan_diagnostics_read_model",
     "list_plans",
     "update_plan_section",
+    "create_global_okr",
+    "create_area_okr",
+    "create_global_key_result",
+    "create_area_key_result",
     "get_projects_execution_risk_read_model",
     "get_team_workload_read_model",
     "consult_rules",

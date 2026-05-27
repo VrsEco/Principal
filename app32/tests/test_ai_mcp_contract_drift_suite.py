@@ -63,6 +63,10 @@ def test_contract_drift_canonical_capabilities_match_expected_scopes_and_domains
         "list_plans": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
         "get_plan_diagnostics": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
         "update_plan_section": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
+        "create_global_okr": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
+        "create_area_okr": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
+        "create_global_key_result": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
+        "create_area_key_result": ("strategy", {ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value}),
         "get_team_workload_read_model": ("workload", {ToolScope.MCP_ANALYTICS.value}),
         "list_team_workload": ("workload", {ToolScope.MCP_ANALYTICS.value, ToolScope.MCP_OPS.value}),
         "query_database": ("analytics", {ToolScope.MCP_ANALYTICS.value}),
@@ -100,6 +104,10 @@ def test_contract_drift_surface_manifests_expose_only_expected_canonical_tools()
     assert "get_plan_diagnostics" not in analytics_tools
     assert "get_plan_diagnostics" in user_tools
     assert "update_plan_section" in admin_tools
+    assert "create_global_okr" in user_tools
+    assert "create_area_okr" in admin_tools
+    assert "create_global_key_result" in user_tools
+    assert "create_area_key_result" in admin_tools
 
 
 def test_contract_drift_policy_matches_canonical_allow_and_deny_scenarios():

@@ -26,6 +26,10 @@ def test_catalog_exposes_known_capability_metadata():
     pop_draft_capability = catalog.get_tool_capability("draft_process_pop_step_description_tool")
     strategy_update_capability = catalog.get_tool_capability("update_plan_section")
     strategy_diag_capability = catalog.get_tool_capability("get_plan_diagnostics")
+    strategy_global_okr_capability = catalog.get_tool_capability("create_global_okr")
+    strategy_area_okr_capability = catalog.get_tool_capability("create_area_okr")
+    strategy_global_kr_capability = catalog.get_tool_capability("create_global_key_result")
+    strategy_area_kr_capability = catalog.get_tool_capability("create_area_key_result")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -73,6 +77,21 @@ def test_catalog_exposes_known_capability_metadata():
     assert strategy_diag_capability.domain == "strategy"
     assert ToolScope.MCP_USER.value in strategy_diag_capability.scopes
     assert ToolScope.MCP_ANALYTICS.value not in strategy_diag_capability.scopes
+    assert strategy_global_okr_capability is not None
+    assert strategy_global_okr_capability.domain == "strategy"
+    assert "okrs.global.create" in strategy_global_okr_capability.permissions
+    assert ToolScope.MCP_USER.value in strategy_global_okr_capability.scopes
+    assert strategy_area_okr_capability is not None
+    assert strategy_area_okr_capability.domain == "strategy"
+    assert "okrs.area.create" in strategy_area_okr_capability.permissions
+    assert ToolScope.MCP_ADMIN.value in strategy_area_okr_capability.scopes
+    assert strategy_global_kr_capability is not None
+    assert strategy_global_kr_capability.domain == "strategy"
+    assert "okrs.key_results.create" in strategy_global_kr_capability.permissions
+    assert ToolScope.MCP_USER.value in strategy_global_kr_capability.scopes
+    assert strategy_area_kr_capability is not None
+    assert strategy_area_kr_capability.domain == "strategy"
+    assert "okrs.key_results.create" in strategy_area_kr_capability.permissions
 
 
 def test_catalog_manifest_filters_by_scope():
@@ -87,6 +106,10 @@ def test_catalog_manifest_filters_by_scope():
     assert "query_database" not in admin_tool_names
     assert "query_database" in analytics_tool_names
     assert "query_database" not in user_tool_names
+    assert "create_global_okr" in user_tool_names
+    assert "create_area_okr" in user_tool_names
+    assert "create_global_key_result" in user_tool_names
+    assert "create_area_key_result" in user_tool_names
     assert "get_plan_diagnostics_read_model" in analytics_tool_names
     assert "get_team_workload_read_model" in analytics_tool_names
     assert "get_projects_execution_risk_read_model" in analytics_tool_names
