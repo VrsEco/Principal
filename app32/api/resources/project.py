@@ -3,7 +3,7 @@ from flask_restful import Resource
 from models import db, Project, Company
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_schema, projects_schema
-from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required
+from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required, can_create_projects
 
 
 def _get_current_company_employee(company_id):
@@ -150,12 +150,12 @@ class ProjectListResource(Resource):
         projects = query.all()
         return projects_schema.dump(projects), 200
 
-    @permission_required('projects', 'create')
+    @permission_required('projects', 'view')
     def post(self):
         """Create a new project."""
         company_id = get_request_company_id()
-        if not has_company_full_access(company_id):
-            return {"message": "Acesso negado: colaboradores não podem criar projetos."}, 403
+        if not can_create_projects(company_id):
+            return {"message": "Acesso negado: usuário não pode criar projetos nesta empresa."}, 403
         data = request.get_json()
         new_project = Project(
             company_id=company_id,

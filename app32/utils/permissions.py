@@ -330,6 +330,20 @@ def can_manage_project_tasks(company_id):
     return has_permission(company_id, "projects", "edit") or is_collaborator_in_company(company_id)
 
 
+def can_create_projects(company_id):
+    """
+    Permite criação de projetos para usuários com permissão explícita de criação
+    e, temporariamente, para todos os colaboradores ativos da empresa.
+
+    Guardrail:
+    - sempre exige vínculo explícito com a empresa
+    - nunca amplia para fora do tenant
+    """
+    if not current_user.is_authenticated or not company_id:
+        return False
+    return has_permission(company_id, "projects", "create") or is_collaborator_in_company(company_id)
+
+
 def admin_required(f):
     """Decorator to require global admin role"""
 

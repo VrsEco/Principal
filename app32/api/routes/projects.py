@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, session, jsonify, abort, request, 
 from models import Company
 from flask_login import current_user
 
-from utils.permissions import get_default_company_id, permission_required, has_company_full_access, is_collaborator_in_company, has_permission
+from utils.permissions import get_default_company_id, permission_required, has_company_full_access, is_collaborator_in_company, has_permission, can_manage_project_tasks, can_create_projects
 
 projects_bp = Blueprint('projects', __name__)
 
@@ -66,15 +66,16 @@ def projects_list():
     """Projects list page"""
     company = get_active_company()
     is_collaborator = is_collaborator_in_company(company.id) if company else False
-    return render_template('modules/projects/projects_v2.html', company=company, is_collaborator=is_collaborator)
+    can_create_projects_flag = can_create_projects(company.id) if company else False
+    return render_template('modules/projects/projects_v2.html', company=company, is_collaborator=is_collaborator, can_create_projects=can_create_projects_flag)
 
 @projects_bp.route('/projects/new')
-@permission_required('projects', 'create')
+@permission_required('projects', 'view')
 def project_new():
     """New project form"""
     company = get_active_company()
-    if company and not has_company_full_access(company.id):
-        abort(403, description='Acesso negado: colaboradores não podem criar projetos.')
+    if company and not can_create_projects(company.id):
+        abort(403, description='Acesso negado: usuário não pode criar projetos nesta empresa.')
     return render_template('modules/projects/project_form_v2.html', company=company)
 
 @projects_bp.route('/projects/<int:project_id>/edit')
@@ -92,7 +93,7 @@ def project_manage(project_id):
     """Project management (Kanban) page"""
     project, company = _get_project_page_with_access(project_id)
     is_collaborator = is_collaborator_in_company(company.id) if company else False
-    can_edit_tasks = has_permission(company.id, 'projects', 'edit') if company else False
+    can_edit_tasks = can_manage_project_tasks(company.id) if company else False
     
     # Define stages for Kanban
     stages = [
@@ -117,7 +118,7 @@ def project_analysis():
     """Project analysis (All tasks Kanban) page"""
     company = get_active_company()
     is_collaborator = is_collaborator_in_company(company.id) if company else False
-    can_edit_tasks = has_permission(company.id, 'projects', 'edit') if company else False
+    can_edit_tasks = can_manage_project_tasks(company.id) if company else False
     
     # Define stages for Kanban
     stages = [
