@@ -27,7 +27,7 @@ echo "----------------------------------------------------"
 # 1. Sincronia Git
 echo "📂 Sincronizando código com repositório central..."
 cd $APP
-git fetch origin main
+git fetch origin +refs/heads/main:refs/remotes/origin/main
 git reset --hard origin/main
 echo "✅ Código atualizado com sucesso."
 
