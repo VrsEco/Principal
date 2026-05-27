@@ -1,6 +1,0 @@
-2026/02/08-17:28:59.736 68f8 Creating DB C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_chat.sentient.xyz_0.indexeddb.leveldb since it was missing.
-2026/02/08-17:28:59.770 68f8 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_chat.sentient.xyz_0.indexeddb.leveldb/MANIFEST-000001
-2026/02/08-17:29:45.213 44ec Level-0 table #5: started
-2026/02/08-17:29:45.569 44ec Level-0 table #5: 71478 bytes OK
-2026/02/08-17:29:45.623 44ec Delete type=0 #3
-2026/02/08-17:29:45.625 68f8 Manual compaction at level-0 from (begin) .. (end); will stop at (end)

@@ -1,6 +1,0 @@
-2026/05/07-12:51:55.965 6c14 Reusing MANIFEST C:\GestaoVersus\app32\tmp_edge_profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
-2026/05/07-12:51:55.968 6c14 Recovering log #8532
-2026/05/07-12:51:55.969 6c14 Reusing old log C:\GestaoVersus\app32\tmp_edge_profile\Default\EdgeCoupons/coupons_data.db/008532.log 
-2026/05/07-12:51:56.132 72e8 Level-0 table #8537: started
-2026/05/07-12:51:56.142 72e8 Level-0 table #8537: 682316 bytes OK
-2026/05/07-12:51:56.144 72e8 Delete type=0 #8532

@@ -1,6 +1,0 @@
-2025/01/15-11:21:01.524 c68 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_mail.google.com_0.indexeddb.leveldb/MANIFEST-000001
-2025/01/15-11:21:01.524 c68 Recovering log #1090
-2025/01/15-11:21:01.536 c68 Reusing old log C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_mail.google.com_0.indexeddb.leveldb/001090.log 
-2025/01/15-11:21:19.810 2e5c Level-0 table #1096: started
-2025/01/15-11:21:19.849 2e5c Level-0 table #1096: 2881635 bytes OK
-2025/01/15-11:21:19.857 2e5c Delete type=0 #1090

@@ -1,6 +1,0 @@
-2026/04/20-20:36:39.923 1a10 Creating DB C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_www.reddit.com_0.indexeddb.leveldb since it was missing.
-2026/04/20-20:36:39.930 1a10 Reusing MANIFEST C:\Users\mff20\AppData\Local\Microsoft\Edge\User Data\Default\IndexedDB\https_www.reddit.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/04/20-20:37:11.922 1a10 Level-0 table #5: started
-2026/04/20-20:37:11.925 1a10 Level-0 table #5: 1562 bytes OK
-2026/04/20-20:37:11.929 1a10 Delete type=0 #3
-2026/04/20-20:37:11.930 1a10 Manual compaction at level-0 from (begin) .. (end); will stop at (end)
