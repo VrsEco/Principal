@@ -23,6 +23,7 @@ from models.financial import (
     FinancialClassificationMemory,
     FinancialCostCenter,
     FinancialCounterparty,
+    FinancialDomainEnablement,
     FinancialEntry,
     FinancialSchedule,
 )
@@ -41,6 +42,7 @@ from services.financial_accountability_service import FinancialAccountabilitySer
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_domain_enablement_service import FinancialDomainEnablementService
 from services.financial_import_service import FinancialImportService
+from services.financial_manual_domain_service import FinancialManualDomainService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
 

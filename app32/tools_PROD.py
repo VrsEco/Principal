@@ -49,6 +49,7 @@ from src.intelligence.tool_context import (
     active_company_id_ctx,
     get_sapiens_context
 )
+from src.intelligence.tools_domains import process_ops as process_ops_domain
 from src.intelligence.tools_domains import strategy_ops as strategy_ops_domain
 
 def get_active_company_id():
