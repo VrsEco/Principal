@@ -54,6 +54,11 @@ app31/
 .agent/skills/
 
 # Configr / produção - artefatos temporários e de restart
+**/.codex_temp*
+**/tmp/
+**/tmp_*
+**/tmp_edge_profile/
+**/scratch/
 **/restart.txt
 **/debug_dashboard.txt
 **/debug_import.py

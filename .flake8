@@ -5,7 +5,9 @@ exclude =
     __pycache__,
     venv,
     .venv,
+    .codex_temp*,
     app32/.venv,
+    app32/.codex_temp*,
     app31,
     docs,
     migrations,
@@ -20,5 +22,10 @@ exclude =
     seeds,
     .agent,
     instance,
-    knowledge
+    knowledge,
+    logs,
+    tmp,
+    tmp_*,
+    tmp_edge_profile,
+    scratch
 max-line-length = 120

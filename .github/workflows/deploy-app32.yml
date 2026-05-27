@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   validate:
     name: 🧪 Validate Code
@@ -26,7 +29,7 @@ jobs:
       - name: 🔍 Check Syntax (Flake8)
         run: |
           # Checa apenas erros fatais e de sintaxe (E9, F63, F7, F82)
-          # O .flake8 na raiz irá excluir pastas como .venv automaticamente
+          # O .flake8 na raiz também exclui artefatos temporários locais/Codex.
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
   deploy:
