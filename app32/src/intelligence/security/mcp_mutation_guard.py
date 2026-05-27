@@ -201,7 +201,7 @@ class MutationLimitBinding:
 def load_mutation_limit_policy() -> MutationLimitPolicy:
     return MutationLimitPolicy(
         profile_name="default",
-        create_limit=_coerce_positive_int(os.environ.get("APP32_MCP_CREATE_LIMIT"), 20),
+        create_limit=_coerce_positive_int(os.environ.get("APP32_MCP_CREATE_LIMIT"), 100),
         update_limit=_coerce_positive_int(os.environ.get("APP32_MCP_UPDATE_LIMIT"), 50),
         delete_limit=_coerce_positive_int(os.environ.get("APP32_MCP_DELETE_LIMIT"), 10),
         restore_limit=_coerce_positive_int(os.environ.get("APP32_MCP_RESTORE_LIMIT"), 10),

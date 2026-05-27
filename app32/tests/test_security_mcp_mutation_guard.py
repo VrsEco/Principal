@@ -3,6 +3,21 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from src.intelligence.security import mcp_mutation_guard as guard
+
+
+def test_load_mutation_limit_policy_uses_default_create_quota_100_per_24h(monkeypatch):
+    monkeypatch.delenv("APP32_MCP_CREATE_LIMIT", raising=False)
+    monkeypatch.delenv("APP32_MCP_UPDATE_LIMIT", raising=False)
+    monkeypatch.delenv("APP32_MCP_DELETE_LIMIT", raising=False)
+    monkeypatch.delenv("APP32_MCP_RESTORE_LIMIT", raising=False)
+    monkeypatch.delenv("APP32_MCP_MUTATION_WINDOW_HOURS", raising=False)
+
+    policy = guard.load_mutation_limit_policy()
+
+    assert policy.create_limit == 100
+    assert policy.window_hours == 24
+
+
 def test_evaluate_mutation_limit_blocks_when_threshold_reached(monkeypatch):
     monkeypatch.setattr(
         guard,
@@ -50,7 +65,7 @@ def test_evaluate_mutation_limit_blocks_when_threshold_reached(monkeypatch):
 def test_evaluate_mutation_limit_requires_user_and_company(monkeypatch):
     guard_policy = guard.MutationLimitPolicy(
         profile_name="default",
-        create_limit=20,
+        create_limit=100,
         update_limit=50,
         delete_limit=10,
         restore_limit=10,

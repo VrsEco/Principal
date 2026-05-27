@@ -21,7 +21,7 @@ Antes de abrir o Claude Code, configure:
 Opcionalmente:
 
 - `APP32_MCP_FALLBACK_ROLE` (default: `colaborador`)
-- `APP32_MCP_CREATE_LIMIT` (default: `20`)
+- `APP32_MCP_CREATE_LIMIT` (default: `100`)
 - `APP32_MCP_UPDATE_LIMIT` (default: `50`)
 - `APP32_MCP_DELETE_LIMIT` (default: `10`)
 - `APP32_MCP_RESTORE_LIMIT` (default: `10`)
