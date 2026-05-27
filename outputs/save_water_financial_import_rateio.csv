@@ -1,0 +1,280 @@
+﻿excel_row,allocation_seq,movement_class,source_category,allocation_amount,target_account_id,target_account_code,target_account_name,map_reason
+2,1,payment,7.06.001 - Retirada Pro-Labore,30000.0,197,8.6.001,Retirada Pro-Labore,explicit_code_map
+3,1,receipt,3.01.001 - Receita de Serviços Prestados,5142.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+3,2,receipt,6.01.001 - Simples Nacional,109.52,93,4.01.001,Simples Nacional,explicit_code_map
+4,1,receipt,3.01.001 - Receita de Serviços Prestados,1169.86,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+5,1,payment,7.01.004 - Transporte - Adm/Coml,141.6,155,8.1.004,Transporte - Adm/Coml,explicit_code_map
+6,1,payment,7.03.999 - Outras Desp. Adm.,100.0,186,8.3.015,Outras Desp. Adm.,explicit_code_map
+7,1,payment,5.05.005 - Manutenção de Poços,1500.0,147,7.5.005,Manutenção de Poços,explicit_code_map
+8,1,payment,8.02.001 - Compra de Equipamentos Operacionais,3968.16,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+9,1,payment,7.06.001 - Retirada Pro-Labore,30000.0,197,8.6.001,Retirada Pro-Labore,explicit_code_map
+10,1,payment,4.01.001 - Insumos - Quimicos,1296.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+11,1,payment,4.01.001 - Insumos - Quimicos,12000.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+12,1,payment,5.01.005 - Saude - Operacao,3439.5,110,7.1.005,Saude - Operacao,explicit_code_map
+13,1,payment,7.03.001 - Aluguel - Adm,2986.52,172,8.3.001,Aluguel - Adm,explicit_code_map
+14,1,payment,5.01.004 - Transporte - Operacao,295.0,109,7.1.004,Transporte - Operacao,explicit_code_map
+15,1,payment,7.01.012 - PJ - Adm / Coml,141.6,163,8.1.012,PJ - Adm / Coml,explicit_code_map
+16,1,receipt,3.01.001 - Receita de Serviços Prestados,2890.23,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+17,1,payment,5.01.003 - Alimentacao - Operacao,5730.0,108,7.1.003,Alimentacao - Operacao,explicit_code_map
+18,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,252.05,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+19,1,payment,7.01.012 - PJ - Adm / Coml,6881.12,163,8.1.012,PJ - Adm / Coml,explicit_code_map
+20,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.97,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+21,1,payment,4.01.001 - Insumos - Quimicos,1080.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+22,1,receipt,3.01.001 - Receita de Serviços Prestados,4801.15,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+22,2,receipt,6.01.001 - Simples Nacional,102.26,93,4.01.001,Simples Nacional,explicit_code_map
+23,1,transfer,Transferência de Entrada,3681.18,,,,
+24,1,payment,4.01.004 - Insumos - Outros,28.0,103,6.1.004,Insumos - Outros,explicit_code_map
+25,1,payment,5.02.008 - Estacionamento Operação,5.6,128,7.2.008,Estacionamento Operação,explicit_code_map
+26,1,payment,5.02.008 - Estacionamento Operação,5.6,128,7.2.008,Estacionamento Operação,explicit_code_map
+27,1,payment,5.02.008 - Estacionamento Operação,80.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+28,1,payment,5.02.004 - Manutencao de Veiculos - Operacao,190.0,124,7.2.004,Manutencao de Veiculos - Operacao,explicit_code_map
+29,1,payment,5.02.008 - Estacionamento Operação,6.6,128,7.2.008,Estacionamento Operação,explicit_code_map
+30,1,payment,5.02.008 - Estacionamento Operação,3.6,128,7.2.008,Estacionamento Operação,explicit_code_map
+31,1,payment,5.01.003 - Alimentacao - Operacao,12.21,108,7.1.003,Alimentacao - Operacao,explicit_code_map
+32,1,payment,5.02.008 - Estacionamento Operação,3.6,128,7.2.008,Estacionamento Operação,explicit_code_map
+33,1,payment,5.02.003 - Combustivel - Operacao,100.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+34,1,payment,5.02.008 - Estacionamento Operação,15.5,128,7.2.008,Estacionamento Operação,explicit_code_map
+35,1,payment,5.02.008 - Estacionamento Operação,15.5,128,7.2.008,Estacionamento Operação,explicit_code_map
+36,1,payment,5.02.003 - Combustivel - Operacao,40.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+37,1,payment,5.02.003 - Combustivel - Operacao,100.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+38,1,payment,5.02.008 - Estacionamento Operação,15.5,128,7.2.008,Estacionamento Operação,explicit_code_map
+39,1,payment,5.02.003 - Combustivel - Operacao,200.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+40,1,payment,5.02.003 - Combustivel - Operacao,200.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+41,1,payment,5.02.003 - Combustivel - Operacao,248.57,123,7.2.003,Combustivel - Operacao,explicit_code_map
+42,1,payment,5.02.003 - Combustivel - Operacao,150.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+43,1,payment,5.05.999 - Outros Custos Operacionais,100.0,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+44,1,payment,5.01.003 - Alimentacao - Operacao,18.0,108,7.1.003,Alimentacao - Operacao,explicit_code_map
+45,1,payment,5.02.008 - Estacionamento Operação,15.5,128,7.2.008,Estacionamento Operação,explicit_code_map
+46,1,payment,5.02.004 - Manutencao de Veiculos - Operacao,110.0,124,7.2.004,Manutencao de Veiculos - Operacao,explicit_code_map
+47,1,payment,5.02.008 - Estacionamento Operação,15.5,128,7.2.008,Estacionamento Operação,explicit_code_map
+48,1,payment,5.02.003 - Combustivel - Operacao,100.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+49,1,payment,5.02.003 - Combustivel - Operacao,120.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+50,1,payment,5.02.003 - Combustivel - Operacao,180.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+51,1,payment,5.02.008 - Estacionamento Operação,9.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+52,1,payment,5.02.003 - Combustivel - Operacao,229.82,123,7.2.003,Combustivel - Operacao,explicit_code_map
+53,1,payment,5.02.008 - Estacionamento Operação,11.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+54,1,payment,5.02.008 - Estacionamento Operação,11.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+55,1,payment,4.01.004 - Insumos - Outros,9.0,103,6.1.004,Insumos - Outros,explicit_code_map
+56,1,payment,4.01.002 - Insumos - Reagentes,598.0,101,6.1.002,Insumos - Reagentes,explicit_code_map
+57,1,payment,5.02.003 - Combustivel - Operacao,323.47,123,7.2.003,Combustivel - Operacao,explicit_code_map
+58,1,payment,5.02.008 - Estacionamento Operação,14.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+59,1,payment,5.02.008 - Estacionamento Operação,14.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+60,1,payment,5.02.008 - Estacionamento Operação,11.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+61,1,payment,5.02.008 - Estacionamento Operação,11.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+62,1,payment,5.02.003 - Combustivel - Operacao,360.61,123,7.2.003,Combustivel - Operacao,explicit_code_map
+63,1,payment,7.03.008 - Telefonia e Internet - Adm,149.9,179,8.3.008,Telefonia e Internet - Adm,explicit_code_map
+64,1,payment,7.01.012 - PJ - Adm / Coml,1776.0,163,8.1.012,PJ - Adm / Coml,explicit_code_map
+65,1,payment,5.01.001 - Salarios - Operacao,3488.16,106,7.1.001,Salarios - Operacao,explicit_code_map
+66,1,payment,5.01.001 - Salarios - Operacao,2078.69,106,7.1.001,Salarios - Operacao,explicit_code_map
+67,1,payment,5.01.009 - FGTS - Operacao,2677.71,114,7.1.009,FGTS - Operacao,explicit_code_map
+68,1,transfer,Transferência de Saída,3681.18,,,,
+69,1,payment,7.03.010 - Sistema de Informacao,113.99,181,8.3.010,Sistema de Informacao,explicit_code_map
+70,1,payment,7.01.012 - PJ - Adm / Coml,6371.73,163,8.1.012,PJ - Adm / Coml,explicit_code_map
+71,1,payment,5.01.001 - Salarios - Operacao,1695.69,106,7.1.001,Salarios - Operacao,explicit_code_map
+72,1,payment,5.01.001 - Salarios - Operacao,1646.02,106,7.1.001,Salarios - Operacao,explicit_code_map
+73,1,payment,5.01.001 - Salarios - Operacao,2602.63,106,7.1.001,Salarios - Operacao,explicit_code_map
+74,1,payment,7.01.001 - Salarios - Adm/Coml,1667.8,152,8.1.001,Salarios - Adm/Coml,explicit_code_map
+75,1,payment,5.01.001 - Salarios - Operacao,2378.68,106,7.1.001,Salarios - Operacao,explicit_code_map
+76,1,payment,5.01.001 - Salarios - Operacao,2602.63,106,7.1.001,Salarios - Operacao,explicit_code_map
+77,1,payment,5.01.001 - Salarios - Operacao,2310.52,106,7.1.001,Salarios - Operacao,explicit_code_map
+78,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,2427.9,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+79,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,49.98,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+80,1,payment,5.01.001 - Salarios - Operacao,348.52,106,7.1.001,Salarios - Operacao,explicit_code_map
+81,1,payment,6.01.004 - ISS Sobre Vendas,828.61,96,4.01.004,ISS Sobre Vendas,explicit_code_map
+82,1,payment,6.01.002 - ISS Retido NF,170.54,94,4.01.002,ISS Retido NF,explicit_code_map
+83,1,payment,7.05.002 - Taxas e Impostos Bancarios,5.88,192,8.5.002,Taxas e Impostos Bancarios,explicit_code_map
+84,1,receipt,3.01.001 - Receita de Serviços Prestados,25438.86,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+84,2,receipt,6.01.001 - Simples Nacional,1271.94,93,4.01.001,Simples Nacional,explicit_code_map
+85,1,receipt,3.01.001 - Receita de Serviços Prestados,9974.9,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+86,1,receipt,3.01.001 - Receita de Serviços Prestados,6612.46,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+86,2,receipt,6.01.001 - Simples Nacional,330.62,93,4.01.001,Simples Nacional,explicit_code_map
+87,1,receipt,3.01.001 - Receita de Serviços Prestados,4334.47,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+87,2,receipt,6.01.001 - Simples Nacional,216.72,93,4.01.001,Simples Nacional,explicit_code_map
+88,1,receipt,3.01.001 - Receita de Serviços Prestados,2660.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+89,1,receipt,3.01.001 - Receita de Serviços Prestados,2312.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+90,1,receipt,3.01.001 - Receita de Serviços Prestados,1385.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+91,1,receipt,999.01 - Rec - Contas de Compensação,14889.18,,,,
+92,1,receipt,3.01.001 - Receita de Serviços Prestados,5867.33,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+93,1,payment,5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,1127.37,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+94,1,receipt,3.01.001 - Receita de Serviços Prestados,4494.35,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+94,2,receipt,6.01.001 - Simples Nacional,95.73,93,4.01.001,Simples Nacional,explicit_code_map
+95,1,receipt,3.01.001 - Receita de Serviços Prestados,4000.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+95,2,receipt,6.01.001 - Simples Nacional,85.2,93,4.01.001,Simples Nacional,explicit_code_map
+96,1,receipt,3.01.001 - Receita de Serviços Prestados,5700.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+97,1,payment,7.04.999 - Outras Despesas Tributarias,461.55,189,8.4.002,Outras Despesas Tributarias,explicit_code_map
+98,1,payment,5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,151.78,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+99,1,payment,5.01.012 - PJ - OPERACAO,6371.73,117,7.1.012,PJ - OPERACAO,explicit_code_map
+100,1,payment,5.01.012 - PJ - OPERACAO,10000.0,117,7.1.012,PJ - OPERACAO,explicit_code_map
+101,1,payment,5.02.002 - Locacao de Veiculos - Operacao,2000.0,122,7.2.002,Locacao de Veiculos - Operacao,explicit_code_map
+102,1,payment,5.02.002 - Locacao de Veiculos - Operacao,2559.7,122,7.2.002,Locacao de Veiculos - Operacao,explicit_code_map
+103,1,payment,4.01.001 - Insumos - Quimicos,6896.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+104,1,payment,4.01.001 - Insumos - Quimicos,11248.47,100,6.1.001,Insumos - Quimicos,explicit_code_map
+105,1,payment,4.01.001 - Insumos - Quimicos,7211.16,100,6.1.001,Insumos - Quimicos,explicit_code_map
+106,1,payment,8.02.001 - Compra de Equipamentos Operacionais,7514.78,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+107,1,payment,8.02.001 - Compra de Equipamentos Operacionais,821.65,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+108,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.28,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+109,1,receipt,3.02.001 - Receita de Venda de Mercadorias,3726.0,82,3.02.001,Receita de Vendas Mercadorias,explicit_code_map
+110,1,receipt,3.02.001 - Receita de Venda de Mercadorias,1656.0,82,3.02.001,Receita de Vendas Mercadorias,explicit_code_map
+111,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,835.94,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+112,1,payment,5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,1127.38,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+113,1,payment,7.03.012 - Assessoria / Consultoria de Gestao,6000.0,183,8.3.012,Assessoria / Consultoria de Gestao,explicit_code_map
+114,1,payment,5.05.999 - Outros Custos Operacionais,85.98,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+115,1,receipt,3.01.001 - Receita de Serviços Prestados,3515.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+116,1,payment,4.01.001 - Insumos - Quimicos,150.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+117,1,payment,4.01.002 - Insumos - Reagentes,1854.69,101,6.1.002,Insumos - Reagentes,explicit_code_map
+118,1,payment,5.05.999 - Outros Custos Operacionais,91.9,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+119,1,payment,5.05.999 - Outros Custos Operacionais,45.99,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+120,1,payment,5.01.005 - Saude - Operacao,426.0,110,7.1.005,Saude - Operacao,explicit_code_map
+121,1,payment,4.01.001 - Insumos - Quimicos,375.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+122,1,payment,4.01.002 - Insumos - Reagentes,400.0,101,6.1.002,Insumos - Reagentes,explicit_code_map
+123,1,receipt,3.01.001 - Receita de Serviços Prestados,15056.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+123,2,receipt,6.01.001 - Simples Nacional,752.8,93,4.01.001,Simples Nacional,explicit_code_map
+124,1,receipt,3.01.001 - Receita de Serviços Prestados,8153.6,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+124,2,receipt,6.01.001 - Simples Nacional,407.68,93,4.01.001,Simples Nacional,explicit_code_map
+125,1,payment,8.02.001 - Compra de Equipamentos Operacionais,13800.0,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+126,1,receipt,3.01.001 - Receita de Serviços Prestados,9836.21,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+127,1,payment,5.01.005 - Saude - Operacao,704.0,110,7.1.005,Saude - Operacao,explicit_code_map
+128,1,payment,5.05.999 - Outros Custos Operacionais,2875.0,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+129,1,payment,4.01.001 - Insumos - Quimicos,14460.39,100,6.1.001,Insumos - Quimicos,explicit_code_map
+130,1,payment,7.03.013 - Assessoria / Consultoria Juridica,4000.0,184,8.3.013,Assessoria / Consultoria Juridica,explicit_code_map
+131,1,payment,7.03.010 - Sistema de Informacao,159.2,181,8.3.010,Sistema de Informacao,explicit_code_map
+132,1,payment,5.05.005 - Manutenção de Poços,1000.0,147,7.5.005,Manutenção de Poços,explicit_code_map
+133,1,payment,7.02.004 - Despesas com Viagens - Comercial,1373.22,169,8.2.004,Despesas com Viagens - Comercial,explicit_code_map
+134,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,913.61,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+135,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,75.08,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+136,1,payment,6.01.003 - ICMS Sobre Vendas,17892.84,95,4.01.003,ICMS Sobre Vendas,explicit_code_map
+137,1,payment,4.01.001 - Insumos - Quimicos,420.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+138,1,payment,5.05.999 - Outros Custos Operacionais,102.7,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+139,1,payment,7.01.003 - Alimentacao - Adm/Coml,16.55,154,8.1.003,Alimentacao - Adm/Coml,explicit_code_map
+140,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.04,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+141,1,receipt,3.01.001 - Receita de Serviços Prestados,22025.69,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+142,1,receipt,3.01.001 - Receita de Serviços Prestados,10176.4,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+143,1,receipt,3.01.001 - Receita de Serviços Prestados,6923.07,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+144,1,receipt,3.01.001 - Receita de Serviços Prestados,3325.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+145,1,payment,5.02.999 - Outros Gastos com Veiculos - Operacao,422.4,129,7.2.009,Outros Gastos com Veiculos - Operacao,explicit_code_map
+146,1,payment,5.05.999 - Outros Custos Operacionais,43.51,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+147,1,payment,5.01.004 - Transporte - Operacao,16.91,109,7.1.004,Transporte - Operacao,explicit_code_map
+148,1,payment,5.04.001 - Alguel Imoveis - Operacao,950.0,136,7.4.001,Alguel Imoveis - Operacao,explicit_code_map
+149,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.03,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+150,1,payment,5.05.999 - Outros Custos Operacionais,887.0,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+151,1,payment,4.01.001 - Insumos - Quimicos,30.36,100,6.1.001,Insumos - Quimicos,explicit_code_map
+152,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.04,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+153,1,payment,5.02.002 - Locacao de Veiculos - Operacao,1700.0,122,7.2.002,Locacao de Veiculos - Operacao,explicit_code_map
+154,1,receipt,3.01.001 - Receita de Serviços Prestados,4000.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+154,2,receipt,6.01.001 - Simples Nacional,100.0,93,4.01.001,Simples Nacional,explicit_code_map
+155,1,payment,4.01.001 - Insumos - Quimicos,584.6,100,6.1.001,Insumos - Quimicos,explicit_code_map
+156,1,payment,5.05.999 - Outros Custos Operacionais,77.67,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+157,1,payment,5.05.005 - Manutenção de Poços,1000.0,147,7.5.005,Manutenção de Poços,explicit_code_map
+158,1,payment,5.01.004 - Transporte - Operacao,23.2,109,7.1.004,Transporte - Operacao,explicit_code_map
+159,1,payment,5.01.004 - Transporte - Operacao,21.34,109,7.1.004,Transporte - Operacao,explicit_code_map
+160,1,receipt,3.01.001 - Receita de Serviços Prestados,10961.28,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+160,2,receipt,6.01.001 - Simples Nacional,548.06,93,4.01.001,Simples Nacional,explicit_code_map
+161,1,payment,5.01.012 - PJ - OPERACAO,2431.5,117,7.1.012,PJ - OPERACAO,explicit_code_map
+162,1,transfer,Transferência de Entrada,1526.29,,,,
+163,1,payment,5.02.008 - Estacionamento Operação,200.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+164,1,payment,4.01.004 - Insumos - Outros,7.99,103,6.1.004,Insumos - Outros,explicit_code_map
+165,1,payment,5.02.008 - Estacionamento Operação,15.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+166,1,payment,5.02.008 - Estacionamento Operação,15.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+167,1,payment,5.02.008 - Estacionamento Operação,19.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+168,1,payment,4.01.004 - Insumos - Outros,10.7,103,6.1.004,Insumos - Outros,explicit_code_map
+169,1,payment,4.01.004 - Insumos - Outros,8.0,103,6.1.004,Insumos - Outros,explicit_code_map
+170,1,payment,5.05.002 - Servicos em Clientes Contratos - Operacao,291.72,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+171,1,payment,5.02.008 - Estacionamento Operação,15.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+172,1,payment,5.02.008 - Estacionamento Operação,15.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+173,1,payment,4.01.004 - Insumos - Outros,12.99,103,6.1.004,Insumos - Outros,explicit_code_map
+174,1,payment,5.05.002 - Servicos em Clientes Contratos - Operacao,218.67,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+175,1,payment,5.02.008 - Estacionamento Operação,6.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+176,1,payment,5.02.008 - Estacionamento Operação,11.2,128,7.2.008,Estacionamento Operação,explicit_code_map
+177,1,payment,5.05.002 - Servicos em Clientes Contratos - Operacao,236.8,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+178,1,payment,5.02.008 - Estacionamento Operação,6.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+179,1,payment,5.02.008 - Estacionamento Operação,15.0,128,7.2.008,Estacionamento Operação,explicit_code_map
+180,1,payment,5.05.002 - Servicos em Clientes Contratos - Operacao,124.8,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+181,1,payment,4.01.004 - Insumos - Outros,69.48,103,6.1.004,Insumos - Outros,explicit_code_map
+182,1,payment,4.01.004 - Insumos - Outros,13.14,103,6.1.004,Insumos - Outros,explicit_code_map
+183,1,payment,5.05.002 - Servicos em Clientes Contratos - Operacao,120.8,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+184,1,payment,4.01.004 - Insumos - Outros,94.0,103,6.1.004,Insumos - Outros,explicit_code_map
+185,1,payment,5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,3118.27,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+186,1,payment,5.02.003 - Combustivel - Operacao,1105.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+187,1,payment,5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,930.83,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+188,1,transfer,Transferência de Saída,1526.29,,,,
+189,1,payment,5.05.999 - Outros Custos Operacionais,800.0,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+190,1,payment,5.01.011 - Fardamento - Operacao,160.0,116,7.1.011,Fardamento - Operacao,explicit_code_map
+191,1,payment,5.01.004 - Transporte - Operacao,11.99,109,7.1.004,Transporte - Operacao,explicit_code_map
+192,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,275.0,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+193,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.28,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+194,1,payment,5.02.003 - Combustivel - Operacao,980.46,123,7.2.003,Combustivel - Operacao,explicit_code_map
+194,2,payment,5.01.003 - Alimentacao - Operacao,598.94,108,7.1.003,Alimentacao - Operacao,explicit_code_map
+194,3,payment,5.01.004 - Transporte - Operacao,111.0,109,7.1.004,Transporte - Operacao,explicit_code_map
+195,1,payment,8.02.001 - Compra de Equipamentos Operacionais,13800.0,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+196,1,receipt,3.01.001 - Receita de Serviços Prestados,19990.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+196,2,receipt,6.01.001 - Simples Nacional,999.5,93,4.01.001,Simples Nacional,explicit_code_map
+197,1,receipt,3.01.001 - Receita de Serviços Prestados,5800.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+198,1,payment,5.01.012 - PJ - OPERACAO,1306.0,117,7.1.012,PJ - OPERACAO,explicit_code_map
+199,1,payment,4.01.001 - Insumos - Quimicos,9281.89,100,6.1.001,Insumos - Quimicos,explicit_code_map
+200,1,payment,5.05.999 - Outros Custos Operacionais,2040.0,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+201,1,payment,5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,390.0,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+202,1,payment,4.01.001 - Insumos - Quimicos,392.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+203,1,payment,5.01.004 - Transporte - Operacao,27.12,109,7.1.004,Transporte - Operacao,explicit_code_map
+204,1,receipt,3.01.001 - Receita de Serviços Prestados,8787.5,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+205,1,receipt,3.01.001 - Receita de Serviços Prestados,1169.86,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+206,1,receipt,3.01.001 - Receita de Serviços Prestados,2890.23,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+207,1,payment,4.01.004 - Insumos - Outros,235.11,103,6.1.004,Insumos - Outros,explicit_code_map
+208,1,payment,5.01.004 - Transporte - Operacao,81.1,109,7.1.004,Transporte - Operacao,explicit_code_map
+209,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.02,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+210,1,payment,7.03.001 - Aluguel - Adm,1100.0,172,8.3.001,Aluguel - Adm,explicit_code_map
+211,1,payment,7.03.011 - Honorarios Contabeis,1092.78,182,8.3.011,Honorarios Contabeis,explicit_code_map
+212,1,payment,5.02.003 - Combustivel - Operacao,200.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+213,1,payment,5.05.004 - Comunicacao Operacao,30.0,146,7.5.004,Comunicacao Operacao,explicit_code_map
+214,1,receipt,3.05.001 - Juros de Aplicacao Financeira,2.38,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+215,1,payment,4.01.001 - Insumos - Quimicos,410.93,100,6.1.001,Insumos - Quimicos,explicit_code_map
+216,1,payment,8.02.001 - Compra de Equipamentos Operacionais,5195.7,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+217,1,payment,4.01.001 - Insumos - Quimicos,470.48,100,6.1.001,Insumos - Quimicos,explicit_code_map
+218,1,payment,4.01.001 - Insumos - Quimicos,191.57,100,6.1.001,Insumos - Quimicos,explicit_code_map
+219,1,payment,7.03.010 - Sistema de Informacao,815.24,181,8.3.010,Sistema de Informacao,explicit_code_map
+220,1,payment,4.01.001 - Insumos - Quimicos,509.22,100,6.1.001,Insumos - Quimicos,explicit_code_map
+221,1,payment,5.05.002 - Servicos em Clientes Contratos - Operacao,1000.0,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+222,1,payment,5.03.003 - Manutencao de Maqu/Equip - Operacao,207.0,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+223,1,payment,5.01.004 - Transporte - Operacao,47.49,109,7.1.004,Transporte - Operacao,explicit_code_map
+224,1,payment,5.02.003 - Combustivel - Operacao,315.5,123,7.2.003,Combustivel - Operacao,explicit_code_map
+225,1,payment,6.01.001 - Simples Nacional,53826.29,93,4.01.001,Simples Nacional,explicit_code_map
+226,1,payment,7.04.999 - Outras Despesas Tributarias,1288.97,189,8.4.002,Outras Despesas Tributarias,explicit_code_map
+227,1,payment,7.03.011 - Honorarios Contabeis,822.5,182,8.3.011,Honorarios Contabeis,explicit_code_map
+228,1,receipt,3.01.001 - Receita de Serviços Prestados,9600.13,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+229,1,payment,4.01.001 - Insumos - Quimicos,41156.11,100,6.1.001,Insumos - Quimicos,explicit_code_map
+230,1,payment,4.01.001 - Insumos - Quimicos,360.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+231,1,payment,5.01.005 - Saude - Operacao,174.0,110,7.1.005,Saude - Operacao,explicit_code_map
+232,1,payment,5.01.004 - Transporte - Operacao,111.77,109,7.1.004,Transporte - Operacao,explicit_code_map
+233,1,payment,5.02.003 - Combustivel - Operacao,100.0,123,7.2.003,Combustivel - Operacao,explicit_code_map
+234,1,receipt,3.05.001 - Juros de Aplicacao Financeira,0.02,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+235,1,receipt,3.02.001 - Receita de Venda de Mercadorias,3726.0,82,3.02.001,Receita de Vendas Mercadorias,explicit_code_map
+236,1,receipt,3.02.001 - Receita de Venda de Mercadorias,1656.0,82,3.02.001,Receita de Vendas Mercadorias,explicit_code_map
+237,1,receipt,3.01.001 - Receita de Serviços Prestados,21252.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+237,2,receipt,6.01.001 - Simples Nacional,1062.6,93,4.01.001,Simples Nacional,explicit_code_map
+238,1,payment,6.01.001 - Simples Nacional,2179.27,93,4.01.001,Simples Nacional,explicit_code_map
+239,1,payment,4.01.001 - Insumos - Quimicos,1080.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+240,1,payment,4.01.001 - Insumos - Quimicos,5970.0,100,6.1.001,Insumos - Quimicos,explicit_code_map
+241,1,receipt,3.01.001 - Receita de Serviços Prestados,1500.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+242,1,payment,4.01.002 - Insumos - Reagentes,1374.83,101,6.1.002,Insumos - Reagentes,explicit_code_map
+243,1,payment,5.05.999 - Outros Custos Operacionais,2875.0,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+244,1,payment,4.01.001 - Insumos - Quimicos,10209.24,100,6.1.001,Insumos - Quimicos,explicit_code_map
+245,1,payment,4.01.001 - Insumos - Quimicos,13449.1,100,6.1.001,Insumos - Quimicos,explicit_code_map
+246,1,receipt,3.01.001 - Receita de Serviços Prestados,5300.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+247,1,receipt,3.01.001 - Receita de Serviços Prestados,6285.6,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+248,1,receipt,3.01.001 - Receita de Serviços Prestados,6912.89,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+249,1,receipt,3.01.001 - Receita de Serviços Prestados,5400.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+250,1,receipt,3.01.001 - Receita de Serviços Prestados,20997.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+251,1,payment,5.02.002 - Locacao de Veiculos - Operacao,1750.0,122,7.2.002,Locacao de Veiculos - Operacao,explicit_code_map
+252,1,payment,5.05.999 - Outros Custos Operacionais,6348.44,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+253,1,receipt,3.01.001 - Receita de Serviços Prestados,5142.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+253,2,receipt,6.01.001 - Simples Nacional,109.52,93,4.01.001,Simples Nacional,explicit_code_map
+254,1,receipt,3.01.001 - Receita de Serviços Prestados,8380.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+254,2,receipt,6.01.001 - Simples Nacional,419.0,93,4.01.001,Simples Nacional,explicit_code_map
+255,1,receipt,3.01.001 - Receita de Serviços Prestados,5200.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+256,1,receipt,3.01.001 - Receita de Serviços Prestados,2550.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+257,1,receipt,3.01.001 - Receita de Serviços Prestados,7000.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+258,1,receipt,3.01.001 - Receita de Serviços Prestados,7443.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+259,1,receipt,3.01.001 - Receita de Serviços Prestados,6056.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+260,1,receipt,3.01.001 - Receita de Serviços Prestados,3700.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+261,1,receipt,3.01.001 - Receita de Serviços Prestados,11800.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+262,1,receipt,3.01.001 - Receita de Serviços Prestados,21319.84,80,3.01.001,Receita de Serviços Prestados,explicit_code_map
+263,1,receipt,3.01.001 - Receita de Serviços Prestados,6000.0,80,3.01.001,Receita de Serviços Prestados,explicit_code_map

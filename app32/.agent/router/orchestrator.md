@@ -17,6 +17,7 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
    - workflow conversacional/V3 -> `workflow-factory-versus`
    - Sapiens, WhatsApp, intent routing, contexto de sessao ou workflow-first -> `sapiens-workflow-first`
    - deploy/produção -> `deploy_gestao_versus`
+   - proposta comercial/oferta/deck de venda -> `alex_reeves.md` com apoio do Conselho PME mínimo
    - trabalho transversal sem workflow específico -> especialista adequado
 5. Chamar no máximo os especialistas realmente necessários.
 6. Consultar referências só quando houver detalhe operacional, checklist ou dúvida de governança.

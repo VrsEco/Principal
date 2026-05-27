@@ -380,7 +380,20 @@
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 60;
   }
 
+  function activateTab(tabName) {
+    const targetButton = document.querySelector(`.journey-tab[data-tab="${tabName}"]`);
+    const targetPanel = document.querySelector(`.journey-tabpanel[data-panel="${tabName}"]`);
+    if (!targetButton || !targetPanel) return;
+    document.querySelectorAll('.journey-tab').forEach((button) => {
+      button.classList.toggle('is-active', button === targetButton);
+    });
+    document.querySelectorAll('.journey-tabpanel').forEach((panel) => {
+      panel.classList.toggle('is-active', panel === targetPanel);
+    });
+  }
+
   function openManualTaskForm(item = null) {
+    activateTab('manual-tasks');
     manualTaskForm.style.display = 'block';
     document.getElementById('manualTaskIdInput').value = item?.id || '';
     document.getElementById('manualTaskTitleInput').value = item?.title || '';

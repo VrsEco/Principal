@@ -45,3 +45,10 @@ Cuida de evidência, smoke, regressão e validação disciplinada.
 - `sapiens_intent_router.md`: classifica intenção e prioriza workflow-first
 - `sapiens_context_resolver.md`: resolve sessão, tenant, permissão e hidratação de payload
 - `sapiens_workflow_executor.md`: confirma, executa e formata a resposta operacional
+
+## Especializações Comerciais / Propostas
+- `alex_reeves.md`: integrador executivo e gate final da proposta
+- `business_architect_versus.md`: estrutura jornada, escopo, fases, entregáveis e limites
+- `lorenzo_vega.md`: fortalece proposta de valor, objeções, CTA e conversão
+- `felix_moreira.md`: melhora posicionamento, mensagem, narrativa e percepção de valor
+- `ruth_nakamura.md`: sustenta investimento, ROI prudente, risco, caixa e custo de inação

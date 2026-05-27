@@ -1,0 +1,244 @@
+﻿title_key,excel_row,component,settlement_date,bank_account_target_id,bank_account_target_name,amount,notes
+R2,2,standard,2026-05-01,8,ITAU - SAVE WATER,30000.0,Título liquidado com baixa identificada.
+R3-SALE,3,bank_liquid_receipt,2026-05-04,8,ITAU - SAVE WATER,5032.48,Baixa líquida em conta bancária.
+R3-SALE,3,withholding_compensation,2026-05-04,12,COMPENSAÇÃO E RETENÇÃO,109.52,Baixa do valor retido na fonte em compensações/retenções.
+R3-TAX,3,withholding_compensation,2026-05-04,12,COMPENSAÇÃO E RETENÇÃO,109.52,Baixa do título a pagar do tributo retido via compensações/retenções.
+R4,4,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,1169.86,Título liquidado com baixa identificada.
+R5,5,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,141.6,Título liquidado com baixa identificada.
+R6,6,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,100.0,Título liquidado com baixa identificada.
+R7,7,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,1500.0,Título liquidado com baixa identificada.
+R8,8,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,3968.16,Título liquidado com baixa identificada.
+R9,9,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,30000.0,Título liquidado com baixa identificada.
+R10,10,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,1296.0,Título liquidado com baixa identificada.
+R11,11,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,12000.0,Título liquidado com baixa identificada.
+R12,12,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,3439.5,Título liquidado com baixa identificada.
+R13,13,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,2986.52,Título liquidado com baixa identificada.
+R14,14,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,295.0,Título liquidado com baixa identificada.
+R15,15,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,141.6,Título liquidado com baixa identificada.
+R16,16,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,2890.23,Título liquidado com baixa identificada.
+R17,17,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,5730.0,Título liquidado com baixa identificada.
+R18,18,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,252.05,Título liquidado com baixa identificada.
+R19,19,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,6881.12,Título liquidado com baixa identificada.
+R20,20,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,0.97,Título liquidado com baixa identificada.
+R21,21,standard,2026-05-04,7,ITAU - STELLA BAPTISTA,1080.0,Título liquidado com baixa identificada.
+R22-SALE,22,bank_liquid_receipt,2026-05-05,8,ITAU - SAVE WATER,4698.89,Baixa líquida em conta bancária.
+R22-SALE,22,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,102.26,Baixa do valor retido na fonte em compensações/retenções.
+R22-TAX,22,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,102.26,Baixa do título a pagar do tributo retido via compensações/retenções.
+R23,23,standard,2026-05-05,13,Corporativo - Vcto dia 05,3681.18,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R24,24,standard,2026-05-05,13,Corporativo - Vcto dia 05,28.0,Título liquidado com baixa identificada.
+R25,25,standard,2026-05-05,13,Corporativo - Vcto dia 05,5.6,Título liquidado com baixa identificada.
+R26,26,standard,2026-05-05,13,Corporativo - Vcto dia 05,5.6,Título liquidado com baixa identificada.
+R27,27,standard,2026-05-05,13,Corporativo - Vcto dia 05,80.0,Título liquidado com baixa identificada.
+R28,28,standard,2026-05-05,13,Corporativo - Vcto dia 05,190.0,Título liquidado com baixa identificada.
+R29,29,standard,2026-05-05,13,Corporativo - Vcto dia 05,6.6,Título liquidado com baixa identificada.
+R30,30,standard,2026-05-05,13,Corporativo - Vcto dia 05,3.6,Título liquidado com baixa identificada.
+R31,31,standard,2026-05-05,13,Corporativo - Vcto dia 05,12.21,Título liquidado com baixa identificada.
+R32,32,standard,2026-05-05,13,Corporativo - Vcto dia 05,3.6,Título liquidado com baixa identificada.
+R33,33,standard,2026-05-05,13,Corporativo - Vcto dia 05,100.0,Título liquidado com baixa identificada.
+R34,34,standard,2026-05-05,13,Corporativo - Vcto dia 05,15.5,Título liquidado com baixa identificada.
+R35,35,standard,2026-05-05,13,Corporativo - Vcto dia 05,15.5,Título liquidado com baixa identificada.
+R36,36,standard,2026-05-05,13,Corporativo - Vcto dia 05,40.0,Título liquidado com baixa identificada.
+R37,37,standard,2026-05-05,13,Corporativo - Vcto dia 05,100.0,Título liquidado com baixa identificada.
+R38,38,standard,2026-05-05,13,Corporativo - Vcto dia 05,15.5,Título liquidado com baixa identificada.
+R39,39,standard,2026-05-05,13,Corporativo - Vcto dia 05,200.0,Título liquidado com baixa identificada.
+R40,40,standard,2026-05-05,13,Corporativo - Vcto dia 05,200.0,Título liquidado com baixa identificada.
+R41,41,standard,2026-05-05,13,Corporativo - Vcto dia 05,248.57,Título liquidado com baixa identificada.
+R42,42,standard,2026-05-05,13,Corporativo - Vcto dia 05,150.0,Título liquidado com baixa identificada.
+R43,43,standard,2026-05-05,13,Corporativo - Vcto dia 05,100.0,Título liquidado com baixa identificada.
+R44,44,standard,2026-05-05,13,Corporativo - Vcto dia 05,18.0,Título liquidado com baixa identificada.
+R45,45,standard,2026-05-05,13,Corporativo - Vcto dia 05,15.5,Título liquidado com baixa identificada.
+R46,46,standard,2026-05-05,13,Corporativo - Vcto dia 05,110.0,Título liquidado com baixa identificada.
+R47,47,standard,2026-05-05,13,Corporativo - Vcto dia 05,15.5,Título liquidado com baixa identificada.
+R48,48,standard,2026-05-05,13,Corporativo - Vcto dia 05,100.0,Título liquidado com baixa identificada.
+R49,49,standard,2026-05-05,13,Corporativo - Vcto dia 05,120.0,Título liquidado com baixa identificada.
+R50,50,standard,2026-05-05,13,Corporativo - Vcto dia 05,180.0,Título liquidado com baixa identificada.
+R51,51,standard,2026-05-05,13,Corporativo - Vcto dia 05,9.0,Título liquidado com baixa identificada.
+R52,52,standard,2026-05-05,13,Corporativo - Vcto dia 05,229.82,Título liquidado com baixa identificada.
+R53,53,standard,2026-05-05,13,Corporativo - Vcto dia 05,11.0,Título liquidado com baixa identificada.
+R54,54,standard,2026-05-05,13,Corporativo - Vcto dia 05,11.0,Título liquidado com baixa identificada.
+R55,55,standard,2026-05-05,13,Corporativo - Vcto dia 05,9.0,Título liquidado com baixa identificada.
+R56,56,standard,2026-05-05,13,Corporativo - Vcto dia 05,598.0,Título liquidado com baixa identificada.
+R57,57,standard,2026-05-05,13,Corporativo - Vcto dia 05,323.47,Título liquidado com baixa identificada.
+R58,58,standard,2026-05-05,13,Corporativo - Vcto dia 05,14.0,Título liquidado com baixa identificada.
+R59,59,standard,2026-05-05,13,Corporativo - Vcto dia 05,14.0,Título liquidado com baixa identificada.
+R60,60,standard,2026-05-05,13,Corporativo - Vcto dia 05,11.0,Título liquidado com baixa identificada.
+R61,61,standard,2026-05-05,13,Corporativo - Vcto dia 05,11.0,Título liquidado com baixa identificada.
+R62,62,standard,2026-05-05,13,Corporativo - Vcto dia 05,360.61,Título liquidado com baixa identificada.
+R63,63,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,149.9,Título liquidado com baixa identificada.
+R64,64,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,1776.0,Título liquidado com baixa identificada.
+R65,65,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,3488.16,Título liquidado com baixa identificada.
+R66,66,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2078.69,Título liquidado com baixa identificada.
+R67,67,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2677.71,Título liquidado com baixa identificada.
+R68,68,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,3681.18,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R69,69,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,113.99,Título liquidado com baixa identificada.
+R70,70,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,6371.73,Título liquidado com baixa identificada.
+R71,71,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,1695.69,Título liquidado com baixa identificada.
+R72,72,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,1646.02,Título liquidado com baixa identificada.
+R73,73,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2602.63,Título liquidado com baixa identificada.
+R74,74,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,1667.8,Título liquidado com baixa identificada.
+R75,75,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2378.68,Título liquidado com baixa identificada.
+R76,76,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2602.63,Título liquidado com baixa identificada.
+R77,77,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2310.52,Título liquidado com baixa identificada.
+R78,78,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2427.9,Título liquidado com baixa identificada.
+R79,79,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,49.98,Título liquidado com baixa identificada.
+R80,80,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,348.52,Título liquidado com baixa identificada.
+R81,81,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,828.61,Título liquidado com baixa identificada.
+R82,82,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,170.54,Título liquidado com baixa identificada.
+R83,83,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,5.88,Título liquidado com baixa identificada.
+R84-SALE,84,bank_liquid_receipt,2026-05-05,7,ITAU - STELLA BAPTISTA,24166.92,Baixa líquida em conta bancária.
+R84-SALE,84,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,1271.94,Baixa do valor retido na fonte em compensações/retenções.
+R84-TAX,84,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,1271.94,Baixa do título a pagar do tributo retido via compensações/retenções.
+R85,85,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,9974.9,Título liquidado com baixa identificada.
+R86-SALE,86,bank_liquid_receipt,2026-05-05,7,ITAU - STELLA BAPTISTA,6281.84,Baixa líquida em conta bancária.
+R86-SALE,86,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,330.62,Baixa do valor retido na fonte em compensações/retenções.
+R86-TAX,86,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,330.62,Baixa do título a pagar do tributo retido via compensações/retenções.
+R87-SALE,87,bank_liquid_receipt,2026-05-05,7,ITAU - STELLA BAPTISTA,4117.75,Baixa líquida em conta bancária.
+R87-SALE,87,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,216.72,Baixa do valor retido na fonte em compensações/retenções.
+R87-TAX,87,withholding_compensation,2026-05-05,12,COMPENSAÇÃO E RETENÇÃO,216.72,Baixa do título a pagar do tributo retido via compensações/retenções.
+R88,88,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2660.0,Título liquidado com baixa identificada.
+R89,89,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,2312.0,Título liquidado com baixa identificada.
+R90,90,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,1385.0,Título liquidado com baixa identificada.
+R91,91,standard,2026-05-05,7,ITAU - STELLA BAPTISTA,14889.18,Título liquidado com baixa identificada.
+R95-SALE,95,bank_liquid_receipt,2026-05-06,8,ITAU - SAVE WATER,3914.8,Baixa líquida em conta bancária.
+R95-SALE,95,withholding_compensation,2026-05-06,12,COMPENSAÇÃO E RETENÇÃO,85.2,Baixa do valor retido na fonte em compensações/retenções.
+R95-TAX,95,withholding_compensation,2026-05-06,12,COMPENSAÇÃO E RETENÇÃO,85.2,Baixa do título a pagar do tributo retido via compensações/retenções.
+R96,96,standard,2026-05-06,7,ITAU - STELLA BAPTISTA,5700.0,Título liquidado com baixa identificada.
+R97,97,standard,2026-05-06,7,ITAU - STELLA BAPTISTA,461.55,Título liquidado com baixa identificada.
+R99,99,standard,2026-05-07,8,ITAU - SAVE WATER,6371.73,Título liquidado com baixa identificada.
+R100,100,standard,2026-05-07,8,ITAU - SAVE WATER,10000.0,Título liquidado com baixa identificada.
+R101,101,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,2000.0,Título liquidado com baixa identificada.
+R102,102,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,2559.7,Título liquidado com baixa identificada.
+R103,103,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,6896.0,Título liquidado com baixa identificada.
+R104,104,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,11248.47,Título liquidado com baixa identificada.
+R105,105,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,7211.16,Título liquidado com baixa identificada.
+R106,106,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,7514.78,Título liquidado com baixa identificada.
+R107,107,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,821.65,Título liquidado com baixa identificada.
+R108,108,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,0.28,Título liquidado com baixa identificada.
+R109,109,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,3726.0,Título liquidado com baixa identificada.
+R110,110,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,1656.0,Título liquidado com baixa identificada.
+R111,111,standard,2026-05-07,7,ITAU - STELLA BAPTISTA,835.94,Título liquidado com baixa identificada.
+R113,113,standard,2026-05-08,8,ITAU - SAVE WATER,6000.0,Título liquidado com baixa identificada.
+R114,114,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,85.98,Título liquidado com baixa identificada.
+R115,115,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,3515.0,Título liquidado com baixa identificada.
+R116,116,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,150.0,Título liquidado com baixa identificada.
+R117,117,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,1854.69,Título liquidado com baixa identificada.
+R118,118,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,91.9,Título liquidado com baixa identificada.
+R119,119,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,45.99,Título liquidado com baixa identificada.
+R120,120,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,426.0,Título liquidado com baixa identificada.
+R121,121,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,375.0,Título liquidado com baixa identificada.
+R122,122,standard,2026-05-08,7,ITAU - STELLA BAPTISTA,400.0,Título liquidado com baixa identificada.
+R123-SALE,123,bank_liquid_receipt,2026-05-08,7,ITAU - STELLA BAPTISTA,14303.2,Baixa líquida em conta bancária.
+R123-SALE,123,withholding_compensation,2026-05-08,12,COMPENSAÇÃO E RETENÇÃO,752.8,Baixa do valor retido na fonte em compensações/retenções.
+R123-TAX,123,withholding_compensation,2026-05-08,12,COMPENSAÇÃO E RETENÇÃO,752.8,Baixa do título a pagar do tributo retido via compensações/retenções.
+R124-SALE,124,bank_liquid_receipt,2026-05-08,7,ITAU - STELLA BAPTISTA,7745.92,Baixa líquida em conta bancária.
+R124-SALE,124,withholding_compensation,2026-05-08,12,COMPENSAÇÃO E RETENÇÃO,407.68,Baixa do valor retido na fonte em compensações/retenções.
+R124-TAX,124,withholding_compensation,2026-05-08,12,COMPENSAÇÃO E RETENÇÃO,407.68,Baixa do título a pagar do tributo retido via compensações/retenções.
+R126,126,standard,2026-05-11,8,ITAU - SAVE WATER,9836.21,Título liquidado com baixa identificada.
+R127,127,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,704.0,Título liquidado com baixa identificada.
+R128,128,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,2875.0,Título liquidado com baixa identificada.
+R129,129,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,14460.39,Título liquidado com baixa identificada.
+R130,130,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,4000.0,Título liquidado com baixa identificada.
+R131,131,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,159.2,Título liquidado com baixa identificada.
+R132,132,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,1000.0,Título liquidado com baixa identificada.
+R133,133,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,1373.22,Título liquidado com baixa identificada.
+R134,134,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,913.61,Título liquidado com baixa identificada.
+R135,135,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,75.08,Título liquidado com baixa identificada.
+R136,136,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,17892.84,Título liquidado com baixa identificada.
+R137,137,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,420.0,Título liquidado com baixa identificada.
+R138,138,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,102.7,Título liquidado com baixa identificada.
+R139,139,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,16.55,Título liquidado com baixa identificada.
+R140,140,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,0.04,Título liquidado com baixa identificada.
+R141,141,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,22025.69,Título liquidado com baixa identificada.
+R142,142,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,10176.4,Título liquidado com baixa identificada.
+R143,143,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,6923.07,Título liquidado com baixa identificada.
+R144,144,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,3325.0,Título liquidado com baixa identificada.
+R145,145,standard,2026-05-11,7,ITAU - STELLA BAPTISTA,422.4,Título liquidado com baixa identificada.
+R146,146,standard,2026-05-12,7,ITAU - STELLA BAPTISTA,43.51,Título liquidado com baixa identificada.
+R147,147,standard,2026-05-12,7,ITAU - STELLA BAPTISTA,16.91,Título liquidado com baixa identificada.
+R148,148,standard,2026-05-12,7,ITAU - STELLA BAPTISTA,950.0,Título liquidado com baixa identificada.
+R149,149,standard,2026-05-12,7,ITAU - STELLA BAPTISTA,0.03,Título liquidado com baixa identificada.
+R150,150,standard,2026-05-13,7,ITAU - STELLA BAPTISTA,887.0,Título liquidado com baixa identificada.
+R151,151,standard,2026-05-13,7,ITAU - STELLA BAPTISTA,30.36,Título liquidado com baixa identificada.
+R152,152,standard,2026-05-13,7,ITAU - STELLA BAPTISTA,0.04,Título liquidado com baixa identificada.
+R154-SALE,154,bank_liquid_receipt,2026-05-14,7,ITAU - STELLA BAPTISTA,3900.0,Baixa líquida em conta bancária.
+R154-SALE,154,withholding_compensation,2026-05-14,12,COMPENSAÇÃO E RETENÇÃO,100.0,Baixa do valor retido na fonte em compensações/retenções.
+R154-TAX,154,withholding_compensation,2026-05-14,12,COMPENSAÇÃO E RETENÇÃO,100.0,Baixa do título a pagar do tributo retido via compensações/retenções.
+R155,155,standard,2026-05-14,7,ITAU - STELLA BAPTISTA,584.6,Título liquidado com baixa identificada.
+R156,156,standard,2026-05-14,7,ITAU - STELLA BAPTISTA,77.67,Título liquidado com baixa identificada.
+R157,157,standard,2026-05-14,7,ITAU - STELLA BAPTISTA,1000.0,Título liquidado com baixa identificada.
+R158,158,standard,2026-05-14,7,ITAU - STELLA BAPTISTA,23.2,Título liquidado com baixa identificada.
+R159,159,standard,2026-05-14,7,ITAU - STELLA BAPTISTA,21.34,Título liquidado com baixa identificada.
+R160-SALE,160,bank_liquid_receipt,2026-05-14,7,ITAU - STELLA BAPTISTA,10413.22,Baixa líquida em conta bancária.
+R160-SALE,160,withholding_compensation,2026-05-14,12,COMPENSAÇÃO E RETENÇÃO,548.06,Baixa do valor retido na fonte em compensações/retenções.
+R160-TAX,160,withholding_compensation,2026-05-14,12,COMPENSAÇÃO E RETENÇÃO,548.06,Baixa do título a pagar do tributo retido via compensações/retenções.
+R161,161,standard,2026-05-15,8,ITAU - SAVE WATER,2431.5,Título liquidado com baixa identificada.
+R162,162,standard,2026-05-15,14,Corporativo - Vcto dia 15,1526.29,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R163,163,standard,2026-05-15,14,Corporativo - Vcto dia 15,200.0,Título liquidado com baixa identificada.
+R164,164,standard,2026-05-15,14,Corporativo - Vcto dia 15,7.99,Título liquidado com baixa identificada.
+R165,165,standard,2026-05-15,14,Corporativo - Vcto dia 15,15.0,Título liquidado com baixa identificada.
+R166,166,standard,2026-05-15,14,Corporativo - Vcto dia 15,15.0,Título liquidado com baixa identificada.
+R167,167,standard,2026-05-15,14,Corporativo - Vcto dia 15,19.0,Título liquidado com baixa identificada.
+R168,168,standard,2026-05-15,14,Corporativo - Vcto dia 15,10.7,Título liquidado com baixa identificada.
+R169,169,standard,2026-05-15,14,Corporativo - Vcto dia 15,8.0,Título liquidado com baixa identificada.
+R170,170,standard,2026-05-15,14,Corporativo - Vcto dia 15,291.72,Título liquidado com baixa identificada.
+R171,171,standard,2026-05-15,14,Corporativo - Vcto dia 15,15.0,Título liquidado com baixa identificada.
+R172,172,standard,2026-05-15,14,Corporativo - Vcto dia 15,15.0,Título liquidado com baixa identificada.
+R173,173,standard,2026-05-15,14,Corporativo - Vcto dia 15,12.99,Título liquidado com baixa identificada.
+R174,174,standard,2026-05-15,14,Corporativo - Vcto dia 15,218.67,Título liquidado com baixa identificada.
+R175,175,standard,2026-05-15,14,Corporativo - Vcto dia 15,6.0,Título liquidado com baixa identificada.
+R176,176,standard,2026-05-15,14,Corporativo - Vcto dia 15,11.2,Título liquidado com baixa identificada.
+R177,177,standard,2026-05-15,14,Corporativo - Vcto dia 15,236.8,Título liquidado com baixa identificada.
+R178,178,standard,2026-05-15,14,Corporativo - Vcto dia 15,6.0,Título liquidado com baixa identificada.
+R179,179,standard,2026-05-15,14,Corporativo - Vcto dia 15,15.0,Título liquidado com baixa identificada.
+R180,180,standard,2026-05-15,14,Corporativo - Vcto dia 15,124.8,Título liquidado com baixa identificada.
+R181,181,standard,2026-05-15,14,Corporativo - Vcto dia 15,69.48,Título liquidado com baixa identificada.
+R182,182,standard,2026-05-15,14,Corporativo - Vcto dia 15,13.14,Título liquidado com baixa identificada.
+R183,183,standard,2026-05-15,14,Corporativo - Vcto dia 15,120.8,Título liquidado com baixa identificada.
+R184,184,standard,2026-05-15,14,Corporativo - Vcto dia 15,94.0,Título liquidado com baixa identificada.
+R185,185,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,3118.27,Título liquidado com baixa identificada.
+R186,186,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,1105.0,Título liquidado com baixa identificada.
+R187,187,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,930.83,Título liquidado com baixa identificada.
+R188,188,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,1526.29,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R189,189,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,800.0,Título liquidado com baixa identificada.
+R190,190,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,160.0,Título liquidado com baixa identificada.
+R191,191,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,11.99,Título liquidado com baixa identificada.
+R192,192,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,275.0,Título liquidado com baixa identificada.
+R193,193,standard,2026-05-15,7,ITAU - STELLA BAPTISTA,0.28,Título liquidado com baixa identificada.
+R200,200,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,2040.0,Título liquidado com baixa identificada.
+R201,201,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,390.0,Título liquidado com baixa identificada.
+R202,202,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,392.0,Título liquidado com baixa identificada.
+R203,203,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,27.12,Título liquidado com baixa identificada.
+R204,204,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,8787.5,Título liquidado com baixa identificada.
+R205,205,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,1169.86,Título liquidado com baixa identificada.
+R206,206,standard,2026-05-18,7,ITAU - STELLA BAPTISTA,2890.23,Título liquidado com baixa identificada.
+R207,207,standard,2026-05-19,7,ITAU - STELLA BAPTISTA,235.11,Título liquidado com baixa identificada.
+R208,208,standard,2026-05-19,7,ITAU - STELLA BAPTISTA,81.1,Título liquidado com baixa identificada.
+R209,209,standard,2026-05-19,7,ITAU - STELLA BAPTISTA,0.02,Título liquidado com baixa identificada.
+R210,210,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,1100.0,Título liquidado com baixa identificada.
+R211,211,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,1092.78,Título liquidado com baixa identificada.
+R212,212,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,200.0,Título liquidado com baixa identificada.
+R213,213,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,30.0,Título liquidado com baixa identificada.
+R214,214,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,2.38,Título liquidado com baixa identificada.
+R215,215,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,410.93,Título liquidado com baixa identificada.
+R216,216,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,5195.7,Título liquidado com baixa identificada.
+R217,217,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,470.48,Título liquidado com baixa identificada.
+R218,218,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,191.57,Título liquidado com baixa identificada.
+R219,219,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,815.24,Título liquidado com baixa identificada.
+R220,220,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,509.22,Título liquidado com baixa identificada.
+R221,221,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,1000.0,Título liquidado com baixa identificada.
+R222,222,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,207.0,Título liquidado com baixa identificada.
+R223,223,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,47.49,Título liquidado com baixa identificada.
+R224,224,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,315.5,Título liquidado com baixa identificada.
+R225,225,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,53826.29,Título liquidado com baixa identificada.
+R226,226,standard,2026-05-21,7,ITAU - STELLA BAPTISTA,1288.97,Título liquidado com baixa identificada.
+R229,229,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,41156.11,Título liquidado com baixa identificada.
+R230,230,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,360.0,Título liquidado com baixa identificada.
+R231,231,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,174.0,Título liquidado com baixa identificada.
+R232,232,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,111.77,Título liquidado com baixa identificada.
+R233,233,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,100.0,Título liquidado com baixa identificada.
+R234,234,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,0.02,Título liquidado com baixa identificada.
+R235,235,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,3726.0,Título liquidado com baixa identificada.
+R236,236,standard,2026-05-22,7,ITAU - STELLA BAPTISTA,1656.0,Título liquidado com baixa identificada.
+R237-SALE,237,bank_liquid_receipt,2026-05-22,7,ITAU - STELLA BAPTISTA,20189.4,Baixa líquida em conta bancária.
+R237-SALE,237,withholding_compensation,2026-05-22,12,COMPENSAÇÃO E RETENÇÃO,1062.6,Baixa do valor retido na fonte em compensações/retenções.
+R237-TAX,237,withholding_compensation,2026-05-22,12,COMPENSAÇÃO E RETENÇÃO,1062.6,Baixa do título a pagar do tributo retido via compensações/retenções.

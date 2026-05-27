@@ -16,11 +16,21 @@
   const processInstanceCardsPanel = document.getElementById('processInstanceCardsPanel');
   const processInstanceCardsList = document.getElementById('processInstanceCardsList');
   const processInstanceCardsSummary = document.getElementById('processInstanceCardsSummary');
+  const projectActivityCardsPanel = document.getElementById('projectActivityCardsPanel');
+  const projectActivityCardsList = document.getElementById('projectActivityCardsList');
+  const projectActivityCardsSummary = document.getElementById('projectActivityCardsSummary');
+  const meetingCardsPanel = document.getElementById('meetingCardsPanel');
+  const meetingCardsList = document.getElementById('meetingCardsList');
+  const meetingCardsSummary = document.getElementById('meetingCardsSummary');
   const summaryContainer = document.getElementById('agendaSummaryCards');
   const statusLabel = document.getElementById('agendaStatusLabel');
   const statusBadge = document.getElementById('agendaLockBadge');
   const metaLine = document.getElementById('agendaMetaLine');
   const searchStatus = document.getElementById('agendaSearchStatus');
+
+  const DEFAULT_COLLAPSED_PANELS = ['process-instances', 'project-activities', 'meetings', 'manual-events'];
+  const COLLAPSE_DEFAULTS_VERSION = 'sections-v2';
+  const COLLAPSED_DAYS_DEFAULTS_VERSION = 'operational-planning-v1';
 
   const state = {
     agenda: null,
@@ -63,14 +73,24 @@
     ].join(':');
   }
 
-  function readPersistedSet(name) {
+  function readPersistedSet(name, defaultValues = []) {
     try {
       const raw = localStorage.getItem(`${getStorageKeyBase()}:${name}`);
-      if (!raw) return new Set();
+      if (!raw) return new Set(defaultValues);
       const values = JSON.parse(raw);
-      return new Set(Array.isArray(values) ? values : []);
+      const parsed = new Set(Array.isArray(values) ? values : []);
+      if (name === 'collapsedPanels') {
+        const defaultsMarkerKey = `${getStorageKeyBase()}:collapsedPanelsDefaultsVersion`;
+        const marker = localStorage.getItem(defaultsMarkerKey);
+        if (marker !== COLLAPSE_DEFAULTS_VERSION) {
+          defaultValues.forEach((value) => parsed.add(value));
+          parsed.delete('operational-planning');
+          localStorage.setItem(defaultsMarkerKey, COLLAPSE_DEFAULTS_VERSION);
+        }
+      }
+      return parsed;
     } catch (_error) {
-      return new Set();
+      return new Set(defaultValues);
     }
   }
 
@@ -113,6 +133,36 @@
       if (unassigned) return { item: unassigned, day, block: null, scope: 'unassigned' };
     }
     return null;
+  }
+
+  function manualJourneyItemFromAction(actionButton) {
+    const source = findItem(actionButton.dataset.agendaItemId);
+    if (!source?.item || source.item.item_kind === 'calendar_event' || source.item.item_type !== 'manual') return null;
+    const journeyItemId = Number(actionButton.dataset.journeyItemId || source.item.journey_item_id || source.item.id);
+    if (!journeyItemId) return null;
+    return {
+      ...source.item,
+      id: journeyItemId,
+      due_date: source.item.due_date || source.item.agenda_date || source.item.occurrence_date,
+    };
+  }
+
+  async function completeManualAgendaItem(actionButton) {
+    const item = manualJourneyItemFromAction(actionButton);
+    if (!item) {
+      toast('Evento avulso não localizado para conclusão.');
+      return;
+    }
+    try {
+      await api(`/api/companies/${companyId}/work-journey/items/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'completed' }),
+      });
+      document.dispatchEvent(new CustomEvent('workJourney:refreshed'));
+      toast('Evento avulso concluído.');
+    } catch (error) {
+      toast(error.message);
+    }
   }
 
   function updateControls() {
@@ -182,6 +232,24 @@
     }
 
     renderProcessInstanceCards(agenda, searchTerm);
+    renderTypedAgendaSection({
+      panel: projectActivityCardsPanel,
+      list: projectActivityCardsList,
+      summary: projectActivityCardsSummary,
+      agenda,
+      searchTerm,
+      itemType: 'project_task',
+      summaryLabel: 'atividade(s)',
+    });
+    renderTypedAgendaSection({
+      panel: meetingCardsPanel,
+      list: meetingCardsList,
+      summary: meetingCardsSummary,
+      agenda,
+      searchTerm,
+      itemType: 'meeting',
+      summaryLabel: 'reunião(ões)',
+    });
 
     if (searchStatus) {
       searchStatus.hidden = !searchTerm;
@@ -217,12 +285,62 @@
       }, searchTerm))
       : cards;
 
-    processInstanceCardsPanel.style.display = filteredCards.length ? '' : 'none';
+    processInstanceCardsPanel.style.display = '';
     processInstanceCardsList.innerHTML = renderer.renderProcessInstanceCards(filteredCards);
     if (processInstanceCardsSummary) {
-      processInstanceCardsSummary.innerHTML = filteredCards.length
-        ? `<span class="badge-pill">${filteredCards.length} instância(s)</span>`
-        : '';
+      processInstanceCardsSummary.innerHTML = `<span class="badge-pill">${filteredCards.length} instância(s)</span>`;
+    }
+  }
+
+  function normalizeIsoDate(value) {
+    const raw = String(value || '').trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
+  }
+
+  function todayIsoDate() {
+    return normalizeIsoDate(bootstrap.today) || new Date().toISOString().slice(0, 10);
+  }
+
+  function defaultCollapsedDayKeys(agenda) {
+    const defaults = new Set(['overdue']);
+    const today = todayIsoDate();
+
+    (agenda?.days || []).forEach((day) => {
+      const dayDate = normalizeIsoDate(day?.date);
+      const dayKey = day?.key || day?.date;
+      if (dayDate && dayKey && dayDate < today) {
+        defaults.add(dayKey);
+      }
+    });
+
+    return defaults;
+  }
+
+  function applyCollapsedDayDefaults(agenda) {
+    try {
+      const defaultsMarkerKey = `${getStorageKeyBase()}:collapsedDaysDefaultsVersion`;
+      const marker = localStorage.getItem(defaultsMarkerKey);
+      if (marker === COLLAPSED_DAYS_DEFAULTS_VERSION) return;
+
+      defaultCollapsedDayKeys(agenda).forEach((value) => state.collapsedDays.add(value));
+      writePersistedSet('collapsedDays', state.collapsedDays);
+      localStorage.setItem(defaultsMarkerKey, COLLAPSED_DAYS_DEFAULTS_VERSION);
+    } catch (_error) {
+      defaultCollapsedDayKeys(agenda).forEach((value) => state.collapsedDays.add(value));
+    }
+  }
+
+  function renderTypedAgendaSection({ panel, list, summary, agenda, searchTerm, itemType, summaryLabel }) {
+    if (!panel || !list || !renderer.collectTypedAgendaItems) return;
+    const items = renderer.collectTypedAgendaItems(agenda, itemType);
+    const filteredItems = searchTerm
+      ? items.filter((item) => utils.searchIncludes(item, searchTerm))
+      : items;
+
+    panel.style.display = '';
+    list.innerHTML = renderer.renderTypedAgendaCards(filteredItems, itemType);
+    if (summary) {
+      summary.innerHTML = `<span class="badge-pill">${filteredItems.length} ${summaryLabel}</span>`;
     }
   }
 
@@ -461,6 +579,15 @@
 
       const blockToggle = event.target.closest('[data-agenda-toggle]');
       if (blockToggle) toggleBlock(blockToggle);
+
+      const editManualItem = event.target.closest('[data-action="edit-manual-agenda-item"]');
+      if (editManualItem) {
+        const item = manualJourneyItemFromAction(editManualItem);
+        if (item) window.WorkJourneyPage?.openManualTaskForm?.(item);
+      }
+
+      const completeManualItem = event.target.closest('[data-action="complete-manual-agenda-item"]');
+      if (completeManualItem) completeManualAgendaItem(completeManualItem);
     });
 
     document.addEventListener('click', (event) => {
@@ -490,7 +617,7 @@
     state.storageKey = getStorageKeyBase();
     state.collapsedBlocks = readPersistedSet('collapsedBlocks');
     state.collapsedDays = readPersistedSet('collapsedDays');
-    state.collapsedPanels = readPersistedSet('collapsedPanels');
+    state.collapsedPanels = readPersistedSet('collapsedPanels', DEFAULT_COLLAPSED_PANELS);
 
     try {
       const response = await api(`/api/companies/${companyId}/work-journey/agendas?employee_id=${employeeId}&date=${selectedDate()}&scope=${currentScope()}`);
@@ -500,6 +627,7 @@
         employeeId,
         companyId,
       });
+      applyCollapsedDayDefaults(state.agenda);
       state.legacyFallback = false;
     } catch (error) {
       if (!forceFallback) {
@@ -534,6 +662,7 @@
             employeeId,
             companyId,
           });
+          applyCollapsedDayDefaults(state.agenda);
           state.legacyFallback = true;
         } catch (fallbackError) {
           state.agenda = null;

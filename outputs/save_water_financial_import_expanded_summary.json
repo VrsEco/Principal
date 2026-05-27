@@ -1,0 +1,17 @@
+{
+  "rows_original": 262,
+  "retention_cases": 0,
+  "expanded_title_rows": 541,
+  "expanded_settlement_rows": 221,
+  "summary": {
+    "standard_payment": 195,
+    "standard_receipt": 63,
+    "standard_transfer": 4
+  },
+  "retention_cases_sample": [],
+  "files": {
+    "titles_expanded_csv": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_import_titles_expanded.csv",
+    "settlements_expanded_csv": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_import_settlements_expanded.csv",
+    "retention_cases_csv": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_retention_cases.csv"
+  }
+}

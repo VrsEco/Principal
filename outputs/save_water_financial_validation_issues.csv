@@ -1,0 +1,16 @@
+﻿descricao,difference,discount_amount,excel_row,fee_amount,gross_title_amount,interest_amount,issue,mapped_rateio_total,movement_class,net_settlement_amount,open_balance_amount,penalty_amount,principal_settlement_amount,rateio_total,settlement_bank_account_target_name,situacao
+Venda 1891,219.04,0.0,3,0.0,5032.48,0.0,rateio_title_mismatch,5251.52,receipt,5032.48,0.0,0.0,5032.48,5251.52,ITAU - SAVE WATER,Quitado
+Venda 1839,204.52,0.0,22,0.0,4698.89,0.0,rateio_title_mismatch,4903.41,receipt,4698.89,0.0,0.0,4698.89,4903.41,ITAU - SAVE WATER,Quitado
+Venda 1809,2543.88,0.0,84,0.0,24166.92,0.0,rateio_title_mismatch,26710.8,receipt,24166.92,0.0,0.0,24166.92,26710.8,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1807,661.24,0.0,86,0.0,6281.84,0.0,rateio_title_mismatch,6943.08,receipt,6281.84,0.0,0.0,6281.84,6943.08,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1818,433.44,0.0,87,0.0,4117.75,0.0,rateio_title_mismatch,4551.19,receipt,4117.75,0.0,0.0,4117.75,4551.19,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1896,191.46,0.0,94,0.0,4398.62,0.0,rateio_title_mismatch,4590.08,receipt,0.0,4398.62,0.0,0.0,4590.08,,Atrasado
+Venda 1894,170.4,0.0,95,0.0,3914.8,0.0,rateio_title_mismatch,4085.2,receipt,3914.8,0.0,0.0,3914.8,4085.2,ITAU - SAVE WATER,Quitado
+Venda 1827,1505.6,0.0,123,0.0,14303.2,0.0,rateio_title_mismatch,15808.8,receipt,14303.2,0.0,0.0,14303.2,15808.8,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1804,815.36,0.0,124,0.0,7745.92,0.0,rateio_title_mismatch,8561.28,receipt,7745.92,0.0,0.0,7745.92,8561.28,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1895,200.0,0.0,154,0.0,3900.0,0.0,rateio_title_mismatch,4100.0,receipt,3900.0,0.0,0.0,3900.0,4100.0,ITAU - STELLA BAPTISTA,Quitado
+Venda 1816,1096.12,0.0,160,0.0,10413.22,0.0,rateio_title_mismatch,11509.34,receipt,10413.22,0.0,0.0,10413.22,11509.34,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1865,1999.0,0.0,196,0.0,18990.5,0.0,rateio_title_mismatch,20989.5,receipt,0.0,18990.5,0.0,0.0,20989.5,,Atrasado
+Venda 1820,2125.2,0.0,237,0.0,20189.4,0.0,rateio_title_mismatch,22314.6,receipt,20189.4,0.0,0.0,20189.4,22314.6,ITAU - STELLA BAPTISTA,Conciliado
+Venda 1892,219.04,0.0,253,0.0,5032.48,0.0,rateio_title_mismatch,5251.52,receipt,0.0,5032.48,0.0,0.0,5251.52,,Em aberto
+Venda 1817,838.0,0.0,254,0.0,7961.0,0.0,rateio_title_mismatch,8799.0,receipt,0.0,7961.0,0.0,0.0,8799.0,,Em aberto

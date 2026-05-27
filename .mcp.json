@@ -44,6 +44,21 @@
         "profile": "squad_versus",
         "surface": "admin"
       }
+    },
+    "Sapiens Cliente": {
+      "metadata": {
+        "experience_label": "Sapiens Cliente",
+        "harness_label": "Harness Coordenador do Squad Cliente",
+        "profile_label": "Squad Cliente",
+        "harness_key": "harness_coordenador_cliente_v1",
+        "profile": "squad_cliente",
+        "surface": "user"
+      },
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer mcpu_lWsy5v5CbjfVaJmSAYw7fYpTus4q_WnOqFnWCArLdac"
+      },
+      "url": "https://app.gestaoversus.com.br/mcp/user/"
     }
   }
 }

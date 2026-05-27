@@ -1,0 +1,557 @@
+﻿title_key,excel_row,entity_type,title_kind,scenario,descricao,favorecido,identificador,issue_date,competence_date,due_date,amount,open_balance_amount,cost_center_target_code,cost_center_target_name,payment_method_target_name,notes
+R2,2,title,payable,standard,repasse/sócios,Manoel Velloso,22368809520,2026-05-01,2026-05-01,2026-05-01,30000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R2,2,allocation,payable,standard,repasse/sócios,Manoel Velloso,22368809520,2026-05-01,2026-05-01,2026-05-01,30000.0,,7.1,Geral,,Rateio 1: 8.6.001 - Retirada Pro-Labore
+R3-SALE,3,title,receivable,withholding_receivable_gross,Venda 1891,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-04,2026-03-01,2026-04-30,5142.0,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R3-SALE,3,allocation,receivable,withholding_receivable_gross,Venda 1891,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-04,2026-03-01,2026-04-30,5142.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R3-TAX,3,title,payable,withholding_tax_payable,Tributo retido - Venda 1891,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-04,2026-03-01,2026-04-30,109.52,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R3-TAX,3,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1891,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-04,2026-03-01,2026-04-30,109.52,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R4,4,title,receivable,standard,Venda 1778,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-04,2026-03-01,2026-04-30,1169.86,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R4,4,allocation,receivable,standard,Venda 1778,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-04,2026-03-01,2026-04-30,1169.86,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R5,5,title,payable,standard,Transporte joseane,Joseane Menezes,03175991513,2026-05-04,2026-05-04,2026-05-04,141.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R5,5,allocation,payable,standard,Transporte joseane,Joseane Menezes,03175991513,2026-05-04,2026-05-04,2026-05-04,141.6,,7.1,Geral,,Rateio 1: 8.1.004 - Transporte - Adm/Coml
+R6,6,title,payable,standard,Frete Bela Vista,Antonio Carlos Dos Santos,42687500534,2026-05-04,2026-05-04,2026-05-04,100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R6,6,allocation,payable,standard,Frete Bela Vista,Antonio Carlos Dos Santos,42687500534,2026-05-04,2026-05-04,2026-05-04,100.0,,7.1,Geral,,Rateio 1: 8.3.015 - Outras Desp. Adm.
+R7,7,title,payable,standard,Obra Bela vista,LEONARDO SERV POÇOS,00083756159,2026-05-04,2026-05-04,2026-05-04,1500.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R7,7,allocation,payable,standard,Obra Bela vista,LEONARDO SERV POÇOS,00083756159,2026-05-04,2026-05-04,2026-05-04,1500.0,,7.1,Geral,,Rateio 1: 7.5.005 - Manutenção de Poços
+R8,8,title,payable,standard,PIX ENVIADO MZ COMERCIO,MZ EQUIPAMENTOS,04703364000199,2026-05-04,2026-05-04,2026-05-04,3968.16,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R8,8,allocation,payable,standard,PIX ENVIADO MZ COMERCIO,MZ EQUIPAMENTOS,04703364000199,2026-05-04,2026-05-04,2026-05-04,3968.16,,7.1,Geral,,Rateio 1: 9.2.001 - Compra de Equipamentos Operacionais
+R9,9,title,payable,standard,repasse socio,Marcel Cesar Stella,,2026-05-04,2026-05-04,2026-05-04,30000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R9,9,allocation,payable,standard,repasse socio,Marcel Cesar Stella,,2026-05-04,2026-05-04,2026-05-04,30000.0,,7.1,Geral,,Rateio 1: 8.6.001 - Retirada Pro-Labore
+R10,10,title,payable,standard,Compra de produto 66 (046),DANETO,07947526000122,2026-05-04,2026-04-06,2026-05-06,1296.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R10,10,allocation,payable,standard,Compra de produto 66 (046),DANETO,07947526000122,2026-05-04,2026-04-06,2026-05-06,1296.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R11,11,title,payable,standard,Compra de produto 58 (040),Gota Quimica,07139318000105,2026-05-04,2026-03-13,2026-05-03,12000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R11,11,allocation,payable,standard,Compra de produto 58 (040),Gota Quimica,07139318000105,2026-05-04,2026-03-13,2026-05-03,12000.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R12,12,title,payable,standard,Plano de saúde,UNIMED,02812468000106,2026-05-04,2026-05-04,2026-05-04,3439.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R12,12,allocation,payable,standard,Plano de saúde,UNIMED,02812468000106,2026-05-04,2026-05-04,2026-05-04,3439.5,,7.1,Geral,,Rateio 1: 7.1.005 - Saude - Operacao
+R13,13,title,payable,standard,ALUGUEL DO wallstreet,Fagundes de Figueiredo Sociedade de Advogados,07981703000197,2026-05-04,2026-05-04,2026-05-04,2986.52,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R13,13,allocation,payable,standard,ALUGUEL DO wallstreet,Fagundes de Figueiredo Sociedade de Advogados,07981703000197,2026-05-04,2026-05-04,2026-05-04,2986.52,,7.1,Geral,,Rateio 1: 8.3.001 - Aluguel - Adm
+R14,14,title,payable,standard,Transporte Gustavo,GUSTAVO DORIA,08779390552,2026-05-04,2026-05-04,2026-05-04,295.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R14,14,allocation,payable,standard,Transporte Gustavo,GUSTAVO DORIA,08779390552,2026-05-04,2026-05-04,2026-05-04,295.0,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R15,15,title,payable,standard,Transporte Thais,Thais Lins,57561864000108,2026-05-04,2026-05-04,2026-05-04,141.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R15,15,allocation,payable,standard,Transporte Thais,Thais Lins,57561864000108,2026-05-04,2026-05-04,2026-05-04,141.6,,7.1,Geral,,Rateio 1: 8.1.012 - PJ - Adm / Coml
+R16,16,title,receivable,standard,Venda 1761,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-04,2026-03-01,2026-04-30,2890.23,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R16,16,allocation,receivable,standard,Venda 1761,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-04,2026-03-01,2026-04-30,2890.23,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R17,17,title,payable,standard,VR ALIMENTAÇÃO,VR,02535864000133,2026-05-04,2026-05-04,2026-05-04,5730.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R17,17,allocation,payable,standard,VR ALIMENTAÇÃO,VR,02535864000133,2026-05-04,2026-05-04,2026-05-04,5730.0,,7.1,Geral,,Rateio 1: 7.1.003 - Alimentacao - Operacao
+R18,18,title,payable,standard,MANUTENÇÃO,MZ EQUIPAMENTOS,04703364000199,2026-05-04,2026-05-04,2026-05-04,252.05,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R18,18,allocation,payable,standard,MANUTENÇÃO,MZ EQUIPAMENTOS,04703364000199,2026-05-04,2026-05-04,2026-05-04,252.05,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R19,19,title,payable,standard,FERIAS ERIKA,Erika Lins Mendonça,04191069527,2026-05-04,2026-05-04,2026-05-04,6881.12,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R19,19,allocation,payable,standard,FERIAS ERIKA,Erika Lins Mendonça,04191069527,2026-05-04,2026-05-04,2026-05-04,6881.12,,7.1,Geral,,Rateio 1: 8.1.012 - PJ - Adm / Coml
+R20,20,title,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-04,2026-05-04,2026-05-04,0.97,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R20,20,allocation,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-04,2026-05-04,2026-05-04,0.97,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R21,21,title,payable,standard,Compra de produto 60 (042),AGROQUIMICA,05574966000156,2026-05-04,2026-03-30,2026-04-30,1080.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R21,21,allocation,payable,standard,Compra de produto 60 (042),AGROQUIMICA,05574966000156,2026-05-04,2026-03-30,2026-04-30,1080.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R22-SALE,22,title,receivable,withholding_receivable_gross,Venda 1839,TELEVISAO BAHIA S.A.,13425269000161,2026-05-05,2026-04-01,2026-05-05,4801.15,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R22-SALE,22,allocation,receivable,withholding_receivable_gross,Venda 1839,TELEVISAO BAHIA S.A.,13425269000161,2026-05-05,2026-04-01,2026-05-05,4801.15,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R22-TAX,22,title,payable,withholding_tax_payable,Tributo retido - Venda 1839,TELEVISAO BAHIA S.A.,13425269000161,2026-05-05,2026-04-01,2026-05-05,102.26,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R22-TAX,22,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1839,TELEVISAO BAHIA S.A.,13425269000161,2026-05-05,2026-04-01,2026-05-05,102.26,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R23,23,title,transfer,standard,BUSINESS      0502-9843,,,2026-05-05,2026-05-05,2026-05-05,3681.18,0.0,7.1,Geral,GERAL,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R23,23,allocation,transfer,standard,BUSINESS      0502-9843,,,2026-05-05,2026-05-05,2026-05-05,3681.18,,7.1,Geral,,Rateio 1: sem conta operacional
+R24,24,title,payable,standard,FILIAL FORTA-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-23,2026-05-05,28.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R24,24,allocation,payable,standard,FILIAL FORTA-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-23,2026-05-05,28.0,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R25,25,title,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,5.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R25,25,allocation,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,5.6,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R26,26,title,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-31,2026-05-05,5.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R26,26,allocation,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-31,2026-05-05,5.6,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R27,27,title,payable,standard,REAL ESTACIO-CT NTO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-07,2026-05-05,80.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R27,27,allocation,payable,standard,REAL ESTACIO-CT NTO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-07,2026-05-05,80.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R28,28,title,payable,standard,RC MOTOS,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,190.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R28,28,allocation,payable,standard,RC MOTOS,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,190.0,,7.1,Geral,,Rateio 1: 7.2.004 - Manutencao de Veiculos - Operacao
+R29,29,title,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,6.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R29,29,allocation,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,6.6,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R30,30,title,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-15,2026-05-05,3.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R30,30,allocation,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-15,2026-05-05,3.6,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R31,31,title,payable,standard,MERCADINHO S-CT UIZ,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,12.21,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R31,31,allocation,payable,standard,MERCADINHO S-CT UIZ,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,12.21,,7.1,Geral,,Rateio 1: 7.1.003 - Alimentacao - Operacao
+R32,32,title,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-15,2026-05-05,3.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R32,32,allocation,payable,standard,FORTALEZA NE-CT ACIONA,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-15,2026-05-05,3.6,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R33,33,title,payable,standard,CEMOPEL SHOP-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R33,33,allocation,payable,standard,CEMOPEL SHOP-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,100.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R34,34,title,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,15.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R34,34,allocation,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-24,2026-05-05,15.5,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R35,35,title,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-25,2026-05-05,15.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R35,35,allocation,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-03-25,2026-05-05,15.5,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R36,36,title,payable,standard,POSTO CURADI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-06,2026-05-05,40.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R36,36,allocation,payable,standard,POSTO CURADI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-06,2026-05-05,40.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R37,37,title,payable,standard,PETROCAL PIN-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-07,2026-05-05,100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R37,37,allocation,payable,standard,PETROCAL PIN-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-07,2026-05-05,100.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R38,38,title,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-08,2026-05-05,15.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R38,38,allocation,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-08,2026-05-05,15.5,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R39,39,title,payable,standard,POSTO CONDE,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,200.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R39,39,allocation,payable,standard,POSTO CONDE,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,200.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R40,40,title,payable,standard,POSTO CURADINHO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-15,2026-05-05,200.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R40,40,allocation,payable,standard,POSTO CURADINHO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-15,2026-05-05,200.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R41,41,title,payable,standard,POSTO APM,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,248.57,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R41,41,allocation,payable,standard,POSTO APM,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,248.57,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R42,42,title,payable,standard,PostoOpcao,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-17,2026-05-05,150.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R42,42,allocation,payable,standard,PostoOpcao,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-17,2026-05-05,150.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R43,43,title,payable,standard,LMCHAVES    -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R43,43,allocation,payable,standard,LMCHAVES    -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,100.0,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R44,44,title,payable,standard,25115621Faus-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-17,2026-05-05,18.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R44,44,allocation,payable,standard,25115621Faus-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-17,2026-05-05,18.0,,7.1,Geral,,Rateio 1: 7.1.003 - Alimentacao - Operacao
+R45,45,title,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-17,2026-05-05,15.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R45,45,allocation,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-17,2026-05-05,15.5,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R46,46,title,payable,standard,MP*ANDRE    -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-18,2026-05-05,110.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R46,46,allocation,payable,standard,MP*ANDRE    -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-18,2026-05-05,110.0,,7.1,Geral,,Rateio 1: 7.2.004 - Manutencao de Veiculos - Operacao
+R47,47,title,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-20,2026-05-05,15.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R47,47,allocation,payable,standard,RECIFE PARKI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-20,2026-05-05,15.5,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R48,48,title,payable,standard,POSTO CURADI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-18,2026-05-05,100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R48,48,allocation,payable,standard,POSTO CURADI-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-18,2026-05-05,100.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R49,49,title,payable,standard,POSTO CURADINHO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-21,2026-05-05,120.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R49,49,allocation,payable,standard,POSTO CURADINHO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-21,2026-05-05,120.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R50,50,title,payable,standard,POSTO CURADINHO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-19,2026-05-05,180.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R50,50,allocation,payable,standard,POSTO CURADINHO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-19,2026-05-05,180.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R51,51,title,payable,standard,LUIZ        -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-20,2026-05-05,9.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R51,51,allocation,payable,standard,LUIZ        -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-20,2026-05-05,9.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R52,52,title,payable,standard,AUTO POSTO SAO JOAO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-07,2026-05-05,229.82,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R52,52,allocation,payable,standard,AUTO POSTO SAO JOAO,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-07,2026-05-05,229.82,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R53,53,title,payable,standard,RIOMAR ARACAJU PARKING,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,11.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R53,53,allocation,payable,standard,RIOMAR ARACAJU PARKING,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,11.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R54,54,title,payable,standard,ARACAJU ADM SHOP CENTE,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,11.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R54,54,allocation,payable,standard,ARACAJU ADM SHOP CENTE,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-09,2026-05-05,11.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R55,55,title,payable,standard,POSTO GURI,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,9.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R55,55,allocation,payable,standard,POSTO GURI,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,9.0,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R56,56,title,payable,standard,ALQUIMIA ESSENCIAS,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,598.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R56,56,allocation,payable,standard,ALQUIMIA ESSENCIAS,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,598.0,,7.1,Geral,,Rateio 1: 6.1.002 - Insumos - Reagentes
+R57,57,title,payable,standard,POSTO GURI,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,323.47,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R57,57,allocation,payable,standard,POSTO GURI,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,323.47,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R58,58,title,payable,standard,Consorcio,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,14.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R58,58,allocation,payable,standard,Consorcio,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-10,2026-05-05,14.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R59,59,title,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-11,2026-05-05,14.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R59,59,allocation,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-11,2026-05-05,14.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R60,60,title,payable,standard,ARACAJU ADM SHOP CENTE,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,11.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R60,60,allocation,payable,standard,ARACAJU ADM SHOP CENTE,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,11.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R61,61,title,payable,standard,RIOMAR ARACAJU PARKING,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,11.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R61,61,allocation,payable,standard,RIOMAR ARACAJU PARKING,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,11.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R62,62,title,payable,standard,REDE RPB,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,360.61,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R62,62,allocation,payable,standard,REDE RPB,Fornecedor e Cliente Diversos,48658069000133,2026-05-05,2026-04-16,2026-05-05,360.61,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R63,63,title,payable,standard,internet escritório,ITS BRASIL,08772214000198,2026-05-05,2026-05-02,2026-05-05,149.9,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R63,63,allocation,payable,standard,internet escritório,ITS BRASIL,08772214000198,2026-05-05,2026-05-02,2026-05-05,149.9,,7.1,Geral,,Rateio 1: 8.3.008 - Telefonia e Internet - Adm
+R64,64,title,payable,standard,prestador de serviços,Thais Lins,57561864000108,2026-05-05,2026-05-05,2026-05-05,1776.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R64,64,allocation,payable,standard,prestador de serviços,Thais Lins,57561864000108,2026-05-05,2026-05-05,2026-05-05,1776.0,,7.1,Geral,,Rateio 1: 8.1.012 - PJ - Adm / Coml
+R65,65,title,payable,standard,SALARIO,LUCIVÂNIA,96097345534,2026-05-05,2026-05-05,2026-05-05,3488.16,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R65,65,allocation,payable,standard,SALARIO,LUCIVÂNIA,96097345534,2026-05-05,2026-05-05,2026-05-05,3488.16,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R66,66,title,payable,standard,PIX ENVIADO GABRIEL DE S,Gabriel Borges Santana,08246123530,2026-05-05,2026-05-05,2026-05-05,2078.69,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R66,66,allocation,payable,standard,PIX ENVIADO GABRIEL DE S,Gabriel Borges Santana,08246123530,2026-05-05,2026-05-05,2026-05-05,2078.69,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R67,67,title,payable,standard,FGTS,Receita Federal,00394460005887,2026-05-05,2026-05-20,2026-05-20,2677.71,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R67,67,allocation,payable,standard,FGTS,Receita Federal,00394460005887,2026-05-05,2026-05-20,2026-05-20,2677.71,,7.1,Geral,,Rateio 1: 7.1.009 - FGTS - Operacao
+R68,68,title,transfer,standard,BUSINESS      0502-9843,,,2026-05-05,2026-05-05,2026-05-05,3681.18,0.0,7.1,Geral,GERAL,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R68,68,allocation,transfer,standard,BUSINESS      0502-9843,,,2026-05-05,2026-05-05,2026-05-05,3681.18,,7.1,Geral,,Rateio 1: sem conta operacional
+R69,69,title,payable,standard,aplicativo controle de ponto,PONTO MAIS TECNOLOGIA S/A,23863463000182,2026-05-05,2026-05-05,2026-05-05,113.99,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R69,69,allocation,payable,standard,aplicativo controle de ponto,PONTO MAIS TECNOLOGIA S/A,23863463000182,2026-05-05,2026-05-05,2026-05-05,113.99,,7.1,Geral,,Rateio 1: 8.3.010 - Sistema de Informacao
+R70,70,title,payable,standard,Salario Erika,Erika Lins Mendonça,04191069527,2026-05-05,2026-05-05,2026-05-05,6371.73,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R70,70,allocation,payable,standard,Salario Erika,Erika Lins Mendonça,04191069527,2026-05-05,2026-05-05,2026-05-05,6371.73,,7.1,Geral,,Rateio 1: 8.1.012 - PJ - Adm / Coml
+R71,71,title,payable,standard,salario,Gerffson Milton Sarmento,46365915349,2026-05-05,2026-05-05,2026-05-05,1695.69,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R71,71,allocation,payable,standard,salario,Gerffson Milton Sarmento,46365915349,2026-05-05,2026-05-05,2026-05-05,1695.69,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R72,72,title,payable,standard,salario,GUSTAVO DORIA,08779390552,2026-05-05,2026-05-05,2026-05-05,1646.02,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R72,72,allocation,payable,standard,salario,GUSTAVO DORIA,08779390552,2026-05-05,2026-05-05,2026-05-05,1646.02,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R73,73,title,payable,standard,salario,Jairo Francisco de Amorim,99565773400,2026-05-05,2026-05-05,2026-05-05,2602.63,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R73,73,allocation,payable,standard,salario,Jairo Francisco de Amorim,99565773400,2026-05-05,2026-05-05,2026-05-05,2602.63,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R74,74,title,payable,standard,salario,Joseane Menezes,03175991513,2026-05-05,2026-05-05,2026-05-05,1667.8,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R74,74,allocation,payable,standard,salario,Joseane Menezes,03175991513,2026-05-05,2026-05-05,2026-05-05,1667.8,,7.1,Geral,,Rateio 1: 8.1.001 - Salarios - Adm/Coml
+R75,75,title,payable,standard,salario,Lucas Nascimento,05746854565,2026-05-05,2026-05-05,2026-05-05,2378.68,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R75,75,allocation,payable,standard,salario,Lucas Nascimento,05746854565,2026-05-05,2026-05-05,2026-05-05,2378.68,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R76,76,title,payable,standard,salario,REGINALDO FILHO,06979643533,2026-05-05,2026-05-05,2026-05-05,2602.63,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R76,76,allocation,payable,standard,salario,REGINALDO FILHO,06979643533,2026-05-05,2026-05-05,2026-05-05,2602.63,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R77,77,title,payable,standard,salario,ROBERTO GALLO,01627452575,2026-05-05,2026-05-05,2026-05-05,2310.52,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R77,77,allocation,payable,standard,salario,ROBERTO GALLO,01627452575,2026-05-05,2026-05-05,2026-05-05,2310.52,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R78,78,title,payable,standard,manutenção,MZ EQUIPAMENTOS,04703364000199,2026-05-05,2026-05-05,2026-05-05,2427.9,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R78,78,allocation,payable,standard,manutenção,MZ EQUIPAMENTOS,04703364000199,2026-05-05,2026-05-05,2026-05-05,2427.9,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R79,79,title,payable,standard,manutenção,MZ EQUIPAMENTOS,04703364000199,2026-05-05,2026-05-05,2026-05-05,49.98,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R79,79,allocation,payable,standard,manutenção,MZ EQUIPAMENTOS,04703364000199,2026-05-05,2026-05-05,2026-05-05,49.98,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R80,80,title,payable,standard,pensão Gerfsson,,,2026-05-05,2026-05-05,2026-05-05,348.52,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R80,80,allocation,payable,standard,pensão Gerfsson,,,2026-05-05,2026-05-05,2026-05-05,348.52,,7.1,Geral,,Rateio 1: 7.1.001 - Salarios - Operacao
+R81,81,title,payable,standard,ISS NORMAL,TRIBUTO MUNICIPAL,13927801000491,2026-05-05,2026-05-05,2026-05-05,828.61,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R81,81,allocation,payable,standard,ISS NORMAL,TRIBUTO MUNICIPAL,13927801000491,2026-05-05,2026-05-05,2026-05-05,828.61,,7.1,Geral,,Rateio 1: 4.01.004 - ISS Sobre Vendas
+R82,82,title,payable,standard,ISS RETIDO,TRIBUTO MUNICIPAL,13927801000491,2026-05-05,2026-05-05,2026-05-05,170.54,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R82,82,allocation,payable,standard,ISS RETIDO,TRIBUTO MUNICIPAL,13927801000491,2026-05-05,2026-05-05,2026-05-05,170.54,,7.1,Geral,,Rateio 1: 4.01.002 - ISS Retido NF
+R83,83,title,payable,standard,TAR COBRANCA EXP,Banco Itau,60701190000104,2026-05-05,2026-05-05,2026-05-05,5.88,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R83,83,allocation,payable,standard,TAR COBRANCA EXP,Banco Itau,60701190000104,2026-05-05,2026-05-05,2026-05-05,5.88,,7.1,Geral,,Rateio 1: 8.5.002 - Taxas e Impostos Bancarios
+R84-SALE,84,title,receivable,withholding_receivable_gross,Venda 1809,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,25438.86,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R84-SALE,84,allocation,receivable,withholding_receivable_gross,Venda 1809,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,25438.86,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R84-TAX,84,title,payable,withholding_tax_payable,Tributo retido - Venda 1809,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,1271.94,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R84-TAX,84,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1809,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,1271.94,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R85,85,title,receivable,standard,Venda 1800,SHOPPING RIOMAR ARACAJU,32752602000191,2026-05-05,2026-04-01,2026-05-05,9974.9,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R85,85,allocation,receivable,standard,Venda 1800,SHOPPING RIOMAR ARACAJU,32752602000191,2026-05-05,2026-04-01,2026-05-05,9974.9,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R86-SALE,86,title,receivable,withholding_receivable_gross,Venda 1807,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,6612.46,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R86-SALE,86,allocation,receivable,withholding_receivable_gross,Venda 1807,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,6612.46,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R86-TAX,86,title,payable,withholding_tax_payable,Tributo retido - Venda 1807,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,330.62,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R86-TAX,86,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1807,CONDOMINIO BARRA,16275232000192,2026-05-05,2026-04-01,2026-05-05,330.62,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R87-SALE,87,title,receivable,withholding_receivable_gross,Venda 1818,Brilux - Salvador,11507415000253,2026-05-05,2026-04-01,2026-05-05,4334.47,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R87-SALE,87,allocation,receivable,withholding_receivable_gross,Venda 1818,Brilux - Salvador,11507415000253,2026-05-05,2026-04-01,2026-05-05,4334.47,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R87-TAX,87,title,payable,withholding_tax_payable,Tributo retido - Venda 1818,Brilux - Salvador,11507415000253,2026-05-05,2026-04-01,2026-05-05,216.72,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R87-TAX,87,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1818,Brilux - Salvador,11507415000253,2026-05-05,2026-04-01,2026-05-05,216.72,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R88,88,title,receivable,standard,Venda 1798,BEBIDAS RAVENA INDUSTRIA E COMERCIO LTDA,26344784000240,2026-05-05,2026-04-01,2026-05-31,2660.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R88,88,allocation,receivable,standard,Venda 1798,BEBIDAS RAVENA INDUSTRIA E COMERCIO LTDA,26344784000240,2026-05-05,2026-04-01,2026-05-31,2660.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R89,89,title,receivable,standard,Venda 1829,TRILUZ EMPREENDIMENTOS E PARTICIPAÇÕES LTDA,14080888000124,2026-05-05,2026-04-01,2026-05-05,2312.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R89,89,allocation,receivable,standard,Venda 1829,TRILUZ EMPREENDIMENTOS E PARTICIPAÇÕES LTDA,14080888000124,2026-05-05,2026-04-01,2026-05-05,2312.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R90,90,title,receivable,standard,Venda 1824,CAESAR BUSINESS SALVADOR BAHIA,13325053000124,2026-05-05,2026-04-01,2026-05-31,1385.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R90,90,allocation,receivable,standard,Venda 1824,CAESAR BUSINESS SALVADOR BAHIA,13325053000124,2026-05-05,2026-04-01,2026-05-31,1385.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R91,91,title,receivable,standard,pagamento de Emanoel (veolia),,,2026-05-05,2026-05-05,2026-05-05,14889.18,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R91,91,allocation,receivable,standard,pagamento de Emanoel (veolia),,,2026-05-05,2026-05-05,2026-05-05,14889.18,,7.1,Geral,,Rateio 1: sem conta operacional
+R92,92,title,receivable,standard,Venda 1802,UHT - Grand Palladium,07224103000184,2026-05-05,2026-04-01,2026-05-05,5867.33,5867.33,7.1,Geral,GERAL,Título em aberto sem baixa.
+R92,92,allocation,receivable,standard,Venda 1802,UHT - Grand Palladium,07224103000184,2026-05-05,2026-04-01,2026-05-05,5867.33,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R93,93,title,payable,standard,analises laboratoriais,Conforlab Engenharia Ambiental LTDA,06191743000172,2026-05-05,2026-05-05,2026-05-05,1127.37,1127.37,7.1,Geral,GERAL,Título em aberto sem baixa.
+R93,93,allocation,payable,standard,analises laboratoriais,Conforlab Engenharia Ambiental LTDA,06191743000172,2026-05-05,2026-05-05,2026-05-05,1127.37,,7.1,Geral,,Rateio 1: 7.5.003 - Servicos Laboratoriais Terceirizados - Operacao
+R94-SALE,94,title,receivable,withholding_receivable_gross,Venda 1896,SOCIEDADE BENEF ISRAELITABRAS HOSPITAL ALBERT EINSTEIN,60765823008386,2026-05-05,2026-04-01,2026-05-05,4494.35,4494.35,7.1,Geral,GERAL,Título a receber bruto da venda.
+R94-SALE,94,allocation,receivable,withholding_receivable_gross,Venda 1896,SOCIEDADE BENEF ISRAELITABRAS HOSPITAL ALBERT EINSTEIN,60765823008386,2026-05-05,2026-04-01,2026-05-05,4494.35,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R94-TAX,94,title,payable,withholding_tax_payable,Tributo retido - Venda 1896,SOCIEDADE BENEF ISRAELITABRAS HOSPITAL ALBERT EINSTEIN,60765823008386,2026-05-05,2026-04-01,2026-05-05,95.73,95.73,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R94-TAX,94,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1896,SOCIEDADE BENEF ISRAELITABRAS HOSPITAL ALBERT EINSTEIN,60765823008386,2026-05-05,2026-04-01,2026-05-05,95.73,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R95-SALE,95,title,receivable,withholding_receivable_gross,Venda 1894,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-06,2026-04-01,2026-04-30,4000.0,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R95-SALE,95,allocation,receivable,withholding_receivable_gross,Venda 1894,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-06,2026-04-01,2026-04-30,4000.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R95-TAX,95,title,payable,withholding_tax_payable,Tributo retido - Venda 1894,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-06,2026-04-01,2026-04-30,85.2,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R95-TAX,95,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1894,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-06,2026-04-01,2026-04-30,85.2,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R96,96,title,receivable,standard,Venda 1796,ZEZE ROCHA CONSTRUCAO E EMPREENDIMENTOS LTDA,14941869000145,2026-05-06,2026-04-01,2026-04-30,5700.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R96,96,allocation,receivable,standard,Venda 1796,ZEZE ROCHA CONSTRUCAO E EMPREENDIMENTOS LTDA,14941869000145,2026-05-06,2026-04-01,2026-04-30,5700.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R97,97,title,payable,standard,Difal,Sefaz Estadual,13937073000156,2026-05-06,2026-05-06,2026-05-06,461.55,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R97,97,allocation,payable,standard,Difal,Sefaz Estadual,13937073000156,2026-05-06,2026-05-06,2026-05-06,461.55,,7.1,Geral,,Rateio 1: 8.4.002 - Outras Despesas Tributarias
+R98,98,title,payable,standard,6/7 - analises laboratoriais 6/7,Conforlab Engenharia Ambiental LTDA,06191743000172,2026-05-06,2025-11-07,2026-05-06,151.78,151.78,7.1,Geral,GERAL,Título em aberto sem baixa.
+R98,98,allocation,payable,standard,6/7 - analises laboratoriais 6/7,Conforlab Engenharia Ambiental LTDA,06191743000172,2026-05-06,2025-11-07,2026-05-06,151.78,,7.1,Geral,,Rateio 1: 7.5.003 - Servicos Laboratoriais Terceirizados - Operacao
+R99,99,title,payable,standard,prestação de serviço,DANIEL MIRANDA,01402179596,2026-05-07,2026-05-05,2026-05-05,6371.73,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R99,99,allocation,payable,standard,prestação de serviço,DANIEL MIRANDA,01402179596,2026-05-07,2026-05-05,2026-05-05,6371.73,,7.1,Geral,,Rateio 1: 7.1.012 - PJ - OPERACAO
+R100,100,title,payable,standard,prestador de serviço,VICENTE GALLO,54911465000123,2026-05-07,2026-05-05,2026-05-05,10000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R100,100,allocation,payable,standard,prestador de serviço,VICENTE GALLO,54911465000123,2026-05-07,2026-05-05,2026-05-05,10000.0,,7.1,Geral,,Rateio 1: 7.1.012 - PJ - OPERACAO
+R101,101,title,payable,standard,Aluguel de carro,LUCIVÂNIA,96097345534,2026-05-07,2026-05-07,2026-05-07,2000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R101,101,allocation,payable,standard,Aluguel de carro,LUCIVÂNIA,96097345534,2026-05-07,2026-05-07,2026-05-07,2000.0,,7.1,Geral,,Rateio 1: 7.2.002 - Locacao de Veiculos - Operacao
+R102,102,title,payable,standard,LOCAÇÃO VEICULO SALVADOR VICENTE,Localiza Rent A Car,16670085000155,2026-05-07,2026-04-01,2026-05-07,2559.7,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R102,102,allocation,payable,standard,LOCAÇÃO VEICULO SALVADOR VICENTE,Localiza Rent A Car,16670085000155,2026-05-07,2026-04-01,2026-05-07,2559.7,,7.1,Geral,,Rateio 1: 7.2.002 - Locacao de Veiculos - Operacao
+R103,103,title,payable,standard,QUIMICOS,Resintec,02701679000171,2026-05-07,2026-05-07,2026-05-07,6896.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R103,103,allocation,payable,standard,QUIMICOS,Resintec,02701679000171,2026-05-07,2026-05-07,2026-05-07,6896.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R104,104,title,payable,standard,Compra de produto 67 (38),VEOLIA,28234708000126,2026-05-07,2026-04-07,2026-05-07,11248.47,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R104,104,allocation,payable,standard,Compra de produto 67 (38),VEOLIA,28234708000126,2026-05-07,2026-04-07,2026-05-07,11248.47,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R105,105,title,payable,standard,Compra de produto 56 (038),VEOLIA,28234708000126,2026-05-07,2026-03-12,2026-05-07,7211.16,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R105,105,allocation,payable,standard,Compra de produto 56 (038),VEOLIA,28234708000126,2026-05-07,2026-03-12,2026-05-07,7211.16,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R106,106,title,payable,standard,Filtro Bela vista,WATER WAREHOUSE PRODUTOS E SERVICOS,07716097000182,2026-05-07,2026-05-07,2026-05-07,7514.78,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R106,106,allocation,payable,standard,Filtro Bela vista,WATER WAREHOUSE PRODUTOS E SERVICOS,07716097000182,2026-05-07,2026-05-07,2026-05-07,7514.78,,7.1,Geral,,Rateio 1: 9.2.001 - Compra de Equipamentos Operacionais
+R107,107,title,payable,standard,EQUIPAMENTO BELA VISTA,MZ EQUIPAMENTOS,04703364000199,2026-05-07,2026-05-07,2026-05-07,821.65,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R107,107,allocation,payable,standard,EQUIPAMENTO BELA VISTA,MZ EQUIPAMENTOS,04703364000199,2026-05-07,2026-05-07,2026-05-07,821.65,,7.1,Geral,,Rateio 1: 9.2.001 - Compra de Equipamentos Operacionais
+R108,108,title,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-07,2026-05-07,2026-05-07,0.28,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R108,108,allocation,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-07,2026-05-07,2026-05-07,0.28,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R109,109,title,receivable,standard,Venda 1841 / NF-e:349,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-07,2026-04-07,2026-05-07,3726.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R109,109,allocation,receivable,standard,Venda 1841 / NF-e:349,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-07,2026-04-07,2026-05-07,3726.0,,7.1,Geral,,Rateio 1: 3.02.001 - Receita de Vendas Mercadorias
+R110,110,title,receivable,standard,Venda 1840 / NF-e:348,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-07,2026-04-07,2026-05-07,1656.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R110,110,allocation,receivable,standard,Venda 1840 / NF-e:348,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-07,2026-04-07,2026-05-07,1656.0,,7.1,Geral,,Rateio 1: 3.02.001 - Receita de Vendas Mercadorias
+R111,111,title,payable,standard,FILTRO BELA VISTA,MZ EQUIPAMENTOS,04703364000199,2026-05-07,2026-05-07,2026-05-07,835.94,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R111,111,allocation,payable,standard,FILTRO BELA VISTA,MZ EQUIPAMENTOS,04703364000199,2026-05-07,2026-05-07,2026-05-07,835.94,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R112,112,title,payable,standard,analises,Conforlab Engenharia Ambiental LTDA,06191743000172,2026-05-07,2026-05-05,2026-05-07,1127.38,1127.38,7.1,Geral,GERAL,Título em aberto sem baixa.
+R112,112,allocation,payable,standard,analises,Conforlab Engenharia Ambiental LTDA,06191743000172,2026-05-07,2026-05-05,2026-05-07,1127.38,,7.1,Geral,,Rateio 1: 7.5.003 - Servicos Laboratoriais Terceirizados - Operacao
+R113,113,title,payable,standard,prestação de serviços consultoria,VERSUS CONSULTORIA,15028181000131,2026-05-08,2026-05-07,2026-05-07,6000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R113,113,allocation,payable,standard,prestação de serviços consultoria,VERSUS CONSULTORIA,15028181000131,2026-05-08,2026-05-07,2026-05-07,6000.0,,7.1,Geral,,Rateio 1: 8.3.012 - Assessoria / Consultoria de Gestao
+R114,114,title,payable,standard,CLARO CELULAR 84300,Claro,40432544000147,2026-05-08,2026-05-08,2026-05-08,85.98,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R114,114,allocation,payable,standard,CLARO CELULAR 84300,Claro,40432544000147,2026-05-08,2026-05-08,2026-05-08,85.98,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R115,115,title,receivable,standard,Venda 1754,GLOBALPACK DO NORDESTE INDUSTRIA E COMERCIO LTDA,02385898000431,2026-05-08,2026-03-01,2026-04-30,3515.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R115,115,allocation,receivable,standard,Venda 1754,GLOBALPACK DO NORDESTE INDUSTRIA E COMERCIO LTDA,02385898000431,2026-05-08,2026-03-01,2026-04-30,3515.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R116,116,title,payable,standard,Reembolso frete,GUSTAVO DORIA,08779390552,2026-05-08,2026-05-08,2026-05-08,150.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R116,116,allocation,payable,standard,Reembolso frete,GUSTAVO DORIA,08779390552,2026-05-08,2026-05-08,2026-05-08,150.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R117,117,title,payable,standard,1/2 - Compra de produto 65 (045),Alfakit,02297602000188,2026-05-08,2026-04-02,2026-05-08,1854.69,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R117,117,allocation,payable,standard,1/2 - Compra de produto 65 (045),Alfakit,02297602000188,2026-05-08,2026-04-02,2026-05-08,1854.69,,7.1,Geral,,Rateio 1: 6.1.002 - Insumos - Reagentes
+R118,118,title,payable,standard,CLARO CELULAR 84297,Claro,40432544000147,2026-05-08,2026-05-08,2026-05-08,91.9,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R118,118,allocation,payable,standard,CLARO CELULAR 84297,Claro,40432544000147,2026-05-08,2026-05-08,2026-05-08,91.9,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R119,119,title,payable,standard,CLARO CELULAR 84303,Claro,40432544000147,2026-05-08,2026-05-08,2026-05-08,45.99,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R119,119,allocation,payable,standard,CLARO CELULAR 84303,Claro,40432544000147,2026-05-08,2026-05-08,2026-05-08,45.99,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R120,120,title,payable,standard,ASO LUCAS,SEMOL,43465660000150,2026-05-08,2026-05-08,2026-05-08,426.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R120,120,allocation,payable,standard,ASO LUCAS,SEMOL,43465660000150,2026-05-08,2026-05-08,2026-05-08,426.0,,7.1,Geral,,Rateio 1: 7.1.005 - Saude - Operacao
+R121,121,title,payable,standard,PIX ENVIADO ANTONIO CARL,Antonio Carlos Dos Santos,42687500534,2026-05-08,2026-05-08,2026-05-08,375.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R121,121,allocation,payable,standard,PIX ENVIADO ANTONIO CARL,Antonio Carlos Dos Santos,42687500534,2026-05-08,2026-05-08,2026-05-08,375.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R122,122,title,payable,standard,FRETE  NITRITO,,,2026-05-08,2026-05-08,2026-05-08,400.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R122,122,allocation,payable,standard,FRETE  NITRITO,,,2026-05-08,2026-05-08,2026-05-08,400.0,,7.1,Geral,,Rateio 1: 6.1.002 - Insumos - Reagentes
+R123-SALE,123,title,receivable,withholding_receivable_gross,Venda 1827,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-31,15056.0,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R123-SALE,123,allocation,receivable,withholding_receivable_gross,Venda 1827,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-31,15056.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R123-TAX,123,title,payable,withholding_tax_payable,Tributo retido - Venda 1827,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-31,752.8,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R123-TAX,123,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1827,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-31,752.8,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R124-SALE,124,title,receivable,withholding_receivable_gross,Venda 1804,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-10,8153.6,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R124-SALE,124,allocation,receivable,withholding_receivable_gross,Venda 1804,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-10,8153.6,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R124-TAX,124,title,payable,withholding_tax_payable,Tributo retido - Venda 1804,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-10,407.68,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R124-TAX,124,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1804,SHOPPING BELA VISTA,14919379000142,2026-05-08,2026-04-01,2026-05-10,407.68,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R125,125,title,payable,standard,1/2 - Equipamentos  1/2,AELSON BANDEIRA (Aquatec),77704452568,2026-05-08,2026-04-23,2026-05-08,13800.0,13800.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R125,125,allocation,payable,standard,1/2 - Equipamentos  1/2,AELSON BANDEIRA (Aquatec),77704452568,2026-05-08,2026-04-23,2026-05-08,13800.0,,7.1,Geral,,Rateio 1: 9.2.001 - Compra de Equipamentos Operacionais
+R126,126,title,receivable,standard,Venda 1797,Shopping Riomar Kennedy,23803719000166,2026-05-11,2026-04-01,2026-05-10,9836.21,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R126,126,allocation,receivable,standard,Venda 1797,Shopping Riomar Kennedy,23803719000166,2026-05-11,2026-04-01,2026-05-10,9836.21,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R127,127,title,payable,standard,total pass benefícios,Total Pass Participacoes LTDA,27059627000174,2026-05-11,2026-04-10,2026-05-10,704.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R127,127,allocation,payable,standard,total pass benefícios,Total Pass Participacoes LTDA,27059627000174,2026-05-11,2026-04-10,2026-05-10,704.0,,7.1,Geral,,Rateio 1: 7.1.005 - Saude - Operacao
+R128,128,title,payable,standard,1/2 - QUADRO BASE DE ALUMINIO 75X75 1/2,DANAFE,48231604000175,2026-05-11,2026-04-17,2026-05-07,2875.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R128,128,allocation,payable,standard,1/2 - QUADRO BASE DE ALUMINIO 75X75 1/2,DANAFE,48231604000175,2026-05-11,2026-04-17,2026-05-07,2875.0,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R129,129,title,payable,standard,Compra de produto 62 (044),VEOLIA,28234708000126,2026-05-11,2026-04-01,2026-05-10,14460.39,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R129,129,allocation,payable,standard,Compra de produto 62 (044),VEOLIA,28234708000126,2026-05-11,2026-04-01,2026-05-10,14460.39,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R130,130,title,payable,standard,Opvs Advogado,Opvs Advogados,26343058000121,2026-05-11,2026-05-10,2026-05-10,4000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R130,130,allocation,payable,standard,Opvs Advogado,Opvs Advogados,26343058000121,2026-05-11,2026-05-10,2026-05-10,4000.0,,7.1,Geral,,Rateio 1: 8.3.013 - Assessoria / Consultoria Juridica
+R131,131,title,payable,standard,BOLETO  PAGO VIRTUEYES M2,VIRTUEYES M2M,26811491000144,2026-05-11,2026-05-11,2026-05-11,159.2,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R131,131,allocation,payable,standard,BOLETO  PAGO VIRTUEYES M2,VIRTUEYES M2M,26811491000144,2026-05-11,2026-05-11,2026-05-11,159.2,,7.1,Geral,,Rateio 1: 8.3.010 - Sistema de Informacao
+R132,132,title,payable,standard,SERVICO POCOS BELA VISTA,LEONARDO SERV POÇOS,00083756159,2026-05-11,2026-05-11,2026-05-11,1000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R132,132,allocation,payable,standard,SERVICO POCOS BELA VISTA,LEONARDO SERV POÇOS,00083756159,2026-05-11,2026-05-11,2026-05-11,1000.0,,7.1,Geral,,Rateio 1: 7.5.005 - Manutenção de Poços
+R133,133,title,payable,standard,PASSAGEM AEREA REEMBOLSO,MARCEL STELLA,01311209565,2026-05-11,2026-05-11,2026-05-11,1373.22,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R133,133,allocation,payable,standard,PASSAGEM AEREA REEMBOLSO,MARCEL STELLA,01311209565,2026-05-11,2026-05-11,2026-05-11,1373.22,,7.1,Geral,,Rateio 1: 8.2.004 - Despesas com Viagens - Comercial
+R134,134,title,payable,standard,Material Bela vista,MZ EQUIPAMENTOS,04703364000199,2026-05-11,2026-05-11,2026-05-11,913.61,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R134,134,allocation,payable,standard,Material Bela vista,MZ EQUIPAMENTOS,04703364000199,2026-05-11,2026-05-11,2026-05-11,913.61,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R135,135,title,payable,standard,BOIA BELA VISTA,MZ EQUIPAMENTOS,04703364000199,2026-05-11,2026-05-11,2026-05-11,75.08,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R135,135,allocation,payable,standard,BOIA BELA VISTA,MZ EQUIPAMENTOS,04703364000199,2026-05-11,2026-05-11,2026-05-11,75.08,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R136,136,title,payable,standard,ICMS REGIME NORMAL - COMERCIO,TRIBUTO MUNICIPAL,13927801000491,2026-05-11,2026-05-09,2026-05-09,17892.84,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R136,136,allocation,payable,standard,ICMS REGIME NORMAL - COMERCIO,TRIBUTO MUNICIPAL,13927801000491,2026-05-11,2026-05-09,2026-05-09,17892.84,,7.1,Geral,,Rateio 1: 4.01.003 - ICMS Sobre Vendas
+R137,137,title,payable,standard,FRETE PAPICUKENNEDY,Antonio Dimas Mota Felipe,78068398368,2026-05-11,2026-05-11,2026-05-11,420.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R137,137,allocation,payable,standard,FRETE PAPICUKENNEDY,Antonio Dimas Mota Felipe,78068398368,2026-05-11,2026-05-11,2026-05-11,420.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R138,138,title,payable,standard,FERRAMENTAS RTS,,,2026-05-11,2026-05-11,2026-05-11,102.7,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R138,138,allocation,payable,standard,FERRAMENTAS RTS,,,2026-05-11,2026-05-11,2026-05-11,102.7,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R139,139,title,payable,standard,REEMBOLSO CAFE,Joseane Menezes,03175991513,2026-05-11,2026-05-11,2026-05-11,16.55,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R139,139,allocation,payable,standard,REEMBOLSO CAFE,Joseane Menezes,03175991513,2026-05-11,2026-05-11,2026-05-11,16.55,,7.1,Geral,,Rateio 1: 8.1.003 - Alimentacao - Adm/Coml
+R140,140,title,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-11,2026-05-11,2026-05-11,0.04,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R140,140,allocation,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-11,2026-05-11,2026-05-11,0.04,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R141,141,title,receivable,standard,Venda 1803,SUBCONDOMINIO RIOMAR FORTALEZA,21399573000100,2026-05-11,2026-04-01,2026-05-10,22025.69,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R141,141,allocation,receivable,standard,Venda 1803,SUBCONDOMINIO RIOMAR FORTALEZA,21399573000100,2026-05-11,2026-04-01,2026-05-10,22025.69,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R142,142,title,receivable,standard,Venda 1806,Shopping Jardins (Aracaju),02296771000101,2026-05-11,2026-04-01,2026-05-10,10176.4,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R142,142,allocation,receivable,standard,Venda 1806,Shopping Jardins (Aracaju),02296771000101,2026-05-11,2026-04-01,2026-05-10,10176.4,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R143,143,title,receivable,standard,Venda 1811,Shopping Boulevard Feira de Santana,03871681000151,2026-05-11,2026-04-01,2026-05-05,6923.07,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R143,143,allocation,receivable,standard,Venda 1811,Shopping Boulevard Feira de Santana,03871681000151,2026-05-11,2026-04-01,2026-05-05,6923.07,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R144,144,title,receivable,standard,Venda 1831,Shopping Boulevard Feira de Santana,03871681000151,2026-05-11,2026-04-01,2026-05-10,3325.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R144,144,allocation,receivable,standard,Venda 1831,Shopping Boulevard Feira de Santana,03871681000151,2026-05-11,2026-04-01,2026-05-10,3325.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R145,145,title,payable,standard,Pedágios e estacionamentos,Sem Parar Instituicao de Pagamento LTDA,04088208000165,2026-05-11,2026-05-10,2026-05-10,422.4,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R145,145,allocation,payable,standard,Pedágios e estacionamentos,Sem Parar Instituicao de Pagamento LTDA,04088208000165,2026-05-11,2026-05-10,2026-05-10,422.4,,7.1,Geral,,Rateio 1: 7.2.009 - Outros Gastos com Veiculos - Operacao
+R146,146,title,payable,standard,REEMBOLSO MATERIAL,ROBERTO GALLO,01627452575,2026-05-12,2026-05-12,2026-05-12,43.51,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R146,146,allocation,payable,standard,REEMBOLSO MATERIAL,ROBERTO GALLO,01627452575,2026-05-12,2026-05-12,2026-05-12,43.51,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R147,147,title,payable,standard,REEMBOLSO UBER,ROBERTO GALLO,01627452575,2026-05-12,2026-05-12,2026-05-12,16.91,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R147,147,allocation,payable,standard,REEMBOLSO UBER,ROBERTO GALLO,01627452575,2026-05-12,2026-05-12,2026-05-12,16.91,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R148,148,title,payable,standard,aluguel do deposito,Imobiliaria Casa Dos Imoveis,39573053000137,2026-05-12,2026-05-10,2026-05-10,950.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R148,148,allocation,payable,standard,aluguel do deposito,Imobiliaria Casa Dos Imoveis,39573053000137,2026-05-12,2026-05-10,2026-05-10,950.0,,7.1,Geral,,Rateio 1: 7.4.001 - Alguel Imoveis - Operacao
+R149,149,title,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-12,2026-05-12,2026-05-12,0.03,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R149,149,allocation,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-12,2026-05-12,2026-05-12,0.03,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R150,150,title,payable,standard,MATERIAL ETA,,,2026-05-13,2026-05-13,2026-05-13,887.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R150,150,allocation,payable,standard,MATERIAL ETA,,,2026-05-13,2026-05-13,2026-05-13,887.0,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R151,151,title,payable,standard,CONCESSIONARIA DO AEROPORTO DE,Concessionaria de Aeroporto de Salvador S.A.,27950582000123,2026-05-13,2026-05-13,2026-05-13,30.36,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R151,151,allocation,payable,standard,CONCESSIONARIA DO AEROPORTO DE,Concessionaria de Aeroporto de Salvador S.A.,27950582000123,2026-05-13,2026-05-13,2026-05-13,30.36,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R152,152,title,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-13,2026-05-13,2026-05-13,0.04,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R152,152,allocation,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-13,2026-05-13,2026-05-13,0.04,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R153,153,title,payable,standard,locação de veículos,Lm Locadora,04577133000186,2026-05-13,2026-05-13,2026-05-13,1700.0,1700.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R153,153,allocation,payable,standard,locação de veículos,Lm Locadora,04577133000186,2026-05-13,2026-05-13,2026-05-13,1700.0,,7.1,Geral,,Rateio 1: 7.2.002 - Locacao de Veiculos - Operacao
+R154-SALE,154,title,receivable,withholding_receivable_gross,Venda 1895,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-14,2026-05-01,2026-05-31,4000.0,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R154-SALE,154,allocation,receivable,withholding_receivable_gross,Venda 1895,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-14,2026-05-01,2026-05-31,4000.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R154-TAX,154,title,payable,withholding_tax_payable,Tributo retido - Venda 1895,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-14,2026-05-01,2026-05-31,100.0,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R154-TAX,154,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1895,FERREIRA COSTA (SSA - PARALELA),10230480000300,2026-05-14,2026-05-01,2026-05-31,100.0,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R155,155,title,payable,standard,TRANPORTADORA,RAJAN,13579271000608,2026-05-14,2026-05-14,2026-05-14,584.6,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R155,155,allocation,payable,standard,TRANPORTADORA,RAJAN,13579271000608,2026-05-14,2026-05-14,2026-05-14,584.6,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R156,156,title,payable,standard,REEMBOLSO MATERIAL,GUSTAVO DORIA,08779390552,2026-05-14,2026-05-14,2026-05-14,77.67,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R156,156,allocation,payable,standard,REEMBOLSO MATERIAL,GUSTAVO DORIA,08779390552,2026-05-14,2026-05-14,2026-05-14,77.67,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R157,157,title,payable,standard,MATERIAIS BELA VISTA,LEONARDO SERV POÇOS,00083756159,2026-05-14,2026-05-14,2026-05-14,1000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R157,157,allocation,payable,standard,MATERIAIS BELA VISTA,LEONARDO SERV POÇOS,00083756159,2026-05-14,2026-05-14,2026-05-14,1000.0,,7.1,Geral,,Rateio 1: 7.5.005 - Manutenção de Poços
+R158,158,title,payable,standard,REEMBOLSO UBER,ROBERTO GALLO,01627452575,2026-05-14,2026-05-14,2026-05-14,23.2,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R158,158,allocation,payable,standard,REEMBOLSO UBER,ROBERTO GALLO,01627452575,2026-05-14,2026-05-14,2026-05-14,23.2,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R159,159,title,payable,standard,REEMBOLSO UBER,ROBERTO GALLO,01627452575,2026-05-14,2026-05-14,2026-05-14,21.34,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R159,159,allocation,payable,standard,REEMBOLSO UBER,ROBERTO GALLO,01627452575,2026-05-14,2026-05-14,2026-05-14,21.34,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R160-SALE,160,title,receivable,withholding_receivable_gross,Venda 1816,Concessionaria de Aeroporto de Salvador S.A.,27950582000123,2026-05-14,2026-04-01,2026-05-31,10961.28,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R160-SALE,160,allocation,receivable,withholding_receivable_gross,Venda 1816,Concessionaria de Aeroporto de Salvador S.A.,27950582000123,2026-05-14,2026-04-01,2026-05-31,10961.28,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R160-TAX,160,title,payable,withholding_tax_payable,Tributo retido - Venda 1816,Concessionaria de Aeroporto de Salvador S.A.,27950582000123,2026-05-14,2026-04-01,2026-05-31,548.06,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R160-TAX,160,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1816,Concessionaria de Aeroporto de Salvador S.A.,27950582000123,2026-05-14,2026-04-01,2026-05-31,548.06,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R161,161,title,payable,standard,prestação de serviço,karolina Saveiro,53092922000132,2026-05-15,2026-04-28,2026-05-15,2431.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R161,161,allocation,payable,standard,prestação de serviço,karolina Saveiro,53092922000132,2026-05-15,2026-04-28,2026-05-15,2431.5,,7.1,Geral,,Rateio 1: 7.1.012 - PJ - OPERACAO
+R162,162,title,transfer,standard,BOLETO  PAGO ITAU UNIBANC,,,2026-05-15,2026-05-15,2026-05-15,1526.29,0.0,7.1,Geral,GERAL,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R162,162,allocation,transfer,standard,BOLETO  PAGO ITAU UNIBANC,,,2026-05-15,2026-05-15,2026-05-15,1526.29,,7.1,Geral,,Rateio 1: sem conta operacional
+R163,163,title,payable,standard,SALVADOR GES-CT DE EMP,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-07,2026-05-15,200.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R163,163,allocation,payable,standard,SALVADOR GES-CT DE EMP,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-07,2026-05-15,200.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R164,164,title,payable,standard,EXTRA FARMA -CT 467,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-07,2026-05-15,7.99,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R164,164,allocation,payable,standard,EXTRA FARMA -CT 467,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-07,2026-05-15,7.99,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R165,165,title,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-03-30,2026-05-15,15.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R165,165,allocation,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-03-30,2026-05-15,15.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R166,166,title,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-07,2026-05-15,15.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R166,166,allocation,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-07,2026-05-15,15.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R167,167,title,payable,standard,ENAPARK. SHO-CT G BARR,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-15,2026-05-15,19.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R167,167,allocation,payable,standard,ENAPARK. SHO-CT G BARR,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-15,2026-05-15,19.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R168,168,title,payable,standard,LOJAO DA ORL-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,10.7,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R168,168,allocation,payable,standard,LOJAO DA ORL-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,10.7,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R169,169,title,payable,standard,LOJAO DA ORL-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,8.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R169,169,allocation,payable,standard,LOJAO DA ORL-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,8.0,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R170,170,title,payable,standard,LOJAO DA ORL-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,291.72,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R170,170,allocation,payable,standard,LOJAO DA ORL-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,291.72,,7.1,Geral,,Rateio 1: 7.5.002 - Servicos em Clientes Contratos - Operacao
+R171,171,title,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,15.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R171,171,allocation,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-17,2026-05-15,15.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R172,172,title,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,15.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R172,172,allocation,payable,standard,Consorcio   -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,15.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R173,173,title,payable,standard,HIPERIDEAL  -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,12.99,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R173,173,allocation,payable,standard,HIPERIDEAL  -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,12.99,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R174,174,title,payable,standard,LEROY MERLIN-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,218.67,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R174,174,allocation,payable,standard,LEROY MERLIN-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,218.67,,7.1,Geral,,Rateio 1: 7.5.002 - Servicos em Clientes Contratos - Operacao
+R175,175,title,payable,standard,FARMACIA FPP-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-22,2026-05-15,6.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R175,175,allocation,payable,standard,FARMACIA FPP-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-22,2026-05-15,6.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R176,176,title,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-22,2026-05-15,11.2,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R176,176,allocation,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-22,2026-05-15,11.2,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R177,177,title,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-23,2026-05-15,236.8,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R177,177,allocation,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-23,2026-05-15,236.8,,7.1,Geral,,Rateio 1: 7.5.002 - Servicos em Clientes Contratos - Operacao
+R178,178,title,payable,standard,PONTO CULTUR-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,6.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R178,178,allocation,payable,standard,PONTO CULTUR-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-20,2026-05-15,6.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R179,179,title,payable,standard,AUTO POSTO C-CT NARIO,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-24,2026-05-15,15.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R179,179,allocation,payable,standard,AUTO POSTO C-CT NARIO,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-24,2026-05-15,15.0,,7.1,Geral,,Rateio 1: 7.2.008 - Estacionamento Operação
+R180,180,title,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-24,2026-05-15,124.8,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R180,180,allocation,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-24,2026-05-15,124.8,,7.1,Geral,,Rateio 1: 7.5.002 - Servicos em Clientes Contratos - Operacao
+R181,181,title,payable,standard,PAGUE MENOS -CT 144,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-27,2026-05-15,69.48,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R181,181,allocation,payable,standard,PAGUE MENOS -CT 144,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-27,2026-05-15,69.48,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R182,182,title,payable,standard,HIPERIDEAL  -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-27,2026-05-15,13.14,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R182,182,allocation,payable,standard,HIPERIDEAL  -CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-27,2026-05-15,13.14,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R183,183,title,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-24,2026-05-15,120.8,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R183,183,allocation,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-24,2026-05-15,120.8,,7.1,Geral,,Rateio 1: 7.5.002 - Servicos em Clientes Contratos - Operacao
+R184,184,title,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-28,2026-05-15,94.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R184,184,allocation,payable,standard,FERREIRA COS-CT,Fornecedor e Cliente Diversos,48658069000133,2026-05-15,2026-04-28,2026-05-15,94.0,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R185,185,title,payable,standard,Analises ( Salvador e Região),Bioagri,04830624000197,2026-05-15,2026-05-15,2026-05-15,3118.27,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R185,185,allocation,payable,standard,Analises ( Salvador e Região),Bioagri,04830624000197,2026-05-15,2026-05-15,2026-05-15,3118.27,,7.1,Geral,,Rateio 1: 7.5.003 - Servicos Laboratoriais Terceirizados - Operacao
+R186,186,title,payable,standard,REEMBOLSO,LUCIVÂNIA,96097345534,2026-05-15,2026-05-15,2026-05-15,1105.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R186,186,allocation,payable,standard,REEMBOLSO,LUCIVÂNIA,96097345534,2026-05-15,2026-05-15,2026-05-15,1105.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R187,187,title,payable,standard,BOLETO  PAGO BIOAGRI LABO,Bioagri,04830624000197,2026-05-15,2026-05-15,2026-05-15,930.83,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R187,187,allocation,payable,standard,BOLETO  PAGO BIOAGRI LABO,Bioagri,04830624000197,2026-05-15,2026-05-15,2026-05-15,930.83,,7.1,Geral,,Rateio 1: 7.5.003 - Servicos Laboratoriais Terceirizados - Operacao
+R188,188,title,transfer,standard,BOLETO  PAGO ITAU UNIBANC,,,2026-05-15,2026-05-15,2026-05-15,1526.29,0.0,7.1,Geral,GERAL,Movimento fora do plano operacional de receita/despesa; tratar como transferência/compensação.
+R188,188,allocation,transfer,standard,BOLETO  PAGO ITAU UNIBANC,,,2026-05-15,2026-05-15,2026-05-15,1526.29,,7.1,Geral,,Rateio 1: sem conta operacional
+R189,189,title,payable,standard,Serviço Bela Vista,Antonio Carlos Dos Santos,42687500534,2026-05-15,2026-05-15,2026-05-15,800.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R189,189,allocation,payable,standard,Serviço Bela Vista,Antonio Carlos Dos Santos,42687500534,2026-05-15,2026-05-15,2026-05-15,800.0,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R190,190,title,payable,standard,REEMBOLSO,Gabriel Borges Santana,08246123530,2026-05-15,2026-05-15,2026-05-15,160.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R190,190,allocation,payable,standard,REEMBOLSO,Gabriel Borges Santana,08246123530,2026-05-15,2026-05-15,2026-05-15,160.0,,7.1,Geral,,Rateio 1: 7.1.011 - Fardamento - Operacao
+R191,191,title,payable,standard,REEMBOLSO UBER,GUSTAVO DORIA,08779390552,2026-05-15,2026-05-15,2026-05-15,11.99,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R191,191,allocation,payable,standard,REEMBOLSO UBER,GUSTAVO DORIA,08779390552,2026-05-15,2026-05-15,2026-05-15,11.99,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R192,192,title,payable,standard,MANUTENÇÃO,WTP,26037407000187,2026-05-15,2026-05-15,2026-05-15,275.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R192,192,allocation,payable,standard,MANUTENÇÃO,WTP,26037407000187,2026-05-15,2026-05-15,2026-05-15,275.0,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R193,193,title,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-15,2026-05-15,2026-05-15,0.28,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R193,193,allocation,receivable,standard,REND PAGO APLIC AUT MAIS,Banco Itau,60701190000104,2026-05-15,2026-05-15,2026-05-15,0.28,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R194,194,title,payable,standard,REEMBOLSO MENSAL,VICENTE GALLO,54911465000123,2026-05-15,2026-05-15,2026-05-15,1690.4,1690.4,7.1,Geral,GERAL,Título em aberto sem baixa.
+R194,194,allocation,payable,standard,REEMBOLSO MENSAL,VICENTE GALLO,54911465000123,2026-05-15,2026-05-15,2026-05-15,980.46,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R194,194,allocation,payable,standard,REEMBOLSO MENSAL,VICENTE GALLO,54911465000123,2026-05-15,2026-05-15,2026-05-15,598.94,,7.1,Geral,,Rateio 2: 7.1.003 - Alimentacao - Operacao
+R194,194,allocation,payable,standard,REEMBOLSO MENSAL,VICENTE GALLO,54911465000123,2026-05-15,2026-05-15,2026-05-15,111.0,,7.1,Geral,,Rateio 3: 7.1.004 - Transporte - Operacao
+R195,195,title,payable,standard,aquatec,AELSON BANDEIRA (Aquatec),77704452568,2026-05-15,2026-05-15,2026-05-15,13800.0,13800.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R195,195,allocation,payable,standard,aquatec,AELSON BANDEIRA (Aquatec),77704452568,2026-05-15,2026-05-15,2026-05-15,13800.0,,7.1,Geral,,Rateio 1: 9.2.001 - Compra de Equipamentos Operacionais
+R196-SALE,196,title,receivable,withholding_receivable_gross,Venda 1865,Salvador Shopping,08867234000142,2026-05-16,2026-05-01,2026-05-16,19990.0,19990.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R196-SALE,196,allocation,receivable,withholding_receivable_gross,Venda 1865,Salvador Shopping,08867234000142,2026-05-16,2026-05-01,2026-05-16,19990.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R196-TAX,196,title,payable,withholding_tax_payable,Tributo retido - Venda 1865,Salvador Shopping,08867234000142,2026-05-16,2026-05-01,2026-05-16,999.5,999.5,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R196-TAX,196,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1865,Salvador Shopping,08867234000142,2026-05-16,2026-05-01,2026-05-16,999.5,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R197,197,title,receivable,standard,Venda 1810,Mansão Wildberger,32039801000157,2026-05-16,2026-04-01,2026-05-16,5800.0,5800.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R197,197,allocation,receivable,standard,Venda 1810,Mansão Wildberger,32039801000157,2026-05-16,2026-04-01,2026-05-16,5800.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R198,198,title,payable,standard,km rodado,DANIEL MIRANDA,01402179596,2026-05-16,2026-05-15,2026-05-16,1306.0,1306.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R198,198,allocation,payable,standard,km rodado,DANIEL MIRANDA,01402179596,2026-05-16,2026-05-15,2026-05-16,1306.0,,7.1,Geral,,Rateio 1: 7.1.012 - PJ - OPERACAO
+R199,199,title,payable,standard,Compra de produto 69 (047),VEOLIA,28234708000126,2026-05-16,2026-04-16,2026-05-16,9281.89,9281.89,7.1,Geral,GERAL,Título em aberto sem baixa.
+R199,199,allocation,payable,standard,Compra de produto 69 (047),VEOLIA,28234708000126,2026-05-16,2026-04-16,2026-05-16,9281.89,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R200,200,title,payable,standard,QUADROS SISTEMA DE DOSAGEM,DANAFE,48231604000175,2026-05-18,2026-03-16,2026-05-15,2040.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R200,200,allocation,payable,standard,QUADROS SISTEMA DE DOSAGEM,DANAFE,48231604000175,2026-05-18,2026-03-16,2026-05-15,2040.0,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R201,201,title,payable,standard,BOLETO  PAGO BIOAGRI LABO,Bioagri,04830624000197,2026-05-18,2026-05-18,2026-05-18,390.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R201,201,allocation,payable,standard,BOLETO  PAGO BIOAGRI LABO,Bioagri,04830624000197,2026-05-18,2026-05-18,2026-05-18,390.0,,7.1,Geral,,Rateio 1: 7.5.003 - Servicos Laboratoriais Terceirizados - Operacao
+R202,202,title,payable,standard,PIX ENVIADO AGROLAB ANAL,AGROLAB,69952299000180,2026-05-18,2026-05-18,2026-05-18,392.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R202,202,allocation,payable,standard,PIX ENVIADO AGROLAB ANAL,AGROLAB,69952299000180,2026-05-18,2026-05-18,2026-05-18,392.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R203,203,title,payable,standard,Reembolso uber,GUSTAVO DORIA,08779390552,2026-05-18,2026-05-18,2026-05-18,27.12,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R203,203,allocation,payable,standard,Reembolso uber,GUSTAVO DORIA,08779390552,2026-05-18,2026-05-18,2026-05-18,27.12,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R204,204,title,receivable,standard,Venda 1830,CONDOMINIO DO NORTH WAY SHOPPING,22424335000170,2026-05-18,2026-04-01,2026-05-16,8787.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R204,204,allocation,receivable,standard,Venda 1830,CONDOMINIO DO NORTH WAY SHOPPING,22424335000170,2026-05-18,2026-04-01,2026-05-16,8787.5,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R205,205,title,receivable,standard,Venda 1814,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-18,2026-04-01,2026-05-31,1169.86,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R205,205,allocation,receivable,standard,Venda 1814,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-18,2026-04-01,2026-05-31,1169.86,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R206,206,title,receivable,standard,Venda 1828,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-18,2026-04-01,2026-05-31,2890.23,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R206,206,allocation,receivable,standard,Venda 1828,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-18,2026-04-01,2026-05-31,2890.23,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R207,207,title,payable,standard,REEMBOLSO DO CORREIOS,LUCIVÂNIA,96097345534,2026-05-19,2026-05-19,2026-05-19,235.11,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R207,207,allocation,payable,standard,REEMBOLSO DO CORREIOS,LUCIVÂNIA,96097345534,2026-05-19,2026-05-19,2026-05-19,235.11,,7.1,Geral,,Rateio 1: 6.1.004 - Insumos - Outros
+R208,208,title,payable,standard,REEMBOLSO UBER,GUSTAVO DORIA,08779390552,2026-05-19,2026-05-19,2026-05-19,81.1,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R208,208,allocation,payable,standard,REEMBOLSO UBER,GUSTAVO DORIA,08779390552,2026-05-19,2026-05-19,2026-05-19,81.1,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R209,209,title,receivable,standard,REND PAGO APLIC AUT APR,Banco Itau,60701190000104,2026-05-19,2026-05-19,2026-05-19,0.02,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R209,209,allocation,receivable,standard,REND PAGO APLIC AUT APR,Banco Itau,60701190000104,2026-05-19,2026-05-19,2026-05-19,0.02,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R210,210,title,payable,standard,ALUGUEL DEPOSITO NOVO,VLADIMIR SIMÕES SANTANA,,2026-05-21,2026-04-23,2026-05-20,1100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R210,210,allocation,payable,standard,ALUGUEL DEPOSITO NOVO,VLADIMIR SIMÕES SANTANA,,2026-05-21,2026-04-23,2026-05-20,1100.0,,7.1,Geral,,Rateio 1: 8.3.001 - Aluguel - Adm
+R211,211,title,payable,standard,Serviços contábil,C&s Assessoria Contabil,00870200000103,2026-05-21,2026-05-20,2026-05-20,1092.78,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R211,211,allocation,payable,standard,Serviços contábil,C&s Assessoria Contabil,00870200000103,2026-05-21,2026-05-20,2026-05-20,1092.78,,7.1,Geral,,Rateio 1: 8.3.011 - Honorarios Contabeis
+R212,212,title,payable,standard,PIX ENVIADO JAIRO FRANCI,Jairo Francisco de Amorim,99565773400,2026-05-21,2026-05-21,2026-05-21,200.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R212,212,allocation,payable,standard,PIX ENVIADO JAIRO FRANCI,Jairo Francisco de Amorim,99565773400,2026-05-21,2026-05-21,2026-05-21,200.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R213,213,title,payable,standard,Reembolso chip da tim,Jairo Francisco de Amorim,99565773400,2026-05-21,2026-05-21,2026-05-21,30.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R213,213,allocation,payable,standard,Reembolso chip da tim,Jairo Francisco de Amorim,99565773400,2026-05-21,2026-05-21,2026-05-21,30.0,,7.1,Geral,,Rateio 1: 7.5.004 - Comunicacao Operacao
+R214,214,title,receivable,standard,REND PAGO APLIC AUT APR,Banco Itau,60701190000104,2026-05-21,2026-05-21,2026-05-21,2.38,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R214,214,allocation,receivable,standard,REND PAGO APLIC AUT APR,Banco Itau,60701190000104,2026-05-21,2026-05-21,2026-05-21,2.38,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R215,215,title,payable,standard,correios,CORREIOS,34028316000103,2026-05-21,2026-05-21,2026-05-21,410.93,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R215,215,allocation,payable,standard,correios,CORREIOS,34028316000103,2026-05-21,2026-05-21,2026-05-21,410.93,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R216,216,title,payable,standard,Equipamento,HEXIS CIENTIFICA LTDA,53276010000110,2026-05-21,2026-05-21,2026-05-21,5195.7,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R216,216,allocation,payable,standard,Equipamento,HEXIS CIENTIFICA LTDA,53276010000110,2026-05-21,2026-05-21,2026-05-21,5195.7,,7.1,Geral,,Rateio 1: 9.2.001 - Compra de Equipamentos Operacionais
+R217,217,title,payable,standard,BOLETO  PAGO HEXIS CIENTI,HEXIS CIENTIFICA LTDA,53276010000110,2026-05-21,2026-05-21,2026-05-21,470.48,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R217,217,allocation,payable,standard,BOLETO  PAGO HEXIS CIENTI,HEXIS CIENTIFICA LTDA,53276010000110,2026-05-21,2026-05-21,2026-05-21,470.48,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R218,218,title,payable,standard,BOLETO  PAGO HEXIS CIENTI,HEXIS CIENTIFICA LTDA,53276010000110,2026-05-21,2026-05-21,2026-05-21,191.57,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R218,218,allocation,payable,standard,BOLETO  PAGO HEXIS CIENTI,HEXIS CIENTIFICA LTDA,53276010000110,2026-05-21,2026-05-21,2026-05-21,191.57,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R219,219,title,payable,standard,sistema ERP financeiro,Auvo,10426136000111,2026-05-21,2026-05-20,2026-05-20,815.24,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R219,219,allocation,payable,standard,sistema ERP financeiro,Auvo,10426136000111,2026-05-21,2026-05-20,2026-05-20,815.24,,7.1,Geral,,Rateio 1: 8.3.010 - Sistema de Informacao
+R220,220,title,payable,standard,BOLETO  PAGO RAJAN TRANSP,RAJAN,13579271000608,2026-05-21,2026-05-21,2026-05-21,509.22,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R220,220,allocation,payable,standard,BOLETO  PAGO RAJAN TRANSP,RAJAN,13579271000608,2026-05-21,2026-05-21,2026-05-21,509.22,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R221,221,title,payable,standard,SUBSTITUIÇÃO CONEXÃO HIDRÁULICA,LEONARDO SERV POÇOS,00083756159,2026-05-21,2026-05-21,2026-05-21,1000.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R221,221,allocation,payable,standard,SUBSTITUIÇÃO CONEXÃO HIDRÁULICA,LEONARDO SERV POÇOS,00083756159,2026-05-21,2026-05-21,2026-05-21,1000.0,,7.1,Geral,,Rateio 1: 7.5.002 - Servicos em Clientes Contratos - Operacao
+R222,222,title,payable,standard,MANUTENÇÃO DA BOMBA,CARLOS FERREIRA ROSAS,,2026-05-21,2026-05-21,2026-05-21,207.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R222,222,allocation,payable,standard,MANUTENÇÃO DA BOMBA,CARLOS FERREIRA ROSAS,,2026-05-21,2026-05-21,2026-05-21,207.0,,7.1,Geral,,Rateio 1: 7.3.003 - Manutencao de Maqu/Equip - Operacao
+R223,223,title,payable,standard,REEMBOLSO UBER,GUSTAVO DORIA,08779390552,2026-05-21,2026-05-21,2026-05-21,47.49,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R223,223,allocation,payable,standard,REEMBOLSO UBER,GUSTAVO DORIA,08779390552,2026-05-21,2026-05-21,2026-05-21,47.49,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R224,224,title,payable,standard,PIX ENVIADO JAIRO FRANCI,Jairo Francisco de Amorim,99565773400,2026-05-21,2026-05-21,2026-05-21,315.5,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R224,224,allocation,payable,standard,PIX ENVIADO JAIRO FRANCI,Jairo Francisco de Amorim,99565773400,2026-05-21,2026-05-21,2026-05-21,315.5,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R225,225,title,payable,standard,DAS,Receita Federal,00394460005887,2026-05-21,2026-05-22,2026-05-22,53826.29,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R225,225,allocation,payable,standard,DAS,Receita Federal,00394460005887,2026-05-21,2026-05-22,2026-05-22,53826.29,,7.1,Geral,,Rateio 1: 4.01.001 - Simples Nacional
+R226,226,title,payable,standard,IMPOSTO FERIAS ERIKA,Erika Mendonça,,2026-05-21,2026-05-21,2026-05-21,1288.97,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R226,226,allocation,payable,standard,IMPOSTO FERIAS ERIKA,Erika Mendonça,,2026-05-21,2026-05-21,2026-05-21,1288.97,,7.1,Geral,,Rateio 1: 8.4.002 - Outras Despesas Tributarias
+R227,227,title,payable,standard,contabilidade save,C&s Assessoria Contabil,00870200000103,2026-05-21,2026-05-22,2026-05-21,822.5,822.5,7.1,Geral,GERAL,Título em aberto sem baixa.
+R227,227,allocation,payable,standard,contabilidade save,C&s Assessoria Contabil,00870200000103,2026-05-21,2026-05-22,2026-05-21,822.5,,7.1,Geral,,Rateio 1: 8.3.011 - Honorarios Contabeis
+R228,228,title,receivable,standard,Venda 1833,FRAPORT BRASIL AEROPORTO FORTALEZA,27059565000109,2026-05-21,2026-04-01,2026-05-21,9600.13,9600.13,7.1,Geral,GERAL,Título em aberto sem baixa.
+R228,228,allocation,receivable,standard,Venda 1833,FRAPORT BRASIL AEROPORTO FORTALEZA,27059565000109,2026-05-21,2026-04-01,2026-05-21,9600.13,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R229,229,title,payable,standard,Compra de produto 61 (043),VEOLIA,28234708000126,2026-05-22,2026-03-31,2026-05-22,41156.11,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R229,229,allocation,payable,standard,Compra de produto 61 (043),VEOLIA,28234708000126,2026-05-22,2026-03-31,2026-05-22,41156.11,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R230,230,title,payable,standard,PIX ENVIADO ANTONIO DIMA,Antonio Dimas Mota Felipe,78068398368,2026-05-22,2026-05-22,2026-05-22,360.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R230,230,allocation,payable,standard,PIX ENVIADO ANTONIO DIMA,Antonio Dimas Mota Felipe,78068398368,2026-05-22,2026-05-22,2026-05-22,360.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R231,231,title,payable,standard,ASO GERFFSON,,,2026-05-22,2026-05-22,2026-05-22,174.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R231,231,allocation,payable,standard,ASO GERFFSON,,,2026-05-22,2026-05-22,2026-05-22,174.0,,7.1,Geral,,Rateio 1: 7.1.005 - Saude - Operacao
+R232,232,title,payable,standard,PIX ENVIADO GUSTAVO DORI,GUSTAVO DORIA,08779390552,2026-05-22,2026-05-22,2026-05-22,111.77,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R232,232,allocation,payable,standard,PIX ENVIADO GUSTAVO DORI,GUSTAVO DORIA,08779390552,2026-05-22,2026-05-22,2026-05-22,111.77,,7.1,Geral,,Rateio 1: 7.1.004 - Transporte - Operacao
+R233,233,title,payable,standard,PIX ENVIADO JAIRO FRANCI,Jairo Francisco de Amorim,99565773400,2026-05-22,2026-05-22,2026-05-22,100.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R233,233,allocation,payable,standard,PIX ENVIADO JAIRO FRANCI,Jairo Francisco de Amorim,99565773400,2026-05-22,2026-05-22,2026-05-22,100.0,,7.1,Geral,,Rateio 1: 7.2.003 - Combustivel - Operacao
+R234,234,title,receivable,standard,REND PAGO APLIC AUT APR,Banco Itau,60701190000104,2026-05-22,2026-05-22,2026-05-22,0.02,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R234,234,allocation,receivable,standard,REND PAGO APLIC AUT APR,Banco Itau,60701190000104,2026-05-22,2026-05-22,2026-05-22,0.02,,7.1,Geral,,Rateio 1: 3.03.001 - Juros de Aplicacao Financeira
+R235,235,title,receivable,standard,Venda 1843 / NF-e:351,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-22,2026-04-22,2026-05-22,3726.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R235,235,allocation,receivable,standard,Venda 1843 / NF-e:351,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-22,2026-04-22,2026-05-22,3726.0,,7.1,Geral,,Rateio 1: 3.02.001 - Receita de Vendas Mercadorias
+R236,236,title,receivable,standard,Venda 1842 / NF-e:350,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-22,2026-04-22,2026-05-22,1656.0,0.0,7.1,Geral,GERAL,Título liquidado com baixa identificada.
+R236,236,allocation,receivable,standard,Venda 1842 / NF-e:350,PENHA EMBALAGENS BAHIA LTDA,06043069000189,2026-05-22,2026-04-22,2026-05-22,1656.0,,7.1,Geral,,Rateio 1: 3.02.001 - Receita de Vendas Mercadorias
+R237-SALE,237,title,receivable,withholding_receivable_gross,Venda 1820,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-22,2026-04-01,2026-05-22,21252.0,0.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R237-SALE,237,allocation,receivable,withholding_receivable_gross,Venda 1820,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-22,2026-04-01,2026-05-22,21252.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R237-TAX,237,title,payable,withholding_tax_payable,Tributo retido - Venda 1820,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-22,2026-04-01,2026-05-22,1062.6,0.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R237-TAX,237,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1820,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-22,2026-04-01,2026-05-22,1062.6,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R238,238,title,payable,standard,DAS SAVE,Receita Federal,00394460005887,2026-05-22,2026-05-22,2026-05-22,2179.27,2179.27,7.1,Geral,GERAL,Título em aberto sem baixa.
+R238,238,allocation,payable,standard,DAS SAVE,Receita Federal,00394460005887,2026-05-22,2026-05-22,2026-05-22,2179.27,,7.1,Geral,,Rateio 1: 4.01.001 - Simples Nacional
+R239,239,title,payable,standard,Compra de produto 70 (048),AGROQUIMICA,05574966000156,2026-05-24,2026-04-16,2026-05-24,1080.0,1080.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R239,239,allocation,payable,standard,Compra de produto 70 (048),AGROQUIMICA,05574966000156,2026-05-24,2026-04-16,2026-05-24,1080.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R240,240,title,payable,standard,Compra de produto 75 (050),AGROQUIMICA,05574966000156,2026-05-24,2026-04-20,2026-05-24,5970.0,5970.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R240,240,allocation,payable,standard,Compra de produto 75 (050),AGROQUIMICA,05574966000156,2026-05-24,2026-04-20,2026-05-24,5970.0,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R241,241,title,receivable,standard,6/12 - Venda 1592,Condominio Civil Shopping Center Paralela,08401841000112,2026-05-26,2025-11-26,2026-05-26,1500.0,1500.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R241,241,allocation,receivable,standard,6/12 - Venda 1592,Condominio Civil Shopping Center Paralela,08401841000112,2026-05-26,2025-11-26,2026-05-26,1500.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R242,242,title,payable,standard,Compra de produto 76 (51),Alfakit,02297602000188,2026-05-27,2026-04-27,2026-05-27,1374.83,1374.83,7.1,Geral,GERAL,Título em aberto sem baixa.
+R242,242,allocation,payable,standard,Compra de produto 76 (51),Alfakit,02297602000188,2026-05-27,2026-04-27,2026-05-27,1374.83,,7.1,Geral,,Rateio 1: 6.1.002 - Insumos - Reagentes
+R243,243,title,payable,standard,2/2 - QUADRO BASE DE ALUMINIO 75X75 2/2,DANAFE,48231604000175,2026-05-28,2026-04-17,2026-05-28,2875.0,2875.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R243,243,allocation,payable,standard,2/2 - QUADRO BASE DE ALUMINIO 75X75 2/2,DANAFE,48231604000175,2026-05-28,2026-04-17,2026-05-28,2875.0,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R244,244,title,payable,standard,Compra de produto 68 (45),VEOLIA,28234708000126,2026-05-29,2026-04-16,2026-05-29,10209.24,10209.24,7.1,Geral,GERAL,Título em aberto sem baixa.
+R244,244,allocation,payable,standard,Compra de produto 68 (45),VEOLIA,28234708000126,2026-05-29,2026-04-16,2026-05-29,10209.24,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R245,245,title,payable,standard,Compra de produto 78 (50),MULTICHEMIE,55195747000134,2026-05-29,2026-04-29,2026-05-29,13449.1,13449.1,7.1,Geral,GERAL,Título em aberto sem baixa.
+R245,245,allocation,payable,standard,Compra de produto 78 (50),MULTICHEMIE,55195747000134,2026-05-29,2026-04-29,2026-05-29,13449.1,,7.1,Geral,,Rateio 1: 6.1.001 - Insumos - Quimicos
+R246,246,title,receivable,standard,Venda 1825,BOULEVARD SHOPPING CAMACARI,26401280000133,2026-05-30,2026-04-01,2026-05-30,5300.0,5300.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R246,246,allocation,receivable,standard,Venda 1825,BOULEVARD SHOPPING CAMACARI,26401280000133,2026-05-30,2026-04-01,2026-05-30,5300.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R247,247,title,receivable,standard,Venda 1832,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-30,2026-04-01,2026-05-30,6285.6,6285.6,7.1,Geral,GERAL,Título em aberto sem baixa.
+R247,247,allocation,receivable,standard,Venda 1832,BOMIX INDUSTRIA DE EMBALAGENS LTDA,01561279000145,2026-05-30,2026-04-01,2026-05-30,6285.6,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R248,248,title,receivable,standard,Venda 1805,JEQUITIBA PLAZA SHOPPING,03932417000180,2026-05-30,2026-04-01,2026-05-30,6912.89,6912.89,7.1,Geral,GERAL,Título em aberto sem baixa.
+R248,248,allocation,receivable,standard,Venda 1805,JEQUITIBA PLAZA SHOPPING,03932417000180,2026-05-30,2026-04-01,2026-05-30,6912.89,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R249,249,title,receivable,standard,Venda,SUBCONDOMINIO COMPLEXO EMPRESARIAL TRADE CENTER IV E V,47842023000107,2026-05-30,2026-05-30,2026-05-30,5400.0,5400.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R249,249,allocation,receivable,standard,Venda,SUBCONDOMINIO COMPLEXO EMPRESARIAL TRADE CENTER IV E V,47842023000107,2026-05-30,2026-05-30,2026-05-30,5400.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R250,250,title,receivable,standard,Venda 1885,IberoStar,05581720000101,2026-05-30,2026-05-01,2026-05-30,20997.0,20997.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R250,250,allocation,receivable,standard,Venda 1885,IberoStar,05581720000101,2026-05-30,2026-05-01,2026-05-30,20997.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R251,251,title,payable,standard,BOLETO  PAGO LM,LM,00389481000179,2026-05-30,2026-04-29,2026-05-30,1750.0,1750.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R251,251,allocation,payable,standard,BOLETO  PAGO LM,LM,00389481000179,2026-05-30,2026-04-29,2026-05-30,1750.0,,7.1,Geral,,Rateio 1: 7.2.002 - Locacao de Veiculos - Operacao
+R252,252,title,payable,standard,Pocos Paralela,Humberto Mascarenhas,,2026-05-30,2026-05-30,2026-05-30,6348.44,6348.44,7.1,Geral,GERAL,Título em aberto sem baixa.
+R252,252,allocation,payable,standard,Pocos Paralela,Humberto Mascarenhas,,2026-05-30,2026-05-30,2026-05-30,6348.44,,7.1,Geral,,Rateio 1: 7.5.007 - Outros Custos Operacionais
+R253-SALE,253,title,receivable,withholding_receivable_gross,Venda 1892,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-30,2026-04-01,2026-05-30,5142.0,5142.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R253-SALE,253,allocation,receivable,withholding_receivable_gross,Venda 1892,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-30,2026-04-01,2026-05-30,5142.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R253-TAX,253,title,payable,withholding_tax_payable,Tributo retido - Venda 1892,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-30,2026-04-01,2026-05-30,109.52,109.52,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R253-TAX,253,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1892,FERREIRA COSTA (SSA-BARRIS),10230480003156,2026-05-30,2026-04-01,2026-05-30,109.52,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R254-SALE,254,title,receivable,withholding_receivable_gross,Venda 1817,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-31,2026-04-01,2026-05-31,8380.0,8380.0,7.1,Geral,GERAL,Título a receber bruto da venda.
+R254-SALE,254,allocation,receivable,withholding_receivable_gross,Venda 1817,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-31,2026-04-01,2026-05-31,8380.0,,7.1,Geral,,Rateio receita 1: 3.01.001 - Receita de Serviços Prestados
+R254-TAX,254,title,payable,withholding_tax_payable,Tributo retido - Venda 1817,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-31,2026-04-01,2026-05-31,419.0,419.0,7.1,Geral,GERAL,Título a pagar do tributo retido (Simples Nacional).
+R254-TAX,254,allocation,payable,withholding_tax_payable,Tributo retido - Venda 1817,CONDOMINIO CIVIL SHOPPING CENTER PARALELA,08401841000112,2026-05-31,2026-04-01,2026-05-31,419.0,,7.1,Geral,,Rateio tributo 1: 4.01.001 - Simples Nacional
+R255,255,title,receivable,standard,Venda 1799,FERREIRA COSTA - ARACAJU,10230480001293,2026-05-31,2026-04-01,2026-05-31,5200.0,5200.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R255,255,allocation,receivable,standard,Venda 1799,FERREIRA COSTA - ARACAJU,10230480001293,2026-05-31,2026-04-01,2026-05-31,5200.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R256,256,title,receivable,standard,Venda 1822,FERREIRA COSTA - CARUARU,10230480003075,2026-05-31,2026-04-01,2026-05-31,2550.0,2550.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R256,256,allocation,receivable,standard,Venda 1822,FERREIRA COSTA - CARUARU,10230480003075,2026-05-31,2026-04-01,2026-05-31,2550.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R257,257,title,receivable,standard,Venda 1823,FERREIRA COSTA - IMBIRIBEIRA,10230480001960,2026-05-31,2026-04-01,2026-05-31,7000.0,7000.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R257,257,allocation,receivable,standard,Venda 1823,FERREIRA COSTA - IMBIRIBEIRA,10230480001960,2026-05-31,2026-04-01,2026-05-31,7000.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R258,258,title,receivable,standard,Venda 1815,FERREIRA COSTA  JPA,10230480002427,2026-05-31,2026-04-01,2026-05-31,7443.0,7443.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R258,258,allocation,receivable,standard,Venda 1815,FERREIRA COSTA  JPA,10230480002427,2026-05-31,2026-04-01,2026-05-31,7443.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R259,259,title,receivable,standard,Venda 1819,FERREIRA COSTA - TAMARINEIRA,10230480000483,2026-05-31,2026-04-01,2026-05-31,6056.0,6056.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R259,259,allocation,receivable,standard,Venda 1819,FERREIRA COSTA - TAMARINEIRA,10230480000483,2026-05-31,2026-04-01,2026-05-31,6056.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R260,260,title,receivable,standard,Venda 1821,GLOBALPACK DO NORDESTE INDUSTRIA E COMERCIO LTDA,02385898000431,2026-05-31,2026-04-01,2026-05-31,3700.0,3700.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R260,260,allocation,receivable,standard,Venda 1821,GLOBALPACK DO NORDESTE INDUSTRIA E COMERCIO LTDA,02385898000431,2026-05-31,2026-04-01,2026-05-31,3700.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R261,261,title,receivable,standard,Venda 1826,Patio Maceio,11862955000174,2026-05-31,2026-04-01,2026-05-31,11800.0,11800.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R261,261,allocation,receivable,standard,Venda 1826,Patio Maceio,11862955000174,2026-05-31,2026-04-01,2026-05-31,11800.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R262,262,title,receivable,standard,Venda 1808,SHOPPING RIOMAR RECIFE,16888022000170,2026-05-31,2026-04-01,2026-05-31,21319.84,21319.84,7.1,Geral,GERAL,Título em aberto sem baixa.
+R262,262,allocation,receivable,standard,Venda 1808,SHOPPING RIOMAR RECIFE,16888022000170,2026-05-31,2026-04-01,2026-05-31,21319.84,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados
+R263,263,title,receivable,standard,Venda 1878,ZEZE ROCHA CONSTRUCAO E EMPREENDIMENTOS LTDA,14941869000145,2026-05-31,2026-05-01,2026-05-31,6000.0,6000.0,7.1,Geral,GERAL,Título em aberto sem baixa.
+R263,263,allocation,receivable,standard,Venda 1878,ZEZE ROCHA CONSTRUCAO E EMPREENDIMENTOS LTDA,14941869000145,2026-05-31,2026-05-01,2026-05-31,6000.0,,7.1,Geral,,Rateio 1: 3.01.001 - Receita de Serviços Prestados

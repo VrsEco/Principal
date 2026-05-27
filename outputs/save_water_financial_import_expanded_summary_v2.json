@@ -1,0 +1,185 @@
+{
+  "rows_original": 262,
+  "withholding_cases": 15,
+  "expanded_title_rows": 556,
+  "expanded_settlement_rows": 243,
+  "summary": {
+    "standard_payment": 195,
+    "withholding_cases": 15,
+    "standard_receipt": 48,
+    "standard_transfer": 4
+  },
+  "withholding_cases_sample": [
+    {
+      "excel_row": 3,
+      "descricao": "Venda 1891",
+      "receita_bruta": 5142.0,
+      "tributo_retido": 109.52,
+      "recebimento_liquido": 5032.48,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Quitado",
+      "settlement_date": "2026-05-04",
+      "bank_account": "ITAU - SAVE WATER"
+    },
+    {
+      "excel_row": 22,
+      "descricao": "Venda 1839",
+      "receita_bruta": 4801.15,
+      "tributo_retido": 102.26,
+      "recebimento_liquido": 4698.89,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Quitado",
+      "settlement_date": "2026-05-05",
+      "bank_account": "ITAU - SAVE WATER"
+    },
+    {
+      "excel_row": 84,
+      "descricao": "Venda 1809",
+      "receita_bruta": 25438.86,
+      "tributo_retido": 1271.94,
+      "recebimento_liquido": 24166.92,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-05",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 86,
+      "descricao": "Venda 1807",
+      "receita_bruta": 6612.46,
+      "tributo_retido": 330.62,
+      "recebimento_liquido": 6281.84,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-05",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 87,
+      "descricao": "Venda 1818",
+      "receita_bruta": 4334.47,
+      "tributo_retido": 216.72,
+      "recebimento_liquido": 4117.75,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-05",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 94,
+      "descricao": "Venda 1896",
+      "receita_bruta": 4494.35,
+      "tributo_retido": 95.73,
+      "recebimento_liquido": 4398.62,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Atrasado",
+      "settlement_date": "",
+      "bank_account": ""
+    },
+    {
+      "excel_row": 95,
+      "descricao": "Venda 1894",
+      "receita_bruta": 4000.0,
+      "tributo_retido": 85.2,
+      "recebimento_liquido": 3914.8,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Quitado",
+      "settlement_date": "2026-05-06",
+      "bank_account": "ITAU - SAVE WATER"
+    },
+    {
+      "excel_row": 123,
+      "descricao": "Venda 1827",
+      "receita_bruta": 15056.0,
+      "tributo_retido": 752.8,
+      "recebimento_liquido": 14303.2,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-08",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 124,
+      "descricao": "Venda 1804",
+      "receita_bruta": 8153.6,
+      "tributo_retido": 407.68,
+      "recebimento_liquido": 7745.92,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-08",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 154,
+      "descricao": "Venda 1895",
+      "receita_bruta": 4000.0,
+      "tributo_retido": 100.0,
+      "recebimento_liquido": 3900.0,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Quitado",
+      "settlement_date": "2026-05-14",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 160,
+      "descricao": "Venda 1816",
+      "receita_bruta": 10961.28,
+      "tributo_retido": 548.06,
+      "recebimento_liquido": 10413.22,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-14",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 196,
+      "descricao": "Venda 1865",
+      "receita_bruta": 19990.0,
+      "tributo_retido": 999.5,
+      "recebimento_liquido": 18990.5,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Atrasado",
+      "settlement_date": "",
+      "bank_account": ""
+    },
+    {
+      "excel_row": 237,
+      "descricao": "Venda 1820",
+      "receita_bruta": 21252.0,
+      "tributo_retido": 1062.6,
+      "recebimento_liquido": 20189.4,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Conciliado",
+      "settlement_date": "2026-05-22",
+      "bank_account": "ITAU - STELLA BAPTISTA"
+    },
+    {
+      "excel_row": 253,
+      "descricao": "Venda 1892",
+      "receita_bruta": 5142.0,
+      "tributo_retido": 109.52,
+      "recebimento_liquido": 5032.48,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Em aberto",
+      "settlement_date": "",
+      "bank_account": ""
+    },
+    {
+      "excel_row": 254,
+      "descricao": "Venda 1817",
+      "receita_bruta": 8380.0,
+      "tributo_retido": 419.0,
+      "recebimento_liquido": 7961.0,
+      "tributo_label": "Simples Nacional",
+      "situacao": "Em aberto",
+      "settlement_date": "",
+      "bank_account": ""
+    }
+  ],
+  "files": {
+    "titles": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_import_titles_expanded_v2.csv",
+    "settlements": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_import_settlements_expanded_v2.csv",
+    "withholding": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_withholding_cases_v2.csv",
+    "summary": "C:\\GestaoVersus\\app32\\outputs\\save_water_financial_import_expanded_summary_v2.json"
+  }
+}

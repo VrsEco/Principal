@@ -1,0 +1,46 @@
+﻿source_text,source_code,source_name,target_id,target_code,target_name,reason
+7.06.001 - Retirada Pro-Labore,7.06.001,Retirada Pro-Labore,197,8.6.001,Retirada Pro-Labore,explicit_code_map
+3.01.001 - Receita de Serviços Prestados,3.01.001,Receita de Serviços Prestados,80,3.01.001,Receita de Serviços Prestados ,explicit_code_map
+6.01.001 - Simples Nacional,6.01.001,Simples Nacional,93,4.01.001,Simples Nacional,explicit_code_map
+7.01.004 - Transporte - Adm/Coml,7.01.004,Transporte - Adm/Coml,155,8.1.004,Transporte - Adm/Coml,explicit_code_map
+7.03.999 - Outras Desp. Adm.,7.03.999,Outras Desp. Adm.,186,8.3.015,Outras Desp. Adm.,explicit_code_map
+5.05.005 - Manutenção de Poços,5.05.005,Manutenção de Poços,147,7.5.005,Manutenção de Poços,explicit_code_map
+8.02.001 - Compra de Equipamentos Operacionais,8.02.001,Compra de Equipamentos Operacionais,207,9.2.001,Compra de Equipamentos Operacionais,explicit_code_map
+4.01.001 - Insumos - Quimicos,4.01.001,Insumos - Quimicos,100,6.1.001,Insumos - Quimicos,explicit_code_map
+5.01.005 - Saude - Operacao,5.01.005,Saude - Operacao,110,7.1.005,Saude - Operacao,explicit_code_map
+7.03.001 - Aluguel - Adm,7.03.001,Aluguel - Adm,172,8.3.001,Aluguel - Adm,explicit_code_map
+5.01.004 - Transporte - Operacao,5.01.004,Transporte - Operacao,109,7.1.004,Transporte - Operacao,explicit_code_map
+7.01.012 - PJ - Adm / Coml,7.01.012,PJ - Adm / Coml,163,8.1.012,PJ - Adm / Coml,explicit_code_map
+5.01.003 - Alimentacao - Operacao,5.01.003,Alimentacao - Operacao,108,7.1.003,Alimentacao - Operacao,explicit_code_map
+5.03.003 - Manutencao de Maqu/Equip - Operacao,5.03.003,Manutencao de Maqu/Equip - Operacao,133,7.3.003,Manutencao de Maqu/Equip - Operacao,explicit_code_map
+3.05.001 - Juros de Aplicacao Financeira,3.05.001,Juros de Aplicacao Financeira,84,3.03.001,Juros de Aplicacao Financeira,explicit_code_map
+4.01.004 - Insumos - Outros,4.01.004,Insumos - Outros,103,6.1.004,Insumos - Outros,explicit_code_map
+5.02.008 - Estacionamento Operação,5.02.008,Estacionamento Operação,128,7.2.008,Estacionamento Operação,explicit_code_map
+5.02.004 - Manutencao de Veiculos - Operacao,5.02.004,Manutencao de Veiculos - Operacao,124,7.2.004,Manutencao de Veiculos - Operacao,explicit_code_map
+5.02.003 - Combustivel - Operacao,5.02.003,Combustivel - Operacao,123,7.2.003,Combustivel - Operacao,explicit_code_map
+5.05.999 - Outros Custos Operacionais,5.05.999,Outros Custos Operacionais,149,7.5.007,Outros Custos Operacionais,explicit_code_map
+4.01.002 - Insumos - Reagentes,4.01.002,Insumos - Reagentes,101,6.1.002,Insumos - Reagentes,explicit_code_map
+7.03.008 - Telefonia e Internet - Adm,7.03.008,Telefonia e Internet - Adm,179,8.3.008,Telefonia e Internet - Adm,explicit_code_map
+5.01.001 - Salarios - Operacao,5.01.001,Salarios - Operacao,106,7.1.001,Salarios - Operacao,explicit_code_map
+5.01.009 - FGTS - Operacao,5.01.009,FGTS - Operacao,114,7.1.009,FGTS - Operacao,explicit_code_map
+7.03.010 - Sistema de Informacao,7.03.010,Sistema de Informacao,181,8.3.010,Sistema de Informacao,explicit_code_map
+7.01.001 - Salarios - Adm/Coml,7.01.001,Salarios - Adm/Coml,152,8.1.001,Salarios - Adm/Coml,explicit_code_map
+6.01.004 - ISS Sobre Vendas,6.01.004,ISS Sobre Vendas,96,4.01.004,ISS Sobre Vendas,explicit_code_map
+6.01.002 - ISS Retido NF,6.01.002,ISS Retido NF,94,4.01.002,ISS Retido NF,explicit_code_map
+7.05.002 - Taxas e Impostos Bancarios,7.05.002,Taxas e Impostos Bancarios,192,8.5.002,Taxas e Impostos Bancarios,explicit_code_map
+5.05.003 - Servicos Laboratoriais Terceirizados - Operacao,5.05.003,Servicos Laboratoriais Terceirizados - Operacao,145,7.5.003,Servicos Laboratoriais Terceirizados - Operacao,explicit_code_map
+7.04.999 - Outras Despesas Tributarias,7.04.999,Outras Despesas Tributarias,189,8.4.002,Outras Despesas Tributarias,explicit_code_map
+5.01.012 - PJ - OPERACAO,5.01.012,PJ - OPERACAO,117,7.1.012,PJ - OPERACAO,explicit_code_map
+5.02.002 - Locacao de Veiculos - Operacao,5.02.002,Locacao de Veiculos - Operacao,122,7.2.002,Locacao de Veiculos - Operacao,explicit_code_map
+3.02.001 - Receita de Venda de Mercadorias,3.02.001,Receita de Venda de Mercadorias,82,3.02.001,Receita de Vendas Mercadorias,explicit_code_map
+7.03.012 - Assessoria / Consultoria de Gestao,7.03.012,Assessoria / Consultoria de Gestao,183,8.3.012,Assessoria / Consultoria de Gestao,explicit_code_map
+7.03.013 - Assessoria / Consultoria Juridica,7.03.013,Assessoria / Consultoria Juridica,184,8.3.013,Assessoria / Consultoria Juridica,explicit_code_map
+7.02.004 - Despesas com Viagens - Comercial,7.02.004,Despesas com Viagens - Comercial,169,8.2.004,Despesas com Viagens - Comercial,explicit_code_map
+6.01.003 - ICMS Sobre Vendas,6.01.003,ICMS Sobre Vendas,95,4.01.003,ICMS Sobre Vendas,explicit_code_map
+7.01.003 - Alimentacao - Adm/Coml,7.01.003,Alimentacao - Adm/Coml,154,8.1.003,Alimentacao - Adm/Coml,explicit_code_map
+5.02.999 - Outros Gastos com Veiculos - Operacao,5.02.999,Outros Gastos com Veiculos - Operacao,129,7.2.009,Outros Gastos com Veiculos - Operacao,explicit_code_map
+5.04.001 - Alguel Imoveis - Operacao,5.04.001,Alguel Imoveis - Operacao,136,7.4.001,Alguel Imoveis - Operacao,explicit_code_map
+5.05.002 - Servicos em Clientes Contratos - Operacao,5.05.002,Servicos em Clientes Contratos - Operacao,144,7.5.002,Servicos em Clientes Contratos - Operacao,explicit_code_map
+5.01.011 - Fardamento - Operacao,5.01.011,Fardamento - Operacao,116,7.1.011,Fardamento - Operacao,explicit_code_map
+7.03.011 - Honorarios Contabeis,7.03.011,Honorarios Contabeis,182,8.3.011,Honorarios Contabeis,explicit_code_map
+5.05.004 - Comunicacao Operacao,5.05.004,Comunicacao Operacao,146,7.5.004,Comunicacao Operacao,explicit_code_map

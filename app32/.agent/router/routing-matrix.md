@@ -14,6 +14,7 @@
 | Modelo, query, migração, performance SQL | nenhuma adicional obrigatória | `dba.md` | `backend_service.md` |
 | UI, template, print, dashboard | nenhuma adicional obrigatória | `frontend.md` | `backend_api.md`, `qa_automation.md` |
 | LangGraph, RAG, consumo MCP, agentes internos | nenhuma adicional obrigatória | `ai_engineer.md` | `backend_api.md`, `arquiteto.md` |
+| Proposta comercial, oferta, deck de venda, narrativa e pacote de serviços | nenhuma adicional obrigatória | `alex_reeves.md` | `business_architect_versus.md`, `lorenzo_vega.md`, `felix_moreira.md`, `ruth_nakamura.md`, `arquiteto.md` |
 
 ## Regra de contenção
 Se o pedido couber em 1 skill + 1 especialista, não expandir para mais componentes.

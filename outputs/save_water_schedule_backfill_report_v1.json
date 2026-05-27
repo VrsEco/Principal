@@ -1,0 +1,134 @@
+{
+  "ok": true,
+  "mode": "backfill",
+  "schedule_batch_id": "conta_azul_save_water_schedule_backfill_20260525_v1",
+  "source_batch_id": "conta_azul_save_water_20260525_v1",
+  "created_count": 272,
+  "skipped_count": 5,
+  "created_preview": [
+    {
+      "entry_code": "CA-SW-R2",
+      "schedule_id": 310,
+      "schedule_code": "AG-000017"
+    },
+    {
+      "entry_code": "CA-SW-R3-SALE",
+      "schedule_id": 311,
+      "schedule_code": "AG-000018"
+    },
+    {
+      "entry_code": "CA-SW-R3-TAX",
+      "schedule_id": 312,
+      "schedule_code": "AG-000019"
+    },
+    {
+      "entry_code": "CA-SW-R4",
+      "schedule_id": 313,
+      "schedule_code": "AG-000020"
+    },
+    {
+      "entry_code": "CA-SW-R5",
+      "schedule_id": 314,
+      "schedule_code": "AG-000021"
+    },
+    {
+      "entry_code": "CA-SW-R6",
+      "schedule_id": 315,
+      "schedule_code": "AG-000022"
+    },
+    {
+      "entry_code": "CA-SW-R7",
+      "schedule_id": 316,
+      "schedule_code": "AG-000023"
+    },
+    {
+      "entry_code": "CA-SW-R8",
+      "schedule_id": 317,
+      "schedule_code": "AG-000024"
+    },
+    {
+      "entry_code": "CA-SW-R9",
+      "schedule_id": 318,
+      "schedule_code": "AG-000025"
+    },
+    {
+      "entry_code": "CA-SW-R10",
+      "schedule_id": 319,
+      "schedule_code": "AG-000026"
+    },
+    {
+      "entry_code": "CA-SW-R11",
+      "schedule_id": 320,
+      "schedule_code": "AG-000027"
+    },
+    {
+      "entry_code": "CA-SW-R12",
+      "schedule_id": 321,
+      "schedule_code": "AG-000028"
+    },
+    {
+      "entry_code": "CA-SW-R13",
+      "schedule_id": 322,
+      "schedule_code": "AG-000029"
+    },
+    {
+      "entry_code": "CA-SW-R14",
+      "schedule_id": 323,
+      "schedule_code": "AG-000030"
+    },
+    {
+      "entry_code": "CA-SW-R15",
+      "schedule_id": 324,
+      "schedule_code": "AG-000031"
+    },
+    {
+      "entry_code": "CA-SW-R16",
+      "schedule_id": 325,
+      "schedule_code": "AG-000032"
+    },
+    {
+      "entry_code": "CA-SW-R17",
+      "schedule_id": 326,
+      "schedule_code": "AG-000033"
+    },
+    {
+      "entry_code": "CA-SW-R18",
+      "schedule_id": 327,
+      "schedule_code": "AG-000034"
+    },
+    {
+      "entry_code": "CA-SW-R19",
+      "schedule_id": 328,
+      "schedule_code": "AG-000035"
+    },
+    {
+      "entry_code": "CA-SW-R20",
+      "schedule_id": 329,
+      "schedule_code": "AG-000036"
+    }
+  ],
+  "skipped": [
+    {
+      "entry_code": "CA-SW-R23",
+      "reason": "transfer_not_supported_on_schedule_screen"
+    },
+    {
+      "entry_code": "CA-SW-R68",
+      "reason": "transfer_not_supported_on_schedule_screen"
+    },
+    {
+      "entry_code": "CA-SW-R91",
+      "reason": "missing_allocation"
+    },
+    {
+      "entry_code": "CA-SW-R162",
+      "reason": "transfer_not_supported_on_schedule_screen"
+    },
+    {
+      "entry_code": "CA-SW-R188",
+      "reason": "transfer_not_supported_on_schedule_screen"
+    }
+  ],
+  "visible_schedule_count_after": 272,
+  "processed_at_utc": "2026-05-25T19:44:57.888888"
+}

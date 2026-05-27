@@ -1,0 +1,12 @@
+import { pathToFileURL } from 'node:url';
+import path from 'node:path';
+const artifact=await import(pathToFileURL('C:/Users/mff20/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/@oai/artifact-tool/dist/artifact_tool.mjs').href);
+const {PresentationFile,FileBlob}=artifact;
+const p='C:/GestaoVersus/app32/Propostas/Revisadas/Proposta_Britos_Mag_Servicos_Pontuais_Revisada.pptx';
+const pres=await PresentationFile.importPptx(await FileBlob.load(p));
+const slide=pres.slides.items[2];
+const e=slide.elements.items.find(e=>String(e.toSnapshot?.().id)==='3');
+e.position={left:880,top:90,width:900,height:760};
+e.text='Inicialmente atenderemos às necessidades apresentadas em reunião com o Sr. Wilson Caldas e Priscila.\n\nEscopo proposto:\n\n→ definição e estruturação legal do negócio;\n\n→ análise das atividades: intermediação, monitoramento, instalação, recebimento de valores de terceiros, patrimônio e indústria de energia;\n\n→ enquadramento e planejamento tributário conforme alternativas disponíveis na legislação atual.';
+e.text.fontSize=17;
+const pptx=await PresentationFile.exportPptx(pres); await pptx.save(p); console.log('updated',p);

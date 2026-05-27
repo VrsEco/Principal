@@ -1,0 +1,49 @@
+{
+  "mcpServers": {
+    "app32-laboratorio-ops": {
+      "headers": {
+        "Authorization": "Bearer HefvDGRA6mUP6Zx9huVIf9jPz_345pBXte8FIzT9b2k"
+      },
+      "url": "https://app.gestaoversus.com.br/mcp/ops?company_id=10",
+      "metadata": {
+        "project": "AA.J.16",
+        "surface": "ops",
+        "profile_label": "Squad de Engenharia",
+        "company_id": 10,
+        "email": "laboratorio.cliente.m1@versus.local",
+        "profile": "engineering"
+      },
+      "transport": "http"
+    },
+    "app32-laboratorio-user": {
+      "metadata": {
+        "email": "laboratorio.cliente.m1@versus.local",
+        "surface": "user",
+        "company_id": 10,
+        "profile_label": "Squad Cliente",
+        "profile": "squad_cliente",
+        "project": "AA.J.16"
+      },
+      "url": "https://app.gestaoversus.com.br/mcp/user?company_id=10",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer mcpu_st3cWZ1HAbE5NbUixYwe5uv52DTFSMlEYC3Ktndr0UY"
+      }
+    },
+    "app32-laboratorio-admin": {
+      "url": "https://app.gestaoversus.com.br/mcp/admin?company_id=10",
+      "transport": "http",
+      "headers": {
+        "Authorization": "Bearer HefvDGRA6mUP6Zx9huVIf9jPz_345pBXte8FIzT9b2k"
+      },
+      "metadata": {
+        "company_id": 10,
+        "project": "AA.J.16",
+        "email": "consultor.versus@versus.local",
+        "profile_label": "Squad Versus",
+        "profile": "squad_versus",
+        "surface": "admin"
+      }
+    }
+  }
+}

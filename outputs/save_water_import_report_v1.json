@@ -1,0 +1,83 @@
+{
+  "ok": true,
+  "mode": "import",
+  "batch_id": "conta_azul_save_water_20260525_v1",
+  "company_id": 1,
+  "before_counts": {
+    "entries_active_company": 0,
+    "allocations_active_company": 0,
+    "settlements_active_company": 0
+  },
+  "validation": {
+    "batch_id": "conta_azul_save_water_20260525_v1",
+    "company_id": 1,
+    "expected": {
+      "entries": 277,
+      "settlements": 243,
+      "allocations": 274
+    },
+    "actual": {
+      "entries": 277,
+      "allocations": 274,
+      "settlements": 243,
+      "entry_type_counts": {
+        "payable": 210,
+        "transfer": 4,
+        "receivable": 63
+      },
+      "entries_total_amount": 888369.13,
+      "settlements_total_amount": 619964.04
+    },
+    "ok": true
+  },
+  "created_entry_codes_sample": [
+    "CA-SW-R2",
+    "CA-SW-R3-SALE",
+    "CA-SW-R3-TAX",
+    "CA-SW-R4",
+    "CA-SW-R5",
+    "CA-SW-R6",
+    "CA-SW-R7",
+    "CA-SW-R8",
+    "CA-SW-R9",
+    "CA-SW-R10",
+    "CA-SW-R11",
+    "CA-SW-R12",
+    "CA-SW-R13",
+    "CA-SW-R14",
+    "CA-SW-R15",
+    "CA-SW-R16",
+    "CA-SW-R17",
+    "CA-SW-R18",
+    "CA-SW-R19",
+    "CA-SW-R20"
+  ],
+  "issues": [
+    {
+      "title_key": "R23",
+      "entry_code": "CA-SW-R23",
+      "issue": "missing_allocation"
+    },
+    {
+      "title_key": "R68",
+      "entry_code": "CA-SW-R68",
+      "issue": "missing_allocation"
+    },
+    {
+      "title_key": "R91",
+      "entry_code": "CA-SW-R91",
+      "issue": "missing_allocation"
+    },
+    {
+      "title_key": "R162",
+      "entry_code": "CA-SW-R162",
+      "issue": "missing_allocation"
+    },
+    {
+      "title_key": "R188",
+      "entry_code": "CA-SW-R188",
+      "issue": "missing_allocation"
+    }
+  ],
+  "imported_at_utc": "2026-05-25T19:25:53.707307"
+}

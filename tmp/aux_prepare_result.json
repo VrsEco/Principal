@@ -1,0 +1,1255 @@
+{
+  "summary": {
+    "spreadsheet_counterparties": 102,
+    "matched_counterparties": 4,
+    "missing_counterparties": 98,
+    "ambiguous_counterparties": 0,
+    "spreadsheet_categories": 48,
+    "mapped_categories": 45,
+    "unmapped_categories": 3
+  },
+  "missing_counterparties": [
+    {
+      "name": "Manoel Velloso",
+      "document_number": "22368809520",
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA (SSA-BARRIS)",
+      "document_number": "10230480003156",
+      "count": 2
+    },
+    {
+      "name": "Joseane Menezes",
+      "document_number": "03175991513",
+      "count": 3
+    },
+    {
+      "name": "LEONARDO SERV POÇOS",
+      "document_number": "00083756159",
+      "count": 4
+    },
+    {
+      "name": "MZ EQUIPAMENTOS",
+      "document_number": "04703364000199",
+      "count": 8
+    },
+    {
+      "name": "Marcel Cesar Stella",
+      "document_number": null,
+      "count": 1
+    },
+    {
+      "name": "DANETO",
+      "document_number": "07947526000122",
+      "count": 1
+    },
+    {
+      "name": "Gota Quimica",
+      "document_number": "07139318000105",
+      "count": 1
+    },
+    {
+      "name": "UNIMED",
+      "document_number": "02812468000106",
+      "count": 1
+    },
+    {
+      "name": "GUSTAVO DORIA",
+      "document_number": "08779390552",
+      "count": 9
+    },
+    {
+      "name": "Thais Lins",
+      "document_number": "57561864000108",
+      "count": 2
+    },
+    {
+      "name": "VR",
+      "document_number": "02535864000133",
+      "count": 1
+    },
+    {
+      "name": "Erika Lins Mendonça",
+      "document_number": "04191069527",
+      "count": 2
+    },
+    {
+      "name": "Banco Itau",
+      "document_number": "60701190000104",
+      "count": 10
+    },
+    {
+      "name": "TELEVISAO BAHIA S.A.",
+      "document_number": "13425269000161",
+      "count": 1
+    },
+    {
+      "name": "Fornecedor e Cliente Diversos",
+      "document_number": "48658069000133",
+      "count": 61
+    },
+    {
+      "name": "ITS BRASIL",
+      "document_number": "08772214000198",
+      "count": 1
+    },
+    {
+      "name": "LUCIVÂNIA",
+      "document_number": "96097345534",
+      "count": 4
+    },
+    {
+      "name": "Gabriel Borges Santana",
+      "document_number": "08246123530",
+      "count": 2
+    },
+    {
+      "name": "Receita Federal",
+      "document_number": "00394460005887",
+      "count": 3
+    },
+    {
+      "name": "PONTO MAIS TECNOLOGIA S/A",
+      "document_number": "23863463000182",
+      "count": 1
+    },
+    {
+      "name": "Gerffson Milton Sarmento",
+      "document_number": "46365915349",
+      "count": 1
+    },
+    {
+      "name": "Jairo Francisco de Amorim",
+      "document_number": "99565773400",
+      "count": 5
+    },
+    {
+      "name": "Lucas Nascimento",
+      "document_number": "05746854565",
+      "count": 1
+    },
+    {
+      "name": "REGINALDO FILHO",
+      "document_number": "06979643533",
+      "count": 1
+    },
+    {
+      "name": "ROBERTO GALLO",
+      "document_number": "01627452575",
+      "count": 5
+    },
+    {
+      "name": "TRIBUTO MUNICIPAL",
+      "document_number": "13927801000491",
+      "count": 3
+    },
+    {
+      "name": "CONDOMINIO BARRA",
+      "document_number": "16275232000192",
+      "count": 2
+    },
+    {
+      "name": "SHOPPING RIOMAR ARACAJU",
+      "document_number": "32752602000191",
+      "count": 1
+    },
+    {
+      "name": "Brilux - Salvador",
+      "document_number": "11507415000253",
+      "count": 1
+    },
+    {
+      "name": "BEBIDAS RAVENA INDUSTRIA E COMERCIO LTDA",
+      "document_number": "26344784000240",
+      "count": 1
+    },
+    {
+      "name": "TRILUZ EMPREENDIMENTOS E PARTICIPAÇÕES LTDA",
+      "document_number": "14080888000124",
+      "count": 1
+    },
+    {
+      "name": "CAESAR BUSINESS SALVADOR BAHIA",
+      "document_number": "13325053000124",
+      "count": 1
+    },
+    {
+      "name": "UHT - Grand Palladium",
+      "document_number": "07224103000184",
+      "count": 1
+    },
+    {
+      "name": "Conforlab Engenharia Ambiental LTDA",
+      "document_number": "06191743000172",
+      "count": 3
+    },
+    {
+      "name": "SOCIEDADE BENEF ISRAELITABRAS HOSPITAL ALBERT EINSTEIN",
+      "document_number": "60765823008386",
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA (SSA - PARALELA)",
+      "document_number": "10230480000300",
+      "count": 2
+    },
+    {
+      "name": "ZEZE ROCHA CONSTRUCAO E EMPREENDIMENTOS LTDA",
+      "document_number": "14941869000145",
+      "count": 2
+    },
+    {
+      "name": "Sefaz Estadual",
+      "document_number": "13937073000156",
+      "count": 1
+    },
+    {
+      "name": "DANIEL MIRANDA",
+      "document_number": "01402179596",
+      "count": 2
+    },
+    {
+      "name": "VICENTE GALLO",
+      "document_number": "54911465000123",
+      "count": 2
+    },
+    {
+      "name": "Localiza Rent A Car",
+      "document_number": "16670085000155",
+      "count": 1
+    },
+    {
+      "name": "Resintec",
+      "document_number": "02701679000171",
+      "count": 1
+    },
+    {
+      "name": "VEOLIA",
+      "document_number": "28234708000126",
+      "count": 6
+    },
+    {
+      "name": "WATER WAREHOUSE PRODUTOS E SERVICOS",
+      "document_number": "07716097000182",
+      "count": 1
+    },
+    {
+      "name": "PENHA EMBALAGENS BAHIA LTDA",
+      "document_number": "06043069000189",
+      "count": 4
+    },
+    {
+      "name": "VERSUS CONSULTORIA",
+      "document_number": "15028181000131",
+      "count": 1
+    },
+    {
+      "name": "Claro",
+      "document_number": "40432544000147",
+      "count": 3
+    },
+    {
+      "name": "GLOBALPACK DO NORDESTE INDUSTRIA E COMERCIO LTDA",
+      "document_number": "02385898000431",
+      "count": 2
+    },
+    {
+      "name": "Alfakit",
+      "document_number": "02297602000188",
+      "count": 2
+    },
+    {
+      "name": "SEMOL",
+      "document_number": "43465660000150",
+      "count": 1
+    },
+    {
+      "name": "SHOPPING BELA VISTA",
+      "document_number": "14919379000142",
+      "count": 2
+    },
+    {
+      "name": "AELSON BANDEIRA (Aquatec)",
+      "document_number": "77704452568",
+      "count": 2
+    },
+    {
+      "name": "Shopping Riomar Kennedy",
+      "document_number": "23803719000166",
+      "count": 1
+    },
+    {
+      "name": "Total Pass Participacoes LTDA",
+      "document_number": "27059627000174",
+      "count": 1
+    },
+    {
+      "name": "DANAFE",
+      "document_number": "48231604000175",
+      "count": 3
+    },
+    {
+      "name": "Opvs Advogados",
+      "document_number": "26343058000121",
+      "count": 1
+    },
+    {
+      "name": "VIRTUEYES M2M",
+      "document_number": "26811491000144",
+      "count": 1
+    },
+    {
+      "name": "MARCEL STELLA",
+      "document_number": "01311209565",
+      "count": 1
+    },
+    {
+      "name": "Antonio Dimas Mota Felipe",
+      "document_number": "78068398368",
+      "count": 2
+    },
+    {
+      "name": "SUBCONDOMINIO RIOMAR FORTALEZA",
+      "document_number": "21399573000100",
+      "count": 1
+    },
+    {
+      "name": "Shopping Jardins (Aracaju)",
+      "document_number": "02296771000101",
+      "count": 1
+    },
+    {
+      "name": "Shopping Boulevard Feira de Santana",
+      "document_number": "03871681000151",
+      "count": 2
+    },
+    {
+      "name": "Sem Parar Instituicao de Pagamento LTDA",
+      "document_number": "04088208000165",
+      "count": 1
+    },
+    {
+      "name": "Imobiliaria Casa Dos Imoveis",
+      "document_number": "39573053000137",
+      "count": 1
+    },
+    {
+      "name": "Concessionaria de Aeroporto de Salvador S.A.",
+      "document_number": "27950582000123",
+      "count": 2
+    },
+    {
+      "name": "Lm Locadora",
+      "document_number": "04577133000186",
+      "count": 1
+    },
+    {
+      "name": "RAJAN",
+      "document_number": "13579271000608",
+      "count": 2
+    },
+    {
+      "name": "karolina Saveiro",
+      "document_number": "53092922000132",
+      "count": 1
+    },
+    {
+      "name": "Bioagri",
+      "document_number": "04830624000197",
+      "count": 3
+    },
+    {
+      "name": "WTP",
+      "document_number": "26037407000187",
+      "count": 1
+    },
+    {
+      "name": "Salvador Shopping",
+      "document_number": "08867234000142",
+      "count": 1
+    },
+    {
+      "name": "Mansão Wildberger",
+      "document_number": "32039801000157",
+      "count": 1
+    },
+    {
+      "name": "AGROLAB",
+      "document_number": "69952299000180",
+      "count": 1
+    },
+    {
+      "name": "CONDOMINIO DO NORTH WAY SHOPPING",
+      "document_number": "22424335000170",
+      "count": 1
+    },
+    {
+      "name": "VLADIMIR SIMÕES SANTANA",
+      "document_number": null,
+      "count": 1
+    },
+    {
+      "name": "C&s Assessoria Contabil",
+      "document_number": "00870200000103",
+      "count": 2
+    },
+    {
+      "name": "CORREIOS",
+      "document_number": "34028316000103",
+      "count": 1
+    },
+    {
+      "name": "HEXIS CIENTIFICA LTDA",
+      "document_number": "53276010000110",
+      "count": 3
+    },
+    {
+      "name": "Auvo",
+      "document_number": "10426136000111",
+      "count": 1
+    },
+    {
+      "name": "CARLOS FERREIRA ROSAS",
+      "document_number": null,
+      "count": 1
+    },
+    {
+      "name": "Erika Mendonça",
+      "document_number": null,
+      "count": 1
+    },
+    {
+      "name": "FRAPORT BRASIL AEROPORTO FORTALEZA",
+      "document_number": "27059565000109",
+      "count": 1
+    },
+    {
+      "name": "CONDOMINIO CIVIL SHOPPING CENTER PARALELA",
+      "document_number": "08401841000112",
+      "count": 3
+    },
+    {
+      "name": "MULTICHEMIE",
+      "document_number": "55195747000134",
+      "count": 1
+    },
+    {
+      "name": "BOULEVARD SHOPPING CAMACARI",
+      "document_number": "26401280000133",
+      "count": 1
+    },
+    {
+      "name": "JEQUITIBA PLAZA SHOPPING",
+      "document_number": "03932417000180",
+      "count": 1
+    },
+    {
+      "name": "SUBCONDOMINIO COMPLEXO EMPRESARIAL TRADE CENTER IV E V",
+      "document_number": "47842023000107",
+      "count": 1
+    },
+    {
+      "name": "IberoStar",
+      "document_number": "05581720000101",
+      "count": 1
+    },
+    {
+      "name": "LM",
+      "document_number": "00389481000179",
+      "count": 1
+    },
+    {
+      "name": "Humberto Mascarenhas",
+      "document_number": null,
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA - ARACAJU",
+      "document_number": "10230480001293",
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA - CARUARU",
+      "document_number": "10230480003075",
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA - IMBIRIBEIRA",
+      "document_number": "10230480001960",
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA  JPA",
+      "document_number": "10230480002427",
+      "count": 1
+    },
+    {
+      "name": "FERREIRA COSTA - TAMARINEIRA",
+      "document_number": "10230480000483",
+      "count": 1
+    },
+    {
+      "name": "Patio Maceio",
+      "document_number": "11862955000174",
+      "count": 1
+    },
+    {
+      "name": "SHOPPING RIOMAR RECIFE",
+      "document_number": "16888022000170",
+      "count": 1
+    }
+  ],
+  "ambiguous_counterparties": [],
+  "unmapped_categories": [
+    {
+      "source": {
+        "source_text": "Transferência de Entrada",
+        "source_code": "",
+        "source_name": "Transferência de Entrada",
+        "count": 2
+      },
+      "reason": "skip_transfer"
+    },
+    {
+      "source": {
+        "source_text": "Transferência de Saída",
+        "source_code": "",
+        "source_name": "Transferência de Saída",
+        "count": 2
+      },
+      "reason": "skip_transfer"
+    },
+    {
+      "source": {
+        "source_text": "999.01 - Rec - Contas de Compensação",
+        "source_code": "999.01",
+        "source_name": "Rec - Contas de Compensação",
+        "count": 1
+      },
+      "reason": "skip_transfer"
+    }
+  ],
+  "category_map": [
+    {
+      "source": {
+        "source_text": "7.06.001 - Retirada Pro-Labore",
+        "source_code": "7.06.001",
+        "source_name": "Retirada Pro-Labore",
+        "count": 2
+      },
+      "target": {
+        "id": 197,
+        "code": "8.6.001",
+        "name": "Retirada Pro-Labore",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "3.01.001 - Receita de Serviços Prestados",
+        "source_code": "3.01.001",
+        "source_name": "Receita de Serviços Prestados",
+        "count": 49
+      },
+      "target": {
+        "id": 80,
+        "code": "3.01.001",
+        "name": "Receita de Serviços Prestados ",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "6.01.001 - Simples Nacional",
+        "source_code": "6.01.001",
+        "source_name": "Simples Nacional",
+        "count": 17
+      },
+      "target": {
+        "id": 93,
+        "code": "4.01.001",
+        "name": "Simples Nacional",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.01.004 - Transporte - Adm/Coml",
+        "source_code": "7.01.004",
+        "source_name": "Transporte - Adm/Coml",
+        "count": 1
+      },
+      "target": {
+        "id": 155,
+        "code": "8.1.004",
+        "name": "Transporte - Adm/Coml",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.999 - Outras Desp. Adm.",
+        "source_code": "7.03.999",
+        "source_name": "Outras Desp. Adm.",
+        "count": 1
+      },
+      "target": {
+        "id": 186,
+        "code": "8.3.015",
+        "name": "Outras Desp. Adm.",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.05.005 - Manutenção de Poços",
+        "source_code": "5.05.005",
+        "source_name": "Manutenção de Poços",
+        "count": 3
+      },
+      "target": {
+        "id": 147,
+        "code": "7.5.005",
+        "name": "Manutenção de Poços",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "8.02.001 - Compra de Equipamentos Operacionais",
+        "source_code": "8.02.001",
+        "source_name": "Compra de Equipamentos Operacionais",
+        "count": 6
+      },
+      "target": {
+        "id": 207,
+        "code": "9.2.001",
+        "name": "Compra de Equipamentos Operacionais",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "4.01.001 - Insumos - Quimicos",
+        "source_code": "4.01.001",
+        "source_name": "Insumos - Quimicos",
+        "count": 24
+      },
+      "target": {
+        "id": 100,
+        "code": "6.1.001",
+        "name": "Insumos - Quimicos",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.005 - Saude - Operacao",
+        "source_code": "5.01.005",
+        "source_name": "Saude - Operacao",
+        "count": 4
+      },
+      "target": {
+        "id": 110,
+        "code": "7.1.005",
+        "name": "Saude - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.001 - Aluguel - Adm",
+        "source_code": "7.03.001",
+        "source_name": "Aluguel - Adm",
+        "count": 2
+      },
+      "target": {
+        "id": 172,
+        "code": "8.3.001",
+        "name": "Aluguel - Adm",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.004 - Transporte - Operacao",
+        "source_code": "5.01.004",
+        "source_name": "Transporte - Operacao",
+        "count": 10
+      },
+      "target": {
+        "id": 109,
+        "code": "7.1.004",
+        "name": "Transporte - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.01.012 - PJ - Adm / Coml",
+        "source_code": "7.01.012",
+        "source_name": "PJ - Adm / Coml",
+        "count": 4
+      },
+      "target": {
+        "id": 163,
+        "code": "8.1.012",
+        "name": "PJ - Adm / Coml",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.003 - Alimentacao - Operacao",
+        "source_code": "5.01.003",
+        "source_name": "Alimentacao - Operacao",
+        "count": 4
+      },
+      "target": {
+        "id": 108,
+        "code": "7.1.003",
+        "name": "Alimentacao - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.03.003 - Manutencao de Maqu/Equip - Operacao",
+        "source_code": "5.03.003",
+        "source_name": "Manutencao de Maqu/Equip - Operacao",
+        "count": 8
+      },
+      "target": {
+        "id": 133,
+        "code": "7.3.003",
+        "name": "Manutencao de Maqu/Equip - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "3.05.001 - Juros de Aplicacao Financeira",
+        "source_code": "3.05.001",
+        "source_name": "Juros de Aplicacao Financeira",
+        "count": 9
+      },
+      "target": {
+        "id": 84,
+        "code": "3.03.001",
+        "name": "Juros de Aplicacao Financeira",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "4.01.004 - Insumos - Outros",
+        "source_code": "4.01.004",
+        "source_name": "Insumos - Outros",
+        "count": 10
+      },
+      "target": {
+        "id": 103,
+        "code": "6.1.004",
+        "name": "Insumos - Outros",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.02.008 - Estacionamento Operação",
+        "source_code": "5.02.008",
+        "source_name": "Estacionamento Operação",
+        "count": 28
+      },
+      "target": {
+        "id": 128,
+        "code": "7.2.008",
+        "name": "Estacionamento Operação",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.02.004 - Manutencao de Veiculos - Operacao",
+        "source_code": "5.02.004",
+        "source_name": "Manutencao de Veiculos - Operacao",
+        "count": 2
+      },
+      "target": {
+        "id": 124,
+        "code": "7.2.004",
+        "name": "Manutencao de Veiculos - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.02.003 - Combustivel - Operacao",
+        "source_code": "5.02.003",
+        "source_name": "Combustivel - Operacao",
+        "count": 18
+      },
+      "target": {
+        "id": 123,
+        "code": "7.2.003",
+        "name": "Combustivel - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.05.999 - Outros Custos Operacionais",
+        "source_code": "5.05.999",
+        "source_name": "Outros Custos Operacionais",
+        "count": 13
+      },
+      "target": {
+        "id": 149,
+        "code": "7.5.007",
+        "name": "Outros Custos Operacionais",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "4.01.002 - Insumos - Reagentes",
+        "source_code": "4.01.002",
+        "source_name": "Insumos - Reagentes",
+        "count": 4
+      },
+      "target": {
+        "id": 101,
+        "code": "6.1.002",
+        "name": "Insumos - Reagentes",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.008 - Telefonia e Internet - Adm",
+        "source_code": "7.03.008",
+        "source_name": "Telefonia e Internet - Adm",
+        "count": 1
+      },
+      "target": {
+        "id": 179,
+        "code": "8.3.008",
+        "name": "Telefonia e Internet - Adm",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.001 - Salarios - Operacao",
+        "source_code": "5.01.001",
+        "source_name": "Salarios - Operacao",
+        "count": 9
+      },
+      "target": {
+        "id": 106,
+        "code": "7.1.001",
+        "name": "Salarios - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.009 - FGTS - Operacao",
+        "source_code": "5.01.009",
+        "source_name": "FGTS - Operacao",
+        "count": 1
+      },
+      "target": {
+        "id": 114,
+        "code": "7.1.009",
+        "name": "FGTS - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.010 - Sistema de Informacao",
+        "source_code": "7.03.010",
+        "source_name": "Sistema de Informacao",
+        "count": 3
+      },
+      "target": {
+        "id": 181,
+        "code": "8.3.010",
+        "name": "Sistema de Informacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.01.001 - Salarios - Adm/Coml",
+        "source_code": "7.01.001",
+        "source_name": "Salarios - Adm/Coml",
+        "count": 1
+      },
+      "target": {
+        "id": 152,
+        "code": "8.1.001",
+        "name": "Salarios - Adm/Coml",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "6.01.004 - ISS Sobre Vendas",
+        "source_code": "6.01.004",
+        "source_name": "ISS Sobre Vendas",
+        "count": 1
+      },
+      "target": {
+        "id": 96,
+        "code": "4.01.004",
+        "name": "ISS Sobre Vendas",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "6.01.002 - ISS Retido NF",
+        "source_code": "6.01.002",
+        "source_name": "ISS Retido NF",
+        "count": 1
+      },
+      "target": {
+        "id": 94,
+        "code": "4.01.002",
+        "name": "ISS Retido NF",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.05.002 - Taxas e Impostos Bancarios",
+        "source_code": "7.05.002",
+        "source_name": "Taxas e Impostos Bancarios",
+        "count": 1
+      },
+      "target": {
+        "id": 192,
+        "code": "8.5.002",
+        "name": "Taxas e Impostos Bancarios",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.05.003 - Servicos Laboratoriais Terceirizados - Operacao",
+        "source_code": "5.05.003",
+        "source_name": "Servicos Laboratoriais Terceirizados - Operacao",
+        "count": 6
+      },
+      "target": {
+        "id": 145,
+        "code": "7.5.003",
+        "name": "Servicos Laboratoriais Terceirizados - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.04.999 - Outras Despesas Tributarias",
+        "source_code": "7.04.999",
+        "source_name": "Outras Despesas Tributarias",
+        "count": 2
+      },
+      "target": {
+        "id": 189,
+        "code": "8.4.002",
+        "name": "Outras Despesas Tributarias",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.012 - PJ - OPERACAO",
+        "source_code": "5.01.012",
+        "source_name": "PJ - OPERACAO",
+        "count": 4
+      },
+      "target": {
+        "id": 117,
+        "code": "7.1.012",
+        "name": "PJ - OPERACAO",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.02.002 - Locacao de Veiculos - Operacao",
+        "source_code": "5.02.002",
+        "source_name": "Locacao de Veiculos - Operacao",
+        "count": 4
+      },
+      "target": {
+        "id": 122,
+        "code": "7.2.002",
+        "name": "Locacao de Veiculos - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "3.02.001 - Receita de Venda de Mercadorias",
+        "source_code": "3.02.001",
+        "source_name": "Receita de Venda de Mercadorias",
+        "count": 4
+      },
+      "target": {
+        "id": 82,
+        "code": "3.02.001",
+        "name": "Receita de Vendas Mercadorias",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.012 - Assessoria / Consultoria de Gestao",
+        "source_code": "7.03.012",
+        "source_name": "Assessoria / Consultoria de Gestao",
+        "count": 1
+      },
+      "target": {
+        "id": 183,
+        "code": "8.3.012",
+        "name": "Assessoria / Consultoria de Gestao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.013 - Assessoria / Consultoria Juridica",
+        "source_code": "7.03.013",
+        "source_name": "Assessoria / Consultoria Juridica",
+        "count": 1
+      },
+      "target": {
+        "id": 184,
+        "code": "8.3.013",
+        "name": "Assessoria / Consultoria Juridica",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.02.004 - Despesas com Viagens - Comercial",
+        "source_code": "7.02.004",
+        "source_name": "Despesas com Viagens - Comercial",
+        "count": 1
+      },
+      "target": {
+        "id": 169,
+        "code": "8.2.004",
+        "name": "Despesas com Viagens - Comercial",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "6.01.003 - ICMS Sobre Vendas",
+        "source_code": "6.01.003",
+        "source_name": "ICMS Sobre Vendas",
+        "count": 1
+      },
+      "target": {
+        "id": 95,
+        "code": "4.01.003",
+        "name": "ICMS Sobre Vendas",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.01.003 - Alimentacao - Adm/Coml",
+        "source_code": "7.01.003",
+        "source_name": "Alimentacao - Adm/Coml",
+        "count": 1
+      },
+      "target": {
+        "id": 154,
+        "code": "8.1.003",
+        "name": "Alimentacao - Adm/Coml",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.02.999 - Outros Gastos com Veiculos - Operacao",
+        "source_code": "5.02.999",
+        "source_name": "Outros Gastos com Veiculos - Operacao",
+        "count": 1
+      },
+      "target": {
+        "id": 129,
+        "code": "7.2.009",
+        "name": "Outros Gastos com Veiculos - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.04.001 - Alguel Imoveis - Operacao",
+        "source_code": "5.04.001",
+        "source_name": "Alguel Imoveis - Operacao",
+        "count": 1
+      },
+      "target": {
+        "id": 136,
+        "code": "7.4.001",
+        "name": "Alguel Imoveis - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.05.002 - Servicos em Clientes Contratos - Operacao",
+        "source_code": "5.05.002",
+        "source_name": "Servicos em Clientes Contratos - Operacao",
+        "count": 6
+      },
+      "target": {
+        "id": 144,
+        "code": "7.5.002",
+        "name": "Servicos em Clientes Contratos - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.01.011 - Fardamento - Operacao",
+        "source_code": "5.01.011",
+        "source_name": "Fardamento - Operacao",
+        "count": 1
+      },
+      "target": {
+        "id": 116,
+        "code": "7.1.011",
+        "name": "Fardamento - Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "7.03.011 - Honorarios Contabeis",
+        "source_code": "7.03.011",
+        "source_name": "Honorarios Contabeis",
+        "count": 2
+      },
+      "target": {
+        "id": 182,
+        "code": "8.3.011",
+        "name": "Honorarios Contabeis",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    },
+    {
+      "source": {
+        "source_text": "5.05.004 - Comunicacao Operacao",
+        "source_code": "5.05.004",
+        "source_name": "Comunicacao Operacao",
+        "count": 1
+      },
+      "target": {
+        "id": 146,
+        "code": "7.5.004",
+        "name": "Comunicacao Operacao",
+        "accepts_posting": true,
+        "is_active": true
+      },
+      "reason": "explicit_code_map"
+    }
+  ]
+}

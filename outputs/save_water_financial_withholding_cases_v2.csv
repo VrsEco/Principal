@@ -1,0 +1,16 @@
+﻿excel_row,descricao,receita_bruta,tributo_retido,recebimento_liquido,tributo_label,situacao,settlement_date,bank_account
+3,Venda 1891,5142.0,109.52,5032.48,Simples Nacional,Quitado,2026-05-04,ITAU - SAVE WATER
+22,Venda 1839,4801.15,102.26,4698.89,Simples Nacional,Quitado,2026-05-05,ITAU - SAVE WATER
+84,Venda 1809,25438.86,1271.94,24166.92,Simples Nacional,Conciliado,2026-05-05,ITAU - STELLA BAPTISTA
+86,Venda 1807,6612.46,330.62,6281.84,Simples Nacional,Conciliado,2026-05-05,ITAU - STELLA BAPTISTA
+87,Venda 1818,4334.47,216.72,4117.75,Simples Nacional,Conciliado,2026-05-05,ITAU - STELLA BAPTISTA
+94,Venda 1896,4494.35,95.73,4398.62,Simples Nacional,Atrasado,,
+95,Venda 1894,4000.0,85.2,3914.8,Simples Nacional,Quitado,2026-05-06,ITAU - SAVE WATER
+123,Venda 1827,15056.0,752.8,14303.2,Simples Nacional,Conciliado,2026-05-08,ITAU - STELLA BAPTISTA
+124,Venda 1804,8153.6,407.68,7745.92,Simples Nacional,Conciliado,2026-05-08,ITAU - STELLA BAPTISTA
+154,Venda 1895,4000.0,100.0,3900.0,Simples Nacional,Quitado,2026-05-14,ITAU - STELLA BAPTISTA
+160,Venda 1816,10961.28,548.06,10413.22,Simples Nacional,Conciliado,2026-05-14,ITAU - STELLA BAPTISTA
+196,Venda 1865,19990.0,999.5,18990.5,Simples Nacional,Atrasado,,
+237,Venda 1820,21252.0,1062.6,20189.4,Simples Nacional,Conciliado,2026-05-22,ITAU - STELLA BAPTISTA
+253,Venda 1892,5142.0,109.52,5032.48,Simples Nacional,Em aberto,,
+254,Venda 1817,8380.0,419.0,7961.0,Simples Nacional,Em aberto,,
