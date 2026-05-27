@@ -337,6 +337,42 @@ class ContractService:
         ]
 
     @staticmethod
+    def get_due_rule_reference_options() -> list[tuple[str, str]]:
+        return [
+            ("current_month", "Mês atual"),
+            ("next_month", "Próximo mês"),
+        ]
+
+    @staticmethod
+    def build_due_rule(*, reference: object, day: object) -> Optional[str]:
+        reference_value = ContractService._normalize_text(reference)
+        day_value = ContractService._normalize_int(day)
+        if reference_value not in {"current_month", "next_month"} or not day_value:
+            return None
+        day_value = max(1, min(day_value, 31))
+        return f"{reference_value}:{day_value:02d}"
+
+    @staticmethod
+    def parse_due_rule(value: object) -> dict:
+        raw_value = ContractService._normalize_text(value)
+        if ":" in raw_value:
+            reference, day_text = raw_value.split(":", 1)
+            day_value = ContractService._normalize_int(day_text)
+            if reference in {"current_month", "next_month"} and day_value:
+                return {
+                    "reference": reference,
+                    "day": max(1, min(day_value, 31)),
+                    "label": f"{dict(ContractService.get_due_rule_reference_options()).get(reference, reference)} · dia {max(1, min(day_value, 31))}",
+                    "is_structured": True,
+                }
+        return {
+            "reference": None,
+            "day": None,
+            "label": raw_value or "-",
+            "is_structured": False,
+        }
+
+    @staticmethod
     def get_contract_automation_template_options() -> list[dict]:
         return [
             {

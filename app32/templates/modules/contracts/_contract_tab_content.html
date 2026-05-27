@@ -9,27 +9,6 @@
                 </div>
                 <div class="panel-body form-grid">
                     <label class="full-width"><span>Título</span><input type="text" name="title" value="{{ contract.title }}" required></label>
-                    <label><span>Tipo</span>
-                        <select name="contract_type">
-                            <option value="">Selecione</option>
-                            {% for value, label in contract_type_options %}
-                            <option value="{{ value }}" {% if contract.contract_type == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label><span>Status</span>
-                        <select name="status">
-                            <option value="active" {% if contract.status in ['active', 'signed', 'implanting'] %}selected{% endif %}>active</option>
-                            <option value="inactive" {% if contract.status in ['inactive', 'closed', 'draft'] %}selected{% endif %}>inactive</option>
-                        </select>
-                    </label>
-                    <label><span>Moeda</span>
-                        <select name="currency_code">
-                            {% for value, label in currency_options %}
-                            <option value="{{ value }}" {% if (contract.currency_code or 'BRL') == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
                     <label><span>Gestor do contrato</span>
                         <select name="manager_employee_id">
                             <option value="">Selecione</option>
@@ -153,15 +132,15 @@
                                 {% endfor %}
                             </select>
                         </label>
-                        <label><span>Competência</span>
-                            <select name="competence_rule">
-                                <option value="">Selecione</option>
-                                {% for value, label in competence_rule_options %}
+                        <label><span>Vencimento</span>
+                            <select name="due_rule_reference">
+                                <option value="">Selecione o mês-base</option>
+                                {% for value, label in due_rule_reference_options %}
                                 <option value="{{ value }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </label>
-                        <label><span>Vencimento</span><input type="text" name="due_rule"></label>
+                        <label><span>Dia do vencimento</span><input type="number" name="due_rule_day" min="1" max="31" step="1"></label>
                         <label><span>Gatilho nativo</span>
                             <select name="trigger_type">
                                 <option value="">Sem gatilho específico</option>
@@ -289,15 +268,15 @@
                                 {% endfor %}
                             </select>
                         </label>
-                        <label><span>Competência</span>
-                            <select name="competence_rule">
-                                <option value="">Selecione</option>
-                                {% for value, label in competence_rule_options %}
-                                <option value="{{ value }}" {% if contract.competence_rule == value %}selected{% endif %}>{{ label }}</option>
+                        <label><span>Vencimento</span>
+                            <select name="due_rule_reference">
+                                <option value="">Selecione o mês-base</option>
+                                {% for value, label in due_rule_reference_options %}
+                                <option value="{{ value }}" {% if due_rule_state.reference == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </label>
-                        <label><span>Regra de vencimento</span><input type="text" name="due_rule" value="{{ contract.due_rule or '' }}"></label>
+                        <label><span>Dia do vencimento</span><input type="number" name="due_rule_day" min="1" max="31" step="1" value="{{ due_rule_state.day or '' }}"></label>
                         <label><span>Regra de renovação</span>
                             <select name="renewal_rule">
                                 <option value="">Selecione</option>

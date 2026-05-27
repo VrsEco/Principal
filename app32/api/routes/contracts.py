@@ -42,6 +42,20 @@ def _normalize_contract_tab(tab_name: str | None) -> str:
     return TAB_ALIASES.get(raw_tab, raw_tab)
 
 
+def _normalize_contract_form_payload(form_data) -> dict:
+    payload = dict(form_data)
+    due_rule = ContractService.build_due_rule(
+        reference=payload.get("due_rule_reference"),
+        day=payload.get("due_rule_day"),
+    )
+    if due_rule:
+        payload["due_rule"] = due_rule
+    payload.pop("due_rule_reference", None)
+    payload.pop("due_rule_day", None)
+    payload.pop("competence_rule", None)
+    return payload
+
+
 def _build_contract_detail_context(company: Company, contract, active_tab: str) -> dict:
     financial_terms = ContractFinancialTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
     fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
@@ -92,13 +106,15 @@ def _build_contract_detail_context(company: Company, contract, active_tab: str) 
         "periodicity_options": ContractService.get_periodicity_options(),
         "competence_rule_options": ContractService.get_competence_rule_options(),
         "renewal_rule_options": ContractService.get_renewal_rule_options(),
+        "due_rule_reference_options": ContractService.get_due_rule_reference_options(),
+        "due_rule_state": ContractService.parse_due_rule(contract.due_rule if contract else None),
     }
 
 
 def _process_contract_section_submission(company: Company, contract, active_tab: str) -> str:
     section = _normalize_contract_tab(request.form.get("section") or active_tab)
     if section == "resumo":
-        ContractService.update_contract_summary(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+        ContractService.update_contract_summary(contract=contract, payload=_normalize_contract_form_payload(request.form), user_id=current_user.id if current_user.is_authenticated else None)
         flash("Resumo do contrato atualizado.", "success")
     elif section == "cliente":
         ContractService.update_contract_customer(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
@@ -122,7 +138,7 @@ def _process_contract_section_submission(company: Company, contract, active_tab:
             ContractService.delete_billing_item(contract=contract, item_id=int(request.form["delete_billing_item_id"]))
             flash("Item de faturamento removido.", "success")
         else:
-            ContractService.add_billing_item(contract=contract, payload=request.form.to_dict())
+            ContractService.add_billing_item(contract=contract, payload=_normalize_contract_form_payload(request.form))
             flash("Item de faturamento incluído.", "success")
     elif section in {"cobranca", "financeiro"}:
         section = "financeiro"
@@ -180,9 +196,10 @@ def _process_contract_section_submission(company: Company, contract, active_tab:
             ContractService.delete_trigger(contract=contract, trigger_id=int(request.form["delete_trigger_id"]))
             flash("Gatilho nativo removido.", "success")
         else:
-            ContractService.update_contract_schedule(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+            normalized_payload = _normalize_contract_form_payload(request.form)
+            ContractService.update_contract_schedule(contract=contract, payload=normalized_payload, user_id=current_user.id if current_user.is_authenticated else None)
             if request.form.get("trigger_type"):
-                ContractService.add_trigger(contract=contract, payload=request.form.to_dict())
+                ContractService.add_trigger(contract=contract, payload=normalized_payload)
             flash("Agenda nativa do contrato atualizada.", "success")
     elif section == "clausulas":
         if request.form.get("delete_clause_id"):
@@ -309,7 +326,7 @@ def contracts_dashboard():
                     abort(403)
                 contract = ContractService.create_contract(
                     company_id=company.id,
-                    payload=request.form.to_dict(),
+                    payload=_normalize_contract_form_payload(request.form),
                     user_id=current_user.id if current_user.is_authenticated else None,
                 )
                 flash("Contrato criado com sucesso. Agora complete o workspace operacional.", "success")
@@ -551,7 +568,7 @@ def contracts_create():
         try:
             if not has_permission(company.id, "contracts", "create"):
                 abort(403)
-            contract = ContractService.create_contract(company_id=company.id, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+            contract = ContractService.create_contract(company_id=company.id, payload=_normalize_contract_form_payload(request.form), user_id=current_user.id if current_user.is_authenticated else None)
             flash("Contrato criado com sucesso. Agora complete o workspace operacional.", "success")
             return redirect(url_for("contracts.contracts_dashboard", contract_id=contract.id, company_id=company.id, tab="cliente"))
         except Exception as exc:
@@ -574,6 +591,7 @@ def contracts_create():
         currency_options=ContractService.get_currency_options(),
         periodicity_options=ContractService.get_periodicity_options(),
         competence_rule_options=ContractService.get_competence_rule_options(),
+        due_rule_reference_options=ContractService.get_due_rule_reference_options(),
     )
 
 

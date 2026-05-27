@@ -160,33 +160,6 @@
                         </select>
                     </label>
                     <label>
-                        <span>Status</span>
-                        <select name="status">
-                            <option value="draft">Rascunho</option>
-                            <option value="active">Ativo</option>
-                            <option value="signed">Assinado</option>
-                            <option value="implanting">Em implantação</option>
-                            <option value="closed">Encerrado</option>
-                        </select>
-                    </label>
-                    <label>
-                        <span>Tipo de contrato</span>
-                        <select name="contract_type">
-                            <option value="">Selecione</option>
-                            {% for value, label in contract_type_options %}
-                            <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Moeda</span>
-                        <select name="currency_code">
-                            {% for value, label in currency_options %}
-                            <option value="{{ value }}" {% if value == 'BRL' %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label>
                         <span>Início dos serviços</span>
                         <input type="date" name="service_start_at">
                     </label>
@@ -200,17 +173,17 @@
                         </select>
                     </label>
                     <label>
-                        <span>Competência</span>
-                        <select name="competence_rule">
-                            <option value="">Selecione</option>
-                            {% for value, label in competence_rule_options %}
+                        <span>Vencimento</span>
+                        <select name="due_rule_reference">
+                            <option value="">Selecione o mês-base</option>
+                            {% for value, label in due_rule_reference_options %}
                             <option value="{{ value }}">{{ label }}</option>
                             {% endfor %}
                         </select>
                     </label>
                     <label>
-                        <span>Regra de vencimento</span>
-                        <input type="text" name="due_rule" placeholder="Ex.: dia 10, 30 dias após emissão">
+                        <span>Dia do vencimento</span>
+                        <input type="number" name="due_rule_day" min="1" max="31" step="1" placeholder="Ex.: 10">
                     </label>
                     <label>
                         <span>Data de renovação</span>

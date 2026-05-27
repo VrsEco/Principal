@@ -109,6 +109,16 @@ def test_update_contract_general_supports_last_billing_and_binary_status():
     assert contract.last_billing_at.isoformat() == "2026-04-30"
 
 
+def test_due_rule_helpers_build_and_parse_structured_value():
+    due_rule = ContractService.build_due_rule(reference="next_month", day="15")
+    assert due_rule == "next_month:15"
+
+    parsed = ContractService.parse_due_rule(due_rule)
+    assert parsed["reference"] == "next_month"
+    assert parsed["day"] == 15
+    assert parsed["is_structured"] is True
+
+
 def test_get_contract_status_group_maps_legacy_active_statuses():
     contract = SimpleNamespace(status="signed")
     assert ContractService.get_contract_status_group(contract) == "active"
