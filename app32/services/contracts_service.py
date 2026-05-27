@@ -289,6 +289,54 @@ class ContractService:
         ]
 
     @staticmethod
+    def get_contract_type_options() -> list[tuple[str, str]]:
+        return [
+            ("prestacao", "Prestação de serviços"),
+            ("licenciamento", "Licenciamento"),
+            ("manutencao_suporte", "Manutenção / suporte"),
+            ("fornecimento", "Fornecimento"),
+            ("consultoria", "Consultoria"),
+            ("outsourcing", "Outsourcing"),
+            ("locacao", "Locação"),
+            ("parceria", "Parceria"),
+        ]
+
+    @staticmethod
+    def get_currency_options() -> list[tuple[str, str]]:
+        return [
+            ("BRL", "BRL · Real"),
+            ("USD", "USD · Dólar"),
+            ("EUR", "EUR · Euro"),
+        ]
+
+    @staticmethod
+    def get_periodicity_options() -> list[tuple[str, str]]:
+        return [
+            ("monthly", "Mensal"),
+            ("weekly", "Semanal"),
+            ("quarterly", "Trimestral"),
+            ("semiannual", "Semestral"),
+            ("annual", "Anual"),
+        ]
+
+    @staticmethod
+    def get_competence_rule_options() -> list[tuple[str, str]]:
+        return [
+            ("mes atual", "Mês atual"),
+            ("mes anterior", "Mês anterior"),
+            ("antecipado", "Antecipado"),
+            ("sob demanda", "Sob demanda"),
+        ]
+
+    @staticmethod
+    def get_renewal_rule_options() -> list[tuple[str, str]]:
+        return [
+            ("manual", "Manual"),
+            ("auto", "Automática"),
+            ("aditivo", "Por aditivo"),
+        ]
+
+    @staticmethod
     def get_contract_automation_template_options() -> list[dict]:
         return [
             {

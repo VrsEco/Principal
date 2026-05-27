@@ -86,7 +86,12 @@
                     </div>
                     <label>
                         <span>Tipo de contrato</span>
-                        <input type="text" name="contract_type" placeholder="Prestação de serviço, fornecimento...">
+                        <select name="contract_type">
+                            <option value="">Selecione</option>
+                            {% for value, label in contract_type_options %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
                     <label>
                         <span>Status</span>
@@ -98,22 +103,29 @@
                     </label>
                     <label>
                         <span>Moeda</span>
-                        <input type="text" name="currency_code" value="BRL">
+                        <select name="currency_code">
+                            {% for value, label in currency_options %}
+                            <option value="{{ value }}" {% if value == 'BRL' %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
                     <label>
                         <span>Periodicidade</span>
                         <select name="periodicity">
                             <option value="">Selecione</option>
-                            <option value="monthly">Mensal</option>
-                            <option value="weekly">Semanal</option>
-                            <option value="quarterly">Trimestral</option>
-                            <option value="semiannual">Semestral</option>
-                            <option value="annual">Anual</option>
+                            {% for value, label in periodicity_options %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
                         </select>
                     </label>
                     <label>
                         <span>Competência</span>
-                        <input type="text" name="competence_rule" placeholder="mês atual, mês anterior...">
+                        <select name="competence_rule">
+                            <option value="">Selecione</option>
+                            {% for value, label in competence_rule_options %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
                     </label>
                     <label>
                         <span>Regra de vencimento</span>

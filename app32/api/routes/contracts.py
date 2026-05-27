@@ -12,6 +12,13 @@ from utils.permissions import get_default_company_id, has_permission, permission
 
 
 contracts_bp = Blueprint("contracts", __name__)
+TAB_ALIASES = {
+    "geral": "cliente",
+    "resumo": "cliente",
+    "cobranca": "financeiro",
+    "gatilhos": "periodicidade",
+    "anexos": "documentos",
+}
 
 
 def get_active_company():
@@ -30,13 +37,247 @@ def get_active_company():
     return None
 
 
-@contracts_bp.route("/contracts")
-@contracts_bp.route("/contracts/dashboard")
+def _normalize_contract_tab(tab_name: str | None) -> str:
+    raw_tab = (tab_name or "cliente").strip().lower()
+    return TAB_ALIASES.get(raw_tab, raw_tab)
+
+
+def _build_contract_detail_context(company: Company, contract, active_tab: str) -> dict:
+    financial_terms = ContractFinancialTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
+    fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
+    references = ContractService.list_financial_references(company.id)
+    parties = ContractService.list_customer_parties(company.id)
+    contract_catalog_items = ContractsCatalogService.list_selectable_items(company.id)
+    managers = Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all()
+    if contract.party and not any(item.id == contract.party.id for item in parties):
+        parties = [contract.party, *parties]
+    documents = ContractDocument.query.filter_by(contract_id=contract.id, company_id=company.id).order_by(ContractDocument.uploaded_at.desc()).all()
+    pdf_documents = [item for item in documents if item.document_type == "pdf_gerado"]
+    signed_documents = [item for item in documents if item.document_type == "contrato_assinado" or item.is_signed_version]
+    generic_documents = [item for item in documents if item.document_type not in {"pdf_gerado", "contrato_assinado"} and not item.is_signed_version]
+    native_billings = ContractService.list_native_billings(contract)
+    return {
+        "parties": parties,
+        "contract_catalog_items": contract_catalog_items,
+        "financial_terms": financial_terms,
+        "fiscal_terms": fiscal_terms,
+        "references": references,
+        "active_tab": active_tab,
+        "tabs": ContractService.get_tab_registry(),
+        "pdf_documents": pdf_documents,
+        "signed_documents": signed_documents,
+        "generic_documents": generic_documents,
+        "managers": managers,
+        "review_flags": ContractService.build_contract_review_flags(contract),
+        "contract_summary": ContractService.get_contract_workspace_summary(contract),
+        "contract_history": ContractService.list_contract_history(contract),
+        "selected_contract_next_action": ContractService.get_contract_next_action(contract),
+        "native_billings": native_billings,
+        "native_billing_preview": ContractService.preview_native_billing(contract, {}),
+        "native_schedule": ContractService.get_native_schedule_overview(contract),
+        "contract_automations": ContractService.list_contract_automations(contract),
+        "automation_template_options": ContractService.get_contract_automation_template_options(),
+        "contract_financial_titles": ContractFinancialService.list_contract_financial_titles(contract),
+        "contract_financial_summary": ContractFinancialService.build_contract_financial_summary(contract),
+        "satellite_policy_templates": ContractFinancialService.get_satellite_policy_template_options(),
+        "contract_satellite_policies": ContractFinancialService.list_contract_satellite_policies(contract),
+        "contracting_legal_entities": ContractService.list_contracting_legal_entities(company.id),
+        "native_billing_export_payloads": {item.id: ContractService.build_native_billing_fiscal_export_payload(item) for item in native_billings},
+        "trigger_type_options": ContractService.get_native_trigger_type_options(),
+        "trigger_type_map": dict(ContractService.get_native_trigger_type_options()),
+        "reference_date_type_options": ContractService.get_reference_date_type_options(),
+        "reference_date_type_map": dict(ContractService.get_reference_date_type_options()),
+        "contract_type_options": ContractService.get_contract_type_options(),
+        "currency_options": ContractService.get_currency_options(),
+        "periodicity_options": ContractService.get_periodicity_options(),
+        "competence_rule_options": ContractService.get_competence_rule_options(),
+        "renewal_rule_options": ContractService.get_renewal_rule_options(),
+    }
+
+
+def _process_contract_section_submission(company: Company, contract, active_tab: str) -> str:
+    section = _normalize_contract_tab(request.form.get("section") or active_tab)
+    if section == "resumo":
+        ContractService.update_contract_summary(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+        flash("Resumo do contrato atualizado.", "success")
+    elif section == "cliente":
+        ContractService.update_contract_customer(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+        flash("Cliente do contrato atualizado.", "success")
+    elif section == "itens":
+        if request.form.get("delete_item_id"):
+            ContractService.delete_contract_item(contract=contract, item_id=int(request.form["delete_item_id"]))
+            flash("Item do contrato removido.", "success")
+        else:
+            ContractService.add_contract_item(contract=contract, payload=request.form.to_dict())
+            flash("Item do contrato incluído.", "success")
+    elif section == "faturamento":
+        if request.form.get("generate_native_billing"):
+            native_billing = ContractService.generate_native_billing(
+                contract=contract,
+                payload=request.form.to_dict(),
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash(f"Faturamento nativo {native_billing.billing_code} gerado com sucesso.", "success")
+        elif request.form.get("delete_billing_item_id"):
+            ContractService.delete_billing_item(contract=contract, item_id=int(request.form["delete_billing_item_id"]))
+            flash("Item de faturamento removido.", "success")
+        else:
+            ContractService.add_billing_item(contract=contract, payload=request.form.to_dict())
+            flash("Item de faturamento incluído.", "success")
+    elif section in {"cobranca", "financeiro"}:
+        section = "financeiro"
+        if request.form.get("delete_satellite_policy_id"):
+            ContractFinancialService.delete_contract_satellite_policy(
+                contract=contract,
+                policy_id=int(request.form["delete_satellite_policy_id"]),
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Regra automática do satélite removida.", "success")
+        elif request.form.get("generate_financial_titles_for_billing_id"):
+            native_billing = next(
+                (item for item in ContractService.list_native_billings(contract) if item.id == int(request.form["generate_financial_titles_for_billing_id"])),
+                None,
+            )
+            if not native_billing:
+                raise ValueError("Competência nativa não localizada para gerar os títulos.")
+            ContractFinancialService.ensure_financial_titles_for_native_billing(
+                contract=contract,
+                native_billing=native_billing,
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Títulos financeiros gerados a partir da competência.", "success")
+        elif request.form.get("satellite_policy_template_key") or request.form.get("satellite_nature"):
+            ContractFinancialService.upsert_contract_satellite_policy(
+                contract=contract,
+                payload=request.form.to_dict(),
+                user_id=current_user.id if current_user.is_authenticated else None,
+                policy_id=request.form.get("satellite_policy_id", type=int),
+            )
+            flash("Regra automática do satélite salva.", "success")
+        else:
+            ContractService.upsert_financial_terms(
+                contract=contract,
+                payload=request.form.to_dict(),
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Financeiro do contrato atualizado.", "success")
+    elif section == "fiscal":
+        if request.form.get("delete_retention_id"):
+            ContractService.delete_retention(contract=contract, retention_id=int(request.form["delete_retention_id"]))
+            flash("Retenção removida.", "success")
+        elif request.form.get("retention_type"):
+            ContractService.add_retention(contract=contract, payload=request.form.to_dict())
+            flash("Retenção adicionada.", "success")
+        else:
+            ContractService.upsert_fiscal_terms(
+                contract=contract,
+                payload=request.form.to_dict(),
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Condições fiscais atualizadas.", "success")
+    elif section == "periodicidade":
+        if request.form.get("delete_trigger_id"):
+            ContractService.delete_trigger(contract=contract, trigger_id=int(request.form["delete_trigger_id"]))
+            flash("Gatilho nativo removido.", "success")
+        else:
+            ContractService.update_contract_schedule(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+            if request.form.get("trigger_type"):
+                ContractService.add_trigger(contract=contract, payload=request.form.to_dict())
+            flash("Agenda nativa do contrato atualizada.", "success")
+    elif section == "clausulas":
+        if request.form.get("delete_clause_id"):
+            ContractService.delete_contract_clause(contract=contract, clause_id=int(request.form["delete_clause_id"]), user_id=current_user.id if current_user.is_authenticated else None)
+            flash("Cláusula removida.", "success")
+        else:
+            ContractService.upsert_contract_clause(contract=contract, payload=request.form.to_dict(), clause_id=request.form.get("clause_id", type=int), user_id=current_user.id if current_user.is_authenticated else None)
+            flash("Cláusula salva.", "success")
+    elif section == "automacoes":
+        if request.form.get("pause_automation_id"):
+            ContractService.update_contract_automation_status(
+                contract=contract,
+                automation_id=int(request.form["pause_automation_id"]),
+                activate=False,
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Automação pausada.", "success")
+        elif request.form.get("activate_automation_id"):
+            ContractService.update_contract_automation_status(
+                contract=contract,
+                automation_id=int(request.form["activate_automation_id"]),
+                activate=True,
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Automação ativada.", "success")
+        else:
+            automation = ContractService.create_contract_automation(
+                contract=contract,
+                template_key=request.form.get("automation_template_key"),
+                user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash(f"Automação '{automation.name}' criada.", "success")
+    elif section == "observacoes":
+        ContractService.update_contract_notes(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+        flash("Observações do contrato atualizadas.", "success")
+    elif section == "validar":
+        ContractService.update_contract_validation(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
+        flash("Validação operacional do contrato atualizada.", "success")
+    elif section == "revisao":
+        flash("A aba de revisão é somente leitura neste MVP.", "info")
+    elif section == "gerar_pdf":
+        if request.form.get("delete_document_id"):
+            ContractService.delete_document(contract=contract, document_id=int(request.form["delete_document_id"]))
+            flash("PDF gerado removido.", "success")
+        else:
+            ContractService.save_document(
+                contract=contract,
+                document_type="pdf_gerado",
+                document_version=request.form.get("document_version"),
+                is_signed_version=False,
+                file=request.files.get("file"),
+                uploaded_by_user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("PDF do contrato registrado.", "success")
+    elif section == "contrato_assinado":
+        if request.form.get("delete_document_id"):
+            ContractService.delete_document(contract=contract, document_id=int(request.form["delete_document_id"]))
+            flash("Documento assinado removido.", "success")
+        else:
+            ContractService.save_document(
+                contract=contract,
+                document_type="contrato_assinado",
+                document_version=request.form.get("document_version"),
+                is_signed_version=True,
+                file=request.files.get("file"),
+                uploaded_by_user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Contrato assinado anexado.", "success")
+    elif section == "documentos":
+        if request.form.get("delete_document_id"):
+            ContractService.delete_document(contract=contract, document_id=int(request.form["delete_document_id"]))
+            flash("Documento removido.", "success")
+        else:
+            ContractService.save_document(
+                contract=contract,
+                document_type=request.form.get("document_type"),
+                document_version=request.form.get("document_version"),
+                is_signed_version=bool(request.form.get("is_signed_version")),
+                file=request.files.get("file"),
+                uploaded_by_user_id=current_user.id if current_user.is_authenticated else None,
+            )
+            flash("Documento anexado ao contrato.", "success")
+    else:
+        flash("Seção do contrato não reconhecida.", "error")
+    return section
+
+
+@contracts_bp.route("/contracts", methods=["GET", "POST"])
+@contracts_bp.route("/contracts/dashboard", methods=["GET", "POST"])
 @permission_required("contracts", "view")
 def contracts_dashboard():
     company = get_active_company()
     if not company:
         abort(400, description="Empresa ativa não localizada.")
+    active_tab = _normalize_contract_tab(request.args.get("tab") or "cliente")
     selected_contract_id = request.args.get("contract_id", type=int)
     selected_party_id = request.args.get("party_id", type=int)
     selected_counterparty_id = request.args.get("counterparty_id", type=int)
@@ -51,20 +292,56 @@ def contracts_dashboard():
     else:
         selected_party = parties[0] if parties else None
 
+    if request.method == "POST":
+        if selected_contract:
+            if not has_permission(company.id, "contracts", "edit"):
+                abort(403)
+            section = _normalize_contract_tab(request.form.get("section") or active_tab)
+            try:
+                section = _process_contract_section_submission(company, selected_contract, active_tab)
+                return redirect(url_for("contracts.contracts_dashboard", company_id=company.id, contract_id=selected_contract.id, tab=section))
+            except Exception as exc:
+                flash(f"Falha ao processar a aba '{section}': {exc}", "error")
+                active_tab = section
+        else:
+            try:
+                if not has_permission(company.id, "contracts", "create"):
+                    abort(403)
+                contract = ContractService.create_contract(
+                    company_id=company.id,
+                    payload=request.form.to_dict(),
+                    user_id=current_user.id if current_user.is_authenticated else None,
+                )
+                flash("Contrato criado com sucesso. Agora complete o workspace operacional.", "success")
+                return redirect(url_for("contracts.contracts_dashboard", company_id=company.id, contract_id=contract.id, tab="cliente"))
+            except Exception as exc:
+                flash(f"Não foi possível criar o contrato: {exc}", "error")
+
+    context = {
+        "company": company,
+        "company_id": company.id,
+        "selected_contract": selected_contract,
+        "selected_contract_summary": ContractService.get_contract_workspace_summary(selected_contract) if selected_contract else None,
+        "selected_party": selected_party,
+        "contract_tree": ContractService.list_customer_contract_tree(company.id),
+        "tabs": ContractService.get_tab_registry(),
+        "contract_status_label": ContractService.get_contract_status_label,
+        "contract_status_group": ContractService.get_contract_status_group,
+        "contract_start_date": ContractService.get_contract_start_date,
+        "contract_next_action": ContractService.get_contract_next_action,
+        "contract_type_options": ContractService.get_contract_type_options(),
+        "currency_options": ContractService.get_currency_options(),
+        "periodicity_options": ContractService.get_periodicity_options(),
+        "competence_rule_options": ContractService.get_competence_rule_options(),
+        "renewal_rule_options": ContractService.get_renewal_rule_options(),
+        "parties": parties,
+        "active_tab": active_tab,
+    }
+    if selected_contract:
+        context.update(_build_contract_detail_context(company, selected_contract, active_tab))
     return render_template(
         "modules/contracts/contracts_workspace.html",
-        company=company,
-        company_id=company.id,
-        parties=parties,
-        selected_contract=selected_contract,
-        selected_contract_summary=ContractService.get_contract_workspace_summary(selected_contract),
-        selected_party=selected_party,
-        contract_tree=ContractService.list_customer_contract_tree(company.id),
-        tabs=ContractService.get_tab_registry(),
-        contract_status_label=ContractService.get_contract_status_label,
-        contract_status_group=ContractService.get_contract_status_group,
-        contract_start_date=ContractService.get_contract_start_date,
-        contract_next_action=ContractService.get_contract_next_action,
+        **context,
     )
 
 
@@ -267,13 +544,16 @@ def contracts_create():
         abort(400, description="Empresa ativa não localizada.")
     selected_party_id = request.args.get("party_id", type=int)
 
+    if request.method == "GET":
+        return redirect(url_for("contracts.contracts_dashboard", company_id=company.id, party_id=selected_party_id))
+
     if request.method == "POST":
         try:
             if not has_permission(company.id, "contracts", "create"):
                 abort(403)
             contract = ContractService.create_contract(company_id=company.id, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-            flash("Contrato criado com sucesso. Agora complete o cockpit operacional.", "success")
-            return redirect(url_for("contracts.contracts_manage", contract_id=contract.id, company_id=company.id, tab="cliente"))
+            flash("Contrato criado com sucesso. Agora complete o workspace operacional.", "success")
+            return redirect(url_for("contracts.contracts_dashboard", contract_id=contract.id, company_id=company.id, tab="cliente"))
         except Exception as exc:
             flash(f"Não foi possível criar o contrato: {exc}", "error")
 
@@ -290,6 +570,10 @@ def contracts_create():
         selected_party=selected_party,
         tabs=ContractService.get_tab_registry(),
         managers=Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all(),
+        contract_type_options=ContractService.get_contract_type_options(),
+        currency_options=ContractService.get_currency_options(),
+        periodicity_options=ContractService.get_periodicity_options(),
+        competence_rule_options=ContractService.get_competence_rule_options(),
     )
 
 
@@ -302,244 +586,32 @@ def contracts_manage(contract_id: int):
     contract = ContractService.get_contract(company.id, contract_id)
     if not contract:
         abort(404)
+    active_tab = _normalize_contract_tab(request.args.get("tab") or "cliente")
 
-    tab_aliases = {
-        "geral": "cliente",
-        "resumo": "cliente",
-        "cobranca": "financeiro",
-        "gatilhos": "periodicidade",
-        "anexos": "documentos",
-    }
-    active_tab = tab_aliases.get((request.args.get("tab") or "cliente").strip().lower(), (request.args.get("tab") or "cliente").strip().lower())
+    if request.method == "GET":
+        return redirect(url_for("contracts.contracts_dashboard", contract_id=contract.id, company_id=company.id, tab=active_tab))
 
     if request.method == "POST":
         if not has_permission(company.id, "contracts", "edit"):
             abort(403)
-        section = (request.form.get("section") or active_tab).strip().lower()
+        section = _normalize_contract_tab(request.form.get("section") or active_tab)
         try:
-            if section == "resumo":
-                ContractService.update_contract_summary(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-                flash("Resumo do contrato atualizado.", "success")
-            elif section == "cliente":
-                ContractService.update_contract_customer(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-                flash("Cliente do contrato atualizado.", "success")
-            elif section == "itens":
-                if request.form.get("delete_item_id"):
-                    ContractService.delete_contract_item(contract=contract, item_id=int(request.form["delete_item_id"]))
-                    flash("Item do contrato removido.", "success")
-                else:
-                    ContractService.add_contract_item(contract=contract, payload=request.form.to_dict())
-                    flash("Item do contrato incluído.", "success")
-            elif section == "faturamento":
-                if request.form.get("generate_native_billing"):
-                    native_billing = ContractService.generate_native_billing(
-                        contract=contract,
-                        payload=request.form.to_dict(),
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash(f"Faturamento nativo {native_billing.billing_code} gerado com sucesso.", "success")
-                elif request.form.get("delete_billing_item_id"):
-                    ContractService.delete_billing_item(contract=contract, item_id=int(request.form["delete_billing_item_id"]))
-                    flash("Item de faturamento removido.", "success")
-                else:
-                    ContractService.add_billing_item(contract=contract, payload=request.form.to_dict())
-                    flash("Item de faturamento incluído.", "success")
-            elif section in {"cobranca", "financeiro"}:
-                if request.form.get("delete_satellite_policy_id"):
-                    ContractFinancialService.delete_contract_satellite_policy(
-                        contract=contract,
-                        policy_id=int(request.form["delete_satellite_policy_id"]),
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Regra automática do satélite removida.", "success")
-                elif request.form.get("generate_financial_titles_for_billing_id"):
-                    native_billing = next(
-                        (
-                            item
-                            for item in ContractService.list_native_billings(contract)
-                            if item.id == int(request.form["generate_financial_titles_for_billing_id"])
-                        ),
-                        None,
-                    )
-                    if not native_billing:
-                        raise ValueError("Competência nativa não localizada para gerar os títulos.")
-                    ContractFinancialService.ensure_financial_titles_for_native_billing(
-                        contract=contract,
-                        native_billing=native_billing,
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Títulos financeiros gerados a partir da competência.", "success")
-                elif request.form.get("satellite_policy_template_key") or request.form.get("satellite_nature"):
-                    ContractFinancialService.upsert_contract_satellite_policy(
-                        contract=contract,
-                        payload=request.form.to_dict(),
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                        policy_id=request.form.get("satellite_policy_id", type=int),
-                    )
-                    flash("Regra automática do satélite salva.", "success")
-                else:
-                    ContractService.upsert_financial_terms(
-                        contract=contract,
-                        payload=request.form.to_dict(),
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Financeiro do contrato atualizado.", "success")
-            elif section == "fiscal":
-                if request.form.get("delete_retention_id"):
-                    ContractService.delete_retention(contract=contract, retention_id=int(request.form["delete_retention_id"]))
-                    flash("Retenção removida.", "success")
-                elif request.form.get("retention_type"):
-                    ContractService.add_retention(contract=contract, payload=request.form.to_dict())
-                    flash("Retenção adicionada.", "success")
-                else:
-                    ContractService.upsert_fiscal_terms(
-                        contract=contract,
-                        payload=request.form.to_dict(),
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Condições fiscais atualizadas.", "success")
-            elif section == "periodicidade":
-                if request.form.get("delete_trigger_id"):
-                    ContractService.delete_trigger(contract=contract, trigger_id=int(request.form["delete_trigger_id"]))
-                    flash("Gatilho nativo removido.", "success")
-                else:
-                    ContractService.update_contract_schedule(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-                    if request.form.get("trigger_type"):
-                        ContractService.add_trigger(contract=contract, payload=request.form.to_dict())
-                    flash("Agenda nativa do contrato atualizada.", "success")
-            elif section == "clausulas":
-                if request.form.get("delete_clause_id"):
-                    ContractService.delete_contract_clause(contract=contract, clause_id=int(request.form["delete_clause_id"]), user_id=current_user.id if current_user.is_authenticated else None)
-                    flash("Cláusula removida.", "success")
-                else:
-                    ContractService.upsert_contract_clause(contract=contract, payload=request.form.to_dict(), clause_id=request.form.get("clause_id", type=int), user_id=current_user.id if current_user.is_authenticated else None)
-                    flash("Cláusula salva.", "success")
-            elif section == "automacoes":
-                if request.form.get("pause_automation_id"):
-                    ContractService.update_contract_automation_status(
-                        contract=contract,
-                        automation_id=int(request.form["pause_automation_id"]),
-                        activate=False,
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Automação pausada.", "success")
-                elif request.form.get("activate_automation_id"):
-                    ContractService.update_contract_automation_status(
-                        contract=contract,
-                        automation_id=int(request.form["activate_automation_id"]),
-                        activate=True,
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Automação ativada.", "success")
-                else:
-                    automation = ContractService.create_contract_automation(
-                        contract=contract,
-                        template_key=request.form.get("automation_template_key"),
-                        user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash(f"Automação '{automation.name}' criada.", "success")
-            elif section == "observacoes":
-                ContractService.update_contract_notes(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-                flash("Observações do contrato atualizadas.", "success")
-            elif section == "validar":
-                ContractService.update_contract_validation(contract=contract, payload=request.form.to_dict(), user_id=current_user.id if current_user.is_authenticated else None)
-                flash("Validação operacional do contrato atualizada.", "success")
-            elif section == "revisao":
-                flash("A aba de revisão é somente leitura neste MVP.", "info")
-            elif section == "gerar_pdf":
-                if request.form.get("delete_document_id"):
-                    ContractService.delete_document(contract=contract, document_id=int(request.form["delete_document_id"]))
-                    flash("PDF gerado removido.", "success")
-                else:
-                    ContractService.save_document(
-                        contract=contract,
-                        document_type="pdf_gerado",
-                        document_version=request.form.get("document_version"),
-                        is_signed_version=False,
-                        file=request.files.get("file"),
-                        uploaded_by_user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("PDF do contrato registrado.", "success")
-            elif section == "contrato_assinado":
-                if request.form.get("delete_document_id"):
-                    ContractService.delete_document(contract=contract, document_id=int(request.form["delete_document_id"]))
-                    flash("Documento assinado removido.", "success")
-                else:
-                    ContractService.save_document(
-                        contract=contract,
-                        document_type="contrato_assinado",
-                        document_version=request.form.get("document_version"),
-                        is_signed_version=True,
-                        file=request.files.get("file"),
-                        uploaded_by_user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Contrato assinado anexado.", "success")
-            elif section == "documentos":
-                if request.form.get("delete_document_id"):
-                    ContractService.delete_document(contract=contract, document_id=int(request.form["delete_document_id"]))
-                    flash("Documento removido.", "success")
-                else:
-                    ContractService.save_document(
-                        contract=contract,
-                        document_type=request.form.get("document_type"),
-                        document_version=request.form.get("document_version"),
-                        is_signed_version=bool(request.form.get("is_signed_version")),
-                        file=request.files.get("file"),
-                        uploaded_by_user_id=current_user.id if current_user.is_authenticated else None,
-                    )
-                    flash("Documento anexado ao contrato.", "success")
-            else:
-                flash("Seção do contrato não reconhecida.", "error")
-            return redirect(url_for("contracts.contracts_manage", contract_id=contract.id, company_id=company.id, tab=section))
+            section = _process_contract_section_submission(company, contract, active_tab)
+            return redirect(url_for("contracts.contracts_dashboard", contract_id=contract.id, company_id=company.id, tab=section))
         except Exception as exc:
             flash(f"Falha ao processar a aba '{section}': {exc}", "error")
             active_tab = section
-
-    financial_terms = ContractFinancialTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
-    fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
-    references = ContractService.list_financial_references(company.id)
-    parties = ContractService.list_customer_parties(company.id)
-    contract_catalog_items = ContractsCatalogService.list_selectable_items(company.id)
-    managers = Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all()
-    if contract.party and not any(item.id == contract.party.id for item in parties):
-        parties = [contract.party, *parties]
-    documents = ContractDocument.query.filter_by(contract_id=contract.id, company_id=company.id).order_by(ContractDocument.uploaded_at.desc()).all()
-    pdf_documents = [item for item in documents if item.document_type == "pdf_gerado"]
-    signed_documents = [item for item in documents if item.document_type == "contrato_assinado" or item.is_signed_version]
-    generic_documents = [item for item in documents if item.document_type not in {"pdf_gerado", "contrato_assinado"} and not item.is_signed_version]
     return render_template(
-        "modules/contracts/contract_manage.html",
+        "modules/contracts/contracts_workspace.html",
         company=company,
         company_id=company.id,
-        contract=contract,
-        parties=parties,
-        contract_catalog_items=contract_catalog_items,
-        financial_terms=financial_terms,
-        fiscal_terms=fiscal_terms,
-        references=references,
-        active_tab=active_tab,
-        tabs=ContractService.get_tab_registry(),
-        pdf_documents=pdf_documents,
-        signed_documents=signed_documents,
-        generic_documents=generic_documents,
-        managers=managers,
-        review_flags=ContractService.build_contract_review_flags(contract),
-        contract_summary=ContractService.get_contract_workspace_summary(contract),
-        contract_history=ContractService.list_contract_history(contract),
-        contract_next_action=ContractService.get_contract_next_action(contract),
-        native_billings=ContractService.list_native_billings(contract),
-        native_billing_preview=ContractService.preview_native_billing(contract, {}),
-        native_schedule=ContractService.get_native_schedule_overview(contract),
-        contract_automations=ContractService.list_contract_automations(contract),
-        automation_template_options=ContractService.get_contract_automation_template_options(),
-        contract_financial_titles=ContractFinancialService.list_contract_financial_titles(contract),
-        contract_financial_summary=ContractFinancialService.build_contract_financial_summary(contract),
-        satellite_policy_templates=ContractFinancialService.get_satellite_policy_template_options(),
-        contract_satellite_policies=ContractFinancialService.list_contract_satellite_policies(contract),
-        contracting_legal_entities=ContractService.list_contracting_legal_entities(company.id),
-        native_billing_export_payloads={item.id: ContractService.build_native_billing_fiscal_export_payload(item) for item in ContractService.list_native_billings(contract)},
-        trigger_type_options=ContractService.get_native_trigger_type_options(),
-        trigger_type_map=dict(ContractService.get_native_trigger_type_options()),
-        reference_date_type_options=ContractService.get_reference_date_type_options(),
-        reference_date_type_map=dict(ContractService.get_reference_date_type_options()),
+        selected_contract=contract,
+        selected_contract_summary=ContractService.get_contract_workspace_summary(contract) if contract else None,
+        selected_party=contract.party,
+        contract_tree=ContractService.list_customer_contract_tree(company.id),
+        contract_status_label=ContractService.get_contract_status_label,
+        contract_status_group=ContractService.get_contract_status_group,
+        contract_start_date=ContractService.get_contract_start_date,
+        contract_next_action=ContractService.get_contract_next_action,
+        **_build_contract_detail_context(company, contract, active_tab),
     )
