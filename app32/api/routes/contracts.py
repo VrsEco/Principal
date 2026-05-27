@@ -337,6 +337,7 @@ def contracts_dashboard():
     context = {
         "company": company,
         "company_id": company.id,
+        "contract": selected_contract,
         "selected_contract": selected_contract,
         "selected_contract_summary": ContractService.get_contract_workspace_summary(selected_contract) if selected_contract else None,
         "selected_party": selected_party,
@@ -624,6 +625,7 @@ def contracts_manage(contract_id: int):
         "modules/contracts/contracts_workspace.html",
         company=company,
         company_id=company.id,
+        contract=contract,
         selected_contract=contract,
         selected_contract_summary=ContractService.get_contract_workspace_summary(contract) if contract else None,
         selected_party=contract.party,
