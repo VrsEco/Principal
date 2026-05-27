@@ -134,13 +134,13 @@
                         </label>
                         <label><span>Vencimento</span>
                             <select name="due_rule_reference">
-                                <option value="">Selecione o mês-base</option>
+                                <option value="">Selecione a referência</option>
                                 {% for value, label in due_rule_reference_options %}
                                 <option value="{{ value }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </label>
-                        <label><span>Dia do vencimento</span><input type="number" name="due_rule_day" min="1" max="31" step="1"></label>
+                        <label><span>Dia do vencimento</span><input type="text" name="due_rule_day" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" placeholder="01, 02, 10..."></label>
                         <label><span>Gatilho nativo</span>
                             <select name="trigger_type">
                                 <option value="">Sem gatilho específico</option>
@@ -270,13 +270,13 @@
                         </label>
                         <label><span>Vencimento</span>
                             <select name="due_rule_reference">
-                                <option value="">Selecione o mês-base</option>
+                                <option value="">Selecione a referência</option>
                                 {% for value, label in due_rule_reference_options %}
                                 <option value="{{ value }}" {% if due_rule_state.reference == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </label>
-                        <label><span>Dia do vencimento</span><input type="number" name="due_rule_day" min="1" max="31" step="1" value="{{ due_rule_state.day or '' }}"></label>
+                        <label><span>Dia do vencimento</span><input type="text" name="due_rule_day" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" value="{{ '%02d'|format(due_rule_state.day) if due_rule_state.day else '' }}" placeholder="01, 02, 10..."></label>
                         <label><span>Regra de renovação</span>
                             <select name="renewal_rule">
                                 <option value="">Selecione</option>

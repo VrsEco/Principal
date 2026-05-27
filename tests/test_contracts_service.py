@@ -110,13 +110,29 @@ def test_update_contract_general_supports_last_billing_and_binary_status():
 
 
 def test_due_rule_helpers_build_and_parse_structured_value():
-    due_rule = ContractService.build_due_rule(reference="next_month", day="15")
-    assert due_rule == "next_month:15"
+    due_rule = ContractService.build_due_rule(reference="issue_month_plus_1", day="15")
+    assert due_rule == "issue_month_plus_1:15"
 
     parsed = ContractService.parse_due_rule(due_rule)
-    assert parsed["reference"] == "next_month"
+    assert parsed["reference"] == "issue_month_plus_1"
     assert parsed["day"] == 15
     assert parsed["is_structured"] is True
+
+
+def test_resolve_due_date_caps_to_last_day_of_month():
+    due_date = ContractService.resolve_due_date(
+        issue_date=date(2026, 1, 5),
+        due_rule="issue_month_plus_1:30",
+    )
+    assert due_date.isoformat() == "2026-02-28"
+
+
+def test_create_contract_requires_title_and_party():
+    with pytest.raises(ValueError, match="título"):
+        ContractService.create_contract(company_id=9, payload={"party_id": 11}, user_id=3)
+
+    with pytest.raises(ValueError, match="cliente"):
+        ContractService.create_contract(company_id=9, payload={"title": "Contrato X"}, user_id=3)
 
 
 def test_get_contract_status_group_maps_legacy_active_statuses():

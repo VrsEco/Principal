@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
+import calendar
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
@@ -339,15 +340,16 @@ class ContractService:
     @staticmethod
     def get_due_rule_reference_options() -> list[tuple[str, str]]:
         return [
-            ("current_month", "Mês atual"),
-            ("next_month", "Próximo mês"),
+            ("issue_month", "Mês da emissão"),
+            ("issue_month_plus_1", "1º mês após a emissão"),
+            ("issue_month_plus_2", "2º mês após a emissão"),
         ]
 
     @staticmethod
     def build_due_rule(*, reference: object, day: object) -> Optional[str]:
         reference_value = ContractService._normalize_text(reference)
         day_value = ContractService._normalize_int(day)
-        if reference_value not in {"current_month", "next_month"} or not day_value:
+        if reference_value not in {"issue_month", "issue_month_plus_1", "issue_month_plus_2"} or not day_value:
             return None
         day_value = max(1, min(day_value, 31))
         return f"{reference_value}:{day_value:02d}"
@@ -358,7 +360,7 @@ class ContractService:
         if ":" in raw_value:
             reference, day_text = raw_value.split(":", 1)
             day_value = ContractService._normalize_int(day_text)
-            if reference in {"current_month", "next_month"} and day_value:
+            if reference in {"issue_month", "issue_month_plus_1", "issue_month_plus_2"} and day_value:
                 return {
                     "reference": reference,
                     "day": max(1, min(day_value, 31)),
@@ -371,6 +373,28 @@ class ContractService:
             "label": raw_value or "-",
             "is_structured": False,
         }
+
+    @staticmethod
+    def _add_months(base_date: date, months: int) -> date:
+        month_index = (base_date.month - 1) + months
+        year = base_date.year + (month_index // 12)
+        month = (month_index % 12) + 1
+        day = min(base_date.day, calendar.monthrange(year, month)[1])
+        return date(year, month, day)
+
+    @staticmethod
+    def resolve_due_date(*, issue_date: date, due_rule: object) -> Optional[date]:
+        parsed = ContractService.parse_due_rule(due_rule)
+        if not parsed["is_structured"] or not parsed["reference"] or not parsed["day"]:
+            return None
+        month_offset_map = {
+            "issue_month": 0,
+            "issue_month_plus_1": 1,
+            "issue_month_plus_2": 2,
+        }
+        target_base = ContractService._add_months(issue_date, month_offset_map[parsed["reference"]])
+        last_day = calendar.monthrange(target_base.year, target_base.month)[1]
+        return date(target_base.year, target_base.month, min(parsed["day"], last_day))
 
     @staticmethod
     def get_contract_automation_template_options() -> list[dict]:
@@ -948,9 +972,19 @@ class ContractService:
 
     @staticmethod
     def create_contract(*, company_id: int, payload: dict, user_id: Optional[int]) -> Contract:
+        title = ContractService._normalize_text(payload.get("title"))
+        party_id = ContractService._normalize_int(payload.get("party_id"))
+        if not title:
+            raise ValueError("Informe o título do contrato.")
+        if not party_id:
+            raise ValueError("Selecione o cliente do contrato.")
         contract = Contract(
             company_id=company_id,
             code=ContractService._next_structured_code(Contract, company_id, "N"),
+            title=title,
+            party_id=party_id,
+            status="draft",
+            currency_code="BRL",
             created_by_user_id=user_id,
             version=1,
         )
@@ -1023,6 +1057,8 @@ class ContractService:
             contract.previous_contract_id = ContractService._normalize_int(payload.get("previous_contract_id"))
         if "notes" in payload:
             contract.notes = ContractService._normalize_text(payload.get("notes")) or None
+        contract.status = contract.status or "draft"
+        contract.currency_code = contract.currency_code or "BRL"
         contract.updated_by_user_id = user_id
         if not is_new:
             ContractService.record_event(
@@ -1320,7 +1356,7 @@ class ContractService:
         competence_start = ContractService._normalize_date(payload.get("competence_start")) or contract.billing_start_at or date.today()
         competence_end = ContractService._normalize_date(payload.get("competence_end")) or competence_start
         issue_date = ContractService._normalize_date(payload.get("issue_date")) or date.today()
-        due_date = ContractService._normalize_date(payload.get("due_date"))
+        due_date = ContractService._normalize_date(payload.get("due_date")) or ContractService.resolve_due_date(issue_date=issue_date, due_rule=contract.due_rule)
         items = contract.billing_items.order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc()).all()
         total_amount = sum((item.amount or Decimal("0")) for item in items)
         return {
