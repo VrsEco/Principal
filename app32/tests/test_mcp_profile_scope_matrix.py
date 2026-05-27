@@ -60,6 +60,26 @@ def test_finance_contract_is_permission_aware_on_user_and_admin_gated_on_delete(
     assert "finance" in user.allowed_domains
 
 
+def test_strategy_contract_and_capability_are_gated_and_surface_aligned():
+    strategy = APP32_CRUD_CONTRACTS_MANIFEST.get_domain("strategy")
+    assert strategy is not None
+
+    update_ops = [operation for operation in strategy.operations if operation.action == "update"]
+    analyze_ops = [operation for operation in strategy.operations if operation.action == "analyze"]
+    assert update_ops
+    assert analyze_ops
+    assert all(operation.human_gate_required is True for operation in update_ops)
+    assert all(operation.surface == "mcp_admin" for operation in update_ops)
+    assert all(operation.surface == "mcp_analytics" for operation in analyze_ops)
+
+    capability = catalog.get_tool_capability("update_plan_section")
+    diagnostics_capability = catalog.get_tool_capability("get_plan_diagnostics")
+    assert capability is not None
+    assert diagnostics_capability is not None
+    assert capability.human_gate is True
+    assert diagnostics_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value)
+
+
 def test_capability_scopes_match_expected_surfaces_by_profile():
     query_capability = catalog.get_tool_capability("query_database")
     escalation_capability = catalog.get_tool_capability("escalate_technical_issue")
@@ -75,7 +95,7 @@ def test_capability_scopes_match_expected_surfaces_by_profile():
 
     assert query_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value)
     assert escalation_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_OPS.value)
-    assert plan_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value)
+    assert plan_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value)
     assert user_listing_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value)
     assert workload_capability.scopes == (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value)
 

@@ -211,7 +211,7 @@
 
     async function completeSection() {
         await saveAlignment();
-        const response = await fetch(`/api/plans/{{ plan.id }}/sections/alignment/complete`, { method: 'POST' });
+        const response = await fetch(`/plans/{{ plan.id }}/sections/alignment/complete`, { method: 'POST' });
         if (response.ok) {
             window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='model') }}";
         }

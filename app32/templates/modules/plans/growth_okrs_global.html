@@ -324,7 +324,7 @@
         if (!confirm('Tem certeza que deseja excluir este OKR Global?')) return;
 
         try {
-            const response = await fetch(`/api/okrs-global/${okrId}`, {
+            const response = await fetch(`/api/okrs-global/${okrId}?company_id=${window.companyId}`, {
                 method: 'DELETE'
             });
 
@@ -358,7 +358,7 @@
             let method = 'POST';
 
             if (okrId) {
-                url = `/api/okrs-global/${okrId}`;
+                url = `/api/okrs-global/${okrId}?company_id=${window.companyId}`;
                 method = 'PUT';
             }
 
@@ -425,7 +425,7 @@
         if (!confirm('Tem certeza que deseja remover este KR?')) return;
 
         try {
-            const response = await fetch(`/api/key-results/${krId}`, {
+            const response = await fetch(`/api/key-results/${krId}?company_id=${window.companyId}`, {
                 method: 'DELETE'
             });
 
@@ -448,6 +448,7 @@
         const krId = document.getElementById('krId').value;
 
         const data = {
+            company_id: window.companyId,
             okr_global_id: parseInt(okrId),
             label: document.getElementById('krLabel').value,
             target: document.getElementById('krTarget').value,
@@ -461,7 +462,7 @@
             let method = 'POST';
 
             if (krId) {
-                url = `/api/key-results/${krId}`;
+                url = `/api/key-results/${krId}?company_id=${window.companyId}`;
                 method = 'PUT';
             }
 

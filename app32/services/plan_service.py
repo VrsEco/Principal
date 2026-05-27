@@ -241,7 +241,7 @@ class PlanService:
         # Generic counts
         from models import PlanDriver, OKRGlobal, PlanParticipant
         drivers_count = PlanDriver.query.filter_by(plan_id=plan_id).count()
-        okrs_count = OKRGlobal.query.filter_by(plan_id=plan_id).count()
+        okrs_count = OKRGlobal.query.filter_by(plan_id=plan_id, company_id=company_id).count()
         participants_count = PlanParticipant.query.filter_by(plan_id=plan_id).count()
 
         # Progression
@@ -390,13 +390,17 @@ class PlanService:
         db.session.commit()
         
         # Update section status to in_progress if it was pending
-        PlanService.update_section_status(plan_id, 'drivers', 'in_progress')
+        PlanService.update_section_status(plan_id, 'drivers', 'in_progress', company_id=company_id)
         
         return driver
 
     @staticmethod
-    def update_section_status(plan_id: int, section_key: str, status: str):
+    def update_section_status(plan_id: int, section_key: str, status: str, company_id: Optional[int] = None):
         """Update status of a specific plan section."""
+        plan = PlanService.get_plan(plan_id, company_id) if company_id is not None else Plan.query.filter_by(id=plan_id).first()
+        if not plan:
+            raise ValueError("Plan not found.")
+
         section = PlanSectionStatus.query.filter_by(plan_id=plan_id, section_key=section_key).first()
         if not section:
             # Create if missing (helps with legacy plans)
@@ -406,12 +410,12 @@ class PlanService:
             section.status = status
             
         db.session.commit()
-        PlanService._recalculate_progress(plan_id)
+        PlanService._recalculate_progress(plan_id, company_id=plan.company_id)
 
     @staticmethod
-    def _recalculate_progress(plan_id: int):
+    def _recalculate_progress(plan_id: int, company_id: Optional[int] = None):
         """Calculate overall plan progress based on completed sections."""
-        plan = Plan.query.get(plan_id)
+        plan = PlanService.get_plan(plan_id, company_id) if company_id is not None else Plan.query.filter_by(id=plan_id).first()
         if not plan:
             return
             
@@ -462,7 +466,7 @@ class PlanService:
         
         # Update section status
         if section_key != 'dashboard':
-            PlanService.update_section_status(plan_id, section_key, 'completed')
+            PlanService.update_section_status(plan_id, section_key, 'completed', company_id=company_id)
             
         return data
 
@@ -497,7 +501,7 @@ class PlanService:
         db.session.commit()
         
         # Update section status
-        PlanService.update_section_status(plan_id, 'participants', 'completed')
+        PlanService.update_section_status(plan_id, 'participants', 'completed', company_id=company_id)
         
         return participant
 

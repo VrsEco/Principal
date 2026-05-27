@@ -24,6 +24,8 @@ def test_catalog_exposes_known_capability_metadata():
     delete_meeting_capability = catalog.get_tool_capability("delete_meeting_secure")
     pop_media_capability = catalog.get_tool_capability("get_process_pop_step_media_context_tool")
     pop_draft_capability = catalog.get_tool_capability("draft_process_pop_step_description_tool")
+    strategy_update_capability = catalog.get_tool_capability("update_plan_section")
+    strategy_diag_capability = catalog.get_tool_capability("get_plan_diagnostics")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -63,6 +65,14 @@ def test_catalog_exposes_known_capability_metadata():
     assert pop_draft_capability is not None
     assert pop_draft_capability.domain == "processes"
     assert pop_draft_capability.risk == ToolRiskLevel.MEDIUM
+    assert strategy_update_capability is not None
+    assert strategy_update_capability.domain == "strategy"
+    assert strategy_update_capability.human_gate is True
+    assert ToolScope.MCP_ADMIN.value in strategy_update_capability.scopes
+    assert strategy_diag_capability is not None
+    assert strategy_diag_capability.domain == "strategy"
+    assert ToolScope.MCP_USER.value in strategy_diag_capability.scopes
+    assert ToolScope.MCP_ANALYTICS.value not in strategy_diag_capability.scopes
 
 
 def test_catalog_manifest_filters_by_scope():

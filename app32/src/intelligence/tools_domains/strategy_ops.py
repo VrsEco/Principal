@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from schemas.plan import PlanSectionStatusUpdate
 from src.intelligence.tools_support import get_active_company_id, sanitize_output
 
 
@@ -23,16 +24,16 @@ def list_plans(mode: str | None = None, company_id: int | None = None):
         return f"Erro ao listar planos: {exc}"
 
 
-def get_plan_diagnostics(plan_id: int):
-    """Retorna diagnóstico consolidado de plano no tenant ativo."""
+def get_plan_diagnostics(plan_id: int, company_id: int | None = None):
+    """Retorna diagnóstico consolidado de plano no tenant ativo ou explicitamente informado."""
     from services.plan_service import PlanService
 
-    company_id = get_active_company_id()
-    if not company_id:
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    if not selected_company_id:
         return "Erro: Contexto de empresa nao identificado."
 
     try:
-        data = PlanService.get_plan_dashboard_data(plan_id, company_id)
+        data = PlanService.get_plan_dashboard_data(plan_id, selected_company_id)
         if not data:
             return f"Plano {plan_id} não encontrado ou sem acesso."
 
@@ -70,6 +71,7 @@ def update_plan_section(
         return "Erro: Contexto de empresa nao identificado."
 
     try:
+        normalized_status = PlanSectionStatusUpdate(status=status).status
         plan = PlanService.get_plan(plan_id, selected_company_id)
         if not plan:
             return f"Plano {plan_id} não encontrado."
@@ -82,8 +84,8 @@ def update_plan_section(
                 f"Use uma das opções: {valid_keys}."
             )
 
-        PlanService.update_section_status(plan_id, section_key, status)
-        return f"Sucesso: Seção '{section_key}' do plano {plan_id} alterada para '{status}'."
+        PlanService.update_section_status(plan_id, section_key, normalized_status)
+        return f"Sucesso: Seção '{section_key}' do plano {plan_id} alterada para '{normalized_status}'."
     except Exception as exc:  # pragma: no cover - proteção defensiva compatível com tool legada
         return f"Erro ao atualizar seção: {exc}"
 

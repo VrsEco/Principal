@@ -734,7 +734,7 @@
         if (resp.ok) alert('Salvo com sucesso!'); else alert('Erro ao salvar: Verifique os campos.');
     }
 
-    async function completeSection() { await saveModel(); fetch(`/api/plans/{{ plan.id }}/sections/model/complete`, { method: 'POST' }); window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='execution') }}"; }
+    async function completeSection() { await saveModel(); fetch(`/plans/{{ plan.id }}/sections/model/complete`, { method: 'POST' }); window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='execution') }}"; }
 
     document.addEventListener('focusout', (event) => {
         const target = event.target;

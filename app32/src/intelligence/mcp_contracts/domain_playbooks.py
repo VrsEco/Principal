@@ -192,9 +192,9 @@ def build_domain_playbooks_manifest() -> DomainPlaybooksManifest:
                 allowed_surfaces=["user", "admin", "analytics"],
                 allowed_profiles=["colaborador", "cliente", "administrador", "admin_tecnico"],
                 allowed_role_overlays=["coordenador_cliente", "comercial_cliente", "admfin_cliente", "estrategico_cliente", "coordenador_versus", "strategist_versus", "pmo_controller_versus", "business_architect_versus", "operations_versus", "performance_analyst_versus", "finance_versus", "auditor_versus", "coordenador_engenharia", "arquiteto_engenharia", "backend_api_engenharia", "ai_engineer_engenharia", "dba_engenharia"],
-                canonical_tools=["describe_app32_crud_contracts_tool", "get_plan_diagnostics_read_model"],
+                canonical_tools=["list_plans", "get_plan_diagnostics_read_model", "update_plan_section", "describe_app32_crud_contracts_tool"],
                 canonical_artifacts=["src.intelligence.mcp_contracts.analysis_catalog", "services.analytics_read_model_service"],
-                discovery_sequence=["describe_app32_allowed_analyses_tool", "get_plan_diagnostics_read_model", "se houver mutação, redirecionar para contrato CRUD"],
+                discovery_sequence=["list_app32_capabilities", "describe_app32_allowed_analyses_tool", "get_plan_diagnostics_read_model", "se houver mutação, validar contrato CRUD e gate humano"],
                 prompt_policy=_prompt_policy(
                     preamble="Você apoia estratégia no APP32 com linguagem executiva, evidências e fronteira clara entre insight e mutação.",
                     output_contract="Responder com diagnóstico, evidências, lacunas, riscos e recomendações sem inventar métricas.",

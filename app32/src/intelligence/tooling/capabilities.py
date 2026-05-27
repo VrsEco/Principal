@@ -217,10 +217,11 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "get_plan_diagnostics": {
         "domain": "strategy",
-        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("plan.diagnostics.read",),
         "tags": ("diagnostics",),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "get_plan_diagnostics_read_model": {
         "domain": "strategy",
@@ -228,14 +229,17 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.LOW,
         "permissions": ("plan.diagnostics.read",),
         "tags": ("read_model", "analytics", "whitelisted"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "update_plan_section": {
         "domain": "strategy",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("plan.section.update",),
-        "human_gate": False,
+        "human_gate": True,
+        "human_gate_reason": "Mutação estratégica exige confirmação explícita antes de alterar o plano.",
         "tags": ("crud",),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "get_my_work": {
         "domain": "routine",

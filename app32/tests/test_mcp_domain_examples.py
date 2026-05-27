@@ -48,6 +48,8 @@ def test_domain_examples_security_boundaries_are_enforced_in_manifest():
 
     assert all(example.surface != "analytics" for example in routine_examples)
     assert all("strategy_plan_diagnostics" in example.related_analysis_ids for example in strategy_examples)
+    redirect = next(example for example in strategy_examples if example.example_id == "strategy_analysis_to_mutation_redirect")
+    assert any(step.tool_name == "update_plan_section" for step in redirect.steps if step.kind == "execute")
     assert all(example.surface in {"admin", "analytics"} for example in finance_examples)
     assert all(example.company_scope == "explicit_company_id" for example in finance_examples)
     assert all(set(example.allowed_profiles) <= {"administrador", "admin_tecnico"} for example in finance_examples)

@@ -516,12 +516,13 @@ def list_plans(company_id: int = None, mode: str = None):
 
 
 @tool
-def get_plan_diagnostics(plan_id: int):
+def get_plan_diagnostics(plan_id: int, company_id: int = None):
     """
     Retorna um diagnóstico completo de um plano, incluindo status de cada seção e métricas financeiras.
-    Use isto para entender gargalos ou o estado atual de uma implantação/crescimento.
+    Use isto para entender gargalos ou o estado atual de uma implantação/crescimento no tenant ativo
+    ou em uma empresa explicitamente informada.
     """
-    return strategy_ops_domain.get_plan_diagnostics(plan_id=plan_id)
+    return strategy_ops_domain.get_plan_diagnostics(plan_id=plan_id, company_id=company_id)
 
 
 @tool

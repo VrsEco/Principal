@@ -13,24 +13,42 @@ from schemas.okr import (
 )
 
 
+def _get_request_company_id():
+    from api.resources.project import get_request_company_id
+
+    return get_request_company_id()
+
+
+def _ensure_company_id():
+    company_id = _get_request_company_id()
+    if not company_id:
+        return None, ({"error": "company_id is required"}, 400)
+    return company_id, None
+
+
 class OKRGlobalListResource(Resource):
     @permission_required('okrs', 'view')
     def get(self):
         plan_id = request.args.get('plan_id', type=int)
-        company_id = request.args.get('company_id', type=int)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
         
-        query = OKRGlobal.query
+        query = OKRGlobal.query.filter_by(company_id=company_id)
         if plan_id:
             query = query.filter_by(plan_id=plan_id)
-        if company_id:
-            query = query.filter_by(company_id=company_id)
             
         okrs = query.all()
         return okrs_global_schema.dump(okrs), 200
 
+    @permission_required('okrs', 'create')
     def post(self):
         try:
             data = request.get_json()
+            company_id, error = _ensure_company_id()
+            if error:
+                return error
+            data['company_id'] = company_id
             okr = okr_global_schema.load(data)
             db.session.add(okr)
             db.session.commit()
@@ -45,13 +63,21 @@ class OKRGlobalListResource(Resource):
 class OKRGlobalResource(Resource):
     @permission_required('okrs', 'view')
     def get(self, okr_id):
-        okr = OKRGlobal.query.get_or_404(okr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        okr = OKRGlobal.query.filter_by(id=okr_id, company_id=company_id).first_or_404()
         return okr_global_schema.dump(okr), 200
 
+    @permission_required('okrs', 'edit')
     def put(self, okr_id):
-        okr = OKRGlobal.query.get_or_404(okr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        okr = OKRGlobal.query.filter_by(id=okr_id, company_id=company_id).first_or_404()
         try:
             data = request.get_json()
+            data['company_id'] = company_id
             okr = okr_global_schema.load(data, instance=okr, partial=True)
             db.session.commit()
             return okr_global_schema.dump(okr), 200
@@ -61,8 +87,12 @@ class OKRGlobalResource(Resource):
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
+    @permission_required('okrs', 'delete')
     def delete(self, okr_id):
-        okr = OKRGlobal.query.get_or_404(okr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        okr = OKRGlobal.query.filter_by(id=okr_id, company_id=company_id).first_or_404()
         try:
             db.session.delete(okr)
             db.session.commit()
@@ -77,6 +107,10 @@ class KeyResultListResource(Resource):
     def post(self):
         try:
             data = request.get_json()
+            company_id, error = _ensure_company_id()
+            if error:
+                return error
+            data['company_id'] = company_id
             kr = key_result_schema.load(data)
             db.session.add(kr)
             db.session.commit()
@@ -88,16 +122,23 @@ class KeyResultListResource(Resource):
 class KeyResultResource(Resource):
     @permission_required('okrs', 'edit')
     def delete(self, kr_id):
-        kr = KeyResult.query.get_or_404(kr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        kr = KeyResult.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
         db.session.delete(kr)
         db.session.commit()
         return {"message": "KR deleted successfully"}, 200
 
     @permission_required('okrs', 'edit')
     def put(self, kr_id):
-        kr = KeyResult.query.get_or_404(kr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        kr = KeyResult.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
         try:
             data = request.get_json()
+            data['company_id'] = company_id
             kr = key_result_schema.load(data, instance=kr, partial=True)
             db.session.commit()
             return key_result_schema.dump(kr), 200
@@ -112,20 +153,25 @@ class OKRAreaListResource(Resource):
     @permission_required('okrs', 'view')
     def get(self):
         plan_id = request.args.get('plan_id', type=int)
-        company_id = request.args.get('company_id', type=int)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
         
-        query = OKRArea.query
+        query = OKRArea.query.filter_by(company_id=company_id)
         if plan_id:
             query = query.filter_by(plan_id=plan_id)
-        if company_id:
-            query = query.filter_by(company_id=company_id)
             
         okrs = query.all()
         return okrs_area_schema.dump(okrs), 200
 
+    @permission_required('okrs', 'create')
     def post(self):
         try:
             data = request.get_json()
+            company_id, error = _ensure_company_id()
+            if error:
+                return error
+            data['company_id'] = company_id
             okr = okr_area_schema.load(data)
             db.session.add(okr)
             db.session.commit()
@@ -137,21 +183,33 @@ class OKRAreaListResource(Resource):
 class OKRAreaResource(Resource):
     @permission_required('okrs', 'view')
     def get(self, okr_id):
-        okr = OKRArea.query.get_or_404(okr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        okr = OKRArea.query.filter_by(id=okr_id, company_id=company_id).first_or_404()
         return okr_area_schema.dump(okr), 200
 
+    @permission_required('okrs', 'edit')
     def put(self, okr_id):
-        okr = OKRArea.query.get_or_404(okr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        okr = OKRArea.query.filter_by(id=okr_id, company_id=company_id).first_or_404()
         try:
             data = request.get_json()
+            data['company_id'] = company_id
             okr = okr_area_schema.load(data, instance=okr, partial=True)
             db.session.commit()
             return okr_area_schema.dump(okr), 200
         except ValidationError as err:
             return {"errors": err.messages}, 400
 
+    @permission_required('okrs', 'delete')
     def delete(self, okr_id):
-        okr = OKRArea.query.get_or_404(okr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        okr = OKRArea.query.filter_by(id=okr_id, company_id=company_id).first_or_404()
         db.session.delete(okr)
         db.session.commit()
         return {"message": "Area OKR deleted successfully"}, 200
@@ -162,6 +220,10 @@ class KeyResultAreaListResource(Resource):
     def post(self):
         try:
             data = request.get_json()
+            company_id, error = _ensure_company_id()
+            if error:
+                return error
+            data['company_id'] = company_id
             kr = key_result_area_schema.load(data)
             db.session.add(kr)
             db.session.commit()
@@ -173,9 +235,13 @@ class KeyResultAreaListResource(Resource):
 class KeyResultAreaResource(Resource):
     @permission_required('okrs', 'edit')
     def put(self, kr_id):
-        kr = KeyResultArea.query.get_or_404(kr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        kr = KeyResultArea.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
         try:
             data = request.get_json()
+            data['company_id'] = company_id
             kr = key_result_area_schema.load(data, instance=kr, partial=True)
             db.session.commit()
             return key_result_area_schema.dump(kr), 200
@@ -184,7 +250,10 @@ class KeyResultAreaResource(Resource):
 
     @permission_required('okrs', 'edit')
     def delete(self, kr_id):
-        kr = KeyResultArea.query.get_or_404(kr_id)
+        company_id, error = _ensure_company_id()
+        if error:
+            return error
+        kr = KeyResultArea.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
         db.session.delete(kr)
         db.session.commit()
         return {"message": "KR Area deleted successfully"}, 200

@@ -228,7 +228,7 @@ def build_domain_examples_manifest() -> MCPDomainExamplesManifest:
                     _step(1, "discover", "Consultar o playbook de strategy para separar análise de mutação.", "Fluxo híbrido compreendido pelo agente.", tool_name="describe_app32_domain_playbooks_tool", required_inputs=["domain", "company_id"]),
                     _step(2, "validate", "Validar perfil admin e contrato CRUD da mutação desejada.", "Permissão e contrato confirmados.", tool_name="describe_app32_crud_contracts_tool", required_inputs=["domain", "company_id", "profile"]),
                     _step(3, "human_gate", "Solicitar confirmação humana antes da alteração estratégica sensível.", "Gate humano registrado.", required_inputs=["change_summary", "owner_confirmation"]),
-                    _step(4, "execute", "Executar a mutação oficial do plano/seção pela surface admin.", "Alteração registrada com auditoria.", tool_name="strategy.update_plan_section", required_inputs=["company_id", "plan_id", "payload_validado"]),
+                    _step(4, "execute", "Executar a mutação oficial do plano/seção pela surface admin.", "Alteração registrada com auditoria.", tool_name="update_plan_section", required_inputs=["company_id", "plan_id", "payload_validado"]),
                     _step(5, "respond", "Responder com mudança aplicada, impacto esperado e referências do diagnóstico original.", "Resposta final com trilha completa entregue.", required_inputs=["result", "analysis_reference"]),
                 ],
                 expected_response_shape=["acao_executada", "plan_id", "changed_fields", "analysis_reference", "audit"],

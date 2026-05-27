@@ -1,11 +1,13 @@
 from marshmallow import fields
 from . import ma
+from models import db
 from models.indicator import IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
 
 class IndicatorDataSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = IndicatorData
         load_instance = True
+        sqla_session = db.session
         include_fk = True
     
     created_at = fields.String(dump_only=True)
@@ -23,6 +25,7 @@ class IndicatorGoalSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = IndicatorGoal
         load_instance = True
+        sqla_session = db.session
         include_fk = True
     
     created_at = fields.String(dump_only=True)
@@ -42,6 +45,7 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Indicator
         load_instance = True
+        sqla_session = db.session
         include_fk = True
     
     created_at = fields.String(dump_only=True)
@@ -57,7 +61,8 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
         # Get the most recent measured value for this indicator
         from sqlalchemy import desc
         last_data = IndicatorData.query.filter_by(
-            indicator_id=obj.id
+            indicator_id=obj.id,
+            company_id=obj.company_id,
         ).order_by(desc('measured_date')).first()
         
         if not last_data:
@@ -67,7 +72,11 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
     def get_performance(self, obj):
         # Comparison logic: last measured value vs active goal
         from sqlalchemy import desc
-        active_goal = IndicatorGoal.query.filter_by(indicator_id=obj.id, status='active').order_by(desc('goal_date')).first()
+        active_goal = IndicatorGoal.query.filter_by(
+            indicator_id=obj.id,
+            company_id=obj.company_id,
+            status='active',
+        ).order_by(desc('goal_date')).first()
         if not active_goal:
             return None
             
@@ -91,6 +100,7 @@ class IndicatorGroupSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = IndicatorGroup
         load_instance = True
+        sqla_session = db.session
         include_fk = True
     
     created_at = fields.String(dump_only=True)

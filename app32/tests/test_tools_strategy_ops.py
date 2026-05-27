@@ -123,6 +123,36 @@ def test_strategy_ops_update_plan_section_blocks_missing_plan(monkeypatch):
     assert result == "Plano 999 não encontrado."
 
 
+def test_strategy_ops_update_plan_section_rejects_invalid_status(monkeypatch):
+    monkeypatch.setattr(strategy_ops, "get_active_company_id", lambda: 31)
+
+    result = strategy_ops.update_plan_section(999, "finance", "done")
+
+    assert "Erro ao atualizar seção" in result
+    assert "String should match pattern" in result
+
+
+def test_strategy_ops_get_plan_diagnostics_honors_explicit_company(monkeypatch):
+    captured = {}
+
+    monkeypatch.setattr(strategy_ops, "get_active_company_id", lambda: 31)
+
+    def fake_dashboard(plan_id, company_id):
+        captured["call"] = (plan_id, company_id)
+        return {
+            "plan": {"title": "Plano B", "mode": "growth"},
+            "stats": {"progress_pct": 55},
+            "sections": [{"title": "Participantes", "status": "in_progress"}],
+        }
+
+    monkeypatch.setattr(PlanService, "get_plan_dashboard_data", staticmethod(fake_dashboard))
+
+    result = strategy_ops.get_plan_diagnostics(14, company_id=10)
+
+    assert captured["call"] == (14, 10)
+    assert "Plano B" in result
+
+
 def test_tools_strategy_wrappers_delegate_to_strategy_domain(monkeypatch):
     calls = []
 
@@ -134,7 +164,7 @@ def test_tools_strategy_wrappers_delegate_to_strategy_domain(monkeypatch):
     monkeypatch.setattr(
         tools_module.strategy_ops_domain,
         "get_plan_diagnostics",
-        lambda plan_id: calls.append(("diagnostics", plan_id)) or "diag-ok",
+        lambda plan_id, company_id=None: calls.append(("diagnostics", plan_id, company_id)) or "diag-ok",
     )
     monkeypatch.setattr(
         tools_module.strategy_ops_domain,
@@ -143,10 +173,10 @@ def test_tools_strategy_wrappers_delegate_to_strategy_domain(monkeypatch):
     )
 
     assert tools_module.list_plans.func(10, "growth") == "plans-ok"
-    assert tools_module.get_plan_diagnostics.func(7) == "diag-ok"
+    assert tools_module.get_plan_diagnostics.func(7, 10) == "diag-ok"
     assert tools_module.update_plan_section.func(7, "finance", "completed", 10) == "update-ok"
     assert calls == [
         ("list", 10, "growth"),
-        ("diagnostics", 7),
+        ("diagnostics", 7, 10),
         ("update", 7, "finance", "completed", 10),
     ]

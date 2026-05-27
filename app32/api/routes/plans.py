@@ -259,7 +259,7 @@ def complete_section(plan_id, section_key):
     if not plan:
         return {"error": "Plan not found"}, 404
         
-    PlanService.update_section_status(plan_id, section_key, 'completed')
+    PlanService.update_section_status(plan_id, section_key, 'completed', company_id=company.id if company else None)
     
     return {"status": "success", "message": "Section marked as completed"}
 

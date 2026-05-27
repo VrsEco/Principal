@@ -322,14 +322,17 @@ class IndicatorGoalListResource(Resource):
 class IndicatorGoalResource(Resource):
     @permission_required('indicators', 'view')
     def get(self, goal_id):
-        goal = IndicatorGoal.query.get_or_404(goal_id)
+        company_id = get_request_company_id()
+        goal = IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()
         return indicator_goal_schema.dump(goal), 200
 
     @permission_required('indicators', 'edit')
     def put(self, goal_id):
-        goal = IndicatorGoal.query.get_or_404(goal_id)
+        company_id = get_request_company_id()
+        goal = IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()
         try:
             data = request.get_json()
+            data['company_id'] = company_id
             goal = indicator_goal_schema.load(data, instance=goal, partial=True)
             db.session.commit()
             return indicator_goal_schema.dump(goal), 200
@@ -340,12 +343,14 @@ class IndicatorGoalResource(Resource):
             logger.exception("Erro ao atualizar meta %s", goal_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
+    @permission_required('indicators', 'edit')
     def patch(self, goal_id):
         return self.put(goal_id)
 
     @permission_required('indicators', 'edit')
     def delete(self, goal_id):
-        goal = IndicatorGoal.query.get_or_404(goal_id)
+        company_id = get_request_company_id()
+        goal = IndicatorGoal.query.filter_by(id=goal_id, company_id=company_id).first_or_404()
         try:
             db.session.delete(goal)
             db.session.commit()
@@ -358,13 +363,14 @@ class IndicatorGoalResource(Resource):
 class IndicatorDataListResource(Resource):
     @permission_required('indicators', 'view')
     def get(self):
+        company_id = get_request_company_id()
         goal_id = request.args.get('goal_id')
         indicator_id = request.args.get('indicator_id')
         
-        if not goal_id and not indicator_id:
+        if not company_id or (not goal_id and not indicator_id):
             return [], 200
             
-        query = IndicatorData.query
+        query = IndicatorData.query.filter_by(company_id=company_id)
         if goal_id:
             query = query.filter_by(goal_id=goal_id)
         elif indicator_id:
@@ -420,12 +426,14 @@ class IndicatorDataListResource(Resource):
 class IndicatorDataResource(Resource):
     @permission_required('indicators', 'view')
     def get(self, data_id):
-        record = IndicatorData.query.get_or_404(data_id)
+        company_id = get_request_company_id()
+        record = IndicatorData.query.filter_by(id=data_id, company_id=company_id).first_or_404()
         return indicator_data_schema.dump(record), 200
 
     @permission_required('indicators', 'edit')
     def delete(self, data_id):
-        record = IndicatorData.query.get_or_404(data_id)
+        company_id = get_request_company_id()
+        record = IndicatorData.query.filter_by(id=data_id, company_id=company_id).first_or_404()
         try:
             db.session.delete(record)
             db.session.commit()

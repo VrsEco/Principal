@@ -405,18 +405,19 @@ def list_plans(mode: str = None):
         return f"Erro ao listar planos: {str(e)}"
 
 @tool
-def get_plan_diagnostics(plan_id: int):
+def get_plan_diagnostics(plan_id: int, company_id: int = None):
     """
     Retorna um diagnóstico completo de um plano, incluindo status de cada seção e métricas financeiras.
-    Use isto para entender gargalos ou o estado atual de uma implantação/crescimento.
+    Use isto para entender gargalos ou o estado atual de uma implantação/crescimento
+    no tenant ativo ou em uma empresa explicitamente informada.
     """
     from services.plan_service import PlanService
     from flask import session
-    company_id = get_active_company_id()
-    if not company_id: return "Erro: Contexto de empresa nao identificado."
+    selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
+    if not selected_company_id: return "Erro: Contexto de empresa nao identificado."
     
     try:
-        data = PlanService.get_plan_dashboard_data(plan_id, company_id)
+        data = PlanService.get_plan_dashboard_data(plan_id, selected_company_id)
         if not data: return f"Plano {plan_id} não encontrado ou sem acesso."
         
         output = [
@@ -446,11 +447,13 @@ def update_plan_section(plan_id: int, section_key: str, status: str = 'completed
     :param company_id: Opcional. Se informado, força a validação tenant-safe nessa empresa.
     """
     from services.plan_service import PlanService
+    from schemas.plan import PlanSectionStatusUpdate
     from flask import session
     selected_company_id = int(company_id) if company_id is not None else get_active_company_id()
     if not selected_company_id: return "Erro: Contexto de empresa nao identificado."
 
     try:
+        normalized_status = PlanSectionStatusUpdate(status=status).status
         # Check permissions/existence
         plan = PlanService.get_plan(plan_id, selected_company_id)
         if not plan: return f"Plano {plan_id} não encontrado."
@@ -463,8 +466,8 @@ def update_plan_section(plan_id: int, section_key: str, status: str = 'completed
                 f"Use uma das opções: {valid_keys}."
             )
         
-        PlanService.update_section_status(plan_id, section_key, status)
-        return f"Sucesso: Seção '{section_key}' do plano {plan_id} alterada para '{status}'."
+        PlanService.update_section_status(plan_id, section_key, normalized_status)
+        return f"Sucesso: Seção '{section_key}' do plano {plan_id} alterada para '{normalized_status}'."
     except Exception as e:
         return f"Erro ao atualizar seção: {str(e)}"
 

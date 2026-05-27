@@ -1391,7 +1391,7 @@
 
     async function completeSection() {
         await saveFinance();
-        await fetch(`/api/plans/{{ plan.id }}/sections/finance/complete`, { method: 'POST' });
+        await fetch(`/plans/{{ plan.id }}/sections/finance/complete`, { method: 'POST' });
         window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='projects') }}";
     }
 </script>

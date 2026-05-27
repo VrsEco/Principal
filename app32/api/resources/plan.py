@@ -9,11 +9,16 @@ import json
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
+
+def _get_request_company_id():
+    from api.resources.project import get_request_company_id
+
+    return get_request_company_id()
+
 class PlanListResource(Resource):
     @permission_required('plans', 'view')
     def get(self):
-        from api.resources.project import get_request_company_id
-        company_id = get_request_company_id()
+        company_id = _get_request_company_id()
                     
         if not company_id:
             return {"error": "company_id is required"}, 400
@@ -26,6 +31,10 @@ class PlanListResource(Resource):
     def post(self):
         try:
             data = request.get_json()
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
+            data['company_id'] = company_id
             # Validate with Pydantic
             plan_data = PlanCreate(**data)
             plan = PlanService.create_plan(plan_data.company_id, plan_data.model_dump())
@@ -39,14 +48,18 @@ class PlanListResource(Resource):
 class PlanParticipantListResource(Resource):
     @permission_required('plans', 'view')
     def get(self, plan_id):
-        company_id = request.args.get('company_id', type=int)
+        company_id = _get_request_company_id()
+        if not company_id:
+            return {"error": "company_id is required"}, 400
         participants = PlanService.list_participants(plan_id, company_id)
         return [p.to_dict() for p in participants], 200
 
     @permission_required('plans', 'edit')
     def post(self, plan_id):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             data = request.get_json()
             # Remove company_id if present in body (handled via query param)
             if 'company_id' in data:
@@ -67,7 +80,9 @@ class PlanParticipantResource(Resource):
     @permission_required('plans', 'edit')
     def delete(self, plan_id, participant_id):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             PlanService.remove_participant(plan_id, company_id, participant_id)
             return {"message": "Participant removed"}, 200
         except ValueError as e:
@@ -79,7 +94,9 @@ class PlanParticipantResource(Resource):
 class PlanResource(Resource):
     @permission_required('plans', 'view')
     def get(self, plan_id):
-        company_id = request.args.get('company_id', type=int)
+        company_id = _get_request_company_id()
+        if not company_id:
+            return {"error": "company_id is required"}, 400
         plan = PlanService.get_plan(plan_id, company_id)
         if not plan:
             return {"error": "Plan not found"}, 404
@@ -88,7 +105,9 @@ class PlanResource(Resource):
     @permission_required('plans', 'edit')
     def patch(self, plan_id):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             data = request.get_json()
             # Validate with Pydantic
             update_data = PlanUpdate(**data)
@@ -106,20 +125,28 @@ class PlanResource(Resource):
             return plan.to_dict(), 200
         except ValidationError as e:
             return {"errors": e.errors()}, 400
+        except Exception:
+            from models import db
+            db.session.rollback()
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanDriverResource(Resource):
     @permission_required('plans', 'edit')
     def get(self, plan_id):
         from services.plan_service import PlanService
-        company_id = request.args.get('company_id', type=int)
+        company_id = _get_request_company_id()
+        if not company_id:
+            return {"error": "company_id is required"}, 400
         drivers = PlanService.list_drivers(plan_id, company_id)
         return [d.to_dict() for d in drivers], 200
 
     @permission_required('plans', 'edit')
     def post(self, plan_id):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             data = request.get_json()
             if 'company_id' in data:
                 del data['company_id']
@@ -143,11 +170,16 @@ class PlanDriverDetailResource(Resource):
     @permission_required('plans', 'edit')
     def put(self, plan_id, driver_id):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             data = request.get_json()
             
             # TODO: Add to service
             from models import PlanDriver, db
+            plan = PlanService.get_plan(plan_id, company_id)
+            if not plan:
+                return {"error": "Plan not found"}, 404
             driver = PlanDriver.query.filter_by(id=driver_id, plan_id=plan_id).first()
             if not driver:
                 return {"error": "Driver not found"}, 404
@@ -171,9 +203,14 @@ class PlanDriverDetailResource(Resource):
     @permission_required('plans', 'edit')
     def delete(self, plan_id, driver_id):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             
             from models import PlanDriver, db
+            plan = PlanService.get_plan(plan_id, company_id)
+            if not plan:
+                return {"error": "Plan not found"}, 404
             driver = PlanDriver.query.filter_by(id=driver_id, plan_id=plan_id).first()
             if not driver:
                 return {"error": "Driver not found"}, 404
@@ -191,19 +228,29 @@ class PlanSectionStatusResource(Resource):
     @permission_required('plans', 'edit')
     def patch(self, plan_id, section_key):
         try:
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             data = request.get_json()
             status_data = PlanSectionStatusUpdate(**data)
-            
+
+            plan = PlanService.get_plan(plan_id, company_id)
+            if not plan:
+                return {"error": "Plan not found"}, 404
             PlanService.update_section_status(plan_id, section_key, status_data.status)
             return {"message": "Status updated"}, 200
         except ValidationError as e:
             return {"errors": e.errors()}, 400
+        except Exception:
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
 class PlanImplantationResource(Resource):
     @permission_required('plans', 'view')
     def get(self, plan_id, section_key):
-        company_id = request.args.get('company_id', type=int)
+        company_id = _get_request_company_id()
+        if not company_id:
+            return {"error": "company_id is required"}, 400
         data = PlanService.get_implantation_data(plan_id, company_id, section_key)
         if not data:
             return {"content": {}}, 200
@@ -212,7 +259,9 @@ class PlanImplantationResource(Resource):
     @permission_required('plans', 'edit')
     def post(self, plan_id, section_key):
         try:
-            company_id = request.args.get('company_id', type=int)
+            company_id = _get_request_company_id()
+            if not company_id:
+                return {"error": "company_id is required"}, 400
             content = request.get_json()
             
             # Structured validation based on section

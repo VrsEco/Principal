@@ -555,7 +555,7 @@
 
     async function completeSection() {
         await saveExecution();
-        const response = await fetch(`/api/plans/{{ plan.id }}/sections/execution/complete`, { method: 'POST' });
+        const response = await fetch(`/plans/{{ plan.id }}/sections/execution/complete`, { method: 'POST' });
         if (response.ok) {
             window.location.href = "{{ url_for('plans.implantation_section', plan_id=plan.id, section='finance') }}";
         }
