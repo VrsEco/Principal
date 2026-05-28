@@ -150,7 +150,7 @@ def apply_task_employee_filter(query, company_id):
 
 
 def _user_can_update_task(company_id, project_id, task_id):
-    if has_permission(company_id, 'projects', 'edit'):
+    if can_manage_project_tasks(company_id):
         return True
 
     query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
@@ -354,7 +354,7 @@ class ProjectTaskResource(Resource):
     def put(self, project_id, task_id):
         """Update a task."""
         from .project import get_request_company_id
-        company_id = get_request_company_id()
+        company_id = get_request_company_id() or _get_project_company_id(project_id)
         if not _user_can_update_task(company_id, project_id, task_id):
             return {"error": "Permission denied: edit on projects"}, 403
 
@@ -365,7 +365,7 @@ class ProjectTaskResource(Resource):
             data = request.get_json()
             if _is_backlog_human_gate_task(task):
                 return _build_backlog_human_gate_lock_response()
-            has_full_edit = has_permission(company_id, 'projects', 'edit')
+            has_full_edit = can_manage_project_tasks(company_id)
             if not has_full_edit:
                 is_valid_payload, extra_fields = _validate_limited_task_update_payload(data)
                 if not is_valid_payload:
