@@ -12,6 +12,7 @@ from services.identity.user_employee_orchestrator_service import (
     UserEmployeeOrchestratorService,
 )
 from services.company_onboarding_service import CompanyOnboardingService
+from services.company_identity_service import CompanyIdentityService
 from services.company_role_permission_preset_service import (
     CompanyRolePermissionPresetService,
 )
@@ -55,6 +56,22 @@ def company_edit(company_id):
     tab = request.args.get('tab', 'dados')
     onboarding = CompanyOnboardingService.build_view_model(company_id, tab)
     return render_template('modules/companies/company_form_v2.html', company_id=company_id, active_tab=tab, onboarding=onboarding)
+
+
+@companies_bp.route('/companies/<int:company_id>/identity')
+@permission_required('companies', 'view')
+def company_identity(company_id):
+    """Hub consolidado da identidade organizacional."""
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+
+    summary = CompanyIdentityService.build_summary(company_id)
+    return render_template(
+        'modules/companies/company_identity_v2.html',
+        company=summary.company,
+        metrics=summary.metrics,
+    )
 
 # Complex nested components logic goes to routes.
 # Core CRUD functionality should be exclusively in api/resources/company.py
@@ -128,6 +145,33 @@ def get_company_roles(company_id):
         return denied
     roles = Role.query.filter_by(company_id=company_id).all()
     return jsonify([RbacPermissionCatalogService.serialize_role(r) for r in roles])
+
+
+@companies_bp.route('/api/companies/<int:company_id>/roles/tree', methods=['GET'])
+@permission_required('companies', 'view')
+def get_company_roles_tree(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    return jsonify({"success": True, "data": CompanyIdentityService.build_roles_tree(company_id)})
+
+
+@companies_bp.route('/api/companies/<int:company_id>/identity/summary', methods=['GET'])
+@permission_required('companies', 'view')
+def get_company_identity_summary(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    summary = CompanyIdentityService.build_summary(company_id)
+    return jsonify(
+        {
+            "success": True,
+            "company": summary.company,
+            "metrics": summary.metrics,
+            "roles": summary.roles,
+            "employees": summary.employees,
+        }
+    )
 
 
 @companies_bp.route('/api/companies/<int:company_id>/permission-catalog', methods=['GET'])
@@ -305,6 +349,9 @@ def update_performance_settings(company_id):
 @companies_bp.route('/api/companies/<int:company_id>/employees/full', methods=['GET'])
 @permission_required('companies', 'view')
 def get_company_employees_full(company_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
     from sqlalchemy.orm import joinedload
     employees = Employee.query.options(joinedload(Employee.role)).filter_by(company_id=company_id).all()
     return jsonify([e.to_dict() for e in employees])
@@ -396,6 +443,9 @@ def link_company_user(company_id):
 @companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>', methods=['GET', 'PUT'])
 @permission_required('companies', 'edit')
 def update_company_employee(company_id, employee_id):
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
     employee = Employee.query.filter_by(id=employee_id, company_id=company_id).first_or_404()
     if request.method == 'GET':
         return jsonify(employee.to_dict())

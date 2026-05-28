@@ -28,6 +28,9 @@
             </svg>
             Voltar
         </button>
+        {% if company_id %}
+        <a class="btn btn-secondary" href="/companies/{{ company_id }}/identity">Abrir Identidade Organizacional</a>
+        {% endif %}
     </div>
 
     <section class="onboarding-hero card" style="margin-bottom: 1rem;">

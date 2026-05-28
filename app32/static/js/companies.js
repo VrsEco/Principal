@@ -93,6 +93,10 @@ function renderCompanies() {
                 </div>
 
                 <div class="instance-actions">
+                    <button class="btn-instance-action" onclick="event.stopPropagation(); window.location.href='/companies/${c.id}/identity'" title="Identidade Organizacional">
+                        <span class="d-none d-md-inline">Identidade</span>
+                        <span class="d-inline d-md-none">🧭</span>
+                    </button>
                     <button class="btn-instance-action action-edit" onclick="event.stopPropagation(); window.location.href='/companies/${c.id}/edit'" title="Editar">
                         <span class="d-none d-md-inline">Editar</span>
                         <span class="d-inline d-md-none">✏️</span>

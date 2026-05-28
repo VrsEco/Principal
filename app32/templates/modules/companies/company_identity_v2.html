@@ -1,0 +1,537 @@
+{% extends "layouts/app.html" %}
+
+{% block title %}Identidade Organizacional - {{ company.name }}{% endblock %}
+{% block page_title %}Configurações / Empresas / Identidade Organizacional{% endblock %}
+
+{% block content %}
+<div class="identity-shell" data-company-id="{{ company.id }}" data-company-name="{{ company.name }}">
+    <section class="identity-hero card">
+        <div class="identity-hero__copy">
+            <span class="identity-kicker">Núcleo canônico</span>
+            <h1 class="text-h1">Identidade Organizacional</h1>
+            <p class="text-secondary">
+                Reúne missão, visão, valores, cargos, colaboradores e organograma em um ponto único da empresa.
+            </p>
+            <div class="identity-hero__actions">
+                <a class="btn btn-special" href="/companies/{{ company.id }}/edit?tab=dados">Editar MVV</a>
+                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Gerenciar cargos</a>
+                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Gerenciar colaboradores</a>
+                <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir relatório</button>
+            </div>
+        </div>
+        <aside class="identity-hero__meta">
+            <div class="identity-meta-card">
+                <span>Empresa</span>
+                <strong>{{ company.name }}</strong>
+                <small>Código {{ company.client_code or 'não definido' }}</small>
+            </div>
+            <div class="identity-meta-card">
+                <span>Escopo</span>
+                <strong>company_id {{ company.id }}</strong>
+                <small>Leitura e gestão tenant-aware</small>
+            </div>
+        </aside>
+    </section>
+
+    <section class="identity-metrics">
+        <article class="identity-metric-card">
+            <span>Cargos</span>
+            <strong id="metricRoles">{{ metrics.roles_total or 0 }}</strong>
+            <small>estrutura formal</small>
+        </article>
+        <article class="identity-metric-card">
+            <span>Colaboradores ativos</span>
+            <strong id="metricEmployees">{{ metrics.active_employees_total or 0 }}</strong>
+            <small>execução em operação</small>
+        </article>
+        <article class="identity-metric-card">
+            <span>Departamentos</span>
+            <strong id="metricDepartments">{{ metrics.departments_total or 0 }}</strong>
+            <small>áreas mapeadas</small>
+        </article>
+        <article class="identity-metric-card">
+            <span>Vagas planejadas</span>
+            <strong id="metricHeadcount">{{ metrics.planned_headcount_total or 0 }}</strong>
+            <small>capacidade prevista</small>
+        </article>
+    </section>
+
+    <nav class="identity-tabs" aria-label="Seções da identidade">
+        <button type="button" class="identity-tab-btn is-active" data-identity-tab="mvv">Missão, Visão e Valores</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="estrutura">Cargos e Colaboradores</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="organograma">Organograma</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="relatorios">Relatórios</button>
+    </nav>
+
+    <section id="mvv" class="card identity-section identity-tab-panel is-active" data-identity-panel="mvv">
+        <div class="identity-section__header">
+            <div>
+                <span class="identity-section__eyebrow">Direcionamento institucional</span>
+                <h2 class="text-h2">Missão, Visão e Valores</h2>
+            </div>
+            <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=dados">Editar identidade</a>
+        </div>
+        <div class="identity-mvv-grid">
+            <article class="identity-content-card">
+                <h3>Missão</h3>
+                <p id="identityMission">{{ company.mission or 'Ainda não definida.' }}</p>
+            </article>
+            <article class="identity-content-card">
+                <h3>Visão</h3>
+                <p id="identityVision">{{ company.vision or 'Ainda não definida.' }}</p>
+            </article>
+            <article class="identity-content-card">
+                <h3>Valores</h3>
+                <p id="identityValues">{{ company.values or 'Ainda não definidos.' }}</p>
+            </article>
+        </div>
+    </section>
+
+    <section id="estrutura" class="card identity-section identity-tab-panel" data-identity-panel="estrutura">
+        <div class="identity-section__header">
+            <div>
+                <span class="identity-section__eyebrow">Estrutura organizacional</span>
+                <h2 class="text-h2">Cargos e colaboradores</h2>
+            </div>
+            <div class="identity-inline-actions">
+                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Cadastrar cargo</a>
+                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Cadastrar colaborador</a>
+            </div>
+        </div>
+
+        <div class="identity-table-grid">
+            <article class="identity-table-card">
+                <div class="identity-table-card__header">
+                    <h3>Cargos</h3>
+                    <small id="rolesTableCount">0 registros</small>
+                </div>
+                <div class="identity-table-wrap">
+                    <table class="table-v2">
+                        <thead>
+                            <tr>
+                                <th>Cargo</th>
+                                <th>Departamento</th>
+                                <th>Lotação</th>
+                                <th>Planejado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="identityRolesBody">
+                            <tr><td colspan="4" class="identity-empty-row">Carregando cargos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="identity-table-card">
+                <div class="identity-table-card__header">
+                    <h3>Colaboradores</h3>
+                    <small id="employeesTableCount">0 registros</small>
+                </div>
+                <div class="identity-table-wrap">
+                    <table class="table-v2">
+                        <thead>
+                            <tr>
+                                <th>Colaborador</th>
+                                <th>Cargo</th>
+                                <th>Departamento</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="identityEmployeesBody">
+                            <tr><td colspan="4" class="identity-empty-row">Carregando colaboradores...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section id="organograma" class="card identity-section identity-tab-panel" data-identity-panel="organograma">
+        <div class="identity-section__header">
+            <div>
+                <span class="identity-section__eyebrow">Leitura visual da hierarquia</span>
+                <h2 class="text-h2">Organograma</h2>
+            </div>
+            <div class="identity-inline-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.IdentityOrgChart?.fit()">Ajustar</button>
+                <button type="button" class="btn btn-secondary" onclick="window.IdentityOrgChart?.expandAll()">Expandir</button>
+                <button type="button" class="btn btn-secondary" onclick="window.IdentityOrgChart?.collapseAll()">Recolher</button>
+                <button type="button" class="btn btn-secondary" onclick="window.IdentityOrgChart?.downloadSvg()">Baixar SVG</button>
+            </div>
+        </div>
+        <div id="identityOrgChart" class="identity-org-chart">
+            <div class="identity-org-chart__empty">Carregando organograma...</div>
+        </div>
+    </section>
+
+    <section id="relatorios" class="card identity-section identity-tab-panel" data-identity-panel="relatorios">
+        <div class="identity-section__header">
+            <div>
+                <span class="identity-section__eyebrow">Saída executiva</span>
+                <h2 class="text-h2">Relatórios</h2>
+            </div>
+            <button type="button" class="btn btn-special" onclick="window.print()">Imprimir agora</button>
+        </div>
+        <div class="identity-report-grid">
+            <article class="identity-content-card">
+                <h3>Relatório de identidade</h3>
+                <p>Imprime missão, visão, valores, métricas, cargos, colaboradores e organograma em uma única saída.</p>
+            </article>
+            <article class="identity-content-card">
+                <h3>Uso recomendado</h3>
+                <ul>
+                    <li>onboarding de liderança</li>
+                    <li>reuniões executivas</li>
+                    <li>alinhamento de processos e responsabilidades</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+</div>
+
+<style>
+    .identity-shell { max-width: 1320px; margin: 0 auto; padding-bottom: 4rem; }
+    .identity-hero { display:grid; grid-template-columns:minmax(0, 1.6fr) 320px; gap:1rem; padding:1.5rem; margin-bottom:1rem; }
+    .identity-kicker, .identity-section__eyebrow { display:inline-block; font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--primary); margin-bottom:0.5rem; }
+    .identity-hero__actions, .identity-inline-actions { display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:1rem; }
+    .identity-hero__meta { display:grid; gap:0.75rem; }
+    .identity-meta-card, .identity-metric-card, .identity-content-card, .identity-table-card { border:1px solid var(--border); border-radius:20px; background:var(--surface-primary); }
+    .identity-meta-card { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:0.35rem; }
+    .identity-meta-card span, .identity-metric-card span { font-size:0.78rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-tertiary); font-weight:700; }
+    .identity-meta-card strong, .identity-metric-card strong { font-size:1.4rem; color:var(--text-primary); }
+    .identity-metrics { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.75rem; margin-bottom:1rem; }
+    .identity-metric-card { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:0.25rem; }
+    .identity-tabs { display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .identity-tab-btn { border:1px solid var(--border); background:var(--surface-primary); border-radius:999px; padding:0.7rem 1rem; color:var(--text-primary); font-weight:600; cursor:pointer; }
+    .identity-tab-btn.is-active { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 10px 20px rgba(37, 99, 235, 0.20); }
+    .identity-section { padding:1.35rem; margin-bottom:1rem; }
+    .identity-tab-panel { display:none; }
+    .identity-tab-panel.is-active { display:block; }
+    .identity-section__header, .identity-table-card__header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .identity-mvv-grid, .identity-report-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:0.75rem; }
+    .identity-content-card { padding:1rem 1.1rem; min-height:100%; }
+    .identity-content-card h3 { margin-bottom:0.5rem; }
+    .identity-content-card p, .identity-content-card li { color:var(--text-secondary); line-height:1.6; }
+    .identity-content-card ul { margin:0; padding-left:1.1rem; }
+    .identity-table-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.75rem; }
+    .identity-table-card { padding:1rem 1.1rem; }
+    .identity-table-wrap { overflow:auto; }
+    .identity-empty-row { text-align:center; color:var(--text-secondary); padding:1rem; }
+    .identity-org-chart { min-height:420px; overflow:hidden; background:
+        radial-gradient(circle at top, rgba(59, 130, 246, 0.10), transparent 38%),
+        linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255,255,255,1));
+        border-radius:22px; border:1px dashed #cbd5e1; padding:1rem 1.25rem; }
+    .identity-org-chart__empty { color:var(--text-secondary); display:flex; align-items:center; justify-content:center; min-height:360px; }
+    .identity-org-chart__viewport { width:100%; overflow:hidden; display:flex; justify-content:center; align-items:flex-start; }
+    .identity-org-chart__scale { transform-origin: top center; will-change: transform; }
+    .identity-tree-shell { display:flex; justify-content:center; align-items:flex-start; min-width:max-content; width:max-content; margin:0 auto; padding:0.25rem 1rem 1rem; }
+    .identity-tree-shell ul { position:relative; padding-top:18px; margin:0; display:flex; justify-content:center; width:max-content; }
+    .identity-tree-shell > ul { padding-top:0; }
+    .identity-tree-shell > ul::before { display:none; }
+    .identity-tree-shell li { list-style:none; text-align:center; position:relative; padding:18px 8px 0 8px; display:flex; flex-direction:column; align-items:center; }
+    .identity-tree-shell li::before, .identity-tree-shell li::after { content:''; position:absolute; top:0; right:50%; width:50%; height:18px; border-top:2px solid #cbd5e1; }
+    .identity-tree-shell li::after { right:auto; left:50%; border-left:2px solid #cbd5e1; }
+    .identity-tree-shell li:only-child::before, .identity-tree-shell li:only-child::after { display:none; }
+    .identity-tree-shell li:only-child { padding-top:0; }
+    .identity-tree-shell li:first-child::before, .identity-tree-shell li:last-child::after { border:0; }
+    .identity-tree-shell li:last-child::before { border-right:2px solid #cbd5e1; border-radius:0 10px 0 0; }
+    .identity-tree-shell li:first-child::after { border-radius:10px 0 0 0; }
+    .identity-tree-shell ul ul::before { content:''; position:absolute; top:0; left:50%; height:18px; border-left:2px solid #cbd5e1; }
+    .identity-node { width:360px; min-height:128px; border-radius:18px; border:1px solid #bfdbfe; background:linear-gradient(180deg, #ffffff, #f8fbff); padding:0; box-shadow:0 14px 30px rgba(15, 23, 42, 0.10); text-align:left; overflow:hidden; display:grid; grid-template-columns: 1.5fr 1fr; }
+    .identity-node__head { padding:0.85rem 1rem; border-right:1px solid #dbeafe; background:linear-gradient(180deg, rgba(219, 234, 254, 0.55), rgba(255,255,255,0)); display:flex; flex-direction:column; justify-content:center; }
+    .identity-node__eyebrow { display:block; font-size:0.68rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#2563eb; margin-bottom:0.35rem; }
+    .identity-node__title { display:block; font-weight:800; color:#0f172a; font-size:1.1rem; line-height:1.15; min-height:auto; }
+    .identity-node__department { display:block; font-size:0.92rem; color:#475569; margin-top:0.3rem; min-height:auto; }
+    .identity-node__body { padding:0.7rem 0.8rem; display:flex; align-items:center; }
+    .identity-node__metrics { display:grid; grid-template-columns:1fr; gap:0.45rem; width:100%; align-content:center; }
+    .identity-node__metric { border:1px solid #e2e8f0; border-radius:14px; background:#fff; padding:0.5rem 0.65rem; }
+    .identity-node__metric-label { display:block; font-size:0.66rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#64748b; margin-bottom:0.3rem; }
+    .identity-node__metric-value { display:block; font-size:1rem; font-weight:800; color:#0f172a; line-height:1; }
+
+    @media (max-width: 1100px) {
+        .identity-hero, .identity-table-grid, .identity-mvv-grid, .identity-report-grid, .identity-metrics { grid-template-columns:1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+        .identity-hero, .identity-table-grid, .identity-mvv-grid, .identity-report-grid, .identity-metrics { grid-template-columns:1fr; }
+        .identity-tree-shell { padding:0.25rem 0.5rem 1rem; }
+        .identity-node { width:300px; min-height:118px; grid-template-columns: 1.45fr 1fr; }
+    }
+
+    @media print {
+        .header, .sidebar, .identity-hero__actions, .identity-inline-actions, .identity-tabs, .btn { display:none !important; }
+        .main-wrapper, .main-content, .identity-shell { padding:0 !important; margin:0 !important; max-width:none !important; }
+        .identity-section, .identity-hero, .identity-metric-card, .identity-content-card, .identity-table-card { break-inside:avoid; box-shadow:none !important; }
+        .identity-org-chart { border:none; background:#fff; min-height:0; overflow:visible; }
+    }
+</style>
+
+<script>
+(() => {
+    const companyId = Number(document.querySelector('.identity-shell')?.dataset.companyId || 0);
+        const state = {
+            summary: null,
+            tree: [],
+            currentTree: [],
+            scale: 1,
+        };
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    async function fetchJson(url) {
+        const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!response.ok) throw new Error(`Falha ao carregar ${url}`);
+        return response.json();
+    }
+
+    function activateTab(tabId) {
+        document.querySelectorAll('.identity-tab-btn').forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.identityTab === tabId);
+        });
+        document.querySelectorAll('.identity-tab-panel').forEach((panel) => {
+            panel.classList.toggle('is-active', panel.dataset.identityPanel === tabId);
+        });
+        if (tabId) {
+            window.location.hash = tabId;
+        }
+        if (tabId === 'organograma') {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => window.IdentityOrgChart?.fit());
+            });
+        }
+    }
+
+    function renderSummary(summary) {
+        document.getElementById('metricRoles').textContent = summary.metrics.roles_total || 0;
+        document.getElementById('metricEmployees').textContent = summary.metrics.active_employees_total || 0;
+        document.getElementById('metricDepartments').textContent = summary.metrics.departments_total || 0;
+        document.getElementById('metricHeadcount').textContent = summary.metrics.planned_headcount_total || 0;
+        document.getElementById('identityMission').textContent = summary.company.mission || 'Ainda não definida.';
+        document.getElementById('identityVision').textContent = summary.company.vision || 'Ainda não definida.';
+        document.getElementById('identityValues').textContent = summary.company.values || 'Ainda não definidos.';
+
+        const rolesBody = document.getElementById('identityRolesBody');
+        const employeesBody = document.getElementById('identityEmployeesBody');
+        document.getElementById('rolesTableCount').textContent = `${summary.roles.length} registros`;
+        document.getElementById('employeesTableCount').textContent = `${summary.employees.length} registros`;
+
+        rolesBody.innerHTML = summary.roles.length ? summary.roles.map((role) => `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(role.title)}</strong>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);">${role.vacancy_count || 0} vagas livres</div>
+                </td>
+                <td>${escapeHtml(role.department || '—')}</td>
+                <td>${role.active_employee_count || 0} ativos</td>
+                <td>${role.headcount_planned || 0}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="identity-empty-row">Nenhum cargo cadastrado.</td></tr>';
+
+        employeesBody.innerHTML = summary.employees.length ? summary.employees.map((employee) => `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(employee.name)}</strong>
+                    <div style="font-size:0.82rem;color:var(--text-secondary);">${escapeHtml(employee.email || employee.phone || 'Sem contato')}</div>
+                </td>
+                <td>${escapeHtml(employee.role_title || 'Sem cargo')}</td>
+                <td>${escapeHtml(employee.role_department || employee.department || '—')}</td>
+                <td>${escapeHtml(employee.status_label || 'Não informado')}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="identity-empty-row">Nenhum colaborador cadastrado.</td></tr>';
+    }
+
+    function renderTreeNode(node) {
+        return `
+            <li>
+                <article class="identity-node" data-node-id="${node.id}">
+                    <div class="identity-node__head">
+                        <span class="identity-node__eyebrow">Cargo</span>
+                        <span class="identity-node__title">${escapeHtml(node.title)}</span>
+                        <span class="identity-node__department">${escapeHtml(node.department || 'Departamento não informado')}</span>
+                    </div>
+                    <div class="identity-node__body">
+                        <div class="identity-node__metrics">
+                            <div class="identity-node__metric">
+                                <span class="identity-node__metric-label">Previstos</span>
+                                <span class="identity-node__metric-value">${node.headcount_planned || 0}</span>
+                            </div>
+                            <div class="identity-node__metric">
+                                <span class="identity-node__metric-label">Efetivos</span>
+                                <span class="identity-node__metric-value">${node.active_employee_count || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                ${node.children?.length ? `<ul>${node.children.map(renderTreeNode).join('')}</ul>` : ''}
+            </li>
+        `;
+    }
+
+    function renderTree(tree) {
+        const mount = document.getElementById('identityOrgChart');
+        if (!tree.length) {
+            mount.innerHTML = '<div class="identity-org-chart__empty">Nenhum cargo cadastrado para montar o organograma.</div>';
+            return;
+        }
+        state.currentTree = tree;
+        mount.innerHTML = `
+            <div class="identity-org-chart__viewport">
+                <div class="identity-org-chart__scale" id="identityOrgChartScale">
+                    <div class="identity-tree-shell" id="identityTreeShell"><ul>${tree.map(renderTreeNode).join('')}</ul></div>
+                </div>
+            </div>
+        `;
+        applyTreeFit();
+    }
+
+    function pruneChildren(nodes) {
+        return (nodes || []).map((node) => ({
+            ...node,
+            children: [],
+        }));
+    }
+
+    function applyTreeFit() {
+        const mount = document.getElementById('identityOrgChart');
+        const scaleHost = document.getElementById('identityOrgChartScale');
+        const shell = document.getElementById('identityTreeShell');
+        if (!mount || !scaleHost || !shell) return;
+
+        scaleHost.style.transform = 'scale(1)';
+        scaleHost.style.width = 'auto';
+        scaleHost.style.height = 'auto';
+
+        const containerWidth = Math.max(0, mount.clientWidth - 8);
+        const naturalWidth = shell.scrollWidth;
+        const naturalHeight = shell.scrollHeight;
+        const scale = naturalWidth > 0 ? Math.min(1, containerWidth / naturalWidth) : 1;
+        state.scale = scale;
+
+        scaleHost.style.transform = `scale(${scale})`;
+        scaleHost.style.width = `${naturalWidth}px`;
+        scaleHost.style.height = `${naturalHeight}px`;
+        mount.style.minHeight = `${Math.max(220, Math.ceil(naturalHeight * scale) + 24)}px`;
+    }
+
+    function downloadText(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1200);
+    }
+
+    function buildOrgChartSvg() {
+        const shell = document.getElementById('identityTreeShell');
+        if (!shell) throw new Error('Organograma não encontrado para exportação.');
+
+        const exportPadding = 56;
+        const contentWidth = Math.ceil(shell.scrollWidth);
+        const contentHeight = Math.ceil(shell.scrollHeight);
+        const width = contentWidth + (exportPadding * 2);
+        const height = contentHeight + (exportPadding * 2);
+        const clone = shell.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+
+        const style = `
+            .identity-tree-shell { display:flex; justify-content:center; align-items:flex-start; min-width:max-content; width:max-content; margin:0 auto; padding:0.25rem 1rem 1rem; font-family: Inter, Arial, sans-serif; overflow:visible; }
+            .identity-tree-shell ul { position:relative; padding-top:18px; margin:0; display:flex; justify-content:center; width:max-content; }
+            .identity-tree-shell > ul { padding-top:0; }
+            .identity-tree-shell > ul::before { display:none; }
+            .identity-tree-shell li { list-style:none; text-align:center; position:relative; padding:18px 8px 0 8px; display:flex; flex-direction:column; align-items:center; }
+            .identity-tree-shell li::before, .identity-tree-shell li::after { content:''; position:absolute; top:0; right:50%; width:50%; height:18px; border-top:2px solid #cbd5e1; box-sizing:border-box; }
+            .identity-tree-shell li::after { right:auto; left:50%; border-left:2px solid #cbd5e1; }
+            .identity-tree-shell li:only-child::before, .identity-tree-shell li:only-child::after { display:none; }
+            .identity-tree-shell li:only-child { padding-top:0; }
+            .identity-tree-shell li:first-child::before, .identity-tree-shell li:last-child::after { border:0; }
+            .identity-tree-shell li:last-child::before { border-right:2px solid #cbd5e1; border-radius:0 10px 0 0; }
+            .identity-tree-shell li:first-child::after { border-radius:10px 0 0 0; }
+            .identity-tree-shell ul ul::before { content:''; position:absolute; top:0; left:50%; height:18px; border-left:2px solid #cbd5e1; }
+            .identity-node { width:360px; min-height:128px; border-radius:18px; border:1px solid #bfdbfe; background:linear-gradient(180deg, #ffffff, #f8fbff); padding:0; box-shadow:0 14px 30px rgba(15, 23, 42, 0.10); text-align:left; overflow:hidden; display:grid; grid-template-columns:1.5fr 1fr; }
+            .identity-node__head { padding:0.85rem 1rem; border-right:1px solid #dbeafe; background:linear-gradient(180deg, rgba(219, 234, 254, 0.55), rgba(255,255,255,0)); display:flex; flex-direction:column; justify-content:center; }
+            .identity-node__eyebrow { display:block; font-size:0.68rem; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; color:#2563eb; margin-bottom:0.35rem; }
+            .identity-node__title { display:block; font-weight:800; color:#0f172a; font-size:1.1rem; line-height:1.15; }
+            .identity-node__department { display:block; font-size:0.92rem; color:#475569; margin-top:0.3rem; }
+            .identity-node__body { padding:0.7rem 0.8rem; display:flex; align-items:center; }
+            .identity-node__metrics { display:grid; grid-template-columns:1fr; gap:0.45rem; width:100%; align-content:center; }
+            .identity-node__metric { border:1px solid #e2e8f0; border-radius:14px; background:#fff; padding:0.5rem 0.65rem; }
+            .identity-node__metric-label { display:block; font-size:0.66rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#64748b; margin-bottom:0.3rem; }
+            .identity-node__metric-value { display:block; font-size:1rem; font-weight:800; color:#0f172a; line-height:1; }
+        `;
+
+        const html = new XMLSerializer().serializeToString(clone);
+        return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;background:#ffffff;overflow:visible;box-sizing:border-box;padding:${exportPadding}px;">
+      <style>${style}</style>
+      ${html}
+    </div>
+  </foreignObject>
+</svg>`;
+    }
+
+        window.IdentityOrgChart = {
+            collapseAll() {
+                renderTree(pruneChildren(state.tree));
+            },
+            expandAll() {
+                renderTree(state.tree);
+            },
+            fit() {
+                applyTreeFit();
+            },
+            downloadSvg() {
+                const filenameBase = (document.querySelector('.identity-shell')?.dataset.companyName || 'organograma')
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-zA-Z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                    .toLowerCase() || 'organograma';
+                downloadText(`${filenameBase}-organograma.svg`, buildOrgChartSvg(), 'image/svg+xml;charset=utf-8');
+            },
+        };
+
+    async function loadPage() {
+        try {
+            const [summary, treeResponse] = await Promise.all([
+                fetchJson(`/api/companies/${companyId}/identity/summary`),
+                fetchJson(`/api/companies/${companyId}/roles/tree`),
+            ]);
+            state.summary = summary;
+            state.tree = treeResponse.data || [];
+            renderSummary(summary);
+            renderTree(state.tree);
+            applyTreeFit();
+        } catch (error) {
+            console.error(error);
+            document.getElementById('identityOrgChart').innerHTML = `<div class="identity-org-chart__empty">${escapeHtml(error.message || 'Falha ao carregar organograma.')}</div>`;
+            document.getElementById('identityRolesBody').innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar cargos.</td></tr>';
+            document.getElementById('identityEmployeesBody').innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar colaboradores.</td></tr>';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.identity-tab-btn').forEach((button) => {
+            button.addEventListener('click', () => activateTab(button.dataset.identityTab));
+        });
+        const hashTab = (window.location.hash || '').replace('#', '').trim();
+        const initialTab = ['mvv', 'estrutura', 'organograma', 'relatorios'].includes(hashTab) ? hashTab : 'mvv';
+        activateTab(initialTab);
+        loadPage();
+    });
+    window.addEventListener('resize', () => window.IdentityOrgChart?.fit());
+})();
+</script>
+{% endblock %}
