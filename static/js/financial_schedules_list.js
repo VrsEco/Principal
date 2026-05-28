@@ -51,9 +51,24 @@
     };
     const settlementClass = (state) => ({ draft: 'sched-pill--open', forecast: 'sched-pill--partial', open: 'sched-pill--open', partial: 'sched-pill--partial', settled: 'sched-pill--settled', cancelled: 'sched-pill--bordero-item', bordero_item: 'sched-pill--bordero-item', bordero: 'sched-pill--bordero' }[state] || 'sched-pill--open');
 
+    const normalizeText = (value) => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
+    const parseCurrencyInput = (value) => {
+      if (value === '' || value == null) return null;
+      const parser = window.App32InputFormatters?.parseCurrency;
+      const normalized = typeof parser === 'function'
+        ? parser(value)
+        : Number(String(value).replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, ''));
+      return Number.isFinite(normalized) ? normalized : null;
+    };
+
     const numberMatches = (filterValue, targetValue) => {
       if (filterValue === '' || filterValue == null) return true;
-      const normalizedFilter = Number(filterValue);
+      const normalizedFilter = parseCurrencyInput(filterValue);
       const normalizedTarget = Number(targetValue || 0);
       if (!Number.isFinite(normalizedFilter)) return true;
       return Math.abs(normalizedTarget - normalizedFilter) < 0.01;
@@ -88,11 +103,11 @@
     }
 
     function getFilteredItems() {
-      const search = String(filters.search.value || '').trim().toLowerCase();
+      const search = normalizeText(filters.search.value);
       const type = String(filters.type.value || '').trim();
       const settlement = String(filters.settlement.value || '').trim();
       const borderoFilter = String(filters.bordero.value || '').trim();
-      const counterparty = String(filters.counterparty.value || '').trim().toLowerCase();
+      const counterparty = normalizeText(filters.counterparty.value);
       const dueDateFrom = String(filters.dueDateFrom.value || '').trim();
       const dueDateTo = String(filters.dueDateTo.value || '').trim();
       const competenceDateFrom = String(filters.competenceDateFrom.value || '').trim();
@@ -102,10 +117,18 @@
       return scheduleItems.filter((item) => {
         const summary = item.summary || {};
         const effectiveState = resolveScheduleState(summary, item);
-        const itemCounterparty = String(summary.counterparty_name || item.metadata_json?.counterparty_name || '').trim().toLowerCase();
+        const itemCounterparty = normalizeText(summary.counterparty_name || item.metadata_json?.counterparty_name || '');
         const itemCompetence = item.start_date || item.first_due_date || item.created_date || '';
         const itemDueDate = item.next_due_date || item.first_due_date || item.created_date || '';
-        const haystack = `${item.schedule_code || ''} ${item.description || item.name || ''} ${itemCounterparty}`.toLowerCase();
+        const haystack = normalizeText([
+          item.id,
+          item.schedule_code,
+          item.bordero_code,
+          item.name,
+          item.description,
+          summary.counterparty_name,
+          item.metadata_json?.counterparty_name,
+        ].filter(Boolean).join(' '));
         if (search && !haystack.includes(search)) return false;
         if (type && item.entry_type !== type) return false;
         if (settlement && effectiveState !== settlement) return false;
