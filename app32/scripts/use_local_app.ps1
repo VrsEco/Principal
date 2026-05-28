@@ -46,20 +46,20 @@ function Import-DotEnvFile {
 
 $appRoot = Split-Path -Parent $PSScriptRoot
 $workspaceRoot = Split-Path -Parent $appRoot
-$appEntryPoint = Join-Path $appRoot "app.py"
+$appEntryPoint = Join-Path $appRoot "scripts\start_local_clone.py"
 $venvPython = Join-Path $workspaceRoot ".venv\Scripts\python.exe"
 $outerEnvFile = Join-Path $workspaceRoot ".env"
 $innerEnvFile = Join-Path $appRoot ".env"
 
 if (-not (Test-Path -LiteralPath $appEntryPoint)) {
-    throw "Entrypoint Flask não encontrado: $appEntryPoint"
+    throw "Launcher Flask não encontrado: $appEntryPoint"
 }
 
 if (-not (Test-Path -LiteralPath $venvPython)) {
     throw "Python da virtualenv não encontrado em $venvPython. Crie a .venv na raiz do workspace."
 }
 
-Set-Location $appRoot
+Set-Location $workspaceRoot
 
 Import-DotEnvFile -Path $outerEnvFile
 
@@ -82,6 +82,10 @@ $env:FLASK_APP = "app.py"
 $env:FLASK_RUN_PORT = "$Port"
 $env:PORT = "$Port"
 $env:PYTHONUNBUFFERED = "1"
+if (-not $env:APP_BOOTSTRAP_DB_SCHEMA) { $env:APP_BOOTSTRAP_DB_SCHEMA = "0" }
+if (-not $env:APP_BOOTSTRAP_RUNTIME_SERVICES) { $env:APP_BOOTSTRAP_RUNTIME_SERVICES = "0" }
+if (-not $env:SECRET_KEY) { $env:SECRET_KEY = "gv-e2e-dev-secret-20260528" }
+if (-not $env:EXTERNAL_URL) { $env:EXTERNAL_URL = "http://127.0.0.1:$Port" }
 
 Write-Host "Iniciando servidor local em http://127.0.0.1:$Port (CTRL+C para sair)..." -ForegroundColor Green
 & $venvPython $appEntryPoint

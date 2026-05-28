@@ -1,0 +1,454 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Central de Testes E2E{% endblock %}
+
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<span class="current">Central de Testes E2E</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="e2e-navbar-actions">
+    <a href="/api-mcp" class="e2e-btn e2e-btn--secondary">API / MCP</a>
+    <a href="/channels" class="e2e-btn e2e-btn--secondary">Channels</a>
+    <a href="/qa/e2e" class="e2e-btn e2e-btn--primary">Atualizar Central</a>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="e2e-center" id="e2eCenterWorkspace">
+    <section class="e2e-page-header">
+        <span class="e2e-eyebrow">QA Automation</span>
+        <h1>Central de Testes E2E</h1>
+        <p>
+            Painel para ver, em linguagem simples, o que o robô já cobre, o que foi testado
+            e o que precisa de correção pelo Squad de Engenharia.
+        </p>
+    </section>
+
+    <section class="e2e-tabs-card">
+        <div class="e2e-tabs" role="tablist" aria-label="Modos da Central E2E">
+            <button type="button" class="e2e-tab is-active" data-e2e-tab="operational" role="tab" aria-selected="true">
+                {{ state.operational_view.tab_labels.operational }}
+            </button>
+            <button type="button" class="e2e-tab" data-e2e-tab="technical" role="tab" aria-selected="false">
+                {{ state.operational_view.tab_labels.technical }}
+            </button>
+        </div>
+    </section>
+
+    <div class="e2e-tab-panel is-active" data-e2e-panel="operational">
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>1) O que o robô já cobre</h2>
+                <span class="e2e-badge">Cobertura</span>
+            </div>
+            <p class="e2e-section-intro">
+                Aqui mostramos quais partes do sistema o robô já conhece, abre e consegue validar.
+            </p>
+            <div class="e2e-table-wrap" style="margin-top:1rem;">
+                <table class="e2e-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>O que existe no sistema</th>
+                            <th>O que o teste cobre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in state.operational_view.coverage.matrix %}
+                        <tr>
+                            <td><strong>{{ item.item }}</strong></td>
+                            <td>
+                                <strong>{{ item.system_total }}</strong><br>
+                                <small>{{ item.system_description }}</small>
+                            </td>
+                            <td>
+                                <strong>{{ item.covered_total }}</strong><br>
+                                <small>{{ item.coverage_description }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>2) Último resultado</h2>
+                <span class="e2e-badge">Resultado resumido</span>
+            </div>
+            <p class="e2e-section-intro">
+                Resumo das últimas rodadas do robô, separando o que passou, o que falhou e o que ainda precisa de análise.
+            </p>
+            <div class="e2e-table-wrap" style="margin-top:1rem;">
+                <table class="e2e-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>O que foi executado</th>
+                            <th>O que o teste mostrou</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in state.operational_view.execution.matrix %}
+                        <tr>
+                            <td><strong>{{ item.item }}</strong></td>
+                            <td><small>{{ item.system_description }}</small></td>
+                            <td><small>{{ item.coverage_description }}</small></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="e2e-empty">Nenhuma execução encontrada ainda.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>3) O que precisa corrigir agora</h2>
+                <span class="e2e-badge">Ação do Squad</span>
+            </div>
+            <p class="e2e-section-intro">
+                Para cada problema encontrado, mostramos o erro percebido pelo robô, o impacto e uma sugestão prática de correção.
+            </p>
+            <div class="e2e-table-wrap" style="margin-top:1rem;">
+                <table class="e2e-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>O que está errado</th>
+                            <th>Como o Squad pode corrigir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in state.operational_view.issues.matrix %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.item }}</strong><br>
+                                <small>{{ item.environment }} · {{ item.severity_label }}</small>
+                            </td>
+                            <td>
+                                <small>{{ item.system_description }}</small>
+                                <div style="margin-top:.45rem;">
+                                    <span class="e2e-label">Impacto</span>
+                                    <small>{{ item.impact }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <small>{{ item.coverage_description }}</small>
+                                <div class="e2e-inline-links" style="margin-top:.5rem;">
+                                    <a href="{{ item.manifest_download_url }}">Baixar evidência</a>
+                                    <button type="button" class="e2e-link-btn e2eBacklogSyncBtn" data-url="{{ item.backlog_sync_url }}">Enviar ao backlog</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="e2e-empty">{{ state.operational_view.issues.empty_message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="e2e-tab-panel" data-e2e-panel="technical">
+        <section class="e2e-grid e2e-grid--three">
+            <article class="e2e-card">
+                <div class="e2e-card__header">
+                    <h2>Último diff</h2>
+                    <span class="e2e-badge">Governança</span>
+                </div>
+                <div class="e2e-kv-list">
+                    <div><span>Status</span><strong>{{ state.latest_diff.status }}</strong></div>
+                    <div><span>Regressões</span><strong>{{ state.latest_diff.regressions | length }}</strong></div>
+                    <div><span>Recuperadas</span><strong>{{ state.latest_diff.recovered | length }}</strong></div>
+                    <div><span>Novas jornadas</span><strong>{{ state.latest_diff.new_journeys | length }}</strong></div>
+                </div>
+            </article>
+
+            <article class="e2e-card">
+                <div class="e2e-card__header">
+                    <h2>Filtros técnicos</h2>
+                    <span class="e2e-badge">UI</span>
+                </div>
+                <div class="e2e-filter-grid">
+                    <label>
+                        <span>Ambiente</span>
+                        <select id="e2eFilterEnvironment">
+                            {% for item in state.filters.environments %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Status</span>
+                        <select id="e2eFilterStatus">
+                            {% for item in state.filters.statuses %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Suíte</span>
+                        <select id="e2eFilterSuite">
+                            {% for item in state.filters.suites %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                        </select>
+                    </label>
+                </div>
+            </article>
+
+            <article class="e2e-card">
+                <div class="e2e-card__header">
+                    <h2>Runbooks</h2>
+                    <span class="e2e-badge">Operação</span>
+                </div>
+                <div class="e2e-doc-list">
+                    {% for item in state.runbooks %}
+                    <div class="e2e-doc-item">
+                        <strong>{{ item.label }}</strong>
+                        <code>{{ item.path }}</code>
+                    </div>
+                    {% else %}
+                    <p class="e2e-empty">Nenhum runbook localizado.</p>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>Últimas execuções por ambiente</h2>
+                <span class="e2e-badge">Leitura local</span>
+            </div>
+            <div class="e2e-run-grid">
+                {% for run in state.latest_by_mode %}
+                <article class="e2e-run-card">
+                    <div class="e2e-run-card__top">
+                        <strong>{{ run.environment }}</strong>
+                        <span class="e2e-pill {{ 'is-danger' if run.status == 'failed' else 'is-safe' }}">{{ run.status }}</span>
+                    </div>
+                    <ul>
+                        <li>Run: {{ run.run_id }}</li>
+                        <li>Journeys: {{ run.journeys_total }}</li>
+                        <li>Falhas: {{ run.journeys_failed }}</li>
+                        <li>Artefatos: {{ run.artifacts_total }}</li>
+                    </ul>
+                    <div class="e2e-inline-links">
+                        <a href="{{ run.manifest_download_url }}">Manifesto</a>
+                        <a href="{{ run.backlog_candidates_url }}">Backlog JSON</a>
+                    </div>
+                    <code>{{ run.manifest_path }}</code>
+                </article>
+                {% else %}
+                <p class="e2e-empty">A suíte ainda não gerou manifestos legíveis neste ambiente.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>Execução supervisionada</h2>
+                <span class="e2e-badge">Central</span>
+            </div>
+            <div class="e2e-supervised-grid">
+                <div class="e2e-supervised-form">
+                    <label>
+                        <span>Suíte</span>
+                        <select id="e2eSuiteSelect">
+                            {% for suite in state.suite_catalog %}
+                            <option value="{{ suite.suite_id }}">{{ suite.label }} — {{ suite.domain }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Ambiente</span>
+                        <select id="e2eEnvironmentSelect">
+                            <option value="DEV_FULL">DEV_FULL</option>
+                            <option value="PROD_SAFE">PROD_SAFE</option>
+                        </select>
+                    </label>
+                    <button type="button" class="e2e-btn e2e-btn--primary" id="e2eStartExecutionBtn">Iniciar execução</button>
+                    <p class="e2e-inline-note">A Central dispara apenas suítes whitelisted pelo catálogo E2E.</p>
+                </div>
+                <div class="e2e-command-list" id="e2eSupervisedList">
+                    {% for execution in state.supervised_executions %}
+                    <article class="e2e-command-item" data-environment="{{ execution.environment }}" data-status="{{ execution.status }}" data-suite="{{ execution.suite_id }}">
+                        <strong>{{ execution.suite_id }} — {{ execution.environment }}</strong>
+                        <span>Status: {{ execution.status }}</span>
+                        <code>{{ execution.stdout_path }}</code>
+                    </article>
+                    {% else %}
+                    <p class="e2e-empty">Nenhuma execução supervisionada registrada ainda.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>Comandos operacionais</h2>
+                <span class="e2e-badge">Terminal</span>
+            </div>
+            <div class="e2e-command-list">
+                {% for item in state.commands %}
+                <article class="e2e-command-item">
+                    <strong>{{ item.label }}</strong>
+                    <code>{{ item.command }}</code>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+
+<style>
+    .e2e-center { padding: 0 1.5rem 2rem; display:flex; flex-direction:column; gap:1rem; }
+    .e2e-navbar-actions { display:flex; gap:.75rem; }
+    .e2e-btn, .e2e-link-btn, .e2e-tab { text-decoration:none; border-radius:12px; padding:.78rem 1rem; font-weight:700; border:1px solid transparent; cursor:pointer; }
+    .e2e-btn--primary { background:var(--primary); color:#fff; }
+    .e2e-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border-color:var(--border); }
+    .e2e-link-btn { background:transparent; color:var(--primary); padding:0; }
+    .e2e-page-header { border:1px solid var(--border); background:linear-gradient(135deg, rgba(37,99,235,.08), rgba(15,23,42,.02)); border-radius:24px; padding:1.4rem; }
+    .e2e-eyebrow { display:inline-block; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; margin-bottom:.4rem; }
+    .e2e-page-header h1, .e2e-card h2 { margin:0; }
+    .e2e-page-header p { color:var(--text-secondary); max-width:72ch; }
+    .e2e-card, .e2e-run-card, .e2e-command-item, .e2e-doc-item, .e2e-kpi-card, .e2e-issue-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; }
+    .e2e-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+    .e2e-card { padding:1.1rem; box-shadow:var(--shadow-sm); }
+    .e2e-card__header { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:1rem; }
+    .e2e-badge, .e2e-pill { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:.35rem .65rem; font-size:.75rem; font-weight:700; }
+    .e2e-badge { background:rgba(37,99,235,.10); color:var(--primary); border:1px solid rgba(37,99,235,.14); }
+    .e2e-pill.is-danger { background:rgba(239,68,68,.10); color:#b91c1c; border:1px solid rgba(239,68,68,.16); }
+    .e2e-pill.is-safe { background:rgba(16,185,129,.10); color:#047857; border:1px solid rgba(16,185,129,.16); }
+    .e2e-pill.is-warning { background:rgba(245,158,11,.10); color:#b45309; border:1px solid rgba(245,158,11,.16); }
+    .e2e-tabs-card { padding:0; border:none; background:transparent; }
+    .e2e-tabs { display:flex; gap:.75rem; }
+    .e2e-tab { background:var(--surface-secondary); color:var(--text-secondary); border-color:var(--border); }
+    .e2e-tab.is-active { background:var(--primary); color:#fff; }
+    .e2e-tab-panel { display:none; flex-direction:column; gap:1rem; }
+    .e2e-tab-panel.is-active { display:flex; }
+    .e2e-section-intro { margin:-.25rem 0 1rem; color:var(--text-secondary); }
+    .e2e-kpi-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.85rem; }
+    .e2e-kpi-grid--compact { grid-template-columns:repeat(5, minmax(0, 1fr)); }
+    .e2e-kpi-card { padding:1rem; }
+    .e2e-kpi-card span, .e2e-kpi-card small { display:block; color:var(--text-secondary); }
+    .e2e-kpi-card strong { display:block; font-size:1.35rem; margin:.35rem 0; }
+    .e2e-issue-list, .e2e-doc-list, .e2e-command-list { display:flex; flex-direction:column; gap:.75rem; }
+    .e2e-issue-card { padding:1rem; }
+    .e2e-issue-card__top { display:flex; justify-content:space-between; gap:1rem; }
+    .e2e-issue-card__top p { margin:.3rem 0 0; color:var(--text-secondary); }
+    .e2e-issue-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.85rem; margin:.85rem 0; }
+    .e2e-label { display:block; font-size:.78rem; font-weight:700; color:var(--text-secondary); margin-bottom:.2rem; }
+    .e2e-supervised-grid, .e2e-filter-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .e2e-filter-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+    .e2e-supervised-form { display:flex; flex-direction:column; gap:.75rem; }
+    .e2e-supervised-form label, .e2e-filter-grid label { display:flex; flex-direction:column; gap:.35rem; color:var(--text-secondary); }
+    .e2e-supervised-form select, .e2e-filter-grid select { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.8rem .9rem; color:var(--text-primary); }
+    .e2e-inline-note { margin:0; color:var(--text-secondary); font-size:.88rem; }
+    .e2e-doc-item, .e2e-command-item { padding:1rem; }
+    .e2e-run-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.85rem; }
+    .e2e-run-card { padding:1rem; display:flex; flex-direction:column; gap:.75rem; }
+    .e2e-run-card__top { display:flex; justify-content:space-between; gap:.75rem; }
+    .e2e-run-card ul { margin:0; padding-left:1rem; color:var(--text-secondary); }
+    .e2e-inline-links { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; }
+    .e2e-run-card code, .e2e-doc-item code, .e2e-command-item code { white-space:pre-wrap; word-break:break-word; font-size:.78rem; color:var(--text-secondary); }
+    .e2e-kv-list { display:grid; gap:.75rem; }
+    .e2e-kv-list div { display:flex; justify-content:space-between; gap:.75rem; padding:.6rem .75rem; background:var(--surface-secondary); border-radius:12px; }
+    .e2e-kv-list span { color:var(--text-secondary); }
+    .e2e-table-wrap { overflow:auto; }
+    .e2e-table { width:100%; border-collapse:collapse; }
+    .e2e-table th, .e2e-table td { padding:.75rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    .e2e-table th { color:var(--text-secondary); font-size:.82rem; text-transform:uppercase; letter-spacing:.05em; }
+    .e2e-empty { color:var(--text-secondary); }
+    @media (max-width: 1100px) {
+        .e2e-grid, .e2e-run-grid, .e2e-supervised-grid, .e2e-filter-grid, .e2e-kpi-grid, .e2e-kpi-grid--compact, .e2e-issue-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width: 768px) {
+        .e2e-center { padding:0 1rem 1.5rem; }
+        .e2e-navbar-actions, .e2e-tabs, .e2e-issue-card__top { flex-direction:column; }
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabButtons = document.querySelectorAll('[data-e2e-tab]');
+    const panels = document.querySelectorAll('[data-e2e-panel]');
+    const startBtn = document.getElementById('e2eStartExecutionBtn');
+    const envFilter = document.getElementById('e2eFilterEnvironment');
+    const statusFilter = document.getElementById('e2eFilterStatus');
+    const suiteFilter = document.getElementById('e2eFilterSuite');
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            tabButtons.forEach((item) => {
+                item.classList.toggle('is-active', item === button);
+                item.setAttribute('aria-selected', item === button ? 'true' : 'false');
+            });
+            panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.e2ePanel === button.dataset.e2eTab));
+        });
+    });
+
+    function applyFilters() {
+        const envValue = envFilter?.value || 'ALL';
+        const statusValue = statusFilter?.value || 'ALL';
+        const suiteValue = suiteFilter?.value || 'ALL';
+        document.querySelectorAll('#e2eSupervisedList [data-environment]').forEach((card) => {
+            const matchEnv = envValue === 'ALL' || card.dataset.environment === envValue;
+            const matchStatus = statusValue === 'ALL' || card.dataset.status === statusValue;
+            const matchSuite = suiteValue === 'ALL' || card.dataset.suite === suiteValue;
+            card.style.display = (matchEnv && matchStatus && matchSuite) ? '' : 'none';
+        });
+    }
+
+    [envFilter, statusFilter, suiteFilter].forEach((node) => node && node.addEventListener('change', applyFilters));
+    applyFilters();
+
+    if (startBtn) {
+        startBtn.addEventListener('click', async () => {
+            const suiteId = document.getElementById('e2eSuiteSelect').value;
+            const environment = document.getElementById('e2eEnvironmentSelect').value;
+            startBtn.disabled = true;
+            startBtn.textContent = 'Disparando...';
+            try {
+                const response = await fetch('/api/configs/qa/e2e/executions', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({suite_id: suiteId, environment}),
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || 'Falha ao iniciar execução supervisionada.');
+                }
+                window.location.reload();
+            } catch (error) {
+                window.alert(error.message || 'Falha ao iniciar execução supervisionada.');
+            } finally {
+                startBtn.disabled = false;
+                startBtn.textContent = 'Iniciar execução';
+            }
+        });
+    }
+
+    document.querySelectorAll('.e2eBacklogSyncBtn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                const response = await fetch(btn.dataset.url, {method: 'POST'});
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || 'Falha ao sincronizar backlog.');
+                }
+                window.alert(`Backlog sincronizado. Itens criados: ${payload.result.created.length}`);
+            } catch (error) {
+                window.alert(error.message || 'Falha ao sincronizar backlog.');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

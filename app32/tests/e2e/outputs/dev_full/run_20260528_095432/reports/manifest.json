@@ -1,0 +1,127 @@
+{
+  "run_id": "run_20260528_095432",
+  "generated_at": "2026-05-28T09:54:32.514461",
+  "artifacts": [
+    {
+      "type": "screenshot",
+      "label": "smoke-workspace.my_work",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\run_20260528_095432\\screenshots\\run_20260528_095432_workspace_my_work.png",
+      "metadata": {}
+    },
+    {
+      "type": "screenshot",
+      "label": "smoke-workspace.my_work",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\run_20260528_095432\\screenshots\\run_20260528_095432_workspace_my_work.png",
+      "metadata": {
+        "target": "workspace.my_work",
+        "url": "http://127.0.0.1:5032/login?next=/my-work"
+      }
+    },
+    {
+      "type": "trace",
+      "label": "playwright-trace",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\run_20260528_095432\\traces\\run_20260528_095432.zip",
+      "metadata": {}
+    },
+    {
+      "type": "storage_state",
+      "label": "auth-storage-state",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\storage_state.json",
+      "metadata": {}
+    }
+  ],
+  "events": [
+    {
+      "name": "real_navigation_smoke_started",
+      "timestamp": "2026-05-28T09:54:34.364523",
+      "payload": {
+        "targets": [
+          "workspace.my_work",
+          "meetings.root_redirect",
+          "integrations.api_mcp",
+          "integrations.channels"
+        ]
+      }
+    },
+    {
+      "name": "real_navigation_target_ok",
+      "timestamp": "2026-05-28T09:54:39.517816",
+      "payload": {
+        "key": "workspace.my_work",
+        "url": "http://127.0.0.1:5032/login?next=/my-work"
+      }
+    }
+  ],
+  "journeys": [
+    {
+      "journey": "smoke_real_navigation",
+      "run_id": "run_20260528_095432",
+      "company_id": 10,
+      "user_label": "operacional@modelo.com.br",
+      "status": "running",
+      "started_at": "2026-05-28T09:54:34.363522",
+      "finished_at": null,
+      "failed_step": null,
+      "failure_type": null,
+      "artifacts": [
+        {
+          "type": "screenshot",
+          "label": "smoke-workspace.my_work",
+          "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\run_20260528_095432\\screenshots\\run_20260528_095432_workspace_my_work.png",
+          "metadata": {
+            "target": "workspace.my_work",
+            "url": "http://127.0.0.1:5032/login?next=/my-work"
+          }
+        }
+      ],
+      "steps": [
+        {
+          "name": "authenticate",
+          "status": "running",
+          "timestamp": "2026-05-28T09:54:34.365521",
+          "details": {}
+        },
+        {
+          "name": "authenticate",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:54:38.425816",
+          "details": {
+            "url": "http://127.0.0.1:5032/login?next=/my-work"
+          }
+        },
+        {
+          "name": "workspace.my_work",
+          "status": "running",
+          "timestamp": "2026-05-28T09:54:38.426716",
+          "details": {
+            "route": "/my-work"
+          }
+        },
+        {
+          "name": "workspace.my_work",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:54:39.517816",
+          "details": {
+            "url": "http://127.0.0.1:5032/login?next=/my-work"
+          }
+        },
+        {
+          "name": "meetings.root_redirect",
+          "status": "running",
+          "timestamp": "2026-05-28T09:54:39.517816",
+          "details": {
+            "route": "/meetings/"
+          }
+        }
+      ],
+      "metadata": {
+        "targets": [
+          "workspace.my_work",
+          "meetings.root_redirect",
+          "integrations.api_mcp",
+          "integrations.channels"
+        ]
+      }
+    }
+  ]
+}

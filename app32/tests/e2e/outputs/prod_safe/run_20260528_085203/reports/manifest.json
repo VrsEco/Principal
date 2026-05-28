@@ -1,0 +1,20 @@
+{
+  "run_id": "run_20260528_085203",
+  "generated_at": "2026-05-28T08:52:03.485400",
+  "artifacts": [
+    {
+      "type": "trace",
+      "label": "playwright-trace",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\prod_safe\\run_20260528_085203\\traces\\run_20260528_085203.zip",
+      "metadata": {}
+    },
+    {
+      "type": "storage_state",
+      "label": "auth-storage-state",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\prod_safe\\storage_state.json",
+      "metadata": {}
+    }
+  ],
+  "events": [],
+  "journeys": []
+}

@@ -1,0 +1,73 @@
+{
+  "run_id": "run_20260527_201702",
+  "generated_at": "2026-05-27T20:17:02.410556",
+  "artifacts": [
+    {
+      "type": "report",
+      "label": "volume_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_201702\\reports\\volume_summary.json",
+      "metadata": {
+        "kind": "data_volume"
+      }
+    },
+    {
+      "type": "report",
+      "label": "user_concurrency_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_201702\\reports\\user_concurrency_summary.json",
+      "metadata": {
+        "kind": "user_concurrency"
+      }
+    },
+    {
+      "type": "report",
+      "label": "mcp_concurrency_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_201702\\reports\\mcp_concurrency_summary.json",
+      "metadata": {
+        "kind": "mcp_concurrency"
+      }
+    },
+    {
+      "type": "report",
+      "label": "report_filter_volume_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_201702\\reports\\report_filter_volume_summary.json",
+      "metadata": {
+        "kind": "report_filter_volume"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T20:17:02.412564",
+      "payload": {
+        "report_name": "volume_summary.json",
+        "kind": "data_volume"
+      }
+    },
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T20:17:02.416322",
+      "payload": {
+        "report_name": "user_concurrency_summary.json",
+        "kind": "user_concurrency"
+      }
+    },
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T20:17:02.420341",
+      "payload": {
+        "report_name": "mcp_concurrency_summary.json",
+        "kind": "mcp_concurrency"
+      }
+    },
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T20:17:02.422350",
+      "payload": {
+        "report_name": "report_filter_volume_summary.json",
+        "kind": "report_filter_volume"
+      }
+    }
+  ],
+  "journeys": []
+}

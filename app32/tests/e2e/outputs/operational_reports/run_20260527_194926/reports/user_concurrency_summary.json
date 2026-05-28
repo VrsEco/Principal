@@ -1,0 +1,20 @@
+{
+  "kind": "user_concurrency",
+  "profile_name": "baseline",
+  "total_workers": 1,
+  "successful_workers": 1,
+  "failed_workers": 0,
+  "success_rate": 1.0,
+  "iterations_completed": 3,
+  "failures": [],
+  "results": [
+    {
+      "user_label": "tester#1",
+      "success": true,
+      "iterations_completed": 3,
+      "details": {
+        "status_code": 200
+      }
+    }
+  ]
+}

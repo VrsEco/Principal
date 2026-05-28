@@ -1,0 +1,37 @@
+accepted_uncovered_routes:
+- /api-mcp-legacy
+- /api/companies/<company_id>/work-journey/absences
+- /api/companies/<company_id>/work-journey/absences/<request_id>/approve
+- /api/companies/<company_id>/work-journey/agendas
+- /api/companies/<company_id>/work-journey/agendas/<agenda_id>/lock
+- /api/companies/<company_id>/work-journey/agendas/<agenda_id>/pdf
+- /api/companies/<company_id>/work-journey/agendas/<agenda_id>/unlock
+- /api/companies/<company_id>/work-journey/agendas/generate
+- /api/companies/<company_id>/work-journey/agendas/items/<agenda_item_id>
+- /api/companies/<company_id>/work-journey/blocks
+- /api/companies/<company_id>/work-journey/blocks/<block_id>
+- /api/companies/<company_id>/work-journey/calendar/events
+- /api/companies/<company_id>/work-journey/calendar/events/<event_id>
+- /api/companies/<company_id>/work-journey/items/<item_id>/transfer
+- /api/companies/<company_id>/work-journey/manual-tasks
+- /api/companies/<company_id>/work-journey/process-routines
+- /api/companies/<company_id>/work-journey/process-routines/<routine_id>/binding
+- /api/companies/<company_id>/work-journey/rules
+- /api/companies/<company_id>/work-journey/rules/<rule_id>
+- /api/companies/<company_id>/work-journey/transfers
+- /api/companies/<company_id>/work-journey/transfers/<request_id>/approve
+- /my-work/api/company-overview
+- /my-work/api/occurrences/summary
+- /my-work/api/process-instances/<instance_id>/complete
+- /my-work/api/project-task/<task_id>/send-summary
+- /my-work/api/project-task/<task_id>/summary
+- /my-work/api/project-task/<task_id>/summary-options
+- /my-work/api/project-task/<task_id>/summary-pdf
+- /my-work/api/project-task/<task_id>/summary.pdf
+- /my-work/api/team-overview
+- /my-work/process-instance/<instance_id>
+- /my-work/project-task/<task_id>
+accepted_inventory_routes_not_found:
+- /auth/login
+- /meetings
+- /meetings/company/<company_id>

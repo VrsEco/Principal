@@ -81,3 +81,4 @@ app31/
 **/pip_error.log
 **/request_debug.log
 **/uwsgi_app.log
+app32/tests/e2e/outputs/

@@ -1,0 +1,9 @@
+[
+  {
+    "title": "Falha E2E: probe",
+    "failure_type": "timeout",
+    "failed_step": "step2",
+    "run_id": "run_20260527_192927",
+    "company_id": 9
+  }
+]

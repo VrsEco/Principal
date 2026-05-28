@@ -1,0 +1,153 @@
+{
+  "run_id": "run_20260528_095653",
+  "generated_at": "2026-05-28T09:56:53.060512",
+  "artifacts": [
+    {
+      "type": "trace",
+      "label": "playwright-trace",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\run_20260528_095653\\traces\\run_20260528_095653.zip",
+      "metadata": {}
+    },
+    {
+      "type": "storage_state",
+      "label": "auth-storage-state",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\storage_state.json",
+      "metadata": {}
+    }
+  ],
+  "events": [],
+  "journeys": [
+    {
+      "journey": "meetings_crud_e2e",
+      "run_id": "run_20260528_095653",
+      "company_id": 10,
+      "user_label": "operacional@modelo.com.br",
+      "status": "passed",
+      "started_at": "2026-05-28T09:56:54.885674",
+      "finished_at": "2026-05-28T09:56:55.178745",
+      "failed_step": null,
+      "failure_type": null,
+      "artifacts": [],
+      "steps": [
+        {
+          "name": "build_payloads",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:54.885674",
+          "details": {}
+        },
+        {
+          "name": "build_payloads",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:54.886653",
+          "details": {
+            "create_title": "AUTOE2E::run_20260528_095653 Reunião E2E",
+            "activity_count": 1
+          }
+        },
+        {
+          "name": "http_login",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:54.887654",
+          "details": {}
+        },
+        {
+          "name": "http_login",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:54.918412",
+          "details": {
+            "redirect": "/my-work"
+          }
+        },
+        {
+          "name": "create_meeting",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:54.919421",
+          "details": {}
+        },
+        {
+          "name": "create_meeting",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:54.979005",
+          "details": {
+            "meeting_id": 28
+          }
+        },
+        {
+          "name": "update_preliminares",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:54.981013",
+          "details": {}
+        },
+        {
+          "name": "update_preliminares",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:55.010560",
+          "details": {}
+        },
+        {
+          "name": "start_meeting",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:55.026762",
+          "details": {}
+        },
+        {
+          "name": "start_meeting",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:55.079596",
+          "details": {
+            "success": true,
+            "message": "Reunião iniciada!",
+            "project_id": 49,
+            "project_title": "Reunião - AUTOE2E::run_20260528_095653 Reunião E2E (28/05/2026)",
+            "project_code": "M1.J.1",
+            "actual_date": "2026-05-28",
+            "actual_time": "09:56",
+            "updated_at": "2026-05-28T12:56:55.042316"
+          }
+        },
+        {
+          "name": "save_execution",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:55.079596",
+          "details": {}
+        },
+        {
+          "name": "save_execution",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:55.105949",
+          "details": {}
+        },
+        {
+          "name": "finish_meeting",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:55.105949",
+          "details": {}
+        },
+        {
+          "name": "finish_meeting",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:55.142810",
+          "details": {}
+        },
+        {
+          "name": "delete_meeting",
+          "status": "running",
+          "timestamp": "2026-05-28T09:56:55.142810",
+          "details": {
+            "meeting_id": 28
+          }
+        },
+        {
+          "name": "delete_meeting",
+          "status": "passed",
+          "timestamp": "2026-05-28T09:56:55.178745",
+          "details": {}
+        }
+      ],
+      "metadata": {
+        "domain": "meetings",
+        "mode": "DEV_FULL"
+      }
+    }
+  ]
+}

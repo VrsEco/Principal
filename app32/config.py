@@ -6,9 +6,17 @@ from pathlib import Path
 from utils.env_helpers import normalize_database_url
 from utils.security import env_csv, env_flag, get_or_create_dev_secret
 
-# Força o carregamento do .env local da pasta base 'app32' (impede problemas no wsgi root)
-env_path = Path(__file__).resolve().parent / ".env"
-load_dotenv(dotenv_path=env_path)
+# Força o carregamento do .env local.
+# Ordem:
+# 1. app32/.env  -> canônico quando a app roda a partir do package root
+# 2. ../.env     -> fallback para launcher local e execuções a partir do repo root
+_ENV_CANDIDATES = [
+    Path(__file__).resolve().parent / ".env",
+    Path(__file__).resolve().parent.parent / ".env",
+]
+for _env_path in _ENV_CANDIDATES:
+    if _env_path.exists():
+        load_dotenv(dotenv_path=_env_path, override=False)
 
 class Config:
     """Base configuration class"""

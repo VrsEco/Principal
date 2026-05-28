@@ -1,0 +1,147 @@
+version: 2
+generated_for: "AA.J.18 Sprint 5"
+smoke_minimum:
+  description: "Cobertura mínima operacional para autenticação, contexto ativo, renderização inicial e governança dos módulos críticos."
+  scenarios:
+    - key: smoke.auth.workspace
+      scenario: journeys/smoke/test_login_and_navigation.py::test_login_and_reach_workspace
+      covers: [auth.login, auth.portal_select_company, workspace.my_work]
+    - key: smoke.navigation.meetings
+      scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+      covers: [meetings.root_redirect, meetings.company_manage]
+    - key: smoke.navigation.integrations
+      scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+      covers: [integrations.api_mcp, integrations.channels]
+    - key: smoke.governance.downloads
+      scenario: scripts/run_report_download_probe.py
+      covers: [workspace.my_work_export_pdf, workspace.filter_options, workspace.activities]
+modules:
+  - name: auth
+    criticality: alta
+    items:
+      - key: auth.login
+        route: /auth/login
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, autenticar]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_login_and_navigation.py::test_login_and_reach_workspace
+      - key: auth.portal_select_company
+        route: /portal
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [selecionar_empresa]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_login_and_navigation.py::test_login_and_reach_workspace
+  - name: workspace
+    criticality: alta
+    items:
+      - key: workspace.my_work
+        route: /my-work
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_login_and_navigation.py::test_login_and_reach_workspace
+      - key: workspace.my_work_export_pdf
+        route: /my-work/export-pdf
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [emitir_relatorio]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_report_download_probe.py
+      - key: workspace.filter_options
+        route: /my-work/api/filter-options
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_filtros, alto_volume]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_report_filter_volume_probe.py
+      - key: workspace.activities
+        route: /my-work/api/activities
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_atividades, alto_volume]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_report_filter_volume_probe.py
+  - name: meetings
+    criticality: alta
+    items:
+      - key: meetings.root_redirect
+        route: /meetings/
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, redirecionar]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+      - key: meetings.company_manage
+        route: /meetings/company/<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+      - key: meetings.api_create
+        route: /meetings/api/company/<company_id>/meeting
+        environment_modes: [DEV_FULL]
+        actions: [criar]
+        owner: QA_AUTOMATION
+        scenario: journeys/crud/test_meetings_crud_e2e.py::test_meetings_crud_e2e
+      - key: meetings.api_detail
+        route: /meetings/api/meeting/<meeting_id>
+        environment_modes: [DEV_FULL]
+        actions: [consultar, alterar, excluir]
+        owner: QA_AUTOMATION
+        scenario: journeys/crud/test_meetings_crud_e2e.py::test_meetings_crud_e2e
+  - name: integrations
+    criticality: média
+    items:
+      - key: integrations.api_mcp
+        route: /api-mcp
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+      - key: integrations.channels
+        route: /channels
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+  - name: work_journey
+    criticality: alta
+    items:
+      - key: work_journey.root
+        route: /work-journey
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: backlog
+      - key: work_journey.company_board
+        route: /companies/<company_id>/work-journey
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e
+      - key: work_journey.report
+        route: /companies/<company_id>/work-journey/report
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [emitir_relatorio]
+        owner: QA_AUTOMATION
+        scenario: backlog
+      - key: work_journey.export_pdf
+        route: /companies/<company_id>/work-journey/export-pdf
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [emitir_relatorio]
+        owner: QA_AUTOMATION
+        scenario: backlog
+      - key: work_journey.api_board
+        route: /api/companies/<company_id>/work-journey/board
+        environment_modes: [DEV_FULL]
+        actions: [consultar_board]
+        owner: QA_AUTOMATION
+        scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e
+      - key: work_journey.api_manual_tasks
+        route: /api/companies/<company_id>/work-journey/items/manual
+        environment_modes: [DEV_FULL]
+        actions: [criar]
+        owner: QA_AUTOMATION
+        scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e
+      - key: work_journey.api_item_detail
+        route: /api/companies/<company_id>/work-journey/items/<item_id>
+        environment_modes: [DEV_FULL]
+        actions: [consultar, alterar, excluir]
+        owner: QA_AUTOMATION
+        scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e

@@ -1,0 +1,57 @@
+{
+  "run_id": "run_20260527_194926",
+  "generated_at": "2026-05-27T19:49:26.875058",
+  "artifacts": [
+    {
+      "type": "report",
+      "label": "volume_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_194926\\reports\\volume_summary.json",
+      "metadata": {
+        "kind": "data_volume"
+      }
+    },
+    {
+      "type": "report",
+      "label": "user_concurrency_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_194926\\reports\\user_concurrency_summary.json",
+      "metadata": {
+        "kind": "user_concurrency"
+      }
+    },
+    {
+      "type": "report",
+      "label": "mcp_concurrency_summary.json",
+      "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\operational_reports\\run_20260527_194926\\reports\\mcp_concurrency_summary.json",
+      "metadata": {
+        "kind": "mcp_concurrency"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T19:49:26.877058",
+      "payload": {
+        "report_name": "volume_summary.json",
+        "kind": "data_volume"
+      }
+    },
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T19:49:26.879575",
+      "payload": {
+        "report_name": "user_concurrency_summary.json",
+        "kind": "user_concurrency"
+      }
+    },
+    {
+      "name": "operational_report_written",
+      "timestamp": "2026-05-27T19:49:26.882091",
+      "payload": {
+        "report_name": "mcp_concurrency_summary.json",
+        "kind": "mcp_concurrency"
+      }
+    }
+  ],
+  "journeys": []
+}

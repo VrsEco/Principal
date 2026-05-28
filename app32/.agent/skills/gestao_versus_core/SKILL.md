@@ -30,7 +30,10 @@ Skill obrigatória de governança do projeto.
 - multi-tenancy com `company_id`
 - MCP First quando houver estado operacional
 - sem lógica de negócio em rota
-- respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
+- respostas devem ser curtas e objetivas, com alvo padrão de leitura em até 1 minuto; só expandir quando houver necessidade real de detalhamento ou quando o usuário pedir aprofundamento
+- preferir respostas em 3 a 7 bullets quando o formato permitir
+- evitar blocos longos de texto; quebrar em bullets curtos ou seções mínimas
+- abrir pela decisão, conclusão ou próximo passo antes do contexto
 - sem documentação longa dentro desta skill
 - sem execução 3+ etapas sem cards reais em `AA.J.1`
 - para Sapiens: arvore oficial por dominio, nao por estrutura legada
@@ -39,6 +42,32 @@ Skill obrigatória de governança do projeto.
 - para Sapiens: dominio de tool precisa ser canonico antes da RBAC/policy
 - para Sapiens: alias de dominio devem ser normalizados antes de permissao, telemetria e workflow resolution
 - drift entre `capabilities`, `tenant_rbac`, `profiles`, `permission_matrix` e `playbooks` e falha arquitetural, nao detalhe de implementacao
+
+## Formato canônico de resposta
+Quando o formato permitir, responder preferencialmente assim:
+
+1. `Decisão:` a conclusão principal em 1 linha
+2. `Impacto:` o efeito técnico ou de negócio em 1 ou 2 bullets
+3. `Próximo passo:` a ação recomendada em 1 linha
+
+Exemplo:
+
+- Decisão: mover a regra para a service e manter a rota fina
+- Impacto: reduz acoplamento HTTP; melhora teste e reuso
+- Próximo passo: extrair a validação e a regra para `service` com escopo por `company_id`
+
+## Formato canônico de resposta
+Quando o formato permitir, responder preferencialmente assim:
+
+1. `Decisão:` a conclusão principal em 1 linha
+2. `Impacto:` o efeito técnico ou de negócio em 1 ou 2 bullets
+3. `Próximo passo:` a ação recomendada em 1 linha
+
+Exemplo:
+
+- Decisão: mover a regra para a service e manter a rota fina
+- Impacto: reduz acoplamento HTTP; melhora teste e reuso
+- Próximo passo: extrair a validação e a regra para `service` com escopo por `company_id`
 
 ## Governança adicional para Sapiens
 - `1` Gestao da Rotina

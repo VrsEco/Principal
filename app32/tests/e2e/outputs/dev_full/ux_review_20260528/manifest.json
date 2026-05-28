@@ -1,0 +1,22 @@
+[
+  {
+    "label": "login_page",
+    "url": "http://127.0.0.1:5032/login",
+    "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\ux_review_20260528\\login_page.png"
+  },
+  {
+    "label": "my_work",
+    "url": "http://127.0.0.1:5032/my-work",
+    "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\ux_review_20260528\\my_work.png"
+  },
+  {
+    "label": "meetings_start",
+    "url": "http://127.0.0.1:5032/meetings/company/10",
+    "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\ux_review_20260528\\meetings_start.png"
+  },
+  {
+    "label": "report_print_view",
+    "url": "http://127.0.0.1:5032/my-work/export-pdf?scope=me&active_company_id=10",
+    "path": "C:\\GestaoVersus\\app32\\app32\\tests\\e2e\\outputs\\dev_full\\ux_review_20260528\\report_print_view.png"
+  }
+]

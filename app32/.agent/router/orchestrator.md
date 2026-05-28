@@ -10,7 +10,10 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
    - multi-tenancy obrigatório com `company_id`
    - MCP First sempre que houver leitura operacional do sistema
    - sem lógica de negócio em rota
-   - respostas curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
+   - respostas curtas e objetivas, com alvo padrão de leitura em até 1 minuto; só expandir quando houver necessidade real de detalhamento ou quando o usuário pedir aprofundamento
+   - preferir respostas em 3 a 7 bullets quando o formato permitir
+   - evitar blocos longos de texto; quebrar em bullets curtos ou seções mínimas
+   - abrir pela decisão, conclusão ou próximo passo antes do contexto
 3. Se a execução tiver 3 ou mais etapas, ativar obrigatoriamente `aa-j-31-card-execution` antes de começar qualquer implementação.
 4. Escolher o fluxo principal:
    - incidente/bug -> `gestao-versus-incident-response`

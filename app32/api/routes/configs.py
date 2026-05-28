@@ -17,6 +17,11 @@ from services.instruction_registry_service import InstructionRegistryService
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
 from services.agent_backlog_service import create_backlog_task
+from services.e2e_operations_center_service import E2EOperationsCenterService
+try:
+    from app32.tests.e2e.core.e2e_supervised_execution_service import E2ESupervisedExecutionService
+except ModuleNotFoundError:  # pragma: no cover - compatibilidade de import local
+    from tests.e2e.core.e2e_supervised_execution_service import E2ESupervisedExecutionService
 from services.external_llm_factory_service import ExternalLLMFactoryService
 from services.monitoring_audit_request_service import MonitoringAuditRequestService
 from services.sapiens_factory_registry_service import SapiensFactoryRegistryService
@@ -181,6 +186,131 @@ def _render_ai_config_page(page_key: str, active_company):
         active_company=active_company,
         page=page_state,
     )
+
+
+@configs_bp.route('/qa/e2e')
+@login_required
+def e2e_operations_center():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    state = E2EOperationsCenterService.build_frontend_state(active_company)
+    return render_template(
+        'modules/operations/e2e_center.html',
+        active_company=active_company,
+        state=state,
+    )
+
+
+@configs_bp.route('/api/configs/qa/e2e/frontend-state')
+@login_required
+def e2e_operations_center_frontend_state():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    state = E2EOperationsCenterService.build_frontend_state(active_company)
+    return jsonify({"success": True, "state": state})
+
+
+@configs_bp.route('/api/configs/qa/e2e/executions', methods=['GET'])
+@login_required
+def e2e_supervised_execution_list():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    return jsonify({"success": True, "executions": E2ESupervisedExecutionService.list_executions()})
+
+
+@configs_bp.route('/api/configs/qa/e2e/executions', methods=['POST'])
+@login_required
+def e2e_supervised_execution_create():
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    payload = request.get_json(silent=True) or {}
+    suite_id = str(payload.get('suite_id') or '').strip()
+    environment = str(payload.get('environment') or '').strip().upper()
+    if not suite_id or not environment:
+        return jsonify({"success": False, "error": "suite_id e environment são obrigatórios."}), 400
+    try:
+        execution = E2ESupervisedExecutionService.start_execution(suite_id=suite_id, environment=environment)
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    return jsonify({"success": True, "execution": execution}), 201
+
+
+@configs_bp.route('/api/configs/qa/e2e/executions/<string:execution_id>', methods=['GET'])
+@login_required
+def e2e_supervised_execution_detail(execution_id: str):
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        execution = E2ESupervisedExecutionService.get_execution(execution_id)
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Execução não encontrada."}), 404
+    return jsonify({"success": True, "execution": execution})
+
+
+@configs_bp.route('/api/configs/qa/e2e/runs/<string:run_id>', methods=['GET'])
+@login_required
+def e2e_run_detail(run_id: str):
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        detail = E2EOperationsCenterService.get_run_detail(run_id)
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Run não encontrado."}), 404
+    return jsonify({"success": True, "run": detail})
+
+
+@configs_bp.route('/api/configs/qa/e2e/runs/<string:run_id>/manifest', methods=['GET'])
+@login_required
+def e2e_run_manifest_download(run_id: str):
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        file_path = E2EOperationsCenterService.resolve_run_file(run_id, 'manifest')
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Manifesto não encontrado."}), 404
+    return send_file(file_path, as_attachment=True, download_name=f'{run_id}-manifest.json', mimetype='application/json')
+
+
+@configs_bp.route('/api/configs/qa/e2e/runs/<string:run_id>/backlog-candidates', methods=['GET'])
+@login_required
+def e2e_run_backlog_candidates_download(run_id: str):
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        file_path = E2EOperationsCenterService.resolve_run_file(run_id, 'backlog_candidates')
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Backlog candidates não encontrado."}), 404
+    return send_file(file_path, as_attachment=True, download_name=f'{run_id}-backlog-candidates.json', mimetype='application/json')
+
+
+@configs_bp.route('/api/configs/qa/e2e/runs/<string:run_id>/artifacts/<int:artifact_index>', methods=['GET'])
+@login_required
+def e2e_run_artifact_download(run_id: str, artifact_index: int):
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        file_path = E2EOperationsCenterService.resolve_run_file(run_id, 'artifact', artifact_index=artifact_index)
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Artefato não encontrado."}), 404
+    return send_file(file_path, as_attachment=True, download_name=file_path.name)
+
+
+@configs_bp.route('/api/configs/qa/e2e/runs/<string:run_id>/backlog-sync', methods=['POST'])
+@login_required
+def e2e_run_backlog_sync(run_id: str):
+    active_company = _resolve_active_company()
+    _require_ai_admin_access(getattr(active_company, "id", None))
+    try:
+        result = E2EOperationsCenterService.sync_backlog_candidates(
+            run_id,
+            user_id=getattr(current_user, 'id', None),
+            company_id=getattr(active_company, 'id', None),
+            create_task_fn=create_backlog_task,
+        )
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": "Run não encontrado."}), 404
+    status_code = 201 if result.get('created') else 200
+    return jsonify({"success": True, "result": result}), status_code
 
 @configs_bp.route('/ai')
 @login_required

@@ -42,8 +42,9 @@ def test_ai_configuration_items_move_from_finance_base_to_sapiens_ia():
     assert "API / MCP" in system_block
     assert "Capacidades de IA" in system_block
     assert "Inventário de Capabilities" in system_block
-    assert "Malha de Automações" in system_block
+    assert "Central de Automações" in system_block
     assert "Monitoramento e Auditoria" in system_block
+    assert "Central de Testes E2E" in system_block
 
 
 
@@ -60,5 +61,6 @@ def test_integrations_and_ai_settings_live_under_sapiens_not_system():
     assert '/ai-automation-mesh' in system_block
     assert '/ai-capabilities' in system_block
     assert '/ai-monitoring' in system_block
+    assert '/qa/e2e' in system_block
     assert 'Configurações de Canais' in system_block
     assert 'API / MCP' in system_block

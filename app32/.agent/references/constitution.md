@@ -19,5 +19,8 @@
 ## Comunicação
 - responder em Português-Brasil
 - exigência técnica alta
-- respostas curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento
+- respostas curtas e objetivas, com alvo padrão de leitura em até 1 minuto; só expandir quando houver necessidade real de detalhamento ou quando o usuário pedir aprofundamento
+- preferir respostas em 3 a 7 bullets quando o formato permitir
+- evitar blocos longos de texto; quebrar em bullets curtos ou seções mínimas
+- abrir pela decisão, conclusão ou próximo passo antes do contexto
 - priorizar clareza arquitetural e evolução sustentável

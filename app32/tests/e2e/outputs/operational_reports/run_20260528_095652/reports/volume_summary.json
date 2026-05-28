@@ -1,0 +1,8 @@
+{
+  "kind": "data_volume",
+  "run_marker": "AUTOE2E::run_20260528_095652",
+  "company_id": 9,
+  "volume_profile": "large",
+  "record_count": 2000,
+  "report_row_count": 25000
+}

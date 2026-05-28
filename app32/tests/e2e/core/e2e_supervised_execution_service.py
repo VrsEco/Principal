@@ -1,0 +1,151 @@
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import uuid
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+try:
+    from app32.tests.e2e.catalog.suite_catalog import get_suite_definition, list_suite_catalog, repo_root
+except ModuleNotFoundError:  # pragma: no cover - compatibilidade de import local
+    from tests.e2e.catalog.suite_catalog import get_suite_definition, list_suite_catalog, repo_root
+
+
+@dataclass
+class SupervisedExecutionRecord:
+    execution_id: str
+    suite_id: str
+    environment: str
+    status: str
+    started_at: str
+    finished_at: str | None
+    command: list[str]
+    workdir: str
+    stdout_path: str
+    stderr_path: str
+    exit_code: int | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.__dict__.copy()
+
+
+class E2ESupervisedExecutionService:
+    _process_registry: dict[str, subprocess.Popen] = {}
+
+    @classmethod
+    def supervised_root(cls) -> Path:
+        return repo_root() / "app32" / "tests" / "e2e" / "outputs" / "supervised_runs"
+
+    @classmethod
+    def _execution_dir(cls, execution_id: str) -> Path:
+        return cls.supervised_root() / execution_id
+
+    @classmethod
+    def _meta_path(cls, execution_id: str) -> Path:
+        return cls._execution_dir(execution_id) / "meta.json"
+
+    @classmethod
+    def list_suites(cls) -> list[dict[str, Any]]:
+        return [item.to_dict() for item in list_suite_catalog()]
+
+    @classmethod
+    def start_execution(cls, *, suite_id: str, environment: str) -> dict[str, Any]:
+        suite = get_suite_definition(suite_id)
+        if environment not in suite.environments:
+            raise ValueError(f"Suíte {suite_id} não suporta ambiente {environment}.")
+
+        execution_id = f"{suite_id}-{uuid.uuid4().hex[:10]}"
+        execution_dir = cls._execution_dir(execution_id)
+        execution_dir.mkdir(parents=True, exist_ok=True)
+        stdout_path = execution_dir / "stdout.log"
+        stderr_path = execution_dir / "stderr.log"
+
+        command = cls._build_command(suite.command_kind, suite.command_args)
+        env = os.environ.copy()
+        env["E2E_ENV_NAME"] = environment
+        if suite.command_kind == "pytest":
+            env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+
+        stdout_handle = stdout_path.open("w", encoding="utf-8")
+        stderr_handle = stderr_path.open("w", encoding="utf-8")
+        process = subprocess.Popen(
+            command,
+            cwd=str(repo_root()),
+            env=env,
+            stdout=stdout_handle,
+            stderr=stderr_handle,
+        )
+        cls._process_registry[execution_id] = process
+
+        record = SupervisedExecutionRecord(
+            execution_id=execution_id,
+            suite_id=suite_id,
+            environment=environment,
+            status="running",
+            started_at=datetime.now().isoformat(),
+            finished_at=None,
+            command=command,
+            workdir=str(repo_root()),
+            stdout_path=str(stdout_path),
+            stderr_path=str(stderr_path),
+            exit_code=None,
+        )
+        cls._write_record(record)
+        return record.to_dict()
+
+    @classmethod
+    def list_executions(cls) -> list[dict[str, Any]]:
+        root = cls.supervised_root()
+        if not root.exists():
+            return []
+        items: list[dict[str, Any]] = []
+        for meta_path in sorted(root.glob("*/meta.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+            payload = json.loads(meta_path.read_text(encoding="utf-8"))
+            items.append(cls._refresh_record(payload))
+        return items
+
+    @classmethod
+    def get_execution(cls, execution_id: str) -> dict[str, Any]:
+        meta_path = cls._meta_path(execution_id)
+        if not meta_path.exists():
+            raise FileNotFoundError(execution_id)
+        payload = json.loads(meta_path.read_text(encoding="utf-8"))
+        return cls._refresh_record(payload)
+
+    @classmethod
+    def _refresh_record(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        execution_id = payload["execution_id"]
+        process = cls._process_registry.get(execution_id)
+        if process is not None:
+            exit_code = process.poll()
+            if exit_code is None:
+                return payload
+            payload["exit_code"] = exit_code
+            payload["status"] = "passed" if exit_code == 0 else "failed"
+            payload["finished_at"] = payload.get("finished_at") or datetime.now().isoformat()
+            cls._process_registry.pop(execution_id, None)
+            cls._write_payload(execution_id, payload)
+        return payload
+
+    @staticmethod
+    def _build_command(command_kind: str, command_args: tuple[str, ...]) -> list[str]:
+        if command_kind == "pytest":
+            return [sys.executable, "-m", "pytest", *command_args]
+        if command_kind == "python":
+            return [sys.executable, *command_args]
+        raise ValueError(f"command_kind não suportado: {command_kind}")
+
+    @classmethod
+    def _write_record(cls, record: SupervisedExecutionRecord) -> None:
+        cls._write_payload(record.execution_id, record.to_dict())
+
+    @classmethod
+    def _write_payload(cls, execution_id: str, payload: dict[str, Any]) -> None:
+        meta_path = cls._meta_path(execution_id)
+        meta_path.parent.mkdir(parents=True, exist_ok=True)
+        meta_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
