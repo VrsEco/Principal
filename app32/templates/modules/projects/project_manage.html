@@ -2185,8 +2185,12 @@
 
     async function loadEmployees() {
         try {
-            const response = await fetch(`/api/companies/${COMPANY_ID}/employees`);
+            const response = await fetch(`/api/projects/${PROJECT_ID}/employees`);
             const data = await response.json();
+            if (!response.ok || !data.success || !Array.isArray(data.employees)) {
+                console.error('Erro ao carregar responsáveis do projeto:', data);
+                return;
+            }
             const select = document.getElementById('taskEmployeeId');
             // logSelect removed
             const filterSelect = document.getElementById('filterResponsible'); // New filter select

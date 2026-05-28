@@ -53,6 +53,7 @@ def test_project_manage_template_uses_task_edit_capability_flag():
     assert "{% if can_edit_tasks %}" in content
     assert "card.draggable = CAN_EDIT_TASKS && !isHumanGateTask;" in content
     assert "if (!CAN_EDIT_TASKS) {" in content
+    assert "fetch(`/api/projects/${PROJECT_ID}/employees`)" in content
 
 
 def test_project_analysis_exposes_task_edit_capability_for_collaborator_with_project_edit(monkeypatch):
@@ -141,3 +142,42 @@ def test_project_manage_exposes_task_edit_capability_for_collaborator_without_pr
     assert response["template"] == "modules/projects/project_manage.html"
     assert response["context"]["is_collaborator"] is True
     assert response["context"]["can_edit_tasks"] is True
+
+
+def test_project_employees_lists_active_company_employees_from_project_scope(monkeypatch):
+    app = _build_app()
+    fake_project = SimpleNamespace(id=74, company_id=9)
+    fake_company = SimpleNamespace(id=9, name="Meu Chapa")
+    fake_employees = [
+        SimpleNamespace(id=3, name="Ana", email="ana@example.com"),
+        SimpleNamespace(id=5, name="Bruno", email="bruno@example.com"),
+    ]
+
+    class _FakeEmployeeQuery:
+        def filter_by(self, **kwargs):
+            assert kwargs == {"company_id": 9, "status": "active"}
+            return self
+
+        def order_by(self, *_args, **_kwargs):
+            return self
+
+        def all(self):
+            return fake_employees
+
+    monkeypatch.setattr(project_routes, "_get_project_page_with_access", lambda project_id: (fake_project, fake_company))
+    monkeypatch.setattr(project_routes, "Employee", None, raising=False)
+    monkeypatch.setattr(
+        __import__("models"),
+        "Employee",
+        type("FakeEmployee", (), {"query": _FakeEmployeeQuery(), "name": SimpleNamespace(asc=lambda: None)}),
+    )
+
+    with app.test_request_context("/api/projects/74/employees"):
+        response = project_routes.project_employees.__wrapped__(74)
+
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert payload["employees"] == [
+        {"id": 3, "name": "Ana", "email": "ana@example.com"},
+        {"id": 5, "name": "Bruno", "email": "bruno@example.com"},
+    ]

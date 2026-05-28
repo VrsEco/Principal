@@ -112,6 +112,31 @@ def project_manage(project_id):
                            is_collaborator=is_collaborator,
                            can_edit_tasks=can_edit_tasks)
 
+
+@projects_bp.route('/api/projects/<int:project_id>/employees')
+@permission_required('projects', 'view')
+def project_employees(project_id):
+    """Lista colaboradores ativos da empresa do projeto no escopo de acesso ao projeto."""
+    from models import Employee
+
+    project, company = _get_project_page_with_access(project_id)
+    company_id = company.id if company else getattr(project, 'company_id', None)
+    if not company_id:
+        return jsonify({"success": False, "message": "Empresa do projeto não encontrada."}), 404
+
+    employees = (
+        Employee.query.filter_by(company_id=company_id, status='active')
+        .order_by(Employee.name.asc())
+        .all()
+    )
+    return jsonify({
+        "success": True,
+        "employees": [
+            {"id": employee.id, "name": employee.name, "email": employee.email}
+            for employee in employees
+        ],
+    })
+
 @projects_bp.route('/projects/analysis')
 @permission_required('projects', 'view')
 def project_analysis():
