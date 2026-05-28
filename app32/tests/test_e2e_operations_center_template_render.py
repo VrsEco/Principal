@@ -34,6 +34,10 @@ def test_e2e_center_template_renders_operational_and_technical_tabs():
         state={
             "summary": {"total_runs": 3, "failed_runs": 1},
             "active_company": {"client_code": "VRS", "name": "Versus"},
+            "execution_modes": [
+                {"key": "DEV_FULL", "label": "DEV_FULL"},
+                {"key": "PROD_SAFE", "label": "PROD_SAFE"},
+            ],
             "operational_view": {
                 "tab_labels": {"operational": "Visão Operacional", "technical": "Visão Técnica"},
                 "coverage": {
@@ -70,13 +74,15 @@ def test_e2e_center_template_renders_operational_and_technical_tabs():
             "latest_diff": {"status": "stable", "regressions": [], "recovered": [], "new_journeys": []},
             "latest_by_mode": [],
             "latest_runs": [],
-            "suite_catalog": [],
+            "suite_catalog": [{"suite_id": "smoke_real_navigation", "label": "Smoke principal", "domain": "core"}],
             "supervised_executions": [],
             "runbooks": [],
             "commands": [],
         }
     )
 
+    assert "Executar teste agora" in html
+    assert "Iniciar teste" in html
     assert "Visão Operacional" in html
     assert "Visão Técnica" in html
     assert "O que o robô já cobre" in html
