@@ -99,6 +99,8 @@ fi
 # Fallback/pass-through para ambientes que ainda respeitam restart por arquivo.
 touch $WWW/restart.txt
 mkdir -p $WWW/tmp && touch $WWW/tmp/restart.txt
+mkdir -p $APP/tmp && touch $APP/tmp/restart.txt
+touch $APP/restart.txt
 if [ -f "passenger_wsgi.py" ]; then
     touch passenger_wsgi.py
 fi

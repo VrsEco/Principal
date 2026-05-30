@@ -17,6 +17,7 @@ from utils.error_handling import (
     extract_validation_error_message,
     log_and_build_public_error_response,
 )
+from utils.db_resilience import run_with_disconnect_retry
 from utils.permissions import can_access_company, get_default_company_id, is_platform_admin
 from utils.security import consume_rate_limit, get_request_ip, rate_limit_exceeded_response
 
@@ -124,7 +125,7 @@ def login():
         if not email or not password:
             return jsonify({"success": False, "message": "Credenciais inválidas"}), 400
         
-        user = User.query.filter_by(email=email).first()
+        user = run_with_disconnect_retry(lambda: User.query.filter_by(email=email).first())
 
         is_active = getattr(user, "is_active", True) if user else False
         if user and is_active and user.check_password(password):

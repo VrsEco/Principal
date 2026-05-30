@@ -250,7 +250,9 @@ def create_app(config_name=None):
     @login_manager.user_loader
     def load_user(user_id):
         from models.user import User
-        return User.query.get(int(user_id))
+        from utils.db_resilience import run_with_disconnect_retry
+
+        return run_with_disconnect_retry(lambda: User.query.get(int(user_id)))
 
     print("DEBUG: Registering API resources...")
     # RESTful API
