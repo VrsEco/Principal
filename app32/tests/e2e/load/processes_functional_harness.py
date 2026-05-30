@@ -1,0 +1,137 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
+from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
+
+
+@dataclass(frozen=True)
+class ProcessesFunctionalProbeResult:
+    check_name: str
+    route: str
+    success: bool
+    status_code: int
+    details: dict[str, Any]
+
+
+PUBLIC_ERROR_PATTERNS = (
+    "Erro interno do servidor",
+    "Erro interno",
+    "Tente novamente ou contate o suporte",
+    "Erro ao salvar",
+)
+
+
+def _contains_public_error(text: str) -> bool:
+    normalized = str(text or "").lower()
+    return any(pattern.lower() in normalized for pattern in PUBLIC_ERROR_PATTERNS)
+
+
+def _discover_process(http: AuthenticatedHTTPSession, company_id: int) -> dict[str, Any]:
+    payload = http.request_json(
+        "GET",
+        f"/api/companies/{company_id}/processes",
+        operation="processes.list",
+    )
+    if not isinstance(payload, list) or not payload:
+        raise RuntimeError(f"Nenhum processo acessível encontrado para company_id={company_id}.")
+    selected = payload[0]
+    if not selected.get("id"):
+        raise RuntimeError(f"Payload de processo inválido para company_id={company_id}: {selected}")
+    return selected
+
+
+def execute_processes_functional_probe(*, settings: E2EEnvironmentSettings) -> list[ProcessesFunctionalProbeResult]:
+    if settings.company_id is None:
+        raise RuntimeError("E2E_COMPANY_ID é obrigatório para probe de processos.")
+
+    http = AuthenticatedHTTPSession.create(settings)
+    http.login()
+    http.select_company()
+
+    selected = _discover_process(http, settings.company_id)
+    process_id = int(selected["id"])
+
+    detail_payload = http.request_json(
+        "GET",
+        f"/api/processes/{process_id}",
+        operation="processes.detail",
+    )
+
+    modeler_route = f"/processes/{process_id}/bpmn-modeler"
+    modeler_response = http.request("GET", modeler_route)
+    modeler_response.raise_for_status()
+    http.assert_not_login_redirect(modeler_response, operation="processes.bpmn_modeler")
+    modeler_html = modeler_response.text or ""
+
+    diagram_payload = http.request_json(
+        "GET",
+        f"/api/processes/{process_id}/bpmn-diagram",
+        operation="processes.bpmn_diagram",
+    )
+
+    results = [
+        ProcessesFunctionalProbeResult(
+            check_name="processes.list",
+            route=f"/api/companies/{settings.company_id}/processes",
+            success=True,
+            status_code=200,
+            details={"process_id": process_id, "process_code": selected.get("code")},
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.detail",
+            route=f"/api/processes/{process_id}",
+            success=bool(detail_payload.get("id")) and int(detail_payload.get("company_id") or 0) == settings.company_id,
+            status_code=200,
+            details={"has_bpmn_flow": bool((detail_payload.get("bpmn_flow") or {}).get("bpmn_xml"))},
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.bpmn_modeler",
+            route=modeler_route,
+            success=("Salvar rascunho" in modeler_html or "bpmn-modeler-shell" in modeler_html) and not _contains_public_error(modeler_html),
+            status_code=modeler_response.status_code,
+            details={
+                "has_save_button": "Salvar rascunho" in modeler_html,
+                "has_public_error": _contains_public_error(modeler_html),
+            },
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.bpmn_diagram",
+            route=f"/api/processes/{process_id}/bpmn-diagram",
+            success=isinstance(diagram_payload, dict) and "status" in diagram_payload,
+            status_code=200,
+            details={"status": diagram_payload.get("status"), "diagram_id": diagram_payload.get("id")},
+        ),
+    ]
+
+    if settings.execution_mode is E2EExecutionMode.DEV_FULL and settings.destructive_actions_allowed:
+        save_payload = {
+            "id": diagram_payload.get("id"),
+            "name": detail_payload.get("name") or selected.get("name") or f"Processo {process_id}",
+            "status": "draft",
+            "bpmn_xml": diagram_payload.get("bpmn_xml")
+            or "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL'><bpmn:process id='Process_1' isExecutable='false'/></bpmn:definitions>",
+            "svg_snapshot": diagram_payload.get("svg_snapshot") or "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+            "metadata_json": diagram_payload.get("metadata_json") or {"source": "e2e_processes_functional_probe"},
+        }
+        save_response = http.request(
+            "PUT",
+            f"/api/processes/{process_id}/bpmn-diagram",
+            json_payload=save_payload,
+        )
+        save_response.raise_for_status()
+        http.assert_not_login_redirect(save_response, operation="processes.bpmn_save")
+        save_payload_response = http._json_or_raise(save_response, operation="processes.bpmn_save")
+        results.append(
+            ProcessesFunctionalProbeResult(
+                check_name="processes.bpmn_save",
+                route=f"/api/processes/{process_id}/bpmn-diagram",
+                success=isinstance(save_payload_response, dict) and save_payload_response.get("status") == "draft",
+                status_code=save_response.status_code,
+                details={"status": save_payload_response.get("status"), "diagram_id": save_payload_response.get("id")},
+            )
+        )
+
+    return results

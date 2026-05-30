@@ -28,5 +28,19 @@ class TenantContextResolver:
 
     def _assert_company_context_loaded(self) -> None:
         current_url = self.page.url
-        if "/my-work" in current_url or "/portal" in current_url:
-            expect(self.page.locator("body")).to_be_visible()
+        if "/login" in current_url:
+            raise AssertionError(
+                "Contexto autenticado inválido: a navegação retornou para /login "
+                f"após tentativa de autenticação/seleção de empresa. URL atual={current_url}"
+            )
+        if "/portal" in current_url:
+            raise AssertionError(
+                "Seleção de empresa não foi concluída: a sessão permaneceu em /portal "
+                f"após a tentativa de resolver o tenant. URL atual={current_url}"
+            )
+        if self.settings.post_login_path not in current_url:
+            raise AssertionError(
+                "Contexto autenticado não chegou ao destino pós-login esperado. "
+                f"Esperado conter={self.settings.post_login_path} atual={current_url}"
+            )
+        expect(self.page.locator("body")).to_be_visible()

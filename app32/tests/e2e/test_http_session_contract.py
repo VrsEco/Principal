@@ -34,3 +34,37 @@ def test_http_session_factory():
     session = AuthenticatedHTTPSession.create(_settings())
     assert session.settings.base_url == "http://localhost:5002"
     assert session.session.headers["Content-Type"] == "application/json"
+
+
+def test_http_session_json_guard_gives_clear_error():
+    session = AuthenticatedHTTPSession.create(_settings())
+
+    class _Response:
+        status_code = 200
+        headers = {"Content-Type": "text/html"}
+        text = "<html>login</html>"
+
+        def json(self):
+            raise ValueError("not json")
+
+    try:
+        session._json_or_raise(_Response(), operation="select_company")
+    except RuntimeError as exc:
+        assert "esperado JSON" in str(exc)
+        assert "text/html" in str(exc)
+    else:
+        raise AssertionError("Era esperado erro claro para resposta não JSON.")
+
+
+def test_http_session_rejects_login_redirect():
+    session = AuthenticatedHTTPSession.create(_settings())
+
+    class _Response:
+        url = "http://localhost:5002/login?next=/my-work"
+
+    try:
+        session.assert_not_login_redirect(_Response(), operation="workspace.activities")
+    except RuntimeError as exc:
+        assert "redirecionou para login" in str(exc)
+    else:
+        raise AssertionError("Era esperado erro claro para redirect de login.")

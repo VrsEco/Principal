@@ -7,11 +7,16 @@ from app32.tests.e2e.core.tenant_context import TenantContextResolver
 
 
 class _DummyLocator:
+    def __init__(self, page=None):
+        self.page = page
+
     @property
     def first(self):
         return self
 
     def click(self):
+        if self.page is not None:
+            self.page.url = "http://127.0.0.1:5002/my-work"
         return None
 
 
@@ -20,7 +25,7 @@ class _DummyPage:
         self.url = url
 
     def locator(self, _selector: str):
-        return _DummyLocator()
+        return _DummyLocator(self)
 
     def wait_for_load_state(self, _state: str):
         return None
@@ -59,3 +64,13 @@ def test_tenant_context_portal_path(monkeypatch):
     monkeypatch.setattr("app32.tests.e2e.core.tenant_context.expect", lambda _locator: SimpleNamespace(to_be_visible=lambda: None))
     resolver = TenantContextResolver(_DummyPage("http://127.0.0.1:5002/portal"), _settings())
     resolver.ensure_company_selected()
+
+
+def test_tenant_context_rejects_login_redirect():
+    resolver = TenantContextResolver(_DummyPage("http://127.0.0.1:5002/login?next=/my-work"), _settings())
+    try:
+        resolver.ensure_company_selected()
+    except AssertionError as exc:
+        assert "/login" in str(exc)
+    else:
+        raise AssertionError("Era esperado falhar quando o contexto volta para /login.")

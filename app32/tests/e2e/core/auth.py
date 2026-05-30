@@ -32,6 +32,7 @@ class AuthPage:
 
     def ensure_authenticated_workspace(self) -> None:
         TenantContextResolver(self.page, self.settings).ensure_company_selected()
+        self._assert_not_on_login_screen()
 
     def _email_input(self) -> Locator:
         return self.page.locator("#email")
@@ -41,3 +42,10 @@ class AuthPage:
 
     def _is_login_screen(self) -> bool:
         return self._email_input().count() > 0 and self._password_input().count() > 0
+
+    def _assert_not_on_login_screen(self) -> None:
+        if self._is_login_screen() or "/login" in self.page.url:
+            raise AssertionError(
+                "Autenticação E2E não foi concluída: a página permaneceu no login "
+                f"(url atual={self.page.url})."
+            )

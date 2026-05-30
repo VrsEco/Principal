@@ -207,6 +207,114 @@ Gates principais:
 3. ampliar downloads reais por módulo crítico
 4. consolidar abertura automática de backlog a partir dos candidatos gerados
 
+## Esteira oficial de completude
+
+Documento canônico:
+- `C:\GestaoVersus\app32\app32\docs\spec\esteira_oficial_completude_testes_e2e_v1.md`
+
+Essa esteira formaliza que a suíte só evolui para completude real quando cobre:
+- inventário de superfícies
+- ação principal do usuário
+- falha observável
+- evidência técnica
+- produção segura em `PROD_SAFE`
+
+Também estabelece que erro real observado e ainda não coberto passa a alimentar a fila oficial de expansão da automação.
+
+Backlog prático derivado:
+- `C:\GestaoVersus\app32\app32\docs\playbooks\backlog_pratico_expansao_e2e_por_dominio_v1.md`
+
+## Regra reforçada de autenticação em PROD_SAFE
+
+A suíte não pode mais aceitar como sucesso um estado em que:
+
+- a URL continue em `/login?next=...`
+- a seleção de empresa permaneça em `/portal`
+- o fluxo pós-login não chegue ao destino esperado
+
+Para sessões HTTP, respostas não JSON na seleção de empresa agora devem falhar com diagnóstico explícito em vez de erro genérico de decode.
+
+## Onda 1 — ações principais de workspace e integrations
+
+Novos probes funcionais:
+
+- `workspace_functional_probe`
+  - filtros do My Work
+  - listagem de atividades
+  - exportação printável
+- `integrations_functional_probe`
+  - catálogo de integrações
+  - fila de pedidos
+  - página API / MCP
+
+Esses probes agora falham explicitamente quando houver:
+
+- redirect para `/login`
+- HTML onde era esperado JSON
+- mensagem pública de erro no conteúdo funcional
+
+## Onda 1 — ações principais de meetings e work_journey
+
+Novos probes funcionais:
+
+- `meetings_functional_probe`
+  - abertura autenticada de `/meetings/`
+  - redirecionamento para `/meetings/company/<company_id>`
+  - presença da ação principal `novaReuniao`
+- `work_journey_functional_probe`
+  - board da jornada
+  - listagem de tarefas manuais
+  - página principal `/companies/<company_id>/work-journey`
+
+Esses probes falham explicitamente quando houver:
+
+- redirect para `/login`
+- erro público no HTML renderizado
+- ausência da ação principal ou da região principal da tela
+- payload funcional sem `success=true`
+
+## Onda 2 — processes, BPMN, canvas e save assíncrono
+
+Novo probe funcional:
+
+- `processes_functional_probe`
+  - lista de processos por empresa
+  - detalhe do processo
+  - abertura do BPMN Modeler
+  - leitura do diagrama BPMN
+  - save de rascunho em `DEV_FULL`
+
+Esse probe falha explicitamente quando houver:
+
+- redirect para `/login`
+- erro público no modeler
+- ausência do botão `Salvar rascunho`
+- falha no payload do diagrama
+- falha no save do rascunho em ambiente controlado
+
+## Onda 3 — financial, reports e admin
+
+Novos probes funcionais:
+
+- `financial_functional_probe`
+  - páginas principais do financeiro
+  - exportações PDF/XLSX
+- `reports_functional_probe`
+  - relatório gerencial da jornada
+  - exportação printável da jornada
+  - print do workspace
+- `admin_functional_probe`
+  - leitura de parametrização
+  - estado da Central E2E
+  - save seguro de parametrização em `DEV_FULL`
+
+Esses probes falham explicitamente quando houver:
+
+- redirect para `/login`
+- exportação com content-type incorreto
+- payload administrativo inválido
+- erro público em páginas ou relatórios
+
 Runbook canônico:
 - `C:\GestaoVersus\app32\app32\docs\runbooks\robot_e2e_aa_j18_sprint1_runbook.md`
 - `C:\GestaoVersus\app32\app32\docs\runbooks\robot_e2e_aa_j18_sprint2_runbook.md`

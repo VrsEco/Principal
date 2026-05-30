@@ -37,9 +37,9 @@ modules:
       - key: workspace.my_work
         route: /my-work
         environment_modes: [DEV_FULL, PROD_SAFE]
-        actions: [abrir, validar_render]
+        actions: [abrir, validar_render, validar_workspace]
         owner: QA_AUTOMATION
-        scenario: journeys/smoke/test_login_and_navigation.py::test_login_and_reach_workspace
+        scenario: scripts/run_workspace_functional_probe.py
       - key: workspace.my_work_export_pdf
         route: /my-work/export-pdf
         environment_modes: [DEV_FULL, PROD_SAFE]
@@ -64,15 +64,15 @@ modules:
       - key: meetings.root_redirect
         route: /meetings/
         environment_modes: [DEV_FULL, PROD_SAFE]
-        actions: [abrir, redirecionar]
+        actions: [abrir, redirecionar, validar_redirect]
         owner: QA_AUTOMATION
-        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+        scenario: scripts/run_meetings_functional_probe.py
       - key: meetings.company_manage
         route: /meetings/company/<company_id>
         environment_modes: [DEV_FULL, PROD_SAFE]
-        actions: [abrir, validar_render]
+        actions: [abrir, validar_render, validar_acao_principal]
         owner: QA_AUTOMATION
-        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+        scenario: scripts/run_meetings_functional_probe.py
       - key: meetings.api_create
         route: /meetings/api/company/<company_id>/meeting
         environment_modes: [DEV_FULL]
@@ -91,30 +91,42 @@ modules:
       - key: integrations.api_mcp
         route: /api-mcp
         environment_modes: [DEV_FULL, PROD_SAFE]
-        actions: [abrir, validar_render]
+        actions: [abrir, validar_render, consultar_catalogo]
         owner: QA_AUTOMATION
-        scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+        scenario: scripts/run_integrations_functional_probe.py
       - key: integrations.channels
         route: /channels
         environment_modes: [DEV_FULL, PROD_SAFE]
         actions: [abrir, validar_render]
         owner: QA_AUTOMATION
         scenario: journeys/smoke/test_real_navigation_smoke.py::test_real_navigation_smoke
+      - key: integrations.catalog_api
+        route: /api/integrations/catalog
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_catalogo]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_integrations_functional_probe.py
+      - key: integrations.requests_api
+        route: /api/integrations/requests
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_pedidos]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_integrations_functional_probe.py
   - name: work_journey
     criticality: alta
     items:
       - key: work_journey.root
         route: /work-journey
         environment_modes: [DEV_FULL, PROD_SAFE]
-        actions: [abrir, validar_render]
+        actions: [abrir, validar_render, validar_jornada]
         owner: QA_AUTOMATION
-        scenario: backlog
+        scenario: scripts/run_work_journey_functional_probe.py
       - key: work_journey.company_board
         route: /companies/<company_id>/work-journey
         environment_modes: [DEV_FULL, PROD_SAFE]
-        actions: [abrir, validar_render]
+        actions: [abrir, validar_render, validar_jornada]
         owner: QA_AUTOMATION
-        scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e
+        scenario: scripts/run_work_journey_functional_probe.py
       - key: work_journey.report
         route: /companies/<company_id>/work-journey/report
         environment_modes: [DEV_FULL, PROD_SAFE]
@@ -129,10 +141,16 @@ modules:
         scenario: backlog
       - key: work_journey.api_board
         route: /api/companies/<company_id>/work-journey/board
-        environment_modes: [DEV_FULL]
-        actions: [consultar_board]
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_board, validar_board]
         owner: QA_AUTOMATION
-        scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e
+        scenario: scripts/run_work_journey_functional_probe.py
+      - key: work_journey.api_manual_tasks_read
+        route: /api/companies/<company_id>/work-journey/manual-tasks
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_tarefas]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_work_journey_functional_probe.py
       - key: work_journey.api_manual_tasks
         route: /api/companies/<company_id>/work-journey/items/manual
         environment_modes: [DEV_FULL]
@@ -145,3 +163,105 @@ modules:
         actions: [consultar, alterar, excluir]
         owner: QA_AUTOMATION
         scenario: journeys/crud/test_work_journey_crud_e2e.py::test_work_journey_manual_task_crud_e2e
+  - name: processes
+    criticality: média
+    items:
+      - key: processes.list
+        route: /api/companies/<company_id>/processes
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [listar]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_processes_functional_probe.py
+      - key: processes.detail
+        route: /api/processes/<process_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_processes_functional_probe.py
+      - key: processes.bpmn_modeler
+        route: /processes/<process_id>/bpmn-modeler
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_processes_functional_probe.py
+      - key: processes.bpmn_diagram
+        route: /api/processes/<process_id>/bpmn-diagram
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_diagrama]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_processes_functional_probe.py
+      - key: processes.bpmn_save
+        route: /api/processes/<process_id>/bpmn-diagram
+        environment_modes: [DEV_FULL]
+        actions: [salvar_rascunho]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_processes_functional_probe.py
+  - name: financial
+    criticality: alta
+    items:
+      - key: financial.schedule_report_page
+        route: /financial/reports/agendamento
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+      - key: financial.bank_statement_page
+        route: /financial/reports/extrato-bancario
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+      - key: financial.schedule_report_pdf
+        route: /financial/reports/agendamento/export-pdf
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [emitir_relatorio]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+      - key: financial.schedule_report_xlsx
+        route: /financial/reports/agendamento/export-xlsx
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [exportar_planilha]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+  - name: reports
+    criticality: média
+    items:
+      - key: reports.work_journey_report
+        route: /companies/<company_id>/work-journey/report
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [emitir_relatorio]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_reports_functional_probe.py
+      - key: reports.work_journey_report_pdf
+        route: /companies/<company_id>/work-journey/export-pdf
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [exportar_relatorio]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_reports_functional_probe.py
+      - key: reports.workspace_print
+        route: /my-work/export-pdf
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [emitir_relatorio]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_reports_functional_probe.py
+  - name: admin
+    criticality: média
+    items:
+      - key: admin.performance_settings_get
+        route: /api/companies/<company_id>/performance-settings
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_parametrizacao]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_admin_functional_probe.py
+      - key: admin.performance_settings_put
+        route: /api/companies/<company_id>/performance-settings
+        environment_modes: [DEV_FULL]
+        actions: [salvar_parametrizacao]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_admin_functional_probe.py
+      - key: admin.e2e_center_frontend_state
+        route: /api/configs/qa/e2e/frontend-state
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [validar_permissao, consultar_estado]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_admin_functional_probe.py

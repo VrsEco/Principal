@@ -50,7 +50,7 @@ class AuthenticatedHTTPSession:
             timeout=30,
         )
         response.raise_for_status()
-        payload = response.json()
+        payload = self._json_or_raise(response, operation="select_company")
         if not payload.get("success"):
             raise RuntimeError(f"Falha ao selecionar empresa E2E: {payload}")
         return payload
@@ -62,6 +62,40 @@ class AuthenticatedHTTPSession:
             json=json_payload,
             timeout=30,
         )
+
+    def request_json(
+        self,
+        method: str,
+        path: str,
+        *,
+        json_payload: dict[str, Any] | None = None,
+        operation: str,
+    ) -> dict[str, Any]:
+        response = self.request(method, path, json_payload=json_payload)
+        response.raise_for_status()
+        self.assert_not_login_redirect(response, operation=operation)
+        payload = self._json_or_raise(response, operation=operation)
+        if isinstance(payload, dict) and payload.get("success") is False:
+            raise RuntimeError(f"Falha funcional em {operation}: {payload}")
+        return payload
+
+    def assert_not_login_redirect(self, response: requests.Response, *, operation: str) -> None:
+        final_url = str(getattr(response, "url", "") or "")
+        if "/login" in final_url:
+            raise RuntimeError(
+                f"Fluxo autenticado inválido em {operation}: resposta final redirecionou para login ({final_url})."
+            )
+
+    def _json_or_raise(self, response: requests.Response, *, operation: str) -> dict[str, Any]:
+        try:
+            return response.json()
+        except Exception as exc:
+            content_type = response.headers.get("Content-Type", "")
+            text_preview = (response.text or "")[:180].replace("\n", " ").replace("\r", " ")
+            raise RuntimeError(
+                f"Resposta inválida em {operation}: esperado JSON e recebido "
+                f"status={response.status_code} content_type={content_type!r} preview={text_preview!r}"
+            ) from exc
 
     def _has_session_cookie(self) -> bool:
         cookie_name = "gv_session"
