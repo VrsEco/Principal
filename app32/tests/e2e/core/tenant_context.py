@@ -23,7 +23,7 @@ class TenantContextResolver:
         card = self.page.locator(selector).first
         expect(card).to_be_visible()
         card.click()
-        self.page.wait_for_load_state("networkidle")
+        self.page.locator("body").wait_for()
         self._assert_company_context_loaded()
 
     def _assert_company_context_loaded(self) -> None:

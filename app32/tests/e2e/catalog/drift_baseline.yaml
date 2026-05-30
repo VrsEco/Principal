@@ -32,6 +32,5 @@ accepted_uncovered_routes:
 - /my-work/process-instance/<instance_id>
 - /my-work/project-task/<task_id>
 accepted_inventory_routes_not_found:
-- /auth/login
 - /meetings
 - /meetings/company/<company_id>

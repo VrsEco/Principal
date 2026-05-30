@@ -25,6 +25,12 @@ class Config:
     _env_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = _env_database_url or "postgresql://postgres@localhost:5432/bdversusv2"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": int(os.environ.get("SQLALCHEMY_POOL_RECYCLE") or 1800),
+        "pool_timeout": int(os.environ.get("SQLALCHEMY_POOL_TIMEOUT") or 30),
+        "pool_use_lifo": True,
+    }
 
     # Authentication
     LOGIN_DISABLED = env_flag("LOGIN_DISABLED", default=False)
@@ -160,6 +166,11 @@ class ProductionConfig(Config):
     REMEMBER_COOKIE_SECURE = True
     _prod_database_url = normalize_database_url(os.environ.get("DATABASE_URL"))
     SQLALCHEMY_DATABASE_URI = _prod_database_url
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        **Config.SQLALCHEMY_ENGINE_OPTIONS,
+        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE") or 10),
+        "max_overflow": int(os.environ.get("SQLALCHEMY_MAX_OVERFLOW") or 20),
+    }
     SECRET_KEY = os.environ.get("SECRET_KEY")
     DEV_ROUTES_ENABLED = False
 

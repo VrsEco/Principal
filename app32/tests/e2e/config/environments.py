@@ -121,7 +121,7 @@ def load_environment_settings() -> E2EEnvironmentSettings:
         environment_name=execution_mode.value,
         execution_mode=execution_mode,
         base_url=str(os.environ.get("E2E_BASE_URL") or "").strip(),
-        login_path=str(os.environ.get("E2E_LOGIN_PATH") or "/auth/login").strip() or "/auth/login",
+        login_path=str(os.environ.get("E2E_LOGIN_PATH") or "/login").strip() or "/login",
         post_login_path=str(os.environ.get("E2E_POST_LOGIN_PATH") or "/my-work").strip() or "/my-work",
         username=str(os.environ.get("E2E_USERNAME") or "").strip(),
         password=str(os.environ.get("E2E_PASSWORD") or ""),

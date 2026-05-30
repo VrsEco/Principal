@@ -11,7 +11,7 @@ class NavigationSmoke:
 
     def open_target(self, target: SmokeTarget) -> None:
         self.page.goto(target.route, wait_until="domcontentloaded")
-        self.page.wait_for_load_state("networkidle")
+        self.page.locator("body").wait_for()
         expect(self.page.locator(target.readiness_selector)).to_be_visible()
         assert target.expected_url_fragment in self.page.url, (
             f"Destino {target.key} não chegou ao fragmento esperado. "

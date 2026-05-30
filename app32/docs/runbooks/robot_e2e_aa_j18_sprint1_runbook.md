@@ -61,7 +61,7 @@ pytest app32/tests/e2e/test_execution_contract.py app32/tests/e2e/test_tenant_co
 - `app32/tests/e2e/outputs/<modo>/<run_id>/reports/manifest.json`
 
 ## Smoke mínimo da Sprint 1
-- login `/auth/login`
+- login `/login`
 - seleção de empresa `/portal`
 - workspace `/my-work`
 - contratos de navegação para `/meetings/` e `/api-mcp`

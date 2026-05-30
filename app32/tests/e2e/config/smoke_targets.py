@@ -13,7 +13,7 @@ class SmokeTarget:
 
 
 SMOKE_TARGETS: tuple[SmokeTarget, ...] = (
-    SmokeTarget("auth.login", "/auth/login", "entrada de autenticação", "/auth/login", "#loginForm"),
+    SmokeTarget("auth.login", "/login", "entrada de autenticação", "/login", "#loginForm"),
     SmokeTarget("workspace.my_work", "/my-work", "workspace principal", "/my-work", "body"),
     SmokeTarget("meetings.root_redirect", "/meetings/", "entrada de reuniões", "/meetings/company/", ".meeting-management"),
     SmokeTarget("integrations.api_mcp", "/api-mcp", "catálogo de integrações", "/api-mcp", "#integrationsWorkspace"),

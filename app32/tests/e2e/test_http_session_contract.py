@@ -11,7 +11,7 @@ def _settings() -> E2EEnvironmentSettings:
         environment_name="DEV_FULL",
         execution_mode=E2EExecutionMode.DEV_FULL,
         base_url="http://localhost:5002",
-        login_path="/auth/login",
+        login_path="/login",
         post_login_path="/my-work",
         username="tester@example.com",
         password="secret",

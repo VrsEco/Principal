@@ -18,7 +18,7 @@ class AuthPage:
             else self.settings.login_url
         )
         self.page.goto(preferred_url, wait_until="domcontentloaded")
-        self.page.wait_for_load_state("networkidle")
+        self.page.locator("body").wait_for()
         if self._is_login_screen():
             expect(self.page).to_have_title("Login | Versus Gestão")
 
@@ -28,7 +28,7 @@ class AuthPage:
         self._email_input().fill(self.settings.username)
         self._password_input().fill(self.settings.password)
         self.page.locator("#submitBtn").click()
-        self.page.wait_for_load_state("networkidle")
+        self.page.locator("body").wait_for()
 
     def ensure_authenticated_workspace(self) -> None:
         TenantContextResolver(self.page, self.settings).ensure_company_selected()

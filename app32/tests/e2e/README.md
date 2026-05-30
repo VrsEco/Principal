@@ -327,7 +327,7 @@ Runbook canônico:
 ## Observações
 
 - a seleção de empresa usa `data-portal-company-id`
-- a rota de login usa `/auth/login`
+- a rota de login usa `/login`
 - os artefatos são gravados em `app32/tests/e2e/outputs/`
 - `PROD_SAFE` não pode operar com `E2E_DESTRUCTIVE_ACTIONS_ALLOWED=true`
 - a Central de Testes E2E no app32 fica em `/qa/e2e`

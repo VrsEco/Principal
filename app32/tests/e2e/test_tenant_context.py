@@ -19,6 +19,9 @@ class _DummyLocator:
             self.page.url = "http://127.0.0.1:5002/my-work"
         return None
 
+    def wait_for(self):
+        return None
+
 
 class _DummyPage:
     def __init__(self, url: str):
@@ -36,7 +39,7 @@ def _settings(company_id: int | None = 9) -> E2EEnvironmentSettings:
         environment_name="DEV_FULL",
         execution_mode=E2EExecutionMode.DEV_FULL,
         base_url="http://127.0.0.1:5002",
-        login_path="/auth/login",
+        login_path="/login",
         post_login_path="/my-work",
         username="dev@example.com",
         password="secret",

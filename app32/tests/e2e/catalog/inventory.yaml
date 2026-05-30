@@ -20,7 +20,7 @@ modules:
     criticality: alta
     items:
       - key: auth.login
-        route: /auth/login
+        route: /login
         environment_modes: [DEV_FULL, PROD_SAFE]
         actions: [abrir, autenticar]
         owner: QA_AUTOMATION

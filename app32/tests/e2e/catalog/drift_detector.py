@@ -11,7 +11,8 @@ from app32.tests.e2e.catalog.suite_catalog import list_suite_catalog
 
 
 DECORATOR_ROUTE_PATTERN = re.compile(r'@[^\n]+?\.route\([\'\"]([^\'\"]+)')
-RESOURCE_ROUTE_PATTERN = re.compile(r'add_resource\([^\n]+?,\s*[\'\"]([^\'\"]+)')
+RESOURCE_CALL_PATTERN = re.compile(r'add_resource\((.*?)\)', re.DOTALL)
+STRING_LITERAL_PATTERN = re.compile(r'[\'\"]([^\'\"]+)[\'\"]')
 BLUEPRINT_PREFIX_PATTERN = re.compile(r'Blueprint\([^\n]+?url_prefix\s*=\s*[\'\"]([^\'\"]+)')
 PARAM_PATTERN = re.compile(r"<(?:(?:int|string|float|uuid|path):)?([^>]+)>")
 IGNORED_PARTS = {"archive", "docs", "tests", "__pycache__", ".agent"}
@@ -34,6 +35,23 @@ def normalize_route(route: str) -> str:
     if normalized != "/" and normalized.endswith("/"):
         normalized = normalized.rstrip("/")
     return normalized
+
+
+def routes_compatible(route_a: str, route_b: str) -> bool:
+    normalized_a = normalize_route(route_a)
+    normalized_b = normalize_route(route_b)
+    segments_a = [segment for segment in normalized_a.strip("/").split("/") if segment]
+    segments_b = [segment for segment in normalized_b.strip("/").split("/") if segment]
+    if len(segments_a) != len(segments_b):
+        return False
+    for segment_a, segment_b in zip(segments_a, segments_b):
+        if segment_a.startswith("<") and segment_a.endswith(">"):
+            continue
+        if segment_b.startswith("<") and segment_b.endswith(">"):
+            continue
+        if segment_a != segment_b:
+            return False
+    return True
 
 
 def _iter_python_sources() -> list[Path]:
@@ -59,6 +77,19 @@ def _join_route(prefix: str, route: str) -> str:
     return normalize_route(f"{prefix}/{route.lstrip('/')}" )
 
 
+def _extract_resource_routes(body: str) -> list[str]:
+    discovered: list[str] = []
+    for match in RESOURCE_CALL_PATTERN.finditer(body):
+        call_body = match.group(1)
+        quoted_values = STRING_LITERAL_PATTERN.findall(call_body)
+        discovered.extend(
+            normalize_route(value)
+            for value in quoted_values
+            if str(value).strip().startswith("/")
+        )
+    return discovered
+
+
 def discover_registered_routes() -> list[str]:
     discovered: list[str] = []
     for path in _iter_python_sources():
@@ -71,7 +102,7 @@ def discover_registered_routes() -> list[str]:
                     discovered.append(_join_route(prefix, route))
         else:
             discovered.extend(normalize_route(route) for route in decorator_routes)
-        discovered.extend(normalize_route(match.group(1)) for match in RESOURCE_ROUTE_PATTERN.finditer(body))
+        discovered.extend(_extract_resource_routes(body))
     return sorted(set(discovered))
 
 
@@ -87,13 +118,18 @@ def _load_baseline() -> dict[str, list[str]]:
 
 
 def _is_governed_route(route: str) -> bool:
-    if route == "/auth/login":
+    if route == "/login":
         return True
     return any(route == prefix or route.startswith(prefix + "/") for prefix in GOVERNED_PREFIXES)
 
 
 def _is_route_covered(route: str, inventory_routes: set[str]) -> bool:
-    return any(route == inventory_route or route.startswith(inventory_route + "/") for inventory_route in inventory_routes)
+    return any(
+        routes_compatible(route, inventory_route)
+        or route.startswith(normalize_route(inventory_route) + "/")
+        or normalize_route(inventory_route).startswith(normalize_route(route) + "/")
+        for inventory_route in inventory_routes
+    )
 
 
 def detect_inventory_drift() -> dict[str, Any]:
@@ -104,7 +140,10 @@ def detect_inventory_drift() -> dict[str, Any]:
 
     governed_routes = {route for route in app_routes if _is_governed_route(route)}
     uncovered = sorted(route for route in governed_routes if not _is_route_covered(route, inventory_routes))
-    backlog_inventory = sorted(route for route in inventory_routes if route not in app_routes)
+    backlog_inventory = sorted(
+        route for route in inventory_routes
+        if not any(routes_compatible(route, app_route) for app_route in app_routes)
+    )
 
     accepted_uncovered = set(baseline["accepted_uncovered_routes"])
     accepted_inventory_missing = set(baseline["accepted_inventory_routes_not_found"])
