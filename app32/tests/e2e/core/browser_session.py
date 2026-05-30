@@ -14,6 +14,13 @@ def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _has_auth_cookie(storage_state: dict) -> bool:
+    for cookie in storage_state.get("cookies", []) or []:
+        if str(cookie.get("name") or "").strip() == "gv_session" and str(cookie.get("value") or "").strip():
+            return True
+    return False
+
+
 @contextmanager
 def managed_page(
     settings: E2EEnvironmentSettings,
@@ -47,13 +54,15 @@ def managed_page(
             path=trace_path,
             label="playwright-trace",
         )
-        settings.storage_state_path.parent.mkdir(parents=True, exist_ok=True)
-        context.storage_state(path=str(settings.storage_state_path))
-        collector.register_artifact(
-            artifact_type="storage_state",
-            path=settings.storage_state_path,
-            label="auth-storage-state",
-        )
+        storage_payload = context.storage_state()
+        if _has_auth_cookie(storage_payload) and "/login" not in (page.url or ""):
+            settings.storage_state_path.parent.mkdir(parents=True, exist_ok=True)
+            context.storage_state(path=str(settings.storage_state_path))
+            collector.register_artifact(
+                artifact_type="storage_state",
+                path=settings.storage_state_path,
+                label="auth-storage-state",
+            )
         context.close()
         browser.close()
         playwright.stop()

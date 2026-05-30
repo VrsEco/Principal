@@ -12,11 +12,10 @@ class AuthPage:
         self.settings = settings
 
     def open(self) -> None:
-        preferred_url = (
-            f"{self.settings.base_url.rstrip('/')}{self.settings.post_login_path}"
-            if self.settings.base_url and self.settings.post_login_path
-            else self.settings.login_url
-        )
+        preferred_url = self.settings.login_url
+        if self.settings.post_login_path:
+            separator = "&" if "?" in preferred_url else "?"
+            preferred_url = f"{preferred_url}{separator}next={self.settings.post_login_path}"
         self.page.goto(preferred_url, wait_until="domcontentloaded")
         self.page.locator("body").wait_for()
         if self._is_login_screen():
