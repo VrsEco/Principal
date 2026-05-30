@@ -26,6 +26,8 @@ def managed_page(
     settings: E2EEnvironmentSettings,
     evidence: EvidencePaths,
     collector: EvidenceCollector,
+    *,
+    use_storage_state: bool = True,
 ) -> Iterator[tuple[Playwright, Browser, BrowserContext, Page]]:
     playwright = sync_playwright().start()
     browser_launcher = getattr(playwright, settings.browser_name)
@@ -37,7 +39,11 @@ def managed_page(
         base_url=settings.base_url or None,
         ignore_https_errors=True,
         record_video_dir=str(video_dir),
-        storage_state=str(settings.storage_state_path) if settings.storage_state_path.exists() else None,
+        storage_state=(
+            str(settings.storage_state_path)
+            if use_storage_state and settings.storage_state_path.exists()
+            else None
+        ),
         viewport={"width": 1440, "height": 960},
     )
     context.tracing.start(screenshots=True, snapshots=True, sources=True)

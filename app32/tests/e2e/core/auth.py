@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Locator, Page, expect
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
@@ -16,7 +17,11 @@ class AuthPage:
         if self.settings.post_login_path:
             separator = "&" if "?" in preferred_url else "?"
             preferred_url = f"{preferred_url}{separator}next={self.settings.post_login_path}"
-        self.page.goto(preferred_url, wait_until="domcontentloaded")
+        try:
+            self.page.goto(preferred_url, wait_until="domcontentloaded", timeout=15_000)
+        except PlaywrightError:
+            self.page.context.clear_cookies()
+            self.page.goto(self.settings.login_url, wait_until="domcontentloaded", timeout=30_000)
         self.page.locator("body").wait_for()
         if self._is_login_screen():
             expect(self.page).to_have_title("Login | Versus Gestão")

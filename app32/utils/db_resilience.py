@@ -5,7 +5,10 @@ from typing import TypeVar
 
 from sqlalchemy.exc import OperationalError
 
-from models import db
+try:
+    from models import db
+except ModuleNotFoundError:  # pragma: no cover - fallback para imports packageados em teste
+    from app32.models import db
 
 T = TypeVar("T")
 

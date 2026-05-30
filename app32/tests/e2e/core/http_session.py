@@ -128,7 +128,7 @@ class AuthenticatedHTTPSession:
     def _bootstrap_via_browser_login(self) -> dict[str, Any]:
         evidence = create_evidence_paths(self.settings.outputs_dir / "http_auth_bootstrap")
         collector = EvidenceCollector(evidence)
-        with managed_page(self.settings, evidence, collector) as (_, _, _, page):
+        with managed_page(self.settings, evidence, collector, use_storage_state=False) as (_, _, _, page):
             auth_page = AuthPage(page, self.settings)
             auth_page.open()
             auth_page.login()
