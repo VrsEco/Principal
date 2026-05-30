@@ -11,6 +11,7 @@ from app32.tests.e2e.config.environments import E2EEnvironmentSettings
 from app32.tests.e2e.core.auth import AuthPage
 from app32.tests.e2e.core.browser_session import managed_page
 from app32.tests.e2e.core.evidence import EvidenceCollector, create_evidence_paths
+from app32.tests.e2e.core.prod_safe_session_bootstrap import bootstrap_remote_prod_safe_storage_state
 
 
 @dataclass
@@ -47,7 +48,10 @@ class AuthenticatedHTTPSession:
                 raise RuntimeError(f"Falha no login E2E: {payload}")
             return payload
         except Exception:
-            return self._bootstrap_via_browser_login()
+            try:
+                return self._bootstrap_via_remote_internal_session()
+            except Exception:
+                return self._bootstrap_via_browser_login()
 
     def select_company(self) -> dict[str, Any] | None:
         if self.settings.company_id is None:
@@ -141,6 +145,18 @@ class AuthenticatedHTTPSession:
             "success": True,
             "redirect": self.settings.post_login_path,
             "auth_source": "browser_bootstrap",
+        }
+
+    def _bootstrap_via_remote_internal_session(self) -> dict[str, Any]:
+        bootstrap_remote_prod_safe_storage_state(self.settings)
+        self.session.cookies.clear()
+        self._load_storage_state_cookie()
+        if not self._has_session_cookie():
+            raise RuntimeError("Falha no bootstrap remoto PROD_SAFE: storage_state sem gv_session.")
+        return {
+            "success": True,
+            "redirect": self.settings.post_login_path,
+            "auth_source": "remote_internal_bootstrap",
         }
 
     def _load_storage_state_cookie(self) -> None:

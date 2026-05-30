@@ -8,6 +8,7 @@ from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
 from app32.tests.e2e.core.evidence import EvidenceCollector, EvidencePaths
+from app32.tests.e2e.core.prod_safe_session_bootstrap import bootstrap_remote_prod_safe_storage_state
 
 
 def _ensure_parent(path: Path) -> None:
@@ -29,6 +30,12 @@ def managed_page(
     *,
     use_storage_state: bool = True,
 ) -> Iterator[tuple[Playwright, Browser, BrowserContext, Page]]:
+    if use_storage_state and not settings.storage_state_path.exists():
+        try:
+            bootstrap_remote_prod_safe_storage_state(settings)
+        except Exception:
+            pass
+
     playwright = sync_playwright().start()
     browser_launcher = getattr(playwright, settings.browser_name)
     browser = browser_launcher.launch(headless=settings.headless)

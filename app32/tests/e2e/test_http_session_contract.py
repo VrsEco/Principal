@@ -104,3 +104,25 @@ def test_http_session_rejects_stale_storage_cookie(monkeypatch):
 
     payload = session.login()
     assert payload["auth_source"] == "browser_bootstrap"
+
+
+def test_http_session_uses_remote_internal_bootstrap_before_browser(monkeypatch):
+    session = AuthenticatedHTTPSession.create(_settings())
+
+    class _FailingSession:
+        headers = {"Content-Type": "application/json"}
+        cookies = session.session.cookies
+
+        def post(self, *_args, **_kwargs):
+            raise RuntimeError("timeout")
+
+    monkeypatch.setattr(session, "session", _FailingSession())
+    monkeypatch.setattr(
+        session,
+        "_bootstrap_via_remote_internal_session",
+        lambda: {"success": True, "redirect": "/my-work", "auth_source": "remote_internal_bootstrap"},
+    )
+    monkeypatch.setattr(session, "_bootstrap_via_browser_login", lambda: (_ for _ in ()).throw(AssertionError("não deveria cair no browser")))
+
+    payload = session.login()
+    assert payload["auth_source"] == "remote_internal_bootstrap"
