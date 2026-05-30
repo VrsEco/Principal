@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
+from requests.cookies import create_cookie
 
 
 def _settings() -> E2EEnvironmentSettings:
@@ -81,6 +82,20 @@ def test_http_session_falls_back_to_browser_bootstrap(monkeypatch):
             raise RuntimeError("timeout")
 
     monkeypatch.setattr(session, "session", _FailingSession())
+    monkeypatch.setattr(
+        session,
+        "_bootstrap_via_browser_login",
+        lambda: {"success": True, "redirect": "/my-work", "auth_source": "browser_bootstrap"},
+    )
+
+    payload = session.login()
+    assert payload["auth_source"] == "browser_bootstrap"
+
+
+def test_http_session_rejects_stale_storage_cookie(monkeypatch):
+    session = AuthenticatedHTTPSession.create(_settings())
+    session.session.cookies.set_cookie(create_cookie(name="gv_session", value="stale", domain="localhost", path="/"))
+    monkeypatch.setattr(session, "_session_is_authenticated", lambda: False)
     monkeypatch.setattr(
         session,
         "_bootstrap_via_browser_login",

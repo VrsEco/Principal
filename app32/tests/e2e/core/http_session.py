@@ -28,7 +28,9 @@ class AuthenticatedHTTPSession:
 
     def login(self) -> dict[str, Any]:
         if self._has_session_cookie():
-            return {"success": True, "redirect": self.settings.post_login_path, "auth_source": "storage_state"}
+            if self._session_is_authenticated():
+                return {"success": True, "redirect": self.settings.post_login_path, "auth_source": "storage_state"}
+            self.session.cookies.clear()
         try:
             response = self.session.post(
                 self.settings.login_url,
@@ -106,6 +108,22 @@ class AuthenticatedHTTPSession:
     def _has_session_cookie(self) -> bool:
         cookie_name = "gv_session"
         return any(cookie.name == cookie_name for cookie in self.session.cookies)
+
+    def _session_is_authenticated(self) -> bool:
+        try:
+            response = self.session.get(
+                f"{self.settings.base_url.rstrip('/')}/portal",
+                timeout=15,
+            )
+        except Exception:
+            return False
+        final_url = str(getattr(response, "url", "") or "")
+        if "/login" in final_url:
+            return False
+        body = (response.text or "")[:400].lower()
+        if "login | versus" in body:
+            return False
+        return response.status_code == 200
 
     def _bootstrap_via_browser_login(self) -> dict[str, Any]:
         evidence = create_evidence_paths(self.settings.outputs_dir / "http_auth_bootstrap")
