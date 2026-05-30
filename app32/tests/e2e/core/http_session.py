@@ -8,6 +8,9 @@ from typing import Any
 import requests
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.auth import AuthPage
+from app32.tests.e2e.core.browser_session import managed_page
+from app32.tests.e2e.core.evidence import EvidenceCollector, create_evidence_paths
 
 
 @dataclass
@@ -26,20 +29,23 @@ class AuthenticatedHTTPSession:
     def login(self) -> dict[str, Any]:
         if self._has_session_cookie():
             return {"success": True, "redirect": self.settings.post_login_path, "auth_source": "storage_state"}
-        response = self.session.post(
-            self.settings.login_url,
-            json={
-                "email": self.settings.username,
-                "password": self.settings.password,
-                "next": self.settings.post_login_path,
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        if not payload.get("success"):
-            raise RuntimeError(f"Falha no login E2E: {payload}")
-        return payload
+        try:
+            response = self.session.post(
+                self.settings.login_url,
+                json={
+                    "email": self.settings.username,
+                    "password": self.settings.password,
+                    "next": self.settings.post_login_path,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            payload = self._json_or_raise(response, operation="login")
+            if not payload.get("success"):
+                raise RuntimeError(f"Falha no login E2E: {payload}")
+            return payload
+        except Exception:
+            return self._bootstrap_via_browser_login()
 
     def select_company(self) -> dict[str, Any] | None:
         if self.settings.company_id is None:
@@ -100,6 +106,24 @@ class AuthenticatedHTTPSession:
     def _has_session_cookie(self) -> bool:
         cookie_name = "gv_session"
         return any(cookie.name == cookie_name for cookie in self.session.cookies)
+
+    def _bootstrap_via_browser_login(self) -> dict[str, Any]:
+        evidence = create_evidence_paths(self.settings.outputs_dir / "http_auth_bootstrap")
+        collector = EvidenceCollector(evidence)
+        with managed_page(self.settings, evidence, collector) as (_, _, _, page):
+            auth_page = AuthPage(page, self.settings)
+            auth_page.open()
+            auth_page.login()
+            auth_page.ensure_authenticated_workspace()
+        self.session.cookies.clear()
+        self._load_storage_state_cookie()
+        if not self._has_session_cookie():
+            raise RuntimeError("Falha no bootstrap autenticado E2E: storage_state sem gv_session.")
+        return {
+            "success": True,
+            "redirect": self.settings.post_login_path,
+            "auth_source": "browser_bootstrap",
+        }
 
     def _load_storage_state_cookie(self) -> None:
         storage_path = Path(self.settings.storage_state_path)

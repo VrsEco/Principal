@@ -68,3 +68,24 @@ def test_http_session_rejects_login_redirect():
         assert "redirecionou para login" in str(exc)
     else:
         raise AssertionError("Era esperado erro claro para redirect de login.")
+
+
+def test_http_session_falls_back_to_browser_bootstrap(monkeypatch):
+    session = AuthenticatedHTTPSession.create(_settings())
+
+    class _FailingSession:
+        headers = {"Content-Type": "application/json"}
+        cookies = session.session.cookies
+
+        def post(self, *_args, **_kwargs):
+            raise RuntimeError("timeout")
+
+    monkeypatch.setattr(session, "session", _FailingSession())
+    monkeypatch.setattr(
+        session,
+        "_bootstrap_via_browser_login",
+        lambda: {"success": True, "redirect": "/my-work", "auth_source": "browser_bootstrap"},
+    )
+
+    payload = session.login()
+    assert payload["auth_source"] == "browser_bootstrap"
