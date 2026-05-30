@@ -10,7 +10,11 @@ class NavigationSmoke:
         self.page = page
 
     def open_target(self, target: SmokeTarget) -> None:
-        self.page.goto(target.route, wait_until="domcontentloaded")
+        timeout_ms = 30000
+        settings = getattr(self.page, "_e2e_settings", None)
+        if settings is not None:
+            timeout_ms = getattr(settings, "navigation_timeout_ms", timeout_ms)
+        self.page.goto(target.route, wait_until="domcontentloaded", timeout=timeout_ms)
         self.page.locator("body").wait_for()
         expect(self.page.locator(target.readiness_selector)).to_be_visible()
         assert target.expected_url_fragment in self.page.url, (

@@ -40,7 +40,7 @@ class AuthenticatedHTTPSession:
                     "password": self.settings.password,
                     "next": self.settings.post_login_path,
                 },
-                timeout=30,
+                timeout=self.settings.request_timeout_seconds,
             )
             response.raise_for_status()
             payload = self._json_or_raise(response, operation="login")
@@ -59,7 +59,7 @@ class AuthenticatedHTTPSession:
         response = self.session.post(
             f"{self.settings.base_url.rstrip('/')}/portal",
             json={"company_id": self.settings.company_id},
-            timeout=30,
+            timeout=self.settings.request_timeout_seconds,
         )
         response.raise_for_status()
         payload = self._json_or_raise(response, operation="select_company")
@@ -72,7 +72,7 @@ class AuthenticatedHTTPSession:
             method=method.upper(),
             url=f"{self.settings.base_url.rstrip('/')}{path}",
             json=json_payload,
-            timeout=30,
+            timeout=self.settings.request_timeout_seconds,
         )
 
     def request_json(
@@ -117,7 +117,7 @@ class AuthenticatedHTTPSession:
         try:
             response = self.session.get(
                 f"{self.settings.base_url.rstrip('/')}/portal",
-                timeout=15,
+                timeout=min(self.settings.request_timeout_seconds, 30),
             )
         except Exception:
             return False

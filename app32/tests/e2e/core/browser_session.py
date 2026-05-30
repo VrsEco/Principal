@@ -55,6 +55,7 @@ def managed_page(
     )
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page = context.new_page()
+    setattr(page, "_e2e_settings", settings)
 
     try:
         yield playwright, browser, context, page

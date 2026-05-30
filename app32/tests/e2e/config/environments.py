@@ -39,6 +39,8 @@ class E2EEnvironmentSettings:
     destructive_actions_allowed: bool
     requires_isolated_tenant: bool
     require_explicit_company: bool
+    request_timeout_seconds: int = 30
+    navigation_timeout_ms: int = 30000
 
     @property
     def login_url(self) -> str:
@@ -82,6 +84,14 @@ def _resolve_execution_mode(raw_value: str | None) -> E2EExecutionMode:
 
 def _default_headless(mode: E2EExecutionMode) -> bool:
     return True if mode is E2EExecutionMode.PROD_SAFE else False
+
+
+def _default_request_timeout(mode: E2EExecutionMode) -> int:
+    return 90 if mode is E2EExecutionMode.PROD_SAFE else 30
+
+
+def _default_navigation_timeout(mode: E2EExecutionMode) -> int:
+    return 90_000 if mode is E2EExecutionMode.PROD_SAFE else 30_000
 
 
 def _mode_defaults(mode: E2EExecutionMode) -> dict[str, bool]:
@@ -146,5 +156,7 @@ def load_environment_settings() -> E2EEnvironmentSettings:
             os.environ.get("E2E_REQUIRE_EXPLICIT_COMPANY"),
             defaults["require_explicit_company"],
         ),
+        request_timeout_seconds=int(os.environ.get("E2E_REQUEST_TIMEOUT_SECONDS") or _default_request_timeout(execution_mode)),
+        navigation_timeout_ms=int(os.environ.get("E2E_NAVIGATION_TIMEOUT_MS") or _default_navigation_timeout(execution_mode)),
     )
     return settings

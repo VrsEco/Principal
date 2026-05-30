@@ -18,10 +18,18 @@ class AuthPage:
             separator = "&" if "?" in preferred_url else "?"
             preferred_url = f"{preferred_url}{separator}next={self.settings.post_login_path}"
         try:
-            self.page.goto(preferred_url, wait_until="domcontentloaded", timeout=15_000)
+            self.page.goto(
+                preferred_url,
+                wait_until="domcontentloaded",
+                timeout=min(self.settings.navigation_timeout_ms, 30_000),
+            )
         except PlaywrightError:
             self.page.context.clear_cookies()
-            self.page.goto(self.settings.login_url, wait_until="domcontentloaded", timeout=30_000)
+            self.page.goto(
+                self.settings.login_url,
+                wait_until="domcontentloaded",
+                timeout=self.settings.navigation_timeout_ms,
+            )
         self.page.locator("body").wait_for()
         if self._is_login_screen():
             expect(self.page).to_have_title("Login | Versus Gestão")
