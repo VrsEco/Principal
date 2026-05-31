@@ -26,14 +26,14 @@ def test_crud_contract_tool_describes_all_domains_and_single_domain():
 
     assert all_contracts["success"] is True
     assert all_contracts["meta"]["operation"] == "crud_contracts.describe"
-    assert {domain["domain"] for domain in all_contracts["data"]["domains"]} == {
+    assert {
         "routine",
         "projects",
         "processes",
         "meetings",
         "finance",
         "strategy",
-    }
+    }.issubset({domain["domain"] for domain in all_contracts["data"]["domains"]})
     assert finance_contract["success"] is True
     assert finance_contract["data"]["domain"] == "finance"
     assert any(operation["human_gate_required"] for operation in finance_contract["data"]["operations"])

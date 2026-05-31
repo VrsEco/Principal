@@ -685,26 +685,38 @@ class StrategyAlignmentN1Service:
         objectives_without_process = StrategyAlignmentN1Service._targets_without_process(
             objectives,
             links_by_type["strategic_objective"],
+            gap_type="objectives_without_process",
+            reason="Objetivo estratégico sem processo contribuinte mapeado.",
         )
         pillars_without_process = StrategyAlignmentN1Service._targets_without_process(
             pillars,
             links_by_type["strategic_pillar"],
+            gap_type="pillars_without_process",
+            reason="Pilar estratégico sem processo contribuinte mapeado.",
         )
         value_props_without_process = StrategyAlignmentN1Service._targets_without_process(
             value_propositions,
             links_by_type["value_proposition"],
+            gap_type="value_propositions_without_process",
+            reason="Proposta de valor sem processo que a sustente.",
         )
         differentials_without_process = StrategyAlignmentN1Service._targets_without_process(
             differentials,
             links_by_type["differential"],
+            gap_type="differentials_without_process",
+            reason="Diferencial competitivo sem processo core mapeado.",
         )
         competencies_without_process = StrategyAlignmentN1Service._targets_without_process(
             competencies,
             links_by_type["essential_competence"],
+            gap_type="essential_competencies_without_process",
+            reason="Competência essencial sem processo sustentador mapeado.",
         )
         policies_without_process = StrategyAlignmentN1Service._targets_without_process(
             policies,
             links_by_type["policy"],
+            gap_type="policies_without_process",
+            reason="Política sem processo aplicável mapeado.",
         )
 
         processes_with_objective = {
@@ -713,13 +725,25 @@ class StrategyAlignmentN1Service:
             if link.get("process_id") in processes_by_id or int(link.get("process_id") or 0) in processes_by_id
         }
         processes_without_objective = [
-            process for process_id, process in processes_by_id.items() if process_id not in processes_with_objective
+            StrategyAlignmentN1Service._with_gap_meta(
+                process,
+                gap_type="processes_without_objective",
+                reason="Processo sem objetivo estratégico contribuído mapeado.",
+            )
+            for process_id, process in processes_by_id.items()
+            if process_id not in processes_with_objective
         ]
         processes_without_purpose = []
         for process_id, process in processes_by_id.items():
             profile = profiles_by_process.get(process_id) or {}
             if not _clean_text(profile.get("objective")) and process_id not in processes_with_objective:
-                processes_without_purpose.append(process)
+                processes_without_purpose.append(
+                    StrategyAlignmentN1Service._with_gap_meta(
+                        process,
+                        gap_type="processes_without_purpose",
+                        reason="Processo sem objetivo do processo e sem contribuição estratégica explícita.",
+                    )
+                )
 
         line_process_indicator_ids = {
             int(item["process_indicator_id"])
@@ -727,12 +751,23 @@ class StrategyAlignmentN1Service:
             if item.get("process_indicator_id") is not None
         }
         process_indicators_without_corporate = [
-            indicator
+            StrategyAlignmentN1Service._with_gap_meta(
+                indicator,
+                gap_type="process_indicators_without_corporate",
+                reason="Indicador de processo sem linha de visada para indicador corporativo.",
+            )
             for indicator in process_indicators
             if int(indicator.get("id") or 0) not in line_process_indicator_ids
         ]
 
-        values_without_policy = StrategyAlignmentN1Service._values_without_policy(identity)
+        values_without_policy = [
+            StrategyAlignmentN1Service._with_gap_meta(
+                value,
+                gap_type="values_without_policy",
+                reason="Valor organizacional sem política vinculada.",
+            )
+            for value in StrategyAlignmentN1Service._values_without_policy(identity)
+        ]
         crossings = {
             "process_to_objectives": StrategyAlignmentN1Service._crossings_for_links(
                 links_by_type["strategic_objective"],
@@ -774,6 +809,27 @@ class StrategyAlignmentN1Service:
             "process_indicators_without_corporate": process_indicators_without_corporate,
         }
         gap_counts = {name: len(items) for name, items in gaps.items()}
+        completeness = StrategyAlignmentN1Service._analysis_completeness(
+            identity=identity,
+            processes=processes,
+            profiles=profiles,
+            objectives=objectives,
+            pillars=pillars,
+            value_propositions=value_propositions,
+            differentials=differentials,
+            competencies=competencies,
+            policies=policies,
+            process_indicators=process_indicators,
+            indicator_line_of_sight=indicator_line_of_sight,
+            gaps=gaps,
+        )
+        risk_signals = StrategyAlignmentN1Service._analysis_risk_signals(
+            gaps=gaps,
+            crossings=crossings,
+            profiles_by_process=profiles_by_process,
+            processes_by_id=processes_by_id,
+            links_by_type=links_by_type,
+        )
 
         return {
             "company_id": company_id,
@@ -793,10 +849,16 @@ class StrategyAlignmentN1Service:
                 "corporate_indicators": len(corporate_indicators),
                 "indicator_line_of_sight_links": len(indicator_line_of_sight),
                 "gap_counts": gap_counts,
+                "risk_signal_count": len(risk_signals),
             },
+            "completeness": completeness,
+            "risk_signals": risk_signals,
             "gaps": gaps,
             "crossings": crossings,
-            "recommended_actions": StrategyAlignmentN1Service._analysis_actions(gap_counts),
+            "recommended_actions": StrategyAlignmentN1Service._analysis_actions(
+                gaps=gaps,
+                risk_signals=risk_signals,
+            ),
         }
 
     @staticmethod
@@ -908,12 +970,170 @@ class StrategyAlignmentN1Service:
         return False
 
     @staticmethod
-    def _targets_without_process(targets: list[dict[str, Any]], links: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _with_gap_meta(
+        item: dict[str, Any],
+        *,
+        gap_type: str,
+        reason: str,
+        status: str = "unmapped",
+        severity: str = "medium",
+    ) -> dict[str, Any]:
+        payload = dict(item or {})
+        payload["gap_type"] = gap_type
+        payload["gap_status"] = StrategyAlignmentN1Service._normalize_gap_status(
+            payload.get("gap_status") or payload.get("mapping_status") or payload.get("status") or status
+        )
+        payload["severity"] = payload.get("severity") or severity
+        payload["reason"] = payload.get("reason") or reason
+        return payload
+
+    @staticmethod
+    def _normalize_gap_status(value: Any) -> str:
+        normalized = _slug(value).replace("-", "_")
+        if normalized in {"mapped", "unmapped", "confirmed_none", "misaligned"}:
+            return normalized
+        return "unmapped"
+
+    @staticmethod
+    def _targets_without_process(
+        targets: list[dict[str, Any]],
+        links: list[dict[str, Any]],
+        *,
+        gap_type: str,
+        reason: str,
+    ) -> list[dict[str, Any]]:
         missing: list[dict[str, Any]] = []
         for target in targets:
             if not any(StrategyAlignmentN1Service._target_matches(link, target) for link in links):
-                missing.append(target)
+                missing.append(
+                    StrategyAlignmentN1Service._with_gap_meta(
+                        target,
+                        gap_type=gap_type,
+                        reason=reason,
+                    )
+                )
         return missing
+
+    @staticmethod
+    def _pct(numerator: int | float, denominator: int | float) -> float | None:
+        if not denominator:
+            return None
+        return round((float(numerator) / float(denominator)) * 100, 2)
+
+    @staticmethod
+    def _analysis_completeness(
+        *,
+        identity: dict[str, Any],
+        processes: list[dict[str, Any]],
+        profiles: list[dict[str, Any]],
+        objectives: list[dict[str, Any]],
+        pillars: list[dict[str, Any]],
+        value_propositions: list[dict[str, Any]],
+        differentials: list[dict[str, Any]],
+        competencies: list[dict[str, Any]],
+        policies: list[dict[str, Any]],
+        process_indicators: list[dict[str, Any]],
+        indicator_line_of_sight: list[dict[str, Any]],
+        gaps: dict[str, list[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        identity_fields = {
+            "mission": bool(_clean_text(identity.get("mission"))),
+            "vision": bool(_clean_text(identity.get("vision"))),
+            "values": bool(identity.get("values")),
+            "purpose": bool(_clean_text(identity.get("purpose"))),
+            "value_propositions": bool(identity.get("value_propositions")),
+            "differentials": bool(identity.get("differentials")),
+            "pillars": bool(identity.get("pillars")),
+            "strategic_objectives": bool(identity.get("strategic_objectives") or objectives),
+            "essential_competencies": bool(identity.get("essential_competencies")),
+            "segments_icp": bool(identity.get("segments_icp")),
+            "policies": bool(identity.get("policies")),
+            "stakeholders": bool(identity.get("stakeholders")),
+            "swot": bool(identity.get("swot")),
+            "corporate_indicators": bool(identity.get("corporate_indicators")),
+        }
+        identity_present = sum(1 for present in identity_fields.values() if present)
+        identity_total = len(identity_fields)
+
+        target_totals = {
+            "objectives": len(objectives),
+            "pillars": len(pillars),
+            "value_propositions": len(value_propositions),
+            "differentials": len(differentials),
+            "essential_competencies": len(competencies),
+            "policies": len(policies),
+        }
+        target_missing = {
+            "objectives": len(gaps.get("objectives_without_process", [])),
+            "pillars": len(gaps.get("pillars_without_process", [])),
+            "value_propositions": len(gaps.get("value_propositions_without_process", [])),
+            "differentials": len(gaps.get("differentials_without_process", [])),
+            "essential_competencies": len(gaps.get("essential_competencies_without_process", [])),
+            "policies": len(gaps.get("policies_without_process", [])),
+        }
+        traceability_total = sum(target_totals.values()) + len(processes)
+        traceability_mapped = (
+            sum(max(target_totals[key] - target_missing[key], 0) for key in target_totals)
+            + max(len(processes) - len(gaps.get("processes_without_objective", [])), 0)
+        )
+        line_process_indicator_ids = {
+            int(item["process_indicator_id"])
+            for item in indicator_line_of_sight
+            if item.get("process_indicator_id") is not None
+        }
+        indicator_total = len(process_indicators)
+        indicator_mapped = len(
+            {
+                int(indicator.get("id") or 0)
+                for indicator in process_indicators
+                if int(indicator.get("id") or 0) in line_process_indicator_ids
+            }
+        )
+        block_scores = {
+            "identity": StrategyAlignmentN1Service._pct(identity_present, identity_total),
+            "process_profiles": StrategyAlignmentN1Service._pct(len(profiles), len(processes)),
+            "traceability": StrategyAlignmentN1Service._pct(traceability_mapped, traceability_total),
+            "indicators": StrategyAlignmentN1Service._pct(indicator_mapped, indicator_total),
+        }
+        applicable_scores = [score for score in block_scores.values() if score is not None]
+        gap_status_counts: dict[str, dict[str, int]] = {}
+        for gap_type, items in gaps.items():
+            counts = Counter(item.get("gap_status", "unmapped") for item in items)
+            gap_status_counts[gap_type] = {
+                "unmapped": int(counts.get("unmapped", 0)),
+                "confirmed_none": int(counts.get("confirmed_none", 0)),
+                "misaligned": int(counts.get("misaligned", 0)),
+            }
+
+        return {
+            "overall_pct": round(sum(applicable_scores) / len(applicable_scores), 2) if applicable_scores else 100.0,
+            "by_block": {
+                "identity": {
+                    "pct": block_scores["identity"],
+                    "present": identity_present,
+                    "total": identity_total,
+                    "missing_fields": [field for field, present in identity_fields.items() if not present],
+                },
+                "process_profiles": {
+                    "pct": block_scores["process_profiles"],
+                    "mapped": len(profiles),
+                    "total": len(processes),
+                },
+                "traceability": {
+                    "pct": block_scores["traceability"],
+                    "mapped": traceability_mapped,
+                    "total": traceability_total,
+                    "target_totals": target_totals,
+                    "target_missing": target_missing,
+                },
+                "indicators": {
+                    "pct": block_scores["indicators"],
+                    "mapped": indicator_mapped,
+                    "total": indicator_total,
+                },
+            },
+            "gap_status_counts": gap_status_counts,
+        }
 
     @staticmethod
     def _crossings_for_links(
@@ -941,6 +1161,123 @@ class StrategyAlignmentN1Service:
                 }
             )
         return crossings
+
+    @staticmethod
+    def _maturity_risk_weight(maturity_level: Any) -> float | None:
+        normalized = _slug(maturity_level).replace("-", "_")
+        if normalized in {"", "nao_definido", "na", "none"}:
+            return 0.9
+        if normalized == "inicial":
+            return 0.9
+        if normalized == "gerenciado":
+            return 0.7
+        return None
+
+    @staticmethod
+    def _severity_from_weight(weight: float) -> str:
+        if weight >= 0.85:
+            return "high"
+        if weight >= 0.6:
+            return "medium"
+        return "low"
+
+    @staticmethod
+    def _risk_signal(
+        *,
+        signal_type: str,
+        weight: float,
+        reason: str,
+        process: dict[str, Any] | None = None,
+        target: dict[str, Any] | None = None,
+        gap_type: str | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "signal_type": signal_type,
+            "severity": StrategyAlignmentN1Service._severity_from_weight(weight),
+            "weight": round(weight, 2),
+            "gap_status": "misaligned",
+            "gap_type": gap_type,
+            "process": process,
+            "target": target,
+            "reason": reason,
+        }
+
+    @staticmethod
+    def _analysis_risk_signals(
+        *,
+        gaps: dict[str, list[dict[str, Any]]],
+        crossings: dict[str, list[dict[str, Any]]],
+        profiles_by_process: dict[int, dict[str, Any]],
+        processes_by_id: dict[int, dict[str, Any]],
+        links_by_type: dict[str, list[dict[str, Any]]],
+    ) -> list[dict[str, Any]]:
+        signals: list[dict[str, Any]] = []
+
+        for crossing in crossings.get("process_to_differentials", []):
+            process = crossing.get("process") or {}
+            process_id = int(process.get("id") or 0)
+            profile = profiles_by_process.get(process_id) or {}
+            weight = StrategyAlignmentN1Service._maturity_risk_weight(
+                profile.get("maturity_level") or process.get("structuring_level")
+            )
+            if weight is not None:
+                signals.append(
+                    StrategyAlignmentN1Service._risk_signal(
+                        signal_type="differential_low_maturity_process",
+                        weight=weight,
+                        process=process,
+                        target=crossing.get("target"),
+                        gap_type="process_to_differentials",
+                        reason="Diferencial competitivo sustentado por processo de baixa maturidade.",
+                    )
+                )
+
+        for process in gaps.get("processes_without_objective", []):
+            profile = profiles_by_process.get(int(process.get("id") or 0)) or {}
+            criticality = _slug(profile.get("strategic_criticality")).replace("-", "_")
+            if criticality == "alta":
+                signals.append(
+                    StrategyAlignmentN1Service._risk_signal(
+                        signal_type="high_criticality_process_without_objective",
+                        weight=0.85,
+                        process=processes_by_id.get(int(process.get("id") or 0), process),
+                        gap_type="processes_without_objective",
+                        reason="Processo de criticidade alta sem contribuição estratégica explícita.",
+                    )
+                )
+
+        policy_process_ids = {
+            int(link.get("process_id") or 0)
+            for link in links_by_type.get("policy", [])
+            if link.get("process_id") is not None
+        }
+        for process_id, profile in profiles_by_process.items():
+            if _clean_text(profile.get("regulatory_exposure")) and process_id not in policy_process_ids:
+                signals.append(
+                    StrategyAlignmentN1Service._risk_signal(
+                        signal_type="regulatory_exposure_without_policy_link",
+                        weight=0.9,
+                        process=processes_by_id.get(process_id),
+                        target={"regulatory_exposure": profile.get("regulatory_exposure")},
+                        gap_type="policies_without_process",
+                        reason="Processo com exposição regulatória sem política/requisito regulatório vinculado.",
+                    )
+                )
+
+        for indicator in gaps.get("process_indicators_without_corporate", []):
+            signals.append(
+                StrategyAlignmentN1Service._risk_signal(
+                    signal_type="process_indicator_without_corporate_line_of_sight",
+                    weight=0.65,
+                    process=processes_by_id.get(int(indicator.get("process_id") or 0)),
+                    target=indicator,
+                    gap_type="process_indicators_without_corporate",
+                    reason="Indicador operacional sem linha de visada corporativa.",
+                )
+            )
+
+        signals.sort(key=lambda item: (-float(item.get("weight") or 0), item.get("signal_type") or ""))
+        return signals
 
     @staticmethod
     def _values_without_policy(identity: dict[str, Any]) -> list[dict[str, Any]]:
@@ -987,20 +1324,107 @@ class StrategyAlignmentN1Service:
         return actions
 
     @staticmethod
-    def _analysis_actions(gap_counts: dict[str, int]) -> list[str]:
-        actions: list[str] = []
-        if gap_counts.get("objectives_without_process"):
-            actions.append("Priorizar vínculo Processo → Objetivo estratégico para objetivos sem processo.")
-        if gap_counts.get("processes_without_objective"):
-            actions.append("Revisar processos sem contribuição estratégica explícita.")
-        if gap_counts.get("differentials_without_process"):
-            actions.append("Conectar diferenciais competitivos aos processos core que os sustentam.")
-        if gap_counts.get("values_without_policy"):
-            actions.append("Formalizar políticas que materializam valores organizacionais.")
-        if gap_counts.get("process_indicators_without_corporate"):
-            actions.append("Criar linha de visada entre indicadores de processo e indicadores corporativos.")
+    def _target_label(item: dict[str, Any] | None) -> str:
+        if not item:
+            return "alvo não informado"
+        return (
+            _clean_text(item.get("name"))
+            or _clean_text(item.get("objective"))
+            or _clean_text(item.get("title"))
+            or _clean_text(item.get("code"))
+            or _clean_text(item.get("key"))
+            or _clean_text(item.get("id"))
+            or "alvo não informado"
+        )
+
+    @staticmethod
+    def _action(
+        *,
+        priority: str,
+        gap_type: str,
+        action: str,
+        target: dict[str, Any] | None = None,
+        status: str = "unmapped",
+        severity: str = "medium",
+        weight: float | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "priority": priority,
+            "gap_type": gap_type,
+            "gap_status": status,
+            "severity": severity,
+            "weight": round(weight, 2) if weight is not None else None,
+            "action": action,
+            "target_label": StrategyAlignmentN1Service._target_label(target),
+            "target": target,
+        }
+
+    @staticmethod
+    def _analysis_actions(
+        *,
+        gaps: dict[str, list[dict[str, Any]]],
+        risk_signals: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        actions: list[dict[str, Any]] = []
+        for signal in risk_signals:
+            actions.append(
+                StrategyAlignmentN1Service._action(
+                    priority="P0" if signal.get("severity") == "high" else "P1",
+                    gap_type=str(signal.get("gap_type") or signal.get("signal_type") or "risk_signal"),
+                    status="misaligned",
+                    severity=str(signal.get("severity") or "medium"),
+                    weight=float(signal.get("weight") or 0),
+                    target=signal.get("target") or signal.get("process"),
+                    action=f"Mitigar risco: {signal.get('reason')}",
+                )
+            )
+
+        action_specs = {
+            "objectives_without_process": ("P1", "Vincular objetivo estratégico a processo contribuinte ou registrar confirmed_none."),
+            "processes_without_objective": ("P1", "Definir objetivo estratégico contribuído pelo processo ou registrar confirmed_none."),
+            "processes_without_purpose": ("P1", "Preencher objetivo do processo e propósito operacional."),
+            "pillars_without_process": ("P2", "Vincular pilar estratégico a processos contribuintes."),
+            "value_propositions_without_process": ("P1", "Mapear processo que entrega a proposta de valor."),
+            "differentials_without_process": ("P1", "Conectar diferencial competitivo ao processo core sustentador."),
+            "essential_competencies_without_process": ("P2", "Mapear competência essencial aos processos que a materializam."),
+            "policies_without_process": ("P1", "Vincular política ou requisito regulatório aos processos aplicáveis."),
+            "values_without_policy": ("P1", "Formalizar ou vincular política que materializa o valor organizacional."),
+            "process_indicators_without_corporate": ("P1", "Criar linha de visada entre indicador de processo e indicador corporativo."),
+        }
+        for gap_type, items in gaps.items():
+            priority, action_text = action_specs.get(gap_type, ("P2", "Revisar gap de alinhamento estratégico."))
+            for item in items:
+                actions.append(
+                    StrategyAlignmentN1Service._action(
+                        priority=priority,
+                        gap_type=gap_type,
+                        status=StrategyAlignmentN1Service._normalize_gap_status(item.get("gap_status")),
+                        severity=str(item.get("severity") or "medium"),
+                        target=item,
+                        action=action_text,
+                    )
+                )
+
         if not actions:
-            actions.append("Sem desalinhamentos críticos detectados no read model N1 atual.")
+            actions.append(
+                StrategyAlignmentN1Service._action(
+                    priority="P3",
+                    gap_type="none",
+                    status="mapped",
+                    severity="low",
+                    action="Sem gaps críticos detectados no read model N1 atual; validar mapa com consultor/cliente.",
+                )
+            )
+
+        priority_rank = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+        actions.sort(
+            key=lambda item: (
+                priority_rank.get(str(item.get("priority")), 9),
+                -float(item.get("weight") or 0),
+                str(item.get("gap_type") or ""),
+                str(item.get("target_label") or ""),
+            )
+        )
         return actions
 
 

@@ -13,7 +13,10 @@ def test_alignment_analysis_flags_core_gaps_from_structured_records():
             ],
             "pillars": [{"key": "pilar-eficiencia", "name": "Eficiência"}],
             "value_propositions": [{"key": "vp-industria", "segment": "Indústria"}],
-            "differentials": [{"key": "dif-iot", "name": "IoT proprietário"}],
+            "differentials": [
+                {"key": "dif-iot", "name": "IoT proprietário"},
+                {"key": "dif-sem-processo", "name": "Consultoria regulatória"},
+            ],
             "essential_competencies": [{"key": "comp-dados", "name": "Dados"}],
             "policies": [{"key": "pol-qualidade", "name": "Qualidade"}],
             "values": [{"key": "valor-sustentabilidade", "name": "Sustentabilidade"}],
@@ -23,8 +26,8 @@ def test_alignment_analysis_flags_core_gaps_from_structured_records():
             {"id": 20, "name": "Faturar cliente"},
         ],
         profiles=[
-            {"process_id": 10, "objective": "Reduzir perdas de água"},
-            {"process_id": 20, "objective": None},
+            {"process_id": 10, "objective": "Reduzir perdas de água", "maturity_level": "inicial"},
+            {"process_id": 20, "objective": None, "strategic_criticality": "alta"},
         ],
         links=[
             {
@@ -45,6 +48,12 @@ def test_alignment_analysis_flags_core_gaps_from_structured_records():
                 "link_type": "value_proposition",
                 "target_key": "vp-industria",
             },
+            {
+                "id": 4,
+                "process_id": 10,
+                "link_type": "differential",
+                "target_key": "dif-iot",
+            },
         ],
         process_indicators=[
             {"id": 100, "name": "Lead time de instalação", "process_id": 10},
@@ -61,10 +70,21 @@ def test_alignment_analysis_flags_core_gaps_from_structured_records():
     assert [item["key"] for item in result["gaps"]["objectives_without_process"]] == ["obj-esg"]
     assert [item["id"] for item in result["gaps"]["processes_without_objective"]] == [20]
     assert [item["id"] for item in result["gaps"]["processes_without_purpose"]] == [20]
-    assert [item["key"] for item in result["gaps"]["differentials_without_process"]] == ["dif-iot"]
+    assert [item["key"] for item in result["gaps"]["differentials_without_process"]] == ["dif-sem-processo"]
     assert [item["key"] for item in result["gaps"]["values_without_policy"]] == ["valor-sustentabilidade"]
     assert [item["id"] for item in result["gaps"]["process_indicators_without_corporate"]] == [200]
+    assert result["gaps"]["objectives_without_process"][0]["gap_status"] == "unmapped"
     assert result["summary"]["gap_counts"]["objectives_without_process"] == 1
+    assert result["completeness"]["overall_pct"] is not None
+    assert result["completeness"]["by_block"]["traceability"]["pct"] < 100
+    assert result["completeness"]["gap_status_counts"]["objectives_without_process"]["unmapped"] == 1
+    assert {signal["signal_type"] for signal in result["risk_signals"]} >= {
+        "differential_low_maturity_process",
+        "high_criticality_process_without_objective",
+        "process_indicator_without_corporate_line_of_sight",
+    }
+    assert result["recommended_actions"][0]["priority"] == "P0"
+    assert result["recommended_actions"][0]["target_label"]
     assert result["crossings"]["process_to_objectives"][0]["process"]["name"] == "Monitorar consumo"
 
 

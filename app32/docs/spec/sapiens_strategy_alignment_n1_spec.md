@@ -200,9 +200,45 @@ O read model N1 é adequado para piloto e empresas médias. Para empresas com mi
 O payload retorna:
 
 - `summary`;
+- `completeness`;
+- `risk_signals`;
 - `gaps`;
 - `crossings`;
 - `recommended_actions`.
+
+`completeness` deve retornar:
+
+- `overall_pct`;
+- `by_block.identity`;
+- `by_block.process_profiles`;
+- `by_block.traceability`;
+- `by_block.indicators`;
+- `gap_status_counts`.
+
+Cada item em `gaps` deve carregar:
+
+- `gap_type`;
+- `gap_status`: `unmapped`, `confirmed_none` ou `misaligned`;
+- `severity`;
+- `reason`.
+
+`risk_signals` deve conter sinais ponderados, por exemplo:
+
+- `differential_low_maturity_process`;
+- `high_criticality_process_without_objective`;
+- `regulatory_exposure_without_policy_link`;
+- `process_indicator_without_corporate_line_of_sight`.
+
+`recommended_actions` deve ser lista de objetos priorizados, não frase única:
+
+- `priority`;
+- `gap_type`;
+- `gap_status`;
+- `severity`;
+- `weight`;
+- `action`;
+- `target_label`;
+- `target`.
 
 Gaps mínimos:
 
