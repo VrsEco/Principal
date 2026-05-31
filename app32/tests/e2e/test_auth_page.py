@@ -17,26 +17,49 @@ class _DummyContext:
 
 
 class _DummyLocator:
+    def __init__(self, page=None, selector: str | None = None):
+        self.page = page
+        self.selector = selector
+
     def wait_for(self):
         return None
 
     def count(self):
+        if self.selector in {"#email", "#password"}:
+            return 1 if getattr(self.page, "login_inputs_present", False) else 0
         return 0
+
+    def fill(self, _value: str):
+        return None
+
+    def click(self):
+        if self.page is not None:
+            self.page.url = "https://app.example.com/portal"
+        return None
 
 
 class _DummyPage:
-    def __init__(self):
+    def __init__(self, *, login_inputs_present: bool = False):
         self.context = _DummyContext()
         self.calls: list[tuple[str, str, int | None]] = []
+        self.url = "https://app.example.com/login?next=/my-work"
+        self.login_inputs_present = login_inputs_present
 
     def goto(self, url: str, wait_until: str, timeout: int | None = None):
         self.calls.append((url, wait_until, timeout))
         if len(self.calls) == 1:
             raise PlaywrightError("timeout")
+        self.url = url
         return None
 
     def locator(self, _selector: str):
-        return _DummyLocator()
+        return _DummyLocator(self, _selector)
+
+    def wait_for_url(self, predicate, timeout: int | None = None):
+        self.calls.append(("wait_for_url", str(timeout or ""), timeout))
+        if predicate(self.url):
+            return None
+        raise PlaywrightError("wait_for_url timeout")
 
 
 def _settings() -> E2EEnvironmentSettings:
@@ -71,3 +94,12 @@ def test_auth_page_open_retries_on_initial_timeout():
     assert page.context.cookies_cleared == 1
     assert page.calls[0][0].endswith("/login?next=/my-work")
     assert page.calls[1][0].endswith("/login")
+
+
+def test_auth_page_login_waits_for_authenticated_transition():
+    page = _DummyPage(login_inputs_present=True)
+    auth = AuthPage(page, _settings())
+
+    auth.login()
+
+    assert page.url.endswith("/portal")

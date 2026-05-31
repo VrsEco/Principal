@@ -33,6 +33,11 @@ class _DummyPage:
     def wait_for_load_state(self, _state: str):
         return None
 
+    def wait_for_url(self, predicate, timeout: int | None = None):
+        if predicate(self.url):
+            return None
+        raise AssertionError(f"wait_for_url timeout {timeout}")
+
 
 def _settings(company_id: int | None = 9) -> E2EEnvironmentSettings:
     return E2EEnvironmentSettings(

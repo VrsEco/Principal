@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, expect
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
@@ -24,6 +25,13 @@ class TenantContextResolver:
         expect(card).to_be_visible()
         card.click()
         self.page.locator("body").wait_for()
+        try:
+            self.page.wait_for_url(
+                lambda current_url: "/portal" not in current_url,
+                timeout=min(self.settings.navigation_timeout_ms, 20_000),
+            )
+        except PlaywrightError:
+            self.page.locator("body").wait_for()
         self._assert_company_context_loaded()
 
     def _assert_company_context_loaded(self) -> None:

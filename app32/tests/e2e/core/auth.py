@@ -21,7 +21,7 @@ class AuthPage:
             self.page.goto(
                 preferred_url,
                 wait_until="domcontentloaded",
-                timeout=min(self.settings.navigation_timeout_ms, 30_000),
+                timeout=self.settings.navigation_timeout_ms,
             )
         except PlaywrightError:
             self.page.context.clear_cookies()
@@ -40,7 +40,7 @@ class AuthPage:
         self._email_input().fill(self.settings.username)
         self._password_input().fill(self.settings.password)
         self.page.locator("#submitBtn").click()
-        self.page.locator("body").wait_for()
+        self._wait_for_authenticated_transition()
 
     def ensure_authenticated_workspace(self) -> None:
         TenantContextResolver(self.page, self.settings).ensure_company_selected()
@@ -61,3 +61,15 @@ class AuthPage:
                 "Autenticação E2E não foi concluída: a página permaneceu no login "
                 f"(url atual={self.page.url})."
             )
+
+    def _wait_for_authenticated_transition(self) -> None:
+        self.page.locator("body").wait_for()
+        if not self._is_login_screen() and "/login" not in self.page.url:
+            return
+        try:
+            self.page.wait_for_url(
+                lambda current_url: "/login" not in current_url,
+                timeout=min(self.settings.navigation_timeout_ms, 20_000),
+            )
+        except PlaywrightError:
+            self.page.locator("body").wait_for()
