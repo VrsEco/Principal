@@ -54,12 +54,14 @@ Viável com arquitetura **sidecar tenant-safe**, sem mutar imediatamente tabelas
 | Perfil estratégico do processo | `process_strategy_profiles` | `company_id + process_id` | Complementa processo com B1–B10. |
 | Vínculos de alinhamento | `process_strategic_alignment_links` | `company_id + process_id` | Ponte C1–C4 e parte de C2/C3. |
 | Linha de visada de indicadores | `indicator_line_of_sight` | `company_id + indicadores` | Ponte C5. |
+| Zona de maturação S1–S2 | `strategy_maturation_items` | `company_id` | Guarda hipóteses/drafts antes do human-gate S2→S3. |
 
 ## 5. Diagrama ER
 
 ```mermaid
 erDiagram
     companies ||--o| organizational_identities : "company_id"
+    companies ||--o{ strategy_maturation_items : "company_id"
     companies ||--o{ processes : "company_id"
     processes ||--o| process_strategy_profiles : "company_id + process_id"
     processes ||--o{ process_strategic_alignment_links : "company_id + process_id"
@@ -114,6 +116,19 @@ erDiagram
         string relationship_type
         numeric contribution_weight
     }
+
+    strategy_maturation_items {
+        int id
+        int company_id
+        string block_type
+        string status
+        string source
+        numeric confidence
+        string state
+        jsonb payload_json
+        int confirmed_by_user_id
+        datetime confirmed_at
+    }
 ```
 
 ## 6. Segurança, tenancy e LGPD
@@ -124,6 +139,7 @@ erDiagram
   - `process_strategic_alignment_links(company_id, process_id) → processes(company_id, id)`;
   - `indicator_line_of_sight(company_id, indicator_id) → indicators(company_id, id)`.
 - Mutação estratégica tem `human_gate=True` nas capabilities.
+- Drafts e inferências não confirmadas ficam isolados em `strategy_maturation_items`; readiness/análise só contam canônico `confirmed`.
 - Surface analítica é somente leitura: `analytics`.
 - Dados estratégicos são sensíveis de negócio: sem SQL livre, sem cross-tenant, sem exposição financeira sensível em surface `user`.
 
@@ -138,6 +154,9 @@ erDiagram
 - `process_strategic_alignment_links(company_id, target_ref_type, target_ref_id, target_key)`;
 - `indicator_line_of_sight(company_id, process_indicator_id)`;
 - `indicator_line_of_sight(company_id, corporate_indicator_id)`.
+- `strategy_maturation_items(company_id, status)`;
+- `strategy_maturation_items(company_id, block_type)`;
+- `strategy_maturation_items(company_id, target_ref_type, target_ref_id, target_key)`.
 
 O read model N1 é adequado para piloto e empresas médias. Para empresas com milhares de processos/indicadores, evoluir para materialização/cache do `strategic.alignment_n1`.
 
@@ -194,6 +213,28 @@ O read model N1 é adequado para piloto e empresas médias. Para empresas com mi
 | `analyze_strategic_alignment_n1_tool` | análise/leitura | `company_id` | Canônica consultiva. |
 | `get_strategy_alignment_n1_readiness_tool` | análise/leitura | `company_id` | Alias de compatibilidade. |
 | `run_strategy_alignment_n1_analysis_tool` | análise/leitura | `company_id` | Alias de compatibilidade. |
+
+### Zona de maturação S1–S2
+
+| Tool | Tipo | Entrada mínima | Observação |
+|---|---|---|---|
+| `list_strategy_maturation_backlog_tool` | leitura | `company_id`, filtros opcionais | Equivalente estratégico do pending queue financeiro. |
+| `review_strategy_maturation_item_tool` | escrita/human-gate | `company_id`, `item_id`, `decision` | `decision`: `confirm`, `reject` ou `hold`. Confirm promove S2→S3. |
+
+Metadados oficiais por item:
+
+- `status`: `draft`, `pending`, `confirmed`, `rejected`;
+- `source`: `consultor`, `cliente`, `ia_inferido`, `sistema`;
+- `confidence`: 0–1;
+- `state`: `as_is`, `to_be`, `target`, `aspirational`;
+- `confirmed_by_user_id` / `confirmed_at`.
+
+Regras:
+
+- `upsert_*` com `status=draft|pending|rejected` persiste em `strategy_maturation_items` e **não** altera dado canônico.
+- `upsert_*` sem status ou com `status=confirmed` grava no sidecar canônico.
+- readiness/análise filtram itens estruturados por `status=confirmed`; itens sem status são tratados como legado confirmado.
+- readiness expõe `maturation.by_status` e `maturation.by_block` com backlog aberto e maturidade por bloco.
 
 ## 9. Saída mínima do read model
 
@@ -258,6 +299,7 @@ Gaps mínimos:
 | Prioridade | Item | Estimativa | Risco |
 |---|---|---:|---|
 | P0 | Aplicar migration e smoke MCP no ambiente alvo | P | Baixo |
+| P0 | Publicar UI/API/MCP da zona de maturação S1–S2 | P | Baixo — padrão financeiro reaproveitado |
 | P0 | Popular Save Water via tools canônicas | M | Médio — depende do cliente/consultor |
 | P0 | Executar `analyze_strategic_alignment_n1_tool(company_id=1)` | P | Baixo |
 | P1 | Enriquecer `list_process_hierarchy` com perfil estratégico opcional | M | Médio — impacto em contrato existente |

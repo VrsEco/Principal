@@ -20,7 +20,7 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
     mcp = _FakeMCP()
     monkeypatch.setattr(
         "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.get_identity",
-        staticmethod(lambda company_id: {"company_id": company_id, "mission": "Salvar água"}),
+        staticmethod(lambda company_id, status="confirmed": {"company_id": company_id, "mission": "Salvar água", "status": status}),
     )
     monkeypatch.setattr(
         "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.upsert_identity",
@@ -29,6 +29,14 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
     monkeypatch.setattr(
         "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.run_alignment_analysis",
         staticmethod(lambda company_id: {"company_id": company_id, "analysis_id": "strategic_alignment_n1"}),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.list_maturation_backlog",
+        staticmethod(lambda company_id, **kwargs: {"company_id": company_id, "items": [], "summary": {"backlog_open": 0}}),
+    )
+    monkeypatch.setattr(
+        "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.review_maturation_item",
+        staticmethod(lambda company_id, item_id, decision, reviewer_user_id=None, notes=None: {"reviewed": True, "decision": decision, "item_id": item_id}),
     )
 
     register_strategy_alignment_tools(mcp)
@@ -48,6 +56,8 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
         "list_indicator_line_of_sight_tool",
         "upsert_indicator_line_of_sight_tool",
         "delete_indicator_line_of_sight_tool",
+        "list_strategy_maturation_backlog_tool",
+        "review_strategy_maturation_item_tool",
         "get_strategy_alignment_n1_readiness_tool",
         "get_strategic_alignment_n1_readiness_tool",
         "run_strategy_alignment_n1_analysis_tool",
@@ -61,6 +71,13 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
         payload={"mission": "Salvar água"},
     )
     analysis_response = mcp.registered["analyze_strategic_alignment_n1_tool"](company_id=1)
+    backlog_response = mcp.registered["list_strategy_maturation_backlog_tool"](company_id=1, status="pending")
+    review_response = mcp.registered["review_strategy_maturation_item_tool"](
+        company_id=1,
+        item_id=10,
+        decision="hold",
+        user_id=7,
+    )
 
     assert read_response["success"] is True
     assert read_response["data"]["mission"] == "Salvar água"
@@ -68,6 +85,9 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
     assert write_response["meta"]["human_gate_required"] is True
     assert analysis_response["success"] is True
     assert analysis_response["meta"]["scope"] == "mcp_analytics"
+    assert backlog_response["success"] is True
+    assert review_response["meta"]["human_gate_required"] is True
+    assert review_response["data"]["decision"] == "hold"
 
 
 def test_strategy_alignment_analysis_catalog_contract_is_published():
@@ -79,6 +99,8 @@ def test_strategy_alignment_analysis_catalog_contract_is_published():
     assert contract.status == "ready"
     assert contract.allowed_surfaces == ["analytics"]
     assert "analyze_strategic_alignment_n1_tool" in contract.capability_names
+    assert "list_strategy_maturation_backlog_tool" in contract.capability_names
+    assert "review_strategy_maturation_item_tool" in contract.capability_names
     assert "strategic.alignment_n1" in contract.required_read_models
     assert contract.cross_tenant_allowed is False
     assert contract.sql_freeform_allowed is False

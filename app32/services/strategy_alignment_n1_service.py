@@ -4,6 +4,7 @@ import json
 import re
 import unicodedata
 from collections import Counter, defaultdict
+from datetime import datetime
 from typing import Any, Iterable
 
 from models import (
@@ -16,6 +17,7 @@ from models import (
     Process,
     ProcessStrategicAlignmentLink,
     ProcessStrategyProfile,
+    StrategyMaturationItem,
     db,
 )
 from models.strategy_alignment import (
@@ -24,6 +26,11 @@ from models.strategy_alignment import (
     PROCESS_STRATEGIC_CRITICALITY_VALUES,
     STRATEGY_ALIGNMENT_LINK_TYPES,
     STRATEGY_ALIGNMENT_TARGET_REF_TYPES,
+    STRATEGY_MATURATION_BLOCK_TYPES,
+    STRATEGY_MATURATION_REVIEW_DECISIONS,
+    STRATEGY_MATURATION_SOURCE_VALUES,
+    STRATEGY_MATURATION_STATE_VALUES,
+    STRATEGY_MATURATION_STATUS_VALUES,
 )
 
 
@@ -174,6 +181,8 @@ class StrategyAlignmentN1Service:
     }
     _PROFILE_LIST_ATTRS = {"indicators_json", "applicable_policies_json", "risks_json"}
     _PROFILE_DICT_ATTRS = {"sipoc_json", "cost_resources_volume_json"}
+    _MATURATION_CANONICAL_STATUS = "confirmed"
+    _MATURATION_NON_CANONICAL_STATUSES = {"draft", "pending", "rejected"}
 
     @staticmethod
     def _ensure_access(company_id: int, accessible_company_ids: Iterable[int] | None = None) -> None:
@@ -208,13 +217,304 @@ class StrategyAlignmentN1Service:
         return indicator
 
     @staticmethod
-    def get_identity(company_id: int) -> dict[str, Any]:
+    def _normalize_maturation_status(value: Any, *, default: str = "confirmed") -> str:
+        normalized = _slug(value or default).replace("-", "_")
+        if normalized in STRATEGY_MATURATION_STATUS_VALUES:
+            return normalized
+        return default
+
+    @staticmethod
+    def _normalize_maturation_source(value: Any) -> str:
+        normalized = _slug(value or "ia_inferido").replace("-", "_")
+        if normalized in STRATEGY_MATURATION_SOURCE_VALUES:
+            return normalized
+        return "ia_inferido"
+
+    @staticmethod
+    def _normalize_maturation_state(value: Any) -> str:
+        normalized = _slug(value or "as_is").replace("-", "_")
+        if normalized in STRATEGY_MATURATION_STATE_VALUES:
+            return normalized
+        return "as_is"
+
+    @staticmethod
+    def _should_stage_payload(payload: dict[str, Any]) -> bool:
+        status = StrategyAlignmentN1Service._normalize_maturation_status(payload.get("status"), default="confirmed")
+        return status in StrategyAlignmentN1Service._MATURATION_NON_CANONICAL_STATUSES
+
+    @staticmethod
+    def _maturation_title(block_type: str, payload: dict[str, Any]) -> str:
+        return (
+            _clean_text(payload.get("title"))
+            or _clean_text(payload.get("name"))
+            or _clean_text(payload.get("objective"))
+            or _clean_text(payload.get("target_key"))
+            or _clean_text(payload.get("key"))
+            or f"Item de maturação {block_type}"
+        )
+
+    @staticmethod
+    def create_maturation_item(
+        company_id: int,
+        *,
+        block_type: str,
+        payload: dict[str, Any],
+        item_type: str | None = None,
+        target_ref_type: str | None = None,
+        target_ref_id: int | None = None,
+        target_key: str | None = None,
+        user_id: int | None = None,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        StrategyAlignmentN1Service._require_company(company_id)
+        if block_type not in STRATEGY_MATURATION_BLOCK_TYPES:
+            raise StrategyAlignmentN1Error(f"Bloco de maturação inválido: {block_type}.")
+        if not isinstance(payload, dict):
+            raise StrategyAlignmentN1Error("Payload de maturação deve ser um objeto.")
+
+        status = StrategyAlignmentN1Service._normalize_maturation_status(payload.get("status"), default="pending")
+        item = StrategyMaturationItem(
+            company_id=company_id,
+            block_type=block_type,
+            item_type=item_type or _clean_text(payload.get("item_type")),
+            status=status,
+            source=StrategyAlignmentN1Service._normalize_maturation_source(payload.get("source")),
+            confidence=payload.get("confidence"),
+            state=StrategyAlignmentN1Service._normalize_maturation_state(payload.get("state")),
+            title=StrategyAlignmentN1Service._maturation_title(block_type, payload),
+            description=_clean_text(payload.get("description") or payload.get("notes")),
+            target_ref_type=target_ref_type or _clean_text(payload.get("target_ref_type")),
+            target_ref_id=target_ref_id or (int(payload["target_ref_id"]) if payload.get("target_ref_id") not in (None, "") else None),
+            target_key=target_key or _clean_text(payload.get("target_key") or payload.get("key")),
+            payload_json=dict(payload),
+            created_by_user_id=user_id,
+            updated_by_user_id=user_id,
+        )
+        db.session.add(item)
+        if commit:
+            db.session.commit()
+        return {"staged": True, "maturation_item": item.to_dict()}
+
+    @staticmethod
+    def _is_all_status_filter(status: Any) -> bool:
+        return str(status or "").strip().lower() in {"all", "*", "todos", "todas"}
+
+    @staticmethod
+    def _payload_status(payload: Any) -> str:
+        if isinstance(payload, dict) and payload.get("status") not in (None, ""):
+            return StrategyAlignmentN1Service._normalize_maturation_status(payload.get("status"), default="confirmed")
+        return "confirmed"
+
+    @staticmethod
+    def _payload_matches_status(payload: Any, status: str | None = "confirmed") -> bool:
+        if status is None or StrategyAlignmentN1Service._is_all_status_filter(status):
+            return True
+        normalized = StrategyAlignmentN1Service._normalize_maturation_status(status, default="confirmed")
+        return StrategyAlignmentN1Service._payload_status(payload) == normalized
+
+    @staticmethod
+    def _filter_payload_list_by_status(items: Any, *, status: str | None = "confirmed", field: str = "items") -> list[Any]:
+        return [
+            item
+            for item in _safe_list(items, field=field)
+            if StrategyAlignmentN1Service._payload_matches_status(item, status)
+        ]
+
+    @staticmethod
+    def _filter_payload_dict_by_status(payload: Any, *, status: str | None = "confirmed", field: str = "payload") -> dict[str, Any]:
+        data = _safe_dict(payload, field=field)
+        if not data:
+            return {}
+        return data if StrategyAlignmentN1Service._payload_matches_status(data, status) else {}
+
+    @staticmethod
+    def _filter_identity_payload_by_status(
+        identity: dict[str, Any],
+        *,
+        status: str | None = "confirmed",
+    ) -> dict[str, Any]:
+        payload = dict(identity or {})
+        if status is None or StrategyAlignmentN1Service._is_all_status_filter(status):
+            return payload
+        for field in (
+            "values",
+            "value_propositions",
+            "differentials",
+            "pillars",
+            "strategic_objectives",
+            "essential_competencies",
+            "segments_icp",
+            "policies",
+            "stakeholders",
+            "corporate_indicators",
+        ):
+            payload[field] = StrategyAlignmentN1Service._filter_payload_list_by_status(
+                payload.get(field, []),
+                status=status,
+                field=field,
+            )
+        payload["swot"] = StrategyAlignmentN1Service._filter_payload_dict_by_status(
+            payload.get("swot", {}),
+            status=status,
+            field="swot",
+        )
+        return payload
+
+    @staticmethod
+    def _filter_profile_payload_by_status(
+        profile: dict[str, Any],
+        *,
+        status: str | None = "confirmed",
+    ) -> dict[str, Any]:
+        payload = dict(profile or {})
+        if status is None or StrategyAlignmentN1Service._is_all_status_filter(status):
+            return payload
+        for field in ("indicators", "applicable_policies", "risks"):
+            payload[field] = StrategyAlignmentN1Service._filter_payload_list_by_status(
+                payload.get(field, []),
+                status=status,
+                field=field,
+            )
+        payload["sipoc"] = StrategyAlignmentN1Service._filter_payload_dict_by_status(
+            payload.get("sipoc", {}),
+            status=status,
+            field="sipoc",
+        )
+        payload["cost_resources_volume"] = StrategyAlignmentN1Service._filter_payload_dict_by_status(
+            payload.get("cost_resources_volume", {}),
+            status=status,
+            field="cost_resources_volume",
+        )
+        return payload
+
+    @staticmethod
+    def _filter_records_by_status(
+        records: list[dict[str, Any]],
+        *,
+        status: str | None = "confirmed",
+    ) -> list[dict[str, Any]]:
+        if status is None or StrategyAlignmentN1Service._is_all_status_filter(status):
+            return list(records or [])
+        return [
+            dict(item)
+            for item in records or []
+            if StrategyAlignmentN1Service._payload_matches_status(item, status)
+        ]
+
+    @staticmethod
+    def _maturation_summary(items: list[dict[str, Any]]) -> dict[str, Any]:
+        rows = list(items or [])
+        status_counts = Counter(str(item.get("status") or "pending") for item in rows)
+        block_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for item in rows:
+            block_rows[str(item.get("block_type") or "unknown")].append(item)
+
+        by_status = {status: int(status_counts.get(status, 0)) for status in STRATEGY_MATURATION_STATUS_VALUES}
+        by_block: dict[str, dict[str, Any]] = {}
+        for block_type in STRATEGY_MATURATION_BLOCK_TYPES:
+            block_items = block_rows.get(block_type, [])
+            block_counts = Counter(str(item.get("status") or "pending") for item in block_items)
+            canonical = int(block_counts.get("confirmed", 0))
+            backlog = int(block_counts.get("draft", 0) + block_counts.get("pending", 0))
+            total = len(block_items)
+            by_block[block_type] = {
+                "total": total,
+                "canonical_confirmed": canonical,
+                "backlog_open": backlog,
+                "rejected": int(block_counts.get("rejected", 0)),
+                "maturity_pct": StrategyAlignmentN1Service._pct(canonical, canonical + backlog),
+                "by_status": {status: int(block_counts.get(status, 0)) for status in STRATEGY_MATURATION_STATUS_VALUES},
+            }
+
+        return {
+            "total": len(rows),
+            "backlog_open": int(status_counts.get("draft", 0) + status_counts.get("pending", 0)),
+            "canonical_confirmed": int(status_counts.get("confirmed", 0)),
+            "rejected": int(status_counts.get("rejected", 0)),
+            "by_status": by_status,
+            "by_block": by_block,
+        }
+
+    @staticmethod
+    def _promote_maturation_payload(
+        *,
+        company_id: int,
+        item: StrategyMaturationItem,
+        payload: dict[str, Any],
+        user_id: int | None = None,
+    ) -> dict[str, Any]:
+        block_type = item.block_type
+
+        if block_type == "identity":
+            result = StrategyAlignmentN1Service.upsert_identity(
+                company_id=company_id,
+                payload=payload,
+                user_id=user_id,
+                commit=False,
+            )
+            promoted_ref_type = "organizational_identity"
+            promoted_ref_id = result.get("id")
+            promoted_ref_key = None
+        elif block_type == "process_profile":
+            process_id = int(item.target_ref_id or payload.get("process_id") or 0)
+            if process_id <= 0:
+                raise StrategyAlignmentN1Error("process_id é obrigatório para promover perfil estratégico de processo.")
+            result = StrategyAlignmentN1Service.upsert_process_profile(
+                company_id=company_id,
+                process_id=process_id,
+                payload=payload,
+                user_id=user_id,
+                commit=False,
+            )
+            promoted_ref_type = "process_strategy_profile"
+            promoted_ref_id = result.get("id")
+            promoted_ref_key = str(process_id)
+        elif block_type == "alignment_link":
+            result = StrategyAlignmentN1Service.upsert_alignment_link(
+                company_id=company_id,
+                payload=payload,
+                user_id=user_id,
+                commit=False,
+            )
+            promoted_ref_type = "process_strategic_alignment_link"
+            promoted_ref_id = result.get("id")
+            promoted_ref_key = result.get("target_key")
+        elif block_type == "indicator_line_of_sight":
+            result = StrategyAlignmentN1Service.upsert_indicator_line_of_sight(
+                company_id=company_id,
+                payload=payload,
+                user_id=user_id,
+                commit=False,
+            )
+            promoted_ref_type = "indicator_line_of_sight"
+            promoted_ref_id = result.get("id")
+            promoted_ref_key = (
+                f"{result.get('process_indicator_id')}->{result.get('corporate_indicator_id')}"
+                if result.get("process_indicator_id") and result.get("corporate_indicator_id")
+                else None
+            )
+        else:
+            raise StrategyAlignmentN1Error(f"Bloco de maturação inválido para promoção: {block_type}.")
+
+        item.promoted_ref_type = promoted_ref_type
+        item.promoted_ref_id = int(promoted_ref_id) if promoted_ref_id not in (None, "") else None
+        item.promoted_ref_key = _clean_text(promoted_ref_key)
+        return {
+            "block_type": block_type,
+            "promoted_ref_type": item.promoted_ref_type,
+            "promoted_ref_id": item.promoted_ref_id,
+            "promoted_ref_key": item.promoted_ref_key,
+            "record": result,
+        }
+
+    @staticmethod
+    def get_identity(company_id: int, *, status: str | None = "confirmed") -> dict[str, Any]:
         company = StrategyAlignmentN1Service._require_company(company_id)
         identity = OrganizationalIdentity.query.filter_by(company_id=company_id).first()
         if identity is not None:
-            return identity.to_dict()
+            return StrategyAlignmentN1Service._filter_identity_payload_by_status(identity.to_dict(), status=status)
 
-        return {
+        payload = {
             "id": None,
             "company_id": company_id,
             "mission": company.mission,
@@ -240,6 +540,7 @@ class StrategyAlignmentN1Service:
             },
             "structured": False,
         }
+        return StrategyAlignmentN1Service._filter_identity_payload_by_status(payload, status=status)
 
     @staticmethod
     def upsert_identity(
@@ -253,6 +554,16 @@ class StrategyAlignmentN1Service:
             raise StrategyAlignmentN1Error("Payload de identidade deve ser um objeto.")
 
         company = StrategyAlignmentN1Service._require_company(company_id)
+        if StrategyAlignmentN1Service._should_stage_payload(payload):
+            return StrategyAlignmentN1Service.create_maturation_item(
+                company_id,
+                block_type="identity",
+                payload=payload,
+                item_type="organizational_identity",
+                target_ref_type="organizational_identity",
+                user_id=user_id,
+                commit=commit,
+            )
         identity = OrganizationalIdentity.query.filter_by(company_id=company_id).first()
         if identity is None:
             identity = OrganizationalIdentity(company_id=company_id, created_by_user_id=user_id)
@@ -285,15 +596,15 @@ class StrategyAlignmentN1Service:
         return identity.to_dict()
 
     @staticmethod
-    def get_process_profile(company_id: int, process_id: int) -> dict[str, Any]:
+    def get_process_profile(company_id: int, process_id: int, *, status: str | None = "confirmed") -> dict[str, Any]:
         process = StrategyAlignmentN1Service._require_process(company_id, process_id)
         profile = ProcessStrategyProfile.query.filter_by(company_id=company_id, process_id=process_id).first()
         if profile is not None:
-            payload = profile.to_dict()
+            payload = StrategyAlignmentN1Service._filter_profile_payload_by_status(profile.to_dict(), status=status)
             payload["process"] = StrategyAlignmentN1Service._process_payload(process)
             payload["profile_exists"] = True
             return payload
-        return {
+        payload = {
             "id": None,
             "company_id": company_id,
             "process_id": process_id,
@@ -313,6 +624,7 @@ class StrategyAlignmentN1Service:
             "risks": [],
             "profile_exists": False,
         }
+        return StrategyAlignmentN1Service._filter_profile_payload_by_status(payload, status=status)
 
     @staticmethod
     def upsert_process_profile(
@@ -326,6 +638,20 @@ class StrategyAlignmentN1Service:
         if not isinstance(payload, dict):
             raise StrategyAlignmentN1Error("Payload do perfil estratégico do processo deve ser um objeto.")
         process = StrategyAlignmentN1Service._require_process(company_id, process_id)
+        if StrategyAlignmentN1Service._should_stage_payload(payload):
+            staged_payload = dict(payload)
+            staged_payload.setdefault("process_id", process_id)
+            return StrategyAlignmentN1Service.create_maturation_item(
+                company_id,
+                block_type="process_profile",
+                payload=staged_payload,
+                item_type="process_strategy_profile",
+                target_ref_type="process",
+                target_ref_id=process_id,
+                target_key=process.code or str(process_id),
+                user_id=user_id,
+                commit=commit,
+            )
         profile = ProcessStrategyProfile.query.filter_by(company_id=company_id, process_id=process_id).first()
         if profile is None:
             profile = ProcessStrategyProfile(
@@ -398,6 +724,18 @@ class StrategyAlignmentN1Service:
         if process_id <= 0:
             raise StrategyAlignmentN1Error("process_id é obrigatório para vínculo estratégico.")
         StrategyAlignmentN1Service._require_process(company_id, process_id)
+        if StrategyAlignmentN1Service._should_stage_payload(payload):
+            return StrategyAlignmentN1Service.create_maturation_item(
+                company_id,
+                block_type="alignment_link",
+                payload=payload,
+                item_type=_clean_text(payload.get("link_type")) or "alignment_link",
+                target_ref_type=_clean_text(payload.get("target_ref_type")) or "identity_json",
+                target_ref_id=int(payload["target_ref_id"]) if payload.get("target_ref_id") not in (None, "") else None,
+                target_key=_clean_text(payload.get("target_key")),
+                user_id=user_id,
+                commit=commit,
+            )
 
         link_id = payload.get("id")
         link = None
@@ -458,6 +796,96 @@ class StrategyAlignmentN1Service:
         return [item.to_dict() for item in links]
 
     @staticmethod
+    def list_maturation_backlog(
+        company_id: int,
+        *,
+        status: str | None = None,
+        block_type: str | None = None,
+        source: str | None = None,
+        state: str | None = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        StrategyAlignmentN1Service._require_company(company_id)
+        query = StrategyMaturationItem.query.filter_by(company_id=company_id)
+        if status and not StrategyAlignmentN1Service._is_all_status_filter(status):
+            query = query.filter_by(status=StrategyAlignmentN1Service._normalize_maturation_status(status, default="pending"))
+        if block_type:
+            normalized_block = _slug(block_type).replace("-", "_")
+            if normalized_block not in STRATEGY_MATURATION_BLOCK_TYPES:
+                raise StrategyAlignmentN1Error(f"Bloco de maturação inválido: {block_type}.")
+            query = query.filter_by(block_type=normalized_block)
+        if source:
+            query = query.filter_by(source=StrategyAlignmentN1Service._normalize_maturation_source(source))
+        if state:
+            query = query.filter_by(state=StrategyAlignmentN1Service._normalize_maturation_state(state))
+
+        rows = (
+            query.order_by(StrategyMaturationItem.updated_at.desc(), StrategyMaturationItem.id.desc())
+            .limit(max(1, min(int(limit or 200), 500)))
+            .all()
+        )
+        all_rows = StrategyMaturationItem.query.filter_by(company_id=company_id).all()
+        summary = StrategyAlignmentN1Service._maturation_summary([row.to_dict() for row in all_rows])
+        return {
+            "company_id": company_id,
+            "summary": summary,
+            "items": [row.to_dict() for row in rows],
+        }
+
+    @staticmethod
+    def review_maturation_item(
+        company_id: int,
+        item_id: int,
+        *,
+        decision: str,
+        reviewer_user_id: int | None = None,
+        notes: str | None = None,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        StrategyAlignmentN1Service._require_company(company_id)
+        item = StrategyMaturationItem.query.filter_by(company_id=company_id, id=item_id).first()
+        if item is None:
+            raise StrategyAlignmentN1Error(f"Item de maturação não encontrado no tenant: id={item_id}.")
+
+        normalized_decision = _slug(decision).replace("-", "_")
+        if normalized_decision not in STRATEGY_MATURATION_REVIEW_DECISIONS:
+            raise StrategyAlignmentN1Error("Decisão inválida. Use confirm, reject ou hold.")
+
+        promoted: dict[str, Any] | None = None
+        now = datetime.utcnow()
+        item.review_decision = normalized_decision
+        item.review_notes = _clean_text(notes)
+        item.reviewed_by_user_id = reviewer_user_id
+        item.reviewed_at = now
+        item.updated_by_user_id = reviewer_user_id
+
+        if normalized_decision == "hold":
+            item.status = "pending"
+        elif normalized_decision == "reject":
+            item.status = "rejected"
+        elif normalized_decision == "confirm":
+            item.status = "confirmed"
+            item.confirmed_by_user_id = reviewer_user_id
+            item.confirmed_at = now
+            payload = dict(item.payload_json or {})
+            payload["status"] = "confirmed"
+            promoted = StrategyAlignmentN1Service._promote_maturation_payload(
+                company_id=company_id,
+                item=item,
+                payload=payload,
+                user_id=reviewer_user_id,
+            )
+
+        if commit:
+            db.session.commit()
+        return {
+            "reviewed": True,
+            "decision": normalized_decision,
+            "item": item.to_dict(),
+            "promoted": promoted,
+        }
+
+    @staticmethod
     def upsert_indicator_line_of_sight(
         company_id: int,
         payload: dict[str, Any],
@@ -487,6 +915,18 @@ class StrategyAlignmentN1Service:
         StrategyAlignmentN1Service._require_process(company_id, int(process_indicator.process_id))
         if corporate_indicator.process_id:
             raise StrategyAlignmentN1Error("Indicador corporativo não deve estar vinculado a um processo específico.")
+        if StrategyAlignmentN1Service._should_stage_payload(payload):
+            return StrategyAlignmentN1Service.create_maturation_item(
+                company_id,
+                block_type="indicator_line_of_sight",
+                payload=payload,
+                item_type="indicator_line_of_sight",
+                target_ref_type="indicator",
+                target_ref_id=process_indicator_id,
+                target_key=str(process_indicator_id),
+                user_id=user_id,
+                commit=commit,
+            )
 
         relationship_type = _clean_text(payload.get("relationship_type")) or "contributes_to"
         if relationship_type not in INDICATOR_LINE_OF_SIGHT_RELATIONSHIP_TYPES:
@@ -541,6 +981,8 @@ class StrategyAlignmentN1Service:
         profile_count = ProcessStrategyProfile.query.filter_by(company_id=company_id).count()
         links = StrategyAlignmentN1Service.list_alignment_links(company_id)
         line_of_sight_count = IndicatorLineOfSight.query.filter_by(company_id=company_id).count()
+        maturation_rows = [row.to_dict() for row in StrategyMaturationItem.query.filter_by(company_id=company_id).all()]
+        maturation_summary = StrategyAlignmentN1Service._maturation_summary(maturation_rows)
         process_indicator_count = Indicator.query.filter(
             Indicator.company_id == company_id,
             Indicator.process_id.isnot(None),
@@ -611,6 +1053,7 @@ class StrategyAlignmentN1Service:
                 "process_indicators": process_indicator_count,
                 "corporate_indicators": corporate_indicator_count,
             },
+            "maturation": maturation_summary,
             "recommended_next_actions": StrategyAlignmentN1Service._readiness_actions(
                 missing_identity=missing_identity,
                 missing_links=missing_links,
@@ -627,7 +1070,10 @@ class StrategyAlignmentN1Service:
         StrategyAlignmentN1Service._require_company(company_id)
         identity = StrategyAlignmentN1Service.get_identity(company_id)
         processes = [StrategyAlignmentN1Service._process_payload(row) for row in Process.query.filter_by(company_id=company_id).all()]
-        profiles = [row.to_dict() for row in ProcessStrategyProfile.query.filter_by(company_id=company_id).all()]
+        profiles = [
+            StrategyAlignmentN1Service._filter_profile_payload_by_status(row.to_dict(), status="confirmed")
+            for row in ProcessStrategyProfile.query.filter_by(company_id=company_id).all()
+        ]
         links = StrategyAlignmentN1Service.list_alignment_links(company_id)
         process_indicators = [
             StrategyAlignmentN1Service._indicator_payload(row)
@@ -664,6 +1110,15 @@ class StrategyAlignmentN1Service:
         indicator_line_of_sight: list[dict[str, Any]],
         okr_objectives: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        identity = StrategyAlignmentN1Service._filter_identity_payload_by_status(identity or {}, status="confirmed")
+        profiles = [
+            StrategyAlignmentN1Service._filter_profile_payload_by_status(item, status="confirmed")
+            for item in StrategyAlignmentN1Service._filter_records_by_status(profiles, status="confirmed")
+        ]
+        links = StrategyAlignmentN1Service._filter_records_by_status(links, status="confirmed")
+        process_indicators = StrategyAlignmentN1Service._filter_records_by_status(process_indicators, status="confirmed")
+        corporate_indicators = StrategyAlignmentN1Service._filter_records_by_status(corporate_indicators, status="confirmed")
+        indicator_line_of_sight = StrategyAlignmentN1Service._filter_records_by_status(indicator_line_of_sight, status="confirmed")
         processes_by_id = {int(item["id"]): item for item in processes if item.get("id") is not None}
         profiles_by_process = {
             int(item["process_id"]): item

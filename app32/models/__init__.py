@@ -28,6 +28,7 @@ from .strategy_alignment import (
     OrganizationalIdentity,
     ProcessStrategicAlignmentLink,
     ProcessStrategyProfile,
+    StrategyMaturationItem,
 )
 from .routine import Routine, RoutineCollaborator, RoutineJourneyBinding
 from .financial import (
@@ -171,7 +172,7 @@ __all__ = [
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
-    'OrganizationalIdentity', 'ProcessStrategyProfile', 'ProcessStrategicAlignmentLink', 'IndicatorLineOfSight',
+    'OrganizationalIdentity', 'ProcessStrategyProfile', 'ProcessStrategicAlignmentLink', 'IndicatorLineOfSight', 'StrategyMaturationItem',
     'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialManualDomain', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialSatellitePolicy', 'FinancialScheduleLink', 'FinancialSatelliteExecution', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialSettlementComponent', 'FinancialTitleAdjustment', 'FinancialTitleAdjustmentAllocation', 'FinancialTitleCalculationLog', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',

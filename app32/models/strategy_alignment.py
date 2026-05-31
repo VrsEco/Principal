@@ -42,6 +42,16 @@ INDICATOR_LINE_OF_SIGHT_RELATIONSHIP_TYPES = (
     "rolls_up_to",
     "correlates_with",
 )
+STRATEGY_MATURATION_STATUS_VALUES = ("draft", "pending", "confirmed", "rejected")
+STRATEGY_MATURATION_SOURCE_VALUES = ("consultor", "cliente", "ia_inferido", "sistema")
+STRATEGY_MATURATION_STATE_VALUES = ("as_is", "to_be", "target", "aspirational")
+STRATEGY_MATURATION_BLOCK_TYPES = (
+    "identity",
+    "process_profile",
+    "alignment_link",
+    "indicator_line_of_sight",
+)
+STRATEGY_MATURATION_REVIEW_DECISIONS = ("confirm", "reject", "hold")
 
 
 def _iso(value):
@@ -322,14 +332,117 @@ class IndicatorLineOfSight(db.Model):
         }
 
 
+class StrategyMaturationItem(db.Model):
+    """Zona S1-S2 de maturação estratégica antes de promoção para dado canônico."""
+
+    __tablename__ = "strategy_maturation_items"
+    __table_args__ = (
+        db.CheckConstraint(
+            f"status IN {STRATEGY_MATURATION_STATUS_VALUES}",
+            name="ck_strategy_maturation_items_status",
+        ),
+        db.CheckConstraint(
+            f"source IN {STRATEGY_MATURATION_SOURCE_VALUES}",
+            name="ck_strategy_maturation_items_source",
+        ),
+        db.CheckConstraint(
+            f"state IN {STRATEGY_MATURATION_STATE_VALUES}",
+            name="ck_strategy_maturation_items_state",
+        ),
+        db.CheckConstraint(
+            f"block_type IN {STRATEGY_MATURATION_BLOCK_TYPES}",
+            name="ck_strategy_maturation_items_block_type",
+        ),
+        db.CheckConstraint(
+            "confidence IS NULL OR (confidence >= 0 AND confidence <= 1)",
+            name="ck_strategy_maturation_items_confidence",
+        ),
+        db.CheckConstraint(
+            f"review_decision IS NULL OR review_decision IN {STRATEGY_MATURATION_REVIEW_DECISIONS}",
+            name="ck_strategy_maturation_items_review_decision",
+        ),
+        db.Index("ix_strategy_maturation_items_company_status", "company_id", "status"),
+        db.Index("ix_strategy_maturation_items_company_block", "company_id", "block_type"),
+        db.Index("ix_strategy_maturation_items_company_source", "company_id", "source"),
+        db.Index("ix_strategy_maturation_items_target", "company_id", "target_ref_type", "target_ref_id", "target_key"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    block_type = db.Column(db.String(60), nullable=False)
+    item_type = db.Column(db.String(80), nullable=True)
+    status = db.Column(db.String(30), nullable=False, default="pending", index=True)
+    source = db.Column(db.String(40), nullable=False, default="ia_inferido", index=True)
+    confidence = db.Column(db.Numeric(5, 4))
+    state = db.Column(db.String(30), nullable=False, default="as_is", index=True)
+    title = db.Column(db.String(255))
+    description = db.Column(db.Text)
+    target_ref_type = db.Column(db.String(60))
+    target_ref_id = db.Column(db.Integer)
+    target_key = db.Column(db.String(180))
+    payload_json = db.Column(JSONB, nullable=False, default=dict)
+    promoted_ref_type = db.Column(db.String(60))
+    promoted_ref_id = db.Column(db.Integer)
+    promoted_ref_key = db.Column(db.String(180))
+    review_decision = db.Column(db.String(20))
+    review_notes = db.Column(db.Text)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    reviewed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    confirmed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    reviewed_at = db.Column(db.DateTime)
+    confirmed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    company = db.relationship("Company", foreign_keys=[company_id])
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "block_type": self.block_type,
+            "item_type": self.item_type,
+            "status": self.status,
+            "source": self.source,
+            "confidence": _decimal(self.confidence),
+            "state": self.state,
+            "title": self.title,
+            "description": self.description,
+            "target_ref_type": self.target_ref_type,
+            "target_ref_id": self.target_ref_id,
+            "target_key": self.target_key,
+            "payload": self.payload_json or {},
+            "promoted_ref_type": self.promoted_ref_type,
+            "promoted_ref_id": self.promoted_ref_id,
+            "promoted_ref_key": self.promoted_ref_key,
+            "review_decision": self.review_decision,
+            "review_notes": self.review_notes,
+            "created_by_user_id": self.created_by_user_id,
+            "updated_by_user_id": self.updated_by_user_id,
+            "reviewed_by_user_id": self.reviewed_by_user_id,
+            "confirmed_by_user_id": self.confirmed_by_user_id,
+            "reviewed_at": _iso(self.reviewed_at),
+            "confirmed_at": _iso(self.confirmed_at),
+            "created_at": _iso(self.created_at),
+            "updated_at": _iso(self.updated_at),
+        }
+
+
 __all__ = [
     "INDICATOR_LINE_OF_SIGHT_RELATIONSHIP_TYPES",
     "PROCESS_MATURITY_LEVEL_VALUES",
     "PROCESS_STRATEGIC_CRITICALITY_VALUES",
+    "STRATEGY_MATURATION_BLOCK_TYPES",
+    "STRATEGY_MATURATION_REVIEW_DECISIONS",
+    "STRATEGY_MATURATION_SOURCE_VALUES",
+    "STRATEGY_MATURATION_STATE_VALUES",
+    "STRATEGY_MATURATION_STATUS_VALUES",
     "STRATEGY_ALIGNMENT_LINK_TYPES",
     "STRATEGY_ALIGNMENT_TARGET_REF_TYPES",
     "IndicatorLineOfSight",
     "OrganizationalIdentity",
     "ProcessStrategicAlignmentLink",
     "ProcessStrategyProfile",
+    "StrategyMaturationItem",
 ]

@@ -1104,6 +1104,7 @@ def register_blueprints(app):
     from api.routes.meetings import meetings_bp
     from api.routes.onboarding import onboarding_bp
     from api.routes.plans import plans_bp
+    from api.routes.strategy_alignment import strategy_alignment_bp
     from api.routes.users import usuarios_bp
  
     app.register_blueprint(main_bp)
@@ -1133,6 +1134,7 @@ def register_blueprints(app):
     app.register_blueprint(meetings_bp, url_prefix='/meetings')
     app.register_blueprint(onboarding_bp)
     app.register_blueprint(plans_bp)
+    app.register_blueprint(strategy_alignment_bp)
     app.register_blueprint(usuarios_bp)
 
     from api.routes.incentives import incentives_bp

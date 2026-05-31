@@ -76,12 +76,12 @@ def _error(
 def register_strategy_alignment_tools(mcp: Any) -> None:
     """Registra tools MCP para identidade estruturada e alinhamento estratégico N1."""
 
-    def _get_identity(company_id: int) -> dict[str, Any]:
+    def _get_identity(company_id: int, status: Optional[str] = "confirmed") -> dict[str, Any]:
         operation = "identity.get"
         try:
             return _success(
                 operation,
-                StrategyAlignmentN1Service.get_identity(company_id=company_id),
+                StrategyAlignmentN1Service.get_identity(company_id=company_id, status=status),
                 company_id=company_id,
             )
         except Exception as exc:  # pragma: no cover - envelope defensivo
@@ -103,7 +103,11 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         except Exception as exc:  # pragma: no cover - envelope defensivo
             return _error(operation, exc, company_id=company_id, write=True)
 
-    def _get_process_profile(company_id: int, process_id: int) -> dict[str, Any]:
+    def _get_process_profile(
+        company_id: int,
+        process_id: int,
+        status: Optional[str] = "confirmed",
+    ) -> dict[str, Any]:
         operation = "process_profile.get"
         try:
             return _success(
@@ -111,6 +115,7 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
                 StrategyAlignmentN1Service.get_process_profile(
                     company_id=company_id,
                     process_id=process_id,
+                    status=status,
                 ),
                 company_id=company_id,
             )
@@ -163,15 +168,64 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         except Exception as exc:  # pragma: no cover - envelope defensivo
             return _error(operation, exc, company_id=company_id, analytics=True)
 
-    @mcp.tool()
-    def get_strategy_identity_tool(company_id: int) -> dict[str, Any]:
-        """Lê a identidade organizacional estruturada do tenant, com fallback dos campos MVV legados."""
-        return _get_identity(company_id)
+    def _list_maturation_backlog(
+        company_id: int,
+        status: Optional[str] = None,
+        block_type: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        operation = "maturation_backlog.list"
+        try:
+            return _success(
+                operation,
+                StrategyAlignmentN1Service.list_maturation_backlog(
+                    company_id=company_id,
+                    status=status,
+                    block_type=block_type,
+                    source=source,
+                    state=state,
+                    limit=limit,
+                ),
+                company_id=company_id,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id)
+
+    def _review_maturation_item(
+        company_id: int,
+        item_id: int,
+        decision: str,
+        user_id: Optional[int] = None,
+        notes: Optional[str] = None,
+    ) -> dict[str, Any]:
+        operation = "maturation_item.review"
+        try:
+            return _success(
+                operation,
+                StrategyAlignmentN1Service.review_maturation_item(
+                    company_id=company_id,
+                    item_id=item_id,
+                    decision=decision,
+                    reviewer_user_id=user_id,
+                    notes=notes,
+                ),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
 
     @mcp.tool()
-    def get_organizational_identity_tool(company_id: int) -> dict[str, Any]:
+    def get_strategy_identity_tool(company_id: int, status: Optional[str] = "confirmed") -> dict[str, Any]:
+        """Lê a identidade organizacional estruturada do tenant, com fallback dos campos MVV legados."""
+        return _get_identity(company_id, status=status)
+
+    @mcp.tool()
+    def get_organizational_identity_tool(company_id: int, status: Optional[str] = "confirmed") -> dict[str, Any]:
         """Alias canônico consultivo: lê a identidade organizacional estruturada do tenant."""
-        return _get_identity(company_id)
+        return _get_identity(company_id, status=status)
 
     @mcp.tool()
     def upsert_strategy_identity_tool(
@@ -192,14 +246,22 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
         return _upsert_identity(company_id, payload, user_id=user_id)
 
     @mcp.tool()
-    def get_process_strategy_profile_tool(company_id: int, process_id: int) -> dict[str, Any]:
+    def get_process_strategy_profile_tool(
+        company_id: int,
+        process_id: int,
+        status: Optional[str] = "confirmed",
+    ) -> dict[str, Any]:
         """Lê o perfil estratégico estruturado de um processo dentro do tenant."""
-        return _get_process_profile(company_id, process_id)
+        return _get_process_profile(company_id, process_id, status=status)
 
     @mcp.tool()
-    def get_process_strategic_profile_tool(company_id: int, process_id: int) -> dict[str, Any]:
+    def get_process_strategic_profile_tool(
+        company_id: int,
+        process_id: int,
+        status: Optional[str] = "confirmed",
+    ) -> dict[str, Any]:
         """Alias canônico consultivo: lê o perfil estratégico estruturado de um processo."""
-        return _get_process_profile(company_id, process_id)
+        return _get_process_profile(company_id, process_id, status=status)
 
     @mcp.tool()
     def upsert_process_strategy_profile_tool(
@@ -336,6 +398,42 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
             )
         except Exception as exc:  # pragma: no cover - envelope defensivo
             return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def list_strategy_maturation_backlog_tool(
+        company_id: int,
+        status: Optional[str] = None,
+        block_type: Optional[str] = None,
+        source: Optional[str] = None,
+        state: Optional[str] = None,
+        limit: int = 200,
+    ) -> dict[str, Any]:
+        """Lista a zona de maturação S1-S2 estratégica antes da promoção canônica."""
+        return _list_maturation_backlog(
+            company_id=company_id,
+            status=status,
+            block_type=block_type,
+            source=source,
+            state=state,
+            limit=limit,
+        )
+
+    @mcp.tool()
+    def review_strategy_maturation_item_tool(
+        company_id: int,
+        item_id: int,
+        decision: str,
+        user_id: Optional[int] = None,
+        notes: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Revisa item S1-S2 e aplica human-gate: confirm promove, reject rejeita, hold mantém pendente."""
+        return _review_maturation_item(
+            company_id=company_id,
+            item_id=item_id,
+            decision=decision,
+            user_id=user_id,
+            notes=notes,
+        )
 
     @mcp.tool()
     def get_strategy_alignment_n1_readiness_tool(company_id: int) -> dict[str, Any]:

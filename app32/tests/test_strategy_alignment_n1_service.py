@@ -120,6 +120,63 @@ def test_alignment_analysis_matches_okr_target_by_ref_id():
     assert result["crossings"]["process_to_objectives"][0]["target"]["objective"] == "Aumentar receita recorrente"
 
 
+def test_alignment_analysis_ignores_non_confirmed_structured_items():
+    result = StrategyAlignmentN1Service.build_alignment_analysis_from_records(
+        company_id=1,
+        identity={
+            "strategic_objectives": [
+                {"key": "obj-confirmado", "objective": "Confirmado", "status": "confirmed"},
+                {"key": "obj-pendente", "objective": "Pendente", "status": "pending"},
+            ],
+            "differentials": [
+                {"key": "dif-draft", "name": "Draft", "status": "draft"},
+            ],
+        },
+        processes=[{"id": 10, "name": "Processo core"}],
+        profiles=[{"process_id": 10, "objective": "Executar", "status": "confirmed"}],
+        links=[
+            {
+                "id": 1,
+                "process_id": 10,
+                "link_type": "strategic_objective",
+                "target_key": "obj-confirmado",
+            },
+            {
+                "id": 2,
+                "process_id": 10,
+                "link_type": "differential",
+                "target_key": "dif-draft",
+                "status": "pending",
+            },
+        ],
+        process_indicators=[],
+        corporate_indicators=[],
+        indicator_line_of_sight=[],
+    )
+
+    assert result["summary"]["strategic_objectives"] == 1
+    assert result["summary"]["differentials"] == 0
+    assert result["gaps"]["objectives_without_process"] == []
+    assert result["crossings"]["process_to_differentials"] == []
+
+
+def test_maturation_summary_reports_open_backlog_and_block_maturity():
+    summary = StrategyAlignmentN1Service._maturation_summary(
+        [
+            {"block_type": "identity", "status": "pending"},
+            {"block_type": "identity", "status": "confirmed"},
+            {"block_type": "alignment_link", "status": "draft"},
+            {"block_type": "alignment_link", "status": "rejected"},
+        ]
+    )
+
+    assert summary["backlog_open"] == 2
+    assert summary["by_status"]["confirmed"] == 1
+    assert summary["by_block"]["identity"]["canonical_confirmed"] == 1
+    assert summary["by_block"]["identity"]["backlog_open"] == 1
+    assert summary["by_block"]["identity"]["maturity_pct"] == 50
+
+
 def test_alignment_service_blocks_company_outside_accessible_scope():
     with pytest.raises(PermissionError, match="escopo analítico"):
         StrategyAlignmentN1Service._ensure_access(99, accessible_company_ids=[1, 2])

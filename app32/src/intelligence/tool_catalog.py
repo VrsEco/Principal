@@ -323,6 +323,14 @@ _supplemental_mcp_tools = (
         description="Remove linha de visada de indicadores dentro do tenant.",
     ),
     SimpleNamespace(
+        name="list_strategy_maturation_backlog_tool",
+        description="Lista a zona de maturação S1-S2 estratégica com filtros de status, bloco, fonte e estado.",
+    ),
+    SimpleNamespace(
+        name="review_strategy_maturation_item_tool",
+        description="Aplica human-gate S2->S3 em item de maturação estratégica: confirm, reject ou hold.",
+    ),
+    SimpleNamespace(
         name="get_strategy_alignment_n1_readiness_tool",
         description="Retorna readiness de dados para a Análise N1 de alinhamento estratégico.",
     ),

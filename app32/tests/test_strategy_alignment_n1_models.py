@@ -8,6 +8,7 @@ from models import (
     OrganizationalIdentity,
     ProcessStrategicAlignmentLink,
     ProcessStrategyProfile,
+    StrategyMaturationItem,
 )
 
 
@@ -16,6 +17,7 @@ TENANT_SCOPED_MODELS = (
     ProcessStrategyProfile,
     ProcessStrategicAlignmentLink,
     IndicatorLineOfSight,
+    StrategyMaturationItem,
 )
 
 
@@ -88,6 +90,23 @@ def test_indicator_line_of_sight_is_unique_by_company_pair():
     ]
 
 
+def test_strategy_maturation_item_has_human_gate_constraints():
+    status_constraint = _constraint(
+        StrategyMaturationItem,
+        "ck_strategy_maturation_items_status",
+    )
+    block_constraint = _constraint(
+        StrategyMaturationItem,
+        "ck_strategy_maturation_items_block_type",
+    )
+
+    assert isinstance(status_constraint, CheckConstraint)
+    assert "pending" in str(status_constraint.sqltext)
+    assert "confirmed" in str(status_constraint.sqltext)
+    assert isinstance(block_constraint, CheckConstraint)
+    assert "alignment_link" in str(block_constraint.sqltext)
+
+
 def test_strategy_alignment_to_dict_preserves_structured_payloads():
     identity = OrganizationalIdentity(
         id=1,
@@ -106,7 +125,20 @@ def test_strategy_alignment_to_dict_preserves_structured_payloads():
         target_key="okr_global:99",
         contribution_weight=Decimal("0.7500"),
     )
+    maturation = StrategyMaturationItem(
+        id=3,
+        company_id=7,
+        block_type="identity",
+        status="pending",
+        source="ia_inferido",
+        state="as_is",
+        confidence=Decimal("0.8300"),
+        title="Propósito",
+        payload_json={"purpose": "Salvar água", "status": "pending"},
+    )
 
     assert identity.to_dict()["values"] == [{"name": "Sustentabilidade"}]
     assert identity.to_dict()["structured"] is True
     assert link.to_dict()["contribution_weight"] == 0.75
+    assert maturation.to_dict()["confidence"] == 0.83
+    assert maturation.to_dict()["payload"]["status"] == "pending"
