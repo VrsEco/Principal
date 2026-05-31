@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from src.intelligence.security.tool_policy import ToolPolicyRequest, evaluate_tool_policy, require_tool_policy
+from src.intelligence.tooling.capabilities import infer_tool_action
 
 
 def test_tool_policy_allows_user_surface_read_inside_tenant() -> None:
@@ -290,15 +291,109 @@ def test_tool_policy_blocks_action_outside_squad_cliente_overlay() -> None:
             "metadata": {"harness_key": "harness_admfin_cliente_v1"},
         },
         ToolPolicyRequest(
-            tool_name="create_project_task",
+            tool_name="delete_project_task",
             surface="user",
             domain="projects",
-            action="create",
+            action="delete",
             requested_company_id=7,
             metadata={"harness_key": "harness_admfin_cliente_v1"},
         ),
     )
 
     assert decision.allowed is False
-    assert "overlay admfin_cliente não permite a ação create" == decision.reason
+    assert "overlay admfin_cliente não permite a ação delete" == decision.reason
     assert "runtime_overlay_action_blocked" in decision.checks
+
+
+def test_tool_policy_allows_strategy_maturation_review_for_cliente_harness() -> None:
+    action = infer_tool_action("review_strategy_maturation_item_tool", "strategy")
+
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 22,
+            "company_id": 1,
+            "role": "cliente",
+            "metadata": {
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+            },
+        },
+        ToolPolicyRequest(
+            tool_name="review_strategy_maturation_item_tool",
+            surface="user",
+            domain="strategy",
+            action=action,
+            risk="medium",
+            requested_company_id=1,
+            required_permissions=("strategy.maturation.review",),
+            required_context=("user", "company"),
+            metadata={"harness_key": "harness_coordenador_cliente_v1"},
+        ),
+    )
+
+    assert action == "review"
+    assert decision.allowed is True
+    assert decision.resolved_surface == "user"
+    assert decision.resolved_company_id == 1
+
+
+def test_tool_policy_allows_strategy_maturation_review_for_estrategico_cliente_overlay() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 23,
+            "company_id": 1,
+            "role": "cliente",
+            "metadata": {
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_estrategico_cliente_v1",
+            },
+        },
+        ToolPolicyRequest(
+            tool_name="review_strategy_maturation_item_tool",
+            surface="user",
+            domain="strategy",
+            action=infer_tool_action("review_strategy_maturation_item_tool", "strategy"),
+            risk="medium",
+            requested_company_id=1,
+            required_permissions=("strategy.maturation.review",),
+            required_context=("user", "company"),
+            metadata={"harness_key": "harness_estrategico_cliente_v1"},
+        ),
+    )
+
+    assert decision.allowed is True
+
+
+def test_tool_policy_blocks_strategy_maturation_review_without_selected_company() -> None:
+    decision = evaluate_tool_policy(
+        {
+            "user_id": 24,
+            "company_id": None,
+            "role": "cliente",
+            "metadata": {
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+                "multi_company": True,
+            },
+        },
+        ToolPolicyRequest(
+            tool_name="review_strategy_maturation_item_tool",
+            surface="user",
+            domain="strategy",
+            action=infer_tool_action("review_strategy_maturation_item_tool", "strategy"),
+            risk="medium",
+            required_permissions=("strategy.maturation.review",),
+            required_context=("user", "company"),
+            metadata={
+                "harness_key": "harness_coordenador_cliente_v1",
+                "multi_company": True,
+            },
+        ),
+    )
+
+    assert decision.allowed is False
+    assert "empresa não selecionada" in decision.reason
+    assert "missing_required_company_context" in decision.checks

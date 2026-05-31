@@ -9,7 +9,7 @@ from .playbooks import APP32_SURFACE_PLAYBOOKS_MANIFEST, PlaybookSurface
 from .profiles import APP32_PROFILE_CONTRACTS_MANIFEST, MCPMutationRisk, MCPOverlayName, MCPProfileName
 
 
-PermissionAction = Literal["discover", "read", "create", "update", "delete", "analyze", "audit"]
+PermissionAction = Literal["discover", "read", "create", "update", "delete", "analyze", "audit", "review"]
 PermissionDomain = Literal[
     "routine",
     "processes",
@@ -49,7 +49,7 @@ class PermissionDomainRule(_StrictModel):
                 raise ValueError("Domínio financeiro exige company_id explícito na matriz canônica.")
             if "delete" in allowed and "delete" not in set(self.human_gate_for_actions):
                 raise ValueError("Delete financeiro deve exigir gate humano na matriz.")
-        if self.domain == "analytics" and any(action in allowed for action in {"create", "update", "delete"}):
+        if self.domain == "analytics" and any(action in allowed for action in {"create", "update", "delete", "review"}):
             raise ValueError("Domínio analytics na matriz não pode liberar mutação.")
         if self.domain == "operations" and "audit" not in allowed:
             raise ValueError("Domínio operations deve manter trilha auditável explícita na matriz.")
@@ -101,7 +101,7 @@ class ProfilePermissionSurfaceMatrix(_StrictModel):
             raise ValueError("Colaborador fica restrito à surface user na matriz.")
         if self.surface == "analytics":
             for rule in self.domains:
-                if any(action in rule.allowed_actions for action in {"create", "update", "delete"}):
+                if any(action in rule.allowed_actions for action in {"create", "update", "delete", "review"}):
                     raise ValueError("Surface analytics na matriz deve permanecer read-only.")
         if self.surface == "ops" and self.profile != "admin_tecnico":
             raise ValueError("Surface ops na matriz fica restrita ao admin_tecnico.")
@@ -599,7 +599,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("processes", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Processos estruturados seguem surface user com rastreabilidade operacional."]),
                     _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Projetos e tarefas seguem surface user e trilha auditável do sistema."]),
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Reuniões permitem preparação e atualização operacional."]),
-                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Estratégia para colaborador fica restrita à leitura e análise assistida."]),
+                    _rule("strategy", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], human_gate_for_actions=["review"], notes=["Estratégia para colaborador fica restrita à leitura, análise assistida e revisão human-gate de maturação S1-S2."]),
                     _rule("real_estate_auctions", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Leilões imobiliários seguem tenant ativo e gate das tools em mutações."]),
                     _rule("finance", ["discover", "read", "create", "update"], denied=["delete", "audit"], requires_explicit_company_id=True, notes=["Financeiro na surface user é permission-aware: só aparece quando a senha do colaborador já possui a permissão web equivalente no APP32."]),
                 ],
@@ -608,14 +608,14 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 profile="cliente",
                 surface="user",
                 title="Matriz de permissões MCP - Cliente / User",
-                summary="Cliente atua apenas na surface user, com leitura guiada e sem mutações operacionais ou administrativas.",
+                summary="Cliente atua apenas na surface user, com leitura guiada e revisão human-gate de maturação estratégica sem mutações operacionais ou administrativas amplas.",
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente consulta rotinas sem alterar dados."]),
                     _rule("processes", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente consulta processos em modo leitura, sem mutação."]),
                     _rule("projects", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Projetos do cliente são somente leitura."]),
                     _rule("meetings", ["discover", "read"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Acesso a reuniões é informativo, sem mutação."]),
-                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente pode consultar diagnóstico estratégico sem alterar plano."]),
+                    _rule("strategy", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", human_gate_for_actions=["review"], notes=["Cliente consulta diagnóstico estratégico e revisa maturação S1-S2 por human-gate, sem update estratégico genérico."]),
                     _rule("real_estate_auctions", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], max_risk_without_human_gate="low", notes=["Cliente consulta pipeline de leilões sem mutação via surface user."]),
                 ],
             ),
@@ -630,7 +630,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("processes", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Processos operacionais podem ser geridos na surface user sem admin global."]),
                     _rule("projects", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Projetos operacionais podem ser geridos na surface user."]),
                     _rule("meetings", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Reuniões seguem fluxo operacional comum."]),
-                    _rule("strategy", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Mudanças estratégicas sensíveis podem exigir redirecionamento para admin."]),
+                    _rule("strategy", ["discover", "read", "create", "update", "analyze", "review"], denied=["delete"], human_gate_for_actions=["review"], notes=["Mudanças estratégicas sensíveis podem exigir redirecionamento para admin; revisão de maturação S1-S2 mantém human-gate."]),
                     _rule("real_estate_auctions", ["discover", "read", "create", "update", "analyze"], denied=["delete"], notes=["Admin pode operar o módulo de leilões pela surface user sem exclusões."]),
                     _rule("finance", ["discover", "read", "create", "update", "analyze"], denied=["delete"], requires_explicit_company_id=True, notes=["Administrador pode operar finanças pela surface user quando o fluxo funcional bastar e a permissão web equivalente estiver presente."]),
                 ],
@@ -646,7 +646,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("processes", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Processos sensíveis exigem confirmação em exclusão e escopo explícito."]),
                     _rule("projects", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Projetos sensíveis pedem gate em exclusão."]),
                     _rule("meetings", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete"], requires_explicit_company_id=True, notes=["Exclusão de reunião deve ser excepcional e auditada."]),
-                    _rule("strategy", ["discover", "read", "create", "update", "delete", "analyze", "audit"], human_gate_for_actions=["delete", "update"], requires_explicit_company_id=True, notes=["Mudanças estratégicas relevantes pedem confirmação humana."]),
+                    _rule("strategy", ["discover", "read", "create", "update", "delete", "analyze", "audit", "review"], human_gate_for_actions=["delete", "update", "review"], requires_explicit_company_id=True, notes=["Mudanças estratégicas relevantes pedem confirmação humana; revisão de maturação S1-S2 mantém gate específico."]),
                     _rule("real_estate_auctions", ["discover", "read", "create", "update", "delete", "analyze", "audit"], human_gate_for_actions=["create", "update", "delete"], requires_explicit_company_id=True, notes=["Módulo de leilões exige company_id explícito e gate humano em mutações sensíveis."]),
                     _rule("finance", ["discover", "read", "create", "update", "delete", "analyze", "audit"], denied=[], max_risk_without_human_gate="medium", requires_explicit_company_id=True, human_gate_for_actions=["create", "update", "delete"], notes=["Finanças exigem menor privilégio, company_id explícito e gate humano em mutações."]),
                     _rule("governance", ["discover", "read", "create", "update", "delete", "audit"], human_gate_for_actions=["delete", "update"], requires_explicit_company_id=True, notes=["Governança/admin deve preservar trilha de auditoria."]),

@@ -34,7 +34,7 @@ SURFACE_ALIASES = {
 }
 
 RISK_ORDER = {"low": 1, "medium": 2, "high": 3, "critical": 4}
-MUTATING_ACTIONS = {"create", "update", "delete", "approve"}
+MUTATING_ACTIONS = {"create", "update", "delete", "approve", "review"}
 DESTRUCTIVE_ACTIONS = {"delete", "approve"}
 ADMIN_DOMAINS = {"admin", "diagnostics", "identity_admin"}
 

@@ -221,6 +221,12 @@ O read model N1 é adequado para piloto e empresas médias. Para empresas com mi
 | `list_strategy_maturation_backlog_tool` | leitura | `company_id`, filtros opcionais | Equivalente estratégico do pending queue financeiro. |
 | `review_strategy_maturation_item_tool` | escrita/human-gate | `company_id`, `item_id`, `decision` | `decision`: `confirm`, `reject` ou `hold`. Confirm promove S2→S3. |
 
+Exposição MCP:
+
+- surface `user` para `list_strategy_maturation_backlog_tool`;
+- surface `user` para `review_strategy_maturation_item_tool` com ação RBAC específica `review`, permissão declarativa `strategy.maturation.review`, `company_id` obrigatório e `human_gate=True`;
+- perfil/harness cliente pode revisar maturação sem ganhar `update` estratégico genérico; `analytics` permanece leitura/análise e não executa review.
+
 Metadados oficiais por item:
 
 - `status`: `draft`, `pending`, `confirmed`, `rejected`;

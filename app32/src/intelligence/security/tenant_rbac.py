@@ -21,7 +21,7 @@ ROLE_ALIASES = {
 
 ADMIN_ROLES = {"administrador", "administrador_tecnico"}
 READ_ACTIONS = {"discover", "read", "list", "search", "analyze", "audit", "export"}
-WRITE_ACTIONS = {"create", "update", "delete", "approve", "execute"}
+WRITE_ACTIONS = {"create", "update", "delete", "approve", "execute", "review"}
 ACTION_ALIASES = {
     "list": "read",
     "search": "discover",
@@ -54,8 +54,8 @@ DOMAIN_MATRIX = {
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },
     "strategy": {
-        "colaborador": {"discover", "read", "list", "search", "analyze"},
-        "cliente": {"discover", "read", "list", "search", "analyze"},
+        "colaborador": {"discover", "read", "list", "search", "analyze", "review"},
+        "cliente": {"discover", "read", "list", "search", "analyze", "review"},
         "administrador": READ_ACTIONS | WRITE_ACTIONS,
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },

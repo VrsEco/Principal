@@ -377,7 +377,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "domain": "strategy",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
-        "permissions": ("strategy.alignment.update",),
+        "permissions": ("strategy.maturation.review",),
         "human_gate": True,
         "human_gate_reason": "Promoção de item S1-S2 para dado canônico altera a base usada por readiness e análise N1.",
         "tags": ("crud", "mutation", "tenant_safe", "maturation", "human_gate", "alignment_n1"),
@@ -1033,6 +1033,9 @@ def _expand_domain_aliases(domains: set[str]) -> set[str]:
 def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
     lowered = str(tool_name or "").strip().lower()
     normalized_domain = normalize_tool_domain(domain) if domain else None
+
+    if lowered == "review_strategy_maturation_item_tool":
+        return "review"
 
     if normalized_domain == "finance":
         if lowered.startswith(_FINANCE_READ_PREFIXES):

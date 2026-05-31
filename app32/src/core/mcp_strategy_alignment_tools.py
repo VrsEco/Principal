@@ -22,7 +22,9 @@ def _meta(
     analytics: bool = False,
 ) -> MCPResponseMeta:
     permissions = ["strategy.alignment.read"]
-    if write:
+    if operation == "maturation_item.review":
+        permissions = ["strategy.maturation.review"]
+    elif write:
         permissions = ["strategy.alignment.update"]
     elif analytics:
         permissions = ["strategy.alignment.analyze"]

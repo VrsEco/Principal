@@ -439,7 +439,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_key="harness_coordenador_cliente_v1",
                 harness_label="Harness Coordenador do Squad Cliente",
                 allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "identity_self_service"],
-                allowed_actions=["discover", "read", "create", "update", "analyze"],
+                allowed_actions=["discover", "read", "create", "update", "analyze", "review"],
                 blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Escalar finanças fora das permissões web equivalentes do usuário para admin/analytics.",
@@ -456,7 +456,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_key="harness_comercial_cliente_v1",
                 harness_label="Harness Comercial do Squad Cliente",
                 allowed_domains=["routine", "projects", "meetings", "strategy", "identity_self_service"],
-                allowed_actions=["discover", "read", "create", "update", "analyze"],
+                allowed_actions=["discover", "read", "create", "update", "analyze", "review"],
                 blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Não tratar financeiro fora das permissões web equivalentes do usuário.",
@@ -490,7 +490,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_key="harness_admfin_cliente_v1",
                 harness_label="Harness Adm/Financeiro do Squad Cliente",
                 allowed_domains=["routine", "projects", "meetings", "strategy", "finance", "identity_self_service"],
-                allowed_actions=["discover", "read", "create", "update", "analyze"],
+                allowed_actions=["discover", "read", "create", "update", "analyze", "review"],
                 blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Executar no financeiro apenas o que a senha do usuário já permitir no APP32 e sempre no company_id ativo.",
@@ -507,7 +507,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_key="harness_estrategico_cliente_v1",
                 harness_label="Harness Estratégico do Squad Cliente",
                 allowed_domains=["strategy", "projects", "meetings", "identity_self_service"],
-                allowed_actions=["discover", "read", "analyze"],
+                allowed_actions=["discover", "read", "analyze", "review"],
                 blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Usar analytics quando a análise exigir read model executivo.",

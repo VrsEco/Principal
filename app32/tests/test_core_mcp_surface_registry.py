@@ -315,3 +315,36 @@ def test_user_surface_manifest_filters_finance_by_effective_permission(monkeypat
     blocked_tool_names = {tool["name"] for tool in blocked_manifest["tools"]}
 
     assert "create_financial_entry" not in blocked_tool_names
+
+
+def test_user_surface_manifest_exposes_strategy_maturation_tools_to_cliente_harness(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=22,
+            company_id=1,
+            employee_id=None,
+            role="cliente",
+            channel="claude_remote",
+            thread_id=None,
+            accessible_company_ids=(1,),
+            permissions=(),
+            metadata={
+                "surface": "user",
+                "transport": "streamable_http",
+                "client": "claude_remote_connector",
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+    )
+
+    manifest = registry.get_surface_manifest("user", domain="strategy", include_tools=True)
+    tool_names = {tool["name"] for tool in manifest["tools"]}
+
+    assert "list_strategy_maturation_backlog_tool" in tool_names
+    assert "review_strategy_maturation_item_tool" in tool_names
