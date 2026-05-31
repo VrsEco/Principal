@@ -36,5 +36,5 @@ def test_processes_functional_harness_validates_actions(monkeypatch):
     )
     settings = _settings()
     results = execute_processes_functional_probe(settings=settings)
-    assert len(results) >= 4
+    assert len(results) >= 5
     assert all(result.success for result in results)

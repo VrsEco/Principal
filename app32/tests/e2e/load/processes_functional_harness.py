@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
+from app32.tests.e2e.config.environments import E2EEnvironmentSettings
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -106,32 +106,31 @@ def execute_processes_functional_probe(*, settings: E2EEnvironmentSettings) -> l
         ),
     ]
 
-    if settings.execution_mode is E2EExecutionMode.DEV_FULL and settings.destructive_actions_allowed:
-        save_payload = {
-            "id": diagram_payload.get("id"),
-            "name": detail_payload.get("name") or selected.get("name") or f"Processo {process_id}",
-            "status": "draft",
-            "bpmn_xml": diagram_payload.get("bpmn_xml")
-            or "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL'><bpmn:process id='Process_1' isExecutable='false'/></bpmn:definitions>",
-            "svg_snapshot": diagram_payload.get("svg_snapshot") or "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
-            "metadata_json": diagram_payload.get("metadata_json") or {"source": "e2e_processes_functional_probe"},
-        }
-        save_response = http.request(
-            "PUT",
-            f"/api/processes/{process_id}/bpmn-diagram",
-            json_payload=save_payload,
+    save_payload = {
+        "id": diagram_payload.get("id"),
+        "name": detail_payload.get("name") or selected.get("name") or f"Processo {process_id}",
+        "status": "draft",
+        "bpmn_xml": diagram_payload.get("bpmn_xml")
+        or "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL'><bpmn:process id='Process_1' isExecutable='false'/></bpmn:definitions>",
+        "svg_snapshot": diagram_payload.get("svg_snapshot") or "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+        "metadata_json": diagram_payload.get("metadata_json") or {"source": "e2e_processes_functional_probe"},
+    }
+    save_response = http.request(
+        "PUT",
+        f"/api/processes/{process_id}/bpmn-diagram",
+        json_payload=save_payload,
+    )
+    save_response.raise_for_status()
+    http.assert_not_login_redirect(save_response, operation="processes.bpmn_save")
+    save_payload_response = http._json_or_raise(save_response, operation="processes.bpmn_save")
+    results.append(
+        ProcessesFunctionalProbeResult(
+            check_name="processes.bpmn_save",
+            route=f"/api/processes/{process_id}/bpmn-diagram",
+            success=isinstance(save_payload_response, dict) and save_payload_response.get("status") == "draft",
+            status_code=save_response.status_code,
+            details={"status": save_payload_response.get("status"), "diagram_id": save_payload_response.get("id")},
         )
-        save_response.raise_for_status()
-        http.assert_not_login_redirect(save_response, operation="processes.bpmn_save")
-        save_payload_response = http._json_or_raise(save_response, operation="processes.bpmn_save")
-        results.append(
-            ProcessesFunctionalProbeResult(
-                check_name="processes.bpmn_save",
-                route=f"/api/processes/{process_id}/bpmn-diagram",
-                success=isinstance(save_payload_response, dict) and save_payload_response.get("status") == "draft",
-                status_code=save_response.status_code,
-                details={"status": save_payload_response.get("status"), "diagram_id": save_payload_response.get("id")},
-            )
-        )
+    )
 
     return results

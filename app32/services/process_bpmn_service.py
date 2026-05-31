@@ -284,6 +284,15 @@ def upsert_process_bpmn_diagram(
         )
         db.session.add(diagram)
 
+    diagram.status = status
+    diagram.name = str(payload.get("name") or process.name or "Diagrama BPMN").strip()
+    diagram.bpmn_xml = bpmn_xml
+    diagram.svg_snapshot = payload.get("svg_snapshot")
+    diagram.png_snapshot = payload.get("png_snapshot")
+    diagram.metadata_json = payload.get("metadata_json") if isinstance(payload.get("metadata_json"), dict) else {}
+    diagram.updated_by_user_id = user_id
+    diagram.updated_at = datetime.utcnow()
+
     if status == "published":
         (
             ProcessBpmnDiagram.query.filter_by(
@@ -296,12 +305,13 @@ def upsert_process_bpmn_diagram(
         )
         diagram.published_at = datetime.utcnow()
 
-    company_name = (
-        db.session.query(Company.name)
-        .filter(Company.id == process.company_id)
-        .scalar()
-        or "Empresa"
-    )
+    with db.session.no_autoflush:
+        company_name = (
+            db.session.query(Company.name)
+            .filter(Company.id == process.company_id)
+            .scalar()
+            or "Empresa"
+        )
 
     resolved_version = int(getattr(diagram, "version", 0) or 0)
     synced_bpmn_xml = sync_bpmn_participant_metadata(
@@ -314,14 +324,7 @@ def upsert_process_bpmn_diagram(
         status=status,
     ) or bpmn_xml
 
-    diagram.status = status
-    diagram.name = str(payload.get("name") or process.name or "Diagrama BPMN").strip()
     diagram.bpmn_xml = synced_bpmn_xml
-    diagram.svg_snapshot = payload.get("svg_snapshot")
-    diagram.png_snapshot = payload.get("png_snapshot")
-    diagram.metadata_json = payload.get("metadata_json") if isinstance(payload.get("metadata_json"), dict) else {}
-    diagram.updated_by_user_id = user_id
-    diagram.updated_at = datetime.utcnow()
 
     db.session.commit()
     return diagram
