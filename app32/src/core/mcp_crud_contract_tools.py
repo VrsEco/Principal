@@ -46,7 +46,7 @@ def register_crud_contract_tools(mcp: Any) -> None:
     def describe_app32_crud_contracts_tool(domain: Optional[str] = None) -> dict[str, Any]:
         """
         Descreve os contratos CRUD MCP do APP32 por domínio:
-        routine, projects, meetings, finance e strategy.
+        routine, projects, processes, meetings, finance e strategy.
         """
         if not domain:
             return _success(
@@ -55,7 +55,7 @@ def register_crud_contract_tools(mcp: Any) -> None:
             )
 
         normalized = domain.strip().lower()
-        if normalized not in {"routine", "projects", "meetings", "finance", "strategy"}:
+        if normalized not in {"routine", "projects", "processes", "meetings", "finance", "strategy"}:
             return _error(
                 "crud_contracts.describe",
                 f"Domínio CRUD MCP inválido: {domain}.",

@@ -204,6 +204,7 @@ nginx/ssl/*.crt
 # ==========================================
 # Custom Project Exclusions
 # ==========================================
+tests/e2e/outputs/
 deploy_key_SECRETA.txt
 github_deploy_key_temp
 out*.txt

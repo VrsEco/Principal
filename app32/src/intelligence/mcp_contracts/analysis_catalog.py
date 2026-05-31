@@ -56,6 +56,9 @@ class AllowedAnalysisCatalogManifest(_StrictModel):
 
     def get_analysis(self, analysis_id: str) -> AllowedAnalysisContract | None:
         normalized = str(analysis_id or "").strip().lower()
+        normalized = {
+            "strategy_alignment_n1": "strategic_alignment_n1",
+        }.get(normalized, normalized)
         for analysis in self.analyses:
             if analysis.analysis_id == normalized:
                 return analysis
@@ -88,6 +91,41 @@ def build_allowed_analysis_catalog_manifest() -> AllowedAnalysisCatalogManifest:
                     "sql livre",
                     "cross-tenant",
                     "mutação de plano",
+                ],
+            ),
+            AllowedAnalysisContract(
+                analysis_id="strategic_alignment_n1",
+                title="Alinhamento estratégico N1",
+                domain="strategy",
+                description="Cruza arquitetura de processos com identidade organizacional para mapear alinhamentos e desalinhamentos.",
+                status="ready",
+                allowed_profiles=["administrador", "admin_tecnico"],
+                allowed_surfaces=["analytics"],
+                required_filters=["company_id"],
+                optional_filters=["process_id", "plan_id"],
+                allowed_dimensions=[
+                    "process",
+                    "objective",
+                    "pillar",
+                    "value_proposition",
+                    "differential",
+                    "policy",
+                    "indicator",
+                ],
+                output_modes=["summary", "table", "diagnostic"],
+                capability_names=[
+                    "get_strategic_alignment_n1_readiness_tool",
+                    "analyze_strategic_alignment_n1_tool",
+                    "get_strategy_alignment_n1_readiness_tool",
+                    "run_strategy_alignment_n1_analysis_tool",
+                ],
+                required_read_models=["strategic.alignment_n1"],
+                max_rows=300,
+                risk="medium",
+                forbidden_patterns=[
+                    "sql livre",
+                    "cross-tenant",
+                    "mutação durante análise",
                 ],
             ),
             AllowedAnalysisContract(

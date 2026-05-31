@@ -40,6 +40,7 @@ from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_to
 from src.core.mcp_sapiens_factory_tools import register_sapiens_factory_tools
 from src.core.mcp_session_company_tools import register_session_company_tools
 from src.core.mcp_squad_runtime_tools import register_squad_runtime_tools
+from src.core.mcp_strategy_alignment_tools import register_strategy_alignment_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
 from src.core.mcp_tool_freeze_tools import register_tool_freeze_tools
 from src.core.mcp_usage_dashboard_tools import register_usage_dashboard_tools
@@ -264,6 +265,78 @@ _supplemental_mcp_tools = (
     SimpleNamespace(
         name="draft_process_pop_step_description_tool",
         description="Gera um rascunho inicial da descrição de um passo POP usando narração, vídeo curto, print e contexto da atividade.",
+    ),
+    SimpleNamespace(
+        name="get_strategy_identity_tool",
+        description="Lê a identidade organizacional estruturada do tenant, com fallback MVV legado.",
+    ),
+    SimpleNamespace(
+        name="get_organizational_identity_tool",
+        description="Alias canônico consultivo para ler a identidade organizacional estruturada.",
+    ),
+    SimpleNamespace(
+        name="upsert_strategy_identity_tool",
+        description="Cria ou atualiza a identidade organizacional estruturada do tenant.",
+    ),
+    SimpleNamespace(
+        name="upsert_organizational_identity_tool",
+        description="Alias canônico consultivo para criar ou atualizar a identidade organizacional estruturada.",
+    ),
+    SimpleNamespace(
+        name="get_process_strategy_profile_tool",
+        description="Lê o perfil estratégico estruturado de um processo.",
+    ),
+    SimpleNamespace(
+        name="get_process_strategic_profile_tool",
+        description="Alias canônico consultivo para ler o perfil estratégico estruturado de um processo.",
+    ),
+    SimpleNamespace(
+        name="upsert_process_strategy_profile_tool",
+        description="Cria ou atualiza objetivo, dono, cliente, indicadores, criticidade, maturidade, SIPOC e políticas do processo.",
+    ),
+    SimpleNamespace(
+        name="upsert_process_strategic_profile_tool",
+        description="Alias canônico consultivo para criar ou atualizar o perfil estratégico estruturado de um processo.",
+    ),
+    SimpleNamespace(
+        name="list_process_strategy_alignment_links_tool",
+        description="Lista vínculos Processo -> objetivo/pilar/proposta/diferencial/competência/política.",
+    ),
+    SimpleNamespace(
+        name="upsert_process_strategy_alignment_link_tool",
+        description="Cria ou atualiza vínculo estratégico de processo para análise N1.",
+    ),
+    SimpleNamespace(
+        name="delete_process_strategy_alignment_link_tool",
+        description="Remove vínculo estratégico de processo dentro do tenant.",
+    ),
+    SimpleNamespace(
+        name="list_indicator_line_of_sight_tool",
+        description="Lista vínculos Indicador de processo -> Indicador corporativo.",
+    ),
+    SimpleNamespace(
+        name="upsert_indicator_line_of_sight_tool",
+        description="Cria ou atualiza linha de visada entre indicador de processo e corporativo.",
+    ),
+    SimpleNamespace(
+        name="delete_indicator_line_of_sight_tool",
+        description="Remove linha de visada de indicadores dentro do tenant.",
+    ),
+    SimpleNamespace(
+        name="get_strategy_alignment_n1_readiness_tool",
+        description="Retorna readiness de dados para a Análise N1 de alinhamento estratégico.",
+    ),
+    SimpleNamespace(
+        name="get_strategic_alignment_n1_readiness_tool",
+        description="Alias canônico consultivo para readiness da Análise N1 de alinhamento estratégico.",
+    ),
+    SimpleNamespace(
+        name="run_strategy_alignment_n1_analysis_tool",
+        description="Executa mapa de alinhamento x desalinhamento entre processos e identidade organizacional.",
+    ),
+    SimpleNamespace(
+        name="analyze_strategic_alignment_n1_tool",
+        description="Alias canônico consultivo para executar a Análise N1 de alinhamento estratégico.",
     ),
     SimpleNamespace(
         name="get_real_estate_auction_settings_tool",
@@ -510,6 +583,7 @@ catalog = ToolCatalog(
         register_sapiens_factory_tools,
         register_session_company_tools,
         register_squad_runtime_tools,
+        register_strategy_alignment_tools,
         register_surface_playbook_tools,
         register_tool_freeze_tools,
         register_usage_dashboard_tools,

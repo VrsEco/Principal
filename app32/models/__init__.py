@@ -23,6 +23,12 @@ from .portfolio import Portfolio
 from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
 from .process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessBpmsAnalysis, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator, ProcessInstanceExecution, ProcessActivityExecutionContract
 from .process_portal import ProcessPortalPublication, ProcessPortalPublicationGrant
+from .strategy_alignment import (
+    IndicatorLineOfSight,
+    OrganizationalIdentity,
+    ProcessStrategicAlignmentLink,
+    ProcessStrategyProfile,
+)
 from .routine import Routine, RoutineCollaborator, RoutineJourneyBinding
 from .financial import (
     FinancialAccountCategory,
@@ -98,7 +104,6 @@ from .automation import (
     AutomationExecution,
     AutomationBpmsLink,
 )
-
 from .real_estate_auction import (
     RealEstateAuctionAttachment,
     RealEstateAuctionDueDiligence,
@@ -166,6 +171,7 @@ __all__ = [
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
+    'OrganizationalIdentity', 'ProcessStrategyProfile', 'ProcessStrategicAlignmentLink', 'IndicatorLineOfSight',
     'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialManualDomain', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialSatellitePolicy', 'FinancialScheduleLink', 'FinancialSatelliteExecution', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialSettlementComponent', 'FinancialTitleAdjustment', 'FinancialTitleAdjustmentAllocation', 'FinancialTitleCalculationLog', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
