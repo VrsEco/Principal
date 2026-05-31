@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error, is_html_success
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -14,19 +15,6 @@ class ProcessesFunctionalProbeResult:
     success: bool
     status_code: int
     details: dict[str, Any]
-
-
-PUBLIC_ERROR_PATTERNS = (
-    "Erro interno do servidor",
-    "Erro interno",
-    "Tente novamente ou contate o suporte",
-    "Erro ao salvar",
-)
-
-
-def _contains_public_error(text: str) -> bool:
-    normalized = str(text or "").lower()
-    return any(pattern.lower() in normalized for pattern in PUBLIC_ERROR_PATTERNS)
 
 
 def _discover_process(http: AuthenticatedHTTPSession, company_id: int) -> dict[str, Any]:
@@ -90,11 +78,11 @@ def execute_processes_functional_probe(*, settings: E2EEnvironmentSettings) -> l
         ProcessesFunctionalProbeResult(
             check_name="processes.bpmn_modeler",
             route=modeler_route,
-            success=("Salvar rascunho" in modeler_html or "bpmn-modeler-shell" in modeler_html) and not _contains_public_error(modeler_html),
+            success=is_html_success(modeler_html, any_markers=("Salvar rascunho", "bpmn-modeler-shell")),
             status_code=modeler_response.status_code,
             details={
                 "has_save_button": "Salvar rascunho" in modeler_html,
-                "has_public_error": _contains_public_error(modeler_html),
+                "has_public_error": contains_public_error(modeler_html),
             },
         ),
         ProcessesFunctionalProbeResult(

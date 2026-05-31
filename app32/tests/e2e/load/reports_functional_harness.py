@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error, is_html_success
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -42,22 +43,38 @@ def execute_reports_functional_probe(*, settings: E2EEnvironmentSettings) -> lis
         ReportsFunctionalProbeResult(
             check_name="reports.work_journey_report",
             route=work_journey_report_route,
-            success="jornada" in (work_journey_report.text or "").lower() or "work journey" in (work_journey_report.text or "").lower(),
+            success=is_html_success(
+                work_journey_report.text,
+                any_markers=("jornada", "work journey"),
+            ),
             status_code=work_journey_report.status_code,
-            details={"content_type": str(work_journey_report.headers.get("Content-Type") or "")},
+            details={
+                "content_type": str(work_journey_report.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(work_journey_report.text),
+            },
         ),
         ReportsFunctionalProbeResult(
             check_name="reports.work_journey_report_pdf",
             route=work_journey_pdf_route,
-            success="html" in str(work_journey_pdf.headers.get("Content-Type") or "").lower(),
+            success="html" in str(work_journey_pdf.headers.get("Content-Type") or "").lower()
+            and not contains_public_error(work_journey_pdf.text),
             status_code=work_journey_pdf.status_code,
-            details={"content_type": str(work_journey_pdf.headers.get("Content-Type") or ""), "content_length": len(work_journey_pdf.text or "")},
+            details={
+                "content_type": str(work_journey_pdf.headers.get("Content-Type") or ""),
+                "content_length": len(work_journey_pdf.text or ""),
+                "has_public_error": contains_public_error(work_journey_pdf.text),
+            },
         ),
         ReportsFunctionalProbeResult(
             check_name="reports.workspace_print",
             route=f"/my-work/export-pdf?scope=me&active_company_id={settings.company_id}",
-            success="html" in str(workspace_print.headers.get("Content-Type") or "").lower(),
+            success="html" in str(workspace_print.headers.get("Content-Type") or "").lower()
+            and not contains_public_error(workspace_print.text),
             status_code=workspace_print.status_code,
-            details={"content_type": str(workspace_print.headers.get("Content-Type") or ""), "content_length": len(workspace_print.text or "")},
+            details={
+                "content_type": str(workspace_print.headers.get("Content-Type") or ""),
+                "content_length": len(workspace_print.text or ""),
+                "has_public_error": contains_public_error(workspace_print.text),
+            },
         ),
     ]

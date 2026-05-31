@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error, is_html_success
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -14,18 +15,6 @@ class MeetingsFunctionalProbeResult:
     success: bool
     status_code: int
     details: dict[str, Any]
-
-
-PUBLIC_ERROR_PATTERNS = (
-    "Erro interno do servidor",
-    "Erro interno",
-    "Tente novamente ou contate o suporte",
-)
-
-
-def _contains_public_error(text: str) -> bool:
-    normalized = str(text or "").lower()
-    return any(pattern.lower() in normalized for pattern in PUBLIC_ERROR_PATTERNS)
 
 
 def execute_meetings_functional_probe(*, settings: E2EEnvironmentSettings) -> list[MeetingsFunctionalProbeResult]:
@@ -49,24 +38,22 @@ def execute_meetings_functional_probe(*, settings: E2EEnvironmentSettings) -> li
             check_name="meetings.root",
             route="/meetings/",
             success="/meetings/company/" in str(getattr(root_response, "url", "") or "")
-            and not _contains_public_error(root_html),
+            and not contains_public_error(root_html),
             status_code=root_response.status_code,
             details={
                 "final_url": str(getattr(root_response, "url", "") or ""),
-                "has_public_error": _contains_public_error(root_html),
+                "has_public_error": contains_public_error(root_html),
             },
         ),
         MeetingsFunctionalProbeResult(
             check_name="meetings.company_manage",
             route=company_route,
-            success="meeting-management" in company_html
-            and "novaReuniao" in company_html
-            and not _contains_public_error(company_html),
+            success=is_html_success(company_html, all_markers=("meeting-management", "novaReuniao")),
             status_code=company_response.status_code,
             details={
                 "has_management_marker": "meeting-management" in company_html,
                 "has_primary_action": "novaReuniao" in company_html,
-                "has_public_error": _contains_public_error(company_html),
+                "has_public_error": contains_public_error(company_html),
             },
         ),
     ]

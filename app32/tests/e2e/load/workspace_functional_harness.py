@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -14,18 +15,6 @@ class WorkspaceFunctionalProbeResult:
     success: bool
     status_code: int
     details: dict[str, Any]
-
-
-PUBLIC_ERROR_PATTERNS = (
-    "Erro interno do servidor",
-    "Erro interno",
-    "Tente novamente ou contate o suporte",
-)
-
-
-def _contains_public_error(text: str) -> bool:
-    normalized = str(text or "").lower()
-    return any(pattern.lower() in normalized for pattern in PUBLIC_ERROR_PATTERNS)
 
 
 def execute_workspace_functional_probe(*, settings: E2EEnvironmentSettings) -> list[WorkspaceFunctionalProbeResult]:
@@ -53,7 +42,7 @@ def execute_workspace_functional_probe(*, settings: E2EEnvironmentSettings) -> l
     export_success = (
         export_response.ok
         and "html" in export_content_type.lower()
-        and not _contains_public_error(export_body)
+        and not contains_public_error(export_body)
     )
 
     return [
@@ -85,7 +74,7 @@ def execute_workspace_functional_probe(*, settings: E2EEnvironmentSettings) -> l
             details={
                 "content_type": export_content_type,
                 "content_length": len(export_body),
-                "has_public_error": _contains_public_error(export_body),
+                "has_public_error": contains_public_error(export_body),
             },
         ),
     ]

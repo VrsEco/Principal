@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error, is_html_success
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -41,16 +42,28 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
         FinancialFunctionalProbeResult(
             check_name="financial.schedule_report_page",
             route="/financial/reports/agendamento",
-            success="relat" in (schedule_html.text or "").lower() or "financeiro" in (schedule_html.text or "").lower(),
+            success=is_html_success(
+                schedule_html.text,
+                any_markers=("relat", "financeiro"),
+            ),
             status_code=schedule_html.status_code,
-            details={"content_type": str(schedule_html.headers.get("Content-Type") or "")},
+            details={
+                "content_type": str(schedule_html.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(schedule_html.text),
+            },
         ),
         FinancialFunctionalProbeResult(
             check_name="financial.bank_statement_page",
             route="/financial/reports/extrato-bancario",
-            success="Extrato" in (bank_statement_html.text or "") or "banc" in (bank_statement_html.text or "").lower(),
+            success=is_html_success(
+                bank_statement_html.text,
+                any_markers=("Extrato", "banc"),
+            ),
             status_code=bank_statement_html.status_code,
-            details={"content_type": str(bank_statement_html.headers.get("Content-Type") or "")},
+            details={
+                "content_type": str(bank_statement_html.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(bank_statement_html.text),
+            },
         ),
         FinancialFunctionalProbeResult(
             check_name="financial.schedule_report_pdf",

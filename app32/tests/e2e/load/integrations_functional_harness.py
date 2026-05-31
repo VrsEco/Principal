@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error, is_html_success
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 
@@ -58,11 +59,12 @@ def execute_integrations_functional_probe(*, settings: E2EEnvironmentSettings) -
         IntegrationsFunctionalProbeResult(
             check_name="integrations.page",
             route="/api-mcp",
-            success="#integrationsWorkspace" in html_body or "API / MCP" in html_body,
+            success=is_html_success(html_body, any_markers=("#integrationsWorkspace", "API / MCP")),
             status_code=html_response.status_code,
             details={
                 "has_workspace_marker": "#integrationsWorkspace" in html_body,
                 "has_title": "API / MCP" in html_body,
+                "has_public_error": contains_public_error(html_body),
             },
         ),
     ]

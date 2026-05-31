@@ -188,6 +188,29 @@ Probe de download e governança:
 - `core/failure_governance.py`
 - `scripts/render_e2e_center_visual_audit.py`
 
+## Cobertura reforçada para erros funcionais semelhantes
+
+Fluxos especiais agora seguem um padrão comum:
+
+- abrir a tela ou endpoint principal
+- executar a ação principal do usuário
+- validar ausência de erro público renderizado
+- validar persistência/retorno funcional
+
+Helper canônico:
+
+- `core/functional_guards.py`
+
+Fluxos já adaptados a esse padrão:
+
+- `workspace_functional_probe`
+- `meetings_functional_probe`
+- `work_journey_functional_probe`
+- `integrations_functional_probe`
+- `reports_functional_probe`
+- `financial_functional_probe`
+- `processes_functional_probe` incluindo **save draft** do BPMN Modeler
+
 ## Pipeline oficial Sprint 5
 
 Workflow canônico:

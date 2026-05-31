@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.core.functional_guards import contains_public_error, is_html_success
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 from app32.tests.e2e.tasks.work_journey_tasks import WorkJourneyTasks
 
@@ -15,18 +16,6 @@ class WorkJourneyFunctionalProbeResult:
     success: bool
     status_code: int
     details: dict[str, Any]
-
-
-PUBLIC_ERROR_PATTERNS = (
-    "Erro interno do servidor",
-    "Erro interno",
-    "Tente novamente ou contate o suporte",
-)
-
-
-def _contains_public_error(text: str) -> bool:
-    normalized = str(text or "").lower()
-    return any(pattern.lower() in normalized for pattern in PUBLIC_ERROR_PATTERNS)
 
 
 def execute_work_journey_functional_probe(*, settings: E2EEnvironmentSettings) -> list[WorkJourneyFunctionalProbeResult]:
@@ -71,14 +60,14 @@ def execute_work_journey_functional_probe(*, settings: E2EEnvironmentSettings) -
         WorkJourneyFunctionalProbeResult(
             check_name="work_journey.page",
             route=page_route,
-            success=(
-                any(marker in page_html for marker in ("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board"))
-                and not _contains_public_error(page_html)
+            success=is_html_success(
+                page_html,
+                any_markers=("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board"),
             ),
             status_code=page_response.status_code,
             details={
                 "has_page_marker": any(marker in page_html for marker in ("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board")),
-                "has_public_error": _contains_public_error(page_html),
+                "has_public_error": contains_public_error(page_html),
             },
         ),
     ]
