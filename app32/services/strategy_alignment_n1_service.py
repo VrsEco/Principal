@@ -155,6 +155,44 @@ class StrategyAlignmentN1Service:
         "stakeholders_json",
         "corporate_indicators_json",
     }
+    _IDENTITY_LIST_FIELD_ALIASES = {
+        "values_json": "values",
+        "value_propositions_json": "value_propositions",
+        "differentials_json": "differentials",
+        "pillars_json": "pillars",
+        "strategic_objectives_json": "strategic_objectives",
+        "essential_competencies_json": "essential_competencies",
+        "segments_icp_json": "segments_icp",
+        "policies_json": "policies",
+        "stakeholders_json": "stakeholders",
+        "corporate_indicators_json": "corporate_indicators",
+    }
+    _IDENTITY_ITEM_TYPE_BY_FIELD = {
+        "values": "value",
+        "value_propositions": "value_proposition",
+        "differentials": "differential",
+        "pillars": "strategic_pillar",
+        "strategic_objectives": "strategic_objective",
+        "essential_competencies": "essential_competence",
+        "segments_icp": "segment_icp",
+        "policies": "policy",
+        "stakeholders": "stakeholder",
+        "corporate_indicators": "corporate_indicator",
+        "swot": "swot",
+    }
+    _MATURATION_CONTROL_KEYS = {
+        "status",
+        "source",
+        "confidence",
+        "state",
+        "title",
+        "description",
+        "notes",
+        "item_type",
+        "target_key",
+        "target_ref_type",
+        "target_ref_id",
+    }
     _PROFILE_FIELD_MAP = {
         "objective": "objective",
         "owner": "owner",
@@ -243,6 +281,79 @@ class StrategyAlignmentN1Service:
         return status in StrategyAlignmentN1Service._MATURATION_NON_CANONICAL_STATUSES
 
     @staticmethod
+    def _identity_payload_field(key: str) -> str:
+        return StrategyAlignmentN1Service._IDENTITY_LIST_FIELD_ALIASES.get(key, key)
+
+    @staticmethod
+    def _identity_target_key(field: str, payload: dict[str, Any]) -> str | None:
+        return (
+            _clean_text(payload.get("target_key"))
+            or _clean_text(payload.get("key"))
+            or _clean_text(payload.get("id"))
+            or _clean_text(payload.get("code"))
+            or _clean_text(payload.get("name"))
+            or _clean_text(payload.get("title"))
+            or _clean_text(payload.get("objective"))
+            or _clean_text(payload.get("segment"))
+            or field
+        )
+
+    @staticmethod
+    def _identity_nested_maturation_payload(field: str, item: dict[str, Any]) -> dict[str, Any]:
+        payload = dict(item)
+        payload.setdefault("identity_field", field)
+        payload.setdefault("item_type", StrategyAlignmentN1Service._IDENTITY_ITEM_TYPE_BY_FIELD.get(field, field))
+        payload.setdefault("target_key", StrategyAlignmentN1Service._identity_target_key(field, payload))
+        return payload
+
+    @staticmethod
+    def _split_identity_payload_for_maturation(payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        canonical_payload = dict(payload)
+        staged_payloads: list[dict[str, Any]] = []
+
+        for raw_field in tuple(StrategyAlignmentN1Service._IDENTITY_LIST_FIELD_ALIASES.keys()) + tuple(
+            value for value in StrategyAlignmentN1Service._IDENTITY_ITEM_TYPE_BY_FIELD if value != "swot"
+        ):
+            if raw_field not in payload:
+                continue
+            field = StrategyAlignmentN1Service._identity_payload_field(raw_field)
+            canonical_items: list[Any] = []
+            for item in _safe_list(payload.get(raw_field), field=raw_field):
+                if isinstance(item, dict) and StrategyAlignmentN1Service._should_stage_payload(item):
+                    staged_payloads.append(
+                        StrategyAlignmentN1Service._identity_nested_maturation_payload(field, item)
+                    )
+                    continue
+                canonical_items.append(item)
+            canonical_payload[raw_field] = canonical_items
+
+        for raw_field in ("swot", "swot_json"):
+            if raw_field not in payload:
+                continue
+            swot_payload = _safe_dict(payload.get(raw_field), field=raw_field)
+            if swot_payload and StrategyAlignmentN1Service._should_stage_payload(swot_payload):
+                staged = StrategyAlignmentN1Service._identity_nested_maturation_payload("swot", swot_payload)
+                staged.setdefault("target_key", "swot")
+                staged_payloads.append(staged)
+                canonical_payload[raw_field] = {}
+
+        return canonical_payload, staged_payloads
+
+    @staticmethod
+    def _has_canonical_identity_update(payload: dict[str, Any]) -> bool:
+        for key, value in (payload or {}).items():
+            if key in StrategyAlignmentN1Service._MATURATION_CONTROL_KEYS:
+                continue
+            if key not in StrategyAlignmentN1Service._IDENTITY_FIELD_MAP:
+                continue
+            if value in (None, ""):
+                continue
+            if isinstance(value, (list, tuple, dict)) and len(value) == 0:
+                continue
+            return True
+        return False
+
+    @staticmethod
     def _maturation_title(block_type: str, payload: dict[str, Any]) -> str:
         return (
             _clean_text(payload.get("title"))
@@ -291,6 +402,7 @@ class StrategyAlignmentN1Service:
             updated_by_user_id=user_id,
         )
         db.session.add(item)
+        db.session.flush()
         if commit:
             db.session.commit()
         return {"staged": True, "maturation_item": item.to_dict()}
@@ -564,13 +676,44 @@ class StrategyAlignmentN1Service:
                 user_id=user_id,
                 commit=commit,
             )
+
+        canonical_payload, nested_maturation_payloads = StrategyAlignmentN1Service._split_identity_payload_for_maturation(payload)
+        staged_items: list[dict[str, Any]] = []
+        for staged_payload in nested_maturation_payloads:
+            staged_items.append(
+                StrategyAlignmentN1Service.create_maturation_item(
+                    company_id,
+                    block_type="identity",
+                    payload=staged_payload,
+                    item_type=_clean_text(staged_payload.get("item_type")) or "organizational_identity_item",
+                    target_ref_type="organizational_identity",
+                    target_key=_clean_text(staged_payload.get("target_key")),
+                    user_id=user_id,
+                    commit=False,
+                )["maturation_item"]
+            )
+
         identity = OrganizationalIdentity.query.filter_by(company_id=company_id).first()
+
+        should_update_canonical = bool(
+            StrategyAlignmentN1Service._has_canonical_identity_update(canonical_payload)
+            or (identity is not None and nested_maturation_payloads)
+        )
+        if not should_update_canonical:
+            if commit:
+                db.session.commit()
+            return {
+                "staged": bool(staged_items),
+                "canonical_updated": False,
+                "maturation_items": staged_items,
+            }
+
         if identity is None:
             identity = OrganizationalIdentity(company_id=company_id, created_by_user_id=user_id)
             db.session.add(identity)
         identity.updated_by_user_id = user_id
 
-        for key, value in payload.items():
+        for key, value in canonical_payload.items():
             attr = StrategyAlignmentN1Service._IDENTITY_FIELD_MAP.get(key)
             if not attr:
                 continue
@@ -584,16 +727,21 @@ class StrategyAlignmentN1Service:
                 value = _clean_text(value)
             setattr(identity, attr, value)
 
-        if "mission" in payload:
+        if "mission" in canonical_payload:
             company.mission = identity.mission
-        if "vision" in payload:
+        if "vision" in canonical_payload:
             company.vision = identity.vision
-        if "values" in payload or "values_json" in payload:
+        if "values" in canonical_payload or "values_json" in canonical_payload:
             company.values = _json_text(identity.values_json)
 
         if commit:
             db.session.commit()
-        return identity.to_dict()
+        response = identity.to_dict()
+        if staged_items:
+            response["staged"] = True
+            response["canonical_updated"] = True
+            response["maturation_items"] = staged_items
+        return response
 
     @staticmethod
     def get_process_profile(company_id: int, process_id: int, *, status: str | None = "confirmed") -> dict[str, Any]:

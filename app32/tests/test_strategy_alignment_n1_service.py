@@ -177,6 +177,62 @@ def test_maturation_summary_reports_open_backlog_and_block_maturity():
     assert summary["by_block"]["identity"]["maturity_pct"] == 50
 
 
+def test_identity_nested_pending_items_are_split_to_maturation_payloads():
+    canonical, staged = StrategyAlignmentN1Service._split_identity_payload_for_maturation(
+        {
+            "values": [
+                {
+                    "name": "TESTE_VALIDACAO_CLAUDE_N1",
+                    "definition": "...",
+                    "expected_behaviors": ["..."],
+                    "status": "pending",
+                    "source": "ia_inferido",
+                    "confidence": 0.3,
+                    "state": "as_is",
+                }
+            ]
+        }
+    )
+
+    assert canonical["values"] == []
+    assert StrategyAlignmentN1Service._has_canonical_identity_update(canonical) is False
+    assert staged == [
+        {
+            "name": "TESTE_VALIDACAO_CLAUDE_N1",
+            "definition": "...",
+            "expected_behaviors": ["..."],
+            "status": "pending",
+            "source": "ia_inferido",
+            "confidence": 0.3,
+            "state": "as_is",
+            "identity_field": "values",
+            "item_type": "value",
+            "target_key": "TESTE_VALIDACAO_CLAUDE_N1",
+        }
+    ]
+
+
+def test_identity_nested_mixed_status_keeps_only_confirmed_canonical_items():
+    canonical, staged = StrategyAlignmentN1Service._split_identity_payload_for_maturation(
+        {
+            "strategic_objectives": [
+                {"key": "obj-confirmado", "objective": "Confirmado", "status": "confirmed"},
+                {"key": "obj-pendente", "objective": "Pendente", "status": "pending"},
+            ],
+            "mission": "Missão canônica",
+        }
+    )
+
+    assert canonical["strategic_objectives"] == [
+        {"key": "obj-confirmado", "objective": "Confirmado", "status": "confirmed"}
+    ]
+    assert canonical["mission"] == "Missão canônica"
+    assert StrategyAlignmentN1Service._has_canonical_identity_update(canonical) is True
+    assert staged[0]["identity_field"] == "strategic_objectives"
+    assert staged[0]["item_type"] == "strategic_objective"
+    assert staged[0]["target_key"] == "obj-pendente"
+
+
 def test_alignment_service_blocks_company_outside_accessible_scope():
     with pytest.raises(PermissionError, match="escopo analítico"):
         StrategyAlignmentN1Service._ensure_access(99, accessible_company_ids=[1, 2])
