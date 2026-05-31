@@ -1,0 +1,284 @@
+{% extends "layouts/workspace.html" %}
+{% set p = property or {} %}
+
+{% block title %}{{ 'Editar' if p else 'Novo' }} Imóvel - Leilões Imobiliários{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('real_estate_auctions.workspace', company_id=company_id) }}">Leilões Imobiliários</a>
+<span class="sep">/</span>
+<span class="current">{{ 'Editar imóvel' if p else 'Novo imóvel' }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<a class="rea-btn rea-btn--secondary" href="{{ url_for('real_estate_auctions.workspace', company_id=company_id) }}">
+    <i class="fa-solid fa-arrow-left"></i> Voltar
+</a>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="rea-form-page fade-in">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="rea-alerts">
+        {% for category, message in messages %}
+        <div class="rea-alert rea-alert--{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <header class="rea-form-hero">
+        <p class="rea-eyebrow">Pipeline de oportunidades</p>
+        <h1>{{ 'Editar imóvel' if p else 'Novo imóvel' }}</h1>
+        <p>Cadastro tenant-safe para análise, triagem e acompanhamento de leilões imobiliários.</p>
+    </header>
+
+    <form class="rea-form-card" method="post" action="{{ form_action }}">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+
+        <section>
+            <div class="rea-section-title">
+                <p class="rea-eyebrow">Identificação</p>
+                <h2>Dados principais</h2>
+            </div>
+            <div class="rea-grid">
+                <label>
+                    <span>Código *</span>
+                    <input required name="code" value="{{ p.get('code', '') }}" placeholder="GND-001">
+                </label>
+                <label>
+                    <span>Apelido</span>
+                    <input name="nickname" value="{{ p.get('nickname', '') }}" placeholder="Casa bairro Centro">
+                </label>
+                <label>
+                    <span>Tipo</span>
+                    <input name="property_type" value="{{ p.get('property_type', '') }}" placeholder="Casa, apartamento, terreno">
+                </label>
+                <label>
+                    <span>Modalidade</span>
+                    <input name="sale_modality" value="{{ p.get('sale_modality', '') }}" placeholder="Judicial, extrajudicial...">
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <div class="rea-section-title">
+                <p class="rea-eyebrow">Endereço</p>
+                <h2>Localização</h2>
+            </div>
+            <div class="rea-grid rea-grid--wide">
+                <label class="span-2">
+                    <span>Endereço *</span>
+                    <input required name="address" value="{{ p.get('address', '') }}">
+                </label>
+                <label>
+                    <span>Bairro</span>
+                    <input name="district" value="{{ p.get('district', '') }}">
+                </label>
+                <label>
+                    <span>Cidade</span>
+                    <input name="city" value="{{ p.get('city', '') }}">
+                </label>
+                <label>
+                    <span>UF</span>
+                    <input name="state" maxlength="2" value="{{ p.get('state', 'BA') or 'BA' }}">
+                </label>
+                <label>
+                    <span>CEP</span>
+                    <input name="zip_code" value="{{ p.get('zip_code', '') }}">
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <div class="rea-section-title">
+                <p class="rea-eyebrow">Triagem</p>
+                <h2>Status e decisão</h2>
+            </div>
+            <div class="rea-grid">
+                <label>
+                    <span>Status</span>
+                    <select name="status">
+                        {% for value, label in status_options %}
+                        <option value="{{ value }}" {% if p.get('status', 'in_analysis') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>Triagem</span>
+                    <select name="triage_status">
+                        {% for value, label in triage_options %}
+                        <option value="{{ value }}" {% if p.get('triage_status', 'pending') == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>
+                    <span>Código do motivo</span>
+                    <input name="triage_reason_code" value="{{ p.get('triage_reason_code', '') }}">
+                </label>
+                <label>
+                    <span>Motivo</span>
+                    <input name="triage_reason_label" value="{{ p.get('triage_reason_label', '') }}">
+                </label>
+                <label class="span-2">
+                    <span>Observações de triagem</span>
+                    <textarea name="triage_notes" rows="4">{{ p.get('triage_notes', '') }}</textarea>
+                </label>
+                <label class="rea-check">
+                    <input type="checkbox" name="occupied" value="1" {% if p.get('occupied', true) %}checked{% endif %}>
+                    <span>Imóvel ocupado</span>
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <div class="rea-section-title">
+                <p class="rea-eyebrow">Valores</p>
+                <h2>Análise econômica inicial</h2>
+            </div>
+            <div class="rea-grid">
+                <label>
+                    <span>Área terreno</span>
+                    <input type="number" step="0.01" name="land_area" value="{{ p.get('land_area', '') }}">
+                </label>
+                <label>
+                    <span>Área privativa</span>
+                    <input type="number" step="0.01" name="private_area" value="{{ p.get('private_area', '') }}">
+                </label>
+                <label>
+                    <span>Área construída</span>
+                    <input type="number" step="0.01" name="built_area" value="{{ p.get('built_area', '') }}">
+                </label>
+                <label>
+                    <span>Valor avaliado</span>
+                    <input type="number" step="0.01" name="appraisal_value" value="{{ p.get('appraisal_value', '') }}">
+                </label>
+                <label>
+                    <span>Venda rápida estimada</span>
+                    <input type="number" step="0.01" name="estimated_quick_sale_value" value="{{ p.get('estimated_quick_sale_value', '') }}">
+                </label>
+                <label>
+                    <span>Venda normal estimada</span>
+                    <input type="number" step="0.01" name="estimated_normal_sale_value" value="{{ p.get('estimated_normal_sale_value', '') }}">
+                </label>
+                <label>
+                    <span>Lance máximo recomendado</span>
+                    <input type="number" step="0.01" name="recommended_max_bid" value="{{ p.get('recommended_max_bid', '') }}">
+                </label>
+                <label>
+                    <span>Venda fechada</span>
+                    <input type="number" step="0.01" name="closed_sale_value" value="{{ p.get('closed_sale_value', '') }}">
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <div class="rea-section-title">
+                <p class="rea-eyebrow">Documentação</p>
+                <h2>Referências externas</h2>
+            </div>
+            <div class="rea-grid">
+                <label>
+                    <span>Matrícula</span>
+                    <input name="registry_number" value="{{ p.get('registry_number', '') }}">
+                </label>
+                <label>
+                    <span>Cartório</span>
+                    <input name="registry_office" value="{{ p.get('registry_office', '') }}">
+                </label>
+                <label>
+                    <span>Comarca</span>
+                    <input name="court_district" value="{{ p.get('court_district', '') }}">
+                </label>
+                <label>
+                    <span>Banco</span>
+                    <input name="bank" value="{{ p.get('bank', '') }}">
+                </label>
+                <label>
+                    <span>Leiloeiro</span>
+                    <input name="auctioneer" value="{{ p.get('auctioneer', '') }}">
+                </label>
+                <label>
+                    <span>Filtro auxiliar</span>
+                    <input name="auxiliary_filter" value="{{ p.get('auxiliary_filter', '') }}">
+                </label>
+                <label class="span-2">
+                    <span>URL do leilão</span>
+                    <input name="auction_url" value="{{ p.get('auction_url', '') }}">
+                </label>
+                <label class="span-2">
+                    <span>URL do edital</span>
+                    <input name="notice_url" value="{{ p.get('notice_url', '') }}">
+                </label>
+            </div>
+        </section>
+
+        <section>
+            <div class="rea-section-title">
+                <p class="rea-eyebrow">Comercialização</p>
+                <h2>Venda e datas-chave</h2>
+            </div>
+            <div class="rea-grid">
+                <label>
+                    <span>Comprador</span>
+                    <input name="buyer_name" value="{{ p.get('buyer_name', '') }}">
+                </label>
+                <label>
+                    <span>Corretor</span>
+                    <input name="broker_name" value="{{ p.get('broker_name', '') }}">
+                </label>
+                <label>
+                    <span>Arrematado em</span>
+                    <input type="datetime-local" name="auction_won_at" value="{{ p.get('auction_won_at', '') }}">
+                </label>
+                <label>
+                    <span>Disponível em</span>
+                    <input type="datetime-local" name="available_for_sale_at" value="{{ p.get('available_for_sale_at', '') }}">
+                </label>
+                <label>
+                    <span>Vendido em</span>
+                    <input type="datetime-local" name="sold_at" value="{{ p.get('sold_at', '') }}">
+                </label>
+            </div>
+        </section>
+
+        <footer class="rea-form-actions">
+            <a class="rea-btn rea-btn--secondary" href="{{ url_for('real_estate_auctions.workspace', company_id=company_id) }}">Cancelar</a>
+            <button class="rea-btn rea-btn--primary" type="submit">Salvar imóvel</button>
+        </footer>
+    </form>
+</div>
+
+<style>
+    .rea-form-page { padding:0 1.25rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
+    .rea-form-hero, .rea-form-card { border:1px solid var(--border); border-radius:22px; background:var(--surface); box-shadow:var(--shadow-sm); }
+    .rea-form-hero { padding:1.1rem; }
+    .rea-form-hero h1 { margin:.15rem 0 .25rem; }
+    .rea-form-hero p:not(.rea-eyebrow) { margin:0; color:var(--text-secondary); }
+    .rea-form-card { padding:1.1rem; display:flex; flex-direction:column; gap:1.25rem; }
+    .rea-section-title { margin-bottom:.7rem; }
+    .rea-section-title h2 { margin:.15rem 0 0; font-size:1.02rem; }
+    .rea-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+    .rea-grid--wide { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .span-2 { grid-column:span 2; }
+    .rea-grid label { display:flex; flex-direction:column; gap:.32rem; color:var(--text-secondary); font-size:.78rem; font-weight:800; }
+    .rea-grid input, .rea-grid select, .rea-grid textarea { border:1px solid var(--border); border-radius:12px; padding:.68rem .78rem; background:#fff; color:var(--text-primary); }
+    .rea-check { flex-direction:row !important; align-items:center; }
+    .rea-check input { width:auto; }
+    .rea-form-actions { display:flex; justify-content:flex-end; gap:.75rem; border-top:1px solid var(--border); padding-top:1rem; }
+    .rea-eyebrow { margin:0; font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; font-weight:800; color:var(--primary); }
+    .rea-btn { border:none; border-radius:12px; padding:.72rem .95rem; font-weight:800; text-decoration:none; cursor:pointer; display:inline-flex; gap:.45rem; justify-content:center; align-items:center; }
+    .rea-btn--primary { background:var(--primary); color:#fff; }
+    .rea-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .rea-alerts { display:grid; gap:.5rem; }
+    .rea-alert { border-radius:14px; padding:.7rem .85rem; border:1px solid var(--border); background:#f8fafc; }
+    .rea-alert--success { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
+    .rea-alert--error { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+    .rea-alert--warning { border-color:#fde68a; background:#fffbeb; color:#92400e; }
+    @media (max-width: 920px) {
+        .rea-grid, .rea-grid--wide { grid-template-columns:1fr; }
+        .span-2 { grid-column:span 1; }
+        .rea-form-actions { flex-direction:column; }
+    }
+</style>
+{% endblock %}

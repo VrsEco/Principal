@@ -99,6 +99,18 @@ from .automation import (
     AutomationBpmsLink,
 )
 
+from .real_estate_auction import (
+    RealEstateAuctionAttachment,
+    RealEstateAuctionDueDiligence,
+    RealEstateAuctionEvent,
+    RealEstateAuctionFinancialSheet,
+    RealEstateAuctionImportJob,
+    RealEstateAuctionImportJobItem,
+    RealEstateAuctionProperty,
+    RealEstateAuctionSource,
+    RealEstateAuctionTenantSettings,
+)
+
 # Operations & Governance
 from .meeting import Meeting, MeetingAgendaItem
 from .note import Note
@@ -160,6 +172,7 @@ __all__ = [
     'FinancialAutomationBatch', 'FinancialAutomationDocument', 'FinancialAutomationHistory', 'FinancialAutomationRecord',
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
     'AutomationRegistry', 'AutomationRule', 'AutomationExecution', 'AutomationBpmsLink',
+    'RealEstateAuctionProperty', 'RealEstateAuctionEvent', 'RealEstateAuctionFinancialSheet', 'RealEstateAuctionDueDiligence', 'RealEstateAuctionAttachment', 'RealEstateAuctionSource', 'RealEstateAuctionImportJob', 'RealEstateAuctionImportJobItem', 'RealEstateAuctionTenantSettings',
     'Contract', 'ContractCatalogItem', 'ContractParty', 'ContractingLegalEntity', 'ContractItem', 'ContractBillingItem', 'ContractNativeBilling', 'ContractNativeBillingItem', 'ContractFinancialTerm', 'ContractFiscalTerm', 'ContractRetention', 'ContractTrigger', 'ContractDocument', 'ContractClause', 'ContractNote', 'ContractEvent',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'CompanyRolePermissionPreset', 'AppComplianceReport', 'AppComplianceReportItem',

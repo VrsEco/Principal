@@ -1,0 +1,205 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ property.code }} - Leilões Imobiliários{% endblock %}
+
+{% block breadcrumb %}
+<a href="{{ url_for('real_estate_auctions.workspace', company_id=company_id) }}">Leilões Imobiliários</a>
+<span class="sep">/</span>
+<span class="current">{{ property.code }}</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="rea-actions">
+    <a class="rea-btn rea-btn--secondary" href="{{ url_for('real_estate_auctions.workspace', company_id=company_id) }}">
+        <i class="fa-solid fa-arrow-left"></i> Voltar
+    </a>
+    {% if can_edit %}
+    <a class="rea-btn rea-btn--primary" href="{{ url_for('real_estate_auctions.property_edit', property_id=property.id, company_id=company_id) }}">
+        <i class="fa-solid fa-pen"></i> Editar
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="rea-detail-page fade-in">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="rea-alerts">
+        {% for category, message in messages %}
+        <div class="rea-alert rea-alert--{{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <header class="rea-detail-hero">
+        <div>
+            <p class="rea-eyebrow">Imóvel em acompanhamento</p>
+            <h1>{{ property.nickname or property.property_type or property.code }}</h1>
+            <p>{{ property.address }}{% if property.city %} — {{ property.city }}{% if property.state %}/{{ property.state }}{% endif %}{% endif %}</p>
+        </div>
+        <div class="rea-status-box">
+            <span>{{ property.code }}</span>
+            <strong>{{ dict(status_options).get(property.status, property.status) }}</strong>
+            <small>{{ dict(triage_options).get(property.triage_status, property.triage_status) }}</small>
+        </div>
+    </header>
+
+    <section class="rea-detail-grid">
+        <article class="rea-panel">
+            <div class="rea-panel__header">
+                <p class="rea-eyebrow">Resumo</p>
+                <h2>Dados do imóvel</h2>
+            </div>
+            <dl class="rea-dl">
+                <div><dt>Tipo</dt><dd>{{ property.property_type or '-' }}</dd></div>
+                <div><dt>Modalidade</dt><dd>{{ property.sale_modality or '-' }}</dd></div>
+                <div><dt>Banco</dt><dd>{{ property.bank or '-' }}</dd></div>
+                <div><dt>Ocupado</dt><dd>{{ 'Sim' if property.occupied else 'Não' }}</dd></div>
+                <div><dt>Matrícula</dt><dd>{{ property.registry_number or '-' }}</dd></div>
+                <div><dt>Cartório</dt><dd>{{ property.registry_office or '-' }}</dd></div>
+            </dl>
+        </article>
+
+        <article class="rea-panel">
+            <div class="rea-panel__header">
+                <p class="rea-eyebrow">Valores</p>
+                <h2>Leitura econômica</h2>
+            </div>
+            <dl class="rea-dl">
+                <div><dt>Avaliação</dt><dd>{{ property.appraisal_value|format_currency_br if property.appraisal_value else '-' }}</dd></div>
+                <div><dt>Venda rápida</dt><dd>{{ property.estimated_quick_sale_value|format_currency_br if property.estimated_quick_sale_value else '-' }}</dd></div>
+                <div><dt>Venda normal</dt><dd>{{ property.estimated_normal_sale_value|format_currency_br if property.estimated_normal_sale_value else '-' }}</dd></div>
+                <div><dt>Lance máximo</dt><dd>{{ property.recommended_max_bid|format_currency_br if property.recommended_max_bid else '-' }}</dd></div>
+                <div><dt>Venda fechada</dt><dd>{{ property.closed_sale_value|format_currency_br if property.closed_sale_value else '-' }}</dd></div>
+            </dl>
+        </article>
+    </section>
+
+    <section class="rea-panel">
+        <div class="rea-panel__header">
+            <p class="rea-eyebrow">Triagem</p>
+            <h2>Parecer operacional</h2>
+        </div>
+        <div class="rea-notes">
+            <strong>{{ property.triage_reason_label or 'Sem motivo registrado' }}</strong>
+            <p>{{ property.triage_notes or 'Nenhuma observação de triagem registrada para este imóvel.' }}</p>
+        </div>
+    </section>
+
+    <section class="rea-detail-grid">
+        <article class="rea-panel">
+            <div class="rea-panel__header">
+                <p class="rea-eyebrow">Leilões</p>
+                <h2>Eventos</h2>
+            </div>
+            {% if detail.events %}
+            <div class="rea-list">
+                {% for event in detail.events %}
+                <div>
+                    <strong>{{ event.auction_type or 'Leilão' }}</strong>
+                    <span>{{ event.auction_datetime or '-' }} · {{ event.result or 'sem resultado' }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="rea-muted">Nenhum evento de leilão registrado ainda.</p>
+            {% endif %}
+        </article>
+
+        <article class="rea-panel">
+            <div class="rea-panel__header">
+                <p class="rea-eyebrow">Diligência</p>
+                <h2>Posse e riscos</h2>
+            </div>
+            {% if detail.due_diligence %}
+            <dl class="rea-dl">
+                <div><dt>Condomínio</dt><dd>{{ detail.due_diligence.condo_fee_value|format_currency_br if detail.due_diligence.condo_fee_value else '-' }}</dd></div>
+                <div><dt>Idade</dt><dd>{{ detail.due_diligence.building_age or '-' }}</dd></div>
+                <div><dt>Morador contatado</dt><dd>{{ 'Sim' if detail.due_diligence.resident_contacted else 'Não' }}</dd></div>
+                <div><dt>Síndico contatado</dt><dd>{{ 'Sim' if detail.due_diligence.manager_contacted else 'Não' }}</dd></div>
+            </dl>
+            {% else %}
+            <p class="rea-muted">Diligência detalhada será integrada nas próximas etapas do módulo.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="rea-panel">
+        <div class="rea-panel__header">
+            <p class="rea-eyebrow">Anexos</p>
+            <h2>Documentos do imóvel</h2>
+        </div>
+        {% if detail.attachments %}
+        <div class="rea-list">
+            {% for attachment in detail.attachments %}
+            <div>
+                <strong>{{ attachment.original_filename }}</strong>
+                <span>{{ attachment.category }} · {{ attachment.mime_type or '-' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="rea-muted">Upload e PDF executivo entram na próxima fase; o modelo de dados já está preparado com isolamento por tenant.</p>
+        {% endif %}
+    </section>
+
+    {% if can_delete %}
+    <form class="rea-danger" method="post" action="{{ url_for('real_estate_auctions.property_archive', property_id=property.id, company_id=company_id) }}">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <div>
+            <strong>Arquivamento seguro</strong>
+            <span>Remove o imóvel da operação ativa sem apagar fisicamente o histórico.</span>
+        </div>
+        <button class="rea-btn rea-btn--danger" type="submit">Arquivar imóvel</button>
+    </form>
+    {% endif %}
+</div>
+
+<style>
+    .rea-detail-page { padding:0 1.25rem 1.5rem; display:flex; flex-direction:column; gap:1rem; }
+    .rea-actions { display:flex; gap:.6rem; align-items:center; }
+    .rea-detail-hero { display:flex; justify-content:space-between; gap:1rem; align-items:stretch; border:1px solid var(--border); border-radius:22px; padding:1.1rem; background:linear-gradient(135deg,#0f172a,#1d4ed8); color:#fff; box-shadow:var(--shadow-sm); }
+    .rea-detail-hero h1 { margin:.15rem 0 .25rem; }
+    .rea-detail-hero p:not(.rea-eyebrow) { margin:0; color:rgba(255,255,255,.82); }
+    .rea-status-box { min-width:210px; border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:.9rem; background:rgba(255,255,255,.08); display:flex; flex-direction:column; justify-content:center; }
+    .rea-status-box span { font-weight:900; color:#bfdbfe; letter-spacing:.08em; }
+    .rea-status-box strong { font-size:1rem; }
+    .rea-status-box small { color:rgba(255,255,255,.8); }
+    .rea-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .rea-panel, .rea-danger { border:1px solid var(--border); border-radius:20px; background:var(--surface); box-shadow:var(--shadow-sm); }
+    .rea-panel__header { padding:1rem 1.1rem; border-bottom:1px solid var(--border); }
+    .rea-panel__header h2 { margin:.15rem 0 0; font-size:1.05rem; }
+    .rea-eyebrow { margin:0; font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; font-weight:800; color:var(--primary); }
+    .rea-detail-hero .rea-eyebrow { color:#bfdbfe; }
+    .rea-dl { margin:0; padding:1rem 1.1rem; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+    .rea-dl div { border:1px solid var(--border); border-radius:14px; padding:.72rem .82rem; background:var(--surface-secondary); }
+    .rea-dl dt { color:var(--text-secondary); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }
+    .rea-dl dd { margin:.18rem 0 0; font-weight:800; color:var(--text-primary); }
+    .rea-notes { padding:1rem 1.1rem; }
+    .rea-notes p { color:var(--text-secondary); line-height:1.45; }
+    .rea-list { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.55rem; }
+    .rea-list div { border:1px solid var(--border); border-radius:14px; padding:.75rem .85rem; background:var(--surface-secondary); }
+    .rea-list strong, .rea-list span { display:block; }
+    .rea-list span, .rea-muted { color:var(--text-secondary); font-size:.82rem; }
+    .rea-muted { padding:1rem 1.1rem; margin:0; line-height:1.45; }
+    .rea-danger { padding:1rem 1.1rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; border-color:#fecaca; background:#fff7f7; }
+    .rea-danger strong, .rea-danger span { display:block; }
+    .rea-danger span { color:#7f1d1d; font-size:.82rem; }
+    .rea-btn { border:none; border-radius:12px; padding:.72rem .95rem; font-weight:800; text-decoration:none; cursor:pointer; display:inline-flex; gap:.45rem; justify-content:center; align-items:center; }
+    .rea-btn--primary { background:var(--primary); color:#fff; }
+    .rea-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .rea-btn--danger { background:#dc2626; color:#fff; }
+    .rea-alerts { display:grid; gap:.5rem; }
+    .rea-alert { border-radius:14px; padding:.7rem .85rem; border:1px solid var(--border); background:#f8fafc; }
+    .rea-alert--success { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
+    .rea-alert--error { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
+    .rea-alert--warning { border-color:#fde68a; background:#fffbeb; color:#92400e; }
+    @media (max-width: 920px) {
+        .rea-detail-grid { grid-template-columns:1fr; }
+        .rea-detail-hero, .rea-danger { flex-direction:column; align-items:stretch; }
+        .rea-dl { grid-template-columns:1fr; }
+    }
+</style>
+{% endblock %}

@@ -139,6 +139,33 @@
     </div>
     {% endif %}
 
+    {% if has_permission('real_estate_auctions', 'view') and real_estate_auctions_enabled is defined and real_estate_auctions_enabled() %}
+    <div class="sidebar-group {{ 'open' if '/real-estate-auctions' in request.path }}">
+        <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 21h18"></path>
+                <path d="M6 21V9l6-4 6 4v12"></path>
+                <path d="M9 21v-6h6v6"></path>
+                <path d="M8 11h1"></path>
+                <path d="M15 11h1"></path>
+            </svg>
+            Leilões Imobiliários
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="/real-estate-auctions" class="sub-nav-link {{ 'active' if request.path == '/real-estate-auctions' }}">
+                <span>Pipeline de Oportunidades</span>
+            </a>
+            <a href="/real-estate-auctions/properties/new" class="sub-nav-link {{ 'active' if request.path == '/real-estate-auctions/properties/new' }}">
+                <span>Novo Imóvel</span>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Gestão Financeira -->
     {% if has_permission('financial', 'view') %}
     <div class="sidebar-group {{ 'open' if '/financial' in request.path and '/financial/classification-rules' not in request.path and '/financial/classification-memories' not in request.path and '/financial/automation-rules' not in request.path and '/financial/automation-audit' not in request.path }}">

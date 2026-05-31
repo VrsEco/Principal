@@ -476,6 +476,23 @@ def create_app(config_name=None):
         def current_access_profile(company_id=None):
             return get_access_profile(_resolve_company_id(company_id))
 
+        def real_estate_auctions_enabled(company_id=None):
+            cid = _resolve_company_id(company_id)
+            if not cid:
+                return False
+            try:
+                from models import db
+                from services.real_estate_auction_service import RealEstateAuctionService
+
+                settings = RealEstateAuctionService.get_tenant_settings(int(cid))
+                return bool(settings.get("module_enabled"))
+            except Exception:
+                try:
+                    db.session.rollback()
+                except Exception:
+                    pass
+                return False
+
         return dict(
             has_permission=check_perm,
             current_access_profile=current_access_profile,
@@ -484,6 +501,7 @@ def create_app(config_name=None):
             is_administrator=lambda company_id=None: is_administrator(_resolve_company_id(company_id)),
             has_company_full_access=lambda company_id=None: has_company_full_access(_resolve_company_id(company_id)),
             is_collaborator_in_company=lambda company_id=None: is_collaborator_in_company(_resolve_company_id(company_id)),
+            real_estate_auctions_enabled=real_estate_auctions_enabled,
         )
 
     @app.context_processor
@@ -1079,6 +1097,7 @@ def register_blueprints(app):
     from api.routes.portfolios import portfolios_bp
     from api.routes.financial import financial_bp
     from api.routes.financial_automation import financial_automation_bp
+    from api.routes.real_estate_auctions import real_estate_auctions_bp
     from api.routes.contracts import contracts_bp
     import api.routes.financial_reports  # noqa: F401
     from api.user_employee import user_employee_bp
@@ -1108,6 +1127,7 @@ def register_blueprints(app):
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(financial_bp)
     app.register_blueprint(financial_automation_bp)
+    app.register_blueprint(real_estate_auctions_bp)
     app.register_blueprint(contracts_bp)
     app.register_blueprint(user_employee_bp)
     app.register_blueprint(meetings_bp, url_prefix='/meetings')

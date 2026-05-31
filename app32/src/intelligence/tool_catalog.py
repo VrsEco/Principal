@@ -34,6 +34,7 @@ from src.core.mcp_permission_matrix_tools import register_permission_matrix_tool
 from src.core.mcp_process_flow_tools import register_process_flow_tools
 from src.core.mcp_process_pop_tools import register_process_pop_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
+from src.core.mcp_real_estate_auction_tools import register_real_estate_auction_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
 from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
 from src.core.mcp_sapiens_factory_tools import register_sapiens_factory_tools
@@ -265,6 +266,38 @@ _supplemental_mcp_tools = (
         description="Gera um rascunho inicial da descrição de um passo POP usando narração, vídeo curto, print e contexto da atividade.",
     ),
     SimpleNamespace(
+        name="get_real_estate_auction_settings_tool",
+        description="Lê a configuração do módulo Leilões Imobiliários para a empresa.",
+    ),
+    SimpleNamespace(
+        name="upsert_real_estate_auction_settings_tool",
+        description="Habilita/desabilita e configura o módulo Leilões Imobiliários para a empresa.",
+    ),
+    SimpleNamespace(
+        name="get_real_estate_auction_workspace_tool",
+        description="Retorna workspace/resumo do módulo Leilões Imobiliários no tenant.",
+    ),
+    SimpleNamespace(
+        name="list_real_estate_auction_properties_tool",
+        description="Lista imóveis/leilões do módulo, sempre escopando por company_id.",
+    ),
+    SimpleNamespace(
+        name="get_real_estate_auction_property_tool",
+        description="Retorna detalhe de um imóvel/leilão com ficha financeira, diligência, eventos e anexos.",
+    ),
+    SimpleNamespace(
+        name="create_real_estate_auction_property_tool",
+        description="Cria um imóvel/leilão no tenant habilitado.",
+    ),
+    SimpleNamespace(
+        name="update_real_estate_auction_property_tool",
+        description="Atualiza um imóvel/leilão dentro do tenant.",
+    ),
+    SimpleNamespace(
+        name="archive_real_estate_auction_property_tool",
+        description="Arquiva logicamente um imóvel/leilão dentro do tenant.",
+    ),
+    SimpleNamespace(
         name="get_work_journey_board_tool",
         description="Retorna o quadro operacional da jornada por blocos de um colaborador.",
     ),
@@ -471,6 +504,7 @@ catalog = ToolCatalog(
         register_process_flow_tools,
         register_process_pop_tools,
         register_profile_contract_tools,
+        register_real_estate_auction_tools,
         register_release_checklist_tools,
         register_sapiens_activation_tools,
         register_sapiens_factory_tools,

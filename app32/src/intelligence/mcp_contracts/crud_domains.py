@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 from .base import MCPSuccessEnvelope, _StrictModel
 
 
-CRUDDomain = Literal["routine", "projects", "processes", "meetings", "finance", "strategy"]
+CRUDDomain = Literal["routine", "projects", "processes", "meetings", "real_estate_auctions", "finance", "strategy"]
 CRUDAction = Literal["create", "read", "update", "delete", "list", "analyze", "execute"]
 CRUDRole = Literal["colaborador", "cliente", "administrador", "admin_tecnico"]
 CRUDSurface = Literal["mcp_user", "mcp_admin", "mcp_analytics", "mcp_ops"]
@@ -343,6 +343,77 @@ def build_app32_crud_contracts_manifest() -> CRUDContractsManifest:
                 entity="meeting",
                 mutation_roles=operational_roles,
                 read_roles=all_roles,
+            ),
+            CRUDDomainContract(
+                domain="real_estate_auctions",
+                title="Leilões Imobiliários",
+                description="Pipeline de imóveis de leilão, triagem, ficha financeira, diligência e rastreabilidade por tenant.",
+                surface="mcp_user",
+                tenant_scope_required=True,
+                operations=[
+                    _operation(
+                        domain="real_estate_auctions",
+                        action="list",
+                        entity="auction_property",
+                        description="Lista imóveis/leilões do tenant com filtros controlados por status, triagem e localização.",
+                        roles=all_roles,
+                        permission="real_estate_auctions.read",
+                        implementation_status="implemented",
+                    ),
+                    _operation(
+                        domain="real_estate_auctions",
+                        action="read",
+                        entity="auction_property",
+                        description="Lê detalhe de imóvel/leilão sem cruzar empresas.",
+                        roles=all_roles,
+                        permission="real_estate_auctions.read",
+                        implementation_status="implemented",
+                    ),
+                    _operation(
+                        domain="real_estate_auctions",
+                        action="create",
+                        entity="auction_property",
+                        description="Cria imóvel/leilão no tenant habilitado, com validação strict e trilha auditável.",
+                        roles=operational_roles,
+                        permission="real_estate_auctions.create",
+                        risk="medium",
+                        human_gate_required=True,
+                        implementation_status="implemented",
+                    ),
+                    _operation(
+                        domain="real_estate_auctions",
+                        action="update",
+                        entity="auction_property",
+                        description="Atualiza imóvel/leilão preservando company_id e unicidade de código por tenant.",
+                        roles=operational_roles,
+                        permission="real_estate_auctions.update",
+                        risk="medium",
+                        human_gate_required=True,
+                        implementation_status="implemented",
+                    ),
+                    _operation(
+                        domain="real_estate_auctions",
+                        action="delete",
+                        entity="auction_property",
+                        description="Arquiva imóvel/leilão com gate humano explícito e auditoria.",
+                        roles=["administrador", "admin_tecnico"],
+                        permission="real_estate_auctions.delete",
+                        risk="high",
+                        surface="mcp_admin",
+                        human_gate_required=True,
+                        implementation_status="implemented",
+                    ),
+                    _operation(
+                        domain="real_estate_auctions",
+                        action="analyze",
+                        entity="auction_property",
+                        description="Cruza pipeline de leilões em leitura analítica tenant-safe.",
+                        roles=all_roles,
+                        permission="real_estate_auctions.analyze",
+                        surface="mcp_analytics",
+                        implementation_status="implemented",
+                    ),
+                ],
             ),
             _domain_contract(
                 domain="finance",
