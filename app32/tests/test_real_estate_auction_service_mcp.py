@@ -105,6 +105,21 @@ def test_financial_sheet_and_source_payload_normalization_are_tenant_safe():
     assert "company_id" not in source
 
 
+def test_group_properties_by_status_preserves_known_columns():
+    grouped = RealEstateAuctionService.group_properties_by_status(
+        [
+            {"id": 1, "status": "in_analysis"},
+            {"id": 2, "status": "in_analysis"},
+            {"id": 3, "status": "sold"},
+        ]
+    )
+    bucket_map = {item["status"]: item for item in grouped}
+
+    assert bucket_map["in_analysis"]["count"] == 2
+    assert bucket_map["sold"]["count"] == 1
+    assert bucket_map["awaiting_auction"]["count"] == 0
+
+
 def test_mcp_real_estate_auction_tools_return_standard_envelope(monkeypatch):
     from src.core import mcp_real_estate_auction_tools as tools_module
 

@@ -44,7 +44,7 @@ def test_workspace_route_uses_service_and_tenant_filters(monkeypatch):
         "get_workspace",
         lambda company_id, include_disabled=True: {
             "settings": {"module_enabled": True, "display_name": "Leilões Imobiliários"},
-            "summary": {"properties_total": 1, "status_counts": {}, "triage_counts": {}},
+            "summary": {"properties_total": 1, "status_counts": {}, "triage_counts": {}, "active_sources_total": 0, "sources_total": 0},
             "sources": [],
             "recent_properties": [],
         },
@@ -68,9 +68,41 @@ def test_workspace_route_uses_service_and_tenant_filters(monkeypatch):
     assert captured["context"]["company_id"] == 31
     assert captured["context"]["properties"][0]["code"] == "GND-001"
     assert captured["context"]["can_manage_sources"] is True
+    assert captured["context"]["kanban_columns"][1]["status"] == "in_analysis"
     assert captured["list"]["company_id"] == 31
     assert captured["list"]["status"] == "in_analysis"
     assert captured["list"]["city"] == "Feira"
+
+
+def test_property_detail_route_builds_tabbed_context(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(route, "_resolve_company", lambda **kwargs: _company())
+    monkeypatch.setattr(route, "_has_module_permission", lambda company_id, action: True)
+    monkeypatch.setattr(
+        route.RealEstateAuctionService,
+        "get_property_detail",
+        lambda company_id, property_id: {
+            "property": {"id": property_id, "code": "GND-001", "status": "in_analysis", "triage_status": "pending", "occupied": True, "address": "Rua A"},
+            "events": [],
+            "financial_sheet": None,
+            "due_diligence": None,
+            "attachments": [],
+        },
+    )
+    monkeypatch.setattr(
+        route,
+        "render_template",
+        lambda template_name, **context: captured.update({"template": template_name, "context": context}) or "ok",
+    )
+
+    response = app.test_client().get("/real-estate-auctions/properties/7?company_id=31&tab=financial")
+
+    assert response.status_code == 200
+    assert captured["template"] == "modules/real_estate_auctions/property_detail.html"
+    assert captured["context"]["active_tab"] == "financial"
+    assert captured["context"]["detail_tabs"][0]["id"] == "overview"
+    assert captured["context"]["financial_sections"]
 
 
 def test_create_property_api_is_thin_and_tenant_scoped(monkeypatch):

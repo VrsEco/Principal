@@ -271,15 +271,26 @@ class RealEstateAuctionService:
     def list_properties(
         company_id: int,
         *,
+        q: str | None = None,
         status: str | None = None,
         triage_status: str | None = None,
         city: str | None = None,
         state: str | None = None,
+        property_type: str | None = None,
+        bank: str | None = None,
+        occupied: bool | None = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         RealEstateAuctionService.ensure_module_enabled(company_id)
         query = RealEstateAuctionProperty.query.filter_by(company_id=company_id, deleted_at=None)
 
+        if q:
+            normalized_q = f"%{_clean_text(q)}%"
+            query = query.filter(
+                (RealEstateAuctionProperty.code.ilike(normalized_q))
+                | (RealEstateAuctionProperty.nickname.ilike(normalized_q))
+                | (RealEstateAuctionProperty.address.ilike(normalized_q))
+            )
         if status:
             RealEstateAuctionService._validate_choice(status, REAL_ESTATE_AUCTION_STATUS_VALUES, "status")
             query = query.filter(RealEstateAuctionProperty.status == status)
@@ -294,10 +305,32 @@ class RealEstateAuctionService:
             query = query.filter(RealEstateAuctionProperty.city.ilike(f"%{_clean_text(city)}%"))
         if state:
             query = query.filter(RealEstateAuctionProperty.state == str(state).strip().upper()[:2])
+        if property_type:
+            query = query.filter(RealEstateAuctionProperty.property_type.ilike(f"%{_clean_text(property_type)}%"))
+        if bank:
+            query = query.filter(RealEstateAuctionProperty.bank.ilike(f"%{_clean_text(bank)}%"))
+        if occupied is not None:
+            query = query.filter(RealEstateAuctionProperty.occupied.is_(bool(occupied)))
 
         safe_limit = max(1, min(int(limit or 100), 200))
         rows = query.order_by(RealEstateAuctionProperty.updated_at.desc()).limit(safe_limit).all()
         return [row.to_dict() for row in rows]
+
+    @staticmethod
+    def group_properties_by_status(properties: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        buckets = {status: [] for status in REAL_ESTATE_AUCTION_STATUS_VALUES}
+        for item in properties or []:
+            status = item.get("status")
+            if status in buckets:
+                buckets[status].append(item)
+        return [
+            {
+                "status": status,
+                "count": len(buckets[status]),
+                "items": buckets[status],
+            }
+            for status in REAL_ESTATE_AUCTION_STATUS_VALUES
+        ]
 
     @staticmethod
     def get_property_detail(company_id: int, property_id: int) -> dict[str, Any]:

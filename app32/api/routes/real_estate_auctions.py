@@ -132,6 +132,178 @@ SOURCE_FORM_FIELDS = [
     "link_pattern",
     "listing_selector",
 ]
+STATUS_LABEL_MAP = dict(STATUS_OPTIONS)
+TRIAGE_LABEL_MAP = dict(TRIAGE_OPTIONS)
+WORKSPACE_FILTER_FIELDS = [
+    {"name": "q", "label": "Buscar imóvel", "kind": "text", "placeholder": "Código, apelido ou endereço"},
+    {"name": "status", "label": "Status", "kind": "select", "options": [("", "Todos")] + STATUS_OPTIONS},
+    {"name": "triage_status", "label": "Triagem", "kind": "select", "options": [("", "Todas")] + TRIAGE_OPTIONS},
+    {"name": "property_type", "label": "Tipo do imóvel", "kind": "text", "placeholder": "Casa, apartamento, terreno"},
+    {"name": "bank", "label": "Banco", "kind": "text", "placeholder": "Caixa, Santander..."},
+    {"name": "occupied", "label": "Ocupação", "kind": "select", "options": [("", "Todos"), ("1", "Ocupado"), ("0", "Desocupado")]},
+    {"name": "city", "label": "Cidade", "kind": "text", "placeholder": "Feira de Santana"},
+    {"name": "state", "label": "UF", "kind": "text", "placeholder": "BA", "maxlength": 2},
+]
+DETAIL_TABS = [
+    {"id": "overview", "label": "Imóvel", "description": "Cadastro principal, localização e triagem."},
+    {"id": "events", "label": "Leilões", "description": "Linha do tempo de leilões e resultados."},
+    {"id": "financial", "label": "Financeiro", "description": "Viabilidade, custos e margem."},
+    {"id": "due_diligence", "label": "Diligência", "description": "Posse, risco, débitos e observações."},
+    {"id": "attachments", "label": "Anexos", "description": "Dossiê documental do imóvel."},
+]
+OVERVIEW_SECTIONS = [
+    {
+        "title": "Identificação",
+        "fields": [
+            {"name": "code", "label": "Código", "kind": "text", "required": True, "placeholder": "GND-001"},
+            {"name": "nickname", "label": "Apelido", "kind": "text", "placeholder": "Casa Centro"},
+            {"name": "property_type", "label": "Tipo do imóvel", "kind": "text"},
+            {"name": "sale_modality", "label": "Modalidade", "kind": "text"},
+        ],
+    },
+    {
+        "title": "Localização",
+        "fields": [
+            {"name": "address", "label": "Endereço", "kind": "text", "required": True, "span": 2},
+            {"name": "district", "label": "Bairro", "kind": "text"},
+            {"name": "city", "label": "Cidade", "kind": "text"},
+            {"name": "state", "label": "UF", "kind": "text", "maxlength": 2},
+            {"name": "zip_code", "label": "CEP", "kind": "text"},
+        ],
+    },
+    {
+        "title": "Triagem e operação",
+        "fields": [
+            {"name": "status", "label": "Status", "kind": "select", "options": STATUS_OPTIONS},
+            {"name": "triage_status", "label": "Triagem", "kind": "select", "options": TRIAGE_OPTIONS},
+            {"name": "triage_reason_code", "label": "Código do motivo", "kind": "text"},
+            {"name": "triage_reason_label", "label": "Motivo da triagem", "kind": "text"},
+            {"name": "occupied", "label": "Imóvel ocupado", "kind": "checkbox", "span": 2},
+            {"name": "triage_notes", "label": "Observações de triagem", "kind": "textarea", "rows": 3, "span": 2},
+        ],
+    },
+    {
+        "title": "Dados físicos e registrais",
+        "fields": [
+            {"name": "land_area", "label": "Área do terreno (m²)", "kind": "decimal"},
+            {"name": "private_area", "label": "Área privativa (m²)", "kind": "decimal"},
+            {"name": "built_area", "label": "Área construída (m²)", "kind": "decimal"},
+            {"name": "auxiliary_filter", "label": "Filtro auxiliar", "kind": "text"},
+            {"name": "registry_number", "label": "Matrícula", "kind": "text"},
+            {"name": "registry_office", "label": "Cartório", "kind": "text"},
+            {"name": "court_district", "label": "Comarca", "kind": "text"},
+            {"name": "bank", "label": "Banco", "kind": "text"},
+        ],
+    },
+    {
+        "title": "Leitura econômica e comercial",
+        "fields": [
+            {"name": "appraisal_value", "label": "Valor avaliado", "kind": "money"},
+            {"name": "estimated_quick_sale_value", "label": "Venda rápida estimada", "kind": "money"},
+            {"name": "estimated_normal_sale_value", "label": "Venda normal estimada", "kind": "money"},
+            {"name": "recommended_max_bid", "label": "Lance máximo recomendado", "kind": "money"},
+            {"name": "closed_sale_value", "label": "Venda fechada", "kind": "money"},
+            {"name": "auctioneer", "label": "Leiloeiro principal", "kind": "text"},
+            {"name": "auction_url", "label": "URL do leilão", "kind": "url", "span": 2},
+            {"name": "notice_url", "label": "URL do edital", "kind": "url", "span": 2},
+            {"name": "buyer_name", "label": "Comprador", "kind": "text"},
+            {"name": "broker_name", "label": "Corretor", "kind": "text"},
+            {"name": "auction_won_at", "label": "Arrematado em", "kind": "datetime"},
+            {"name": "available_for_sale_at", "label": "Disponível em", "kind": "datetime"},
+            {"name": "sold_at", "label": "Vendido em", "kind": "datetime"},
+        ],
+    },
+]
+EVENT_FORM_SCHEMA = [
+    {"name": "auction_type", "label": "Tipo do leilão", "kind": "text", "required": True},
+    {"name": "auction_datetime", "label": "Data e hora", "kind": "datetime"},
+    {"name": "minimum_bid", "label": "Lance mínimo", "kind": "money"},
+    {"name": "modality", "label": "Modalidade", "kind": "text"},
+    {"name": "auctioneer", "label": "Leiloeiro", "kind": "text"},
+    {"name": "winning_bid", "label": "Lance vencedor", "kind": "money"},
+    {"name": "result", "label": "Resultado", "kind": "text"},
+    {"name": "notes", "label": "Notas", "kind": "textarea", "rows": 3, "span": 2},
+]
+FINANCIAL_SECTIONS = [
+    {
+        "title": "Aquisição e impostos",
+        "fields": [
+            {"name": "winning_bid", "label": "Lance vencedor", "kind": "money"},
+            {"name": "auctioneer_commission_percent", "label": "Comissão leiloeiro (%)", "kind": "percent", "step": "0.0001"},
+            {"name": "other_acquisition_costs", "label": "Outros custos de aquisição", "kind": "money"},
+            {"name": "transfer_tax_percent", "label": "ITBI (%)", "kind": "percent", "step": "0.0001"},
+            {"name": "transfer_tax_value", "label": "ITBI (valor)", "kind": "money"},
+            {"name": "registry_cost_percent", "label": "Registro (%)", "kind": "percent", "step": "0.0001"},
+            {"name": "registry_cost_value", "label": "Registro (valor)", "kind": "money"},
+        ],
+    },
+    {
+        "title": "Obras, débitos e custos operacionais",
+        "fields": [
+            {"name": "eviction_cost", "label": "Desocupação", "kind": "money"},
+            {"name": "renovation_budget", "label": "Reforma", "kind": "money"},
+            {"name": "cleaning_cost", "label": "Limpeza", "kind": "money"},
+            {"name": "overdue_property_tax", "label": "IPTU vencido", "kind": "money"},
+            {"name": "future_property_tax", "label": "IPTU futuro", "kind": "money"},
+            {"name": "overdue_condo_fee", "label": "Condomínio vencido", "kind": "money"},
+            {"name": "future_condo_fee", "label": "Condomínio futuro", "kind": "money"},
+            {"name": "legal_fees", "label": "Honorários jurídicos", "kind": "money"},
+            {"name": "contingency_value", "label": "Contingência", "kind": "money"},
+            {"name": "operational_expenses", "label": "Despesas operacionais", "kind": "money"},
+        ],
+    },
+    {
+        "title": "Capital, margem e saída",
+        "fields": [
+            {"name": "capital_cost_months", "label": "Custo de capital (meses)", "kind": "int"},
+            {"name": "capital_cost_percent", "label": "Custo de capital (%)", "kind": "percent", "step": "0.0001"},
+            {"name": "minimum_profit_percent", "label": "Lucro mínimo (%)", "kind": "percent", "step": "0.0001"},
+            {"name": "minimum_profit_value", "label": "Lucro mínimo (valor)", "kind": "money"},
+            {"name": "projected_sale_value", "label": "Venda projetada", "kind": "money"},
+            {"name": "broker_commission_percent", "label": "Comissão corretor (%)", "kind": "percent", "step": "0.0001"},
+            {"name": "sale_tax_percent", "label": "Impostos sobre venda (%)", "kind": "percent", "step": "0.0001"},
+        ],
+    },
+]
+DUE_DILIGENCE_SECTIONS = [
+    {
+        "title": "Riscos e contato",
+        "fields": [
+            {"name": "condo_fee_value", "label": "Condomínio", "kind": "money"},
+            {"name": "building_age", "label": "Idade do prédio", "kind": "int"},
+            {"name": "region_square_meter_value", "label": "R$/m² da região", "kind": "money"},
+            {"name": "other_debts", "label": "Outras dívidas", "kind": "money"},
+            {"name": "resident_contacted", "label": "Morador contatado", "kind": "checkbox", "span": 2},
+            {"name": "manager_contacted", "label": "Síndico contatado", "kind": "checkbox", "span": 2},
+        ],
+    },
+    {
+        "title": "Descrição e observações",
+        "fields": [
+            {"name": "building_description", "label": "Descrição do prédio", "kind": "textarea", "rows": 3, "span": 2},
+            {"name": "property_description", "label": "Descrição do imóvel", "kind": "textarea", "rows": 3, "span": 2},
+            {"name": "resident_report", "label": "Relato do morador", "kind": "textarea", "rows": 3, "span": 2},
+            {"name": "manager_report", "label": "Relato do síndico", "kind": "textarea", "rows": 3, "span": 2},
+            {"name": "internal_notes", "label": "Notas internas", "kind": "textarea", "rows": 3, "span": 2},
+        ],
+    },
+]
+ATTACHMENT_FORM_SCHEMA = [
+    {"name": "category", "label": "Categoria", "kind": "select", "options": [(item, item) for item in REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES]},
+    {"name": "original_filename", "label": "Arquivo original", "kind": "text", "required": True},
+    {"name": "stored_filename", "label": "Arquivo interno", "kind": "text"},
+    {"name": "storage_path", "label": "Storage path", "kind": "text"},
+    {"name": "mime_type", "label": "MIME type", "kind": "text"},
+    {"name": "size_bytes", "label": "Tamanho (bytes)", "kind": "int"},
+]
+SOURCE_FORM_SCHEMA = [
+    {"name": "name", "label": "Nome da fonte", "kind": "text", "required": True},
+    {"name": "domain", "label": "Domínio", "kind": "text"},
+    {"name": "base_url", "label": "Base URL", "kind": "url", "required": True},
+    {"name": "link_pattern", "label": "Pattern do link", "kind": "text"},
+    {"name": "listing_selector", "label": "Selector da listagem", "kind": "text", "span": 2},
+    {"name": "active", "label": "Fonte ativa", "kind": "checkbox", "span": 2},
+]
 
 
 def _current_user_id() -> int | None:
@@ -203,6 +375,30 @@ def _form_payload(fields: list[str]) -> dict[str, Any]:
     return {field: request.form.get(field) for field in fields if field in request.form}
 
 
+def _parse_optional_bool(raw_value: str | None) -> bool | None:
+    if raw_value in (None, ""):
+        return None
+    return str(raw_value).strip().lower() in {"1", "true", "sim", "yes"}
+
+
+def _active_detail_tab() -> str:
+    allowed = {item["id"] for item in DETAIL_TABS}
+    raw = (request.args.get("tab") or request.form.get("tab") or "overview").strip().lower()
+    return raw if raw in allowed else "overview"
+
+
+def _detail_redirect(company_id: int, property_id: int, *, fallback_tab: str | None = None):
+    tab = fallback_tab or _active_detail_tab()
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company_id, tab=tab))
+
+
+def _html_datetime_value(value: Any) -> str:
+    if not value:
+        return ""
+    text = str(value).strip()
+    return text[:16] if "T" in text else text.replace(" ", "T")[:16]
+
+
 def _json_error(exc: Exception, *, status: int = 400):
     return jsonify({"success": False, "error": str(exc)}), status
 
@@ -212,8 +408,12 @@ def _json_error(exc: Exception, *, status: int = 400):
 def workspace():
     company = _resolve_company(action="view")
     filters = {
+        "q": request.args.get("q") or None,
         "status": request.args.get("status") or None,
         "triage_status": request.args.get("triage_status") or None,
+        "property_type": request.args.get("property_type") or None,
+        "bank": request.args.get("bank") or None,
+        "occupied": _parse_optional_bool(request.args.get("occupied")),
         "city": request.args.get("city") or None,
         "state": request.args.get("state") or None,
     }
@@ -228,15 +428,27 @@ def workspace():
         workspace_payload = RealEstateAuctionService.get_workspace(company.id, include_disabled=True)
         properties = []
 
+    kanban_columns = [
+        {
+            **column,
+            "label": STATUS_LABEL_MAP.get(column["status"], column["status"]),
+        }
+        for column in RealEstateAuctionService.group_properties_by_status(properties)
+    ]
+
     return render_template(
         "modules/real_estate_auctions/workspace.html",
         company=company,
         company_id=company.id,
         workspace=workspace_payload,
         properties=properties,
+        kanban_columns=kanban_columns,
         filters=filters,
+        filter_fields=WORKSPACE_FILTER_FIELDS,
         status_options=STATUS_OPTIONS,
+        status_label_map=STATUS_LABEL_MAP,
         triage_options=TRIAGE_OPTIONS,
+        triage_label_map=TRIAGE_LABEL_MAP,
         can_create=_has_module_permission(company.id, "create"),
         can_edit=_has_module_permission(company.id, "edit"),
         can_configure=_has_module_permission(company.id, "configure"),
@@ -310,19 +522,31 @@ def property_detail(property_id: int):
         flash(str(exc), "error")
         return redirect(url_for("real_estate_auctions.workspace", company_id=company.id))
 
+    active_tab = _active_detail_tab()
     return render_template(
         "modules/real_estate_auctions/property_detail.html",
         company=company,
         company_id=company.id,
         detail=detail,
         property=detail["property"],
+        active_tab=active_tab,
+        detail_tabs=DETAIL_TABS,
+        overview_sections=OVERVIEW_SECTIONS,
+        event_form_schema=EVENT_FORM_SCHEMA,
+        financial_sections=FINANCIAL_SECTIONS,
+        due_diligence_sections=DUE_DILIGENCE_SECTIONS,
+        attachment_form_schema=ATTACHMENT_FORM_SCHEMA,
+        source_form_schema=SOURCE_FORM_SCHEMA,
         status_options=STATUS_OPTIONS,
+        status_label_map=STATUS_LABEL_MAP,
         triage_options=TRIAGE_OPTIONS,
+        triage_label_map=TRIAGE_LABEL_MAP,
         can_edit=_has_module_permission(company.id, "edit"),
         can_delete=_has_module_permission(company.id, "delete"),
         can_manage_financial_sheet=_has_module_permission(company.id, "manage_financial_sheet"),
         can_manage_sources=_has_module_permission(company.id, "manage_sources"),
         attachment_categories=REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES,
+        html_datetime_value=_html_datetime_value,
     )
 
 
@@ -362,7 +586,7 @@ def property_update(property_id: int):
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
         return redirect(url_for("real_estate_auctions.property_edit", property_id=property_id, company_id=company.id))
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id)
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/archive", methods=["POST"])
@@ -386,7 +610,7 @@ def property_event_create(property_id: int):
         flash("Evento de leilão registrado com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id, fallback_tab="events")
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/events/<int:event_id>/delete", methods=["POST"])
@@ -398,7 +622,7 @@ def property_event_delete(property_id: int, event_id: int):
         flash("Evento removido com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id, fallback_tab="events")
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/financial-sheet", methods=["POST"])
@@ -410,7 +634,7 @@ def property_financial_sheet_upsert(property_id: int):
         flash("Ficha financeira atualizada com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id, fallback_tab="financial")
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/due-diligence", methods=["POST"])
@@ -425,7 +649,7 @@ def property_due_diligence_upsert(property_id: int):
         flash("Diligência atualizada com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id, fallback_tab="due_diligence")
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/attachments", methods=["POST"])
@@ -442,7 +666,7 @@ def property_attachment_create(property_id: int):
         flash("Metadado de anexo registrado com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id, fallback_tab="attachments")
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/attachments/<int:attachment_id>/delete", methods=["POST"])
@@ -454,7 +678,7 @@ def property_attachment_delete(property_id: int, attachment_id: int):
         flash("Anexo removido com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
-    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+    return _detail_redirect(company.id, property_id, fallback_tab="attachments")
 
 
 @real_estate_auctions_bp.route("/real-estate-auctions/sources", methods=["POST"])
@@ -519,8 +743,12 @@ def api_properties_list():
     try:
         properties = RealEstateAuctionService.list_properties(
             company.id,
+            q=request.args.get("q") or None,
             status=request.args.get("status") or None,
             triage_status=request.args.get("triage_status") or None,
+            property_type=request.args.get("property_type") or None,
+            bank=request.args.get("bank") or None,
+            occupied=_parse_optional_bool(request.args.get("occupied")),
             city=request.args.get("city") or None,
             state=request.args.get("state") or None,
             limit=request.args.get("limit", default=100, type=int),

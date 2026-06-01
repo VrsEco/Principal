@@ -15,73 +15,99 @@
         <i class="fa-solid fa-plus"></i> Novo imóvel
     </a>
     {% endif %}
-    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
-        <i class="fa-solid fa-filter"></i>
-        <span class="btn-text">Filtros</span>
-    </button>
 </div>
 {% endblock %}
 
 {% block sidebar_right %}
 <aside class="rea-side">
-    <div class="rea-side__header">
-        <p>Configuração</p>
+    <div class="rea-side__card">
+        <p class="rea-side__eyebrow">Configuração</p>
         <h3>{{ workspace.settings.display_name or 'Leilões Imobiliários' }}</h3>
         <span class="rea-chip {{ 'rea-chip--success' if workspace.settings.module_enabled else 'rea-chip--muted' }}">
             {{ 'Habilitado' if workspace.settings.module_enabled else 'Desabilitado' }}
         </span>
+        {% if can_configure %}
+        <form method="post" action="{{ url_for('real_estate_auctions.settings_update', company_id=company_id) }}" class="rea-form rea-form--stack">
+            <label><span>Nome exibido</span><input name="display_name" value="{{ workspace.settings.display_name or 'Leilões Imobiliários' }}"></label>
+            <label><span>Prefixo</span><input name="code_prefix" value="{{ workspace.settings.code_prefix or '' }}" placeholder="GND"></label>
+            <label class="rea-check"><input type="checkbox" name="module_enabled" value="1" {% if workspace.settings.module_enabled %}checked{% endif %}><span>Módulo ativo neste tenant</span></label>
+            <button class="rea-btn rea-btn--primary" type="submit">Salvar configuração</button>
+        </form>
+        {% endif %}
     </div>
 
-    {% if can_configure %}
-    <form method="post" action="{{ url_for('real_estate_auctions.settings_update', company_id=company_id) }}" class="rea-form rea-form--compact">
-        <label>
-            <span>Nome exibido</span>
-            <input name="display_name" value="{{ workspace.settings.display_name or 'Leilões Imobiliários' }}">
-        </label>
-        <label>
-            <span>Prefixo de código</span>
-            <input name="code_prefix" value="{{ workspace.settings.code_prefix or '' }}" placeholder="GND">
-        </label>
-        <label class="rea-check">
-            <input type="checkbox" name="module_enabled" value="1" {% if workspace.settings.module_enabled %}checked{% endif %}>
-            <span>Módulo habilitado para este tenant</span>
-        </label>
-        <button class="rea-btn rea-btn--primary" type="submit">Salvar configuração</button>
-    </form>
-    {% else %}
-    <p class="rea-muted">A configuração do módulo é restrita a administradores do tenant.</p>
-    {% endif %}
+    <div class="rea-side__card">
+        <div class="rea-side__header">
+            <div>
+                <p class="rea-side__eyebrow">Filtros</p>
+                <h3>Explorar carteira</h3>
+            </div>
+        </div>
+        <form method="get" action="{{ url_for('real_estate_auctions.workspace') }}" class="rea-form rea-form--stack">
+            <input type="hidden" name="company_id" value="{{ company_id }}">
+            {% for field in filter_fields %}
+            <label>
+                <span>{{ field.label }}</span>
+                {% if field.kind == 'select' %}
+                <select name="{{ field.name }}">
+                    {% for value, label in field.options %}
+                    <option value="{{ value }}" {% if (filters.get(field.name) ~ '') == (value ~ '') %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <input name="{{ field.name }}" value="{{ filters.get(field.name, '') if filters.get(field.name) is not none else '' }}" placeholder="{{ field.placeholder or '' }}" {% if field.maxlength %}maxlength="{{ field.maxlength }}"{% endif %}>
+                {% endif %}
+            </label>
+            {% endfor %}
+            <div class="rea-side__actions">
+                <button class="rea-btn rea-btn--primary" type="submit">Aplicar filtros</button>
+                <a class="rea-btn rea-btn--secondary" href="{{ url_for('real_estate_auctions.workspace', company_id=company_id) }}">Limpar</a>
+            </div>
+        </form>
+    </div>
 
-    <form method="get" action="{{ url_for('real_estate_auctions.workspace') }}" class="rea-form rea-form--compact">
-        <input type="hidden" name="company_id" value="{{ company_id }}">
-        <label>
-            <span>Status</span>
-            <select name="status">
-                <option value="">Todos</option>
-                {% for value, label in status_options %}
-                <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>
-            <span>Triagem</span>
-            <select name="triage_status">
-                <option value="">Todas</option>
-                {% for value, label in triage_options %}
-                <option value="{{ value }}" {% if filters.triage_status == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>
-            <span>Cidade</span>
-            <input name="city" value="{{ filters.city or '' }}" placeholder="Feira de Santana">
-        </label>
-        <label>
-            <span>UF</span>
-            <input name="state" maxlength="2" value="{{ filters.state or '' }}" placeholder="BA">
-        </label>
-        <button class="rea-btn rea-btn--secondary" type="submit">Aplicar filtros</button>
-    </form>
+    <div class="rea-side__card">
+        <div class="rea-side__header">
+            <div>
+                <p class="rea-side__eyebrow">Fontes</p>
+                <h3>Captação</h3>
+            </div>
+            <span class="rea-chip rea-chip--soft">{{ workspace.summary.sources_total or 0 }}</span>
+        </div>
+        {% if can_manage_sources %}
+        <form class="rea-form rea-form--stack" method="post" action="{{ url_for('real_estate_auctions.source_create', company_id=company_id) }}">
+            <input type="hidden" name="company_id" value="{{ company_id }}">
+            <label><span>Nome</span><input name="name" required></label>
+            <label><span>Domínio</span><input name="domain"></label>
+            <label><span>Base URL</span><input type="url" name="base_url" required></label>
+            <label><span>Pattern do link</span><input name="link_pattern"></label>
+            <label><span>Selector da listagem</span><input name="listing_selector"></label>
+            <label class="rea-check"><input type="checkbox" name="active" value="1" checked><span>Fonte ativa</span></label>
+            <button class="rea-btn rea-btn--secondary" type="submit">Cadastrar fonte</button>
+        </form>
+        {% endif %}
+        <div class="rea-source-list">
+            {% for source in workspace.sources %}
+            <div class="rea-source-item">
+                <div>
+                    <strong>{{ source.name }}</strong>
+                    <span>{{ source.domain or source.base_url }}</span>
+                </div>
+                <div class="rea-source-item__actions">
+                    <span class="rea-chip {{ 'rea-chip--success' if source.active else 'rea-chip--muted' }}">{{ 'Ativa' if source.active else 'Inativa' }}</span>
+                    {% if can_manage_sources %}
+                    <form method="post" action="{{ url_for('real_estate_auctions.source_delete', source_id=source.id, company_id=company_id) }}">
+                        <input type="hidden" name="company_id" value="{{ company_id }}">
+                        <button class="rea-link-btn" type="submit">Remover</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <p class="rea-muted">Nenhuma fonte cadastrada.</p>
+            {% endfor %}
+        </div>
+    </div>
 </aside>
 {% endblock %}
 
@@ -99,13 +125,14 @@
 
     <header class="rea-hero">
         <div>
-            <p class="rea-eyebrow">Módulo customizável por tenant</p>
+            <p class="rea-eyebrow">Kanban operacional do tenant</p>
             <h1>{{ workspace.settings.display_name or 'Leilões Imobiliários' }}</h1>
-            <p>Pipeline multi-tenant para triagem, arrematação e comercialização de oportunidades imobiliárias.</p>
+            <p>Visualize toda a carteira por status, aplique filtros e entre no detalhe por imóvel.</p>
         </div>
         <div class="rea-hero__meta">
             <span>{{ company.client_code or 'VS' }}</span>
             <strong>{{ company.name }}</strong>
+            <small>{{ properties|length }} item(ns) na visão atual</small>
         </div>
     </header>
 
@@ -113,213 +140,62 @@
     <section class="rea-empty">
         <i class="fa-solid fa-lock"></i>
         <h2>Módulo ainda não habilitado para esta empresa.</h2>
-        <p>GanduInvest será apenas a primeira configuração. Outros clientes usam a mesma base, isolados por <code>company_id</code>.</p>
-        {% if can_configure %}
-        <form method="post" action="{{ url_for('real_estate_auctions.settings_update', company_id=company_id) }}">
-            <input type="hidden" name="module_enabled" value="1">
-            <input type="hidden" name="display_name" value="{{ workspace.settings.display_name or 'Leilões Imobiliários' }}">
-            <input type="hidden" name="code_prefix" value="{{ workspace.settings.code_prefix or company.client_code or '' }}">
-            <button class="rea-btn rea-btn--primary" type="submit">Habilitar agora</button>
-        </form>
-        {% endif %}
+        <p>Ative o módulo na barra lateral para operar a carteira de leilões deste tenant.</p>
     </section>
     {% else %}
     <section class="rea-kpis">
-        <article>
-            <span>Total de imóveis</span>
-            <strong>{{ workspace.summary.properties_total }}</strong>
-        </article>
-        <article>
-            <span>Em análise</span>
-            <strong>{{ workspace.summary.status_counts.get('in_analysis', 0) }}</strong>
-        </article>
-        <article>
-            <span>Aguardando leilão</span>
-            <strong>{{ workspace.summary.status_counts.get('awaiting_auction', 0) }}</strong>
-        </article>
-        <article>
-            <span>Disponíveis/Vendidos</span>
-            <strong>{{ workspace.summary.status_counts.get('available_for_sale', 0) + workspace.summary.status_counts.get('sold', 0) }}</strong>
-        </article>
+        <article><span>Total de imóveis</span><strong>{{ workspace.summary.properties_total }}</strong></article>
+        <article><span>Em análise</span><strong>{{ workspace.summary.status_counts.get('in_analysis', 0) }}</strong></article>
+        <article><span>Aguardando leilão</span><strong>{{ workspace.summary.status_counts.get('awaiting_auction', 0) }}</strong></article>
+        <article><span>Fontes ativas</span><strong>{{ workspace.summary.active_sources_total }}</strong></article>
     </section>
 
-    <section class="rea-panel">
-        <div class="rea-panel__header">
+    <section class="rea-board-shell">
+        <div class="rea-board-header">
             <div>
-                <p class="rea-eyebrow">Pipeline operacional</p>
-                <h2>Oportunidades imobiliárias</h2>
+                <p class="rea-eyebrow">Carteira</p>
+                <h2>Todos os imóveis em kanban</h2>
             </div>
-            <span>{{ properties|length }} registros exibidos</span>
+            <span>{{ properties|length }} registro(s) após filtros</span>
         </div>
-
-        {% if properties %}
-        <div class="rea-table-wrap">
-            <table class="rea-table">
-                <thead>
-                    <tr>
-                        <th>Código</th>
-                        <th>Imóvel</th>
-                        <th>Localização</th>
-                        <th>Status</th>
-                        <th>Triagem</th>
-                        <th>Valor avaliado</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in properties %}
-                    <tr>
-                        <td><strong>{{ item.code }}</strong></td>
-                        <td>
-                            <strong>{{ item.nickname or item.property_type or 'Imóvel' }}</strong>
-                            <span>{{ item.address }}</span>
-                        </td>
-                        <td>{{ item.city or '-' }}{% if item.state %}/{{ item.state }}{% endif %}</td>
-                        <td><span class="rea-chip">{{ dict(status_options).get(item.status, item.status) }}</span></td>
-                        <td><span class="rea-chip rea-chip--soft">{{ dict(triage_options).get(item.triage_status, item.triage_status) }}</span></td>
-                        <td>{{ item.appraisal_value|format_currency_br if item.appraisal_value else '-' }}</td>
-                        <td class="rea-table__actions">
-                            <a href="{{ url_for('real_estate_auctions.property_detail', property_id=item.id, company_id=company_id) }}">Abrir</a>
-                        </td>
-                    </tr>
+        <div class="rea-board">
+            {% for column in kanban_columns %}
+            <article class="rea-column">
+                <header class="rea-column__header">
+                    <div>
+                        <strong>{{ column.label }}</strong>
+                        <small>{{ column.status }}</small>
+                    </div>
+                    <span class="rea-column__count">{{ column.count }}</span>
+                </header>
+                <div class="rea-column__body">
+                    {% for item in column.items %}
+                    <a class="rea-card" href="{{ url_for('real_estate_auctions.property_detail', property_id=item.id, company_id=company_id) }}">
+                        <div class="rea-card__top">
+                            <span class="rea-card__code">{{ item.code }}</span>
+                            <span class="rea-chip rea-chip--soft">{{ triage_label_map.get(item.triage_status, item.triage_status) }}</span>
+                        </div>
+                        <h3>{{ item.nickname or item.property_type or 'Imóvel sem apelido' }}</h3>
+                        <p>{{ item.address }}</p>
+                        <dl>
+                            <div><dt>Cidade</dt><dd>{{ item.city or '-' }}{% if item.state %}/{{ item.state }}{% endif %}</dd></div>
+                            <div><dt>Banco</dt><dd>{{ item.bank or '-' }}</dd></div>
+                            <div><dt>Ocupação</dt><dd>{{ 'Ocupado' if item.occupied else 'Desocupado' }}</dd></div>
+                            <div><dt>Avaliação</dt><dd>{{ item.appraisal_value|format_currency_br if item.appraisal_value else '-' }}</dd></div>
+                        </dl>
+                    </a>
+                    {% else %}
+                    <div class="rea-column__empty">Sem imóveis nesta etapa.</div>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="rea-empty rea-empty--inline">
-            <i class="fa-regular fa-building"></i>
-            <h3>Nenhuma oportunidade cadastrada.</h3>
-            {% if can_create %}
-            <a class="rea-btn rea-btn--primary" href="{{ url_for('real_estate_auctions.property_new', company_id=company_id) }}">Cadastrar primeiro imóvel</a>
-            {% endif %}
-        </div>
-        {% endif %}
-    </section>
-
-    <section class="rea-panel">
-        <div class="rea-panel__header">
-            <div>
-                <p class="rea-eyebrow">Captação e importação</p>
-                <h2>Fontes do tenant</h2>
-            </div>
-            <span>{{ workspace.sources|length }} fonte(s)</span>
-        </div>
-        {% if can_manage_sources %}
-        <form class="rea-form rea-form--section rea-grid-2" method="post" action="{{ url_for('real_estate_auctions.source_create', company_id=company_id) }}">
-            <input type="hidden" name="company_id" value="{{ company_id }}">
-            <label><span>Nome</span><input name="name" placeholder="Caixa / Santander / Portal" required></label>
-            <label><span>Domínio</span><input name="domain" placeholder="caixa.gov.br"></label>
-            <label><span>Base URL</span><input name="base_url" placeholder="https://..."></label>
-            <label><span>Pattern do link</span><input name="link_pattern" placeholder="/imovel/{codigo}"></label>
-            <label class="rea-grid-span-2"><span>Selector de listagem</span><input name="listing_selector" placeholder=".property-card a"></label>
-            <label class="rea-check"><input type="checkbox" name="active" value="1" checked><span>Fonte ativa</span></label>
-            <div class="rea-form__actions rea-grid-span-2">
-                <button class="rea-btn rea-btn--primary" type="submit">Cadastrar fonte</button>
-            </div>
-        </form>
-        {% endif %}
-
-        {% if workspace.sources %}
-        <div class="rea-list">
-            {% for source in workspace.sources %}
-            <div class="rea-list__row">
-                <div>
-                    <strong>{{ source.name }}</strong>
-                    <span>{{ source.domain or source.base_url or '-' }}</span>
                 </div>
-                <div class="rea-list__actions">
-                    <span class="rea-chip {{ 'rea-chip--success' if source.active else 'rea-chip--muted' }}">{{ 'Ativa' if source.active else 'Inativa' }}</span>
-                    {% if can_manage_sources %}
-                    <form method="post" action="{{ url_for('real_estate_auctions.source_delete', source_id=source.id, company_id=company_id) }}">
-                        <input type="hidden" name="company_id" value="{{ company_id }}">
-                        <button class="rea-btn rea-btn--secondary rea-btn--sm" type="submit">Remover</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
+            </article>
             {% endfor %}
         </div>
-        {% else %}
-        <p class="rea-muted rea-panel-pad">Nenhuma fonte cadastrada neste tenant.</p>
-        {% endif %}
     </section>
     {% endif %}
 </div>
 
 <style>
-    .rea-page { padding:0 1.25rem 1.4rem; display:flex; flex-direction:column; gap:1rem; }
-    .rea-actions { display:flex; gap:.6rem; align-items:center; }
-    .rea-hero { display:flex; justify-content:space-between; gap:1rem; align-items:stretch; border:1px solid var(--border); border-radius:22px; padding:1.1rem; background:linear-gradient(135deg,#0f172a,#1d4ed8); color:#fff; box-shadow:var(--shadow-sm); }
-    .rea-hero h1 { margin:.15rem 0 .25rem; font-size:1.55rem; }
-    .rea-hero p { margin:0; color:rgba(255,255,255,.82); max-width:720px; }
-    .rea-hero__meta { min-width:210px; border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:.9rem; background:rgba(255,255,255,.08); display:flex; flex-direction:column; justify-content:center; }
-    .rea-hero__meta span { font-weight:800; letter-spacing:.08em; font-size:.75rem; color:#bfdbfe; }
-    .rea-hero__meta strong { font-size:.95rem; }
-    .rea-eyebrow { margin:0; font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; font-weight:800; color:var(--primary); }
-    .rea-hero .rea-eyebrow { color:#bfdbfe; }
-    .rea-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; }
-    .rea-kpis article { border:1px solid var(--border); border-radius:18px; padding:.9rem 1rem; background:var(--surface); }
-    .rea-kpis span { display:block; color:var(--text-secondary); font-size:.78rem; }
-    .rea-kpis strong { display:block; font-size:1.65rem; color:var(--text-primary); }
-    .rea-panel, .rea-empty { border:1px solid var(--border); border-radius:20px; background:var(--surface); box-shadow:var(--shadow-sm); }
-    .rea-panel__header { display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem 1.1rem; border-bottom:1px solid var(--border); }
-    .rea-panel__header h2 { margin:.15rem 0 0; font-size:1.08rem; }
-    .rea-panel__header > span { color:var(--text-secondary); font-size:.8rem; }
-    .rea-table-wrap { overflow:auto; }
-    .rea-table { width:100%; border-collapse:collapse; min-width:880px; }
-    .rea-table th { text-align:left; padding:.72rem .9rem; background:var(--surface-secondary); color:var(--text-secondary); font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; }
-    .rea-table td { padding:.82rem .9rem; border-top:1px solid var(--border); vertical-align:top; }
-    .rea-table td span { display:block; color:var(--text-secondary); font-size:.78rem; margin-top:.15rem; }
-    .rea-table__actions { text-align:right; }
-    .rea-table__actions a { color:var(--primary); font-weight:800; text-decoration:none; }
-    .rea-chip { display:inline-flex !important; align-items:center; width:max-content; border-radius:999px; background:#eef2ff; color:#1d4ed8 !important; padding:.25rem .55rem; font-size:.7rem !important; font-weight:800; }
-    .rea-chip--soft { background:#f1f5f9; color:#475569 !important; }
-    .rea-chip--success { background:#dcfce7; color:#15803d !important; }
-    .rea-chip--muted { background:#f1f5f9; color:#64748b !important; }
-    .rea-empty { padding:2rem; text-align:center; display:flex; flex-direction:column; align-items:center; gap:.6rem; }
-    .rea-empty i { font-size:2rem; color:var(--primary); }
-    .rea-empty h2, .rea-empty h3 { margin:0; }
-    .rea-empty p { margin:0; color:var(--text-secondary); max-width:720px; }
-    .rea-empty--inline { border:none; box-shadow:none; border-radius:0; }
-    .rea-side { padding:1rem; display:flex; flex-direction:column; gap:1rem; }
-    .rea-side__header { border:1px solid var(--border); border-radius:18px; padding:1rem; background:var(--surface); }
-    .rea-side__header p { margin:0 0 .25rem; color:var(--text-secondary); font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
-    .rea-side__header h3 { margin:0 0 .55rem; }
-    .rea-form { display:grid; gap:.7rem; }
-    .rea-form label { display:flex; flex-direction:column; gap:.3rem; color:var(--text-secondary); font-size:.78rem; font-weight:700; }
-    .rea-form input, .rea-form select, .rea-form textarea { border:1px solid var(--border); border-radius:12px; padding:.65rem .75rem; background:#fff; color:var(--text-primary); }
-    .rea-form--compact { border:1px solid var(--border); border-radius:18px; padding:1rem; background:var(--surface); }
-    .rea-form--section { padding:1rem 1.1rem; border-bottom:1px solid var(--border); }
-    .rea-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
-    .rea-grid-span-2 { grid-column:1 / -1; }
-    .rea-check { flex-direction:row !important; align-items:center; }
-    .rea-check input { width:auto; }
-    .rea-form__actions { display:flex; justify-content:flex-end; }
-    .rea-btn { border:none; border-radius:12px; padding:.72rem .95rem; font-weight:800; text-decoration:none; cursor:pointer; display:inline-flex; gap:.45rem; justify-content:center; align-items:center; }
-    .rea-btn--primary { background:var(--primary); color:#fff; }
-    .rea-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
-    .rea-btn--sm { padding:.5rem .7rem; font-size:.78rem; }
-    .rea-alerts { display:grid; gap:.5rem; }
-    .rea-alert { border-radius:14px; padding:.7rem .85rem; border:1px solid var(--border); background:#f8fafc; }
-    .rea-alert--success { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
-    .rea-alert--error { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
-    .rea-alert--warning { border-color:#fde68a; background:#fffbeb; color:#92400e; }
-    .rea-muted { color:var(--text-secondary); font-size:.82rem; line-height:1.4; }
-    .rea-panel-pad { padding:1rem 1.1rem; }
-    .rea-list { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.55rem; }
-    .rea-list__row { border:1px solid var(--border); border-radius:14px; padding:.75rem .85rem; background:var(--surface-secondary); display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; }
-    .rea-list strong, .rea-list span { display:block; }
-    .rea-list span { color:var(--text-secondary); font-size:.78rem; margin-top:.15rem; }
-    .rea-list__actions { display:flex; gap:.55rem; align-items:center; }
-    @media (max-width: 980px) {
-        .rea-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
-        .rea-hero { flex-direction:column; }
-        .rea-grid-2 { grid-template-columns:1fr; }
-    }
-    @media (max-width: 640px) {
-        .rea-kpis { grid-template-columns:1fr; }
-        .rea-actions { flex-direction:column; align-items:stretch; }
-    }
+.rea-page{padding:0 1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem}.rea-actions{display:flex;gap:.6rem;align-items:center}.rea-hero{display:flex;justify-content:space-between;gap:1rem;align-items:stretch;border:1px solid var(--border);border-radius:22px;padding:1.1rem;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;box-shadow:var(--shadow-sm)}.rea-hero h1{margin:.15rem 0 .25rem;font-size:1.55rem}.rea-hero p{margin:0;color:rgba(255,255,255,.82);max-width:720px}.rea-hero__meta{min-width:220px;border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:.9rem;background:rgba(255,255,255,.08);display:flex;flex-direction:column;justify-content:center}.rea-hero__meta span{font-weight:800;letter-spacing:.08em;font-size:.75rem;color:#bfdbfe}.rea-hero__meta strong{font-size:.95rem}.rea-hero__meta small{color:rgba(255,255,255,.85)}.rea-eyebrow,.rea-side__eyebrow{margin:0;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--primary)}.rea-hero .rea-eyebrow{color:#bfdbfe}.rea-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}.rea-kpis article,.rea-side__card,.rea-board-shell,.rea-empty{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:var(--shadow-sm)}.rea-kpis article{padding:1rem}.rea-kpis span{display:block;color:var(--text-secondary);font-size:.8rem}.rea-kpis strong{display:block;margin-top:.35rem;font-size:1.25rem}.rea-side{padding:1rem;display:flex;flex-direction:column;gap:1rem}.rea-side__card{padding:1rem;display:flex;flex-direction:column;gap:.8rem}.rea-side__header{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem}.rea-form{display:grid;gap:.7rem}.rea-form--stack label{display:flex;flex-direction:column;gap:.3rem;color:var(--text-secondary);font-size:.78rem;font-weight:700}.rea-form input,.rea-form select,.rea-form textarea{border:1px solid var(--border);border-radius:12px;padding:.65rem .75rem;background:#fff;color:var(--text-primary)}.rea-check{flex-direction:row !important;align-items:center}.rea-check input{width:auto}.rea-side__actions{display:flex;gap:.5rem}.rea-btn{border:none;border-radius:12px;padding:.72rem .95rem;font-weight:800;text-decoration:none;cursor:pointer;display:inline-flex;gap:.45rem;justify-content:center;align-items:center}.rea-btn--primary{background:var(--primary);color:#fff}.rea-btn--secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}.rea-chip{display:inline-flex;align-items:center;width:max-content;border-radius:999px;background:#eef2ff;color:#1d4ed8;padding:.25rem .55rem;font-size:.7rem;font-weight:800}.rea-chip--soft{background:#f1f5f9;color:#475569}.rea-chip--success{background:#dcfce7;color:#15803d}.rea-chip--muted{background:#f1f5f9;color:#64748b}.rea-board-shell{padding:1rem}.rea-board-header{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;padding:0 .1rem 1rem}.rea-board-header h2{margin:.15rem 0 0}.rea-board-header>span{color:var(--text-secondary);font-size:.82rem}.rea-board{display:flex;gap:1rem;overflow:auto;padding-bottom:.5rem}.rea-column{flex:0 0 320px;background:var(--surface-secondary);border:1px solid var(--border);border-radius:18px;display:flex;flex-direction:column;max-height:calc(100vh - 280px)}.rea-column__header{display:flex;justify-content:space-between;align-items:center;padding:1rem;border-bottom:1px solid var(--border);background:rgba(255,255,255,.65)}.rea-column__header strong{display:block}.rea-column__header small{color:var(--text-secondary);font-size:.74rem}.rea-column__count{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 .5rem;border-radius:999px;background:var(--primary-light);color:var(--primary);font-weight:800;font-size:.75rem}.rea-column__body{padding:1rem;overflow-y:auto;display:flex;flex-direction:column;gap:.75rem}.rea-card{display:flex;flex-direction:column;gap:.65rem;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1rem;box-shadow:var(--shadow-sm);transition:all .18s ease}.rea-card:hover{transform:translateY(-2px);border-color:rgba(37,99,235,.2)}.rea-card__top{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start}.rea-card__code{font-size:.72rem;font-weight:800;color:var(--text-tertiary);background:var(--surface-secondary);border-radius:999px;padding:.24rem .55rem}.rea-card h3{margin:0;font-size:.95rem}.rea-card p{margin:0;color:var(--text-secondary);font-size:.82rem}.rea-card dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin:0}.rea-card dt{font-size:.68rem;color:var(--text-tertiary);text-transform:uppercase;font-weight:800}.rea-card dd{margin:.12rem 0 0;font-size:.8rem;font-weight:700}.rea-column__empty,.rea-muted{color:var(--text-secondary);font-size:.82rem;line-height:1.45}.rea-column__empty{padding:.5rem 0}.rea-empty{padding:2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.6rem}.rea-empty i{font-size:2rem;color:var(--primary)}.rea-source-list{display:flex;flex-direction:column;gap:.6rem}.rea-source-item{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;border:1px solid var(--border);border-radius:14px;padding:.75rem .8rem;background:var(--surface-secondary)}.rea-source-item strong,.rea-source-item span{display:block}.rea-source-item span{color:var(--text-secondary);font-size:.78rem;margin-top:.12rem}.rea-source-item__actions{display:flex;gap:.45rem;align-items:center}.rea-link-btn{background:none;border:none;color:var(--primary);font-weight:800;cursor:pointer;padding:0}.rea-alerts{display:grid;gap:.5rem}.rea-alert{border-radius:14px;padding:.7rem .85rem;border:1px solid var(--border);background:#f8fafc}.rea-alert--success{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.rea-alert--error{border-color:#fecaca;background:#fef2f2;color:#991b1b}.rea-alert--warning{border-color:#fde68a;background:#fffbeb;color:#92400e}@media (max-width:1200px){.rea-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:980px){.rea-hero{flex-direction:column}.rea-board-header{flex-direction:column;align-items:flex-start}.rea-column{max-height:none}}@media (max-width:640px){.rea-kpis{grid-template-columns:1fr}.rea-side__actions,.rea-actions{flex-direction:column;align-items:stretch}.rea-card dl{grid-template-columns:1fr}}
 </style>
 {% endblock %}
