@@ -1,0 +1,24 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Auditoria Interna{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><span class="current">Auditoria Interna</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page fade-in">
+  <header class="audit-header">
+    <div><p class="eyebrow">Assurance Versus</p><h1>Auditoria Interna</h1><p class="subtitle">Base da Onda 1: cadastros, checklists e preparação da execução.</p></div>
+  </header>
+  <section class="summary-grid">
+    <a class="summary-card" href="/internal-audit/areas"><span>Áreas</span><strong>{{ summary.areas_count }}</strong></a>
+    <a class="summary-card" href="/internal-audit/auditors"><span>Auditores</span><strong>{{ summary.auditors_count }}</strong></a>
+    <a class="summary-card" href="/internal-audit/checklists"><span>Checklists</span><strong>{{ summary.checklists_count }}</strong></a>
+    <a class="summary-card" href="/internal-audit/checklists"><span>Itens</span><strong>{{ summary.checklist_items_count }}</strong></a>
+  </section>
+  <section class="audit-grid">
+    <a href="/internal-audit/checklists" class="audit-card"><h2>Checklists</h2><p>Vincule checklists a processos, projetos ou itens autônomos.</p></a>
+    <a href="/internal-audit/areas" class="audit-card"><h2>Áreas</h2><p>Cadastre áreas/departamentos auditáveis.</p></a>
+    <a href="/internal-audit/auditors" class="audit-card"><h2>Auditores</h2><p>Defina perfis de auditoria para a empresa ativa.</p></a>
+  </section>
+</div>
+<style>
+.audit-page{padding:0 2rem 2rem}.audit-header{margin-bottom:1.5rem}.eyebrow{margin:0 0 .35rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--primary);font-weight:800}.subtitle{color:var(--text-secondary);max-width:760px}.summary-grid,.audit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1.5rem}.audit-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.summary-card,.audit-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.2rem;text-decoration:none;color:inherit;box-shadow:var(--shadow-sm)}.summary-card span{color:var(--text-secondary);font-weight:700}.summary-card strong{display:block;font-size:2rem;margin-top:.25rem}.audit-card p{color:var(--text-secondary)}@media(max-width:900px){.summary-grid,.audit-grid{grid-template-columns:1fr}.audit-page{padding:0 1rem 1.5rem}}
+</style>
+{% endblock %}

@@ -1099,6 +1099,7 @@ def register_blueprints(app):
     from api.routes.financial_automation import financial_automation_bp
     from api.routes.real_estate_auctions import real_estate_auctions_bp
     from api.routes.contracts import contracts_bp
+    from api.routes.internal_audit import internal_audit_bp
     import api.routes.financial_reports  # noqa: F401
     from api.user_employee import user_employee_bp
     from api.routes.meetings import meetings_bp
@@ -1130,6 +1131,7 @@ def register_blueprints(app):
     app.register_blueprint(financial_automation_bp)
     app.register_blueprint(real_estate_auctions_bp)
     app.register_blueprint(contracts_bp)
+    app.register_blueprint(internal_audit_bp)
     app.register_blueprint(user_employee_bp)
     app.register_blueprint(meetings_bp, url_prefix='/meetings')
     app.register_blueprint(onboarding_bp)

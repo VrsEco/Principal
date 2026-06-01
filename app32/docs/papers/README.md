@@ -16,3 +16,4 @@ Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_resiliencia_auditoria_recuperacao_operacional_mcp_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_copiloto_fluxo_bpmn_mcp_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_pop_copilot_mcp_v1.md`
+- `C:\GestaoVersus\app32\app32\docs\papers\paper_auditoria_interna_integrada_versus_v1.md`

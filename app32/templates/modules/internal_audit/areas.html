@@ -1,0 +1,15 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Auditoria Interna - Áreas{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><a href="/internal-audit">Auditoria Interna</a><span class="sep">/</span><span class="current">Áreas</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page" data-company-id="{{ company_id }}">
+  <header class="audit-header"><div><p class="eyebrow">Cadastros</p><h1>Áreas de Auditoria</h1></div></header>
+  <section class="panel"><form id="area-form" class="form-grid"><input name="name" placeholder="Nome da área" required><input name="description" placeholder="Descrição"><button class="btn btn-primary">Cadastrar</button></form><div id="areas-list" class="list"></div></section>
+</div>
+<style>.audit-page{padding:0 2rem 2rem}.eyebrow{color:var(--primary);font-weight:800;text-transform:uppercase;font-size:.72rem}.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1rem}.form-grid{display:grid;grid-template-columns:1fr 2fr auto;gap:.75rem}.form-grid input,.form-grid select,.form-grid textarea{border:1px solid var(--border);border-radius:12px;padding:.8rem;background:var(--surface-secondary)}.btn{border:0;border-radius:12px;padding:.8rem 1rem;font-weight:800;cursor:pointer}.btn-primary{background:var(--primary);color:#fff}.list{display:grid;gap:.6rem;margin-top:1rem}.row{border:1px solid var(--border);border-radius:12px;padding:.9rem;background:var(--surface-secondary)}.row strong{display:block}@media(max-width:800px){.form-grid{grid-template-columns:1fr}.audit-page{padding:0 1rem 1.5rem}}</style>
+<script>
+const list=document.getElementById('areas-list');
+async function load(){const r=await fetch('/api/internal-audit/areas');const j=await r.json();list.innerHTML=(j.data||[]).map(a=>`<div class="row"><strong>${a.name}</strong><span>${a.description||''}</span></div>`).join('')||'<div class="row">Nenhuma área cadastrada.</div>'}
+document.getElementById('area-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const r=await fetch('/api/internal-audit/areas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.success){alert(j.message||'Erro');return}e.target.reset();load()});load();
+</script>
+{% endblock %}

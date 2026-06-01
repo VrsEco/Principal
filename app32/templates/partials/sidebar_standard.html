@@ -300,6 +300,41 @@
     </div>
     {% endif %}
 
+
+    <!-- Auditoria Interna -->
+    <div class="sidebar-group {{ 'open' if '/internal-audit' in request.path }}">
+        <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            Auditoria Interna
+            <span class="nav-pill nav-pill-warning">Onda 1</span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="/internal-audit" class="sub-nav-link {{ 'active' if request.path == '/internal-audit' }}">
+                <span>Dashboard</span>
+            </a>
+            <a href="/internal-audit/checklists" class="sub-nav-link {{ 'active' if '/internal-audit/checklists' in request.path }}">
+                <span>Checklists</span>
+                <span class="nav-pill">MVP</span>
+            </a>
+            <a href="/internal-audit/areas" class="sub-nav-link {{ 'active' if '/internal-audit/areas' in request.path }}">
+                <span>Áreas</span>
+            </a>
+            <a href="/internal-audit/auditors" class="sub-nav-link {{ 'active' if '/internal-audit/auditors' in request.path }}">
+                <span>Auditores</span>
+            </a>
+            <a href="#" class="sub-nav-link" aria-disabled="true" onclick="return false;">
+                <span>Pontos de Auditoria</span>
+                <span class="nav-pill nav-pill-warning">Futuro</span>
+            </a>
+        </div>
+    </div>
+
     <!-- Sapiens -->
     <div class="sidebar-group {{ 'open' if '/sapiens' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">

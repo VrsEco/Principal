@@ -117,6 +117,14 @@ from .real_estate_auction import (
     RealEstateAuctionTenantSettings,
 )
 
+from .internal_audit import (
+    AuditArea,
+    AuditAuditor,
+    AuditChecklist,
+    AuditChecklistItem,
+    AuditSchedule,
+)
+
 # Operations & Governance
 from .meeting import Meeting, MeetingAgendaItem
 from .note import Note
