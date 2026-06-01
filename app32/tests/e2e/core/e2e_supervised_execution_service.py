@@ -169,12 +169,13 @@ class E2ESupervisedExecutionService:
     def _discover_repo_python_candidates() -> list[str]:
         root = repo_root()
         candidates: list[str] = []
-        for anchor in (root, root.parent):
+        for anchor in (root.parent, root):
             virtualenv_root = anchor / ".virtualenv"
             if virtualenv_root.exists():
                 for python_path in virtualenv_root.glob("*/bin/python*"):
                     if python_path.is_file() and "config" not in python_path.name:
                         candidates.append(str(python_path))
+        for anchor in (root, root.parent):
             for direct_candidate in ("venv", ".venv"):
                 python_path = anchor / direct_candidate / "bin" / "python"
                 if python_path.is_file():
