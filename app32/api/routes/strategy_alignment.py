@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from api.routes.projects import get_active_company
 from services.strategy_alignment_n1_service import StrategyAlignmentN1Error, StrategyAlignmentN1Service
+from services.structuring_journey_service import StructuringJourneyService
 from utils.permissions import has_company_full_access
 
 
@@ -34,6 +35,58 @@ def strategy_alignment_n1_maturation_page():
         company=company,
         company_id=company.id,
     )
+
+
+@strategy_alignment_bp.route("/structuring-journey")
+@login_required
+def structuring_journey_redirect():
+    return redirect(url_for("strategy_alignment.structuring_journey_client_page"))
+
+
+@strategy_alignment_bp.route("/structuring-journey/client")
+@login_required
+def structuring_journey_client_page():
+    company = get_active_company()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template(
+        "modules/strategy/structuring_journey.html",
+        company=company,
+        company_id=company.id,
+        audience="client",
+        page_title="Jornada de Estruturação",
+    )
+
+
+@strategy_alignment_bp.route("/structuring-journey/consultant")
+@login_required
+def structuring_journey_consultant_page():
+    company = get_active_company()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template(
+        "modules/strategy/structuring_journey.html",
+        company=company,
+        company_id=company.id,
+        audience="consultant",
+        page_title="Cockpit da Jornada de Estruturação",
+    )
+
+
+@strategy_alignment_bp.route("/api/structuring-journey", methods=["GET"])
+@login_required
+def get_structuring_journey():
+    company = _active_company_or_400()
+    try:
+        result = StructuringJourneyService.get_journey(
+            company_id=company.id,
+            audience=request.args.get("audience") or "client",
+            scope=request.args.get("scope") or "company",
+            process_id=request.args.get("process_id", type=int),
+        )
+    except StrategyAlignmentN1Error as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(result)
 
 
 @strategy_alignment_bp.route("/api/strategy-alignment-n1/maturation", methods=["GET"])

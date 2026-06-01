@@ -6,6 +6,7 @@ from services.strategy_alignment_n1_service import (
     StrategyAlignmentN1Error,
     StrategyAlignmentN1Service,
 )
+from services.structuring_journey_service import StructuringJourneyService
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
@@ -169,6 +170,27 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
             )
         except Exception as exc:  # pragma: no cover - envelope defensivo
             return _error(operation, exc, company_id=company_id, analytics=True)
+
+    def _get_structuring_journey(
+        company_id: int,
+        audience: Optional[str] = "client",
+        scope: Optional[str] = "company",
+        process_id: Optional[int] = None,
+    ) -> dict[str, Any]:
+        operation = "structuring_journey.get"
+        try:
+            return _success(
+                operation,
+                StructuringJourneyService.get_journey(
+                    company_id=company_id,
+                    audience=audience,
+                    scope=scope,
+                    process_id=process_id,
+                ),
+                company_id=company_id,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id)
 
     def _list_maturation_backlog(
         company_id: int,
@@ -446,6 +468,16 @@ def register_strategy_alignment_tools(mcp: Any) -> None:
     def get_strategic_alignment_n1_readiness_tool(company_id: int) -> dict[str, Any]:
         """Alias canônico consultivo: retorna readiness para a Análise N1."""
         return _get_readiness(company_id)
+
+    @mcp.tool()
+    def get_structuring_journey_tool(
+        company_id: int,
+        audience: Optional[str] = "client",
+        scope: Optional[str] = "company",
+        process_id: Optional[int] = None,
+    ) -> dict[str, Any]:
+        """Retorna a Jornada de Estruturação Bloco->Sub-bloco com maturidade e gates tenant-safe."""
+        return _get_structuring_journey(company_id, audience=audience, scope=scope, process_id=process_id)
 
     @mcp.tool()
     def run_strategy_alignment_n1_analysis_tool(company_id: int) -> dict[str, Any]:

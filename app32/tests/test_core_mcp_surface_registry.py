@@ -346,5 +346,6 @@ def test_user_surface_manifest_exposes_strategy_maturation_tools_to_cliente_harn
     manifest = registry.get_surface_manifest("user", domain="strategy", include_tools=True)
     tool_names = {tool["name"] for tool in manifest["tools"]}
 
+    assert "get_structuring_journey_tool" in tool_names
     assert "list_strategy_maturation_backlog_tool" in tool_names
     assert "review_strategy_maturation_item_tool" in tool_names

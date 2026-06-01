@@ -339,6 +339,10 @@ _supplemental_mcp_tools = (
         description="Alias canônico consultivo para readiness da Análise N1 de alinhamento estratégico.",
     ),
     SimpleNamespace(
+        name="get_structuring_journey_tool",
+        description="Retorna a Jornada de Estruturação com blocos, sub-blocos, maturidade e gates.",
+    ),
+    SimpleNamespace(
         name="run_strategy_alignment_n1_analysis_tool",
         description="Executa mapa de alinhamento x desalinhamento entre processos e identidade organizacional.",
     ),

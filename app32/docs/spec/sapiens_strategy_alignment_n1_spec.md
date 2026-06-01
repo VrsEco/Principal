@@ -244,6 +244,31 @@ Regras:
 - readiness/análise filtram itens estruturados por `status=confirmed`; itens sem status são tratados como legado confirmado.
 - readiness expõe `maturation.by_status` e `maturation.by_block` com backlog aberto e maturidade por bloco.
 
+### Jornada de Estruturação Sapiens
+
+A Jornada de Estruturação é uma camada de read model sobre a maturação N1, sem rebuild do dado transacional.
+
+Hierarquia oficial v1:
+
+- Jornada `sapiens_structuring`;
+- Blocos ordenados com gate soft: `identity`, `process_architecture`, `modeling`;
+- Sub-blocos paralelos com criticidade `essential`, `recommended` ou `optional`;
+- Itens continuam sendo `strategy_maturation_items` quando estão em S1–S2.
+
+Tool MCP:
+
+| Tool | Tipo | Entrada mínima | Observação |
+|---|---|---|---|
+| `get_structuring_journey_tool` | leitura/read model | `company_id` | Retorna Bloco→Sub-bloco com maturidade, gate, pendências e faltantes. |
+
+Regras:
+
+- gate é **SOFT**: cliente é guiado por fases; consultor navega livre;
+- próximo bloco destrava quando todos os sub-blocos `essential` do bloco anterior estão prontos;
+- sub-blocos `recommended` e `optional` contam maturidade, mas não bloqueiam gate;
+- as duas UIs, cliente lúdico e consultor funcional, consomem o mesmo read model `sapiens.structuring_journey`;
+- B3 Modelagem calcula rollup por processo e pode ser filtrado por `scope=process&process_id=<id>`.
+
 ## 9. Saída mínima do read model
 
 O payload retorna:

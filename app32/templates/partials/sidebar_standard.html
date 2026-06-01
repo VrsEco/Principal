@@ -56,7 +56,7 @@
 
 
     <!-- Gestão Estratégica -->
-    <div class="sidebar-group {{ 'open' if '/indicators' in request.path or '/incentives' in request.path or '/okrs' in request.path or '/plans' in request.path }}">
+    <div class="sidebar-group {{ 'open' if '/indicators' in request.path or '/incentives' in request.path or '/okrs' in request.path or '/plans' in request.path or '/structuring-journey' in request.path or '/strategy/alignment-n1' in request.path }}">
         <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"></circle>
@@ -73,6 +73,10 @@
             <a href="{{ url_for('plans.plans_list') }}"
                 class="sub-nav-link {{ 'active' if '/plans' in request.path }}">Planejamento
                 Estratégico</a>
+            <a href="/structuring-journey/client"
+                class="sub-nav-link {{ 'active' if '/structuring-journey' in request.path }}">Jornada de Estruturação</a>
+            <a href="/strategy/alignment-n1/maturation"
+                class="sub-nav-link {{ 'active' if '/strategy/alignment-n1' in request.path }}">Maturação N1</a>
             
             <!-- Subgrupo: Indicadores -->
             <div class="sidebar-subgroup {{ 'open' if '/indicators' in request.path or '/okrs' in request.path }}">

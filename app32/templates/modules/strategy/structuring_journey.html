@@ -1,0 +1,187 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ page_title or "Jornada de Estruturação" }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<span>Estratégia</span>
+<span class="sep">/</span>
+<span class="current">{{ page_title or "Jornada de Estruturação" }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="structuring-journey-page {{ 'consultant-mode' if audience == 'consultant' else 'client-mode' }}"
+     data-company-id="{{ company_id or '' }}"
+     data-audience="{{ audience or 'client' }}">
+    <header class="journey-hero">
+        <div>
+            <p class="eyebrow">Sapiens · Jornada de Estruturação</p>
+            {% if audience == 'consultant' %}
+                <h1>Cockpit funcional da jornada</h1>
+                <p class="subtitle">Gates, maturidade por sub-bloco e fila S1–S2 sobre o mesmo read model usado pelo cliente.</p>
+            {% else %}
+                <h1>Monte o DNA da sua empresa</h1>
+                <p class="subtitle">Avance por fases, complete missões e veja o que falta para destravar a próxima etapa.</p>
+            {% endif %}
+        </div>
+        <div class="hero-actions">
+            <a class="btn btn-secondary" href="/strategy/alignment-n1/maturation">Fila de maturação</a>
+            {% if audience == 'consultant' %}
+                <a class="btn btn-primary" href="/structuring-journey/client">Ver experiência cliente</a>
+            {% else %}
+                <a class="btn btn-primary" href="/structuring-journey/consultant">Ver cockpit consultor</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <section class="summary-grid" aria-live="polite">
+        <div class="summary-card"><span>Maturidade geral</span><strong id="overall">--%</strong></div>
+        <div class="summary-card"><span>Fases prontas</span><strong id="blocks-ready">--</strong></div>
+        <div class="summary-card"><span>Fases destravadas</span><strong id="blocks-unlocked">--</strong></div>
+        <div class="summary-card"><span>Itens em revisão</span><strong id="pending-items">--</strong></div>
+    </section>
+
+    <section class="next-panel" id="next-panel">
+        <div>
+            <p class="eyebrow">Próximo avanço</p>
+            <h2 id="next-title">Carregando jornada...</h2>
+            <p id="next-copy">Aguarde enquanto calculamos gates e maturidade.</p>
+        </div>
+    </section>
+
+    <section id="blocks" class="journey-blocks">
+        <div class="empty-state">Carregando blocos...</div>
+    </section>
+</div>
+
+<style>
+    .structuring-journey-page { padding: 0 2rem 2rem; color: #102033; }
+    .journey-hero { display:flex; justify-content:space-between; gap:1.5rem; align-items:flex-start; margin-bottom:1.5rem; }
+    .eyebrow { text-transform:uppercase; letter-spacing:.12em; font-weight:800; color:#0f766e; font-size:.76rem; margin:0 0 .35rem; }
+    .journey-hero h1 { font-size:2rem; line-height:1.1; margin:0; color:#0f172a; }
+    .subtitle { color:#64748b; margin:.5rem 0 0; max-width:760px; }
+    .hero-actions { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:flex-end; }
+    .btn { border-radius:999px; padding:.7rem 1rem; font-weight:800; text-decoration:none; border:1px solid transparent; display:inline-flex; align-items:center; }
+    .btn-primary { background:#0f766e; color:#fff; }
+    .btn-secondary { background:#fff; color:#0f172a; border-color:#cbd5e1; }
+    .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
+    .summary-card { background:#fff; border:1px solid #e2e8f0; border-radius:1.25rem; padding:1rem; box-shadow:0 12px 30px rgba(15,23,42,.06); }
+    .summary-card span { display:block; color:#64748b; font-weight:700; font-size:.82rem; }
+    .summary-card strong { display:block; margin-top:.35rem; font-size:1.7rem; color:#0f172a; }
+    .next-panel { background:linear-gradient(135deg,#ecfeff,#f0fdf4); border:1px solid #99f6e4; border-radius:1.5rem; padding:1.25rem; margin-bottom:1.25rem; }
+    .next-panel h2 { margin:.2rem 0; font-size:1.25rem; color:#115e59; }
+    .next-panel p:last-child { margin:0; color:#475569; }
+    .journey-blocks { display:grid; gap:1rem; }
+    .block-card { background:#fff; border:1px solid #e2e8f0; border-radius:1.5rem; padding:1.1rem; box-shadow:0 16px 42px rgba(15,23,42,.07); position:relative; overflow:hidden; }
+    .block-card.locked { opacity:.72; }
+    .block-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.9rem; }
+    .block-head h2 { margin:.2rem 0 .25rem; color:#0f172a; }
+    .badge { display:inline-flex; align-items:center; border-radius:999px; padding:.28rem .65rem; font-size:.75rem; font-weight:800; background:#e0f2fe; color:#0369a1; }
+    .badge.ready { background:#dcfce7; color:#166534; }
+    .badge.locked { background:#fee2e2; color:#991b1b; }
+    .progress { height:.65rem; background:#e2e8f0; border-radius:999px; overflow:hidden; }
+    .progress > span { display:block; height:100%; background:linear-gradient(90deg,#14b8a6,#22c55e); border-radius:999px; }
+    .subblocks { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; margin-top:1rem; }
+    .subblock { border:1px solid #e2e8f0; border-radius:1rem; padding:.85rem; background:#f8fafc; }
+    .subblock h3 { margin:0 0 .4rem; font-size:.95rem; color:#0f172a; }
+    .sub-meta { display:flex; flex-wrap:wrap; gap:.35rem; color:#64748b; font-size:.78rem; }
+    .pill { border-radius:999px; padding:.18rem .48rem; background:#fff; border:1px solid #e2e8f0; font-weight:700; }
+    .pill.essential { color:#991b1b; border-color:#fecaca; background:#fff1f2; }
+    .pill.recommended { color:#92400e; border-color:#fed7aa; background:#fff7ed; }
+    .pill.optional { color:#475569; }
+    .status-confirmed { border-color:#86efac; background:#f0fdf4; }
+    .status-pending,.status-partial { border-color:#fde68a; background:#fffbeb; }
+    .status-gap { border-color:#e2e8f0; }
+    .status-rejected { border-color:#fecaca; background:#fff1f2; }
+    .missing { margin:.55rem 0 0; color:#64748b; font-size:.82rem; }
+    .client-mode .subblock { min-height:132px; }
+    .client-mode .subblock h3::before { content:"🎯 "; }
+    .client-mode .status-confirmed h3::before { content:"🏆 "; }
+    .consultant-mode .subblocks { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .empty-state { padding:1.5rem; border:1px dashed #cbd5e1; border-radius:1rem; background:#fff; color:#64748b; }
+    @media (max-width: 1100px) { .summary-grid,.subblocks,.consultant-mode .subblocks { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 720px) { .structuring-journey-page { padding:0 1rem 1.5rem; } .journey-hero { flex-direction:column; } .summary-grid,.subblocks,.consultant-mode .subblocks { grid-template-columns:1fr; } }
+</style>
+
+<script>
+(() => {
+    const root = document.querySelector('.structuring-journey-page');
+    const companyId = root?.dataset.companyId;
+    const audience = root?.dataset.audience || 'client';
+    const blocksEl = document.getElementById('blocks');
+    const statusLabel = {
+        confirmed: 'Confirmado',
+        partial: 'Parcial',
+        pending: 'Em revisão',
+        rejected: 'Rejeitado',
+        gap: 'Lacuna'
+    };
+    const critLabel = { essential: 'Essencial', recommended: 'Recomendado', optional: 'Opcional' };
+
+    function pct(value) { return `${Number(value || 0)}%`; }
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    }
+    function renderSubblock(item) {
+        const missing = (item.missing_to_ready || []).map(escapeHtml).join(' ');
+        const review = item.backlog_open ? `<span class="pill">${item.backlog_open} em revisão</span>` : '';
+        return `
+            <article class="subblock status-${escapeHtml(item.status)}">
+                <h3>${escapeHtml(item.label)}</h3>
+                <div class="progress" title="${pct(item.maturity_pct)}"><span style="width:${Number(item.maturity_pct || 0)}%"></span></div>
+                <div class="sub-meta">
+                    <span class="pill ${escapeHtml(item.criticality)}">${critLabel[item.criticality] || item.criticality}</span>
+                    <span class="pill">${statusLabel[item.status] || item.status}</span>
+                    <span class="pill">${escapeHtml(item.confirmed_count)}/${escapeHtml(item.required_count)}</span>
+                    ${review}
+                </div>
+                ${missing ? `<p class="missing">${missing}</p>` : ''}
+            </article>
+        `;
+    }
+    function renderBlock(block) {
+        const gateClass = block.gate.ready ? 'ready' : (block.unlocked ? '' : 'locked');
+        const gateText = block.gate.ready ? 'Gate pronto' : (block.unlocked ? 'Em construção' : 'Aguardando fase anterior');
+        return `
+            <article class="block-card ${block.unlocked ? '' : 'locked'}">
+                <div class="block-head">
+                    <div>
+                        <span class="badge ${gateClass}">Fase ${escapeHtml(block.order)} · ${gateText}</span>
+                        <h2>${escapeHtml(audience === 'client' ? block.client_label : block.consultant_label)}</h2>
+                        <p class="subtitle">${escapeHtml(block.gate.message)}</p>
+                    </div>
+                    <strong>${pct(block.maturity_pct)}</strong>
+                </div>
+                <div class="progress"><span style="width:${Number(block.maturity_pct || 0)}%"></span></div>
+                <div class="subblocks">${block.subblocks.map(renderSubblock).join('')}</div>
+            </article>
+        `;
+    }
+    function render(data) {
+        document.getElementById('overall').textContent = pct(data.summary.overall_maturity_pct);
+        document.getElementById('blocks-ready').textContent = `${data.summary.blocks_ready}/${data.summary.blocks_total}`;
+        document.getElementById('blocks-unlocked').textContent = data.summary.blocks_unlocked;
+        document.getElementById('pending-items').textContent = data.summary.pending_items;
+        const current = (data.blocks || []).find((block) => block.key === data.current_block) || (data.blocks || [])[0];
+        const missing = (data.summary.next_missing || []).map((item) => item.label).join(', ');
+        document.getElementById('next-title').textContent = current?.gate?.ready ? 'Todas as missões essenciais desta fase estão prontas.' : `Fase atual: ${audience === 'client' ? current?.client_label : current?.consultant_label}`;
+        document.getElementById('next-copy').textContent = missing ? `Falta para avançar: ${missing}.` : 'Nenhum bloqueio essencial identificado.';
+        blocksEl.innerHTML = (data.blocks || []).map(renderBlock).join('');
+    }
+    async function loadJourney() {
+        if (!companyId) {
+            blocksEl.innerHTML = '<div class="empty-state">Selecione uma empresa para visualizar a jornada.</div>';
+            return;
+        }
+        const response = await fetch(`/api/structuring-journey?audience=${encodeURIComponent(audience)}`);
+        if (!response.ok) {
+            blocksEl.innerHTML = '<div class="empty-state">Não foi possível carregar a jornada.</div>';
+            return;
+        }
+        render(await response.json());
+    }
+    loadJourney();
+})();
+</script>
+{% endblock %}

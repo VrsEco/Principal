@@ -38,6 +38,10 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
         "src.core.mcp_strategy_alignment_tools.StrategyAlignmentN1Service.review_maturation_item",
         staticmethod(lambda company_id, item_id, decision, reviewer_user_id=None, notes=None: {"reviewed": True, "decision": decision, "item_id": item_id}),
     )
+    monkeypatch.setattr(
+        "src.core.mcp_strategy_alignment_tools.StructuringJourneyService.get_journey",
+        staticmethod(lambda company_id, **kwargs: {"company_id": company_id, "journey_key": "sapiens_structuring", **kwargs}),
+    )
 
     register_strategy_alignment_tools(mcp)
 
@@ -60,6 +64,7 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
         "review_strategy_maturation_item_tool",
         "get_strategy_alignment_n1_readiness_tool",
         "get_strategic_alignment_n1_readiness_tool",
+        "get_structuring_journey_tool",
         "run_strategy_alignment_n1_analysis_tool",
         "analyze_strategic_alignment_n1_tool",
     }
@@ -71,6 +76,7 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
         payload={"mission": "Salvar água"},
     )
     analysis_response = mcp.registered["analyze_strategic_alignment_n1_tool"](company_id=1)
+    journey_response = mcp.registered["get_structuring_journey_tool"](company_id=1, audience="client")
     backlog_response = mcp.registered["list_strategy_maturation_backlog_tool"](company_id=1, status="pending")
     review_response = mcp.registered["review_strategy_maturation_item_tool"](
         company_id=1,
@@ -85,6 +91,9 @@ def test_strategy_alignment_tools_register_and_return_envelopes(monkeypatch):
     assert write_response["meta"]["human_gate_required"] is True
     assert analysis_response["success"] is True
     assert analysis_response["meta"]["scope"] == "mcp_analytics"
+    assert journey_response["success"] is True
+    assert journey_response["data"]["journey_key"] == "sapiens_structuring"
+    assert journey_response["meta"]["scope"] == "mcp_user"
     assert backlog_response["success"] is True
     assert review_response["meta"]["human_gate_required"] is True
     assert review_response["data"]["decision"] == "hold"
@@ -99,8 +108,10 @@ def test_strategy_alignment_analysis_catalog_contract_is_published():
     assert contract.status == "ready"
     assert contract.allowed_surfaces == ["analytics"]
     assert "analyze_strategic_alignment_n1_tool" in contract.capability_names
+    assert "get_structuring_journey_tool" in contract.capability_names
     assert "list_strategy_maturation_backlog_tool" in contract.capability_names
     assert "review_strategy_maturation_item_tool" in contract.capability_names
     assert "strategic.alignment_n1" in contract.required_read_models
+    assert "sapiens.structuring_journey" in contract.required_read_models
     assert contract.cross_tenant_allowed is False
     assert contract.sql_freeform_allowed is False

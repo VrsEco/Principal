@@ -118,10 +118,11 @@ def build_allowed_analysis_catalog_manifest() -> AllowedAnalysisCatalogManifest:
                     "analyze_strategic_alignment_n1_tool",
                     "get_strategy_alignment_n1_readiness_tool",
                     "run_strategy_alignment_n1_analysis_tool",
+                    "get_structuring_journey_tool",
                     "list_strategy_maturation_backlog_tool",
                     "review_strategy_maturation_item_tool",
                 ],
-                required_read_models=["strategic.alignment_n1"],
+                required_read_models=["strategic.alignment_n1", "sapiens.structuring_journey"],
                 max_rows=300,
                 risk="medium",
                 forbidden_patterns=[

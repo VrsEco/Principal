@@ -391,6 +391,14 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("read_model", "analytics", "tenant_safe", "readiness", "alignment_n1"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    "get_structuring_journey_tool": {
+        "domain": "strategy",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("strategy.alignment.read",),
+        "tags": ("read_model", "tenant_safe", "journey", "structuring", "maturation"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "run_strategy_alignment_n1_analysis_tool": {
         "domain": "strategy",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
