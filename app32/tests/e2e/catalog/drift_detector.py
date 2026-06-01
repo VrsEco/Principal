@@ -4,7 +4,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError:  # pragma: no cover - fallback para runtime enxuto
+    yaml = None
 
 from app32.tests.e2e.catalog.inventory import iter_inventory_items
 from app32.tests.e2e.catalog.suite_catalog import list_suite_catalog
@@ -109,6 +112,8 @@ def discover_registered_routes() -> list[str]:
 def _load_baseline() -> dict[str, list[str]]:
     baseline_path = Path(__file__).with_name("drift_baseline.yaml")
     if not baseline_path.exists():
+        return {"accepted_uncovered_routes": [], "accepted_inventory_routes_not_found": []}
+    if yaml is None:
         return {"accepted_uncovered_routes": [], "accepted_inventory_routes_not_found": []}
     payload = yaml.safe_load(baseline_path.read_text(encoding="utf-8")) or {}
     return {
