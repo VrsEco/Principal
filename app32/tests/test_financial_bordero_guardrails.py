@@ -249,6 +249,58 @@ def test_bordero_settlement_audit_metadata_is_complete():
     assert metadata['audit']['actor']['user_id'] == 7
 
 
+def test_allocate_to_schedule_entries_uses_financial_title_settlement_flow(monkeypatch):
+    captured = {}
+
+    def fake_create_assisted_settlement(**kwargs):
+        captured.update(kwargs)
+        return {
+            'entry': {'id': 900, 'entry_code': 'TIT-101-2026-06-01'},
+            'settlement': {'id': 501, 'settlement_code': 'LIQ-000501'},
+            'simulation': {'composition': {'principal': 80.0, 'gross_amount': 80.0}},
+        }, None
+
+    monkeypatch.setattr(
+        bordero_module.FinancialSettlementCompositionService,
+        'create_assisted_settlement',
+        staticmethod(fake_create_assisted_settlement),
+    )
+
+    payload, error = FinancialBorderoService._allocate_to_schedule_entries(
+        company_id=9,
+        schedule_id=101,
+        bordero=SimpleNamespace(id=31, bordero_code='B-31'),
+        bordero_settlement=SimpleNamespace(id=55, settlement_code='B-31-BX-001'),
+        amount=Decimal('80.00'),
+        settlement_date='2026-06-01',
+        bank_account_id=4,
+        created_by_user_id=7,
+        created_by_employee_id=8,
+        created_by_agent='app32',
+        notes='baixa por borderô',
+    )
+
+    assert error is None
+    assert captured['company_id'] == 9
+    assert captured['schedule_id'] == 101
+    assert captured['allowed_company_ids'] == [9]
+    assert captured['ignore_bordero_lock'] is True
+    assert captured['payload']['gross_amount'] == Decimal('80.00')
+    assert captured['payload']['metadata_json']['reconcile_via_bordero'] is True
+    assert captured['payload']['metadata_json']['bordero_settlement_code'] == 'B-31-BX-001'
+    assert payload == [
+        {
+            'financial_entry_id': 900,
+            'entry_code': 'TIT-101-2026-06-01',
+            'allocated_amount': 80.0,
+            'financial_settlement_id': 501,
+            'settlement_code': 'LIQ-000501',
+            'financial_title_flow': True,
+            'composition': {'principal': 80.0, 'gross_amount': 80.0},
+        }
+    ]
+
+
 def test_sync_bordero_totals_from_items_marks_partial_and_settled():
     bordero = SimpleNamespace(total_amount=Decimal('0'), settled_amount=Decimal('0'), open_amount=Decimal('0'), status='open')
     items = [

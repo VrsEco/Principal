@@ -8,6 +8,8 @@ def test_bordero_rollout_contract_contains_required_guardrails():
     assert "Somente Títulos Financeiros operacionais" in service
     assert "reconcile_via_bordero" in service
     assert "bordero_trace" in service
+    assert "FinancialSettlementCompositionService.create_assisted_settlement" in service
+    assert "financial_title_flow" in service
     assert "_is_duplicate_bordero_code_error" in service
     assert "não foi possível gerar um código único para a empresa" in service
 

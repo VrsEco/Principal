@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_DOWN
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from models.financial import (
     FinancialBordero,
@@ -23,6 +24,7 @@ from schemas.financial import (
 )
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_schedule_service import FinancialScheduleService
+from services.financial_settlement_composition_service import FinancialSettlementCompositionService
 from services.financial_service import FinancialService
 
 
@@ -868,8 +870,13 @@ class FinancialBorderoService:
         child_settlements = (
             FinancialSettlement.query.filter(
                 FinancialSettlement.company_id == company_id,
-                FinancialSettlement.external_reference == bordero_settlement.settlement_code,
                 FinancialSettlement.deleted_at.is_(None),
+                or_(
+                    FinancialSettlement.external_reference == bordero_settlement.settlement_code,
+                    FinancialSettlement.metadata_json.contains(
+                        {"bordero_settlement_code": bordero_settlement.settlement_code}
+                    ),
+                ),
             )
             .order_by(FinancialSettlement.id.asc())
             .all()
@@ -910,126 +917,62 @@ class FinancialBorderoService:
         created_by_agent: Optional[str],
         notes: Optional[str],
     ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
-        entries = FinancialBorderoService._list_open_entries_for_schedule(company_id=company_id, schedule_id=schedule_id)
-        if not entries:
-            generated, error = FinancialScheduleService.create_entry_from_schedule(
-                schedule_id=schedule_id,
-                company_id=company_id,
-                allowed_company_ids=[company_id],
-                ignore_bordero_lock=True,
-            )
-            if error:
-                return None, error
-            entries = FinancialBorderoService._list_open_entries_for_schedule(company_id=company_id, schedule_id=schedule_id)
+        allocated = Decimal(str(amount or 0)).quantize(Decimal("0.01"))
+        if allocated <= Decimal("0.00"):
+            return [], None
 
-        if not entries:
-            return None, "Não foi possível localizar ou gerar lançamento para baixa do borderô."
-
-        outstanding_items: List[Dict[str, Any]] = []
-        for entry in entries:
-            outstanding = FinancialBorderoService._entry_open_amount(entry)
-            if outstanding > Decimal("0.00"):
-                outstanding_items.append({"id": entry.id, "weight": outstanding, "entry": entry})
-        if not outstanding_items:
-            return None, "Os lançamentos do Título Financeiro selecionado não possuem saldo aberto para baixa."
-
-        allocations = FinancialBorderoService._allocate_amount(amount, outstanding_items)
-        created_payload: List[Dict[str, Any]] = []
-        for item in outstanding_items:
-            allocated = allocations.get(item["id"], Decimal("0.00"))
-            if allocated <= 0:
-                continue
-
-            entry = item["entry"]
-            settlement = FinancialSettlement(
-                company_id=company_id,
-                financial_entry_id=entry.id,
-                settlement_code=f"{bordero_settlement.settlement_code}-E{entry.id}",
-                settlement_type="manual",
-                settlement_status="posted",
-                settlement_date=settlement_date,
-                bank_account_id=bank_account_id,
-                principal_amount=allocated,
-                interest_amount=Decimal("0.00"),
-                penalty_amount=Decimal("0.00"),
-                discount_amount=Decimal("0.00"),
-                fee_amount=Decimal("0.00"),
-                other_adjustments_amount=Decimal("0.00"),
-                net_amount=allocated,
-                external_reference=bordero_settlement.settlement_code,
-                import_batch_id=None,
-                reconciliation_status="pending",
-                notes=notes,
-                metadata_json={
-                    "bordero_id": bordero.id,
-                    "bordero_code": bordero.bordero_code,
-                    "bordero_settlement_id": bordero_settlement.id,
-                    "bordero_settlement_code": bordero_settlement.settlement_code,
-                    "bordero_item_schedule_id": schedule_id,
-                    "bordero_allocation_amount": float(allocated),
-                    "bordero_trace": {
-                        "source": "bordero_settlement",
-                        "bordero_id": bordero.id,
-                        "bordero_code": bordero.bordero_code,
-                        "bordero_settlement_id": bordero_settlement.id,
-                        "bordero_settlement_code": bordero_settlement.settlement_code,
-                        "financial_schedule_id": schedule_id,
-                    },
-                    "reconcile_via_bordero": True,
-                },
-                created_by_user_id=created_by_user_id,
-                created_by_employee_id=created_by_employee_id,
-                created_by_agent=created_by_agent,
-            )
-            db.session.add(settlement)
-
-            projected_total = FinancialBorderoService._entry_settled_amount(entry) + allocated
-            if projected_total >= Decimal(str(entry.original_amount or 0)):
-                entry.status = "settled"
-            elif projected_total > Decimal("0.00"):
-                entry.status = "partially_settled"
-
-            created_payload.append(
-                {
-                    "financial_entry_id": entry.id,
-                    "entry_code": entry.entry_code,
-                    "allocated_amount": float(allocated),
-                    "settlement_code": settlement.settlement_code,
-                }
-            )
-        return created_payload, None
-
-    @staticmethod
-    def _list_open_entries_for_schedule(*, company_id: int, schedule_id: int) -> List[FinancialEntry]:
-        return (
-            FinancialEntry.query.filter(
-                FinancialEntry.company_id == company_id,
-                FinancialEntry.external_reference == f"financial_schedule:{schedule_id}",
-                FinancialEntry.deleted_at.is_(None),
-            )
-            .order_by(FinancialEntry.competence_date.asc(), FinancialEntry.id.asc())
-            .all()
+        title_settlement_metadata = {
+            "bordero_id": bordero.id,
+            "bordero_code": bordero.bordero_code,
+            "bordero_settlement_id": bordero_settlement.id,
+            "bordero_settlement_code": bordero_settlement.settlement_code,
+            "bordero_item_schedule_id": schedule_id,
+            "bordero_allocation_amount": float(allocated),
+            "bordero_trace": {
+                "source": "bordero_settlement",
+                "bordero_id": bordero.id,
+                "bordero_code": bordero.bordero_code,
+                "bordero_settlement_id": bordero_settlement.id,
+                "bordero_settlement_code": bordero_settlement.settlement_code,
+                "financial_schedule_id": schedule_id,
+            },
+            "reconcile_via_bordero": True,
+            "traceability_contract": "financial_bordero_settlement_v2",
+        }
+        result, error = FinancialSettlementCompositionService.create_assisted_settlement(
+            company_id=company_id,
+            schedule_id=schedule_id,
+            payload={
+                "settlement_type": "manual",
+                "settlement_status": "posted",
+                "settlement_date": settlement_date,
+                "gross_amount": allocated,
+                "bank_account_id": bank_account_id,
+                "notes": notes,
+                "metadata_json": title_settlement_metadata,
+                "created_by_user_id": created_by_user_id,
+                "created_by_employee_id": created_by_employee_id,
+                "created_by_agent": created_by_agent,
+            },
+            allowed_company_ids=[company_id],
+            ignore_bordero_lock=True,
         )
+        if error:
+            return None, error
 
-    @staticmethod
-    def _entry_settled_amount(entry: FinancialEntry) -> Decimal:
-        total = (
-            db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
-            .filter(
-                FinancialSettlement.company_id == entry.company_id,
-                FinancialSettlement.financial_entry_id == entry.id,
-                FinancialSettlement.deleted_at.is_(None),
-                FinancialSettlement.settlement_status != "cancelled",
-            )
-            .scalar()
-        ) or 0
-        return Decimal(str(total or 0)).quantize(Decimal("0.01"))
-
-    @staticmethod
-    def _entry_open_amount(entry: FinancialEntry) -> Decimal:
-        original_amount = Decimal(str(entry.original_amount or 0)).quantize(Decimal("0.01"))
-        settled_amount = FinancialBorderoService._entry_settled_amount(entry)
-        return max(original_amount - settled_amount, Decimal("0.00"))
+        entry_payload = dict((result or {}).get("entry") or {})
+        settlement_payload = dict((result or {}).get("settlement") or {})
+        return [
+            {
+                "financial_entry_id": entry_payload.get("id"),
+                "entry_code": entry_payload.get("entry_code") or entry_payload.get("code"),
+                "allocated_amount": float(allocated),
+                "financial_settlement_id": settlement_payload.get("id"),
+                "settlement_code": settlement_payload.get("settlement_code"),
+                "financial_title_flow": True,
+                "composition": ((result or {}).get("simulation") or {}).get("composition"),
+            }
+        ], None
 
     @staticmethod
     def _allocate_amount(total_amount: Decimal, weighted_items: List[Dict[str, Any]]) -> Dict[int, Decimal]:

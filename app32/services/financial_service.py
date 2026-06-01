@@ -2266,6 +2266,7 @@ class FinancialService:
         *,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
     ) -> Tuple[Optional[FinancialSettlement], Optional[str]]:
         normalized_payload = dict(payload or {})
         company_id = normalized_payload.get("company_id")
@@ -2294,8 +2295,16 @@ class FinancialService:
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=data.company_id, entry=entry)
-        if active_bordero:
+        if active_bordero and not ignore_bordero_lock:
             return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}. Faça a baixa pelo borderô."
+        if active_bordero and ignore_bordero_lock:
+            bordero_metadata = dict(data.metadata_json or {})
+            if not (
+                bordero_metadata.get("reconcile_via_bordero")
+                and bordero_metadata.get("bordero_id")
+                and bordero_metadata.get("bordero_settlement_id")
+            ):
+                return None, "Bypass do bloqueio de borderô exige rastreabilidade completa da baixa do borderô."
 
         existing = FinancialSettlement.query.filter(
             FinancialSettlement.company_id == data.company_id,

@@ -415,6 +415,7 @@ class FinancialSettlementCompositionService:
         schedule_id: int,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         simulation, error = FinancialSettlementCompositionService.simulate_settlement(
             company_id=company_id,
@@ -446,6 +447,7 @@ class FinancialSettlementCompositionService:
             company_id=company_id,
             payload=settlement_payload,
             allowed_company_ids=allowed_company_ids,
+            ignore_bordero_lock=ignore_bordero_lock,
         )
         if settlement_error:
             return None, settlement_error

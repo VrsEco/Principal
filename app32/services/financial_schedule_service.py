@@ -984,6 +984,7 @@ class FinancialScheduleService:
         company_id: int,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -1001,7 +1002,7 @@ class FinancialScheduleService:
             schedule_id=schedule_id,
             company_id=company_id,
             allowed_company_ids=allowed_company_ids,
-            ignore_bordero_lock=True,
+            ignore_bordero_lock=ignore_bordero_lock,
         )
         if entry_error:
             return None, entry_error
@@ -1025,10 +1026,13 @@ class FinancialScheduleService:
         settlement_payload["financial_entry_id"] = entry_id
         settlement_payload["external_reference"] = f"financial_schedule:{schedule.id}"
 
-        settlement, settlement_error = FinancialService.create_settlement(
-            payload=settlement_payload,
-            allowed_company_ids=allowed_company_ids,
-        )
+        create_settlement_kwargs = {
+            "payload": settlement_payload,
+            "allowed_company_ids": allowed_company_ids,
+        }
+        if ignore_bordero_lock:
+            create_settlement_kwargs["ignore_bordero_lock"] = True
+        settlement, settlement_error = FinancialService.create_settlement(**create_settlement_kwargs)
         if settlement_error:
             return None, settlement_error
 
