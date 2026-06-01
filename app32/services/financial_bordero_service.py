@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_DOWN
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
+from sqlalchemy.exc import IntegrityError
 from models.financial import (
     FinancialBordero,
     FinancialBorderoItem,
@@ -91,103 +92,116 @@ class FinancialBorderoService:
         if scope_error:
             return None, scope_error
 
-        created_items: List[FinancialBorderoItem] = []
-        total_amount = Decimal("0")
-        try:
-            bordero_name = (data.name or data.description or data.notes or "").strip()
-            bordero_description = (data.description or data.notes or bordero_name).strip() or bordero_name
-            bordero = FinancialBordero(
-                company_id=data.company_id,
-                bordero_code=FinancialBorderoService._generate_bordero_code(data.company_id),
-                name=bordero_name,
-                bordero_type=data.bordero_type,
-                status="open",
-                description=bordero_description,
-                created_by_user_id=data.created_by_user_id,
-                created_by_employee_id=data.created_by_employee_id,
-                created_by_agent=data.created_by_agent,
-                notes=data.notes or bordero_description,
-                metadata_json=dict(data.metadata_json or {}),
-                created_at=datetime.combine(data.created_date, datetime.min.time()) if data.created_date else datetime.utcnow(),
-            )
-            db.session.add(bordero)
-            db.session.flush()
+        bordero_name = (data.name or data.description or data.notes or "").strip()
+        bordero_description = (data.description or data.notes or bordero_name).strip() or bordero_name
 
-            for index, item_input in enumerate(data.items, start=1):
-                schedule = FinancialSchedule.query.filter(
-                    FinancialSchedule.id == item_input.financial_schedule_id,
-                    FinancialSchedule.company_id == data.company_id,
-                    FinancialSchedule.deleted_at.is_(None),
-                ).first()
-                if not schedule:
-                    db.session.rollback()
-                    return None, f"Título Financeiro {item_input.financial_schedule_id} não encontrado no escopo da empresa."
-                if schedule.entry_type != data.bordero_type:
-                    db.session.rollback()
-                    return None, "Não é permitido misturar Títulos Financeiros a pagar e a receber no mesmo borderô."
-
-                snapshot = FinancialBorderoService._build_schedule_snapshot(schedule)
-                operational_state = str(((snapshot.get("summary") or {}).get("operational_state") or "")).strip().lower()
-                if operational_state in {"draft", "cancelled", "forecast"}:
-                    db.session.rollback()
-                    return None, "Somente Títulos Financeiros operacionais com saldo aberto podem entrar em borderô."
-
-                lock_error = FinancialBorderoService._ensure_schedule_is_available(
+        for attempt in range(1, 6):
+            total_amount = Decimal("0")
+            try:
+                bordero = FinancialBordero(
                     company_id=data.company_id,
-                    schedule_id=schedule.id,
-                    exclude_bordero_id=bordero.id,
+                    bordero_code=FinancialBorderoService._generate_bordero_code(data.company_id),
+                    name=bordero_name,
+                    bordero_type=data.bordero_type,
+                    status="open",
+                    description=bordero_description,
+                    created_by_user_id=data.created_by_user_id,
+                    created_by_employee_id=data.created_by_employee_id,
+                    created_by_agent=data.created_by_agent,
+                    notes=data.notes or bordero_description,
+                    metadata_json=dict(data.metadata_json or {}),
+                    created_at=datetime.combine(data.created_date, datetime.min.time()) if data.created_date else datetime.utcnow(),
                 )
-                if lock_error:
-                    db.session.rollback()
-                    return None, lock_error
+                db.session.add(bordero)
+                db.session.flush()
 
-                open_amount = Decimal(str(snapshot["summary"]["open_total"]))
-                if open_amount <= 0:
-                    db.session.rollback()
-                    return None, f"O Título Financeiro {schedule.schedule_code} não possui saldo aberto para borderô."
+                for index, item_input in enumerate(data.items, start=1):
+                    schedule = FinancialSchedule.query.filter(
+                        FinancialSchedule.id == item_input.financial_schedule_id,
+                        FinancialSchedule.company_id == data.company_id,
+                        FinancialSchedule.deleted_at.is_(None),
+                    ).first()
+                    if not schedule:
+                        db.session.rollback()
+                        return None, f"Título Financeiro {item_input.financial_schedule_id} não encontrado no escopo da empresa."
+                    if schedule.entry_type != data.bordero_type:
+                        db.session.rollback()
+                        return None, "Não é permitido misturar Títulos Financeiros a pagar e a receber no mesmo borderô."
 
-                selected_amount = item_input.selected_amount if item_input.selected_amount is not None else open_amount
-                selected_amount = Decimal(str(selected_amount)).quantize(Decimal("0.01"))
-                if selected_amount <= 0:
-                    db.session.rollback()
-                    return None, f"O valor selecionado do Título Financeiro {schedule.schedule_code} deve ser maior que zero."
-                if selected_amount > open_amount:
-                    db.session.rollback()
-                    return None, (
-                        f"O valor selecionado do Título Financeiro {schedule.schedule_code} excede o saldo aberto. "
-                        f"Saldo: {open_amount}."
+                    snapshot = FinancialBorderoService._build_schedule_snapshot(schedule)
+                    operational_state = str(((snapshot.get("summary") or {}).get("operational_state") or "")).strip().lower()
+                    if operational_state in {"draft", "cancelled", "forecast"}:
+                        db.session.rollback()
+                        return None, "Somente Títulos Financeiros operacionais com saldo aberto podem entrar em borderô."
+
+                    lock_error = FinancialBorderoService._ensure_schedule_is_available(
+                        company_id=data.company_id,
+                        schedule_id=schedule.id,
+                        exclude_bordero_id=bordero.id,
                     )
+                    if lock_error:
+                        db.session.rollback()
+                        return None, lock_error
 
-                bordero_item = FinancialBorderoItem(
-                    company_id=data.company_id,
-                    bordero_id=bordero.id,
-                    financial_schedule_id=schedule.id,
-                    item_code=f"{bordero.bordero_code}-{index:03d}",
-                    selected_amount=selected_amount,
-                    settled_amount=Decimal("0.00"),
-                    open_amount=selected_amount,
-                    display_order=index,
-                    snapshot_json=snapshot,
-                    metadata_json={
-                        **dict(item_input.metadata_json or {}),
-                        "schedule_code": schedule.schedule_code,
-                        "bordero_code": bordero.bordero_code,
-                        "frozen_at": datetime.utcnow().isoformat(),
-                    },
-                )
-                db.session.add(bordero_item)
-                created_items.append(bordero_item)
-                total_amount += selected_amount
+                    open_amount = Decimal(str(snapshot["summary"]["open_total"]))
+                    if open_amount <= 0:
+                        db.session.rollback()
+                        return None, f"O Título Financeiro {schedule.schedule_code} não possui saldo aberto para borderô."
 
-            bordero.total_amount = total_amount
-            bordero.settled_amount = Decimal("0.00")
-            bordero.open_amount = total_amount
-            db.session.commit()
-            return FinancialBorderoService._serialize_bordero(bordero, include_items=True), None
-        except Exception as exc:
-            db.session.rollback()
-            logger.exception("Erro ao criar borderô financeiro")
-            return None, f"Erro ao criar borderô: {exc}"
+                    selected_amount = item_input.selected_amount if item_input.selected_amount is not None else open_amount
+                    selected_amount = Decimal(str(selected_amount)).quantize(Decimal("0.01"))
+                    if selected_amount <= 0:
+                        db.session.rollback()
+                        return None, f"O valor selecionado do Título Financeiro {schedule.schedule_code} deve ser maior que zero."
+                    if selected_amount > open_amount:
+                        db.session.rollback()
+                        return None, (
+                            f"O valor selecionado do Título Financeiro {schedule.schedule_code} excede o saldo aberto. "
+                            f"Saldo: {open_amount}."
+                        )
+
+                    bordero_item = FinancialBorderoItem(
+                        company_id=data.company_id,
+                        bordero_id=bordero.id,
+                        financial_schedule_id=schedule.id,
+                        item_code=f"{bordero.bordero_code}-{index:03d}",
+                        selected_amount=selected_amount,
+                        settled_amount=Decimal("0.00"),
+                        open_amount=selected_amount,
+                        display_order=index,
+                        snapshot_json=snapshot,
+                        metadata_json={
+                            **dict(item_input.metadata_json or {}),
+                            "schedule_code": schedule.schedule_code,
+                            "bordero_code": bordero.bordero_code,
+                            "frozen_at": datetime.utcnow().isoformat(),
+                        },
+                    )
+                    db.session.add(bordero_item)
+                    total_amount += selected_amount
+
+                bordero.total_amount = total_amount
+                bordero.settled_amount = Decimal("0.00")
+                bordero.open_amount = total_amount
+                db.session.commit()
+                return FinancialBorderoService._serialize_bordero(bordero, include_items=True), None
+            except IntegrityError as exc:
+                db.session.rollback()
+                if FinancialBorderoService._is_duplicate_bordero_code_error(exc):
+                    logger.warning(
+                        "Colisão de código ao criar borderô da empresa %s na tentativa %s; regenerando código.",
+                        data.company_id,
+                        attempt,
+                    )
+                    continue
+                logger.exception("Erro de integridade ao criar borderô financeiro")
+                return None, f"Erro ao criar borderô: {exc}"
+            except Exception as exc:
+                db.session.rollback()
+                logger.exception("Erro ao criar borderô financeiro")
+                return None, f"Erro ao criar borderô: {exc}"
+
+        return None, "Erro ao criar borderô: não foi possível gerar um código único para a empresa."
 
     @staticmethod
     def update_bordero(
@@ -613,43 +627,60 @@ class FinancialBorderoService:
 
     @staticmethod
     def _generate_bordero_code(company_id: int) -> str:
+        # O código é único por empresa mesmo após exclusão lógica. Não filtrar
+        # deleted_at aqui: registros soft-deletados continuam protegidos pela
+        # constraint uq_financial_borderos_company_code.
         prefix = "B"
-        last = (
+        borderos = (
             FinancialBordero.query.filter(
                 FinancialBordero.company_id == company_id,
-                FinancialBordero.deleted_at.is_(None),
-                FinancialBordero.bordero_code.like(f"{prefix}-%"),
             )
             .order_by(FinancialBordero.id.desc())
-            .first()
+            .all()
         )
-        next_number = 1
-        if last and last.bordero_code:
+        max_number = 0
+        for bordero in borderos or []:
+            code = str(getattr(bordero, "bordero_code", "") or "").strip().upper()
+            if not code.startswith(f"{prefix}-"):
+                continue
             try:
-                next_number = int(str(last.bordero_code).split("-")[-1]) + 1
+                max_number = max(max_number, int(code.split("-")[-1]))
             except Exception:
-                next_number = last.id + 1
-        return f"{prefix}-{next_number}"
+                max_number = max(max_number, int(getattr(bordero, "id", 0) or 0))
+        return f"{prefix}-{max_number + 1}"
 
     @staticmethod
     def _generate_bordero_settlement_code(company_id: int, bordero_code: str) -> str:
+        # Mesma regra do borderô: settlement_code é único por empresa e não
+        # pode reutilizar códigos de baixas excluídas logicamente.
         base = f"{bordero_code}-BX"
-        last = (
+        settlements = (
             FinancialBorderoSettlement.query.filter(
                 FinancialBorderoSettlement.company_id == company_id,
-                FinancialBorderoSettlement.deleted_at.is_(None),
-                FinancialBorderoSettlement.settlement_code.like(f"{base}-%"),
             )
             .order_by(FinancialBorderoSettlement.id.desc())
-            .first()
+            .all()
         )
-        next_number = 1
-        if last and last.settlement_code:
+        max_number = 0
+        for settlement in settlements or []:
+            code = str(getattr(settlement, "settlement_code", "") or "").strip().upper()
+            if not code.startswith(f"{base.upper()}-"):
+                continue
             try:
-                next_number = int(str(last.settlement_code).split("-")[-1]) + 1
+                max_number = max(max_number, int(code.split("-")[-1]))
             except Exception:
-                next_number = last.id + 1
-        return f"{base}-{next_number:03d}"
+                max_number = max(max_number, int(getattr(settlement, "id", 0) or 0))
+        return f"{base}-{max_number + 1:03d}"
+
+    @staticmethod
+    def _is_duplicate_bordero_code_error(exc: IntegrityError) -> bool:
+        constraint_name = str(
+            getattr(getattr(getattr(exc, "orig", None), "diag", None), "constraint_name", "") or ""
+        ).strip()
+        if constraint_name == "uq_financial_borderos_company_code":
+            return True
+        message = str(getattr(exc, "orig", exc) or "").lower()
+        return "uq_financial_borderos_company_code" in message
 
     @staticmethod
     def _build_schedule_snapshot(schedule: FinancialSchedule) -> Dict[str, Any]:
