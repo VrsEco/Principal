@@ -5,7 +5,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError:  # pragma: no cover - fallback para runtime enxuto
+    yaml = None
 
 from app32.tests.e2e.catalog.drift_detector import discover_registered_routes, normalize_route, routes_compatible
 from app32.tests.e2e.catalog.inventory import iter_inventory_items
@@ -95,7 +98,10 @@ def write_inventory_candidates_report(base_dir: Path) -> Path:
     summary_path = target_dir / "summary.json"
 
     json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    yaml_path.write_text(yaml.safe_dump(report, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    if yaml is not None:
+        yaml_path.write_text(yaml.safe_dump(report, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    else:
+        yaml_path.write_text(_render_yaml_fallback(report), encoding="utf-8")
     summary_path.write_text(
         json.dumps(
             {
@@ -114,3 +120,35 @@ def write_inventory_candidates_report(base_dir: Path) -> Path:
         encoding="utf-8",
     )
     return summary_path
+
+
+def _render_yaml_fallback(payload: dict[str, Any]) -> str:
+    lines: list[str] = []
+
+    def _walk(value: Any, indent: int = 0, key: str | None = None) -> None:
+        prefix = " " * indent
+        if isinstance(value, dict):
+            if key is not None:
+                lines.append(f"{prefix}{key}:")
+            for child_key, child_value in value.items():
+                _walk(child_value, indent + (2 if key is not None else 0), str(child_key))
+            return
+        if isinstance(value, list):
+            if key is not None:
+                lines.append(f"{prefix}{key}:")
+            for item in value:
+                if isinstance(item, (dict, list)):
+                    lines.append(f"{prefix}{'  ' if key is not None else ''}-")
+                    _walk(item, indent + (4 if key is not None else 2))
+                else:
+                    rendered = json.dumps(item, ensure_ascii=False)
+                    lines.append(f"{prefix}{'  ' if key is not None else ''}- {rendered}")
+            return
+        rendered = json.dumps(value, ensure_ascii=False)
+        if key is None:
+            lines.append(f"{prefix}{rendered}")
+        else:
+            lines.append(f"{prefix}{key}: {rendered}")
+
+    _walk(payload)
+    return "\n".join(lines) + "\n"
