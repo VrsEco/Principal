@@ -144,12 +144,16 @@ class E2ESupervisedExecutionService:
 
     @staticmethod
     def _resolve_python_executable() -> str:
+        repo_based_candidates = E2ESupervisedExecutionService._discover_repo_python_candidates()
+        executable_based_candidates = E2ESupervisedExecutionService._discover_python_near_current_executable()
         candidates = [
             os.environ.get("APP32_E2E_PYTHON"),
+            *repo_based_candidates,
+            *executable_based_candidates,
             str(Path(os.environ.get("VIRTUAL_ENV", "")).joinpath("bin", "python")) if os.environ.get("VIRTUAL_ENV") else None,
+            getattr(sys, "_base_executable", None),
             shutil.which("python3"),
             shutil.which("python"),
-            getattr(sys, "_base_executable", None),
             sys.executable,
         ]
         for candidate in candidates:
@@ -160,6 +164,35 @@ class E2ESupervisedExecutionService:
                 continue
             return str(candidate)
         return "python3"
+
+    @staticmethod
+    def _discover_repo_python_candidates() -> list[str]:
+        root = repo_root()
+        candidates: list[str] = []
+        for anchor in (root, root.parent):
+            virtualenv_root = anchor / ".virtualenv"
+            if virtualenv_root.exists():
+                for python_path in virtualenv_root.glob("*/bin/python*"):
+                    if python_path.is_file() and "config" not in python_path.name:
+                        candidates.append(str(python_path))
+            for direct_candidate in ("venv", ".venv"):
+                python_path = anchor / direct_candidate / "bin" / "python"
+                if python_path.is_file():
+                    candidates.append(str(python_path))
+        return candidates
+
+    @staticmethod
+    def _discover_python_near_current_executable() -> list[str]:
+        executable = Path(str(sys.executable or ""))
+        if not executable.name.lower().startswith("uwsgi"):
+            return []
+        search_dir = executable.parent
+        candidates: list[str] = []
+        for name in ("python", "python3", "python3.12", "python3.11", "python3.10"):
+            python_path = search_dir / name
+            if python_path.is_file():
+                candidates.append(str(python_path))
+        return candidates
 
     @classmethod
     def _write_record(cls, record: SupervisedExecutionRecord) -> None:
