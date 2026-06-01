@@ -383,14 +383,19 @@ class StrategyAlignmentN1Service:
                 continue
             field = StrategyAlignmentN1Service._identity_payload_field(raw_field)
             canonical_items: list[Any] = []
+            staged_field_item = False
             for item in _safe_list(payload.get(raw_field), field=raw_field):
                 if isinstance(item, dict) and StrategyAlignmentN1Service._should_stage_payload(item):
+                    staged_field_item = True
                     staged_payloads.append(
                         StrategyAlignmentN1Service._identity_nested_maturation_payload(field, item)
                     )
                     continue
                 canonical_items.append(item)
-            canonical_payload[raw_field] = canonical_items
+            if staged_field_item and not canonical_items:
+                canonical_payload.pop(raw_field, None)
+            else:
+                canonical_payload[raw_field] = canonical_items
 
         for raw_field in ("swot", "swot_json"):
             if raw_field not in payload:
@@ -400,7 +405,7 @@ class StrategyAlignmentN1Service:
                 staged = StrategyAlignmentN1Service._identity_nested_maturation_payload("swot", swot_payload)
                 staged.setdefault("target_key", "swot")
                 staged_payloads.append(staged)
-                canonical_payload[raw_field] = {}
+                canonical_payload.pop(raw_field, None)
 
         return canonical_payload, staged_payloads
 
@@ -819,10 +824,7 @@ class StrategyAlignmentN1Service:
 
         identity = OrganizationalIdentity.query.filter_by(company_id=company_id).first()
 
-        should_update_canonical = bool(
-            StrategyAlignmentN1Service._has_canonical_identity_update(canonical_payload)
-            or (identity is not None and nested_maturation_payloads)
-        )
+        should_update_canonical = bool(StrategyAlignmentN1Service._has_canonical_identity_update(canonical_payload))
         if not should_update_canonical:
             if commit:
                 db.session.commit()

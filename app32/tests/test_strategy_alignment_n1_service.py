@@ -194,7 +194,7 @@ def test_identity_nested_pending_items_are_split_to_maturation_payloads():
         }
     )
 
-    assert canonical["values"] == []
+    assert "values" not in canonical
     assert StrategyAlignmentN1Service._has_canonical_identity_update(canonical) is False
     assert staged == [
         {
@@ -231,6 +231,18 @@ def test_identity_nested_mixed_status_keeps_only_confirmed_canonical_items():
     assert staged[0]["identity_field"] == "strategic_objectives"
     assert staged[0]["item_type"] == "strategic_objective"
     assert staged[0]["target_key"] == "obj-pendente"
+
+
+def test_identity_explicit_empty_array_without_staged_items_is_preserved_in_payload():
+    canonical, staged = StrategyAlignmentN1Service._split_identity_payload_for_maturation(
+        {
+            "values": [],
+        }
+    )
+
+    assert canonical["values"] == []
+    assert staged == []
+    assert StrategyAlignmentN1Service._has_canonical_identity_update(canonical) is False
 
 
 @pytest.mark.parametrize(
