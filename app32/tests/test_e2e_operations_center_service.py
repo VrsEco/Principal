@@ -60,6 +60,9 @@ def test_e2e_operations_center_service_collects_latest_runs(tmp_path, monkeypatc
 
     assert state["summary"]["total_runs"] >= 2
     assert state["summary"]["backlog_candidates"] == 1
+    assert state["system_actions"]["inventory_scan"]["suite_id"] == "inventory_system_scan"
+    assert state["system_actions"]["full_validation"]["suite_id"] == "full_system_validation"
+    assert all(item["suite_id"] not in {"inventory_system_scan", "full_system_validation"} for item in state["partial_suite_catalog"])
     assert {item["environment"] for item in state["latest_runs"][:2]} == {"DEV_FULL", "PROD_SAFE"}
     assert state["latest_diff"]["status"] in {"stable", "regression"}
     assert state["operational_view"]["coverage"]["matrix"][0]["item"] == "Telas e páginas"

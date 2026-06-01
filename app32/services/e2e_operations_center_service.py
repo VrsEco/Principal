@@ -21,6 +21,8 @@ except ModuleNotFoundError:  # pragma: no cover - compatibilidade de import loca
 class E2EOperationsCenterService:
     """Monta a visão operacional da Central de Testes E2E sem acoplar execução à UI."""
 
+    SYSTEM_ACTION_SUITES = {"inventory_system_scan", "full_system_validation"}
+
     FAILURE_SUGGESTIONS = {
         "timeout": "Revisar carregamento assíncrono, tempos de espera e seletor de prontidão do fluxo afetado.",
         "assertion": "Revisar a regra funcional esperada e alinhar contrato da tela/API com a automação.",
@@ -60,6 +62,8 @@ class E2EOperationsCenterService:
         latest_diff = cls._build_latest_diff(outputs_root)
         backlog_candidates = cls._collect_backlog_candidates(runs)
         suite_catalog = [item.to_dict() for item in list_suite_catalog()]
+        quick_actions = cls._build_system_actions(suite_catalog)
+        partial_suites = [item for item in suite_catalog if item["suite_id"] not in cls.SYSTEM_ACTION_SUITES]
         supervised_executions = E2ESupervisedExecutionService.list_executions()[:12]
         operational_view = cls._build_operational_view(inventory_items, runs, backlog_candidates)
 
@@ -95,12 +99,14 @@ class E2EOperationsCenterService:
                 "statuses": ["ALL", "passed", "failed", "observed"],
                 "suites": ["ALL", *sorted(item["suite_id"] for item in suite_catalog)],
             },
+            "system_actions": quick_actions,
             "operational_view": operational_view,
             "latest_runs": runs[:20],
             "latest_by_mode": latest_by_mode,
             "latest_diff": latest_diff,
             "backlog_candidates": backlog_candidates[:20],
             "suite_catalog": suite_catalog,
+            "partial_suite_catalog": partial_suites,
             "supervised_executions": supervised_executions,
             "runbooks": cls._build_runbooks(runbooks_root),
             "commands": cls._build_commands(repo_root),
@@ -555,3 +561,25 @@ class E2EOperationsCenterService:
                 "command": "python app32/tests/e2e/scripts/render_e2e_center_visual_audit.py",
             },
         ]
+
+    @classmethod
+    def _build_system_actions(cls, suite_catalog: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        by_id = {item["suite_id"]: item for item in suite_catalog}
+        return {
+            "inventory_scan": {
+                "suite_id": "inventory_system_scan",
+                "label": "Checar e mapear todo o sistema",
+                "description": "Vasculha rotas novas, compara com o inventário atual e aponta o que ainda precisa entrar na cobertura.",
+                "summary": (by_id.get("inventory_system_scan") or {}).get("summary"),
+            },
+            "full_validation": {
+                "suite_id": "full_system_validation",
+                "label": "Fazer teste completo do sistema",
+                "description": "Executa a bateria completa de testes suportada no ambiente escolhido e consolida o resultado final.",
+                "summary": (by_id.get("full_system_validation") or {}).get("summary"),
+            },
+            "partial_execution": {
+                "label": "Fazer teste parcial",
+                "description": "Permite escolher uma suíte específica para validar apenas uma parte do sistema.",
+            },
+        }

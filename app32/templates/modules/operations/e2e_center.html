@@ -41,24 +41,15 @@
     <div class="e2e-tab-panel is-active" data-e2e-panel="operational">
         <section class="e2e-card">
             <div class="e2e-card__header">
-                <h2>Executar teste agora</h2>
+                <h2>Executar agora</h2>
                 <span class="e2e-badge">Ação rápida</span>
             </div>
             <p class="e2e-section-intro">
-                Use este atalho para iniciar uma nova rodada do robô sem entrar na área técnica.
+                Escolha o ambiente e use uma das ações rápidas abaixo para mapear o sistema, rodar o teste completo
+                ou disparar um teste parcial.
             </p>
             <div class="e2e-supervised-grid">
                 <div class="e2e-supervised-form">
-                    <label>
-                        <span>Tipo de teste</span>
-                        <select id="e2eSuiteSelect">
-                            {% for suite in state.suite_catalog %}
-                            <option value="{{ suite.suite_id }}">{{ suite.label }} — {{ suite.domain }}</option>
-                            {% else %}
-                            <option value="">Nenhuma suíte disponível</option>
-                            {% endfor %}
-                        </select>
-                    </label>
                     <label>
                         <span>Ambiente</span>
                         <select id="e2eEnvironmentSelect">
@@ -67,13 +58,49 @@
                             {% endfor %}
                         </select>
                     </label>
-                    <button type="button" class="e2e-btn e2e-btn--primary" id="e2eStartExecutionBtn">Iniciar teste</button>
+                    <button type="button" class="e2e-btn e2e-btn--secondary e2e-fixed-suite-btn" data-fixed-suite-id="{{ state.system_actions.inventory_scan.suite_id }}" data-default-label="{{ state.system_actions.inventory_scan.label }}">{{ state.system_actions.inventory_scan.label }}</button>
+                    <button type="button" class="e2e-btn e2e-btn--primary e2e-fixed-suite-btn" data-fixed-suite-id="{{ state.system_actions.full_validation.suite_id }}" data-default-label="{{ state.system_actions.full_validation.label }}">{{ state.system_actions.full_validation.label }}</button>
                     <p class="e2e-inline-note">Recomendação: use DEV_FULL para laboratório e PROD_SAFE para conferência segura.</p>
                 </div>
+                <div class="e2e-command-list">
+                    <article class="e2e-command-item">
+                        <strong>{{ state.system_actions.inventory_scan.label }}</strong>
+                        <p class="e2e-section-intro" style="margin-top:.5rem;">{{ state.system_actions.inventory_scan.description }}</p>
+                    </article>
+                    <article class="e2e-command-item">
+                        <strong>{{ state.system_actions.full_validation.label }}</strong>
+                        <p class="e2e-section-intro" style="margin-top:.5rem;">{{ state.system_actions.full_validation.description }}</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="e2e-card">
+            <div class="e2e-card__header">
+                <h2>Teste parcial</h2>
+                <span class="e2e-badge">Escolha específica</span>
+            </div>
+            <p class="e2e-section-intro">
+                Use quando quiser validar apenas um módulo, fluxo ou suíte específica sem rodar o sistema inteiro.
+            </p>
+            <div class="e2e-supervised-grid">
+                <div class="e2e-supervised-form">
+                    <label>
+                        <span>Parte do sistema</span>
+                        <select id="e2eSuiteSelect">
+                            {% for suite in state.partial_suite_catalog %}
+                            <option value="{{ suite.suite_id }}">{{ suite.label }} — {{ suite.domain }}</option>
+                            {% else %}
+                            <option value="">Nenhuma suíte disponível</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <button type="button" class="e2e-btn e2e-btn--primary" id="e2eStartExecutionBtn">Iniciar teste parcial</button>
+                </div>
                 <div class="e2e-command-item">
-                    <strong>Como funciona</strong>
+                    <strong>{{ state.system_actions.partial_execution.label }}</strong>
                     <p class="e2e-section-intro" style="margin-top:.5rem;">
-                        Ao clicar em iniciar, a Central dispara a suíte escolhida e registra a execução para acompanhamento.
+                        {{ state.system_actions.partial_execution.description }}
                     </p>
                 </div>
             </div>
@@ -417,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabButtons = document.querySelectorAll('[data-e2e-tab]');
     const panels = document.querySelectorAll('[data-e2e-panel]');
     const startButtons = document.querySelectorAll('#e2eStartExecutionBtn, .e2e-start-execution-btn');
+    const fixedSuiteButtons = document.querySelectorAll('.e2e-fixed-suite-btn');
     const envFilter = document.getElementById('e2eFilterEnvironment');
     const statusFilter = document.getElementById('e2eFilterStatus');
     const suiteFilter = document.getElementById('e2eFilterSuite');
@@ -446,35 +474,49 @@ document.addEventListener('DOMContentLoaded', () => {
     [envFilter, statusFilter, suiteFilter].forEach((node) => node && node.addEventListener('change', applyFilters));
     applyFilters();
 
+    async function triggerExecution({suiteId, environment, startBtn, runningLabel, defaultLabel}) {
+        if (!suiteId || !environment) {
+            window.alert('Selecione o tipo de teste e o ambiente.');
+            return;
+        }
+        startBtn.disabled = true;
+        startBtn.textContent = runningLabel;
+        try {
+            const response = await fetch('/api/configs/qa/e2e/executions', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({suite_id: suiteId, environment}),
+            });
+            const payload = await response.json();
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Falha ao iniciar execução supervisionada.');
+            }
+            window.location.reload();
+        } catch (error) {
+            window.alert(error.message || 'Falha ao iniciar execução supervisionada.');
+        } finally {
+            startBtn.disabled = false;
+            startBtn.textContent = defaultLabel;
+        }
+    }
+
     if (startButtons.length) {
         startButtons.forEach((startBtn) => startBtn.addEventListener('click', async () => {
             const suiteSelectId = startBtn.dataset.suiteSelectId || 'e2eSuiteSelect';
             const environmentSelectId = startBtn.dataset.environmentSelectId || 'e2eEnvironmentSelect';
             const suiteId = document.getElementById(suiteSelectId)?.value;
             const environment = document.getElementById(environmentSelectId)?.value;
-            if (!suiteId || !environment) {
-                window.alert('Selecione o tipo de teste e o ambiente.');
-                return;
-            }
-            startBtn.disabled = true;
-            startBtn.textContent = 'Disparando...';
-            try {
-                const response = await fetch('/api/configs/qa/e2e/executions', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({suite_id: suiteId, environment}),
-                });
-                const payload = await response.json();
-                if (!response.ok || !payload.success) {
-                    throw new Error(payload.error || 'Falha ao iniciar execução supervisionada.');
-                }
-                window.location.reload();
-            } catch (error) {
-                window.alert(error.message || 'Falha ao iniciar execução supervisionada.');
-            } finally {
-                startBtn.disabled = false;
-                startBtn.textContent = startBtn.id === 'e2eStartExecutionBtn' ? 'Iniciar teste' : 'Iniciar execução';
-            }
+            const defaultLabel = startBtn.id === 'e2eStartExecutionBtn' ? 'Iniciar teste parcial' : 'Iniciar execução';
+            await triggerExecution({suiteId, environment, startBtn, runningLabel: 'Disparando...', defaultLabel});
+        }));
+    }
+
+    if (fixedSuiteButtons.length) {
+        fixedSuiteButtons.forEach((button) => button.addEventListener('click', async () => {
+            const environment = document.getElementById('e2eEnvironmentSelect')?.value;
+            const suiteId = button.dataset.fixedSuiteId;
+            const defaultLabel = button.dataset.defaultLabel || button.textContent || 'Iniciar';
+            await triggerExecution({suiteId, environment, startBtn: button, runningLabel: 'Disparando...', defaultLabel});
         }));
     }
 

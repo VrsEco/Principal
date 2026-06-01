@@ -29,6 +29,26 @@ class E2ESuiteDefinition:
 
 
 SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
+    "inventory_system_scan": E2ESuiteDefinition(
+        suite_id="inventory_system_scan",
+        label="Checagem e mapeamento do sistema",
+        domain="governance",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/build_inventory_candidates.py",),
+        destructive=False,
+        summary="Descobre rotas novas, compara com o inventário e gera candidatos de cobertura.",
+    ),
+    "full_system_validation": E2ESuiteDefinition(
+        suite_id="full_system_validation",
+        label="Teste completo do sistema",
+        domain="system",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_full_system_suite.py",),
+        destructive=False,
+        summary="Executa a bateria completa de suítes suportadas pelo ambiente selecionado.",
+    ),
     "smoke_real_navigation": E2ESuiteDefinition(
         suite_id="smoke_real_navigation",
         label="Smoke real de navegação",

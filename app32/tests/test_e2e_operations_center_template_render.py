@@ -34,6 +34,11 @@ def test_e2e_center_template_renders_operational_and_technical_tabs():
         state={
             "summary": {"total_runs": 3, "failed_runs": 1},
             "active_company": {"client_code": "VRS", "name": "Versus"},
+            "system_actions": {
+                "inventory_scan": {"suite_id": "inventory_system_scan", "label": "Checar e mapear todo o sistema", "description": "Mapeia rotas e lacunas."},
+                "full_validation": {"suite_id": "full_system_validation", "label": "Fazer teste completo do sistema", "description": "Executa a bateria completa."},
+                "partial_execution": {"label": "Fazer teste parcial", "description": "Executa só uma parte do sistema."},
+            },
             "execution_modes": [
                 {"key": "DEV_FULL", "label": "DEV_FULL"},
                 {"key": "PROD_SAFE", "label": "PROD_SAFE"},
@@ -75,14 +80,18 @@ def test_e2e_center_template_renders_operational_and_technical_tabs():
             "latest_by_mode": [],
             "latest_runs": [],
             "suite_catalog": [{"suite_id": "smoke_real_navigation", "label": "Smoke principal", "domain": "core"}],
+            "partial_suite_catalog": [{"suite_id": "smoke_real_navigation", "label": "Smoke principal", "domain": "core"}],
             "supervised_executions": [],
             "runbooks": [],
             "commands": [],
         }
     )
 
-    assert "Executar teste agora" in html
-    assert "Iniciar teste" in html
+    assert "Executar agora" in html
+    assert "Checar e mapear todo o sistema" in html
+    assert "Fazer teste completo do sistema" in html
+    assert "Teste parcial" in html
+    assert "Iniciar teste parcial" in html
     assert "Visão Operacional" in html
     assert "Visão Técnica" in html
     assert "O que o robô já cobre" in html

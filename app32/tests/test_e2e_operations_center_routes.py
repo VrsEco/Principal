@@ -36,7 +36,7 @@ def _build_app():
 def test_e2e_operations_center_frontend_state_route(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
-    fake_state = {"summary": {"total_runs": 3, "failed_runs": 1}, "latest_runs": [], "execution_modes": [], "filters": {}, "suite_catalog": [], "supervised_executions": [], "runbooks": [], "commands": [], "latest_by_mode": [], "latest_diff": {"status": "stable"}, "backlog_candidates": []}
+    fake_state = {"summary": {"total_runs": 3, "failed_runs": 1}, "latest_runs": [], "execution_modes": [], "filters": {}, "system_actions": {}, "suite_catalog": [], "partial_suite_catalog": [], "supervised_executions": [], "runbooks": [], "commands": [], "latest_by_mode": [], "latest_diff": {"status": "stable"}, "backlog_candidates": []}
 
     monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
     monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
@@ -141,6 +141,11 @@ def test_e2e_operations_center_template_route(monkeypatch):
     fake_state = {
         "summary": {"total_runs": 3, "failed_runs": 1, "backlog_candidates": 2},
         "active_company": {"client_code": "VRS", "name": "Versus"},
+        "system_actions": {
+            "inventory_scan": {"suite_id": "inventory_system_scan", "label": "Checar e mapear todo o sistema"},
+            "full_validation": {"suite_id": "full_system_validation", "label": "Fazer teste completo do sistema"},
+            "partial_execution": {"label": "Fazer teste parcial"},
+        },
         "execution_modes": [{"label": "DEV_FULL", "description": "Execução destrutiva", "destructive": True}],
         "filters": {"environments": ["ALL", "DEV_FULL"], "statuses": ["ALL", "passed"], "suites": ["ALL", "smoke_real_navigation"]},
         "latest_runs": [],
@@ -148,6 +153,7 @@ def test_e2e_operations_center_template_route(monkeypatch):
         "latest_diff": {"status": "stable", "regressions": [], "recovered": [], "new_journeys": []},
         "backlog_candidates": [],
         "suite_catalog": [],
+        "partial_suite_catalog": [],
         "supervised_executions": [],
         "runbooks": [],
         "commands": [],
