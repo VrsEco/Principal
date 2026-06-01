@@ -8,6 +8,7 @@ flask-marshmallow
 marshmallow-sqlalchemy
 python-dotenv
 requests
+PyYAML>=6.0
 
 # Database (PostgreSQL)
 # psycopg2-binary é para dev/CI; em produção usamos psycopg2 compilado (instalado via pip no servidor)
