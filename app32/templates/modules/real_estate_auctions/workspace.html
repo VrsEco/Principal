@@ -163,13 +163,13 @@
             <article class="rea-column">
                 <header class="rea-column__header">
                     <div>
-                        <strong>{{ column.label }}</strong>
-                        <small>{{ column.status }}</small>
+                        <strong>{{ column["label"] }}</strong>
+                        <small>{{ column["status"] }}</small>
                     </div>
-                    <span class="rea-column__count">{{ column.count }}</span>
+                    <span class="rea-column__count">{{ column["count"] }}</span>
                 </header>
                 <div class="rea-column__body">
-                    {% for item in column.items %}
+                    {% for item in column["items"] %}
                     <a class="rea-card" href="{{ url_for('real_estate_auctions.property_detail', property_id=item.id, company_id=company_id) }}">
                         <div class="rea-card__top">
                             <span class="rea-card__code">{{ item.code }}</span>
