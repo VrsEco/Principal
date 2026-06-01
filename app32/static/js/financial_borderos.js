@@ -300,7 +300,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    window.location.href = `/financial/borderos/${created.id}`;
+    window.location.href = `/financial/borderos/${created.id}?company_id=${companyId}`;
   }
 
   async function saveBordero() {

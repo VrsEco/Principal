@@ -33,5 +33,6 @@ def test_financial_functional_harness_validates_actions(monkeypatch):
         lambda _settings: _FakeHTTP(),
     )
     results = execute_financial_functional_probe(settings=_settings())
-    assert len(results) == 4
+    assert len(results) == 5
     assert all(result.success for result in results)
+    assert any(result.check_name == "financial.bordero_create_page" for result in results)

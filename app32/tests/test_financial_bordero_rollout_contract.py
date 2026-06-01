@@ -8,6 +8,8 @@ def test_bordero_rollout_contract_contains_required_guardrails():
     assert "Somente Títulos Financeiros operacionais" in service
     assert "reconcile_via_bordero" in service
     assert "bordero_trace" in service
+    assert "_is_duplicate_bordero_code_error" in service
+    assert "não foi possível gerar um código único para a empresa" in service
 
 
 def test_bordero_rollout_ui_uses_canonical_title_language():
@@ -16,3 +18,11 @@ def test_bordero_rollout_ui_uses_canonical_title_language():
     assert "Títulos Financeiros elegíveis" in template
     assert "títulos financeiros elegíveis" in frontend
     assert "Selecione ao menos um título financeiro." in frontend
+
+
+def test_bordero_links_and_redirects_preserve_company_scope():
+    list_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\borderos_list.html").read_text(encoding="utf-8")
+    frontend = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_borderos.js").read_text(encoding="utf-8")
+
+    assert "company_id={{ company_id or '' }}" in list_template
+    assert "?company_id=${companyId}" in frontend

@@ -199,6 +199,12 @@ modules:
   - name: financial
     criticality: alta
     items:
+      - key: financial.bordero_create_page
+        route: /financial/borderos/new?company_id=<company_id>&bordero_type=receivable
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, preparar_criacao]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
       - key: financial.schedule_report_page
         route: /financial/reports/agendamento
         environment_modes: [DEV_FULL, PROD_SAFE]

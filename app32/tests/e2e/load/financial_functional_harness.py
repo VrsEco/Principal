@@ -30,6 +30,10 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
     bank_statement_html.raise_for_status()
     http.assert_not_login_redirect(bank_statement_html, operation="financial.bank_statement_page")
 
+    bordero_create_html = http.request("GET", f"/financial/borderos/new?company_id={settings.company_id}&bordero_type=receivable")
+    bordero_create_html.raise_for_status()
+    http.assert_not_login_redirect(bordero_create_html, operation="financial.bordero_create_page")
+
     pdf_response = http.request("GET", "/financial/reports/agendamento/export-pdf")
     pdf_response.raise_for_status()
     http.assert_not_login_redirect(pdf_response, operation="financial.schedule_report_pdf")
@@ -63,6 +67,19 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
             details={
                 "content_type": str(bank_statement_html.headers.get("Content-Type") or ""),
                 "has_public_error": contains_public_error(bank_statement_html.text),
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.bordero_create_page",
+            route=f"/financial/borderos/new?company_id={settings.company_id}&bordero_type=receivable",
+            success=is_html_success(
+                bordero_create_html.text,
+                any_markers=("borderô", "bordero", "financeiro"),
+            ),
+            status_code=bordero_create_html.status_code,
+            details={
+                "content_type": str(bordero_create_html.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(bordero_create_html.text),
             },
         ),
         FinancialFunctionalProbeResult(
