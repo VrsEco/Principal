@@ -2,6 +2,7 @@ import os
 import sys
 import io
 from datetime import datetime
+from decimal import Decimal
 from types import SimpleNamespace
 
 from flask import Flask
@@ -46,6 +47,39 @@ def test_get_workspace_requires_bank_account():
 
     assert result is None
     assert error == "Conta bancária é obrigatória para abrir a conciliação."
+
+
+def test_workspace_filters_match_absolute_amount_and_movement_nature():
+    assert FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+        {"amount": -150.0, "movement_nature": "debit"},
+        amount_filter=Decimal("150.00"),
+        movement_nature="debit",
+    )
+    assert FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+        {"remaining_amount": "150.00", "movement_nature": "credit"},
+        amount_filter=Decimal("150.00"),
+        movement_nature="credit",
+    )
+    assert not FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+        {"amount": -150.01, "movement_nature": "debit"},
+        amount_filter=Decimal("150.00"),
+        movement_nature="debit",
+    )
+    assert not FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+        {"amount": -150.0, "movement_nature": "credit"},
+        amount_filter=Decimal("150.00"),
+        movement_nature="debit",
+    )
+
+
+def test_workspace_amount_query_parser_accepts_brl_and_decimal_dot():
+    app = Flask(__name__)
+
+    with app.test_request_context("/api/financial/reconciliation/workspace?amount=R$%201.234,56"):
+        assert financial_resource_module._get_optional_decimal_arg("amount") == Decimal("1234.56")
+
+    with app.test_request_context("/api/financial/reconciliation/workspace?amount=-100.00"):
+        assert financial_resource_module._get_optional_decimal_arg("amount") == Decimal("100.00")
 
 
 def test_create_entry_from_row_requires_bank_account_link(monkeypatch):

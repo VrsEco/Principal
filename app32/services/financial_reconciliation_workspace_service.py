@@ -22,6 +22,49 @@ from services.financial_title_balance_service import FinancialTitleBalanceServic
 
 class FinancialReconciliationWorkspaceService:
     @staticmethod
+    def _normalize_amount_filter(amount: Optional[Decimal]) -> Optional[Decimal]:
+        if amount is None:
+            return None
+        try:
+            return abs(Decimal(str(amount))).quantize(Decimal("0.01"))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _amount_matches_filter(value, amount_filter: Optional[Decimal]) -> bool:
+        if amount_filter is None:
+            return True
+        try:
+            current = abs(Decimal(str(value or 0))).quantize(Decimal("0.01"))
+        except Exception:
+            return False
+        return current == amount_filter
+
+    @staticmethod
+    def _movement_matches_filter(value, movement_nature: Optional[str]) -> bool:
+        if not movement_nature:
+            return True
+        return str(value or "").strip().lower() == movement_nature
+
+    @staticmethod
+    def _workspace_row_matches_filters(
+        row: Dict,
+        *,
+        amount_filter: Optional[Decimal] = None,
+        movement_nature: Optional[str] = None,
+    ) -> bool:
+        return (
+            FinancialReconciliationWorkspaceService._amount_matches_filter(
+                row.get("remaining_amount", row.get("original_amount", row.get("amount"))),
+                amount_filter,
+            )
+            and FinancialReconciliationWorkspaceService._movement_matches_filter(
+                row.get("movement_nature"),
+                movement_nature,
+            )
+        )
+
+    @staticmethod
     def _group_matches_by_row(matches: Sequence[FinancialReconciliationMatch]) -> Dict[int, List[FinancialReconciliationMatch]]:
         grouped: Dict[int, List[FinancialReconciliationMatch]] = {}
         for match in matches or []:
@@ -237,6 +280,7 @@ class FinancialReconciliationWorkspaceService:
         company_id: int,
         bank_account_id: int,
         rows: Sequence[FinancialImportRow],
+        movement_nature: Optional[str] = None,
     ) -> List[FinancialEntry]:
         query = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
@@ -244,6 +288,8 @@ class FinancialReconciliationWorkspaceService:
             FinancialEntry.status.in_(["scheduled", "posted", "partially_settled", "settled"]),
             FinancialEntry.bank_account_id == bank_account_id,
         )
+        if movement_nature:
+            query = query.filter(FinancialEntry.movement_nature == movement_nature)
 
         reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
         if reference_dates:
@@ -274,6 +320,7 @@ class FinancialReconciliationWorkspaceService:
         rows: Sequence[FinancialImportRow],
         due_date_from: Optional[date] = None,
         due_date_to: Optional[date] = None,
+        movement_nature: Optional[str] = None,
     ) -> List[FinancialEntry]:
         query = FinancialEntry.query.filter(
             FinancialEntry.company_id == company_id,
@@ -281,6 +328,8 @@ class FinancialReconciliationWorkspaceService:
             FinancialEntry.entry_type.in_(["payable", "receivable"]),
             FinancialEntry.status.in_(["scheduled", "posted", "partially_settled"]),
         )
+        if movement_nature:
+            query = query.filter(FinancialEntry.movement_nature == movement_nature)
 
         if due_date_from:
             query = query.filter(FinancialEntry.due_date >= due_date_from)
@@ -313,6 +362,8 @@ class FinancialReconciliationWorkspaceService:
             FinancialSchedule.entry_type.in_(["payable", "receivable"]),
             FinancialSchedule.status == "active",
         )
+        if movement_nature:
+            schedule_query = schedule_query.filter(FinancialSchedule.movement_nature == movement_nature)
         if due_date_from:
             schedule_query = schedule_query.filter(FinancialSchedule.next_due_date >= due_date_from)
         if due_date_to:
@@ -453,6 +504,8 @@ class FinancialReconciliationWorkspaceService:
         batch_id: Optional[int] = None,
         due_date_from: Optional[date] = None,
         due_date_to: Optional[date] = None,
+        amount: Optional[Decimal] = None,
+        movement_nature: Optional[str] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
@@ -460,6 +513,8 @@ class FinancialReconciliationWorkspaceService:
             return None, scope_error
         if not bank_account_id:
             return None, "Conta bancária é obrigatória para abrir a conciliação."
+        amount_filter = FinancialReconciliationWorkspaceService._normalize_amount_filter(amount)
+        movement_filter = movement_nature if movement_nature in {"credit", "debit"} else None
 
         account = FinancialBankAccount.query.filter(
             FinancialBankAccount.id == bank_account_id,
@@ -491,9 +546,18 @@ class FinancialReconciliationWorkspaceService:
             FinancialReconciliationWorkspaceService._serialize_row(row, match_groups.get(int(row.id), []))
             for row in rows
         ]
-        pending_rows = [row for row in rows_payload if row.get("needs_manual_action")]
-        suggested_rows = [row for row in rows_payload if (row.get("matches") or {}).get("suggested_count")]
-        confirmed_rows = [row for row in rows_payload if (row.get("matches") or {}).get("confirmed_count") or row.get("created_entry_id")]
+        filtered_rows_payload = [
+            row
+            for row in rows_payload
+            if FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+                row,
+                amount_filter=amount_filter,
+                movement_nature=movement_filter,
+            )
+        ]
+        pending_rows = [row for row in filtered_rows_payload if row.get("needs_manual_action")]
+        suggested_rows = [row for row in filtered_rows_payload if (row.get("matches") or {}).get("suggested_count")]
+        confirmed_rows = [row for row in filtered_rows_payload if (row.get("matches") or {}).get("confirmed_count") or row.get("created_entry_id")]
 
         linked_entry_ids: Dict[int, List[int]] = {}
         for row in rows_payload:
@@ -507,6 +571,7 @@ class FinancialReconciliationWorkspaceService:
             company_id=company_id,
             bank_account_id=bank_account_id,
             rows=rows,
+            movement_nature=movement_filter,
         )
         system_rows = [
             FinancialReconciliationWorkspaceService._serialize_system_entry(
@@ -514,6 +579,15 @@ class FinancialReconciliationWorkspaceService:
                 linked_row_ids=linked_entry_ids.get(int(entry.id), []),
             )
             for entry in system_entries
+        ]
+        system_rows = [
+            item
+            for item in system_rows
+            if FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+                item,
+                amount_filter=amount_filter,
+                movement_nature=movement_filter,
+            )
         ]
         system_unmatched_rows = [
             item for item in system_rows
@@ -525,6 +599,7 @@ class FinancialReconciliationWorkspaceService:
             rows=rows,
             due_date_from=due_date_from,
             due_date_to=due_date_to,
+            movement_nature=movement_filter,
         )
         open_title_rows = [
             FinancialReconciliationWorkspaceService._serialize_open_title(
@@ -532,6 +607,15 @@ class FinancialReconciliationWorkspaceService:
                 linked_row_ids=linked_entry_ids.get(int(entry.id), []),
             )
             for entry in open_titles
+        ]
+        open_title_rows = [
+            item
+            for item in open_title_rows
+            if FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+                item,
+                amount_filter=amount_filter,
+                movement_nature=movement_filter,
+            )
         ]
         open_title_unmatched_rows = [
             item for item in open_title_rows
@@ -542,8 +626,8 @@ class FinancialReconciliationWorkspaceService:
             "bank_account": account.to_dict(),
             "selected_batch": selected_batch.to_dict() if selected_batch else None,
             "available_batches": [batch.to_dict() for batch in batches],
-            "rows": rows_payload,
-            "bank_rows": rows_payload,
+            "rows": filtered_rows_payload,
+            "bank_rows": filtered_rows_payload,
             "bank_rows_without_link": pending_rows,
             "bank_rows_with_suggestion": suggested_rows,
             "bank_rows_reconciled": confirmed_rows,
@@ -552,10 +636,10 @@ class FinancialReconciliationWorkspaceService:
             "open_title_rows": open_title_rows,
             "open_title_rows_without_link": open_title_unmatched_rows,
             "summary": {
-                "total_rows": len(rows),
+                "total_rows": len(filtered_rows_payload),
                 "pending_rows": len(pending_rows),
-                "confirmed_matches": sum(1 for item in matches if item.match_status == "confirmed"),
-                "suggested_matches": sum(1 for item in matches if item.match_status == "suggested"),
+                "confirmed_matches": sum((item.get("matches") or {}).get("confirmed_count", 0) for item in filtered_rows_payload),
+                "suggested_matches": sum((item.get("matches") or {}).get("suggested_count", 0) for item in filtered_rows_payload),
                 "unmatched_bank_rows": len(pending_rows),
                 "unmatched_system_rows": len(system_unmatched_rows),
                 "system_rows": len(system_rows),
@@ -564,6 +648,8 @@ class FinancialReconciliationWorkspaceService:
             "filters": {
                 "due_date_from": due_date_from.isoformat() if due_date_from else None,
                 "due_date_to": due_date_to.isoformat() if due_date_to else None,
+                "amount": str(amount_filter) if amount_filter is not None else None,
+                "movement_nature": movement_filter,
             },
         }, None
 

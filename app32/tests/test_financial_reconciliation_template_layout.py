@@ -10,6 +10,10 @@ def test_reconciliation_template_uses_standard_right_sidebar_filters():
     assert "{% block sidebar_right %}" in content
     assert 'workspace-bank-account' in content
     assert 'batch-select' in content
+    assert 'reconciliation-amount-filter' in content
+    assert 'reconciliation-movement-filter' in content
+    assert 'data-format="currency"' in content
+    assert 'Compara o valor absoluto' in content
     assert 'onclick="applyWorkspaceFilters()"' in content
     assert 'openFilterDrawer()' not in content
     assert 'id="recon-filter-drawer"' not in content
@@ -52,3 +56,13 @@ def test_reconciliation_template_exposes_entry_and_exit_tags_for_bank_and_system
     assert "${movementNatureBadge(row.movement_nature)}" in content
     assert "${movementNatureBadge(item.movement_nature)}" in content
     assert content.count("${movementNatureBadge(item.movement_nature)}") >= 2
+
+
+def test_reconciliation_template_submits_amount_and_movement_filters_to_workspace_api():
+    content = TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    assert "amountFilter" in content
+    assert "movementNatureFilter" in content
+    assert "amount: state.amountFilter || null" in content
+    assert "movement_nature: state.movementNatureFilter || null" in content
+    assert "formatCurrencyInputValue" in content

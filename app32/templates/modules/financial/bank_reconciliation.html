@@ -13,7 +13,7 @@
 {% block sidebar_right %}
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
-    <p class="recon-sidebar-subtitle">Conta bancária do workspace, lote e filtros operacionais da coluna 3.</p>
+    <p class="recon-sidebar-subtitle">Conta bancária do workspace, lote e filtros operacionais da conciliação.</p>
 </div>
 
 <div class="sidebar-content-ws recon-sidebar-filters">
@@ -40,6 +40,21 @@
     <div class="filter-group recon-sidebar-field">
         <label class="filter-label" for="system-search">Buscar no sistema / títulos</label>
         <input id="system-search" type="search" placeholder="Histórico, documento ou código">
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="reconciliation-amount-filter">Valor</label>
+        <input id="reconciliation-amount-filter" type="text" inputmode="decimal" data-format="currency" placeholder="Ex.: 1.234,56">
+        <small>Compara o valor absoluto: +100,00 e -100,00 entram no mesmo filtro.</small>
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="reconciliation-movement-filter">Entradas ou saídas</label>
+        <select id="reconciliation-movement-filter">
+            <option value="">Todas</option>
+            <option value="credit">Entradas</option>
+            <option value="debit">Saídas</option>
+        </select>
     </div>
 
     <div class="recon-sidebar-actions">
@@ -241,6 +256,7 @@
     .recon-sidebar-filters{padding:1rem}
     .recon-sidebar-field{display:flex;flex-direction:column;align-items:stretch;margin-bottom:1.25rem}
     .recon-sidebar-field .filter-label{font-size:.72rem;font-weight:800;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:.5rem;display:block;letter-spacing:.05em}
+    .recon-sidebar-field small{margin-top:.4rem;color:var(--text-secondary);font-size:.76rem;line-height:1.35}
     .recon-sidebar-filters select,.recon-sidebar-filters input{width:100%;padding:.75rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--surface-secondary);color:var(--text-primary);font-size:.85rem;transition:all .2s}
     .recon-sidebar-filters select:focus,.recon-sidebar-filters input:focus{border-color:var(--primary);outline:none;background:var(--surface)}
     .recon-sidebar-actions{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem}
@@ -349,6 +365,8 @@ const state = {
     systemSearch: '',
     openTitleDueDateFrom: '',
     openTitleDueDateTo: '',
+    amountFilter: '',
+    movementNatureFilter: '',
     resolutionPreview: null,
 };
 
@@ -359,6 +377,12 @@ function movementNatureBadge(movementNature){
     if(normalized === 'credit') return badge('Entrada', 'info');
     if(normalized === 'debit') return badge('Saída', 'danger');
     return '';
+}
+function formatCurrencyInputValue(value){
+    if(value === null || value === undefined || value === '') return '';
+    return window.App32InputFormatters?.formatCurrency
+        ? window.App32InputFormatters.formatCurrency(value)
+        : String(value);
 }
 function formatDateDisplay(value){
     if(!value) return 'Sem histórico';
@@ -924,11 +948,15 @@ function renderWorkspace(){
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const systemSearchInput = document.getElementById('system-search');
+    const amountInput = document.getElementById('reconciliation-amount-filter');
+    const movementSelect = document.getElementById('reconciliation-movement-filter');
     const workspaceSelect = document.getElementById('workspace-bank-account');
     const batchSelect = document.getElementById('batch-select');
     if(dueDateFromInput) dueDateFromInput.value = state.openTitleDueDateFrom || '';
     if(dueDateToInput) dueDateToInput.value = state.openTitleDueDateTo || '';
     if(systemSearchInput) systemSearchInput.value = state.systemSearch || '';
+    if(amountInput) amountInput.value = formatCurrencyInputValue(state.amountFilter || '');
+    if(movementSelect) movementSelect.value = state.movementNatureFilter || '';
     if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
     if(batchSelect){
         batchSelect.innerHTML = (state.workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id) === String(state.workspace.selected_batch?.id) ? 'selected' : ''}>${escapeHtml(item.batch_code)} · ${escapeHtml(item.source_type)}</option>`).join('');
@@ -980,10 +1008,14 @@ async function openWorkspace(bankAccountId, batchId=null){
         batch_id: batchId,
         due_date_from: state.openTitleDueDateFrom || null,
         due_date_to: state.openTitleDueDateTo || null,
+        amount: state.amountFilter || null,
+        movement_nature: state.movementNatureFilter || null,
     })}`);
     state.selectedBatchId = state.workspace?.selected_batch?.id || batchId || null;
     state.openTitleDueDateFrom = state.workspace?.filters?.due_date_from || state.openTitleDueDateFrom || '';
     state.openTitleDueDateTo = state.workspace?.filters?.due_date_to || state.openTitleDueDateTo || '';
+    state.amountFilter = state.workspace?.filters?.amount ? formatCurrencyInputValue(state.workspace.filters.amount) : (state.amountFilter || '');
+    state.movementNatureFilter = state.workspace?.filters?.movement_nature || state.movementNatureFilter || '';
     const preferredRow = (state.workspace.bank_rows_without_link || [])[0] || (state.workspace.bank_rows_with_suggestion || [])[0] || (state.workspace.bank_rows || [])[0] || null;
     state.activeRowId = preferredRow?.id || null;
     state.selectedBankRowIds = preferredRow?.id ? [Number(preferredRow.id)] : [];
@@ -1002,6 +1034,8 @@ async function applyWorkspaceFilters(){
     state.openTitleDueDateFrom = document.getElementById('open-title-due-date-from')?.value || '';
     state.openTitleDueDateTo = document.getElementById('open-title-due-date-to')?.value || '';
     state.systemSearch = document.getElementById('system-search')?.value || '';
+    state.amountFilter = document.getElementById('reconciliation-amount-filter')?.value || '';
+    state.movementNatureFilter = document.getElementById('reconciliation-movement-filter')?.value || '';
     closeAllSidebars();
     if(nextBankAccountId){
         await openWorkspace(nextBankAccountId, nextBankIdMatchesCurrent(nextBankAccountId) ? nextBatchId : null);
@@ -1024,12 +1058,18 @@ async function clearWorkspaceFilters(){
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const searchInput = document.getElementById('system-search');
+    const amountInput = document.getElementById('reconciliation-amount-filter');
+    const movementSelect = document.getElementById('reconciliation-movement-filter');
     if(dueDateFromInput) dueDateFromInput.value = '';
     if(dueDateToInput) dueDateToInput.value = '';
     if(searchInput) searchInput.value = '';
+    if(amountInput) amountInput.value = '';
+    if(movementSelect) movementSelect.value = '';
     state.openTitleDueDateFrom = '';
     state.openTitleDueDateTo = '';
     state.systemSearch = '';
+    state.amountFilter = '';
+    state.movementNatureFilter = '';
     closeAllSidebars();
     await refreshWorkspace();
 }

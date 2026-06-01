@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from flask import current_app, request
 from flask_restful import Resource
@@ -65,6 +66,28 @@ def _get_optional_iso_date_arg(name: str):
         return date.fromisoformat(raw_value)
     except ValueError:
         return None
+
+
+def _get_optional_decimal_arg(name: str):
+    raw_value = str(request.args.get(name) or "").strip()
+    if not raw_value:
+        return None
+    normalized = raw_value.replace("R$", "").replace(" ", "")
+    normalized = (
+        normalized.replace(".", "").replace(",", ".")
+        if "," in normalized
+        else normalized.replace(",", "")
+    )
+    normalized = "".join(char for char in normalized if char.isdigit() or char in ".-")
+    try:
+        return abs(Decimal(normalized)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError):
+        return None
+
+
+def _get_optional_movement_nature_arg(name: str = "movement_nature"):
+    raw_value = str(request.args.get(name) or "").strip().lower()
+    return raw_value if raw_value in {"credit", "debit"} else None
 
 
 def _sanitize_update_payload(payload: dict | None, *extra_fields: str) -> dict:
@@ -1474,6 +1497,8 @@ class FinancialBankReconciliationWorkspaceResource(Resource):
             batch_id=request.args.get("batch_id", type=int),
             due_date_from=_get_optional_iso_date_arg("due_date_from"),
             due_date_to=_get_optional_iso_date_arg("due_date_to"),
+            amount=_get_optional_decimal_arg("amount"),
+            movement_nature=_get_optional_movement_nature_arg(),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:
