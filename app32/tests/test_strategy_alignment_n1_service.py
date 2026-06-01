@@ -233,6 +233,78 @@ def test_identity_nested_mixed_status_keeps_only_confirmed_canonical_items():
     assert staged[0]["target_key"] == "obj-pendente"
 
 
+@pytest.mark.parametrize(
+    ("field", "item_type"),
+    [
+        ("values", "value"),
+        ("value_propositions", "value_proposition"),
+        ("differentials", "differential"),
+        ("pillars", "strategic_pillar"),
+        ("strategic_objectives", "strategic_objective"),
+        ("essential_competencies", "essential_competence"),
+        ("segments_icp", "segment_icp"),
+        ("policies", "policy"),
+        ("stakeholders", "stakeholder"),
+        ("corporate_indicators", "corporate_indicator"),
+    ],
+)
+def test_confirmed_identity_maturation_array_items_append_to_canonical_payload(field, item_type):
+    payload = {
+        "name": "Item confirmado",
+        "definition": "Definição validada",
+        "identity_field": field,
+        "item_type": item_type,
+        "target_key": f"{field}-001",
+        "status": "confirmed",
+        "source": "cliente",
+    }
+
+    resolved_field = StrategyAlignmentN1Service._identity_field_for_maturation_item(item_type, payload)
+    canonical_item = StrategyAlignmentN1Service._canonical_identity_item_payload(resolved_field, payload)
+    next_items, action, target_key = StrategyAlignmentN1Service._upsert_identity_list_item(
+        [],
+        field=resolved_field,
+        item_payload=canonical_item,
+    )
+
+    assert resolved_field == field
+    assert action == "append"
+    assert target_key == f"{field}-001"
+    assert next_items == [
+        {
+            "name": "Item confirmado",
+            "definition": "Definição validada",
+            "target_key": f"{field}-001",
+            "status": "confirmed",
+            "source": "cliente",
+            "key": f"{field}-001",
+        }
+    ]
+
+
+def test_confirmed_identity_maturation_array_item_replaces_existing_by_key():
+    payload = {
+        "name": "Sustentabilidade atualizada",
+        "identity_field": "values",
+        "item_type": "value",
+        "target_key": "valor-sustentabilidade",
+        "status": "confirmed",
+    }
+
+    canonical_item = StrategyAlignmentN1Service._canonical_identity_item_payload("values", payload)
+    next_items, action, target_key = StrategyAlignmentN1Service._upsert_identity_list_item(
+        [{"key": "valor-sustentabilidade", "name": "Sustentabilidade antiga"}],
+        field="values",
+        item_payload=canonical_item,
+    )
+
+    assert action == "replace"
+    assert target_key == "valor-sustentabilidade"
+    assert len(next_items) == 1
+    assert next_items[0]["name"] == "Sustentabilidade atualizada"
+    assert next_items[0]["status"] == "confirmed"
+
+
 def test_alignment_service_blocks_company_outside_accessible_scope():
     with pytest.raises(PermissionError, match="escopo analítico"):
         StrategyAlignmentN1Service._ensure_access(99, accessible_company_ids=[1, 2])

@@ -239,6 +239,7 @@ Regras:
 
 - `upsert_*` com `status=draft|pending|rejected` persiste em `strategy_maturation_items` e **não** altera dado canônico.
 - Em identidade organizacional, itens aninhados com `status=draft|pending|rejected` dentro de listas estruturadas (`values`, `strategic_objectives`, `policies` etc.) também são roteados individualmente para `strategy_maturation_items`; o sidecar canônico recebe somente itens `confirmed`/sem status.
+- Ao confirmar um item individual de identidade com `identity_field`/`item_type` de campo array (`values`, `value_propositions`, `differentials`, `pillars`, `essential_competencies`, `segments_icp`, `policies`, `stakeholders`, etc.), o human-gate faz `append`/`replace` no array canônico correspondente por `target_key`, sem re-stage e sem contaminar outros campos.
 - `upsert_*` sem status ou com `status=confirmed` grava no sidecar canônico.
 - readiness/análise filtram itens estruturados por `status=confirmed`; itens sem status são tratados como legado confirmado.
 - readiness expõe `maturation.by_status` e `maturation.by_block` com backlog aberto e maturidade por bloco.

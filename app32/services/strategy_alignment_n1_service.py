@@ -307,6 +307,71 @@ class StrategyAlignmentN1Service:
         return payload
 
     @staticmethod
+    def _identity_field_for_maturation_item(item_type: str | None, payload: dict[str, Any]) -> str | None:
+        raw_field = _clean_text(payload.get("identity_field") or payload.get("field"))
+        if raw_field:
+            field = StrategyAlignmentN1Service._identity_payload_field(raw_field)
+            if field in StrategyAlignmentN1Service._IDENTITY_ITEM_TYPE_BY_FIELD:
+                return field
+
+        normalized_item_type = _slug(payload.get("item_type") or item_type).replace("-", "_")
+        item_type_to_field = {
+            _slug(mapped_item_type).replace("-", "_"): field
+            for field, mapped_item_type in StrategyAlignmentN1Service._IDENTITY_ITEM_TYPE_BY_FIELD.items()
+        }
+        return item_type_to_field.get(normalized_item_type)
+
+    @staticmethod
+    def _canonical_identity_item_payload(field: str, payload: dict[str, Any]) -> dict[str, Any]:
+        canonical = dict(payload)
+        canonical.pop("identity_field", None)
+        canonical.pop("field", None)
+        canonical.pop("item_type", None)
+        canonical["status"] = "confirmed"
+
+        target_key = StrategyAlignmentN1Service._identity_target_key(field, canonical)
+        if target_key:
+            canonical.setdefault("target_key", target_key)
+            canonical.setdefault("key", target_key)
+        return canonical
+
+    @staticmethod
+    def _identity_item_keys_match(left: str | None, right: str | None) -> bool:
+        left_clean = _clean_text(left)
+        right_clean = _clean_text(right)
+        if not left_clean or not right_clean:
+            return False
+        return left_clean.casefold() == right_clean.casefold() or _slug(left_clean) == _slug(right_clean)
+
+    @staticmethod
+    def _upsert_identity_list_item(
+        existing_items: Any,
+        *,
+        field: str,
+        item_payload: dict[str, Any],
+    ) -> tuple[list[Any], str, str | None]:
+        target_key = StrategyAlignmentN1Service._identity_target_key(field, item_payload)
+        updated_items: list[Any] = []
+        replaced = False
+
+        for existing in _safe_list(existing_items, field=field):
+            existing_key = (
+                StrategyAlignmentN1Service._identity_target_key(field, existing)
+                if isinstance(existing, dict)
+                else _clean_text(existing)
+            )
+            if target_key and StrategyAlignmentN1Service._identity_item_keys_match(existing_key, target_key):
+                updated_items.append(item_payload)
+                replaced = True
+            else:
+                updated_items.append(existing)
+
+        if not replaced:
+            updated_items.append(item_payload)
+
+        return updated_items, ("replace" if replaced else "append"), target_key
+
+    @staticmethod
     def _split_identity_payload_for_maturation(payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         canonical_payload = dict(payload)
         staged_payloads: list[dict[str, Any]] = []
@@ -558,15 +623,15 @@ class StrategyAlignmentN1Service:
         block_type = item.block_type
 
         if block_type == "identity":
-            result = StrategyAlignmentN1Service.upsert_identity(
+            result = StrategyAlignmentN1Service._promote_identity_maturation_payload(
                 company_id=company_id,
+                item=item,
                 payload=payload,
                 user_id=user_id,
-                commit=False,
             )
             promoted_ref_type = "organizational_identity"
             promoted_ref_id = result.get("id")
-            promoted_ref_key = None
+            promoted_ref_key = result.get("target_key")
         elif block_type == "process_profile":
             process_id = int(item.target_ref_id or payload.get("process_id") or 0)
             if process_id <= 0:
@@ -618,6 +683,65 @@ class StrategyAlignmentN1Service:
             "promoted_ref_key": item.promoted_ref_key,
             "record": result,
         }
+
+    @staticmethod
+    def _promote_identity_maturation_payload(
+        *,
+        company_id: int,
+        item: StrategyMaturationItem,
+        payload: dict[str, Any],
+        user_id: int | None = None,
+    ) -> dict[str, Any]:
+        field = StrategyAlignmentN1Service._identity_field_for_maturation_item(item.item_type, payload)
+        if not field:
+            return StrategyAlignmentN1Service.upsert_identity(
+                company_id=company_id,
+                payload=payload,
+                user_id=user_id,
+                commit=False,
+            )
+
+        company = StrategyAlignmentN1Service._require_company(company_id)
+        identity = OrganizationalIdentity.query.filter_by(company_id=company_id).first()
+        if identity is None:
+            identity = OrganizationalIdentity(company_id=company_id, created_by_user_id=user_id)
+            db.session.add(identity)
+        identity.updated_by_user_id = user_id
+
+        item_payload = StrategyAlignmentN1Service._canonical_identity_item_payload(field, payload)
+        target_key: str | None = None
+        action = "merge"
+
+        if field == "swot":
+            current_swot = dict(_safe_dict(identity.swot_json, field="swot"))
+            current_swot.update(item_payload)
+            identity.swot_json = current_swot
+            target_key = "swot"
+        else:
+            attr = StrategyAlignmentN1Service._IDENTITY_FIELD_MAP.get(field)
+            if attr not in StrategyAlignmentN1Service._IDENTITY_LIST_ATTRS:
+                return StrategyAlignmentN1Service.upsert_identity(
+                    company_id=company_id,
+                    payload=payload,
+                    user_id=user_id,
+                    commit=False,
+                )
+            next_items, action, target_key = StrategyAlignmentN1Service._upsert_identity_list_item(
+                getattr(identity, attr),
+                field=field,
+                item_payload=item_payload,
+            )
+            setattr(identity, attr, next_items)
+            if attr == "values_json":
+                company.values = _json_text(next_items)
+
+        db.session.flush()
+        result = identity.to_dict()
+        result["canonical_updated"] = True
+        result["promoted_field"] = field
+        result["promoted_action"] = action
+        result["target_key"] = target_key
+        return result
 
     @staticmethod
     def get_identity(company_id: int, *, status: str | None = "confirmed") -> dict[str, Any]:
