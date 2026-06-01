@@ -207,5 +207,192 @@ def register_real_estate_auction_tools(mcp: Any) -> None:
         except Exception as exc:  # pragma: no cover - envelope defensivo
             return _error(operation, exc, company_id=company_id, write=True)
 
+    @mcp.tool()
+    def list_real_estate_auction_sources_tool(company_id: int) -> dict[str, Any]:
+        """Lista fontes de captação/importação do tenant para o módulo Leilões Imobiliários."""
+        operation = "sources.list"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.list_sources, company_id),
+                company_id=company_id,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id)
+
+    @mcp.tool()
+    def create_real_estate_auction_source_tool(company_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+        """Cria uma fonte de importação/captação do módulo no tenant."""
+        operation = "sources.create"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.create_source, company_id, payload),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def update_real_estate_auction_source_tool(
+        company_id: int,
+        source_id: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Atualiza uma fonte de importação/captação do módulo no tenant."""
+        operation = "sources.update"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.update_source, company_id, source_id, payload),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def delete_real_estate_auction_source_tool(company_id: int, source_id: int) -> dict[str, Any]:
+        """Remove logicamente uma fonte do módulo dentro do tenant."""
+        operation = "sources.delete"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.delete_source, company_id, source_id),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def create_real_estate_auction_event_tool(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Cria um evento de leilão vinculado a um imóvel do tenant."""
+        operation = "events.create"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.create_event, company_id, property_id, payload),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def update_real_estate_auction_event_tool(
+        company_id: int,
+        property_id: int,
+        event_id: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Atualiza um evento de leilão existente no tenant."""
+        operation = "events.update"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.update_event, company_id, property_id, event_id, payload),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def delete_real_estate_auction_event_tool(
+        company_id: int,
+        property_id: int,
+        event_id: int,
+    ) -> dict[str, Any]:
+        """Remove um evento de leilão do imóvel dentro do tenant."""
+        operation = "events.delete"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.delete_event, company_id, property_id, event_id),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def upsert_real_estate_auction_financial_sheet_tool(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Cria ou atualiza a ficha financeira de um imóvel do tenant."""
+        operation = "financial_sheet.upsert"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.upsert_financial_sheet, company_id, property_id, payload),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def upsert_real_estate_auction_due_diligence_tool(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Cria ou atualiza a ficha de diligência/posse/riscos do imóvel."""
+        operation = "due_diligence.upsert"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.upsert_due_diligence, company_id, property_id, payload),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def create_real_estate_auction_attachment_tool(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+        user_id: Optional[int] = None,
+    ) -> dict[str, Any]:
+        """Registra metadado de anexo para um imóvel/leilão do tenant."""
+        operation = "attachments.create"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.create_attachment, company_id, property_id, payload, user_id=user_id),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
+    @mcp.tool()
+    def delete_real_estate_auction_attachment_tool(
+        company_id: int,
+        property_id: int,
+        attachment_id: int,
+    ) -> dict[str, Any]:
+        """Remove metadado de anexo de um imóvel/leilão no tenant."""
+        operation = "attachments.delete"
+        try:
+            return _success(
+                operation,
+                _run(RealEstateAuctionService.delete_attachment, company_id, property_id, attachment_id),
+                company_id=company_id,
+                write=True,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id, write=True)
+
 
 __all__ = ["register_real_estate_auction_tools"]

@@ -6,6 +6,7 @@ from flask import Blueprint, abort, flash, jsonify, redirect, render_template, r
 from flask_login import current_user, login_required
 
 from models import Company, Employee, db
+from models.real_estate_auction import REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES
 from services.real_estate_auction_service import RealEstateAuctionError, RealEstateAuctionService
 from utils.permissions import can_access_company, get_default_company_id, has_company_full_access, has_permission
 
@@ -68,6 +69,68 @@ PROPERTY_FORM_FIELDS = [
     "auction_won_at",
     "available_for_sale_at",
     "sold_at",
+]
+EVENT_FORM_FIELDS = [
+    "auction_type",
+    "auction_datetime",
+    "minimum_bid",
+    "modality",
+    "auctioneer",
+    "winning_bid",
+    "result",
+    "notes",
+]
+FINANCIAL_SHEET_FORM_FIELDS = [
+    "winning_bid",
+    "auctioneer_commission_percent",
+    "other_acquisition_costs",
+    "transfer_tax_percent",
+    "transfer_tax_value",
+    "registry_cost_percent",
+    "registry_cost_value",
+    "eviction_cost",
+    "renovation_budget",
+    "cleaning_cost",
+    "overdue_property_tax",
+    "future_property_tax",
+    "overdue_condo_fee",
+    "future_condo_fee",
+    "legal_fees",
+    "contingency_value",
+    "capital_cost_months",
+    "capital_cost_percent",
+    "minimum_profit_percent",
+    "minimum_profit_value",
+    "projected_sale_value",
+    "broker_commission_percent",
+    "sale_tax_percent",
+    "operational_expenses",
+]
+DUE_DILIGENCE_FORM_FIELDS = [
+    "condo_fee_value",
+    "building_age",
+    "building_description",
+    "property_description",
+    "region_square_meter_value",
+    "resident_report",
+    "manager_report",
+    "other_debts",
+    "internal_notes",
+]
+ATTACHMENT_FORM_FIELDS = [
+    "category",
+    "original_filename",
+    "stored_filename",
+    "storage_path",
+    "mime_type",
+    "size_bytes",
+]
+SOURCE_FORM_FIELDS = [
+    "name",
+    "domain",
+    "base_url",
+    "link_pattern",
+    "listing_selector",
 ]
 
 
@@ -136,6 +199,10 @@ def _json_payload() -> dict[str, Any]:
     return payload
 
 
+def _form_payload(fields: list[str]) -> dict[str, Any]:
+    return {field: request.form.get(field) for field in fields if field in request.form}
+
+
 def _json_error(exc: Exception, *, status: int = 400):
     return jsonify({"success": False, "error": str(exc)}), status
 
@@ -173,6 +240,7 @@ def workspace():
         can_create=_has_module_permission(company.id, "create"),
         can_edit=_has_module_permission(company.id, "edit"),
         can_configure=_has_module_permission(company.id, "configure"),
+        can_manage_sources=_has_module_permission(company.id, "manage_sources"),
     )
 
 
@@ -252,6 +320,9 @@ def property_detail(property_id: int):
         triage_options=TRIAGE_OPTIONS,
         can_edit=_has_module_permission(company.id, "edit"),
         can_delete=_has_module_permission(company.id, "delete"),
+        can_manage_financial_sheet=_has_module_permission(company.id, "manage_financial_sheet"),
+        can_manage_sources=_has_module_permission(company.id, "manage_sources"),
+        attachment_categories=REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES,
     )
 
 
@@ -301,6 +372,112 @@ def property_archive(property_id: int):
     try:
         RealEstateAuctionService.archive_property(company.id, property_id, user_id=_current_user_id())
         flash("Imóvel arquivado com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.workspace", company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/events", methods=["POST"])
+@login_required
+def property_event_create(property_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        RealEstateAuctionService.create_event(company.id, property_id, _form_payload(EVENT_FORM_FIELDS))
+        flash("Evento de leilão registrado com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/events/<int:event_id>/delete", methods=["POST"])
+@login_required
+def property_event_delete(property_id: int, event_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        RealEstateAuctionService.delete_event(company.id, property_id, event_id)
+        flash("Evento removido com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/financial-sheet", methods=["POST"])
+@login_required
+def property_financial_sheet_upsert(property_id: int):
+    company = _resolve_company(action="manage_financial_sheet")
+    try:
+        RealEstateAuctionService.upsert_financial_sheet(company.id, property_id, _form_payload(FINANCIAL_SHEET_FORM_FIELDS))
+        flash("Ficha financeira atualizada com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/due-diligence", methods=["POST"])
+@login_required
+def property_due_diligence_upsert(property_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        payload = _form_payload(DUE_DILIGENCE_FORM_FIELDS)
+        payload["resident_contacted"] = bool(request.form.get("resident_contacted"))
+        payload["manager_contacted"] = bool(request.form.get("manager_contacted"))
+        RealEstateAuctionService.upsert_due_diligence(company.id, property_id, payload)
+        flash("Diligência atualizada com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/attachments", methods=["POST"])
+@login_required
+def property_attachment_create(property_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        RealEstateAuctionService.create_attachment(
+            company.id,
+            property_id,
+            _form_payload(ATTACHMENT_FORM_FIELDS),
+            user_id=_current_user_id(),
+        )
+        flash("Metadado de anexo registrado com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/properties/<int:property_id>/attachments/<int:attachment_id>/delete", methods=["POST"])
+@login_required
+def property_attachment_delete(property_id: int, attachment_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        RealEstateAuctionService.delete_attachment(company.id, property_id, attachment_id)
+        flash("Anexo removido com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.property_detail", property_id=property_id, company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/sources", methods=["POST"])
+@login_required
+def source_create():
+    company = _resolve_company(action="manage_sources")
+    try:
+        payload = _form_payload(SOURCE_FORM_FIELDS)
+        payload["active"] = bool(request.form.get("active"))
+        RealEstateAuctionService.create_source(company.id, payload)
+        flash("Fonte cadastrada com sucesso.", "success")
+    except RealEstateAuctionError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("real_estate_auctions.workspace", company_id=company.id))
+
+
+@real_estate_auctions_bp.route("/real-estate-auctions/sources/<int:source_id>/delete", methods=["POST"])
+@login_required
+def source_delete(source_id: int):
+    company = _resolve_company(action="manage_sources")
+    try:
+        RealEstateAuctionService.delete_source(company.id, source_id)
+        flash("Fonte removida com sucesso.", "success")
     except RealEstateAuctionError as exc:
         flash(str(exc), "error")
     return redirect(url_for("real_estate_auctions.workspace", company_id=company.id))
@@ -393,6 +570,141 @@ def api_property_archive(property_id: int):
     company = _resolve_company(action="delete")
     try:
         payload = RealEstateAuctionService.archive_property(company.id, property_id, user_id=_current_user_id())
+        return jsonify({"success": True, **payload})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/events", methods=["POST"])
+@login_required
+def api_property_event_create(property_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        event = RealEstateAuctionService.create_event(company.id, property_id, _json_payload())
+        return jsonify({"success": True, "event": event}), 201
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/events/<int:event_id>", methods=["PATCH"])
+@login_required
+def api_property_event_update(property_id: int, event_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        event = RealEstateAuctionService.update_event(company.id, property_id, event_id, _json_payload())
+        return jsonify({"success": True, "event": event})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/events/<int:event_id>", methods=["DELETE"])
+@login_required
+def api_property_event_delete(property_id: int, event_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        payload = RealEstateAuctionService.delete_event(company.id, property_id, event_id)
+        return jsonify({"success": True, **payload})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/financial-sheet", methods=["PUT"])
+@login_required
+def api_property_financial_sheet_upsert(property_id: int):
+    company = _resolve_company(action="manage_financial_sheet")
+    try:
+        sheet = RealEstateAuctionService.upsert_financial_sheet(company.id, property_id, _json_payload())
+        return jsonify({"success": True, "financial_sheet": sheet})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/due-diligence", methods=["PUT"])
+@login_required
+def api_property_due_diligence_upsert(property_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        due = RealEstateAuctionService.upsert_due_diligence(company.id, property_id, _json_payload())
+        return jsonify({"success": True, "due_diligence": due})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/attachments", methods=["POST"])
+@login_required
+def api_property_attachment_create(property_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        attachment = RealEstateAuctionService.create_attachment(
+            company.id,
+            property_id,
+            _json_payload(),
+            user_id=_current_user_id(),
+        )
+        return jsonify({"success": True, "attachment": attachment}), 201
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/properties/<int:property_id>/attachments/<int:attachment_id>", methods=["DELETE"])
+@login_required
+def api_property_attachment_delete(property_id: int, attachment_id: int):
+    company = _resolve_company(action="edit")
+    try:
+        payload = RealEstateAuctionService.delete_attachment(company.id, property_id, attachment_id)
+        return jsonify({"success": True, **payload})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/sources", methods=["GET"])
+@login_required
+def api_sources_list():
+    company = _resolve_company(action="view")
+    try:
+        return jsonify({"success": True, "sources": RealEstateAuctionService.list_sources(company.id)})
+    except RealEstateAuctionError as exc:
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/sources", methods=["POST"])
+@login_required
+def api_source_create():
+    company = _resolve_company(action="manage_sources")
+    try:
+        source = RealEstateAuctionService.create_source(company.id, _json_payload())
+        return jsonify({"success": True, "source": source}), 201
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/sources/<int:source_id>", methods=["PATCH"])
+@login_required
+def api_source_update(source_id: int):
+    company = _resolve_company(action="manage_sources")
+    try:
+        source = RealEstateAuctionService.update_source(company.id, source_id, _json_payload())
+        return jsonify({"success": True, "source": source})
+    except RealEstateAuctionError as exc:
+        db.session.rollback()
+        return _json_error(exc)
+
+
+@real_estate_auctions_bp.route("/api/real-estate-auctions/sources/<int:source_id>", methods=["DELETE"])
+@login_required
+def api_source_delete(source_id: int):
+    company = _resolve_company(action="manage_sources")
+    try:
+        payload = RealEstateAuctionService.delete_source(company.id, source_id)
         return jsonify({"success": True, **payload})
     except RealEstateAuctionError as exc:
         db.session.rollback()

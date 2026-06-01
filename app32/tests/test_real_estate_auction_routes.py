@@ -67,6 +67,7 @@ def test_workspace_route_uses_service_and_tenant_filters(monkeypatch):
     assert captured["template"] == "modules/real_estate_auctions/workspace.html"
     assert captured["context"]["company_id"] == 31
     assert captured["context"]["properties"][0]["code"] == "GND-001"
+    assert captured["context"]["can_manage_sources"] is True
     assert captured["list"]["company_id"] == 31
     assert captured["list"]["status"] == "in_analysis"
     assert captured["list"]["city"] == "Feira"
@@ -111,6 +112,54 @@ def test_list_properties_api_wraps_domain_error(monkeypatch):
     assert response.status_code == 400
     assert payload["success"] is False
     assert "não habilitado" in payload["error"]
+
+
+def test_financial_sheet_api_is_thin_and_tenant_scoped(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(route, "_resolve_company", lambda **kwargs: _company())
+
+    def fake_upsert(company_id, property_id, payload):
+        captured["sheet"] = {"company_id": company_id, "property_id": property_id, "payload": payload}
+        return {"property_id": property_id, "winning_bid": payload["winning_bid"]}
+
+    monkeypatch.setattr(route.RealEstateAuctionService, "upsert_financial_sheet", fake_upsert)
+
+    response = app.test_client().put(
+        "/api/real-estate-auctions/properties/44/financial-sheet?company_id=31",
+        json={"winning_bid": "280000"},
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["financial_sheet"]["property_id"] == 44
+    assert captured["sheet"]["company_id"] == 31
+    assert captured["sheet"]["payload"] == {"winning_bid": "280000"}
+
+
+def test_source_create_api_is_thin_and_tenant_scoped(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(route, "_resolve_company", lambda **kwargs: _company())
+
+    def fake_create(company_id, payload):
+        captured["source"] = {"company_id": company_id, "payload": payload}
+        return {"id": 9, "company_id": company_id, "name": payload["name"]}
+
+    monkeypatch.setattr(route.RealEstateAuctionService, "create_source", fake_create)
+
+    response = app.test_client().post(
+        "/api/real-estate-auctions/sources?company_id=31",
+        json={"name": "Portal Caixa", "domain": "caixa.gov.br", "active": True},
+    )
+    payload = response.get_json()
+
+    assert response.status_code == 201
+    assert payload["success"] is True
+    assert payload["source"]["company_id"] == 31
+    assert captured["source"]["company_id"] == 31
+    assert captured["source"]["payload"]["name"] == "Portal Caixa"
 
 
 def test_app_registers_real_estate_auction_blueprint():

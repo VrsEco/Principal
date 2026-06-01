@@ -196,6 +196,54 @@
         </div>
         {% endif %}
     </section>
+
+    <section class="rea-panel">
+        <div class="rea-panel__header">
+            <div>
+                <p class="rea-eyebrow">Captação e importação</p>
+                <h2>Fontes do tenant</h2>
+            </div>
+            <span>{{ workspace.sources|length }} fonte(s)</span>
+        </div>
+        {% if can_manage_sources %}
+        <form class="rea-form rea-form--section rea-grid-2" method="post" action="{{ url_for('real_estate_auctions.source_create', company_id=company_id) }}">
+            <input type="hidden" name="company_id" value="{{ company_id }}">
+            <label><span>Nome</span><input name="name" placeholder="Caixa / Santander / Portal" required></label>
+            <label><span>Domínio</span><input name="domain" placeholder="caixa.gov.br"></label>
+            <label><span>Base URL</span><input name="base_url" placeholder="https://..."></label>
+            <label><span>Pattern do link</span><input name="link_pattern" placeholder="/imovel/{codigo}"></label>
+            <label class="rea-grid-span-2"><span>Selector de listagem</span><input name="listing_selector" placeholder=".property-card a"></label>
+            <label class="rea-check"><input type="checkbox" name="active" value="1" checked><span>Fonte ativa</span></label>
+            <div class="rea-form__actions rea-grid-span-2">
+                <button class="rea-btn rea-btn--primary" type="submit">Cadastrar fonte</button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if workspace.sources %}
+        <div class="rea-list">
+            {% for source in workspace.sources %}
+            <div class="rea-list__row">
+                <div>
+                    <strong>{{ source.name }}</strong>
+                    <span>{{ source.domain or source.base_url or '-' }}</span>
+                </div>
+                <div class="rea-list__actions">
+                    <span class="rea-chip {{ 'rea-chip--success' if source.active else 'rea-chip--muted' }}">{{ 'Ativa' if source.active else 'Inativa' }}</span>
+                    {% if can_manage_sources %}
+                    <form method="post" action="{{ url_for('real_estate_auctions.source_delete', source_id=source.id, company_id=company_id) }}">
+                        <input type="hidden" name="company_id" value="{{ company_id }}">
+                        <button class="rea-btn rea-btn--secondary rea-btn--sm" type="submit">Remover</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="rea-muted rea-panel-pad">Nenhuma fonte cadastrada neste tenant.</p>
+        {% endif %}
+    </section>
     {% endif %}
 </div>
 
@@ -242,20 +290,32 @@
     .rea-form label { display:flex; flex-direction:column; gap:.3rem; color:var(--text-secondary); font-size:.78rem; font-weight:700; }
     .rea-form input, .rea-form select, .rea-form textarea { border:1px solid var(--border); border-radius:12px; padding:.65rem .75rem; background:#fff; color:var(--text-primary); }
     .rea-form--compact { border:1px solid var(--border); border-radius:18px; padding:1rem; background:var(--surface); }
+    .rea-form--section { padding:1rem 1.1rem; border-bottom:1px solid var(--border); }
+    .rea-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+    .rea-grid-span-2 { grid-column:1 / -1; }
     .rea-check { flex-direction:row !important; align-items:center; }
     .rea-check input { width:auto; }
+    .rea-form__actions { display:flex; justify-content:flex-end; }
     .rea-btn { border:none; border-radius:12px; padding:.72rem .95rem; font-weight:800; text-decoration:none; cursor:pointer; display:inline-flex; gap:.45rem; justify-content:center; align-items:center; }
     .rea-btn--primary { background:var(--primary); color:#fff; }
     .rea-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .rea-btn--sm { padding:.5rem .7rem; font-size:.78rem; }
     .rea-alerts { display:grid; gap:.5rem; }
     .rea-alert { border-radius:14px; padding:.7rem .85rem; border:1px solid var(--border); background:#f8fafc; }
     .rea-alert--success { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
     .rea-alert--error { border-color:#fecaca; background:#fef2f2; color:#991b1b; }
     .rea-alert--warning { border-color:#fde68a; background:#fffbeb; color:#92400e; }
     .rea-muted { color:var(--text-secondary); font-size:.82rem; line-height:1.4; }
+    .rea-panel-pad { padding:1rem 1.1rem; }
+    .rea-list { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.55rem; }
+    .rea-list__row { border:1px solid var(--border); border-radius:14px; padding:.75rem .85rem; background:var(--surface-secondary); display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; }
+    .rea-list strong, .rea-list span { display:block; }
+    .rea-list span { color:var(--text-secondary); font-size:.78rem; margin-top:.15rem; }
+    .rea-list__actions { display:flex; gap:.55rem; align-items:center; }
     @media (max-width: 980px) {
         .rea-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
         .rea-hero { flex-direction:column; }
+        .rea-grid-2 { grid-template-columns:1fr; }
     }
     @media (max-width: 640px) {
         .rea-kpis { grid-template-columns:1fr; }

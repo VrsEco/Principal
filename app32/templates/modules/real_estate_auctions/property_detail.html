@@ -94,12 +94,37 @@
                 <p class="rea-eyebrow">Leilões</p>
                 <h2>Eventos</h2>
             </div>
+            {% if can_edit %}
+            <form class="rea-form rea-form--section rea-grid-2" method="post" action="{{ url_for('real_estate_auctions.property_event_create', property_id=property.id, company_id=company_id) }}">
+                <input type="hidden" name="company_id" value="{{ company_id }}">
+                <label><span>Tipo</span><input name="auction_type" placeholder="1º leilão / 2º leilão" required></label>
+                <label><span>Data/hora</span><input type="datetime-local" name="auction_datetime"></label>
+                <label><span>Lance mínimo</span><input name="minimum_bid" placeholder="250000"></label>
+                <label><span>Modalidade</span><input name="modality" placeholder="Online"></label>
+                <label><span>Leiloeiro</span><input name="auctioneer"></label>
+                <label><span>Lance vencedor</span><input name="winning_bid"></label>
+                <label><span>Resultado</span><input name="result" placeholder="arrematado / sem lance"></label>
+                <label class="rea-grid-span-2"><span>Notas</span><textarea name="notes" rows="2"></textarea></label>
+                <div class="rea-form__actions rea-grid-span-2">
+                    <button class="rea-btn rea-btn--primary" type="submit">Adicionar evento</button>
+                </div>
+            </form>
+            {% endif %}
             {% if detail.events %}
             <div class="rea-list">
                 {% for event in detail.events %}
-                <div>
-                    <strong>{{ event.auction_type or 'Leilão' }}</strong>
-                    <span>{{ event.auction_datetime or '-' }} · {{ event.result or 'sem resultado' }}</span>
+                <div class="rea-list__row">
+                    <div>
+                        <strong>{{ event.auction_type or 'Leilão' }}</strong>
+                        <span>{{ event.auction_datetime or '-' }} · {{ event.result or 'sem resultado' }}</span>
+                        {% if event.minimum_bid %}<span>Lance mínimo: {{ event.minimum_bid|format_currency_br }}</span>{% endif %}
+                    </div>
+                    {% if can_edit %}
+                    <form method="post" action="{{ url_for('real_estate_auctions.property_event_delete', property_id=property.id, event_id=event.id, company_id=company_id) }}">
+                        <input type="hidden" name="company_id" value="{{ company_id }}">
+                        <button class="rea-btn rea-btn--secondary rea-btn--sm" type="submit">Remover</button>
+                    </form>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -113,6 +138,25 @@
                 <p class="rea-eyebrow">Diligência</p>
                 <h2>Posse e riscos</h2>
             </div>
+            {% if can_edit %}
+            <form class="rea-form rea-form--section rea-grid-2" method="post" action="{{ url_for('real_estate_auctions.property_due_diligence_upsert', property_id=property.id, company_id=company_id) }}">
+                <input type="hidden" name="company_id" value="{{ company_id }}">
+                <label><span>Condomínio</span><input name="condo_fee_value" value="{{ detail.due_diligence.condo_fee_value if detail.due_diligence else '' }}"></label>
+                <label><span>Idade do prédio</span><input name="building_age" value="{{ detail.due_diligence.building_age if detail.due_diligence else '' }}"></label>
+                <label><span>Descrição do prédio</span><input name="building_description" value="{{ detail.due_diligence.building_description if detail.due_diligence else '' }}"></label>
+                <label><span>Descrição do imóvel</span><input name="property_description" value="{{ detail.due_diligence.property_description if detail.due_diligence else '' }}"></label>
+                <label><span>R$/m² região</span><input name="region_square_meter_value" value="{{ detail.due_diligence.region_square_meter_value if detail.due_diligence else '' }}"></label>
+                <label><span>Outras dívidas</span><input name="other_debts" value="{{ detail.due_diligence.other_debts if detail.due_diligence else '' }}"></label>
+                <label class="rea-check"><input type="checkbox" name="resident_contacted" value="1" {% if detail.due_diligence and detail.due_diligence.resident_contacted %}checked{% endif %}><span>Morador contatado</span></label>
+                <label class="rea-check"><input type="checkbox" name="manager_contacted" value="1" {% if detail.due_diligence and detail.due_diligence.manager_contacted %}checked{% endif %}><span>Síndico contatado</span></label>
+                <label class="rea-grid-span-2"><span>Relato do morador</span><textarea name="resident_report" rows="2">{{ detail.due_diligence.resident_report if detail.due_diligence else '' }}</textarea></label>
+                <label class="rea-grid-span-2"><span>Relato do síndico</span><textarea name="manager_report" rows="2">{{ detail.due_diligence.manager_report if detail.due_diligence else '' }}</textarea></label>
+                <label class="rea-grid-span-2"><span>Notas internas</span><textarea name="internal_notes" rows="2">{{ detail.due_diligence.internal_notes if detail.due_diligence else '' }}</textarea></label>
+                <div class="rea-form__actions rea-grid-span-2">
+                    <button class="rea-btn rea-btn--primary" type="submit">Salvar diligência</button>
+                </div>
+            </form>
+            {% endif %}
             {% if detail.due_diligence %}
             <dl class="rea-dl">
                 <div><dt>Condomínio</dt><dd>{{ detail.due_diligence.condo_fee_value|format_currency_br if detail.due_diligence.condo_fee_value else '-' }}</dd></div>
@@ -128,20 +172,97 @@
 
     <section class="rea-panel">
         <div class="rea-panel__header">
+            <p class="rea-eyebrow">Economia da operação</p>
+            <h2>Ficha financeira</h2>
+        </div>
+        {% if can_manage_financial_sheet %}
+        <form class="rea-form rea-form--section rea-grid-2" method="post" action="{{ url_for('real_estate_auctions.property_financial_sheet_upsert', property_id=property.id, company_id=company_id) }}">
+            <input type="hidden" name="company_id" value="{{ company_id }}">
+            <label><span>Lance vencedor</span><input name="winning_bid" value="{{ detail.financial_sheet.winning_bid if detail.financial_sheet else '' }}"></label>
+            <label><span>Comissão leiloeiro %</span><input name="auctioneer_commission_percent" value="{{ detail.financial_sheet.auctioneer_commission_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>Custos aquisição</span><input name="other_acquisition_costs" value="{{ detail.financial_sheet.other_acquisition_costs if detail.financial_sheet else '' }}"></label>
+            <label><span>ITBI %</span><input name="transfer_tax_percent" value="{{ detail.financial_sheet.transfer_tax_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>ITBI valor</span><input name="transfer_tax_value" value="{{ detail.financial_sheet.transfer_tax_value if detail.financial_sheet else '' }}"></label>
+            <label><span>Registro %</span><input name="registry_cost_percent" value="{{ detail.financial_sheet.registry_cost_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>Registro valor</span><input name="registry_cost_value" value="{{ detail.financial_sheet.registry_cost_value if detail.financial_sheet else '' }}"></label>
+            <label><span>Desocupação</span><input name="eviction_cost" value="{{ detail.financial_sheet.eviction_cost if detail.financial_sheet else '' }}"></label>
+            <label><span>Reforma</span><input name="renovation_budget" value="{{ detail.financial_sheet.renovation_budget if detail.financial_sheet else '' }}"></label>
+            <label><span>Limpeza</span><input name="cleaning_cost" value="{{ detail.financial_sheet.cleaning_cost if detail.financial_sheet else '' }}"></label>
+            <label><span>IPTU vencido</span><input name="overdue_property_tax" value="{{ detail.financial_sheet.overdue_property_tax if detail.financial_sheet else '' }}"></label>
+            <label><span>IPTU futuro</span><input name="future_property_tax" value="{{ detail.financial_sheet.future_property_tax if detail.financial_sheet else '' }}"></label>
+            <label><span>Condomínio vencido</span><input name="overdue_condo_fee" value="{{ detail.financial_sheet.overdue_condo_fee if detail.financial_sheet else '' }}"></label>
+            <label><span>Condomínio futuro</span><input name="future_condo_fee" value="{{ detail.financial_sheet.future_condo_fee if detail.financial_sheet else '' }}"></label>
+            <label><span>Honorários</span><input name="legal_fees" value="{{ detail.financial_sheet.legal_fees if detail.financial_sheet else '' }}"></label>
+            <label><span>Contingência</span><input name="contingency_value" value="{{ detail.financial_sheet.contingency_value if detail.financial_sheet else '' }}"></label>
+            <label><span>Custo capital (meses)</span><input name="capital_cost_months" value="{{ detail.financial_sheet.capital_cost_months if detail.financial_sheet else '' }}"></label>
+            <label><span>Custo capital %</span><input name="capital_cost_percent" value="{{ detail.financial_sheet.capital_cost_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>Lucro mínimo %</span><input name="minimum_profit_percent" value="{{ detail.financial_sheet.minimum_profit_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>Lucro mínimo valor</span><input name="minimum_profit_value" value="{{ detail.financial_sheet.minimum_profit_value if detail.financial_sheet else '' }}"></label>
+            <label><span>Venda projetada</span><input name="projected_sale_value" value="{{ detail.financial_sheet.projected_sale_value if detail.financial_sheet else '' }}"></label>
+            <label><span>Comissão corretor %</span><input name="broker_commission_percent" value="{{ detail.financial_sheet.broker_commission_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>Impostos venda %</span><input name="sale_tax_percent" value="{{ detail.financial_sheet.sale_tax_percent if detail.financial_sheet else '' }}"></label>
+            <label><span>Despesas operacionais</span><input name="operational_expenses" value="{{ detail.financial_sheet.operational_expenses if detail.financial_sheet else '' }}"></label>
+            <div class="rea-form__actions rea-grid-span-2">
+                <button class="rea-btn rea-btn--primary" type="submit">Salvar ficha financeira</button>
+            </div>
+        </form>
+        {% endif %}
+        {% if detail.financial_sheet %}
+        <dl class="rea-dl">
+            <div><dt>Lance vencedor</dt><dd>{{ detail.financial_sheet.winning_bid|format_currency_br if detail.financial_sheet.winning_bid else '-' }}</dd></div>
+            <div><dt>Venda projetada</dt><dd>{{ detail.financial_sheet.projected_sale_value|format_currency_br if detail.financial_sheet.projected_sale_value else '-' }}</dd></div>
+            <div><dt>Lucro mínimo %</dt><dd>{{ detail.financial_sheet.minimum_profit_percent or '-' }}</dd></div>
+            <div><dt>Despesas operacionais</dt><dd>{{ detail.financial_sheet.operational_expenses|format_currency_br if detail.financial_sheet.operational_expenses else '-' }}</dd></div>
+        </dl>
+        {% else %}
+        <p class="rea-muted">Ficha financeira ainda não preenchida.</p>
+        {% endif %}
+    </section>
+
+    <section class="rea-panel">
+        <div class="rea-panel__header">
             <p class="rea-eyebrow">Anexos</p>
             <h2>Documentos do imóvel</h2>
         </div>
+        {% if can_edit %}
+        <form class="rea-form rea-form--section rea-grid-2" method="post" action="{{ url_for('real_estate_auctions.property_attachment_create', property_id=property.id, company_id=company_id) }}">
+            <input type="hidden" name="company_id" value="{{ company_id }}">
+            <label><span>Categoria</span>
+                <select name="category" required>
+                    {% for category in attachment_categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label><span>Arquivo original</span><input name="original_filename" placeholder="edital.pdf" required></label>
+            <label><span>Arquivo interno</span><input name="stored_filename" placeholder="gnd-001-edital.pdf"></label>
+            <label><span>Storage path</span><input name="storage_path" placeholder="real-estate/7/gnd-001/"></label>
+            <label><span>MIME type</span><input name="mime_type" placeholder="application/pdf"></label>
+            <label><span>Tamanho (bytes)</span><input name="size_bytes" placeholder="123456"></label>
+            <div class="rea-form__actions rea-grid-span-2">
+                <button class="rea-btn rea-btn--primary" type="submit">Registrar anexo</button>
+            </div>
+        </form>
+        {% endif %}
         {% if detail.attachments %}
         <div class="rea-list">
             {% for attachment in detail.attachments %}
-            <div>
-                <strong>{{ attachment.original_filename }}</strong>
-                <span>{{ attachment.category }} · {{ attachment.mime_type or '-' }}</span>
+            <div class="rea-list__row">
+                <div>
+                    <strong>{{ attachment.original_filename }}</strong>
+                    <span>{{ attachment.category }} · {{ attachment.mime_type or '-' }}</span>
+                </div>
+                {% if can_edit %}
+                <form method="post" action="{{ url_for('real_estate_auctions.property_attachment_delete', property_id=property.id, attachment_id=attachment.id, company_id=company_id) }}">
+                    <input type="hidden" name="company_id" value="{{ company_id }}">
+                    <button class="rea-btn rea-btn--secondary rea-btn--sm" type="submit">Remover</button>
+                </form>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="rea-muted">Upload e PDF executivo entram na próxima fase; o modelo de dados já está preparado com isolamento por tenant.</p>
+        <p class="rea-muted">Nenhum anexo registrado ainda.</p>
         {% endif %}
     </section>
 
@@ -180,9 +301,18 @@
     .rea-notes { padding:1rem 1.1rem; }
     .rea-notes p { color:var(--text-secondary); line-height:1.45; }
     .rea-list { padding:1rem 1.1rem; display:flex; flex-direction:column; gap:.55rem; }
-    .rea-list div { border:1px solid var(--border); border-radius:14px; padding:.75rem .85rem; background:var(--surface-secondary); }
+    .rea-list__row { border:1px solid var(--border); border-radius:14px; padding:.75rem .85rem; background:var(--surface-secondary); display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; }
     .rea-list strong, .rea-list span { display:block; }
     .rea-list span, .rea-muted { color:var(--text-secondary); font-size:.82rem; }
+    .rea-form { display:grid; gap:.7rem; }
+    .rea-form--section { padding:1rem 1.1rem; border-bottom:1px solid var(--border); }
+    .rea-form label { display:flex; flex-direction:column; gap:.3rem; color:var(--text-secondary); font-size:.78rem; font-weight:700; }
+    .rea-form input, .rea-form select, .rea-form textarea { border:1px solid var(--border); border-radius:12px; padding:.65rem .75rem; background:#fff; color:var(--text-primary); }
+    .rea-grid-2 { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; }
+    .rea-grid-span-2 { grid-column:1 / -1; }
+    .rea-check { flex-direction:row !important; align-items:center; }
+    .rea-check input { width:auto; }
+    .rea-form__actions { display:flex; justify-content:flex-end; }
     .rea-muted { padding:1rem 1.1rem; margin:0; line-height:1.45; }
     .rea-danger { padding:1rem 1.1rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; border-color:#fecaca; background:#fff7f7; }
     .rea-danger strong, .rea-danger span { display:block; }
@@ -190,6 +320,7 @@
     .rea-btn { border:none; border-radius:12px; padding:.72rem .95rem; font-weight:800; text-decoration:none; cursor:pointer; display:inline-flex; gap:.45rem; justify-content:center; align-items:center; }
     .rea-btn--primary { background:var(--primary); color:#fff; }
     .rea-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .rea-btn--sm { padding:.5rem .7rem; font-size:.78rem; }
     .rea-btn--danger { background:#dc2626; color:#fff; }
     .rea-alerts { display:grid; gap:.5rem; }
     .rea-alert { border-radius:14px; padding:.7rem .85rem; border:1px solid var(--border); background:#f8fafc; }
@@ -200,6 +331,8 @@
         .rea-detail-grid { grid-template-columns:1fr; }
         .rea-detail-hero, .rea-danger { flex-direction:column; align-items:stretch; }
         .rea-dl { grid-template-columns:1fr; }
+        .rea-grid-2 { grid-template-columns:1fr; }
+        .rea-list__row { flex-direction:column; }
     }
 </style>
 {% endblock %}

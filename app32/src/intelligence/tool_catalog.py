@@ -379,6 +379,50 @@ _supplemental_mcp_tools = (
         description="Arquiva logicamente um imóvel/leilão dentro do tenant.",
     ),
     SimpleNamespace(
+        name="list_real_estate_auction_sources_tool",
+        description="Lista fontes de captação/importação do tenant para o módulo Leilões Imobiliários.",
+    ),
+    SimpleNamespace(
+        name="create_real_estate_auction_source_tool",
+        description="Cria uma fonte de importação/captação do módulo no tenant.",
+    ),
+    SimpleNamespace(
+        name="update_real_estate_auction_source_tool",
+        description="Atualiza uma fonte de importação/captação do módulo no tenant.",
+    ),
+    SimpleNamespace(
+        name="delete_real_estate_auction_source_tool",
+        description="Remove logicamente uma fonte do módulo dentro do tenant.",
+    ),
+    SimpleNamespace(
+        name="create_real_estate_auction_event_tool",
+        description="Cria um evento de leilão vinculado a um imóvel do tenant.",
+    ),
+    SimpleNamespace(
+        name="update_real_estate_auction_event_tool",
+        description="Atualiza um evento de leilão existente no tenant.",
+    ),
+    SimpleNamespace(
+        name="delete_real_estate_auction_event_tool",
+        description="Remove um evento de leilão do imóvel dentro do tenant.",
+    ),
+    SimpleNamespace(
+        name="upsert_real_estate_auction_financial_sheet_tool",
+        description="Cria ou atualiza a ficha financeira de um imóvel do tenant.",
+    ),
+    SimpleNamespace(
+        name="upsert_real_estate_auction_due_diligence_tool",
+        description="Cria ou atualiza a ficha de diligência/posse/riscos do imóvel.",
+    ),
+    SimpleNamespace(
+        name="create_real_estate_auction_attachment_tool",
+        description="Registra metadado de anexo para um imóvel/leilão do tenant.",
+    ),
+    SimpleNamespace(
+        name="delete_real_estate_auction_attachment_tool",
+        description="Remove metadado de anexo de um imóvel/leilão no tenant.",
+    ),
+    SimpleNamespace(
         name="get_work_journey_board_tool",
         description="Retorna o quadro operacional da jornada por blocos de um colaborador.",
     ),

@@ -18,6 +18,7 @@ from models import (
     db,
 )
 from models.real_estate_auction import (
+    REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES,
     REAL_ESTATE_AUCTION_STATUS_VALUES,
     REAL_ESTATE_AUCTION_TRIAGE_STATUS_VALUES,
 )
@@ -114,6 +115,52 @@ class RealEstateAuctionService:
     PROPERTY_BOOL_FIELDS = {"occupied"}
     PROPERTY_DATETIME_FIELDS = {"auction_won_at", "available_for_sale_at", "sold_at", "deleted_at"}
     PROPERTY_JSON_FIELDS = {"metadata_json"}
+    EVENT_TEXT_FIELDS = {"auction_type", "modality", "auctioneer", "result", "notes"}
+    EVENT_DECIMAL_FIELDS = {"minimum_bid", "winning_bid"}
+    EVENT_DATETIME_FIELDS = {"auction_datetime"}
+    FINANCIAL_DECIMAL_FIELDS = {
+        "winning_bid",
+        "auctioneer_commission_percent",
+        "other_acquisition_costs",
+        "transfer_tax_percent",
+        "transfer_tax_value",
+        "registry_cost_percent",
+        "registry_cost_value",
+        "eviction_cost",
+        "renovation_budget",
+        "cleaning_cost",
+        "overdue_property_tax",
+        "future_property_tax",
+        "overdue_condo_fee",
+        "future_condo_fee",
+        "legal_fees",
+        "contingency_value",
+        "capital_cost_percent",
+        "minimum_profit_percent",
+        "minimum_profit_value",
+        "projected_sale_value",
+        "broker_commission_percent",
+        "sale_tax_percent",
+        "operational_expenses",
+    }
+    FINANCIAL_INT_FIELDS = {"capital_cost_months"}
+    FINANCIAL_JSON_FIELDS = {"last_calculation_snapshot_json"}
+    DUE_DILIGENCE_TEXT_FIELDS = {
+        "building_description",
+        "property_description",
+        "resident_report",
+        "manager_report",
+        "internal_notes",
+    }
+    DUE_DILIGENCE_DECIMAL_FIELDS = {"condo_fee_value", "region_square_meter_value", "other_debts"}
+    DUE_DILIGENCE_INT_FIELDS = {"building_age"}
+    DUE_DILIGENCE_BOOL_FIELDS = {"resident_contacted", "manager_contacted"}
+    ATTACHMENT_TEXT_FIELDS = {"category", "original_filename", "stored_filename", "storage_path", "mime_type"}
+    ATTACHMENT_INT_FIELDS = {"size_bytes"}
+    ATTACHMENT_JSON_FIELDS = {"metadata_json"}
+    SOURCE_TEXT_FIELDS = {"name", "domain", "base_url", "link_pattern", "listing_selector"}
+    SOURCE_BOOL_FIELDS = {"active"}
+    SOURCE_JSON_FIELDS = {"metadata_json"}
 
     @staticmethod
     def _require_company(company_id: int) -> Company:
@@ -277,6 +324,12 @@ class RealEstateAuctionService:
         }
 
     @staticmethod
+    def list_sources(company_id: int) -> list[dict[str, Any]]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        rows = RealEstateAuctionSource.query.filter_by(company_id=company_id).order_by(RealEstateAuctionSource.name.asc()).all()
+        return [row.to_dict() for row in rows]
+
+    @staticmethod
     def create_property(
         company_id: int,
         payload: dict[str, Any],
@@ -335,6 +388,182 @@ class RealEstateAuctionService:
         return {"archived": True, "property": row.to_dict()}
 
     @staticmethod
+    def create_event(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        RealEstateAuctionService._require_property(company_id, property_id)
+        data = RealEstateAuctionService._normalize_event_payload(payload, partial=False)
+        row = RealEstateAuctionEvent(company_id=company_id, property_id=property_id)
+        RealEstateAuctionService._apply_payload(row, data)
+        db.session.add(row)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def update_event(
+        company_id: int,
+        property_id: int,
+        event_id: int,
+        payload: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        row = RealEstateAuctionService._require_event(company_id, property_id, event_id)
+        data = RealEstateAuctionService._normalize_event_payload(payload, partial=True)
+        RealEstateAuctionService._apply_payload(row, data)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def delete_event(
+        company_id: int,
+        property_id: int,
+        event_id: int,
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        row = RealEstateAuctionService._require_event(company_id, property_id, event_id)
+        db.session.delete(row)
+        if commit:
+            db.session.commit()
+        return {"deleted": True, "event_id": event_id}
+
+    @staticmethod
+    def upsert_financial_sheet(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        RealEstateAuctionService._require_property(company_id, property_id)
+        data = RealEstateAuctionService._normalize_financial_sheet_payload(payload)
+        row = RealEstateAuctionFinancialSheet.query.filter_by(company_id=company_id, property_id=property_id).first()
+        if row is None:
+            row = RealEstateAuctionFinancialSheet(company_id=company_id, property_id=property_id)
+            db.session.add(row)
+        RealEstateAuctionService._apply_payload(row, data)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def upsert_due_diligence(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        RealEstateAuctionService._require_property(company_id, property_id)
+        data = RealEstateAuctionService._normalize_due_diligence_payload(payload)
+        row = RealEstateAuctionDueDiligence.query.filter_by(company_id=company_id, property_id=property_id).first()
+        if row is None:
+            row = RealEstateAuctionDueDiligence(company_id=company_id, property_id=property_id)
+            db.session.add(row)
+        RealEstateAuctionService._apply_payload(row, data)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def create_attachment(
+        company_id: int,
+        property_id: int,
+        payload: dict[str, Any],
+        *,
+        user_id: int | None = None,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        RealEstateAuctionService._require_property(company_id, property_id)
+        data = RealEstateAuctionService._normalize_attachment_payload(payload, partial=False)
+        row = RealEstateAuctionAttachment(company_id=company_id, property_id=property_id, created_by_user_id=user_id)
+        RealEstateAuctionService._apply_payload(row, data)
+        db.session.add(row)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def delete_attachment(
+        company_id: int,
+        property_id: int,
+        attachment_id: int,
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        row = RealEstateAuctionService._require_attachment(company_id, property_id, attachment_id)
+        db.session.delete(row)
+        if commit:
+            db.session.commit()
+        return {"deleted": True, "attachment_id": attachment_id}
+
+    @staticmethod
+    def create_source(
+        company_id: int,
+        payload: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        data = RealEstateAuctionService._normalize_source_payload(payload, partial=False)
+        if RealEstateAuctionSource.query.filter_by(company_id=company_id, base_url=data["base_url"]).first() is not None:
+            raise RealEstateAuctionError(f"Já existe fonte com base_url='{data['base_url']}' neste tenant.")
+        row = RealEstateAuctionSource(company_id=company_id)
+        RealEstateAuctionService._apply_payload(row, data)
+        db.session.add(row)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def update_source(
+        company_id: int,
+        source_id: int,
+        payload: dict[str, Any],
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        row = RealEstateAuctionService._require_source(company_id, source_id)
+        data = RealEstateAuctionService._normalize_source_payload(payload, partial=True)
+        if "base_url" in data:
+            existing = RealEstateAuctionSource.query.filter_by(company_id=company_id, base_url=data["base_url"]).first()
+            if existing is not None and int(existing.id) != int(source_id):
+                raise RealEstateAuctionError(f"Já existe fonte com base_url='{data['base_url']}' neste tenant.")
+        RealEstateAuctionService._apply_payload(row, data)
+        if commit:
+            db.session.commit()
+        return row.to_dict()
+
+    @staticmethod
+    def delete_source(
+        company_id: int,
+        source_id: int,
+        *,
+        commit: bool = True,
+    ) -> dict[str, Any]:
+        RealEstateAuctionService.ensure_module_enabled(company_id)
+        row = RealEstateAuctionService._require_source(company_id, source_id)
+        db.session.delete(row)
+        if commit:
+            db.session.commit()
+        return {"deleted": True, "source_id": source_id}
+
+    @staticmethod
     def _require_property(company_id: int, property_id: int) -> RealEstateAuctionProperty:
         row = RealEstateAuctionProperty.query.filter_by(
             company_id=company_id,
@@ -350,6 +579,32 @@ class RealEstateAuctionService:
     @staticmethod
     def _property_by_code(company_id: int, code: str) -> RealEstateAuctionProperty | None:
         return RealEstateAuctionProperty.query.filter_by(company_id=company_id, code=code).first()
+
+    @staticmethod
+    def _require_event(company_id: int, property_id: int, event_id: int) -> RealEstateAuctionEvent:
+        row = RealEstateAuctionEvent.query.filter_by(company_id=company_id, property_id=property_id, id=event_id).first()
+        if row is None:
+            raise RealEstateAuctionError(
+                f"Evento não encontrado no tenant: company_id={company_id}, property_id={property_id}, event_id={event_id}."
+            )
+        return row
+
+    @staticmethod
+    def _require_attachment(company_id: int, property_id: int, attachment_id: int) -> RealEstateAuctionAttachment:
+        row = RealEstateAuctionAttachment.query.filter_by(company_id=company_id, property_id=property_id, id=attachment_id).first()
+        if row is None:
+            raise RealEstateAuctionError(
+                "Anexo não encontrado no tenant: "
+                f"company_id={company_id}, property_id={property_id}, attachment_id={attachment_id}."
+            )
+        return row
+
+    @staticmethod
+    def _require_source(company_id: int, source_id: int) -> RealEstateAuctionSource:
+        row = RealEstateAuctionSource.query.filter_by(company_id=company_id, id=source_id).first()
+        if row is None:
+            raise RealEstateAuctionError(f"Fonte não encontrada no tenant: company_id={company_id}, source_id={source_id}.")
+        return row
 
     @staticmethod
     def _normalize_property_payload(payload: dict[str, Any], *, partial: bool) -> dict[str, Any]:
@@ -403,6 +658,114 @@ class RealEstateAuctionService:
     def _apply_property_payload(row: RealEstateAuctionProperty, payload: dict[str, Any]) -> None:
         for field, value in payload.items():
             setattr(row, field, value)
+
+    @staticmethod
+    def _apply_payload(row: Any, payload: dict[str, Any]) -> None:
+        for field, value in payload.items():
+            setattr(row, field, value)
+
+    @staticmethod
+    def _normalize_event_payload(payload: dict[str, Any], *, partial: bool) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise RealEstateAuctionError("Payload de evento deve ser um objeto.")
+        data: dict[str, Any] = {}
+        for field in RealEstateAuctionService.EVENT_TEXT_FIELDS:
+            if field in payload:
+                data[field] = _clean_text(payload.get(field))
+        for field in RealEstateAuctionService.EVENT_DECIMAL_FIELDS:
+            if field in payload:
+                data[field] = _safe_decimal(payload.get(field), field=field)
+        for field in RealEstateAuctionService.EVENT_DATETIME_FIELDS:
+            if field in payload:
+                data[field] = RealEstateAuctionService._parse_datetime(payload.get(field), field=field)
+        if not partial:
+            if not data.get("result"):
+                data["result"] = "pending"
+        return data
+
+    @staticmethod
+    def _normalize_financial_sheet_payload(payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise RealEstateAuctionError("Payload de ficha financeira deve ser um objeto.")
+        data: dict[str, Any] = {}
+        for field in RealEstateAuctionService.FINANCIAL_DECIMAL_FIELDS:
+            if field in payload:
+                data[field] = _safe_decimal(payload.get(field), field=field) or Decimal("0")
+        for field in RealEstateAuctionService.FINANCIAL_INT_FIELDS:
+            if field in payload:
+                data[field] = _safe_int(payload.get(field), field=field) or 0
+        for field in RealEstateAuctionService.FINANCIAL_JSON_FIELDS:
+            if field in payload:
+                data[field] = RealEstateAuctionService._require_dict(payload.get(field), field)
+        return data
+
+    @staticmethod
+    def _normalize_due_diligence_payload(payload: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise RealEstateAuctionError("Payload de diligência deve ser um objeto.")
+        data: dict[str, Any] = {}
+        for field in RealEstateAuctionService.DUE_DILIGENCE_TEXT_FIELDS:
+            if field in payload:
+                data[field] = _clean_text(payload.get(field))
+        for field in RealEstateAuctionService.DUE_DILIGENCE_DECIMAL_FIELDS:
+            if field in payload:
+                data[field] = _safe_decimal(payload.get(field), field=field) or Decimal("0")
+        for field in RealEstateAuctionService.DUE_DILIGENCE_INT_FIELDS:
+            if field in payload:
+                data[field] = _safe_int(payload.get(field), field=field)
+        for field in RealEstateAuctionService.DUE_DILIGENCE_BOOL_FIELDS:
+            if field in payload:
+                data[field] = _safe_bool(payload.get(field))
+        return data
+
+    @staticmethod
+    def _normalize_attachment_payload(payload: dict[str, Any], *, partial: bool) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise RealEstateAuctionError("Payload de anexo deve ser um objeto.")
+        data: dict[str, Any] = {}
+        for field in RealEstateAuctionService.ATTACHMENT_TEXT_FIELDS:
+            if field in payload:
+                data[field] = _clean_text(payload.get(field))
+        for field in RealEstateAuctionService.ATTACHMENT_INT_FIELDS:
+            if field in payload:
+                data[field] = _safe_int(payload.get(field), field=field) or 0
+        for field in RealEstateAuctionService.ATTACHMENT_JSON_FIELDS:
+            if field in payload:
+                data[field] = RealEstateAuctionService._require_dict(payload.get(field), field)
+        if "category" in data and data["category"] not in REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES:
+            raise RealEstateAuctionError(
+                "Campo 'category' inválido. Valores permitidos: "
+                + ", ".join(REAL_ESTATE_AUCTION_ATTACHMENT_CATEGORY_VALUES)
+                + "."
+            )
+        if not partial:
+            required = ("category", "storage_path")
+            missing = [field for field in required if not data.get(field)]
+            if missing:
+                raise RealEstateAuctionError("Campos obrigatórios ausentes em anexo: " + ", ".join(missing))
+        return data
+
+    @staticmethod
+    def _normalize_source_payload(payload: dict[str, Any], *, partial: bool) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise RealEstateAuctionError("Payload de fonte deve ser um objeto.")
+        data: dict[str, Any] = {}
+        for field in RealEstateAuctionService.SOURCE_TEXT_FIELDS:
+            if field in payload:
+                data[field] = _clean_text(payload.get(field))
+        for field in RealEstateAuctionService.SOURCE_BOOL_FIELDS:
+            if field in payload:
+                data[field] = _safe_bool(payload.get(field))
+        for field in RealEstateAuctionService.SOURCE_JSON_FIELDS:
+            if field in payload:
+                data[field] = RealEstateAuctionService._require_dict(payload.get(field), field)
+        if not partial:
+            required = ("name", "domain", "base_url")
+            missing = [field for field in required if not data.get(field)]
+            if missing:
+                raise RealEstateAuctionError("Campos obrigatórios ausentes em fonte: " + ", ".join(missing))
+            data.setdefault("active", True)
+        return data
 
     @staticmethod
     def _validate_choice(value: str | None, allowed: tuple[str, ...], field: str) -> str:
