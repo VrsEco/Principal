@@ -37,6 +37,57 @@ class _QueryStub:
         return None
 
 
+def test_apply_schedule_allocations_forwards_bordero_bypass(monkeypatch):
+    captured = {}
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "company_id": 9,
+            "template_amount": 100.0,
+            "next_due_date": None,
+            "first_due_date": None,
+            "chart_account_id": 301,
+            "cost_center_id": 8,
+            "metadata_json": {"allocations": [{"chart_account_id": 301}]},
+        },
+    )()
+    normalized_allocations = [
+        {
+            "chart_account_id": 301,
+            "cost_center_id": 8,
+            "allocation_type": "amount",
+            "allocated_amount": 100.0,
+            "percentage": None,
+            "notes": "rateio do título",
+            "metadata_json": {},
+        }
+    ]
+    monkeypatch.setattr(
+        schedule_module.FinancialScheduleService,
+        "_normalize_schedule_allocations",
+        staticmethod(lambda **kwargs: normalized_allocations),
+    )
+
+    def fake_replace_allocations(**kwargs):
+        captured.update(kwargs)
+        return [], None
+
+    monkeypatch.setattr(schedule_module.FinancialService, "replace_allocations", fake_replace_allocations)
+
+    error = FinancialScheduleService._apply_schedule_allocations(
+        schedule=schedule,
+        entry_id=88,
+        allowed_company_ids=[9],
+        ignore_bordero_lock=True,
+    )
+
+    assert error is None
+    assert captured["allowed_company_ids"] == [9]
+    assert captured["ignore_bordero_lock"] is True
+    assert captured["payload"]["financial_entry_id"] == 88
+
+
 def test_create_settlement_from_schedule_forwards_entry_and_external_reference(monkeypatch):
     schedule = type("Schedule", (), {"id": 15, "company_id": 9, "schedule_code": "TIT-000015"})()
 
@@ -420,8 +471,9 @@ def test_apply_schedule_allocations_persists_only_principal_rows(monkeypatch):
         lambda **kwargs: 777,
     )
 
-    def _fake_replace_allocations(*, payload, allowed_company_ids=None):
+    def _fake_replace_allocations(*, payload, allowed_company_ids=None, ignore_bordero_lock=False):
         captured["payload"] = payload
+        captured["ignore_bordero_lock"] = ignore_bordero_lock
         return [], None
 
     monkeypatch.setattr(schedule_module.FinancialService, "replace_allocations", _fake_replace_allocations)

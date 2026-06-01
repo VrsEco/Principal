@@ -943,6 +943,7 @@ class FinancialScheduleService:
                 schedule=schedule,
                 entry_id=existing.id,
                 allowed_company_ids=allowed_company_ids,
+                ignore_bordero_lock=ignore_bordero_lock,
             )
             if allocation_error:
                 return None, allocation_error
@@ -966,6 +967,7 @@ class FinancialScheduleService:
             schedule=schedule,
             entry_id=entry.id,
             allowed_company_ids=allowed_company_ids,
+            ignore_bordero_lock=ignore_bordero_lock,
         )
         if allocation_error:
             return None, allocation_error
@@ -1361,6 +1363,7 @@ class FinancialScheduleService:
         schedule: FinancialSchedule,
         entry_id: int,
         allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
     ) -> Optional[str]:
         metadata = dict(schedule.metadata_json or {})
         raw_allocations = FinancialScheduleService._normalize_schedule_allocations(
@@ -1420,6 +1423,7 @@ class FinancialScheduleService:
         _, error = FinancialService.replace_allocations(
             payload=payload,
             allowed_company_ids=allowed_company_ids,
+            ignore_bordero_lock=ignore_bordero_lock,
         )
         return error
 

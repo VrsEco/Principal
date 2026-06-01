@@ -158,6 +158,7 @@ def test_create_assisted_settlement_forwards_component_payload_and_updates_adjus
     class _FakeScheduleService:
         @staticmethod
         def create_settlement_from_schedule(**kwargs):
+            captured["settlement_kwargs"] = kwargs
             captured["settlement_payload"] = kwargs["payload"]
             return {"settlement": {"id": 501}, "entry": {"id": 99}, "created_entry": True}, None
 
@@ -175,8 +176,18 @@ def test_create_assisted_settlement_forwards_component_payload_and_updates_adjus
     result, error = FinancialSettlementCompositionService.create_assisted_settlement(
         company_id=7,
         schedule_id=34,
-        payload={"settlement_date": "2026-04-20", "gross_amount": 300, "settlement_type": "manual"},
+        payload={
+            "settlement_date": "2026-04-20",
+            "gross_amount": 300,
+            "settlement_type": "manual",
+            "metadata_json": {
+                "bordero_id": 31,
+                "bordero_settlement_id": 55,
+                "reconcile_via_bordero": True,
+            },
+        },
         allowed_company_ids=[7],
+        ignore_bordero_lock=True,
     )
 
     assert error is None
@@ -184,6 +195,11 @@ def test_create_assisted_settlement_forwards_component_payload_and_updates_adjus
     assert captured["settlement_payload"]["principal_amount"] == 270.0
     assert captured["settlement_payload"]["interest_amount"] == 30.0
     assert captured["settlement_payload"]["settlement_components"][1]["origin_adjustment_id"] == 91
+    assert captured["settlement_payload"]["metadata_json"]["bordero_id"] == 31
+    assert captured["settlement_payload"]["metadata_json"]["bordero_settlement_id"] == 55
+    assert captured["settlement_payload"]["metadata_json"]["reconcile_via_bordero"] is True
+    assert captured["settlement_payload"]["metadata_json"]["financial_correction_audit"]
+    assert captured["settlement_kwargs"]["ignore_bordero_lock"] is True
     assert adjustment.settled_amount == Decimal("50.00")
     assert adjustment.open_amount == Decimal("0.00")
     assert adjustment.status == "settled"

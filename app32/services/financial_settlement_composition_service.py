@@ -429,13 +429,19 @@ class FinancialSettlementCompositionService:
             return None, "; ".join(simulation.get("errors") or ["Composição da baixa inválida."])
 
         settlement_payload = dict(payload or {})
+        incoming_metadata = dict(settlement_payload.get("metadata_json") or {})
         settlement_payload.pop("composition", None)
         settlement_payload.pop("settlement_code", None)
         settlement_payload.setdefault("settlement_type", "manual")
         settlement_payload["settlement_date"] = simulation["settlement_date"]
-        settlement_payload.update(simulation["settlement_payload"])
-        settlement_payload["settlement_components"] = simulation["settlement_payload"]["settlement_components"]
-        metadata = dict(settlement_payload.get("metadata_json") or {})
+        simulation_settlement_payload = dict(simulation["settlement_payload"] or {})
+        simulation_metadata = dict(simulation_settlement_payload.get("metadata_json") or {})
+        settlement_payload.update(simulation_settlement_payload)
+        settlement_payload["settlement_components"] = simulation_settlement_payload["settlement_components"]
+        metadata = {
+            **incoming_metadata,
+            **simulation_metadata,
+        }
         metadata["assisted_composition"] = simulation["composition"]
         metadata["financial_correction_audit"] = simulation.get("suggestions") or metadata.get("financial_correction_audit") or {}
         settlement_payload["metadata_json"] = metadata

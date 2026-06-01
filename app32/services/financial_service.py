@@ -1514,6 +1514,7 @@ class FinancialService:
         *,
         payload: Dict[str, Any],
         allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
     ) -> Tuple[Optional[List[FinancialEntryAllocation]], Optional[str]]:
         try:
             data = FinancialAllocationBatchInput(**payload)
@@ -1534,8 +1535,12 @@ class FinancialService:
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_entry(company_id=data.company_id, entry=entry)
-        if active_bordero:
+        if active_bordero and not ignore_bordero_lock:
             return None, f"Lançamento bloqueado pelo borderô {active_bordero.bordero_code}."
+        if active_bordero and ignore_bordero_lock:
+            external_reference = str(getattr(entry, "external_reference", "") or "").strip()
+            if not (getattr(entry, "financial_schedule_id", None) or external_reference.startswith("financial_schedule:")):
+                return None, "Bypass do bloqueio de borderô em rateio exige lançamento vinculado a Título Financeiro."
 
         normalized_allocations: List[FinancialAllocationInput] = []
         for item in data.allocations:
