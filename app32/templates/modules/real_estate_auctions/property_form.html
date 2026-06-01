@@ -1,6 +1,10 @@
 {% extends "layouts/workspace.html" %}
 {% set p = property or {} %}
 
+{% macro hint(text) -%}
+<small class="rea-field__hint">{{ text }}</small>
+{%- endmacro %}
+
 {% block title %}{{ 'Editar' if p else 'Novo' }} Imóvel - Leilões Imobiliários{% endblock %}
 
 {% block breadcrumb %}
@@ -44,7 +48,8 @@
             <div class="rea-grid">
                 <label>
                     <span>Código *</span>
-                    <input required name="code" value="{{ p.get('code', '') }}" placeholder="GND-001">
+                    <input required name="code" value="{{ p.get('code', '') }}" placeholder="GND-001" data-field-kind="code">
+                    {{ hint('Código em maiúsculas. O helper normaliza antes do envio.') }}
                 </label>
                 <label>
                     <span>Apelido</span>
@@ -81,11 +86,13 @@
                 </label>
                 <label>
                     <span>UF</span>
-                    <input name="state" maxlength="2" value="{{ p.get('state', 'BA') or 'BA' }}">
+                    <input name="state" maxlength="2" value="{{ p.get('state', 'BA') or 'BA' }}" data-field-kind="state">
+                    {{ hint('Sigla com 2 letras em maiúsculo.') }}
                 </label>
                 <label>
                     <span>CEP</span>
-                    <input name="zip_code" value="{{ p.get('zip_code', '') }}">
+                    <input name="zip_code" value="{{ p.get('zip_code', '') }}" data-field-kind="zip">
+                    {{ hint('Formato visual 00000-000.') }}
                 </label>
             </div>
         </section>
@@ -139,35 +146,43 @@
             <div class="rea-grid">
                 <label>
                     <span>Área terreno</span>
-                    <input type="number" step="0.01" name="land_area" value="{{ p.get('land_area', '') }}">
+                    <input type="text" name="land_area" value="{{ p.get('land_area', '') }}" data-field-kind="decimal">
+                    {{ hint('Aceita casas decimais com vírgula ou ponto.') }}
                 </label>
                 <label>
                     <span>Área privativa</span>
-                    <input type="number" step="0.01" name="private_area" value="{{ p.get('private_area', '') }}">
+                    <input type="text" name="private_area" value="{{ p.get('private_area', '') }}" data-field-kind="decimal">
+                    {{ hint('Aceita casas decimais com vírgula ou ponto.') }}
                 </label>
                 <label>
                     <span>Área construída</span>
-                    <input type="number" step="0.01" name="built_area" value="{{ p.get('built_area', '') }}">
+                    <input type="text" name="built_area" value="{{ p.get('built_area', '') }}" data-field-kind="decimal">
+                    {{ hint('Aceita casas decimais com vírgula ou ponto.') }}
                 </label>
                 <label>
                     <span>Valor avaliado</span>
-                    <input type="number" step="0.01" name="appraisal_value" value="{{ p.get('appraisal_value', '') }}">
+                    <input type="text" name="appraisal_value" value="{{ p.get('appraisal_value', '') }}" data-field-kind="money">
+                    {{ hint('Exibição em R$ no blur com normalização automática no submit.') }}
                 </label>
                 <label>
                     <span>Venda rápida estimada</span>
-                    <input type="number" step="0.01" name="estimated_quick_sale_value" value="{{ p.get('estimated_quick_sale_value', '') }}">
+                    <input type="text" name="estimated_quick_sale_value" value="{{ p.get('estimated_quick_sale_value', '') }}" data-field-kind="money">
+                    {{ hint('Exibição em R$ no blur com normalização automática no submit.') }}
                 </label>
                 <label>
                     <span>Venda normal estimada</span>
-                    <input type="number" step="0.01" name="estimated_normal_sale_value" value="{{ p.get('estimated_normal_sale_value', '') }}">
+                    <input type="text" name="estimated_normal_sale_value" value="{{ p.get('estimated_normal_sale_value', '') }}" data-field-kind="money">
+                    {{ hint('Exibição em R$ no blur com normalização automática no submit.') }}
                 </label>
                 <label>
                     <span>Lance máximo recomendado</span>
-                    <input type="number" step="0.01" name="recommended_max_bid" value="{{ p.get('recommended_max_bid', '') }}">
+                    <input type="text" name="recommended_max_bid" value="{{ p.get('recommended_max_bid', '') }}" data-field-kind="money">
+                    {{ hint('Exibição em R$ no blur com normalização automática no submit.') }}
                 </label>
                 <label>
                     <span>Venda fechada</span>
-                    <input type="number" step="0.01" name="closed_sale_value" value="{{ p.get('closed_sale_value', '') }}">
+                    <input type="text" name="closed_sale_value" value="{{ p.get('closed_sale_value', '') }}" data-field-kind="money">
+                    {{ hint('Exibição em R$ no blur com normalização automática no submit.') }}
                 </label>
             </div>
         </section>
@@ -204,11 +219,13 @@
                 </label>
                 <label class="span-2">
                     <span>URL do leilão</span>
-                    <input name="auction_url" value="{{ p.get('auction_url', '') }}">
+                    <input type="url" name="auction_url" value="{{ p.get('auction_url', '') }}">
+                    {{ hint('Cole a URL completa para rastreabilidade da origem.') }}
                 </label>
                 <label class="span-2">
                     <span>URL do edital</span>
-                    <input name="notice_url" value="{{ p.get('notice_url', '') }}">
+                    <input type="url" name="notice_url" value="{{ p.get('notice_url', '') }}">
+                    {{ hint('Cole a URL completa do edital ou documento oficial.') }}
                 </label>
             </div>
         </section>
@@ -263,6 +280,8 @@
     .span-2 { grid-column:span 2; }
     .rea-grid label { display:flex; flex-direction:column; gap:.32rem; color:var(--text-secondary); font-size:.78rem; font-weight:800; }
     .rea-grid input, .rea-grid select, .rea-grid textarea { border:1px solid var(--border); border-radius:12px; padding:.68rem .78rem; background:#fff; color:var(--text-primary); }
+    .rea-grid input:focus, .rea-grid select:focus, .rea-grid textarea:focus { outline:none; border-color:rgba(37,99,235,.35); box-shadow:0 0 0 4px rgba(37,99,235,.08); }
+    .rea-field__hint { color:var(--text-tertiary); font-size:.72rem; line-height:1.35; font-weight:600; }
     .rea-check { flex-direction:row !important; align-items:center; }
     .rea-check input { width:auto; }
     .rea-form-actions { display:flex; justify-content:flex-end; gap:.75rem; border-top:1px solid var(--border); padding-top:1rem; }
@@ -281,4 +300,74 @@
         .rea-form-actions { flex-direction:column; }
     }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('.rea-form-card');
+    if (!form) return;
+
+    const numericInputs = form.querySelectorAll('input[data-field-kind="money"], input[data-field-kind="decimal"]');
+    const stateInput = form.querySelector('input[data-field-kind="state"]');
+    const zipInput = form.querySelector('input[data-field-kind="zip"]');
+    const codeInput = form.querySelector('input[data-field-kind="code"]');
+
+    const normalizeNumericValue = (value) => {
+        if (value == null) return '';
+        let cleaned = String(value).trim();
+        if (!cleaned) return '';
+        cleaned = cleaned.replace(/[R$\s]/g, '');
+        if (cleaned.includes(',') && cleaned.includes('.')) {
+            cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+        } else if (cleaned.includes(',')) {
+            cleaned = cleaned.replace(',', '.');
+        }
+        cleaned = cleaned.replace(/[^0-9.-]/g, '');
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? String(parsed) : '';
+    };
+
+    const formatNumericValue = (value, kind) => {
+        const normalized = normalizeNumericValue(value);
+        if (!normalized) return '';
+        const parsed = Number(normalized);
+        if (kind === 'money') {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parsed);
+        }
+        return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(parsed);
+    };
+
+    numericInputs.forEach((input) => {
+        input.value = formatNumericValue(input.value, input.dataset.fieldKind);
+        input.addEventListener('focus', () => { input.value = normalizeNumericValue(input.value); });
+        input.addEventListener('blur', () => { input.value = formatNumericValue(input.value, input.dataset.fieldKind); });
+    });
+
+    if (stateInput) {
+        const normalizeState = () => { stateInput.value = (stateInput.value || '').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase(); };
+        normalizeState();
+        stateInput.addEventListener('input', normalizeState);
+    }
+
+    if (zipInput) {
+        const normalizeZip = () => {
+            const digits = (zipInput.value || '').replace(/\D/g, '').slice(0, 8);
+            zipInput.value = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
+        };
+        normalizeZip();
+        zipInput.addEventListener('input', normalizeZip);
+    }
+
+    if (codeInput) {
+        const normalizeCode = () => { codeInput.value = (codeInput.value || '').toUpperCase().replace(/\s+/g, '-'); };
+        normalizeCode();
+        codeInput.addEventListener('input', normalizeCode);
+    }
+
+    form.addEventListener('submit', () => {
+        numericInputs.forEach((input) => { input.value = normalizeNumericValue(input.value); });
+        if (stateInput) stateInput.value = (stateInput.value || '').toUpperCase();
+        if (zipInput) zipInput.value = (zipInput.value || '').replace(/\D/g, '');
+        if (codeInput) codeInput.value = (codeInput.value || '').toUpperCase();
+    });
+});
+</script>
 {% endblock %}
