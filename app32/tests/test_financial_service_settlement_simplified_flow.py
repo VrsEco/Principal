@@ -835,7 +835,19 @@ def test_upload_and_delete_settlement_attachment_updates_metadata(tmp_path, monk
 
 
 def test_delete_settlement_rejects_direct_entry_link(monkeypatch):
-    schedule = type("Schedule", (), {"id": 44, "company_id": 7, "metadata_json": {"direct_entry": True}})()
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 44,
+            "company_id": 7,
+            "schedule_code": "TIT-44",
+            "metadata_json": {"direct_entry": True},
+            "next_due_date": None,
+            "first_due_date": date(2026, 6, 1),
+            "start_date": None,
+        },
+    )()
     entry = type(
         "Entry",
         (),
@@ -899,6 +911,129 @@ def test_delete_settlement_rejects_direct_entry_link(monkeypatch):
 
     assert result is None
     assert "Lançamento rápido" in error
+
+
+def test_delete_settlement_allows_bordero_child_even_when_title_originated_from_direct_entry(monkeypatch):
+    captured = {"added": []}
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 44,
+            "company_id": 7,
+            "schedule_code": "TIT-44",
+            "metadata_json": {"direct_entry": True},
+            "next_due_date": None,
+            "first_due_date": date(2026, 6, 1),
+            "start_date": None,
+        },
+    )()
+    entry = type(
+        "Entry",
+        (),
+        {
+            "id": 21,
+            "company_id": 7,
+            "financial_schedule_id": 44,
+            "deleted_at": None,
+            "metadata_json": {"direct_entry": True},
+            "status": "settled",
+        },
+    )()
+    settlement = type(
+        "Settlement",
+        (),
+        {
+            "id": 31,
+            "company_id": 7,
+            "deleted_at": None,
+            "financial_entry_id": 21,
+            "reconciliation_status": "pending",
+            "settlement_date": date(2026, 6, 1),
+            "metadata_json": {
+                "reconcile_via_bordero": True,
+                "bordero_id": 11,
+                "bordero_settlement_id": 12,
+            },
+        },
+    )()
+
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSettlement",
+        type(
+            "SettlementStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(settlement),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialEntry",
+        type(
+            "EntryStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(entry),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSchedule",
+        type(
+            "ScheduleStub",
+            (),
+            {
+                "id": _Column(),
+                "company_id": _Column(),
+                "deleted_at": _Column(),
+                "query": _QueryStub(schedule),
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        financial_module,
+        "FinancialSettlementComponent",
+        type(
+            "ComponentStub",
+            (),
+            {
+                "company_id": _Column(),
+                "financial_settlement_id": _Column(),
+                "query": _QueryStub([]),
+            },
+        ),
+    )
+    monkeypatch.setattr(financial_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialService, "_hide_superseded_calculation_logs", lambda **kwargs: [])
+    monkeypatch.setattr(financial_module.FinancialService, "_build_deleted_settlement_snapshot", lambda **kwargs: {})
+    monkeypatch.setattr(financial_module.FinancialService, "_build_title_calculation_log_payload", lambda **kwargs: {})
+    monkeypatch.setattr(financial_module.FinancialService, "_recalculate_entry_status", lambda **kwargs: None)
+    monkeypatch.setattr(financial_module.FinancialTitleBalanceService, "calculate_for_schedule", lambda **kwargs: {})
+    monkeypatch.setattr(financial_module.db.session, "add", lambda obj: captured["added"].append(obj))
+    monkeypatch.setattr(financial_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(financial_module.db.session, "rollback", lambda: captured.setdefault("rolled_back", True))
+
+    result, error = FinancialService.delete_settlement(
+        settlement_id=31,
+        company_id=7,
+        allowed_company_ids=[7],
+        allow_bordero_child_delete=True,
+    )
+
+    assert error is None
+    assert result["id"] == 31
+    assert settlement.deleted_at is not None
+    assert captured["committed"] is True
 
 
 def test_delete_entry_whole_flow_soft_deletes_active_settlement(monkeypatch):

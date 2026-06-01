@@ -301,6 +301,51 @@ def test_allocate_to_schedule_entries_uses_financial_title_settlement_flow(monke
     ]
 
 
+def test_delete_child_financial_settlements_uses_controlled_bordero_delete(monkeypatch):
+    captured = {}
+    child = SimpleNamespace(id=501)
+
+    class _ChildQuery:
+        def filter(self, *args, **kwargs):
+            return self
+        def order_by(self, *args, **kwargs):
+            return self
+        def all(self):
+            return [child]
+
+    fake_settlement_model = type(
+        'FinancialSettlementStub',
+        (),
+        {
+            'company_id': _ColumnStub(),
+            'deleted_at': _ColumnStub(),
+            'external_reference': _ColumnStub(),
+            'metadata_json': type('MetadataColumn', (), {'contains': lambda self, other: True})(),
+            'id': _ColumnStub(),
+            'query': _ChildQuery(),
+        },
+    )
+    monkeypatch.setattr(bordero_module, 'FinancialSettlement', fake_settlement_model)
+
+    def fake_delete_settlement(**kwargs):
+        captured.update(kwargs)
+        return {'id': kwargs['settlement_id']}, None
+
+    monkeypatch.setattr(bordero_module.FinancialService, 'delete_settlement', staticmethod(fake_delete_settlement))
+
+    error = FinancialBorderoService._delete_child_financial_settlements(
+        company_id=9,
+        bordero_settlement=SimpleNamespace(settlement_code='B-31-BX-001'),
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert captured['settlement_id'] == 501
+    assert captured['company_id'] == 9
+    assert captured['allowed_company_ids'] == [9]
+    assert captured['allow_bordero_child_delete'] is True
+
+
 def test_sync_bordero_totals_from_items_marks_partial_and_settled():
     bordero = SimpleNamespace(total_amount=Decimal('0'), settled_amount=Decimal('0'), open_amount=Decimal('0'), status='open')
     items = [

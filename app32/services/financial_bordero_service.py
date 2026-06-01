@@ -886,6 +886,7 @@ class FinancialBorderoService:
                 settlement_id=child.id,
                 company_id=company_id,
                 allowed_company_ids=allowed_company_ids,
+                allow_bordero_child_delete=True,
             )
             if error:
                 return error

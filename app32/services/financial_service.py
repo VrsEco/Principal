@@ -2471,6 +2471,7 @@ class FinancialService:
         settlement_id: int,
         company_id: int,
         allowed_company_ids: Optional[Sequence[int]] = None,
+        allow_bordero_child_delete: bool = False,
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -2494,7 +2495,13 @@ class FinancialService:
                 FinancialEntry.deleted_at.is_(None),
             ).first()
             schedule = FinancialService._resolve_linked_schedule(entry, company_id)
-            if FinancialService._requires_whole_entry_delete(entry, schedule):
+            bordero_child_metadata = dict(getattr(settlement, "metadata_json", {}) or {})
+            bordero_child_delete_allowed = bool(
+                allow_bordero_child_delete
+                and bordero_child_metadata.get("reconcile_via_bordero")
+                and bordero_child_metadata.get("bordero_settlement_id")
+            )
+            if FinancialService._requires_whole_entry_delete(entry, schedule) and not bordero_child_delete_allowed:
                 return None, (
                     "Lançamento rápido não permite excluir apenas a baixa. "
                     "Exclua o lançamento rápido inteiro para remover baixa e título."
