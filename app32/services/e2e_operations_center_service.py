@@ -22,6 +22,7 @@ class E2EOperationsCenterService:
     """Monta a visão operacional da Central de Testes E2E sem acoplar execução à UI."""
 
     SYSTEM_ACTION_SUITES = {"inventory_system_scan", "full_system_validation"}
+    OPERATIONAL_ENVIRONMENTS = {"DEV_FULL", "PROD_SAFE"}
 
     FAILURE_SUGGESTIONS = {
         "timeout": "Revisar carregamento assíncrono, tempos de espera e seletor de prontidão do fluxo afetado.",
@@ -206,13 +207,16 @@ class E2EOperationsCenterService:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             except Exception:
                 continue
-            runs.append(cls._build_run_record(outputs_root, manifest_path, manifest))
+            environment = cls._infer_environment(outputs_root, manifest_path)
+            if environment not in cls.OPERATIONAL_ENVIRONMENTS:
+                continue
+            runs.append(cls._build_run_record(outputs_root, manifest_path, manifest, environment=environment))
         return runs
 
     @classmethod
-    def _build_run_record(cls, outputs_root: Path, manifest_path: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    def _build_run_record(cls, outputs_root: Path, manifest_path: Path, manifest: dict[str, Any], *, environment: str | None = None) -> dict[str, Any]:
         root_dir = manifest_path.parents[1]
-        environment = cls._infer_environment(outputs_root, manifest_path)
+        environment = environment or cls._infer_environment(outputs_root, manifest_path)
         journeys = manifest.get("journeys") or []
         failed_journeys = [item for item in journeys if item.get("status") == "failed"]
         status = "failed" if failed_journeys else ("passed" if journeys else "observed")

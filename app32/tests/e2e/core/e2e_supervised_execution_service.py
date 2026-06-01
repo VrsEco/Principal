@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import uuid
@@ -134,11 +135,31 @@ class E2ESupervisedExecutionService:
 
     @staticmethod
     def _build_command(command_kind: str, command_args: tuple[str, ...]) -> list[str]:
+        python_executable = E2ESupervisedExecutionService._resolve_python_executable()
         if command_kind == "pytest":
-            return [sys.executable, "-m", "pytest", *command_args]
+            return [python_executable, "-m", "pytest", *command_args]
         if command_kind == "python":
-            return [sys.executable, *command_args]
+            return [python_executable, *command_args]
         raise ValueError(f"command_kind não suportado: {command_kind}")
+
+    @staticmethod
+    def _resolve_python_executable() -> str:
+        candidates = [
+            os.environ.get("APP32_E2E_PYTHON"),
+            str(Path(os.environ.get("VIRTUAL_ENV", "")).joinpath("bin", "python")) if os.environ.get("VIRTUAL_ENV") else None,
+            shutil.which("python3"),
+            shutil.which("python"),
+            getattr(sys, "_base_executable", None),
+            sys.executable,
+        ]
+        for candidate in candidates:
+            if not candidate:
+                continue
+            executable_name = Path(str(candidate)).name.lower()
+            if executable_name in {"uwsgi", "uwsgi.exe"}:
+                continue
+            return str(candidate)
+        return "python3"
 
     @classmethod
     def _write_record(cls, record: SupervisedExecutionRecord) -> None:

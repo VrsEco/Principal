@@ -41,3 +41,15 @@ def test_supervised_execution_service_reads_execution_meta(tmp_path, monkeypatch
 
     assert items[0]["execution_id"] == "exec-1"
     assert items[0]["status"] == "passed"
+
+
+def test_supervised_execution_service_resolves_python_without_uwsgi(monkeypatch):
+    monkeypatch.setenv("APP32_E2E_PYTHON", "")
+    monkeypatch.setenv("VIRTUAL_ENV", "")
+    monkeypatch.setattr("app32.tests.e2e.core.e2e_supervised_execution_service.sys.executable", "/var/www/.pyenv/versions/3.12.12/bin/uwsgi")
+    monkeypatch.setattr("app32.tests.e2e.core.e2e_supervised_execution_service.sys._base_executable", "/usr/bin/python3", raising=False)
+
+    command = E2ESupervisedExecutionService._build_command("python", ("app32/tests/e2e/scripts/build_inventory_candidates.py",))
+
+    assert Path(command[0]).name.lower().startswith("python")
+    assert "uwsgi" not in command[0].lower()

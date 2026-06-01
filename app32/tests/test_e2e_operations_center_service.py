@@ -46,6 +46,20 @@ def test_e2e_operations_center_service_collects_latest_runs(tmp_path, monkeypatc
         ),
         encoding="utf-8",
     )
+    probe_reports = repo_root / "app32" / "tests" / "e2e" / "outputs" / "journey_probe" / "run_probe" / "reports"
+    probe_reports.mkdir(parents=True)
+    (probe_reports / "manifest.json").write_text(
+        json.dumps(
+            {
+                "run_id": "run_probe",
+                "generated_at": "2026-05-27T18:00:00",
+                "artifacts": [],
+                "events": [],
+                "journeys": [{"journey": "probe", "status": "failed", "failure_type": "TimeoutError", "failed_step": "step2"}],
+            }
+        ),
+        encoding="utf-8",
+    )
 
     runbooks = repo_root / "app32" / "docs" / "runbooks"
     runbooks.mkdir(parents=True)
@@ -58,7 +72,7 @@ def test_e2e_operations_center_service_collects_latest_runs(tmp_path, monkeypatc
 
     state = E2EOperationsCenterService.build_frontend_state(SimpleNamespace(id=9, name="Versus", client_code="VRS"))
 
-    assert state["summary"]["total_runs"] >= 2
+    assert state["summary"]["total_runs"] == 2
     assert state["summary"]["backlog_candidates"] == 1
     assert state["system_actions"]["inventory_scan"]["suite_id"] == "inventory_system_scan"
     assert state["system_actions"]["full_validation"]["suite_id"] == "full_system_validation"
