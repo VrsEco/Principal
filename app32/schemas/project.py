@@ -31,6 +31,7 @@ class ProjectSchema(ma.SQLAlchemyAutoSchema):
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
     task_stats = fields.Dict(dump_only=True)
+    deadline = fields.Date(attribute="deadline", allow_none=True)
     portfolio_id = fields.Integer(allow_none=True)  # Explicitly include portfolio_id
     
     tasks = fields.Nested(ProjectTaskSchema, many=True, dump_only=True)
