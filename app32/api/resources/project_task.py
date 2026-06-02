@@ -11,6 +11,8 @@ from datetime import datetime
 from services.project_task_due_date_change_service import (
     ProjectTaskDueDateChangeService,
 )
+from services.project_task_service import ProjectTaskService
+from utils.error_handling import log_and_build_public_error_response
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 
@@ -776,73 +778,54 @@ class ProjectTaskTransferResource(Resource):
     def post(self, project_id, task_id):
         """Transfer a task to another project."""
         from .project import get_request_company_id
+        from flask_login import current_user
+
         company_id = get_request_company_id()
         query = ProjectTask.query.filter_by(id=task_id, project_id=project_id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
         task = query.first_or_404()
         if _is_backlog_human_gate_task(task):
             return _build_backlog_human_gate_lock_response()
-        data = request.get_json()
-        target_project_id = data.get('target_project_id')
-        note = data.get('note', '')
-
-        if not target_project_id:
-            return {"error": "Target project ID is required"}, 400
-        
-        if int(target_project_id) == int(project_id):
-            return {"error": "Target project must be different from current project"}, 400
-
-        target_project = Project.query.get(target_project_id)
-        if not target_project:
-            return {"error": "Target project not found"}, 404
-
-        # Verify target project belongs to the same company
-        current_project = Project.query.get(project_id)
-        if target_project.company_id != current_project.company_id:
-             return {"error": "Target project must belong to the same company"}, 403
-
-        # Update task
-        old_project_name = current_project.name
-        new_project_name = target_project.name
-        
-        task.project_id = target_project_id
-        task.stage = 'inbox' # Reset to inbox as per legacy requirements
-        task.status = 'planned'
-        
-        # Log the transfer
-        if not task.logs:
-            task.logs = []
-        
-        from flask_login import current_user
-        user_name = current_user.name if hasattr(current_user, 'name') else "Usuário"
-        
-        transfer_log = {
-            "timestamp": datetime.now().isoformat(),
-            "text": f"Atividade transferida de '{old_project_name}' para '{new_project_name}'",
-            "type": "transfer",
-            "note": note,
-            "old_project_id": project_id,
-            "new_project_id": target_project_id,
-            "user_name": user_name
-        }
-        
-        # Ensure task.logs is a list and append
-        current_logs = list(task.logs) if task.logs else []
-        current_logs.append(transfer_log)
-        task.logs = current_logs
-
         try:
-            db.session.commit()
-            # Update both projects progress
-            current_project.update_progress()
-            target_project.update_progress()
-            db.session.commit()
-            
-            return {"success": True, "message": "Atividade transferida com sucesso"}, 200
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.exception("Erro ao criar dependência successor_task_id=%s project_id=%s", task_id, project_id)
-            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+            data = request.get_json(force=True, silent=True) or {}
+            target_project_id = data.get('target_project_id')
+            note = data.get('note', '')
+
+            if not target_project_id:
+                return {"error": "Target project ID is required"}, 400
+
+            result, error = ProjectTaskService.transfer_task(
+                company_id=int(company_id),
+                source_project_id=int(project_id),
+                task_id=int(task_id),
+                target_project_id=int(target_project_id),
+                note=note,
+                user_name=getattr(current_user, 'name', None),
+            )
+            if error:
+                lowered_error = error.lower()
+                if "não encontrada" in lowered_error or "não encontrado" in lowered_error:
+                    return {"error": error}, 404
+                if "empresa ativa" in lowered_error:
+                    return {"error": error}, 403
+                if "diferente" in lowered_error:
+                    return {"error": error}, 400
+                return {"error": error}, 400
+
+            return {
+                "success": True,
+                "message": "Atividade transferida com sucesso",
+                "new_code": result["new_code"],
+            }, 200
+        except Exception as exc:
+            return log_and_build_public_error_response(
+                current_app.logger,
+                exc,
+                context=(
+                    "Erro ao transferir atividade "
+                    f"task_id={task_id} projeto_origem={project_id} company_id={company_id}"
+                ),
+            )
 
 
 class ProjectTaskDependencyListResource(Resource):

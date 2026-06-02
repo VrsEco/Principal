@@ -11,6 +11,7 @@ import services.backlog_human_gate_service as backlog_human_gate_service
 from api.resources import project_task as project_task_resource
 from api.resources import project_task_operational as project_task_operational_resource
 from services.backlog_human_gate_service import BacklogHumanGateOutcome
+from services import project_task_service as project_task_service_module
 
 
 def _build_workflow_action(**overrides):
@@ -386,6 +387,11 @@ def test_project_task_resource_get_includes_backlog_human_gate(monkeypatch):
         "build_backlog_human_gate_context",
         lambda obj: {"enabled": True, "agent_action_id": 25, "available_operations": [{"id": "approve"}]},
     )
+    monkeypatch.setattr(
+        project_task_resource.ProjectTaskDueDateChangeService,
+        "build_task_context",
+        lambda *_args, **_kwargs: {},
+    )
 
     with app.test_request_context("/api/projects/31/tasks/270", method="GET"):
         session["active_company_id"] = 9
@@ -591,3 +597,149 @@ def test_project_task_transfer_resource_post_blocks_manual_transfer_on_human_gat
 
     assert status_code == 409
     assert "espelhado" in response["error"]
+
+
+def test_project_task_service_transfer_task_regenerates_scoped_sequence_and_appends_log(monkeypatch):
+    class _FakeProject:
+        def __init__(self, project_id, company_id, name):
+            self.id = project_id
+            self.company_id = company_id
+            self.name = name
+            self.is_deleted = False
+            self.progress_updates = 0
+
+        def update_progress(self):
+            self.progress_updates += 1
+
+    class _FakeTask:
+        def __init__(self):
+            self.id = 270
+            self.project_id = 31
+            self.is_deleted = False
+            self.logs = [{"type": "note", "text": "anterior"}]
+            self.stage = "completed"
+            self.status = "completed"
+            self.completion_date = date(2026, 6, 1)
+            self.code_sequence = 7
+
+        @property
+        def code(self):
+            return f"AA.J.{self.project_id}.{self.code_sequence}"
+
+    class _FakeQuery:
+        def __init__(self, items):
+            self._items = items
+            self._filters = {}
+
+        def filter_by(self, **kwargs):
+            self._filters = kwargs
+            return self
+
+        def first(self):
+            for item in self._items:
+                if all(getattr(item, key, None) == value for key, value in self._filters.items()):
+                    return item
+            return None
+
+    class _FakeSession:
+        def __init__(self):
+            self.flush_calls = 0
+            self.commit_calls = 0
+            self.rollback_calls = 0
+
+        def connection(self):
+            return object()
+
+        def flush(self):
+            self.flush_calls += 1
+
+        def commit(self):
+            self.commit_calls += 1
+
+        def rollback(self):
+            self.rollback_calls += 1
+
+    source_project = _FakeProject(31, 9, "Projeto Origem")
+    target_project = _FakeProject(99, 9, "Projeto Destino")
+    task = _FakeTask()
+    fake_session = _FakeSession()
+
+    monkeypatch.setattr(project_task_service_module, "Project", type("FakeProjectModel", (), {"query": _FakeQuery([source_project, target_project])}))
+    monkeypatch.setattr(project_task_service_module, "ProjectTask", type("FakeTaskModel", (), {"query": _FakeQuery([task])}))
+    monkeypatch.setattr(project_task_service_module.db, "session", fake_session)
+    monkeypatch.setattr(project_task_service_module, "_allocate_scoped_sequence", lambda *_args, **_kwargs: 14)
+
+    result, error = project_task_service_module.ProjectTaskService.transfer_task(
+        company_id=9,
+        source_project_id=31,
+        task_id=270,
+        target_project_id=99,
+        note="Realocação operacional",
+        user_name="Fabiano",
+    )
+
+    assert error is None
+    assert result is not None
+    assert task.project_id == 99
+    assert task.code_sequence == 14
+    assert task.stage == "inbox"
+    assert task.status == "planned"
+    assert task.completion_date is None
+    assert task.logs[-1]["type"] == "transfer"
+    assert task.logs[-1]["note"] == "Realocação operacional"
+    assert task.logs[-1]["user_name"] == "Fabiano"
+    assert result["new_code"] == "AA.J.99.14"
+    assert fake_session.flush_calls == 1
+    assert fake_session.commit_calls == 1
+    assert fake_session.rollback_calls == 0
+    assert source_project.progress_updates == 1
+    assert target_project.progress_updates == 1
+
+
+def test_project_task_transfer_resource_logs_centralized_error_on_failure(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = "test-secret"
+    task = _build_backlog_task(agent_action_backlog_link=None)
+
+    class _FakeQuery:
+        def filter_by(self, **_kwargs):
+            return self
+
+        def first_or_404(self):
+            return task
+
+    fake_project_task_class = type("FakeProjectTask", (), {"query": _FakeQuery()})
+    monkeypatch.setattr(project_task_resource, "ProjectTask", fake_project_task_class)
+    monkeypatch.setattr(project_task_resource, "apply_task_employee_filter", lambda query, company_id: query)
+    monkeypatch.setattr(
+        project_task_resource.ProjectTaskService,
+        "transfer_task",
+        lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("falha forçada")),
+    )
+
+    captured = {}
+
+    def _fake_log_and_build_public_error_response(logger, exc, *, context, **_kwargs):
+        captured["context"] = context
+        captured["error"] = str(exc)
+        return {"error": "tracked"}, 500
+
+    monkeypatch.setattr(project_task_resource, "log_and_build_public_error_response", _fake_log_and_build_public_error_response)
+
+    with app.test_request_context(
+        "/api/projects/31/tasks/270/transfer",
+        method="POST",
+        json={"target_project_id": 99, "note": "teste"},
+    ):
+        session["active_company_id"] = 9
+        response, status_code = project_task_resource.ProjectTaskTransferResource().post.__wrapped__(
+            project_task_resource.ProjectTaskTransferResource(),
+            31,
+            270,
+        )
+
+    assert status_code == 500
+    assert response["error"] == "tracked"
+    assert "Erro ao transferir atividade" in captured["context"]
+    assert "company_id=9" in captured["context"]
+    assert captured["error"] == "falha forçada"

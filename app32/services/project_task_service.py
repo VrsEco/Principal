@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 from models import db
 from models.company import Company
 from models.employee import Employee
-from models.project import Project, ProjectTask
+from models.project import Project, ProjectTask, _allocate_scoped_sequence
 from models.user import User
 
 logger = logging.getLogger(__name__)
@@ -200,3 +200,86 @@ class ProjectTaskService:
             db.session.rollback()
             logger.exception("Erro ao criar atividade de projeto %s", normalized_name)
             return None, f"Erro ao cadastrar atividade de projeto: {str(exc)}"
+
+    @staticmethod
+    def transfer_task(
+        *,
+        company_id: int,
+        source_project_id: int,
+        task_id: int,
+        target_project_id: int,
+        note: Optional[str] = None,
+        user_name: Optional[str] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        source_project = Project.query.filter_by(
+            id=source_project_id,
+            company_id=company_id,
+            is_deleted=False,
+        ).first()
+        if not source_project:
+            return None, "Projeto de origem não encontrado para a empresa ativa."
+
+        target_project = Project.query.filter_by(
+            id=target_project_id,
+            company_id=company_id,
+            is_deleted=False,
+        ).first()
+        if not target_project:
+            return None, "Projeto de destino não encontrado na empresa ativa."
+
+        if int(target_project.id) == int(source_project.id):
+            return None, "O projeto de destino deve ser diferente do projeto atual."
+
+        task = ProjectTask.query.filter_by(
+            id=task_id,
+            project_id=source_project_id,
+            is_deleted=False,
+        ).first()
+        if not task:
+            return None, "Atividade não encontrada neste projeto."
+
+        old_project_name = source_project.name
+        new_project_name = target_project.name
+        normalized_note = str(note or "").strip()
+        normalized_user_name = str(user_name or "Usuário").strip() or "Usuário"
+
+        try:
+            task.project_id = int(target_project.id)
+            task.code_sequence = _allocate_scoped_sequence(
+                db.session.connection(),
+                "project_tasks",
+                "project_id",
+                int(target_project.id),
+            )
+            task.stage = "inbox"
+            task.status = "planned"
+            task.completion_date = None
+
+            transfer_log = {
+                "timestamp": datetime.now().isoformat(),
+                "text": f"Atividade transferida de '{old_project_name}' para '{new_project_name}'",
+                "type": "transfer",
+                "note": normalized_note,
+                "old_project_id": int(source_project.id),
+                "new_project_id": int(target_project.id),
+                "user_name": normalized_user_name,
+            }
+
+            current_logs = list(task.logs) if isinstance(task.logs, list) else []
+            current_logs.append(transfer_log)
+            task.logs = current_logs
+
+            db.session.flush()
+            source_project.update_progress()
+            target_project.update_progress()
+            db.session.commit()
+
+            return {
+                "task": task,
+                "source_project": source_project,
+                "target_project": target_project,
+                "new_code": task.code,
+            }, None
+        except Exception:
+            db.session.rollback()
+            raise
