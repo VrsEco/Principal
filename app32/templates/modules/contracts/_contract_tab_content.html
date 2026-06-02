@@ -49,6 +49,18 @@
                             <span><strong>Telefone:</strong> {{ contract.party.phone if contract.party else '-' }}</span>
                         </div>
                     </div>
+                    <label class="full-width"><span>Perfil operacional do contrato</span>
+                        <select name="operational_profile">
+                            {% for option in operational_profile_options %}
+                            <option value="{{ option.key }}" {% if selected_operational_profile == option.key %}selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="field-hint">
+                            {% for option in operational_profile_options %}
+                                {% if selected_operational_profile == option.key %}{{ option.description }}{% endif %}
+                            {% endfor %}
+                        </small>
+                    </label>
                 </div>
                 <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar cliente</button></div>
             </form>

@@ -62,6 +62,29 @@ class ContractService:
         {"key": "contrato_assinado", "label": "Contrato Assinado", "scope": "capability", "description": "Upload da via assinada escaneada."},
         {"key": "documentos", "label": "Documentos / Anexos", "scope": "capability", "description": "Artefatos gerais vinculados ao contrato."},
     )
+    OPERATIONAL_PROFILE_FULL = "full_contract"
+    OPERATIONAL_PROFILE_BILLING_FISCAL = "billing_fiscal"
+    OPERATIONAL_PROFILE_CONFIG = {
+        OPERATIONAL_PROFILE_FULL: {
+            "label": "Contrato completo",
+            "description": "Usa todas as faces operacionais do contrato dentro do Gestão Versus.",
+            "visible_tabs": [item["key"] for item in TAB_REGISTRY],
+        },
+        OPERATIONAL_PROFILE_BILLING_FISCAL: {
+            "label": "Faturamento / Fiscal / Financeiro",
+            "description": "Contrato controlado parcialmente em sistema externo, mantendo aqui serviços, agenda, fiscal, faturamento e financeiro.",
+            "visible_tabs": [
+                "cliente",
+                "itens",
+                "faturamento",
+                "periodicidade",
+                "financeiro",
+                "fiscal",
+                "observacoes",
+                "historico",
+            ],
+        },
+    }
 
     @staticmethod
     def _normalize_text(value: object) -> str:
@@ -92,6 +115,13 @@ class ContractService:
             return int(text)
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _normalize_operational_profile(value: object) -> str:
+        profile = ContractService._normalize_text(value).lower()
+        if profile in ContractService.OPERATIONAL_PROFILE_CONFIG:
+            return profile
+        return ContractService.OPERATIONAL_PROFILE_FULL
 
     @staticmethod
     def _normalize_date(value: object) -> Optional[date]:
@@ -530,6 +560,8 @@ class ContractService:
             "total_billing_value": total_billing_value.quantize(Decimal("0.01")) if billing_items else Decimal("0.00"),
             "updated_at": contract.updated_at,
             "created_at": contract.created_at,
+            "operational_profile": ContractService.get_contract_operational_profile(contract),
+            "operational_profile_label": ContractService.get_operational_profile_label(contract),
         }
 
     @staticmethod
@@ -889,6 +921,42 @@ class ContractService:
         return [dict(item) for item in ContractService.TAB_REGISTRY]
 
     @staticmethod
+    def get_contract_operational_profile(contract: Optional[Contract]) -> str:
+        metadata = dict((contract.metadata_json or {}) if contract else {})
+        return ContractService._normalize_operational_profile(metadata.get("operational_profile"))
+
+    @staticmethod
+    def get_operational_profile_label(contract: Optional[Contract]) -> str:
+        profile_key = ContractService.get_contract_operational_profile(contract)
+        profile = ContractService.OPERATIONAL_PROFILE_CONFIG.get(profile_key, {})
+        return profile.get("label") or "Contrato completo"
+
+    @staticmethod
+    def get_operational_profile_options() -> list[dict]:
+        return [
+            {"key": key, "label": config["label"], "description": config["description"]}
+            for key, config in ContractService.OPERATIONAL_PROFILE_CONFIG.items()
+        ]
+
+    @staticmethod
+    def get_visible_tabs(contract: Optional[Contract]) -> list[dict]:
+        profile_key = ContractService.get_contract_operational_profile(contract)
+        allowed_keys = set(ContractService.OPERATIONAL_PROFILE_CONFIG.get(profile_key, {}).get("visible_tabs") or [])
+        registry = ContractService.get_tab_registry()
+        if not allowed_keys:
+            return registry
+        return [tab for tab in registry if tab["key"] in allowed_keys]
+
+    @staticmethod
+    def resolve_active_tab(contract: Optional[Contract], requested_tab: Optional[str]) -> str:
+        visible_tabs = ContractService.get_visible_tabs(contract)
+        visible_keys = [tab["key"] for tab in visible_tabs]
+        normalized = ContractService._normalize_text(requested_tab).lower() or "cliente"
+        if normalized in visible_keys:
+            return normalized
+        return visible_keys[0] if visible_keys else "cliente"
+
+    @staticmethod
     def create_contracting_legal_entity(*, company_id: int, payload: dict):
         entity = ContractingLegalEntity(
             company_id=company_id,
@@ -1004,6 +1072,7 @@ class ContractService:
 
     @staticmethod
     def update_contract_general(*, contract: Contract, payload: dict, user_id: Optional[int], is_new: bool = False):
+        metadata = dict(contract.metadata_json or {})
         title = ContractService._normalize_text(payload.get("title"))
         if title:
             contract.title = title
@@ -1057,6 +1126,9 @@ class ContractService:
             contract.previous_contract_id = ContractService._normalize_int(payload.get("previous_contract_id"))
         if "notes" in payload:
             contract.notes = ContractService._normalize_text(payload.get("notes")) or None
+        if "operational_profile" in payload:
+            metadata["operational_profile"] = ContractService._normalize_operational_profile(payload.get("operational_profile"))
+        contract.metadata_json = metadata
         contract.status = contract.status or "draft"
         contract.currency_code = contract.currency_code or "BRL"
         contract.updated_by_user_id = user_id
@@ -1081,10 +1153,14 @@ class ContractService:
         party_id = ContractService._normalize_int(payload.get("party_id"))
         if not party_id:
             raise ValueError("Selecione um favorecido cliente para o contrato.")
-        contract.party_id = party_id
-        contract.updated_by_user_id = user_id
-        db.session.commit()
-        return contract
+        return ContractService.update_contract_general(
+            contract=contract,
+            payload={
+                "party_id": party_id,
+                "operational_profile": payload.get("operational_profile"),
+            },
+            user_id=user_id,
+        )
 
     @staticmethod
     def update_contract_schedule(*, contract: Contract, payload: dict, user_id: Optional[int]):

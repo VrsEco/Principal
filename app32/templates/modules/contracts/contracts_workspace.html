@@ -110,6 +110,7 @@
                             <span class="mini-badge {{ selected_contract_next_action.tone if selected_contract_next_action and selected_contract_next_action.tone else 'info' }}">{{ active_tab|replace('_', ' ')|title }}</span>
                             <h2>{{ selected_contract.code }} · {{ selected_contract.title }}</h2>
                             <p class="field-hint">{{ selected_contract.party.name if selected_contract.party else 'Sem cliente vinculado' }} · Próxima ação: {{ selected_contract_next_action.label }}</p>
+                            <p class="field-hint">Perfil operacional: {{ selected_contract_summary.operational_profile_label if selected_contract_summary else 'Contrato completo' }}</p>
                         </div>
                         {% if current_tab %}
                         <div class="contract-tab-legend">
@@ -171,6 +172,15 @@
                             <option value="{{ value }}">{{ label }}</option>
                             {% endfor %}
                         </select>
+                    </label>
+                    <label class="full-width">
+                        <span>Perfil operacional</span>
+                        <select name="operational_profile">
+                            {% for option in operational_profile_options %}
+                            <option value="{{ option.key }}" {% if option.key == 'full_contract' %}selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="field-hint">Use perfil parcial quando cláusulas, documentos e automações permanecerem em sistema externo.</small>
                     </label>
                     <label>
                         <span>Vencimento</span>

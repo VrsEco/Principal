@@ -70,14 +70,18 @@ def _build_contract_detail_context(company: Company, contract, active_tab: str) 
     signed_documents = [item for item in documents if item.document_type == "contrato_assinado" or item.is_signed_version]
     generic_documents = [item for item in documents if item.document_type not in {"pdf_gerado", "contrato_assinado"} and not item.is_signed_version]
     native_billings = ContractService.list_native_billings(contract)
+    visible_tabs = ContractService.get_visible_tabs(contract)
     return {
         "parties": parties,
         "contract_catalog_items": contract_catalog_items,
         "financial_terms": financial_terms,
         "fiscal_terms": fiscal_terms,
         "references": references,
-        "active_tab": active_tab,
-        "tabs": ContractService.get_tab_registry(),
+        "active_tab": ContractService.resolve_active_tab(contract, active_tab),
+        "tabs": visible_tabs,
+        "all_tabs": ContractService.get_tab_registry(),
+        "operational_profile_options": ContractService.get_operational_profile_options(),
+        "selected_operational_profile": ContractService.get_contract_operational_profile(contract),
         "pdf_documents": pdf_documents,
         "signed_documents": signed_documents,
         "generic_documents": generic_documents,
@@ -300,6 +304,8 @@ def contracts_dashboard():
     selected_counterparty_id = request.args.get("counterparty_id", type=int)
     parties = ContractService.list_customer_parties(company.id)
     selected_contract = ContractService.get_contract(company.id, selected_contract_id) if selected_contract_id else None
+    if selected_contract:
+        active_tab = ContractService.resolve_active_tab(selected_contract, active_tab)
     if selected_contract and selected_contract.party:
         selected_party = selected_contract.party
     elif selected_counterparty_id:
@@ -342,7 +348,8 @@ def contracts_dashboard():
         "selected_contract_summary": ContractService.get_contract_workspace_summary(selected_contract) if selected_contract else None,
         "selected_party": selected_party,
         "contract_tree": ContractService.list_customer_contract_tree(company.id),
-        "tabs": ContractService.get_tab_registry(),
+        "tabs": ContractService.get_visible_tabs(selected_contract) if selected_contract else ContractService.get_tab_registry(),
+        "all_tabs": ContractService.get_tab_registry(),
         "contract_status_label": ContractService.get_contract_status_label,
         "contract_status_group": ContractService.get_contract_status_group,
         "contract_start_date": ContractService.get_contract_start_date,
@@ -353,6 +360,7 @@ def contracts_dashboard():
         "competence_rule_options": ContractService.get_competence_rule_options(),
         "renewal_rule_options": ContractService.get_renewal_rule_options(),
         "due_rule_reference_options": ContractService.get_due_rule_reference_options(),
+        "operational_profile_options": ContractService.get_operational_profile_options(),
         "parties": parties,
         "active_tab": active_tab,
     }
