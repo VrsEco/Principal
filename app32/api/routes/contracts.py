@@ -56,6 +56,16 @@ def _normalize_contract_form_payload(form_data) -> dict:
     return payload
 
 
+def _build_commercial_counterparty_page() -> dict:
+    return {
+        "api_type": "counterparties",
+        "title": "Clientes",
+        "new_label": "Novo cliente",
+        "eyebrow": "Cadastros comerciais",
+        "description": "Cadastro mestre comercial compartilhado com contratos e financeiro. Marque Cliente para habilitar a abertura contratual.",
+    }
+
+
 def _build_contract_detail_context(company: Company, contract, active_tab: str) -> dict:
     financial_terms = ContractFinancialTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
     fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
@@ -372,6 +382,51 @@ def contracts_dashboard():
     )
 
 
+@contracts_bp.route("/contracts/customers/portfolio")
+@permission_required("contracts", "view")
+def contracts_customer_portfolio():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+    portfolio_tree = ContractService.list_customer_contract_tree(company.id)
+    portfolio_summary = ContractService.get_customer_portfolio_summary(company.id)
+    return render_template(
+        "modules/contracts/customers_portfolio.html",
+        company=company,
+        company_id=company.id,
+        portfolio_tree=portfolio_tree,
+        portfolio_summary=portfolio_summary,
+        contract_status_label=ContractService.get_contract_status_label,
+        contract_start_date=ContractService.get_contract_start_date,
+        contract_next_action=ContractService.get_contract_next_action,
+    )
+
+
+@contracts_bp.route("/contracts/customers")
+@permission_required("contracts", "view")
+def contracts_customers_workspace():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+    return render_template(
+        "modules/financial/counterparties_workspace.html",
+        company=company,
+        company_id=company.id,
+        catalog_slug="counterparties",
+        catalog_pages={"counterparties": _build_commercial_counterparty_page()},
+        catalog_page=_build_commercial_counterparty_page(),
+        selected_counterparty_id=request.args.get("counterparty_id", type=int),
+        workspace_origin_label="Gestão Comercial",
+        workspace_section_label="Cadastros",
+        workspace_current_label="Clientes",
+        workspace_back_href=f"/contracts/customers/portfolio?company_id={company.id}",
+        workspace_back_label="Carteira de Clientes",
+        workspace_subtitle="Cadastro mestre comercial compartilhado com contratos. Marque Cliente para habilitar o favorecido na abertura de contrato.",
+        workspace_new_label="Novo cliente",
+        workspace_list_label="Clientes",
+    )
+
+
 @contracts_bp.route("/contracts/parties")
 @permission_required("contracts", "view")
 def contracts_parties_list():
@@ -441,6 +496,7 @@ def contracts_items_catalog():
 
     selected_item_id = request.args.get("item_id", type=int)
     selected_parent_id = request.args.get("parent_id", type=int)
+    catalog_view = (request.args.get("catalog_view") or "structure").strip().lower()
 
     if request.method == "POST":
         action = (request.form.get("action") or "save").strip().lower()
@@ -489,7 +545,7 @@ def contracts_items_catalog():
                     item = ContractsCatalogService.create_item(payload=payload)
                     flash("Item mestre criado com sucesso.", "success")
                     selected_item_id = item.id
-                return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id, item_id=selected_item_id))
+                return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id, item_id=selected_item_id, catalog_view=catalog_view))
 
             target_item_id = request.form.get("item_id", type=int)
             item = ContractsCatalogService.get_item(company.id, target_item_id) if target_item_id else None
@@ -501,7 +557,7 @@ def contracts_items_catalog():
             elif action == "delete":
                 ContractsCatalogService.delete_item(item=item)
                 flash("Item mestre excluído.", "success")
-                return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id))
+            return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id, catalog_view=catalog_view))
         except Exception as exc:
             flash(f"Falha ao processar catálogo de itens: {exc}", "error")
 
@@ -521,6 +577,7 @@ def contracts_items_catalog():
         selected_parent=selected_parent,
         level_label=ContractsCatalogService.get_level_label,
         level_label_by_parent=ContractsCatalogService.get_level_label_by_parent,
+        catalog_view=catalog_view,
     )
 
 
@@ -560,6 +617,36 @@ def contracts_legal_entities():
         company_id=company.id,
         legal_entities=legal_entities,
         selected_entity=selected_entity,
+        page_origin_label="Gestão Comercial",
+        page_section_label="Cadastros",
+        page_title="PJs Emissoras",
+        page_subtitle="Cadastre as pessoas jurídicas emissoras que poderão ser usadas na operação fiscal e contratual.",
+    )
+
+
+@contracts_bp.route("/contracts/billing")
+@permission_required("contracts", "view")
+def contracts_billing_workspace():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+
+    filters = {
+        "status": request.args.get("status"),
+        "party_id": request.args.get("party_id", type=int),
+        "manager_employee_id": request.args.get("manager_employee_id", type=int),
+        "search": request.args.get("search"),
+    }
+    billing_rows = ContractService.list_contracts_billing_view(company.id, filters)
+    return render_template(
+        "modules/contracts/contracts_billing.html",
+        company=company,
+        company_id=company.id,
+        billing_rows=billing_rows,
+        parties=ContractService.list_customer_parties(company.id),
+        managers=Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all(),
+        filters=filters,
+        kpis=ContractService.get_contracts_kpis(company.id),
     )
 
 

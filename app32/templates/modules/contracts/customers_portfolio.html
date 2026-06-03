@@ -1,0 +1,83 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Carteira de Clientes{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão Comercial</a>
+<span class="sep">/</span>
+<span>Cadastros</span>
+<span class="sep">/</span>
+<span class="current">Carteira de Clientes</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Cadastros comerciais</p>
+            <h1>Carteira de Clientes</h1>
+            <p class="subtitle">Visão consolidada da base de clientes e sua cobertura contratual, separando cadastro comercial da operação contratual.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/customers?company_id={{ company_id }}">Clientes</a>
+            <a class="btn btn-primary" href="/contracts/list?company_id={{ company_id }}">Cadastro de Contratos</a>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Clientes</span><strong>{{ portfolio_summary.total_customers }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Com contrato</span><strong>{{ portfolio_summary.customers_with_contracts }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Sem contrato</span><strong>{{ portfolio_summary.customers_without_contracts }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Contratos ativos</span><strong>{{ portfolio_summary.active_contracts }}</strong></article>
+    </section>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2>Carteira</h2>
+            <span class="mini-badge">{{ portfolio_tree|length }} cliente(s)</span>
+        </div>
+        <div class="panel-body">
+            {% if portfolio_tree %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Documento</th>
+                        <th>Contratos</th>
+                        <th>Ativos</th>
+                        <th>Próxima ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in portfolio_tree %}
+                    {% set first_contract = row.contracts[0] if row.contracts else None %}
+                    {% set next_action = contract_next_action(first_contract) if first_contract else None %}
+                    <tr>
+                        <td>
+                            <strong>{{ row.party.code }}</strong>
+                            <div>{{ row.party.name }}</div>
+                        </td>
+                        <td>{{ row.party.document_number or '-' }}</td>
+                        <td>{{ row.contract_count }}</td>
+                        <td>{{ row.active_count }}</td>
+                        <td>
+                            {% if first_contract and next_action %}
+                            <a href="/contracts/{{ first_contract.id }}?company_id={{ company_id }}">{{ next_action.label }}</a>
+                            {% else %}
+                            <a href="/contracts/new?company_id={{ company_id }}&party_id={{ row.party.id }}">Criar primeiro contrato</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">Nenhum cliente cadastrado ainda.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Faturamento Contratual{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão Comercial</a>
+<span class="sep">/</span>
+<span>Gestão de Contratos</span>
+<span class="sep">/</span>
+<span class="current">Faturamento</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Gestão de Contratos</p>
+            <h1>Faturamento</h1>
+            <p class="subtitle">Tela dedicada para localizar contratos faturáveis, abrir a aba nativa de faturamento e acompanhar a cobertura operacional.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Cadastro de Contratos</a>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Total</span><strong>{{ kpis.total }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Ativos</span><strong>{{ kpis.active }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Com renovação</span><strong>{{ kpis.renewing }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Sem faturamento</span><strong>{{ kpis.pending_billing }}</strong></article>
+    </section>
+
+    <form method="get" class="panel form-panel compact-filter-panel">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <div class="panel-header">
+            <h2>Filtros rápidos</h2>
+            <button class="btn btn-secondary" type="submit">Aplicar</button>
+        </div>
+        <div class="panel-body form-grid">
+            <label>
+                <span>Busca</span>
+                <input type="text" name="search" value="{{ filters.search or '' }}" placeholder="Código, título ou cliente">
+            </label>
+            <label>
+                <span>Status</span>
+                <select name="status">
+                    <option value="">Todos</option>
+                    {% for status in ['draft', 'active', 'signed', 'implanting', 'inactive', 'closed'] %}
+                    <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Cliente</span>
+                <select name="party_id">
+                    <option value="">Todos</option>
+                    {% for party in parties %}
+                    <option value="{{ party.id }}" {% if filters.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>
+                <span>Gestor</span>
+                <select name="manager_employee_id">
+                    <option value="">Todos</option>
+                    {% for employee in managers %}
+                    <option value="{{ employee.id }}" {% if filters.manager_employee_id == employee.id %}selected{% endif %}>{{ employee.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+        </div>
+    </form>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h2>Contratos faturáveis</h2>
+            <span class="mini-badge">{{ billing_rows|length }} resultado(s)</span>
+        </div>
+        <div class="panel-body">
+            {% if billing_rows %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Contrato</th>
+                        <th>Cliente</th>
+                        <th>Itens de faturamento</th>
+                        <th>Competências geradas</th>
+                        <th>Último faturamento</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in billing_rows %}
+                    <tr>
+                        <td>
+                            <strong>{{ row.contract.code }}</strong>
+                            <div>{{ row.contract.title }}</div>
+                        </td>
+                        <td>{{ row.contract.party.name if row.contract.party else '-' }}</td>
+                        <td>{{ row.billing_item_count }}</td>
+                        <td>{{ row.native_billing_count }}</td>
+                        <td>
+                            {% if row.last_native_billing %}
+                            {{ row.last_native_billing.issue_date.strftime('%d/%m/%Y') if row.last_native_billing.issue_date else row.last_native_billing.created_at.strftime('%d/%m/%Y') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="/contracts?company_id={{ company_id }}&contract_id={{ row.contract.id }}&tab=faturamento">Abrir faturamento</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-state">Nenhum contrato encontrado para os filtros informados.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}

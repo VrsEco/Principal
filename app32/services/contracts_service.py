@@ -836,6 +836,39 @@ class ContractService:
         return tree
 
     @staticmethod
+    def get_customer_portfolio_summary(company_id: int) -> dict:
+        tree = ContractService.list_customer_contract_tree(company_id)
+        total_customers = len(tree)
+        customers_with_contracts = sum(1 for item in tree if item.get("contract_count"))
+        total_contracts = sum(item.get("contract_count", 0) for item in tree)
+        active_contracts = sum(item.get("active_count", 0) for item in tree)
+        return {
+            "total_customers": total_customers,
+            "customers_with_contracts": customers_with_contracts,
+            "customers_without_contracts": max(total_customers - customers_with_contracts, 0),
+            "total_contracts": total_contracts,
+            "active_contracts": active_contracts,
+        }
+
+    @staticmethod
+    def list_contracts_billing_view(company_id: int, filters: Optional[dict] = None) -> list[dict]:
+        contracts = ContractService.list_contracts_filtered(company_id, filters or {})
+        rows: list[dict] = []
+        for contract in contracts:
+            native_billings = ContractService.list_native_billings(contract)
+            next_action = ContractService.get_contract_next_action(contract)
+            rows.append(
+                {
+                    "contract": contract,
+                    "billing_item_count": contract.billing_items.count(),
+                    "native_billing_count": len(native_billings),
+                    "last_native_billing": native_billings[0] if native_billings else None,
+                    "next_action": next_action,
+                }
+            )
+        return rows
+
+    @staticmethod
     def list_financial_counterparties(company_id: int):
         return (
             FinancialCounterparty.query.filter(

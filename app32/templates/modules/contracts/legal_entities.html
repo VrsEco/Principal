@@ -1,22 +1,26 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}PJ Contratada / Emissora{% endblock %}
+{% block title %}{{ page_title if page_title is defined else 'PJ Contratada / Emissora' }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<a href="/contracts?company_id={{ company_id }}">{{ page_origin_label if page_origin_label is defined else 'Gestão de Contratos' }}</a>
 <span class="sep">/</span>
-<span class="current">PJ Contratada / Emissora</span>
+{% if page_section_label is defined %}
+<span>{{ page_section_label }}</span>
+<span class="sep">/</span>
+{% endif %}
+<span class="current">{{ page_title if page_title is defined else 'PJ Contratada / Emissora' }}</span>
 {% endblock %}
 
 {% block workspace_content %}
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
-            <p class="eyebrow">Cadastros fiscais do contrato</p>
-            <h1>PJ Contratada / Emissora</h1>
-            <p class="subtitle">Cadastre as pessoas jurídicas que poderão ser usadas como contratada e emissora fiscal.</p>
+            <p class="eyebrow">{{ page_section_label if page_section_label is defined else 'Cadastros fiscais do contrato' }}</p>
+            <h1>{{ page_title if page_title is defined else 'PJ Contratada / Emissora' }}</h1>
+            <p class="subtitle">{{ page_subtitle if page_subtitle is defined else 'Cadastre as pessoas jurídicas que poderão ser usadas como contratada e emissora fiscal.' }}</p>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Voltar</a>

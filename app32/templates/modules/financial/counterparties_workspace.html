@@ -1,34 +1,40 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Financeiro - Favorecidos{% endblock %}
+{% block title %}{{ workspace_current_label if workspace_current_label is defined else 'Financeiro - Favorecidos' }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="/financial/entries">Financeiro</a>
+<a href="{{ workspace_origin_href if workspace_origin_href is defined else '/financial/entries' }}">{{ workspace_origin_label if workspace_origin_label is defined else 'Financeiro' }}</a>
 <span class="sep">/</span>
-<a href="/financial/catalogs">Cadastros</a>
+<a href="{{ workspace_section_href if workspace_section_href is defined else '/financial/catalogs' }}">{{ workspace_section_label if workspace_section_label is defined else 'Cadastros' }}</a>
 <span class="sep">/</span>
-<span class="current">Favorecidos</span>
+<span class="current">{{ workspace_current_label if workspace_current_label is defined else 'Favorecidos' }}</span>
 {% endblock %}
 
 {% block navbar_actions %}{% endblock %}
 
 {% block workspace_content %}
 <div class="cp-page fade-in" data-company-id="{{ company_id or '' }}" data-selected-counterparty-id="{{ selected_counterparty_id or '' }}">
+    {% set header_subtitle = workspace_subtitle if workspace_subtitle is defined else 'Cadastro mestre compartilhado com contratos. Marque <strong>Cliente</strong> para habilitar o favorecido na abertura de contrato.' %}
     <header class="cp-header">
         <div>
             <h1>{{ catalog_page.title }}</h1>
-            <p class="subtitle">Cadastro mestre compartilhado com contratos. Marque <strong>Cliente</strong> para habilitar o favorecido na abertura de contrato.</p>
+            <p class="subtitle">{{ header_subtitle | safe }}</p>
         </div>
-        <button class="btn btn-primary" type="button" onclick="startNewCounterparty()">Novo favorecido</button>
+        <div class="page-actions">
+            {% if workspace_back_href is defined %}
+            <a class="btn btn-secondary" href="{{ workspace_back_href }}">{{ workspace_back_label if workspace_back_label is defined else 'Voltar' }}</a>
+            {% endif %}
+            <button class="btn btn-primary" type="button" onclick="startNewCounterparty()">{{ workspace_new_label if workspace_new_label is defined else 'Novo favorecido' }}</button>
+        </div>
     </header>
 
     <section class="cp-shell">
         <aside class="cp-list-rail">
             <div class="cp-sidebar-card">
                 <div class="cp-sidebar-header">
-                    <h3>Favorecidos</h3>
+                    <h3>{{ workspace_list_label if workspace_list_label is defined else 'Favorecidos' }}</h3>
                     <span id="cp-counter" class="cp-counter">0</span>
                 </div>
                 <label class="cp-search">

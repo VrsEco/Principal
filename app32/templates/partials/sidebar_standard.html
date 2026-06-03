@@ -133,12 +133,49 @@
             </svg>
         </button>
         <div class="sub-menu">
-            <a href="/contracts" class="sub-nav-link {{ 'active' if request.path == '/contracts' or request.path == '/contracts/dashboard' or request.path == '/contracts/list' or '/contracts/' in request.path }}">
-                Gestão de Contratos
-            </a>
-            <a href="/contracts/catalogs/items" class="sub-nav-link {{ 'active' if request.path == '/contracts/catalogs/items' }}">
-                Catálogo de Itens
-            </a>
+            <div class="sidebar-subgroup {{ 'open' if '/contracts/customers' in request.path or '/contracts/parties' in request.path or '/contracts/legal-entities' in request.path or '/contracts/catalogs/items' in request.path }}">
+                <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                    Cadastros
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/contracts/customers/portfolio" class="sub-nav-link {{ 'active' if request.path == '/contracts/customers/portfolio' }}">
+                        <span>Carteira de Clientes</span>
+                    </a>
+                    <a href="/contracts/legal-entities" class="sub-nav-link {{ 'active' if request.path == '/contracts/legal-entities' }}">
+                        <span>PJs Emissoras</span>
+                    </a>
+                    <a href="/contracts/customers" class="sub-nav-link {{ 'active' if request.path == '/contracts/customers' or request.path == '/contracts/parties' or '/contracts/parties/' in request.path }}">
+                        <span>Clientes</span>
+                    </a>
+                    <a href="/contracts/catalogs/items?catalog_view=structure" class="sub-nav-link {{ 'active' if request.path == '/contracts/catalogs/items' and request.args.get('catalog_view') == 'structure' }}">
+                        <span>Grupo e Sub-Grupos de Produtos e Serviços</span>
+                    </a>
+                    <a href="/contracts/catalogs/items?catalog_view=items" class="sub-nav-link {{ 'active' if request.path == '/contracts/catalogs/items' and request.args.get('catalog_view') == 'items' }}">
+                        <span>Serviços/Produtos</span>
+                    </a>
+                </div>
+            </div>
+            <div class="sidebar-subgroup {{ 'open' if request.path == '/contracts' or request.path == '/contracts/dashboard' or request.path == '/contracts/list' or request.path == '/contracts/new' or request.path == '/contracts/billing' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path) }}">
+                <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
+                    Gestão de Contratos
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="3">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="subgroup-content">
+                    <a href="/contracts/list" class="sub-nav-link {{ 'active' if request.path == '/contracts/list' or request.path == '/contracts/new' or request.path == '/contracts' or request.path == '/contracts/dashboard' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path and request.path != '/contracts/billing') }}">
+                        <span>Cadastro de Contratos</span>
+                    </a>
+                    <a href="/contracts/billing" class="sub-nav-link {{ 'active' if request.path == '/contracts/billing' }}">
+                        <span>Faturamento</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
     {% endif %}

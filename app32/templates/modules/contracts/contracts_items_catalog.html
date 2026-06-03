@@ -1,13 +1,18 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Catálogo Mestre de Itens{% endblock %}
+{% set is_items_view = catalog_view == 'items' %}
+{% set page_title = 'Serviços/Produtos' if is_items_view else 'Grupo e Sub-Grupos de Produtos e Serviços' %}
+{% set page_subtitle = 'Cadastro operacional dos itens folha que podem ser usados em contratos e faturamento.' if is_items_view else 'Estruture os níveis de grupo e sub-grupo para organizar a oferta comercial e contratual.' %}
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="/contracts?company_id={{ company_id }}">Gestão de Contratos</a>
+<a href="/contracts?company_id={{ company_id }}">Gestão Comercial</a>
 <span class="sep">/</span>
-<span class="current">Catálogo Mestre de Itens</span>
+<span>Cadastros</span>
+<span class="sep">/</span>
+<span class="current">{{ page_title }}</span>
 {% endblock %}
 
 {% block workspace_content %}
@@ -18,13 +23,13 @@
 <div class="contracts-page fade-in">
     <header class="contracts-header">
         <div>
-            <p class="eyebrow">Catálogo mestre</p>
-            <h1>Grupos, sub-grupos e itens contratuais</h1>
-            <p class="subtitle">Estrutura hierárquica no padrão do plano de contas. Apenas o nível Item pode ser utilizado em contratos e demais fluxos operacionais.</p>
+            <p class="eyebrow">Cadastros comerciais</p>
+            <h1>{{ page_title }}</h1>
+            <p class="subtitle">{{ page_subtitle }}</p>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Voltar</a>
-            <a class="btn btn-primary" href="/contracts/catalogs/items?company_id={{ company_id }}">Novo grupo</a>
+            <a class="btn btn-primary" href="/contracts/catalogs/items?company_id={{ company_id }}{% if catalog_view %}&catalog_view={{ catalog_view }}{% endif %}">Novo grupo</a>
         </div>
     </header>
 
@@ -41,7 +46,7 @@
                     <details class="contract-tree-node" {% if selected_item and (selected_item.id == node.item.id or selected_item.parent_id == node.item.id) %}open{% endif %}>
                         <summary class="contract-tree-summary">
                             <a class="contract-party-card {{ 'active' if selected_item and selected_item.id == node.item.id else '' }}"
-                               href="/contracts/catalogs/items?company_id={{ company_id }}&item_id={{ node.item.id }}">
+                               href="/contracts/catalogs/items?company_id={{ company_id }}&item_id={{ node.item.id }}{% if catalog_view %}&catalog_view={{ catalog_view }}{% endif %}">
                                 <div>
                                     <strong>{{ node.item.code }} · {{ node.item.name }}</strong>
                                     <small>{{ node.level_label }} · {{ 'Serviço' if node.item.item_kind == 'service' else 'Produto' }}{% if node.is_selectable %} · Utilizável em contrato{% endif %}</small>
@@ -79,9 +84,9 @@
                     {% if selected_item %}
                     <div class="page-actions">
                         {% if level_label(selected_item) == 'Grupo' %}
-                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}">Novo sub-grupo</a>
+                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}{% if catalog_view %}&catalog_view={{ catalog_view }}{% endif %}">Novo sub-grupo</a>
                         {% elif level_label(selected_item) == 'Sub-Grupo' %}
-                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}">Novo item</a>
+                        <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&parent_id={{ selected_item.id }}{% if catalog_view %}&catalog_view={{ catalog_view }}{% endif %}">Novo item</a>
                         {% endif %}
                     </div>
                     {% endif %}
