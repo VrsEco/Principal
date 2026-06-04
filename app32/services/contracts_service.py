@@ -41,6 +41,9 @@ from models.financial import (
     FinancialChartAccount,
     FinancialCostCenter,
     FinancialPaymentMethod,
+    FinancialSatelliteExecution,
+    FinancialSchedule,
+    FinancialScheduleLink,
 )
 from services.contracts_catalog_service import ContractsCatalogService
 
@@ -426,6 +429,23 @@ class ContractService:
         month = (month_index % 12) + 1
         day = min(base_date.day, calendar.monthrange(year, month)[1])
         return date(year, month, day)
+
+    @staticmethod
+    def _month_end(base_date: date) -> date:
+        last_day = calendar.monthrange(base_date.year, base_date.month)[1]
+        return date(base_date.year, base_date.month, last_day)
+
+    @staticmethod
+    def _periodicity_month_interval(periodicity: object) -> int:
+        periodicity_key = ContractService._normalize_text(periodicity).lower()
+        return {
+            "quarterly": 3,
+            "trimestral": 3,
+            "semiannual": 6,
+            "semestral": 6,
+            "annual": 12,
+            "anual": 12,
+        }.get(periodicity_key, 1)
 
     @staticmethod
     def resolve_due_date(*, issue_date: date, due_rule: object) -> Optional[date]:
@@ -902,21 +922,129 @@ class ContractService:
 
     @staticmethod
     def list_contracts_billing_view(company_id: int, filters: Optional[dict] = None) -> list[dict]:
-        contracts = ContractService.list_contracts_filtered(company_id, filters or {})
+        normalized_filters = dict(filters or {})
+        billing_state = ContractService._normalize_text(normalized_filters.get("billing_state") or "eligible").lower()
+        contracts = ContractService.list_contracts_filtered(company_id, normalized_filters)
         rows: list[dict] = []
         for contract in contracts:
             native_billings = ContractService.list_native_billings(contract)
-            next_action = ContractService.get_contract_next_action(contract)
+            last_native_billing = native_billings[0] if native_billings else None
+            next_period = ContractService.build_contract_next_billing_period(contract)
+            preview_payload = {
+                "competence_start": next_period["competence_start"].isoformat(),
+                "competence_end": next_period["competence_end"].isoformat(),
+                "issue_date": next_period["issue_date"].isoformat(),
+                "due_date": next_period["due_date"].isoformat() if next_period.get("due_date") else None,
+            }
+            preview = ContractService.preview_native_billing(contract, preview_payload)
+            eligibility = ContractService.get_contract_billing_eligibility(contract, preview)
+            if billing_state == "eligible" and not eligibility["eligible"]:
+                continue
+            if billing_state == "blocked" and eligibility["eligible"]:
+                continue
             rows.append(
                 {
                     "contract": contract,
-                    "billing_item_count": contract.billing_items.count(),
+                    "billing_item_count": preview["item_count"],
                     "native_billing_count": len(native_billings),
-                    "last_native_billing": native_billings[0] if native_billings else None,
-                    "next_action": next_action,
+                    "last_native_billing": last_native_billing,
+                    "next_period": next_period,
+                    "preview": preview,
+                    "eligibility": eligibility,
                 }
             )
         return rows
+
+    @staticmethod
+    def get_last_native_billing(contract: Contract) -> Optional[ContractNativeBilling]:
+        if not hasattr(contract, "native_billings"):
+            return None
+        return (
+            contract.native_billings.filter(ContractNativeBilling.status != "cancelled")
+            .order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc())
+            .first()
+        )
+
+    @staticmethod
+    def build_contract_next_billing_period(contract: Contract, issue_date: Optional[date] = None) -> dict:
+        base_issue_date = issue_date or date.today()
+        periodicity_key = ContractService._normalize_text(getattr(contract, "periodicity", None)).lower()
+        last_billing = ContractService.get_last_native_billing(contract)
+
+        if periodicity_key in {"weekly", "semanal"}:
+            if last_billing and last_billing.competence_start:
+                competence_start = last_billing.competence_start + timedelta(days=7)
+            else:
+                competence_start = getattr(contract, "billing_start_at", None) or getattr(contract, "service_start_at", None) or base_issue_date
+            competence_end = competence_start + timedelta(days=6)
+        else:
+            month_interval = ContractService._periodicity_month_interval(periodicity_key)
+            if last_billing and last_billing.competence_start:
+                anchor = date(last_billing.competence_start.year, last_billing.competence_start.month, 1)
+                competence_start = ContractService._add_months(anchor, month_interval)
+            else:
+                anchor = getattr(contract, "billing_start_at", None) or getattr(contract, "service_start_at", None) or base_issue_date
+                competence_start = date(anchor.year, anchor.month, 1)
+            competence_end = ContractService._month_end(
+                ContractService._add_months(competence_start, max(month_interval - 1, 0))
+            )
+        if not hasattr(contract, "items") and hasattr(contract, "billing_items"):
+            competence_end = competence_start
+
+        due_date = ContractService.resolve_due_date(issue_date=base_issue_date, due_rule=getattr(contract, "due_rule", None)) or base_issue_date
+        return {
+            "competence_start": competence_start,
+            "competence_end": competence_end,
+            "issue_date": base_issue_date,
+            "due_date": due_date,
+            "periodicity": periodicity_key or "monthly",
+        }
+
+    @staticmethod
+    def has_existing_native_billing_for_period(
+        contract: Contract,
+        competence_start: Optional[date],
+        competence_end: Optional[date],
+    ) -> bool:
+        if not competence_start or not competence_end:
+            return False
+        return (
+            ContractNativeBilling.query.filter(
+                ContractNativeBilling.company_id == contract.company_id,
+                ContractNativeBilling.contract_id == contract.id,
+                ContractNativeBilling.competence_start == competence_start,
+                ContractNativeBilling.competence_end == competence_end,
+                ContractNativeBilling.status != "cancelled",
+            ).first()
+            is not None
+        )
+
+    @staticmethod
+    def get_contract_billing_eligibility(contract: Contract, preview: Optional[dict] = None) -> dict:
+        reasons: list[str] = []
+        if ContractService.get_contract_status_group(contract) != "active":
+            reasons.append("Contrato ainda não está ativo.")
+        if not contract.party_id:
+            reasons.append("Cliente não definido.")
+
+        preview_payload = preview or ContractService.preview_native_billing(contract, {})
+        if int(preview_payload.get("item_count") or 0) <= 0:
+            reasons.append("Nenhum item contratual cadastrado.")
+        if ContractService._normalize_decimal(preview_payload.get("gross_amount")) <= Decimal("0.00"):
+            reasons.append("Valor bruto igual a zero.")
+
+        competence_start = preview_payload.get("competence_start")
+        competence_end = preview_payload.get("competence_end")
+        if contract.billing_end_at and competence_start and competence_start > contract.billing_end_at:
+            reasons.append("Próxima competência está após o fim do faturamento.")
+        if ContractService.has_existing_native_billing_for_period(contract, competence_start, competence_end):
+            reasons.append("Competência já faturada.")
+
+        return {
+            "eligible": not reasons,
+            "reasons": reasons,
+            "label": "Apto para faturar" if not reasons else "Bloqueado",
+        }
 
     @staticmethod
     def list_financial_counterparties(company_id: int):
@@ -1888,34 +2016,501 @@ class ContractService:
         return f"contract:{contract.company_id}:{contract.id}:{competence_start.isoformat()}:{competence_end.isoformat()}"
 
     @staticmethod
-    def list_native_billings(contract: Contract):
-        return contract.native_billings.order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc()).all()
+    def _cancelled_native_billing_idempotency_key(idempotency_key: str, native_billing_id: int) -> str:
+        return f"{str(idempotency_key or '')[:130]}:cancelled:{native_billing_id}"
+
+    @staticmethod
+    def _next_native_billing_code(company_id: int) -> str:
+        company_code = ContractService._resolve_company_code(company_id)
+        code_prefix = f"{company_code}.B."
+        last_number = 0
+        rows = (
+            ContractNativeBilling.query.with_entities(ContractNativeBilling.billing_code)
+            .filter(ContractNativeBilling.company_id == company_id)
+            .all()
+        )
+        for (billing_code,) in rows:
+            normalized_code = str(billing_code or "").strip().upper()
+            if not normalized_code.startswith(code_prefix):
+                continue
+            match = re.search(r"(\d+)$", normalized_code)
+            if match:
+                last_number = max(last_number, int(match.group(1)))
+        return f"{code_prefix}{last_number + 1:03d}"
+
+    @staticmethod
+    def list_native_billings(contract: Contract, include_cancelled: bool = False):
+        query = contract.native_billings
+        if not include_cancelled:
+            query = query.filter(ContractNativeBilling.status != "cancelled")
+        return query.order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc()).all()
+
+    @staticmethod
+    def _normalize_id_list(value: object) -> list[int]:
+        raw_values: list[object]
+        if value is None:
+            raw_values = []
+        elif isinstance(value, (list, tuple, set)):
+            raw_values = list(value)
+        else:
+            raw_values = re.split(r"[,;\s]+", str(value or ""))
+        normalized: list[int] = []
+        for raw_value in raw_values:
+            item_id = ContractService._normalize_int(raw_value)
+            if item_id and item_id not in normalized:
+                normalized.append(item_id)
+        return normalized
+
+    @staticmethod
+    def _resolve_native_billing_contract_items(contract: Contract, payload: Optional[dict] = None) -> list[ContractItem]:
+        payload = payload or {}
+        selected_ids: list[int] = []
+        for key in ("contract_item_ids", "contract_item_id", "item_ids", "selected_item_ids"):
+            raw_value = None
+            if hasattr(payload, "getlist"):
+                listed = payload.getlist(key)
+                raw_value = listed if listed else None
+            if raw_value is None:
+                raw_value = payload.get(key) if hasattr(payload, "get") else None
+            selected_ids.extend(ContractService._normalize_id_list(raw_value))
+
+        if hasattr(contract, "items"):
+            query = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc())
+        elif hasattr(contract, "billing_items"):
+            query = contract.billing_items.order_by()
+        else:
+            return []
+        if selected_ids:
+            if hasattr(query, "filter"):
+                return query.filter(ContractItem.id.in_(selected_ids)).all()
+            return [item for item in query.all() if getattr(item, "id", None) in selected_ids]
+        return query.all()
 
     @staticmethod
     def preview_native_billing(contract: Contract, payload: dict) -> dict:
-        competence_start = ContractService._normalize_date(payload.get("competence_start")) or contract.billing_start_at or date.today()
-        competence_end = ContractService._normalize_date(payload.get("competence_end")) or competence_start
-        issue_date = ContractService._normalize_date(payload.get("issue_date")) or date.today()
-        due_date = ContractService._normalize_date(payload.get("due_date")) or ContractService.resolve_due_date(issue_date=issue_date, due_rule=contract.due_rule)
-        items = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()
-        total_amount = sum((item.total_price or Decimal("0")) for item in items)
-        total_retentions = Decimal("0.00")
-        for item in items:
-            retention_details = list((item.metadata_json or {}).get("retention_details") or [])
-            total_retentions += sum(
-                ContractService._normalize_decimal(detail.get("retention_amount"))
-                for detail in retention_details
-            )
+        next_period = ContractService.build_contract_next_billing_period(contract)
+        competence_start = ContractService._normalize_date(payload.get("competence_start")) or next_period["competence_start"]
+        competence_end = ContractService._normalize_date(payload.get("competence_end")) or next_period["competence_end"]
+        issue_date = ContractService._normalize_date(payload.get("issue_date")) or next_period["issue_date"]
+        due_date = (
+            ContractService._normalize_date(payload.get("due_date"))
+            or ContractService.resolve_due_date(issue_date=issue_date, due_rule=getattr(contract, "due_rule", None))
+            or issue_date
+        )
+        items = ContractService._resolve_native_billing_contract_items(contract, payload)
+        item_snapshots = [ContractService._build_native_billing_item_snapshot(item) for item in items]
+        gross_amount = sum((ContractService._normalize_decimal(item.get("gross_amount")) for item in item_snapshots), Decimal("0.00"))
+        retention_amount = sum((ContractService._normalize_decimal(item.get("retention_amount")) for item in item_snapshots), Decimal("0.00"))
+        net_amount = gross_amount - retention_amount
         return {
             "competence_start": competence_start,
             "competence_end": competence_end,
             "issue_date": issue_date,
             "due_date": due_date,
-            "item_count": len(items),
-            "gross_amount": total_amount.quantize(Decimal("0.01")) if items else Decimal("0.00"),
-            "retention_amount": total_retentions.quantize(Decimal("0.01")) if items else Decimal("0.00"),
-            "net_amount": (total_amount - total_retentions).quantize(Decimal("0.01")) if items else Decimal("0.00"),
+            "item_count": len(item_snapshots),
+            "gross_amount": gross_amount.quantize(Decimal("0.01")) if item_snapshots else Decimal("0.00"),
+            "retention_amount": retention_amount.quantize(Decimal("0.01")) if item_snapshots else Decimal("0.00"),
+            "net_amount": net_amount.quantize(Decimal("0.01")) if item_snapshots else Decimal("0.00"),
+            "items": item_snapshots,
         }
+
+    @staticmethod
+    def build_billing_review_rows(
+        company_id: int,
+        contract_ids: list[int],
+        overrides_by_contract: Optional[dict[int, dict]] = None,
+    ) -> list[dict]:
+        overrides_by_contract = overrides_by_contract or {}
+        rows: list[dict] = []
+        for contract_id in contract_ids:
+            contract = ContractService.get_contract(company_id, contract_id)
+            if not contract:
+                continue
+            payload = dict(overrides_by_contract.get(contract.id) or {})
+            if "contract_item_ids" not in payload and "item_ids" not in payload:
+                payload["contract_item_ids"] = [item.id for item in contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()]
+            preview = ContractService.preview_native_billing(contract, payload)
+            eligibility = ContractService.get_contract_billing_eligibility(contract, preview)
+            rows.append(
+                {
+                    "contract": contract,
+                    "preview": preview,
+                    "eligibility": eligibility,
+                    "selected_item_ids": [item.get("contract_item_id") for item in preview.get("items", [])],
+                    "last_native_billing": ContractService.get_last_native_billing(contract),
+                    "review_notes": ContractService._normalize_text(payload.get("review_notes")),
+                }
+            )
+        return rows
+
+    @staticmethod
+    def confirm_native_billing_review(*, company_id: int, review_payloads: list[dict], user_id: Optional[int]) -> dict:
+        created: list[ContractNativeBilling] = []
+        errors: list[str] = []
+        for payload in review_payloads:
+            contract_id = ContractService._normalize_int(payload.get("contract_id"))
+            if not contract_id:
+                continue
+            contract = ContractService.get_contract(company_id, contract_id)
+            if not contract:
+                errors.append(f"Contrato {contract_id} não localizado para a empresa ativa.")
+                continue
+            try:
+                preview = ContractService.preview_native_billing(contract, payload)
+                eligibility = ContractService.get_contract_billing_eligibility(contract, preview)
+                if not eligibility["eligible"]:
+                    errors.append(f"{contract.code}: {'; '.join(eligibility['reasons'])}")
+                    continue
+                native_billing = ContractService.generate_native_billing(
+                    contract=contract,
+                    payload=payload,
+                    user_id=user_id,
+                )
+                created.append(native_billing)
+            except Exception as exc:  # noqa: BLE001 - retorno consolidado para conferência operacional
+                db.session.rollback()
+                errors.append(f"{contract.code}: {exc}")
+        return {"created": created, "errors": errors}
+
+    @staticmethod
+    def list_native_billings_done(company_id: int, filters: Optional[dict] = None) -> list[dict]:
+        filters = dict(filters or {})
+        query = (
+            ContractNativeBilling.query.filter(ContractNativeBilling.company_id == company_id)
+            .outerjoin(Contract, Contract.id == ContractNativeBilling.contract_id)
+            .outerjoin(ContractParty, ContractParty.id == ContractNativeBilling.party_id)
+        )
+        status = ContractService._normalize_text(filters.get("status"))
+        if status:
+            query = query.filter(ContractNativeBilling.status == status)
+        party_id = ContractService._normalize_int(filters.get("party_id"))
+        if party_id:
+            query = query.filter(ContractNativeBilling.party_id == party_id)
+        competence_from = ContractService._normalize_date(filters.get("competence_from"))
+        if competence_from:
+            query = query.filter(ContractNativeBilling.competence_start >= competence_from)
+        competence_to = ContractService._normalize_date(filters.get("competence_to"))
+        if competence_to:
+            query = query.filter(ContractNativeBilling.competence_start <= competence_to)
+        search = ContractService._normalize_text(filters.get("search"))
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    ContractNativeBilling.billing_code.ilike(pattern),
+                    Contract.code.ilike(pattern),
+                    Contract.title.ilike(pattern),
+                    ContractParty.name.ilike(pattern),
+                )
+            )
+
+        billings = query.order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc()).all()
+        rows: list[dict] = []
+        for billing in billings:
+            metadata = dict(billing.metadata_json or {})
+            financial_integration = dict(metadata.get("financial_integration") or {})
+            gross_amount = ContractService._normalize_decimal(billing.gross_amount)
+            net_amount = ContractService._normalize_decimal(billing.net_amount)
+            rows.append(
+                {
+                    "billing": billing,
+                    "contract": billing.contract,
+                    "party": billing.party,
+                    "retention_amount": (gross_amount - net_amount).quantize(Decimal("0.01")),
+                    "financial_integration": financial_integration,
+                    "item_count": billing.items.count(),
+                }
+            )
+        return rows
+
+    @staticmethod
+    def cancel_native_billing(*, company_id: int, native_billing_id: int, user_id: Optional[int], reason: Optional[str] = None):
+        native_billing = ContractNativeBilling.query.filter(
+            ContractNativeBilling.id == native_billing_id,
+            ContractNativeBilling.company_id == company_id,
+        ).first()
+        if not native_billing:
+            raise ValueError("Faturamento não localizado para a empresa ativa.")
+        if native_billing.status == "cancelled":
+            return native_billing
+
+        now = datetime.utcnow()
+        contract = native_billing.contract
+        metadata = dict(native_billing.metadata_json or {})
+        financial_integration = dict(metadata.get("financial_integration") or {})
+        schedule_ids = []
+        main_schedule_id = ContractService._normalize_int(financial_integration.get("main_schedule_id"))
+        if main_schedule_id:
+            schedule_ids.append(main_schedule_id)
+        schedule_ids.extend(ContractService._normalize_id_list(financial_integration.get("satellite_schedule_ids")))
+        schedule_ids = list(dict.fromkeys(schedule_ids))
+
+        if schedule_ids:
+            schedules = FinancialSchedule.query.filter(
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.id.in_(schedule_ids),
+                FinancialSchedule.deleted_at.is_(None),
+            ).all()
+            for schedule in schedules:
+                schedule.status = "cancelled"
+                schedule.deleted_at = now
+                schedule.metadata_json = {
+                    **dict(schedule.metadata_json or {}),
+                    "cancelled_from_contract_billing": True,
+                    "cancelled_native_billing_id": native_billing.id,
+                    "cancelled_at": now.isoformat(),
+                    "cancelled_by_user_id": user_id,
+                }
+
+            links = FinancialScheduleLink.query.filter(
+                FinancialScheduleLink.company_id == company_id,
+                FinancialScheduleLink.deleted_at.is_(None),
+                or_(
+                    FinancialScheduleLink.parent_schedule_id.in_(schedule_ids),
+                    FinancialScheduleLink.child_schedule_id.in_(schedule_ids),
+                ),
+            ).all()
+            for link in links:
+                link.deleted_at = now
+                link.metadata_json = {
+                    **dict(link.metadata_json or {}),
+                    "cancelled_from_contract_billing": True,
+                    "cancelled_native_billing_id": native_billing.id,
+                    "cancelled_at": now.isoformat(),
+                    "cancelled_by_user_id": user_id,
+                }
+
+            executions = FinancialSatelliteExecution.query.filter(
+                FinancialSatelliteExecution.company_id == company_id,
+                FinancialSatelliteExecution.reversed_at.is_(None),
+                or_(
+                    FinancialSatelliteExecution.parent_schedule_id.in_(schedule_ids),
+                    FinancialSatelliteExecution.child_schedule_id.in_(schedule_ids),
+                ),
+            ).all()
+            for execution in executions:
+                execution.reversed_at = now
+                execution.execution_status = "reversed"
+                execution.metadata_json = {
+                    **dict(execution.metadata_json or {}),
+                    "reversed_from_contract_billing": True,
+                    "cancelled_native_billing_id": native_billing.id,
+                    "reversed_at": now.isoformat(),
+                    "reversed_by_user_id": user_id,
+                }
+
+        financial_integration["cancelled_at"] = now.isoformat()
+        financial_integration["cancelled_schedule_ids"] = schedule_ids
+        metadata["financial_integration"] = financial_integration
+        metadata["cancellation"] = {
+            "cancelled_at": now.isoformat(),
+            "cancelled_by_user_id": user_id,
+            "reason": ContractService._normalize_text(reason) or None,
+            "original_idempotency_key": native_billing.idempotency_key,
+        }
+        native_billing.status = "cancelled"
+        native_billing.idempotency_key = ContractService._cancelled_native_billing_idempotency_key(
+            native_billing.idempotency_key,
+            native_billing.id,
+        )
+        native_billing.metadata_json = metadata
+
+        if contract:
+            latest = ContractNativeBilling.query.filter(
+                ContractNativeBilling.company_id == company_id,
+                ContractNativeBilling.contract_id == contract.id,
+                ContractNativeBilling.id != native_billing.id,
+                ContractNativeBilling.status != "cancelled",
+            ).order_by(ContractNativeBilling.issue_date.desc(), ContractNativeBilling.id.desc()).first()
+            contract.last_billing_at = latest.issue_date if latest else None
+            contract.updated_by_user_id = user_id
+            ContractService.record_event(
+                contract=contract,
+                event_type="contract.billing_cancelled",
+                description="Faturamento nativo cancelado a partir da tela Faturamentos Feitos.",
+                payload={
+                    "native_billing_id": native_billing.id,
+                    "billing_code": native_billing.billing_code,
+                    "cancelled_schedule_ids": schedule_ids,
+                    "reason": ContractService._normalize_text(reason) or None,
+                },
+                user_id=user_id,
+                auto_commit=False,
+            )
+        db.session.commit()
+        return native_billing
+
+    @staticmethod
+    def _build_native_billing_item_snapshot(contract_item: ContractItem) -> dict:
+        item_metadata = dict(getattr(contract_item, "metadata_json", None) or {})
+        allocation = dict(item_metadata.get("allocation") or {})
+        retention_details = []
+        gross_amount = ContractService._normalize_decimal(
+            getattr(contract_item, "total_price", None) if getattr(contract_item, "total_price", None) is not None else getattr(contract_item, "amount", 0)
+        )
+        for detail in list(item_metadata.get("retention_details") or []):
+            normalized = dict(detail or {})
+            retention_amount = ContractService._normalize_decimal(
+                normalized.get("calculated_amount") or normalized.get("retention_amount")
+            ).quantize(Decimal("0.01"))
+            if retention_amount <= Decimal("0.00"):
+                continue
+            normalized["retention_amount"] = float(retention_amount)
+            normalized["calculated_amount"] = float(retention_amount)
+            normalized["contract_item_id"] = contract_item.id
+            retention_details.append(normalized)
+        retention_total = sum(
+            (ContractService._normalize_decimal(detail.get("calculated_amount")) for detail in retention_details),
+            Decimal("0.00"),
+        )
+        return {
+            "contract_item_id": getattr(contract_item, "id", None),
+            "item_code": getattr(contract_item, "item_code", None),
+            "description": getattr(contract_item, "description", None) or "Item de faturamento",
+            "quantity": float(getattr(contract_item, "quantity", 1) or 0),
+            "unit_price": float(getattr(contract_item, "unit_price", gross_amount) or 0),
+            "gross_amount": float(gross_amount.quantize(Decimal("0.01"))),
+            "net_amount": float((gross_amount - retention_total).quantize(Decimal("0.01"))),
+            "retention_amount": float(retention_total.quantize(Decimal("0.01"))),
+            "allocation": allocation,
+            "retention_details": retention_details,
+        }
+
+    @staticmethod
+    def generate_native_billing(*, contract: Contract, payload: dict, user_id: Optional[int]):
+        if not contract.party_id:
+            raise ValueError("Defina o cliente do contrato antes de gerar o faturamento nativo.")
+
+        preview = ContractService.preview_native_billing(contract, payload)
+        competence_start = preview["competence_start"]
+        competence_end = preview["competence_end"]
+        issue_date = preview["issue_date"]
+        due_date = preview["due_date"]
+        contract_items = ContractService._resolve_native_billing_contract_items(contract, payload)
+
+        if not contract_items:
+            raise ValueError("Cadastre ou selecione ao menos um item contratual antes de gerar a competência.")
+
+        fiscal_snapshot = ContractService.build_contract_fiscal_snapshot(contract)
+
+        idempotency_key = ContractService.build_native_billing_idempotency_key(
+            contract=contract,
+            competence_start=competence_start,
+            competence_end=competence_end,
+        )
+        existing = ContractNativeBilling.query.filter_by(
+            company_id=contract.company_id,
+            idempotency_key=idempotency_key,
+        ).first()
+        if existing:
+            if existing.status != "cancelled":
+                raise ValueError("Já existe faturamento nativo gerado para esta competência.")
+            existing_metadata = dict(existing.metadata_json or {})
+            existing_metadata.setdefault("cancellation", {})
+            existing_metadata["cancellation"]["original_idempotency_key"] = idempotency_key
+            existing.metadata_json = existing_metadata
+            existing.idempotency_key = ContractService._cancelled_native_billing_idempotency_key(idempotency_key, existing.id)
+            db.session.flush()
+
+        review_notes = ContractService._normalize_text(payload.get("review_notes")) or None
+        native_billing = ContractNativeBilling(
+            company_id=contract.company_id,
+            contract_id=contract.id,
+            party_id=contract.party_id,
+            billing_code=ContractService._next_native_billing_code(contract.company_id),
+            status="generated",
+            source_type="native_contract",
+            competence_start=competence_start,
+            competence_end=competence_end,
+            issue_date=issue_date,
+            due_date=due_date,
+            gross_amount=preview["gross_amount"],
+            net_amount=preview["net_amount"],
+            idempotency_key=idempotency_key,
+            generated_by_user_id=user_id,
+            metadata_json={
+                "contract_version": contract.version,
+                "generated_from": "contract_native_module",
+                "reviewed_from": payload.get("reviewed_from") or "contract_native_module",
+                "review_notes": review_notes,
+                "item_count": len(contract_items),
+                "contract_item_ids": [item.id for item in contract_items],
+                "retention_amount": float(preview["retention_amount"]),
+                "fiscal_snapshot": fiscal_snapshot,
+            },
+        )
+        db.session.add(native_billing)
+        db.session.flush()
+
+        retention_summary = {}
+        snapshots_by_item_id = {
+            snapshot["contract_item_id"]: snapshot
+            for snapshot in preview.get("items", [])
+        }
+        for item in contract_items:
+            snapshot = snapshots_by_item_id.get(item.id) or ContractService._build_native_billing_item_snapshot(item)
+            for retention in snapshot["retention_details"]:
+                key = retention.get("kind")
+                retention_summary[key] = round(
+                    float(retention_summary.get(key) or 0) + float(retention.get("calculated_amount") or retention.get("retention_amount") or 0),
+                    2,
+                )
+            db.session.add(
+                ContractNativeBillingItem(
+                    company_id=contract.company_id,
+                    contract_native_billing_id=native_billing.id,
+                    contract_billing_item_id=None,
+                    contract_item_id=item.id,
+                    description=item.description,
+                    amount=ContractService._normalize_decimal(snapshot.get("gross_amount")),
+                    competence_rule=contract.competence_rule,
+                    due_rule=contract.due_rule,
+                    trigger_type="contract_item",
+                    trigger_reference_date="contract_rule",
+                    metadata_json={
+                        "billing_periodicity": contract.periodicity,
+                        "is_recurring": True,
+                        "review_notes": review_notes,
+                        **snapshot,
+                    },
+                )
+            )
+
+        native_billing.metadata_json = {
+            **dict(native_billing.metadata_json or {}),
+            "retention_summary": retention_summary,
+        }
+
+        contract.last_billing_at = issue_date
+        contract.updated_by_user_id = user_id
+        ContractService.record_event(
+            contract=contract,
+            event_type="contract.billing_generated",
+            description="Faturamento nativo gerado a partir do contrato.",
+            payload={
+                "native_billing_id": native_billing.id,
+                "billing_code": native_billing.billing_code,
+                "competence_start": competence_start.isoformat(),
+                "competence_end": competence_end.isoformat(),
+                "gross_amount": float(native_billing.gross_amount or 0),
+                "net_amount": float(native_billing.net_amount or 0),
+                "retention_amount": float(preview["retention_amount"]),
+                "contract_item_ids": [item.id for item in contract_items],
+                "idempotency_key": idempotency_key,
+            },
+            user_id=user_id,
+            auto_commit=False,
+        )
+        from services.contract_financial_service import ContractFinancialService
+
+        ContractFinancialService.ensure_financial_titles_for_native_billing(
+            contract=contract,
+            native_billing=native_billing,
+            user_id=user_id,
+            auto_commit=False,
+        )
+        db.session.commit()
+        return native_billing
 
     @staticmethod
     def build_contract_fiscal_snapshot(contract: Contract) -> dict:
@@ -1976,143 +2571,6 @@ class ContractService:
                 for item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all()
             ],
         }
-
-    @staticmethod
-    def _build_native_billing_item_snapshot(contract_item: ContractItem) -> dict:
-        item_metadata = dict(contract_item.metadata_json or {})
-        allocation = dict(item_metadata.get("allocation") or {})
-        retention_details = list(item_metadata.get("retention_details") or [])
-        gross_amount = ContractService._normalize_decimal(contract_item.total_price)
-        retention_total = sum(
-            ContractService._normalize_decimal(detail.get("retention_amount"))
-            for detail in retention_details
-        )
-        return {
-            "contract_item_id": contract_item.id,
-            "item_code": contract_item.item_code,
-            "description": contract_item.description,
-            "quantity": float(contract_item.quantity or 0),
-            "unit_price": float(contract_item.unit_price or 0),
-            "gross_amount": float(gross_amount),
-            "net_amount": float((gross_amount - retention_total).quantize(Decimal("0.01"))),
-            "retention_amount": float(retention_total.quantize(Decimal("0.01"))),
-            "allocation": allocation,
-            "retention_details": retention_details,
-        }
-
-    @staticmethod
-    def generate_native_billing(*, contract: Contract, payload: dict, user_id: Optional[int]):
-        if not contract.party_id:
-            raise ValueError("Defina o cliente do contrato antes de gerar o faturamento nativo.")
-
-        preview = ContractService.preview_native_billing(contract, payload)
-        competence_start = preview["competence_start"]
-        competence_end = preview["competence_end"]
-        issue_date = preview["issue_date"]
-        due_date = preview["due_date"]
-        contract_items = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()
-
-        if not contract_items:
-            raise ValueError("Cadastre ao menos um item contratual antes de gerar a competência.")
-
-        fiscal_snapshot = ContractService.build_contract_fiscal_snapshot(contract)
-
-        idempotency_key = ContractService.build_native_billing_idempotency_key(
-            contract=contract,
-            competence_start=competence_start,
-            competence_end=competence_end,
-        )
-        existing = ContractNativeBilling.query.filter_by(
-            company_id=contract.company_id,
-            idempotency_key=idempotency_key,
-        ).first()
-        if existing and existing.status != "cancelled":
-            raise ValueError("Já existe faturamento nativo gerado para esta competência.")
-
-        native_billing = ContractNativeBilling(
-            company_id=contract.company_id,
-            contract_id=contract.id,
-            party_id=contract.party_id,
-            billing_code=ContractService._next_structured_code(ContractNativeBilling, contract.company_id, "B"),
-            status="generated",
-            source_type="native_contract",
-            competence_start=competence_start,
-            competence_end=competence_end,
-            issue_date=issue_date,
-            due_date=due_date,
-            gross_amount=preview["gross_amount"],
-            net_amount=preview["net_amount"],
-            idempotency_key=idempotency_key,
-            generated_by_user_id=user_id,
-            metadata_json={
-                "contract_version": contract.version,
-                "generated_from": "contract_native_module",
-                "item_count": len(contract_items),
-                "retention_amount": float(preview["retention_amount"]),
-                "fiscal_snapshot": fiscal_snapshot,
-            },
-        )
-        db.session.add(native_billing)
-        db.session.flush()
-
-        retention_summary = {}
-        for item in contract_items:
-            snapshot = ContractService._build_native_billing_item_snapshot(item)
-            for retention in snapshot["retention_details"]:
-                key = retention.get("kind")
-                retention_summary[key] = round(float(retention_summary.get(key) or 0) + float(retention.get("retention_amount") or 0), 2)
-            db.session.add(
-                ContractNativeBillingItem(
-                    company_id=contract.company_id,
-                    contract_native_billing_id=native_billing.id,
-                    contract_billing_item_id=None,
-                    contract_item_id=item.id,
-                    description=item.description,
-                    amount=item.total_price,
-                    competence_rule=contract.competence_rule,
-                    due_rule=contract.due_rule,
-                    trigger_type="contract_item",
-                    trigger_reference_date="contract_rule",
-                    metadata_json={
-                        "billing_periodicity": contract.periodicity,
-                        "is_recurring": True,
-                        **snapshot,
-                    },
-                )
-            )
-
-        native_billing.metadata_json = {
-            **dict(native_billing.metadata_json or {}),
-            "retention_summary": retention_summary,
-        }
-
-        contract.last_billing_at = issue_date
-        contract.updated_by_user_id = user_id
-        ContractService.record_event(
-            contract=contract,
-            event_type="contract.billing_generated",
-            description="Faturamento nativo gerado a partir do contrato.",
-            payload={
-                "native_billing_id": native_billing.id,
-                "billing_code": native_billing.billing_code,
-                "competence_start": competence_start.isoformat(),
-                "competence_end": competence_end.isoformat(),
-                "gross_amount": float(native_billing.gross_amount or 0),
-                "idempotency_key": idempotency_key,
-            },
-            user_id=user_id,
-            auto_commit=False,
-        )
-        from services.contract_financial_service import ContractFinancialService
-
-        ContractFinancialService.ensure_financial_titles_for_native_billing(
-            contract=contract,
-            native_billing=native_billing,
-            user_id=user_id,
-            auto_commit=False,
-        )
-        db.session.commit()
-        return native_billing
 
     @staticmethod
     def delete_billing_item(*, contract: Contract, item_id: int) -> bool:

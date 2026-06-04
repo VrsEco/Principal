@@ -1,0 +1,145 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Conferência de Faturamento{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts/billing?company_id={{ company_id }}">Faturar</a>
+<span class="sep">/</span>
+<span class="current">Conferência</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page contracts-billing-review-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Faturamento Contratual</p>
+            <h1>Conferência de Faturamento</h1>
+            <p class="subtitle">Revise competência, vencimento, itens, retenções e observações antes de consolidar o faturamento.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/billing?company_id={{ company_id }}">Voltar para Faturar</a>
+            <a class="btn btn-secondary" href="/contracts/billing/done?company_id={{ company_id }}">Faturamentos Feitos</a>
+        </div>
+    </header>
+
+    <form method="post" action="{{ url_for('contracts.contracts_billing_review', company_id=company_id) }}" class="billing-review-form">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        {% if review_rows %}
+            {% for row in review_rows %}
+            {% set contract = row.contract %}
+            {% set preview = row.preview %}
+            <section class="panel billing-review-card {{ 'is-blocked' if not row.eligibility.eligible }}">
+                <div class="panel-header billing-review-card-header">
+                    <label class="billing-review-toggle">
+                        <input type="checkbox" name="contract_ids" value="{{ contract.id }}" checked {% if not row.eligibility.eligible %}disabled{% endif %}>
+                        <span>Incluir no lote</span>
+                    </label>
+                    {% if not row.eligibility.eligible %}
+                    <span class="mini-badge badge-muted">Bloqueado</span>
+                    {% else %}
+                    <span class="mini-badge badge-success">Apto</span>
+                    {% endif %}
+                </div>
+                <div class="panel-body">
+                    <div class="billing-review-summary">
+                        <div>
+                            <strong>{{ contract.code }} · {{ contract.title }}</strong>
+                            <small>{{ contract.party.name if contract.party else 'Cliente não definido' }}</small>
+                        </div>
+                        <div class="billing-review-kpis">
+                            <span>Bruto <strong>{{ preview.gross_amount|format_currency_br }}</strong></span>
+                            <span>Retenções <strong>{{ preview.retention_amount|format_currency_br }}</strong></span>
+                            <span>Líquido <strong>{{ preview.net_amount|format_currency_br }}</strong></span>
+                        </div>
+                    </div>
+
+                    {% if row.eligibility.reasons %}
+                    <ul class="billing-reasons">
+                        {% for reason in row.eligibility.reasons %}<li>{{ reason }}</li>{% endfor %}
+                    </ul>
+                    {% endif %}
+
+                    <div class="form-grid billing-review-grid">
+                        <label>
+                            <span>Competência inicial</span>
+                            <input type="date" name="competence_start_{{ contract.id }}" value="{{ preview.competence_start.isoformat() if preview.competence_start else '' }}">
+                        </label>
+                        <label>
+                            <span>Competência final</span>
+                            <input type="date" name="competence_end_{{ contract.id }}" value="{{ preview.competence_end.isoformat() if preview.competence_end else '' }}">
+                        </label>
+                        <label>
+                            <span>Emissão</span>
+                            <input type="date" name="issue_date_{{ contract.id }}" value="{{ preview.issue_date.isoformat() if preview.issue_date else '' }}">
+                        </label>
+                        <label>
+                            <span>Vencimento</span>
+                            <input type="date" name="due_date_{{ contract.id }}" value="{{ preview.due_date.isoformat() if preview.due_date else '' }}">
+                        </label>
+                        <label class="full-width">
+                            <span>Observações do faturamento</span>
+                            <textarea name="review_notes_{{ contract.id }}" rows="2" placeholder="Observações para auditoria, financeiro e fiscal">{{ row.review_notes or '' }}</textarea>
+                        </label>
+                    </div>
+
+                    <div class="billing-review-items">
+                        <div class="billing-review-items-head">
+                            <h3>Itens do faturamento</h3>
+                            <small>Desmarque itens que não serão faturados nesta competência.</small>
+                        </div>
+                        <table class="data-table billing-review-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Sel.</th>
+                                    <th>Item</th>
+                                    <th>Valor bruto</th>
+                                    <th>Retenção</th>
+                                    <th>Valor líquido</th>
+                                    <th>Retenções detalhadas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in preview.items %}
+                                <tr>
+                                    <td><input type="checkbox" name="item_ids_{{ contract.id }}" value="{{ item.contract_item_id }}" checked></td>
+                                    <td>
+                                        <strong>{{ item.item_code or '-' }}</strong>
+                                        <div>{{ item.description }}</div>
+                                    </td>
+                                    <td>{{ item.gross_amount|format_currency_br }}</td>
+                                    <td>{{ item.retention_amount|format_currency_br }}</td>
+                                    <td>{{ item.net_amount|format_currency_br }}</td>
+                                    <td>
+                                        {% if item.retention_details %}
+                                            {% for retention in item.retention_details %}
+                                            <span class="retention-pill">{{ retention.kind|upper }} · {{ retention.calculated_amount|format_currency_br }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="muted">Sem retenção</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            {% endfor %}
+
+            <div class="billing-review-footer">
+                <button class="btn btn-secondary" type="submit" name="form_action" value="refresh">Recalcular conferência</button>
+                <button class="btn btn-primary" type="submit" name="form_action" value="confirm" onclick="return confirm('Confirmar geração dos faturamentos selecionados?')">Faturar agora</button>
+            </div>
+        {% else %}
+            <section class="panel"><div class="panel-body"><p class="empty-state">Nenhum contrato selecionado para conferência.</p></div></section>
+        {% endif %}
+    </form>
+</div>
+{% include "modules/contracts/_styles.html" %}
+<style>
+.contracts-billing-review-page .billing-review-form{display:flex;flex-direction:column;gap:1rem}.billing-review-card.is-blocked{opacity:.72}.billing-review-card-header{align-items:center}.billing-review-toggle{display:flex;align-items:center;gap:.5rem;font-weight:800}.billing-review-summary{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}.billing-review-summary small{display:block;color:var(--text-secondary);margin-top:.25rem}.billing-review-kpis{display:flex;gap:.6rem;flex-wrap:wrap}.billing-review-kpis span{background:var(--surface-muted);border:1px solid var(--border);border-radius:999px;padding:.45rem .7rem;color:var(--text-secondary)}.billing-review-kpis strong{color:var(--text-primary)}.billing-review-grid .full-width{grid-column:1/-1}.billing-review-items{margin-top:1rem}.billing-review-items-head{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:.75rem}.billing-review-items-head h3{margin:0}.billing-review-items-head small,.muted{color:var(--text-secondary)}.billing-review-items-table th:first-child,.billing-review-items-table td:first-child{width:54px;text-align:center}.retention-pill{display:inline-flex;margin:.1rem .2rem .1rem 0;padding:.25rem .45rem;border-radius:999px;background:rgba(37,99,235,.08);color:#1d4ed8;font-size:.78rem;font-weight:800}.billing-review-footer{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:.75rem;padding:1rem;background:linear-gradient(180deg,rgba(248,250,252,.8),var(--background));border-top:1px solid var(--border);z-index:2}.billing-reasons{margin:.5rem 0 1rem;padding-left:1rem;color:var(--text-secondary);font-size:.85rem}.badge-success{background:rgba(34,197,94,.13);color:#15803d}.badge-muted{background:rgba(148,163,184,.18);color:#64748b}
+</style>
+{% endblock %}

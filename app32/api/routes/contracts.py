@@ -68,6 +68,72 @@ def _normalize_contracts_list_tab(tab_name: str | None) -> str:
     return normalized if normalized in allowed else "geral"
 
 
+def _parse_int_list(values) -> list[int]:
+    raw_values = values if isinstance(values, (list, tuple)) else [values]
+    parsed: list[int] = []
+    for raw_value in raw_values:
+        for part in str(raw_value or "").replace(";", ",").split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                value = int(part)
+            except ValueError:
+                continue
+            if value not in parsed:
+                parsed.append(value)
+    return parsed
+
+
+def _current_user_id() -> int | None:
+    return current_user.id if current_user.is_authenticated else None
+
+
+def _contracts_billing_filters_from_request() -> dict:
+    return {
+        "status": request.args.get("status"),
+        "party_id": request.args.get("party_id", type=int),
+        "manager_employee_id": request.args.get("manager_employee_id", type=int),
+        "search": request.args.get("search"),
+        "billing_state": request.args.get("billing_state") or "eligible",
+    }
+
+
+def _billing_done_filters_from_request() -> dict:
+    return {
+        "status": request.args.get("status"),
+        "party_id": request.args.get("party_id", type=int),
+        "search": request.args.get("search"),
+        "competence_from": request.args.get("competence_from"),
+        "competence_to": request.args.get("competence_to"),
+    }
+
+
+def _build_billing_review_overrides(contract_ids: list[int]) -> dict[int, dict]:
+    overrides: dict[int, dict] = {}
+    for contract_id in contract_ids:
+        overrides[contract_id] = {
+            "competence_start": request.form.get(f"competence_start_{contract_id}"),
+            "competence_end": request.form.get(f"competence_end_{contract_id}"),
+            "issue_date": request.form.get(f"issue_date_{contract_id}"),
+            "due_date": request.form.get(f"due_date_{contract_id}"),
+            "review_notes": request.form.get(f"review_notes_{contract_id}"),
+            "contract_item_ids": request.form.getlist(f"item_ids_{contract_id}"),
+            "reviewed_from": "contracts_billing_review",
+        }
+    return overrides
+
+
+def _build_billing_confirmation_payloads(contract_ids: list[int]) -> list[dict]:
+    overrides = _build_billing_review_overrides(contract_ids)
+    payloads: list[dict] = []
+    for contract_id in contract_ids:
+        payload = dict(overrides.get(contract_id) or {})
+        payload["contract_id"] = contract_id
+        payloads.append(payload)
+    return payloads
+
+
 def _normalize_contract_form_payload(form_data) -> dict:
     payload = dict(form_data)
     due_rule = ContractService.build_due_rule(
@@ -928,19 +994,29 @@ def contracts_legal_entities():
     )
 
 
-@contracts_bp.route("/contracts/billing")
+@contracts_bp.route("/contracts/billing", methods=["GET", "POST"])
 @permission_required("contracts", "view")
 def contracts_billing_workspace():
     company = get_active_company()
     if not company:
         abort(400, description="Empresa ativa não localizada.")
 
-    filters = {
-        "status": request.args.get("status"),
-        "party_id": request.args.get("party_id", type=int),
-        "manager_employee_id": request.args.get("manager_employee_id", type=int),
-        "search": request.args.get("search"),
-    }
+    if request.method == "POST":
+        if not has_permission(company.id, "contracts", "create"):
+            abort(403)
+        contract_ids = _parse_int_list(request.form.getlist("contract_ids"))
+        if not contract_ids:
+            flash("Selecione ao menos um contrato apto para faturar.", "error")
+            return redirect(url_for("contracts.contracts_billing_workspace", company_id=company.id))
+        return redirect(
+            url_for(
+                "contracts.contracts_billing_review",
+                company_id=company.id,
+                contract_ids=",".join(str(item) for item in contract_ids),
+            )
+        )
+
+    filters = _contracts_billing_filters_from_request()
     billing_rows = ContractService.list_contracts_billing_view(company.id, filters)
     return render_template(
         "modules/contracts/contracts_billing.html",
@@ -951,6 +1027,85 @@ def contracts_billing_workspace():
         managers=Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all(),
         filters=filters,
         kpis=ContractService.get_contracts_kpis(company.id),
+    )
+
+
+@contracts_bp.route("/contracts/billing/review", methods=["GET", "POST"])
+@permission_required("contracts", "view")
+def contracts_billing_review():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+
+    if request.method == "POST":
+        if not has_permission(company.id, "contracts", "create"):
+            abort(403)
+        contract_ids = _parse_int_list(request.form.getlist("contract_ids"))
+        if not contract_ids:
+            flash("Nenhum contrato ficou selecionado para faturamento.", "error")
+            return redirect(url_for("contracts.contracts_billing_workspace", company_id=company.id))
+        if request.form.get("form_action") == "confirm":
+            result = ContractService.confirm_native_billing_review(
+                company_id=company.id,
+                review_payloads=_build_billing_confirmation_payloads(contract_ids),
+                user_id=_current_user_id(),
+            )
+            if result["created"]:
+                flash(f"{len(result['created'])} faturamento(s) gerado(s) com sucesso.", "success")
+            for error in result["errors"]:
+                flash(error, "error")
+            if result["created"] and not result["errors"]:
+                return redirect(url_for("contracts.contracts_billing_done", company_id=company.id))
+        overrides = _build_billing_review_overrides(contract_ids)
+    else:
+        contract_id_args = request.args.getlist("contract_ids") or [request.args.get("contract_ids")]
+        contract_ids = _parse_int_list(contract_id_args)
+        overrides = None
+
+    review_rows = ContractService.build_billing_review_rows(company.id, contract_ids, overrides)
+    return render_template(
+        "modules/contracts/contracts_billing_review.html",
+        company=company,
+        company_id=company.id,
+        review_rows=review_rows,
+        contract_ids=contract_ids,
+    )
+
+
+@contracts_bp.route("/contracts/billing/done", methods=["GET", "POST"])
+@permission_required("contracts", "view")
+def contracts_billing_done():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+
+    if request.method == "POST":
+        if not has_permission(company.id, "contracts", "create"):
+            abort(403)
+        try:
+            native_billing_id = request.form.get("native_billing_id", type=int)
+            if not native_billing_id:
+                raise ValueError("Faturamento não informado para cancelamento.")
+            ContractService.cancel_native_billing(
+                company_id=company.id,
+                native_billing_id=native_billing_id,
+                user_id=_current_user_id(),
+                reason=request.form.get("cancel_reason"),
+            )
+            flash("Faturamento cancelado e vínculos financeiros satélites marcados para auditoria.", "success")
+        except Exception as exc:
+            flash(f"Não foi possível cancelar o faturamento: {exc}", "error")
+        return redirect(url_for("contracts.contracts_billing_done", company_id=company.id))
+
+    filters = _billing_done_filters_from_request()
+    billing_rows = ContractService.list_native_billings_done(company.id, filters)
+    return render_template(
+        "modules/contracts/contracts_billing_done.html",
+        company=company,
+        company_id=company.id,
+        billing_rows=billing_rows,
+        parties=ContractService.list_customer_parties(company.id),
+        filters=filters,
     )
 
 

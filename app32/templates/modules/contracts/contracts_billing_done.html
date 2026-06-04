@@ -1,0 +1,165 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Faturamentos Feitos{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts/list?company_id={{ company_id }}">Gestão Comercial</a>
+<span class="sep">/</span>
+<a href="/contracts/billing?company_id={{ company_id }}">Faturar</a>
+<span class="sep">/</span>
+<span class="current">Faturamentos Feitos</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page contracts-billing-done-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Faturamento Contratual</p>
+            <h1>Faturamentos Feitos</h1>
+            <p class="subtitle">Auditoria dos faturamentos já consolidados, com trilha para cancelamento controlado e refaturamento.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-primary" href="/contracts/billing?company_id={{ company_id }}">Faturar</a>
+            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Cadastro de Contratos</a>
+        </div>
+    </header>
+
+    <section class="panel billing-done-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Faturamentos gerados</h2>
+                <p class="panel-subtitle">Cancelamentos não removem auditoria: faturamento e títulos vinculados ficam marcados como cancelados.</p>
+            </div>
+            <span class="mini-badge">{{ billing_rows|length }} resultado(s)</span>
+        </div>
+        <div class="panel-body">
+            {% if billing_rows %}
+            <div class="billing-table-wrap">
+                <table class="data-table billing-done-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Contrato / Cliente</th>
+                            <th>Competência</th>
+                            <th>Emissão / Vencimento</th>
+                            <th>Valores</th>
+                            <th>Financeiro</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in billing_rows %}
+                        {% set billing = row.billing %}
+                        {% set contract = row.contract %}
+                        {% set integration = row.financial_integration %}
+                        {% set cancellation = (billing.metadata_json or {}).get('cancellation') or {} %}
+                        <tr class="{{ 'is-cancelled' if billing.status == 'cancelled' }}">
+                            <td>
+                                <strong>{{ billing.billing_code }}</strong>
+                                <small>{{ row.item_count }} item(ns)</small>
+                            </td>
+                            <td>
+                                <strong>{{ contract.code if contract else '-' }}</strong>
+                                <div>{{ contract.title if contract else '-' }}</div>
+                                <small>{{ row.party.name if row.party else '-' }}</small>
+                            </td>
+                            <td>
+                                {{ billing.competence_start.strftime('%d/%m/%Y') if billing.competence_start else '-' }}<br>
+                                <small>até {{ billing.competence_end.strftime('%d/%m/%Y') if billing.competence_end else '-' }}</small>
+                            </td>
+                            <td>
+                                Emissão: {{ billing.issue_date.strftime('%d/%m/%Y') if billing.issue_date else '-' }}<br>
+                                <small>Venc.: {{ billing.due_date.strftime('%d/%m/%Y') if billing.due_date else '-' }}</small>
+                            </td>
+                            <td>
+                                <div>Bruto: <strong>{{ billing.gross_amount|format_currency_br }}</strong></div>
+                                <div>Retenção: <strong>{{ row.retention_amount|format_currency_br }}</strong></div>
+                                <div>Líquido: <strong>{{ billing.net_amount|format_currency_br }}</strong></div>
+                            </td>
+                            <td>
+                                {% if integration.main_schedule_id %}
+                                <strong>{{ integration.main_schedule_code or ('#' ~ integration.main_schedule_id) }}</strong>
+                                <small>Satélites: {{ integration.satellite_count or 0 }}</small>
+                                {% else %}
+                                <span class="muted">Não integrado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="mini-badge {{ 'badge-danger' if billing.status == 'cancelled' else 'badge-success' }}">{{ billing.status }}</span>
+                                {% if cancellation.reason %}<small>{{ cancellation.reason }}</small>{% endif %}
+                            </td>
+                            <td>
+                                {% if billing.status != 'cancelled' %}
+                                <form method="post" action="{{ url_for('contracts.contracts_billing_done', company_id=company_id) }}" class="cancel-billing-form" onsubmit="return confirm('Cancelar este faturamento e liberar refaturamento da competência?')">
+                                    <input type="hidden" name="native_billing_id" value="{{ billing.id }}">
+                                    <input type="text" name="cancel_reason" placeholder="Motivo" aria-label="Motivo do cancelamento">
+                                    <button class="btn btn-secondary btn-sm" type="submit">Cancelar</button>
+                                </form>
+                                {% else %}
+                                <span class="muted">Cancelado</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="empty-state">Nenhum faturamento encontrado para os filtros informados.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% include "modules/contracts/_styles.html" %}
+<style>
+.contracts-billing-done-page .billing-table-wrap{overflow:auto}.billing-done-table small{display:block;color:var(--text-secondary);margin-top:.25rem}.billing-done-table tr.is-cancelled{opacity:.7;background:rgba(239,68,68,.06)}.panel-subtitle{margin:.25rem 0 0;color:var(--text-secondary);font-size:.9rem}.muted{color:var(--text-secondary)}.badge-success{background:rgba(34,197,94,.13);color:#15803d}.badge-danger{background:rgba(239,68,68,.12);color:#b91c1c}.cancel-billing-form{display:flex;gap:.4rem;align-items:center;min-width:220px}.cancel-billing-form input{width:120px;border:1px solid var(--border);border-radius:10px;padding:.55rem .65rem}.btn-sm{padding:.55rem .7rem;font-size:.85rem}.contracts-billing-filter-form{display:flex;flex-direction:column;gap:1rem}.contracts-billing-filter-form .filter-group{display:flex;flex-direction:column;gap:.35rem}.contracts-billing-filter-form input,.contracts-billing-filter-form select{width:100%;border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;background:var(--surface);color:var(--text-primary)}.sidebar-actions-stack{display:flex;flex-direction:column;gap:.65rem;margin-top:.4rem}
+</style>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="sched-sidebar-subtitle">Localize faturamentos já gerados ou cancelados.</p>
+</div>
+<div class="sidebar-content-ws">
+    <form method="get" action="{{ url_for('contracts.contracts_billing_done') }}" class="contracts-billing-filter-form">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <div class="filter-group">
+            <label class="filter-label">Buscar</label>
+            <input type="search" name="search" value="{{ filters.search or '' }}" placeholder="Código, contrato ou cliente">
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Status</label>
+            <select name="status">
+                <option value="">Todos</option>
+                <option value="generated" {% if filters.status == 'generated' %}selected{% endif %}>Gerado</option>
+                <option value="cancelled" {% if filters.status == 'cancelled' %}selected{% endif %}>Cancelado</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Cliente</label>
+            <select name="party_id">
+                <option value="">Todos</option>
+                {% for party in parties %}
+                <option value="{{ party.id }}" {% if filters.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Competência de</label>
+            <input type="date" name="competence_from" value="{{ filters.competence_from or '' }}">
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Competência até</label>
+            <input type="date" name="competence_to" value="{{ filters.competence_to or '' }}">
+        </div>
+        <div class="sidebar-actions-stack">
+            <button class="btn btn-primary w-100" type="submit">Aplicar filtros</button>
+            <a class="btn btn-secondary w-100" href="{{ url_for('contracts.contracts_billing_done', company_id=company_id) }}">Limpar filtros</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
