@@ -593,11 +593,8 @@ class ContractService:
         financial_terms = ContractFinancialTerm.query.filter_by(contract_id=contract.id, company_id=contract.company_id).first()
         fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=contract.company_id).first()
         fiscal_ok = bool(
-            fiscal_terms
-            and contract.contracting_legal_entity_id
-            and fiscal_terms.service_code
-            and fiscal_terms.service_list_item
-            and fiscal_terms.operation_nature
+            contract.contracting_legal_entity_id
+            and fiscal_terms
             and fiscal_terms.integration_mode
         )
         return {
@@ -1625,6 +1622,28 @@ class ContractService:
 
     @staticmethod
     def add_contract_item(*, contract: Contract, payload: dict):
+        item_data = ContractService._build_contract_item_data(contract=contract, payload=payload)
+        item = ContractItem(
+            company_id=contract.company_id,
+            contract_id=contract.id,
+            contract_catalog_item_id=item_data["contract_catalog_item_id"],
+            item_code=item_data["item_code"],
+            item_type=item_data["item_type"],
+            description=item_data["description"],
+            quantity=item_data["quantity"],
+            unit_code=item_data["unit_code"],
+            unit_price=item_data["unit_price"],
+            total_price=item_data["total_price"],
+            order_index=item_data["order_index"],
+            notes=item_data["notes"],
+            metadata_json=item_data["metadata_json"],
+        )
+        db.session.add(item)
+        db.session.commit()
+        return item
+
+    @staticmethod
+    def _build_contract_item_data(*, contract: Contract, payload: dict) -> dict:
         catalog_item_id = ContractService._normalize_int(payload.get("contract_catalog_item_id"))
         catalog_item = None
         if catalog_item_id:
@@ -1766,22 +1785,37 @@ class ContractService:
             "retention_count": len(retention_details),
         }
 
-        item = ContractItem(
-            company_id=contract.company_id,
-            contract_id=contract.id,
-            contract_catalog_item_id=catalog_item.id if catalog_item else None,
-            item_code=item_code,
-            item_type=item_type,
-            description=description,
-            quantity=quantity,
-            unit_code=unit_code,
-            unit_price=unit_price,
-            total_price=total_price,
-            order_index=ContractService._normalize_int(payload.get("order_index")) or 0,
-            notes=ContractService._normalize_text(payload.get("notes")) or None,
-            metadata_json=metadata,
-        )
-        db.session.add(item)
+        return {
+            "contract_catalog_item_id": catalog_item.id if catalog_item else None,
+            "item_code": item_code,
+            "item_type": item_type,
+            "description": description,
+            "quantity": quantity,
+            "unit_code": unit_code,
+            "unit_price": unit_price,
+            "total_price": total_price,
+            "order_index": ContractService._normalize_int(payload.get("order_index")) or 0,
+            "notes": ContractService._normalize_text(payload.get("notes")) or None,
+            "metadata_json": metadata,
+        }
+
+    @staticmethod
+    def update_contract_item(*, contract: Contract, item_id: int, payload: dict):
+        item = ContractItem.query.filter_by(id=item_id, company_id=contract.company_id, contract_id=contract.id).first()
+        if not item:
+            raise ValueError("Item do contrato não encontrado para edição.")
+        item_data = ContractService._build_contract_item_data(contract=contract, payload=payload)
+        item.contract_catalog_item_id = item_data["contract_catalog_item_id"]
+        item.item_code = item_data["item_code"]
+        item.item_type = item_data["item_type"]
+        item.description = item_data["description"]
+        item.quantity = item_data["quantity"]
+        item.unit_code = item_data["unit_code"]
+        item.unit_price = item_data["unit_price"]
+        item.total_price = item_data["total_price"]
+        item.order_index = item_data["order_index"]
+        item.notes = item_data["notes"]
+        item.metadata_json = item_data["metadata_json"]
         db.session.commit()
         return item
 
@@ -1793,6 +1827,40 @@ class ContractService:
         db.session.delete(item)
         db.session.commit()
         return True
+
+    @staticmethod
+    def get_contract_item(company_id: int, contract_id: int, item_id: int) -> Optional[ContractItem]:
+        return ContractItem.query.filter_by(
+            id=item_id,
+            company_id=company_id,
+            contract_id=contract_id,
+        ).first()
+
+    @staticmethod
+    def build_contract_item_form_state(item: Optional[ContractItem]) -> dict:
+        if not item:
+            return {}
+        metadata = dict(item.metadata_json or {})
+        allocation = dict(metadata.get("allocation") or {})
+        retention_flags = dict(metadata.get("retention_flags") or {})
+        retention_details = list(metadata.get("retention_details") or [])
+        retention_by_kind = {
+            str(detail.get("kind") or "").lower(): detail
+            for detail in retention_details
+            if detail.get("kind")
+        }
+        return {
+            "id": item.id,
+            "contract_catalog_item_id": item.contract_catalog_item_id,
+            "quantity": item.quantity,
+            "unit_price": item.unit_price,
+            "total_price": item.total_price,
+            "chart_account_id": allocation.get("chart_account_id"),
+            "cost_center_id": allocation.get("cost_center_id"),
+            "project_id": allocation.get("project_id"),
+            "retention_flags": retention_flags,
+            "retention_by_kind": retention_by_kind,
+        }
 
     @staticmethod
     def add_billing_item(*, contract: Contract, payload: dict):
@@ -1867,13 +1935,13 @@ class ContractService:
             "integration_mode": (fiscal_terms.integration_mode if fiscal_terms else None) or (legal_entity.integration_mode if legal_entity else None),
             "nfs_provider": (fiscal_terms.nfs_provider if fiscal_terms else None) or (legal_entity.nfs_provider if legal_entity else None),
             "default_rps_series": fiscal_terms.default_rps_series if fiscal_terms else None,
-            "service_code": fiscal_terms.service_code if fiscal_terms else None,
-            "service_list_item": fiscal_terms.service_list_item if fiscal_terms else None,
-            "operation_nature": fiscal_terms.operation_nature if fiscal_terms else None,
+            "service_code": None,
+            "service_list_item": None,
+            "operation_nature": None,
             "service_city": fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None),
             "iss_city": fiscal_terms.iss_city if fiscal_terms else None,
-            "withholding_flags": (fiscal_terms.withholding_flags if fiscal_terms else None) or {},
-            "fiscal_notes": fiscal_terms.notes if fiscal_terms else None,
+            "withholding_flags": {},
+            "fiscal_notes": fiscal_terms.tax_observation if fiscal_terms else None,
         }
 
     @staticmethod
@@ -2112,55 +2180,29 @@ class ContractService:
         if not legal_entity:
             raise ValueError("PJ contratada inválida para a empresa ativa.")
 
-        legal_entity.municipal_registration = ContractService._normalize_text(payload.get("issuer_municipal_registration")) or legal_entity.municipal_registration
-        legal_entity.tax_regime = ContractService._normalize_text(payload.get("issuer_tax_regime")) or legal_entity.tax_regime
-        legal_entity.service_city = ContractService._normalize_text(payload.get("issuer_service_city")) or legal_entity.service_city
-        legal_entity.nfs_provider = ContractService._normalize_text(payload.get("nfs_provider")) or legal_entity.nfs_provider
-        legal_entity.integration_mode = ContractService._normalize_text(payload.get("integration_mode")) or legal_entity.integration_mode or "manual"
-        legal_entity.api_profile_id = ContractService._normalize_int(payload.get("api_profile_id")) or legal_entity.api_profile_id
-        legal_entity.spreadsheet_profile_id = ContractService._normalize_int(payload.get("spreadsheet_profile_id")) or legal_entity.spreadsheet_profile_id
-
-        integration_mode = legal_entity.integration_mode or "manual"
-        api_profile_id = ContractService._normalize_int(payload.get("api_profile_id")) or legal_entity.api_profile_id
-        spreadsheet_profile_id = ContractService._normalize_int(payload.get("spreadsheet_profile_id")) or legal_entity.spreadsheet_profile_id
-        if integration_mode == "api" and not api_profile_id:
-            raise ValueError("Selecione o perfil de API da emissão fiscal.")
-        if integration_mode == "spreadsheet" and not spreadsheet_profile_id:
-            raise ValueError("Selecione o perfil de planilha da emissão fiscal.")
-
-        withholding_flags = {
-            "iss_withheld": ContractService._normalize_bool(payload.get("iss_withheld")),
-            "inss_withheld": ContractService._normalize_bool(payload.get("inss_withheld")),
-            "irrf_withheld": ContractService._normalize_bool(payload.get("irrf_withheld")),
-            "pis_withheld": ContractService._normalize_bool(payload.get("pis_withheld")),
-            "cofins_withheld": ContractService._normalize_bool(payload.get("cofins_withheld")),
-            "csll_withheld": ContractService._normalize_bool(payload.get("csll_withheld")),
-        }
+        integration_mode = ContractService._normalize_text(payload.get("integration_mode")) or legal_entity.integration_mode or "manual"
+        nfs_provider = ContractService._normalize_text(payload.get("nfs_provider")) or legal_entity.nfs_provider or None
+        service_city = ContractService._normalize_text(payload.get("service_city")) or legal_entity.service_city or None
+        iss_city = ContractService._normalize_text(payload.get("iss_city")) or service_city
 
         contract.contracting_legal_entity_id = legal_entity.id
         contract.updated_by_user_id = user_id
         record.contracting_legal_entity_id = legal_entity.id
         record.fiscal_profile_code = ContractService._normalize_text(payload.get("fiscal_profile_code")) or None
         record.integration_mode = integration_mode
-        record.nfs_provider = ContractService._normalize_text(payload.get("nfs_provider")) or legal_entity.nfs_provider or None
+        record.nfs_provider = nfs_provider
         record.default_rps_series = ContractService._normalize_text(payload.get("default_rps_series")) or None
-        record.service_code = ContractService._normalize_text(payload.get("service_code")) or None
-        record.service_list_item = ContractService._normalize_text(payload.get("service_list_item")) or None
-        record.operation_nature = ContractService._normalize_text(payload.get("operation_nature")) or None
-        record.service_city = ContractService._normalize_text(payload.get("service_city")) or legal_entity.service_city or None
-        record.iss_city = ContractService._normalize_text(payload.get("iss_city")) or record.service_city
-        record.tax_nature = ContractService._normalize_text(payload.get("tax_nature")) or None
-        record.api_profile_id = api_profile_id
-        record.spreadsheet_profile_id = spreadsheet_profile_id
-        record.withholding_flags = withholding_flags
+        record.service_code = None
+        record.service_list_item = None
+        record.operation_nature = None
+        record.service_city = service_city
+        record.iss_city = iss_city
+        record.tax_nature = None
+        record.api_profile_id = legal_entity.api_profile_id
+        record.spreadsheet_profile_id = legal_entity.spreadsheet_profile_id
+        record.withholding_flags = {}
         record.tax_observation = ContractService._normalize_text(payload.get("tax_observation")) or None
-        record.notes = ContractService._normalize_text(payload.get("notes")) or None
-        if not record.service_code:
-            raise ValueError("Informe o código do serviço da nota fiscal.")
-        if not record.service_list_item:
-            raise ValueError("Informe o item da lista de serviço.")
-        if not record.operation_nature:
-            raise ValueError("Informe a natureza da operação fiscal.")
+        record.notes = None
         record.metadata_json = {
             **(record.metadata_json or {}),
             "issuer_cnpj": legal_entity.cnpj,
@@ -2174,8 +2216,9 @@ class ContractService:
             payload={
                 "contracting_legal_entity_id": legal_entity.id,
                 "integration_mode": integration_mode,
-                "service_code": record.service_code,
-                "service_list_item": record.service_list_item,
+                "nfs_provider": record.nfs_provider,
+                "service_city": record.service_city,
+                "iss_city": record.iss_city,
             },
             user_id=user_id,
             auto_commit=False,

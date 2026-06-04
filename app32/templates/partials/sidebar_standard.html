@@ -168,11 +168,14 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
-                    <a href="/contracts/list" class="sub-nav-link {{ 'active' if request.path == '/contracts/list' or request.path == '/contracts/new' or request.path == '/contracts' or request.path == '/contracts/dashboard' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path and request.path != '/contracts/billing') }}">
+                    <a href="/contracts/list" class="sub-nav-link {{ 'active' if ((request.path == '/contracts/list' and request.args.get('tab') != 'fiscal') or request.path == '/contracts/new' or request.path == '/contracts' or request.path == '/contracts/dashboard' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path and request.path != '/contracts/billing' and request.args.get('tab') != 'fiscal')) }}">
                         <span>Cadastro de Contratos</span>
                     </a>
                     <a href="/contracts/billing" class="sub-nav-link {{ 'active' if request.path == '/contracts/billing' }}">
                         <span>Faturamento</span>
+                    </a>
+                    <a href="/contracts/list?tab=fiscal" class="sub-nav-link {{ 'active' if request.path == '/contracts/list' and request.args.get('tab') == 'fiscal' }}">
+                        <span>Notas Fiscais</span>
                     </a>
                 </div>
             </div>

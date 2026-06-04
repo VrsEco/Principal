@@ -115,6 +115,13 @@ def _process_contracts_list_submission(company: Company, contract, active_tab: s
         if request.form.get("delete_item_id"):
             ContractService.delete_contract_item(contract=contract, item_id=int(request.form["delete_item_id"]))
             flash("Item do contrato removido.", "success")
+        elif request.form.get("edit_item_id"):
+            ContractService.update_contract_item(
+                contract=contract,
+                item_id=int(request.form["edit_item_id"]),
+                payload=request.form.to_dict(),
+            )
+            flash("Item do contrato atualizado.", "success")
         else:
             ContractService.add_contract_item(contract=contract, payload=request.form.to_dict())
             flash("Item e valor do contrato incluídos.", "success")
@@ -593,6 +600,7 @@ def contracts_list():
         abort(400, description="Empresa ativa não localizada.")
     active_list_tab = _normalize_contracts_list_tab(request.args.get("tab"))
     selected_contract_id = request.args.get("contract_id", type=int)
+    selected_edit_item_id = request.args.get("edit_item_id", type=int)
     mode = (request.args.get("mode") or "").strip().lower()
     filters = {
         "status": request.args.get("status"),
@@ -685,6 +693,13 @@ def contracts_list():
         context["active_list_tab"] = active_list_tab
         context["contracts_list_tabs"] = CONTRACTS_LIST_TABS
         context["is_new_contract"] = False
+        edit_item = None
+        if active_list_tab == "itens_valores" and selected_edit_item_id:
+            edit_item = ContractService.get_contract_item(company.id, selected_contract.id, selected_edit_item_id)
+            if not edit_item:
+                abort(404)
+        context["editing_contract_item"] = edit_item
+        context["editing_contract_item_state"] = ContractService.build_contract_item_form_state(edit_item)
     return render_template("modules/contracts/contracts_list.html", **context)
 
 
