@@ -40,34 +40,60 @@
                     <h3>Clientes e contratos</h3>
                     <span class="cw-counter">{{ contracts|length }}</span>
                 </div>
-                <div class="contracts-tree-list">
+                <label class="contracts-tree-search">
+                    <span>Buscar</span>
+                    <input id="contracts-tree-search" type="search" placeholder="Cliente, código ou contrato">
+                </label>
+                <div class="contracts-tree-list compact-tree" id="contracts-tree-list">
                     {% for branch in contract_tree %}
                     {% if not has_active_filters or branch.contract_count %}
-                    <article class="contracts-party-node">
-                        <div class="contracts-party-head">
-                            <div>
-                                <strong>{{ branch.party.code or 'Cliente' }}</strong>
-                                <span>{{ branch.party.name }}</span>
+                    <div class="cw-tree-node is-parent is-synthetic" data-tree-node data-search-text="{{ (branch.party.code ~ ' ' ~ branch.party.name)|lower }}">
+                        <article class="cw-list-item {{ 'active' if selected_contract and selected_contract.party_id == branch.party.id else '' }}">
+                            <div class="cw-list-item-line">
+                                <div class="cw-tree-title-wrap">
+                                    <button
+                                        type="button"
+                                        class="cw-tree-toggle"
+                                        data-tree-toggle="{{ branch.party.id }}"
+                                        onclick="event.stopPropagation(); toggleContractsTreeNode('{{ branch.party.id }}')"
+                                        aria-expanded="true"
+                                        title="Expandir ou recolher {{ branch.party.name }}"
+                                    >▾</button>
+                                    <div class="cw-tree-title-content">
+                                        <strong>{{ branch.party.code or 'Cliente' }}</strong>
+                                        <span class="cw-tree-separator">-</span>
+                                        <span>{{ branch.party.name }}</span>
+                                    </div>
+                                </div>
+                                <span class="cw-tree-badge">{{ branch.active_count }}/{{ branch.contract_count }}</span>
                             </div>
-                            <small>{{ branch.contract_count }}/{{ branch.active_count }}</small>
-                        </div>
-                        <div class="contracts-party-children">
+                        </article>
+                        <div class="cw-tree-children" data-tree-children="{{ branch.party.id }}">
                             {% if branch.contracts %}
                                 {% for item in branch.contracts %}
                                 {% set next_action = contract_next_action(item) %}
-                                <a class="contracts-contract-link {{ 'active' if selected_id == item.id else '' }}" href="/contracts/list?company_id={{ company_id }}&contract_id={{ item.id }}&tab={{ active_list_tab }}">
-                                    <div>
-                                        <strong>{{ item.code }}</strong>
-                                        <span>{{ item.title }}</span>
+                                <a class="cw-list-item {{ 'active' if selected_id == item.id else '' }}" href="/contracts/list?company_id={{ company_id }}&contract_id={{ item.id }}&tab={{ active_list_tab }}">
+                                    <div class="cw-list-item-line">
+                                        <div class="cw-tree-title-wrap">
+                                            <button type="button" class="cw-tree-toggle placeholder" tabindex="-1"></button>
+                                            <div class="cw-tree-title-content">
+                                                <strong>{{ item.code }}</strong>
+                                                <span class="cw-tree-separator">-</span>
+                                                <span>{{ item.title }}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <small class="mini-badge {{ next_action.tone }}">{{ next_action.label }}</small>
+                                    <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                                        <span class="mini-badge {{ next_action.tone }}">{{ next_action.label }}</span>
+                                    </div>
                                 </a>
+                                <div hidden data-contract-search-text="{{ (item.code ~ ' ' ~ item.title ~ ' ' ~ branch.party.code ~ ' ' ~ branch.party.name)|lower }}"></div>
                                 {% endfor %}
                             {% else %}
                                 <p class="contracts-empty-branch">Nenhum contrato ainda.</p>
                             {% endif %}
                         </div>
-                    </article>
+                    </div>
                     {% endif %}
                     {% endfor %}
                     {% if not contract_tree %}
@@ -431,8 +457,8 @@
             {% endif %}
         </main>
 
+        {% if not is_new_contract %}
         <aside class="contracts-tabs-rail">
-            {% if not is_new_contract %}
             <div class="contracts-sidebar-card">
                 <h3>Abas do contrato</h3>
                 <nav class="contracts-tab-nav">
@@ -447,46 +473,8 @@
                     {% endfor %}
                 </nav>
             </div>
-            {% endif %}
-
-            <form method="get" class="contracts-sidebar-card contracts-filter-card">
-                <input type="hidden" name="company_id" value="{{ company_id }}">
-                <input type="hidden" name="tab" value="{{ active_list_tab }}">
-                <div class="contracts-sidebar-header">
-                    <h3>Filtros</h3>
-                    <span class="cw-counter">{{ contracts|length }}</span>
-                </div>
-                <label><span>Busca</span><input type="text" name="search" value="{{ filters.search or '' }}" placeholder="Código, contrato ou cliente"></label>
-                <label><span>Status</span>
-                    <select name="status">
-                        <option value="">Todos</option>
-                        {% for status in ['draft', 'active', 'signed', 'implanting', 'inactive', 'closed'] %}
-                        <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label><span>Cliente</span>
-                    <select name="party_id">
-                        <option value="">Todos</option>
-                        {% for party in parties %}
-                        <option value="{{ party.id }}" {% if filters.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label><span>Gestor</span>
-                    <select name="manager_employee_id">
-                        <option value="">Todos</option>
-                        {% for employee in managers %}
-                        <option value="{{ employee.id }}" {% if filters.manager_employee_id == employee.id %}selected{% endif %}>{{ employee.name }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <div class="contracts-filter-actions">
-                    <button class="btn btn-primary" type="submit">Aplicar</button>
-                    <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}">Limpar</a>
-                </div>
-            </form>
         </aside>
+        {% endif %}
     </section>
 </div>
 
@@ -503,16 +491,31 @@
     .contracts-sidebar-header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.85rem; }
     .contracts-sidebar-card h3 { margin:0; }
     .cw-counter { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:30px; border-radius:999px; background:var(--primary-light); color:var(--primary); font-size:.78rem; font-weight:800; }
-    .contracts-tree-list { display:flex; flex-direction:column; gap:.75rem; max-height:calc(100vh - 300px); overflow:auto; padding-right:.2rem; }
-    .contracts-party-node { border:1px solid var(--border); border-radius:14px; background:var(--surface-secondary); overflow:hidden; }
-    .contracts-party-head { display:flex; justify-content:space-between; gap:.75rem; padding:.75rem .8rem; border-bottom:1px dashed var(--border); }
-    .contracts-party-head strong, .contracts-party-head span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .contracts-party-head span, .contracts-party-head small { color:var(--text-secondary); font-size:.76rem; }
-    .contracts-party-children { display:flex; flex-direction:column; gap:.35rem; padding:.55rem; }
-    .contracts-contract-link { display:flex; justify-content:space-between; gap:.6rem; text-decoration:none; color:inherit; border:1px solid transparent; border-radius:12px; padding:.55rem .6rem; background:#fff; }
-    .contracts-contract-link:hover, .contracts-contract-link.active { border-color:var(--primary); box-shadow:0 0 0 2px rgba(37,99,235,.08); }
-    .contracts-contract-link strong, .contracts-contract-link span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:165px; }
-    .contracts-contract-link span, .contracts-empty-branch { color:var(--text-secondary); font-size:.76rem; margin:0; }
+    .contracts-tree-search { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem; color:var(--text-secondary); font-weight:600; }
+    .contracts-tree-search input { width:100%; padding:.78rem .9rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); color:var(--text-primary); }
+    .contracts-tree-list { display:flex; flex-direction:column; gap:.2rem; max-height:calc(100vh - 340px); overflow:auto; padding-right:.2rem; }
+    .contracts-tree-list[hidden] { display:none !important; }
+    .cw-tree { display:flex; flex-direction:column; gap:.1rem; }
+    .cw-tree-node { display:flex; flex-direction:column; gap:.12rem; }
+    .cw-tree-children { display:flex; flex-direction:column; gap:.12rem; margin-left:.7rem; padding-left:.75rem; border-left:1px dashed var(--border); }
+    .cw-tree-children.collapsed { display:none; }
+    .cw-list-item { border:1px solid #e6ebf3; background:#fff; border-radius:10px; padding:.42rem .55rem; text-decoration:none; color:inherit; transition:all .15s ease; }
+    .cw-list-item:hover,.cw-list-item.active { border-color:rgba(37,99,235,.18); background:#f8fbff; }
+    .cw-tree-node.is-parent > .cw-list-item { background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
+    .cw-tree-node.is-analytic > .cw-list-item { background:#fcfcfd; border-color:#edf1f6; }
+    .cw-list-item-line { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; }
+    .cw-tree-toggle { display:inline-flex; align-items:center; justify-content:center; width:1.3rem; height:1.3rem; border:1px solid var(--border); border-radius:6px; background:var(--surface-secondary); color:var(--text-secondary); font-weight:700; cursor:pointer; flex-shrink:0; font-size:.78rem; padding:0; margin-top:.06rem; }
+    .cw-tree-toggle:hover { color:var(--text-primary); border-color:rgba(37,99,235,.22); }
+    .cw-tree-toggle.placeholder { visibility:hidden; }
+    .cw-tree-title-wrap { display:flex; align-items:flex-start; gap:.4rem; min-width:0; flex:1; }
+    .cw-tree-title-content { min-width:0; display:flex; align-items:baseline; gap:.25rem; flex-wrap:wrap; }
+    .cw-tree-title-content strong { font-size:.82rem; line-height:1.15; font-weight:800; color:var(--text-primary); }
+    .cw-tree-title-content span { color:var(--text-primary); font-size:.8rem; line-height:1.15; }
+    .cw-tree-separator { color:var(--text-tertiary); font-weight:600; }
+    .cw-tree-badge { display:inline-flex; align-items:center; justify-content:center; padding:.16rem .45rem; border-radius:8px; font-size:.65rem; line-height:1; font-weight:700; border:1px solid #bbf7d0; background:#dcfce7; color:#166534; text-transform:none; letter-spacing:0; }
+    .cw-list-item-actions { display:flex; gap:.25rem; flex-wrap:wrap; margin-top:.28rem; margin-left:1.7rem; }
+    .cw-list-item-actions .mini-badge { display:inline-flex; }
+    .contracts-empty-branch { color:var(--text-secondary); font-size:.76rem; margin:.2rem 0 0 1.7rem; }
     .contracts-cw-main { min-width:0; display:flex; flex-direction:column; gap:1rem; }
     .contract-selected-header { padding:1rem 1.2rem; display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
     .contract-selected-header h2 { margin:.35rem 0 .2rem; }
@@ -531,5 +534,111 @@
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const collapsedNodes = new Set();
+    const storageKey = 'contractsListCollapsedNodes:{{ company_id }}';
+    const savedRaw = window.localStorage.getItem(storageKey);
+    if (savedRaw) {
+        try {
+            JSON.parse(savedRaw).forEach((value) => collapsedNodes.add(String(value)));
+        } catch (error) {
+            console.warn('Falha ao restaurar estado da árvore de contratos.', error);
+        }
+    }
+
+    const persistCollapsedNodes = () => {
+        window.localStorage.setItem(storageKey, JSON.stringify(Array.from(collapsedNodes)));
+    };
+
+    const syncCollapsedTreeNodes = () => {
+        document.querySelectorAll('[data-tree-children]').forEach((children) => {
+            const nodeId = String(children.dataset.treeChildren || '');
+            const collapsed = collapsedNodes.has(nodeId);
+            children.classList.toggle('collapsed', collapsed);
+            const toggle = document.querySelector(`.cw-tree-toggle[data-tree-toggle="${nodeId}"]`);
+            if (toggle) {
+                toggle.textContent = collapsed ? '▸' : '▾';
+                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            }
+        });
+    };
+
+    window.toggleContractsTreeNode = function (itemId) {
+        const key = String(itemId);
+        if (collapsedNodes.has(key)) collapsedNodes.delete(key);
+        else collapsedNodes.add(key);
+        persistCollapsedNodes();
+        syncCollapsedTreeNodes();
+    };
+
+    const searchInput = document.getElementById('contracts-tree-search');
+    const nodes = Array.from(document.querySelectorAll('[data-tree-node]'));
+    if (searchInput && nodes.length) {
+        searchInput.addEventListener('input', function () {
+            const query = (searchInput.value || '').trim().toLowerCase();
+            nodes.forEach((node) => {
+                const branchText = node.getAttribute('data-search-text') || '';
+                const contractTexts = Array.from(node.querySelectorAll('[data-contract-search-text]')).map((item) => item.getAttribute('data-contract-search-text') || '');
+                const match = !query || branchText.includes(query) || contractTexts.some((value) => value.includes(query));
+                node.hidden = !match;
+            });
+        });
+    }
+
+    syncCollapsedTreeNodes();
+});
+</script>
+{% block sidebar_right %}
+<div class="contracts-sidebar-card contracts-filter-card">
+    <div class="sidebar-header-ws">
+        <h3 class="text-h3">Filtros</h3>
+        <p class="text-secondary" style="margin: .35rem 0 0 0;">Padrão Versus: filtros acessados pelo botão superior direito.</p>
+    </div>
+    <form method="get">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <input type="hidden" name="tab" value="{{ active_list_tab }}">
+        <input type="hidden" name="ui_refresh" value="1">
+        {% if is_new_contract %}
+        <input type="hidden" name="mode" value="new">
+        {% elif selected_contract %}
+        <input type="hidden" name="contract_id" value="{{ selected_contract.id }}">
+        {% endif %}
+        <div class="contracts-sidebar-header">
+            <h3>Filtros</h3>
+            <span class="cw-counter">{{ contracts|length }}</span>
+        </div>
+        <label><span>Busca</span><input type="text" name="search" value="{{ filters.search or '' }}" placeholder="Código, contrato ou cliente"></label>
+        <label><span>Status</span>
+            <select name="status">
+                <option value="">Todos</option>
+                {% for status in ['draft', 'active', 'signed', 'implanting', 'inactive', 'closed'] %}
+                <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label><span>Cliente</span>
+            <select name="party_id">
+                <option value="">Todos</option>
+                {% for party in parties %}
+                <option value="{{ party.id }}" {% if filters.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label><span>Gestor</span>
+            <select name="manager_employee_id">
+                <option value="">Todos</option>
+                {% for employee in managers %}
+                <option value="{{ employee.id }}" {% if filters.manager_employee_id == employee.id %}selected{% endif %}>{{ employee.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="contracts-filter-actions">
+            <button class="btn btn-primary" type="submit">Aplicar</button>
+            <a class="btn btn-secondary" href="/contracts/list?company_id={{ company_id }}{% if is_new_contract %}&mode=new{% endif %}">Limpar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
 {% include "modules/contracts/_styles.html" %}
 {% endblock %}
