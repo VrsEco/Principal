@@ -338,23 +338,6 @@
                     <button type="button" class="cw-section-btn" data-section="financeiro">Financeiro</button>
                 </nav>
             </div>
-            <div class="cw-sidebar-card">
-                <h3>Leitura rápida</h3>
-                <div class="cw-note-stack">
-                    <div class="cw-note-card">
-                        <strong>Estrutura</strong>
-                        <span>Grupos e sub-grupos vêm da árvore comercial criada na tela anterior.</span>
-                    </div>
-                    <div class="cw-note-card">
-                        <strong>Uso contratual</strong>
-                        <span>Somente itens folha devem ser utilizados em contratos e faturamento.</span>
-                    </div>
-                    <div class="cw-note-card">
-                        <strong>Seleção atual</strong>
-                        <span>{% if selected_item %}{{ selected_item.code }} · {{ selected_item.name }}{% else %}Nenhum item selecionado.{% endif %}</span>
-                    </div>
-                </div>
-            </div>
         </aside>
     </section>
 </div>
@@ -373,7 +356,7 @@
     .cw-search { display:flex; flex-direction:column; gap:.4rem; margin:1rem 0; color:var(--text-secondary); font-weight:600; }
     .cw-search input,.cw-form input,.cw-form select,.cw-form textarea { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); width:100%; }
     .cw-list { display:flex; flex-direction:column; gap:.4rem; max-height:calc(100vh - 320px); overflow:auto; padding-right:.2rem; }
-    .cw-list.compact-tree,.cw-tree,.cw-tree-node,.cw-note-stack,.cw-info-grid { display:flex; flex-direction:column; gap:.35rem; }
+    .cw-list.compact-tree,.cw-tree,.cw-tree-node,.cw-info-grid { display:flex; flex-direction:column; gap:.35rem; }
     .cw-tree-details { border-radius:10px; }
     .cw-tree-summary { list-style:none; }
     .cw-tree-summary::-webkit-details-marker { display:none; }
@@ -382,7 +365,7 @@
     .cw-list-item:hover,.cw-list-item.active { border-color:rgba(37,99,235,.12); background:var(--surface-secondary); }
     .cw-list-item-title { min-width:0; display:flex; flex-direction:column; gap:.2rem; }
     .cw-list-item-title strong,.cw-list-item-title span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .cw-list-item-title span,.cw-list-item-status,.field-hint,.cw-note-card span { color:var(--text-secondary); font-size:.78rem; }
+    .cw-list-item-title span,.cw-list-item-status,.field-hint { color:var(--text-secondary); font-size:.78rem; }
     .cw-panel { padding:1.25rem; }
     .cw-panel-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
     .cw-panel-header h2,.cw-sidebar-card h3 { margin:0; }
@@ -393,9 +376,9 @@
     .cw-form-grid label { display:flex; flex-direction:column; gap:.45rem; }
     .cw-form-grid .full-width { grid-column:1 / -1; }
     .nested-grid { padding-top:1rem; }
-    .checkbox-card,.cw-info-card,.cw-note-card { padding:1rem; border-radius:16px; background:var(--surface-secondary); }
+    .checkbox-card,.cw-info-card { padding:1rem; border-radius:16px; background:var(--surface-secondary); }
     .checkbox-card { border:1px dashed var(--border); }
-    .cw-info-card,.cw-note-card { border:1px solid var(--border); }
+    .cw-info-card { border:1px solid var(--border); }
     .checkbox-card input { width:auto; margin-top:.5rem; }
     .cw-section-nav { display:flex; flex-direction:column; gap:.5rem; margin-top:.85rem; }
     .cw-section-btn { text-align:left; border:1px solid var(--border); background:var(--surface-secondary); border-radius:12px; padding:.75rem .9rem; cursor:pointer; color:var(--text-primary); font-weight:600; }
