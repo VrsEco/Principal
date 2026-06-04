@@ -15,7 +15,11 @@
 {% block navbar_actions %}{% endblock %}
 
 {% block workspace_content %}
-<div class="cp-page fade-in" data-company-id="{{ company_id or '' }}" data-selected-counterparty-id="{{ selected_counterparty_id or '' }}">
+<div class="cp-page fade-in"
+     data-company-id="{{ company_id or '' }}"
+     data-selected-counterparty-id="{{ selected_counterparty_id or '' }}"
+     data-customer-only-mode="{{ 'true' if customer_only_mode else 'false' }}"
+     data-lock-operational-classification="{{ 'true' if lock_operational_classification else 'false' }}">
     {% set header_subtitle = workspace_subtitle if workspace_subtitle is defined else 'Cadastro mestre compartilhado com contratos. Marque <strong>Cliente</strong> para habilitar o favorecido na abertura de contrato.' %}
     <header class="cp-header">
         <div>
@@ -26,7 +30,9 @@
             {% if workspace_back_href is defined %}
             <a class="btn btn-secondary" href="{{ workspace_back_href }}">{{ workspace_back_label if workspace_back_label is defined else 'Voltar' }}</a>
             {% endif %}
+            {% if workspace_new_enabled is not defined or workspace_new_enabled %}
             <button class="btn btn-primary" type="button" onclick="startNewCounterparty()">{{ workspace_new_label if workspace_new_label is defined else 'Novo favorecido' }}</button>
+            {% endif %}
         </div>
     </header>
 
@@ -78,12 +84,25 @@
                                 <span>Status</span>
                                 <input id="cp-status-display" value="Ativo" readonly tabindex="-1">
                             </label>
-                            <div class="checkbox-card col-span-2">
+                            <label>
+                                <span>Carteira de Clientes</span>
+                                <select name="customer_portfolio_id">
+                                    <option value="">Selecione uma carteira analítica</option>
+                                </select>
+                                <small class="field-hint">Somente carteiras analíticas podem ser vinculadas ao cliente.</small>
+                            </label>
+                            <div class="checkbox-card col-span-2 {{ 'checkbox-card-locked' if lock_operational_classification else '' }}">
                                 <span>Classificação operacional</span>
-                                <p class="field-hint">O mesmo cadastro atende Financeiro e Contratos. Para iniciar contrato, o flag de cliente é obrigatório.</p>
+                                <p class="field-hint">
+                                    {% if lock_operational_classification %}
+                                    Campo bloqueado nesta visão. Para alterar Cliente/Fornecedor, use o cadastro de Favorecidos.
+                                    {% else %}
+                                    O mesmo cadastro atende Financeiro e Contratos. Para iniciar contrato, o flag de cliente é obrigatório.
+                                    {% endif %}
+                                </p>
                                 <div class="checkbox-inline-wrap">
-                                    <label class="checkbox-inline"><input type="checkbox" name="is_customer"> Cliente</label>
-                                    <label class="checkbox-inline"><input type="checkbox" name="is_supplier" checked> Fornecedor</label>
+                                    <label class="checkbox-inline"><input type="checkbox" name="is_customer" {% if lock_operational_classification %}disabled{% endif %}> Cliente</label>
+                                    <label class="checkbox-inline"><input type="checkbox" name="is_supplier" checked {% if lock_operational_classification %}disabled{% endif %}> Fornecedor</label>
                                 </div>
                             </div>
                         </div>
@@ -277,6 +296,10 @@
         border-radius:12px;
         padding:.9rem 1rem;
         justify-content:center;
+    }
+    .checkbox-card-locked {
+        background:var(--surface-secondary);
+        opacity:.88;
     }
     .checkbox-inline-wrap { display:flex; gap:1rem; flex-wrap:wrap; }
     .checkbox-inline { display:inline-flex; align-items:center; gap:.55rem; }
@@ -525,6 +548,8 @@
     const pageEl = document.querySelector('.cp-page');
     const companyId = Number(pageEl?.dataset.companyId);
     const selectedCounterpartyId = Number(pageEl?.dataset.selectedCounterpartyId || 0);
+    const customerOnlyMode = pageEl?.dataset.customerOnlyMode === 'true';
+    const lockOperationalClassification = pageEl?.dataset.lockOperationalClassification === 'true';
     const catalogType = 'counterparties';
     const sections = [
         { key: 'main', label: 'Dados principais' },
@@ -537,6 +562,7 @@
     let selectedListId = null;
     let allItems = [];
     const auxiliaryData = {
+        customer_portfolios: [],
         chart_accounts: [],
         cost_centers: [],
     };
@@ -586,6 +612,11 @@
         field.value = isActive ? 'Ativo' : 'Inativo';
     }
 
+    function getVisibleItems(items) {
+        const normalized = Array.isArray(items) ? items : [];
+        return customerOnlyMode ? normalized.filter(item => item.is_customer === true) : normalized;
+    }
+
     function renderSectionNav() {
         const nav = document.getElementById('cp-section-nav');
         nav.innerHTML = sections.map((section, index) => `
@@ -606,7 +637,7 @@
 
     function normalizeValue(field, value) {
         if (value === '') return null;
-        if (['default_chart_account_id', 'default_cost_center_id'].includes(field)) return Number(value);
+        if (['customer_portfolio_id', 'default_chart_account_id', 'default_cost_center_id'].includes(field)) return Number(value);
         if (['is_customer', 'is_supplier'].includes(field)) return value === 'on';
         return value;
     }
@@ -619,10 +650,21 @@
         const form = document.getElementById('cp-form');
         if (!form) return;
 
+        const portfolioSelect = form.querySelector('[name="customer_portfolio_id"]');
         const chartSelect = form.querySelector('[name="default_chart_account_id"]');
         const costCenterSelect = form.querySelector('[name="default_cost_center_id"]');
+        const selectedPortfolioId = currentItem?.customer_portfolio_id ? String(currentItem.customer_portfolio_id) : '';
         const selectedChartId = currentItem?.default_chart_account_id ? String(currentItem.default_chart_account_id) : '';
         const selectedCostCenterId = currentItem?.default_cost_center_id ? String(currentItem.default_cost_center_id) : '';
+
+        if (portfolioSelect) {
+            const portfolioOptions = auxiliaryData.customer_portfolios
+                .filter(item => item.accepts_posting === true && (item.is_active !== false || String(item.id) === selectedPortfolioId))
+                .map(item => `<option value="${item.id}">${buildOptionLabel(item)}</option>`)
+                .join('');
+            portfolioSelect.innerHTML = `<option value="">Selecione uma carteira analítica</option>${portfolioOptions}`;
+            portfolioSelect.value = selectedPortfolioId;
+        }
 
         if (chartSelect) {
             const chartOptions = auxiliaryData.chart_accounts
@@ -644,15 +686,18 @@
     }
 
     async function loadAuxiliaryData() {
-        const [chartResponse, costCenterResponse] = await Promise.all([
+        const [portfolioResponse, chartResponse, costCenterResponse] = await Promise.all([
+            fetch(`/api/financial/catalogs/customer_portfolios?company_id=${companyId}`),
             fetch(`/api/financial/catalogs/chart_accounts?company_id=${companyId}`),
             fetch(`/api/financial/catalogs/cost_centers?company_id=${companyId}`),
         ]);
-        const [chartResult, costCenterResult] = await Promise.all([
+        const [portfolioResult, chartResult, costCenterResult] = await Promise.all([
+            portfolioResponse.json(),
             chartResponse.json(),
             costCenterResponse.json(),
         ]);
 
+        auxiliaryData.customer_portfolios = Array.isArray(portfolioResult) ? portfolioResult : [];
         auxiliaryData.chart_accounts = Array.isArray(chartResult) ? chartResult : [];
         auxiliaryData.cost_centers = Array.isArray(costCenterResult) ? costCenterResult : [];
         hydrateDefaultSelects();
@@ -664,13 +709,13 @@
         document.getElementById('cp-form').reset();
         document.querySelector('#cp-form [name="id"]').value = '';
         document.querySelector('#cp-form [name="code"]').value = '';
-        document.querySelector('#cp-form [name="is_customer"]').checked = false;
+        document.querySelector('#cp-form [name="is_customer"]').checked = customerOnlyMode;
         document.querySelector('#cp-form [name="is_supplier"]').checked = true;
         hydrateDefaultSelects();
         updateStatusDisplay(true);
         updateDocumentTypeLabel('');
         activateSection('main');
-        renderList(allItems);
+        renderList(getVisibleItems(allItems));
     }
 
     function startNewCounterparty() {
@@ -703,17 +748,19 @@
 
     function renderList(items) {
         const list = document.getElementById('cp-list');
-        document.getElementById('cp-counter').textContent = items.length;
-        if (!items.length) {
-            list.innerHTML = '<div class="empty-state">Nenhum favorecido encontrado.</div>';
+        const visibleItems = getVisibleItems(items);
+        document.getElementById('cp-counter').textContent = visibleItems.length;
+        if (!visibleItems.length) {
+            list.innerHTML = `<div class="empty-state">${customerOnlyMode ? 'Nenhum favorecido habilitado como cliente.' : 'Nenhum favorecido encontrado.'}</div>`;
             return;
         }
-        list.innerHTML = items.map(item => `
+        list.innerHTML = visibleItems.map(item => `
             <article class="cp-list-item ${selectedListId === item.id ? 'active' : ''}" onclick="selectItemById(${item.id})">
                 <div class="cp-list-item-line">
                     <div class="cp-list-item-title">
                         <strong>${item.code || '-'}</strong>
                         <span>${item.name || '-'}${item.is_customer ? ' · cliente' : ''}${item.is_supplier ? ' · fornecedor' : ''}</span>
+                        ${item.customer_portfolio_name ? `<span>Carteira: ${item.customer_portfolio_code || '-'} - ${item.customer_portfolio_name}</span>` : ''}
                     </div>
                     <span class="cp-list-item-status">${item.is_active ? 'ativo' : 'inativo'}</span>
                 </div>
@@ -735,10 +782,10 @@
     function filterItems() {
         const term = (document.getElementById('cp-search-input').value || '').trim().toLowerCase();
         if (!term) {
-            renderList(allItems);
+            renderList(getVisibleItems(allItems));
             return;
         }
-        const filtered = allItems.filter(item => {
+        const filtered = getVisibleItems(allItems).filter(item => {
             return [item.code, item.name, item.legal_name, item.document_number]
                 .filter(Boolean)
                 .some(value => String(value).toLowerCase().includes(term));
@@ -750,16 +797,17 @@
         const response = await fetch(`/api/financial/catalogs/${catalogType}?company_id=${companyId}`);
         const result = await response.json();
         allItems = Array.isArray(result) ? result : [];
-        renderList(allItems);
+        const visibleItems = getVisibleItems(allItems);
+        renderList(visibleItems);
         if (selectedCounterpartyId) {
-            const selectedByQuery = allItems.find(item => item.id === selectedCounterpartyId);
+            const selectedByQuery = visibleItems.find(item => item.id === selectedCounterpartyId);
             if (selectedByQuery) {
                 fillForm(selectedByQuery);
                 return;
             }
         }
         if (selectedListId) {
-            const selected = allItems.find(item => item.id === selectedListId);
+            const selected = visibleItems.find(item => item.id === selectedListId);
             if (selected) {
                 fillForm(selected);
             }
@@ -775,8 +823,14 @@
             if (key === 'id') continue;
             payload[key] = normalizeValue(key, value);
         }
-        payload.is_customer = !!form.querySelector('[name="is_customer"]')?.checked;
-        payload.is_supplier = !!form.querySelector('[name="is_supplier"]')?.checked;
+        if (lockOperationalClassification && editingId) {
+            const currentItem = allItems.find(item => item.id === editingId);
+            payload.is_customer = !!currentItem?.is_customer;
+            payload.is_supplier = !!currentItem?.is_supplier;
+        } else {
+            payload.is_customer = !!form.querySelector('[name="is_customer"]')?.checked;
+            payload.is_supplier = !!form.querySelector('[name="is_supplier"]')?.checked;
+        }
         const id = formData.get('id');
         const url = id
             ? `/api/financial/catalogs/${catalogType}/${id}?company_id=${companyId}`

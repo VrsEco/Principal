@@ -1,0 +1,448 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Produtos / Serviços{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts?company_id={{ company_id }}">Gestão Comercial</a>
+<span class="sep">/</span>
+<span>Cadastros</span>
+<span class="sep">/</span>
+<span class="current">Produtos / Serviços</span>
+{% endblock %}
+
+{% block workspace_content %}
+{% set current_parent = selected_item.parent if selected_item and selected_item.parent else selected_parent %}
+{% set form_level = level_label(selected_item) if selected_item else level_label_by_parent(current_parent) %}
+{% set current_kind = selected_item.item_kind if selected_item and level_label(selected_item) == 'Item' else 'service' %}
+{% set metadata = (selected_item.metadata_json or {}) if selected_item else {} %}
+{% set selected_level = level_label(selected_item) if selected_item else None %}
+<div class="cw-page fade-in">
+    <header class="cw-header">
+        <div>
+            <h1>Produtos / Serviços</h1>
+            <p class="subtitle">Cadastro operacional dos itens folha com navegação em árvore à esquerda, edição central e abas funcionais à direita.</p>
+        </div>
+        <div class="cw-header-actions">
+            <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Voltar</a>
+            <a class="btn btn-primary" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=items">Novo item</a>
+        </div>
+    </header>
+
+    <section class="cw-shell">
+        <aside class="cw-list-rail">
+            <div class="cw-sidebar-card">
+                <div class="cw-sidebar-header">
+                    <h3>Árvore comercial</h3>
+                    <span class="cw-counter">{{ items|length }}</span>
+                </div>
+                <label class="cw-search">
+                    <span>Buscar</span>
+                    <input id="items-search" type="search" placeholder="Código ou nome">
+                </label>
+                <div class="cw-list compact-tree" id="items-tree-list">
+                    {% macro render_node(node) %}
+                    {% set level = node.level_label %}
+                    <div class="cw-tree-node" data-tree-search="{{ (node.item.code ~ ' ' ~ node.item.name ~ ' ' ~ level)|lower }}">
+                        <details class="cw-tree-details" {% if selected_item and (selected_item.id == node.item.id or selected_item.parent_id == node.item.id or (selected_item.parent and selected_item.parent.parent_id == node.item.id)) %}open{% endif %}>
+                            <summary class="cw-tree-summary">
+                                <a class="cw-list-item {{ 'active' if selected_item and selected_item.id == node.item.id else '' }}" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=items&item_id={{ node.item.id }}">
+                                    <span class="cw-list-item-title">
+                                        <strong>{{ node.item.code }} · {{ node.item.name }}</strong>
+                                        <span>{{ level }}{% if level == 'Item' %} · {{ 'Serviço' if node.item.item_kind == 'service' else 'Produto' }}{% endif %}</span>
+                                    </span>
+                                    <span class="cw-list-item-status">{{ 'Ativo' if node.item.is_active else 'Inativo' }}</span>
+                                </a>
+                            </summary>
+                            {% if node.children %}
+                            <div class="cw-tree-children">
+                                {% for child in node.children %}
+                                    {{ render_node(child) }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </details>
+                    </div>
+                    {% endmacro %}
+                    {% if catalog_tree %}
+                        <div class="cw-tree">
+                            {% for node in catalog_tree %}
+                                {{ render_node(node) }}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">Nenhum item cadastrado ainda.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <main class="cw-main">
+            <section class="cw-panel">
+                <form method="post" class="cw-form">
+                    <input type="hidden" name="action" value="save">
+                    <input type="hidden" name="item_id" value="{{ selected_item.id if selected_item else '' }}">
+                    <div class="cw-panel-header">
+                        <div>
+                            <h2>
+                                {% if selected_item %}
+                                    {{ selected_item.code }} · {{ selected_item.name }}
+                                {% else %}
+                                    Novo {{ form_level }}
+                                {% endif %}
+                            </h2>
+                            <p class="field-hint">
+                                {% if selected_level == 'Grupo' %}
+                                    Grupo estrutural selecionado. Escolha um sub-grupo ou avance na árvore até um item folha.
+                                {% elif selected_level == 'Sub-Grupo' %}
+                                    Sub-grupo selecionado. Você pode cadastrar um novo item folha vinculado a este sub-grupo.
+                                {% else %}
+                                    Somente itens folha entram em contratos e faturamento.
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="cw-panel-actions">
+                            {% if selected_item and selected_level == 'Sub-Grupo' %}
+                            <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=items&parent_id={{ selected_item.id }}">Novo item neste sub-grupo</a>
+                            {% elif selected_item and selected_level == 'Grupo' %}
+                            <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=structure&item_id={{ selected_item.id }}">Abrir estrutura</a>
+                            {% elif selected_item and selected_level == 'Item' and selected_item.parent_id %}
+                            <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=items&parent_id={{ selected_item.parent_id }}">Novo item irmão</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="cw-form-section active" data-section="geral">
+                        <div class="cw-form-grid">
+                            <label>
+                                <span>Nível pai</span>
+                                <select name="parent_id">
+                                    <option value="">Sem pai (Grupo)</option>
+                                    {% for item in parent_candidates %}
+                                        <option value="{{ item.id }}" {% if (selected_item and selected_item.parent_id == item.id) or (not selected_item and selected_parent and selected_parent.id == item.id) %}selected{% endif %}>{{ item.code }} · {{ item.name }} · {{ level_label(item) }}</option>
+                                    {% endfor %}
+                                </select>
+                                <small class="field-hint">Para item folha, selecione preferencialmente um Sub-Grupo.</small>
+                            </label>
+                            <label>
+                                <span>Complemento do código</span>
+                                <input type="text" name="code_suffix" placeholder="001 ou 010" value="{{ selected_item.code.split('.')[-1] if selected_item else '' }}">
+                                <small class="field-hint">Grupo gera sequência automática se vazio. Para Sub-Grupo e Item, informe o complemento.</small>
+                            </label>
+                            <label class="full-width">
+                                <span>Nome</span>
+                                <input type="text" name="name" value="{{ selected_item.name if selected_item else '' }}" required>
+                            </label>
+                            <label>
+                                <span>Natureza</span>
+                                <select name="item_kind" data-item-kind-selector>
+                                    <option value="service" {% if current_kind == 'service' %}selected{% endif %}>Serviço</option>
+                                    <option value="product" {% if current_kind == 'product' %}selected{% endif %}>Produto</option>
+                                </select>
+                            </label>
+                            <label>
+                                <span>Unidade</span>
+                                <input type="text" name="unit_code" value="{{ selected_item.unit_code if selected_item else '' }}" placeholder="UN, H, MÊS">
+                            </label>
+                            <label class="full-width">
+                                <span>Descrição operacional</span>
+                                <textarea name="description" rows="4">{{ selected_item.description if selected_item else '' }}</textarea>
+                            </label>
+                            <label class="checkbox-card full-width">
+                                <strong>Ativo</strong>
+                                <span class="field-hint">Permite uso em contratos, faturamento e vínculos futuros.</span>
+                                <input type="checkbox" name="is_active" {% if not selected_item or selected_item.is_active %}checked{% endif %}>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="cw-form-section" data-section="fiscal">
+                        <div class="cw-info-card full-width">
+                            <strong>Classificação fiscal e tributária</strong>
+                            <div class="cw-info-grid">
+                                <span><strong>CST IBS/CBS:</strong> situação tributária.</span>
+                                <span><strong>cClassTrib:</strong> classificação oficial IBS/CBS.</span>
+                                <span><strong>cPres:</strong> crédito presumido quando aplicável.</span>
+                                <span><strong>IS:</strong> incidência e classificação do Imposto Seletivo.</span>
+                            </div>
+                        </div>
+                        <div class="cw-form-grid">
+                            <label>
+                                <span>CST IBS/CBS</span>
+                                <input type="text" name="cst_ibs_cbs" value="{{ metadata.get('cst_ibs_cbs', '') }}" placeholder="Ex.: 000">
+                            </label>
+                            <label>
+                                <span>cClassTrib IBS/CBS</span>
+                                <input type="text" name="cclasstrib" value="{{ metadata.get('cclasstrib', '') }}" placeholder="Código oficial">
+                            </label>
+                            <label>
+                                <span>cPres</span>
+                                <input type="text" name="cpres" value="{{ metadata.get('cpres', '') }}" placeholder="Crédito presumido">
+                            </label>
+                            <label>
+                                <span>Alíquota CBS (%)</span>
+                                <input type="text" name="aliq_cbs" value="{{ metadata.get('aliq_cbs', '') }}" placeholder="0,00">
+                            </label>
+                            <label>
+                                <span>Alíquota IBS UF (%)</span>
+                                <input type="text" name="aliq_ibs_uf" value="{{ metadata.get('aliq_ibs_uf', '') }}" placeholder="0,00">
+                            </label>
+                            <label>
+                                <span>Alíquota IBS Município (%)</span>
+                                <input type="text" name="aliq_ibs_mun" value="{{ metadata.get('aliq_ibs_mun', '') }}" placeholder="0,00">
+                            </label>
+                            <label class="checkbox-card">
+                                <strong>Sujeito a Imposto Seletivo (IS)</strong>
+                                <span class="field-hint">Use quando houver incidência do IS no item.</span>
+                                <input type="checkbox" name="is_subject" {% if metadata.get('is_subject') %}checked{% endif %}>
+                            </label>
+                            <label>
+                                <span>CST do IS</span>
+                                <input type="text" name="cst_is" value="{{ metadata.get('cst_is', '') }}" placeholder="Código do IS">
+                            </label>
+                            <label>
+                                <span>cClassTrib do IS</span>
+                                <input type="text" name="cclasstrib_is" value="{{ metadata.get('cclasstrib_is', '') }}" placeholder="Classificação do IS">
+                            </label>
+                            <div class="cw-kind-panel full-width" data-item-kind-panel="service" {% if current_kind != 'service' %}hidden{% endif %}>
+                                <div class="cw-info-card">
+                                    <strong>Campos fiscais de serviço</strong>
+                                    <div class="cw-info-grid">
+                                        <span><strong>NBS:</strong> nomenclatura brasileira de serviços.</span>
+                                        <span><strong>LC 116:</strong> item/subitem da lista de serviços.</span>
+                                        <span><strong>cIndOp:</strong> indicador da operação associada ao serviço.</span>
+                                    </div>
+                                </div>
+                                <div class="cw-form-grid nested-grid">
+                                    <label>
+                                        <span>Item/Subitem LC 116</span>
+                                        <input type="text" name="service_list_code" value="{{ metadata.get('service_list_code', '') }}" placeholder="Ex.: 1.07">
+                                    </label>
+                                    <label>
+                                        <span>NBS</span>
+                                        <input type="text" name="nbs" value="{{ metadata.get('nbs', '') }}" placeholder="Nomenclatura Brasileira de Serviços">
+                                    </label>
+                                    <label>
+                                        <span>cIndOp</span>
+                                        <input type="text" name="cindop" value="{{ metadata.get('cindop', '') }}" placeholder="Indicador da operação">
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="cw-kind-panel full-width" data-item-kind-panel="product" {% if current_kind != 'product' %}hidden{% endif %}>
+                                <div class="cw-info-card">
+                                    <strong>Campos fiscais de produto</strong>
+                                    <div class="cw-info-grid">
+                                        <span><strong>NCM/SH:</strong> classificação fiscal da mercadoria.</span>
+                                        <span><strong>CEST:</strong> segmento sujeito à substituição tributária.</span>
+                                        <span><strong>CFOP:</strong> circulação padrão.</span>
+                                    </div>
+                                </div>
+                                <div class="cw-form-grid nested-grid">
+                                    <label>
+                                        <span>NCM</span>
+                                        <input type="text" name="ncm" value="{{ metadata.get('ncm', '') }}">
+                                    </label>
+                                    <label>
+                                        <span>CEST</span>
+                                        <input type="text" name="cest" value="{{ metadata.get('cest', '') }}">
+                                    </label>
+                                    <label>
+                                        <span>CFOP padrão</span>
+                                        <input type="text" name="cfop" value="{{ metadata.get('cfop', '') }}">
+                                    </label>
+                                </div>
+                            </div>
+                            <label class="full-width">
+                                <span>Notas fiscais / governança</span>
+                                <textarea name="fiscal_notes" rows="4">{{ metadata.get('fiscal_notes', '') }}</textarea>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="cw-form-section" data-section="financeiro">
+                        <div class="cw-info-card full-width">
+                            <strong>Dados financeiros e operacionais</strong>
+                            <div class="cw-info-grid">
+                                <span><strong>SKU / código interno:</strong> apoio a integração e precificação.</span>
+                                <span><strong>Unidade:</strong> base para quantificação e faturamento.</span>
+                                <span><strong>Estoque:</strong> flag de uso futuro para integração de produtos.</span>
+                            </div>
+                        </div>
+                        <div class="cw-form-grid">
+                            <div class="cw-kind-panel full-width" data-item-kind-panel="service" {% if current_kind != 'service' %}hidden{% endif %}>
+                                <div class="cw-form-grid nested-grid">
+                                    <label>
+                                        <span>Código interno do serviço</span>
+                                        <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}">
+                                    </label>
+                                    <label>
+                                        <span>Unidade de faturamento</span>
+                                        <input type="text" value="{{ selected_item.unit_code if selected_item else '' }}" disabled>
+                                        <small class="field-hint">A unidade é mantida na aba Geral para evitar divergência de cadastro.</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="cw-kind-panel full-width" data-item-kind-panel="product" {% if current_kind != 'product' %}hidden{% endif %}>
+                                <div class="cw-form-grid nested-grid">
+                                    <label>
+                                        <span>SKU / referência</span>
+                                        <input type="text" name="sku" value="{{ metadata.get('sku', '') }}">
+                                    </label>
+                                    <label class="checkbox-card">
+                                        <strong>Controle de estoque</strong>
+                                        <span class="field-hint">Reserva flag para integração futura com estoque.</span>
+                                        <input type="checkbox" name="stock_control" {% if metadata.get('stock_control') %}checked{% endif %}>
+                                    </label>
+                                </div>
+                            </div>
+                            <label>
+                                <span>Status atual</span>
+                                <input type="text" value="{{ 'Ativo' if not selected_item or selected_item.is_active else 'Inativo' }}" disabled>
+                            </label>
+                            <label>
+                                <span>Nível operacional</span>
+                                <input type="text" value="{{ selected_level or form_level }}" disabled>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="cw-form-actions">
+                        <button class="btn btn-primary" type="submit">{{ 'Salvar item' if selected_item else 'Criar item' }}</button>
+                    </div>
+                </form>
+
+                {% if selected_item %}
+                <div class="cw-secondary-actions">
+                    <form method="post">
+                        <input type="hidden" name="action" value="toggle">
+                        <input type="hidden" name="item_id" value="{{ selected_item.id }}">
+                        <button class="btn btn-secondary" type="submit">{{ 'Inativar' if selected_item.is_active else 'Reativar' }}</button>
+                    </form>
+                    <form method="post" onsubmit="return confirm('Deseja realmente excluir este item mestre?');">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="item_id" value="{{ selected_item.id }}">
+                        <button class="btn btn-danger" type="submit">Excluir</button>
+                    </form>
+                </div>
+                {% endif %}
+            </section>
+        </main>
+
+        <aside class="cw-tabs-rail">
+            <div class="cw-sidebar-card">
+                <h3>Abas do cadastro</h3>
+                <nav class="cw-section-nav" id="cw-section-nav">
+                    <button type="button" class="cw-section-btn active" data-section="geral">Geral</button>
+                    <button type="button" class="cw-section-btn" data-section="fiscal">Fiscal</button>
+                    <button type="button" class="cw-section-btn" data-section="financeiro">Financeiro</button>
+                </nav>
+            </div>
+            <div class="cw-sidebar-card">
+                <h3>Leitura rápida</h3>
+                <div class="cw-note-stack">
+                    <div class="cw-note-card">
+                        <strong>Estrutura</strong>
+                        <span>Grupos e sub-grupos vêm da árvore comercial criada na tela anterior.</span>
+                    </div>
+                    <div class="cw-note-card">
+                        <strong>Uso contratual</strong>
+                        <span>Somente itens folha devem ser utilizados em contratos e faturamento.</span>
+                    </div>
+                    <div class="cw-note-card">
+                        <strong>Seleção atual</strong>
+                        <span>{% if selected_item %}{{ selected_item.code }} · {{ selected_item.name }}{% else %}Nenhum item selecionado.{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </section>
+</div>
+
+<style>
+    .cw-page { padding:0 2rem 2rem; }
+    .cw-header { margin-bottom:1rem; display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; }
+    .cw-header-actions,.cw-panel-actions,.cw-form-actions,.cw-secondary-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+    .subtitle { color:var(--text-secondary); max-width:880px; margin-top:.35rem; }
+    .cw-shell { display:grid; grid-template-columns:320px minmax(0,1fr) 250px; gap:1rem; align-items:start; }
+    .cw-list-rail,.cw-tabs-rail { display:flex; flex-direction:column; gap:1rem; position:sticky; top:1rem; }
+    .cw-sidebar-card,.cw-panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .cw-sidebar-card { padding:1rem; }
+    .cw-sidebar-header { display:flex; justify-content:space-between; align-items:center; gap:.75rem; }
+    .cw-counter { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:30px; padding:0 .5rem; border-radius:999px; background:var(--primary-light); color:var(--primary); font-weight:700; font-size:.78rem; }
+    .cw-search { display:flex; flex-direction:column; gap:.4rem; margin:1rem 0; color:var(--text-secondary); font-weight:600; }
+    .cw-search input,.cw-form input,.cw-form select,.cw-form textarea { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); width:100%; }
+    .cw-list { display:flex; flex-direction:column; gap:.4rem; max-height:calc(100vh - 320px); overflow:auto; padding-right:.2rem; }
+    .cw-list.compact-tree,.cw-tree,.cw-tree-node,.cw-note-stack,.cw-info-grid { display:flex; flex-direction:column; gap:.35rem; }
+    .cw-tree-details { border-radius:10px; }
+    .cw-tree-summary { list-style:none; }
+    .cw-tree-summary::-webkit-details-marker { display:none; }
+    .cw-tree-children { display:flex; flex-direction:column; gap:.2rem; margin-left:.7rem; padding-left:.75rem; border-left:1px dashed var(--border); }
+    .cw-list-item { display:flex; align-items:center; justify-content:space-between; gap:.75rem; border:1px solid transparent; background:transparent; border-radius:10px; padding:.45rem .5rem; text-decoration:none; color:inherit; transition:all .15s ease; }
+    .cw-list-item:hover,.cw-list-item.active { border-color:rgba(37,99,235,.12); background:var(--surface-secondary); }
+    .cw-list-item-title { min-width:0; display:flex; flex-direction:column; gap:.2rem; }
+    .cw-list-item-title strong,.cw-list-item-title span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cw-list-item-title span,.cw-list-item-status,.field-hint,.cw-note-card span { color:var(--text-secondary); font-size:.78rem; }
+    .cw-panel { padding:1.25rem; }
+    .cw-panel-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
+    .cw-panel-header h2,.cw-sidebar-card h3 { margin:0; }
+    .cw-form { display:flex; flex-direction:column; gap:1rem; }
+    .cw-form-section { display:none; }
+    .cw-form-section.active { display:block; }
+    .cw-form-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:1rem; }
+    .cw-form-grid label { display:flex; flex-direction:column; gap:.45rem; }
+    .cw-form-grid .full-width { grid-column:1 / -1; }
+    .nested-grid { padding-top:1rem; }
+    .checkbox-card,.cw-info-card,.cw-note-card { padding:1rem; border-radius:16px; background:var(--surface-secondary); }
+    .checkbox-card { border:1px dashed var(--border); }
+    .cw-info-card,.cw-note-card { border:1px solid var(--border); }
+    .checkbox-card input { width:auto; margin-top:.5rem; }
+    .cw-section-nav { display:flex; flex-direction:column; gap:.5rem; margin-top:.85rem; }
+    .cw-section-btn { text-align:left; border:1px solid var(--border); background:var(--surface-secondary); border-radius:12px; padding:.75rem .9rem; cursor:pointer; color:var(--text-primary); font-weight:600; }
+    .cw-section-btn.active { border-color:var(--primary); background:rgba(37,99,235,.08); color:var(--primary); }
+    .cw-kind-panel[hidden] { display:none !important; }
+    @media (max-width: 1200px) { .cw-shell { grid-template-columns:1fr; } .cw-list-rail,.cw-tabs-rail { position:static; } }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('items-search');
+        const nodes = Array.from(document.querySelectorAll('[data-tree-search]'));
+        const buttons = Array.from(document.querySelectorAll('.cw-section-btn'));
+        const sections = Array.from(document.querySelectorAll('.cw-form-section'));
+        const selector = document.querySelector('[data-item-kind-selector]');
+        const kindPanels = Array.from(document.querySelectorAll('[data-item-kind-panel]'));
+
+        const activateSection = (sectionKey) => {
+            buttons.forEach((button) => button.classList.toggle('active', button.dataset.section === sectionKey));
+            sections.forEach((section) => section.classList.toggle('active', section.dataset.section === sectionKey));
+        };
+
+        buttons.forEach((button) => button.addEventListener('click', () => activateSection(button.dataset.section)));
+
+        if (searchInput && nodes.length) {
+            searchInput.addEventListener('input', function () {
+                const query = (searchInput.value || '').trim().toLowerCase();
+                nodes.forEach((node) => {
+                    const match = !query || (node.getAttribute('data-tree-search') || '').includes(query);
+                    node.style.display = match ? '' : 'none';
+                });
+            });
+        }
+
+        const syncKindPanels = () => {
+            const selected = selector ? selector.value : 'service';
+            kindPanels.forEach((panel) => {
+                panel.hidden = panel.getAttribute('data-item-kind-panel') !== selected;
+            });
+        };
+
+        if (selector) {
+            selector.addEventListener('change', syncKindPanels);
+            syncKindPanels();
+        }
+
+        activateSection('geral');
+    });
+</script>
+{% endblock %}

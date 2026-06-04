@@ -271,6 +271,45 @@ class FinancialCostCenter(db.Model):
         }
 
 
+class FinancialCustomerPortfolio(db.Model):
+    __tablename__ = "financial_customer_portfolios"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "code", name="uq_financial_customer_portfolios_company_code"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("financial_customer_portfolios.id"), index=True)
+    code = db.Column(db.String(30), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    accepts_posting = db.Column(db.Boolean, nullable=False, default=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    deleted_at = db.Column(db.DateTime)
+
+    parent = db.relationship("FinancialCustomerPortfolio", remote_side=[id], foreign_keys=[parent_id])
+
+    def to_dict(self):
+        metadata = self.metadata_json or {}
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "parent_id": self.parent_id,
+            "code": self.code,
+            "name": self.name,
+            "description": self.description,
+            "accepts_posting": self.accepts_posting,
+            "account_level_type": metadata.get("account_level_type") or ("analytic" if self.accepts_posting else "synthetic"),
+            "is_active": self.is_active,
+            "metadata_json": metadata,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class FinancialCounterparty(db.Model):
     __tablename__ = "financial_counterparties"
     __table_args__ = (
@@ -279,6 +318,7 @@ class FinancialCounterparty(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    customer_portfolio_id = db.Column(db.Integer, db.ForeignKey("financial_customer_portfolios.id"), index=True)
     default_chart_account_id = db.Column(db.Integer, db.ForeignKey("financial_chart_accounts.id"), index=True)
     default_cost_center_id = db.Column(db.Integer, db.ForeignKey("financial_cost_centers.id"), index=True)
     code = db.Column(db.String(30), nullable=False)
@@ -295,6 +335,7 @@ class FinancialCounterparty(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = db.Column(db.DateTime)
 
+    customer_portfolio = db.relationship("FinancialCustomerPortfolio", foreign_keys=[customer_portfolio_id])
     default_chart_account = db.relationship("FinancialChartAccount", foreign_keys=[default_chart_account_id])
     default_cost_center = db.relationship("FinancialCostCenter", foreign_keys=[default_cost_center_id])
 
@@ -310,6 +351,7 @@ class FinancialCounterparty(db.Model):
         return {
             "id": self.id,
             "company_id": self.company_id,
+            "customer_portfolio_id": self.customer_portfolio_id,
             "default_chart_account_id": self.default_chart_account_id,
             "default_cost_center_id": self.default_cost_center_id,
             "code": self.code,
@@ -323,6 +365,8 @@ class FinancialCounterparty(db.Model):
             "is_active": self.is_active,
             "is_customer": self.is_customer,
             "is_supplier": self.is_supplier,
+            "customer_portfolio_name": self.customer_portfolio.name if self.customer_portfolio else None,
+            "customer_portfolio_code": self.customer_portfolio.code if self.customer_portfolio else None,
             "metadata_json": self.metadata_json or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

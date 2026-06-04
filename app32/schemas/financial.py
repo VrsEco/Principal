@@ -492,6 +492,95 @@ class FinancialCostCenterUpdateInput(BaseModel):
         return text.lower() or None
 
 
+class FinancialCustomerPortfolioInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    parent_id: Optional[int] = None
+    code: Optional[str] = Field(None, max_length=30)
+    code_suffix: Optional[str] = Field(None, max_length=10)
+    reduced_code: Optional[str] = Field(None, max_length=3)
+    external_code: Optional[str] = Field(None, max_length=120)
+    name: str = Field(..., min_length=2, max_length=120)
+    description: Optional[str] = None
+    accepts_posting: bool = True
+    account_level_type: Optional[str] = Field(None, pattern="^(analytic|synthetic)$")
+    is_active: bool = True
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def normalize_code(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    @field_validator("code_suffix", mode="before")
+    @classmethod
+    def normalize_code_suffix(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        if not text.isdigit():
+            raise ValueError("code_suffix deve conter apenas números.")
+        return text
+
+    @field_validator("reduced_code", mode="before")
+    @classmethod
+    def normalize_reduced_code(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text.lower() or None
+
+
+class FinancialCustomerPortfolioUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    parent_id: Optional[int] = None
+    code: Optional[str] = Field(None, max_length=30)
+    code_suffix: Optional[str] = Field(None, max_length=10)
+    reduced_code: Optional[str] = Field(None, max_length=3)
+    external_code: Optional[str] = Field(None, max_length=120)
+    name: Optional[str] = Field(None, min_length=2, max_length=120)
+    description: Optional[str] = None
+    accepts_posting: Optional[bool] = None
+    account_level_type: Optional[str] = Field(None, pattern="^(analytic|synthetic)$")
+    is_active: Optional[bool] = None
+    metadata_json: Optional[Dict[str, Any]] = None
+
+    @field_validator("code", mode="before")
+    @classmethod
+    def normalize_code(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    @field_validator("code_suffix", mode="before")
+    @classmethod
+    def normalize_code_suffix(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        if not text.isdigit():
+            raise ValueError("code_suffix deve conter apenas números.")
+        return text
+
+    @field_validator("reduced_code", mode="before")
+    @classmethod
+    def normalize_reduced_code(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text.lower() or None
+
+
 class _SimpleFinancialCatalogBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -715,6 +804,7 @@ class FinancialCounterpartyInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     company_id: int
+    customer_portfolio_id: Optional[int] = None
     default_chart_account_id: Optional[int] = None
     default_cost_center_id: Optional[int] = None
     code: Optional[str] = Field(None, max_length=30)
@@ -747,6 +837,7 @@ class FinancialCounterpartyInput(BaseModel):
 class FinancialCounterpartyUpdateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    customer_portfolio_id: Optional[int] = None
     default_chart_account_id: Optional[int] = None
     default_cost_center_id: Optional[int] = None
     code: Optional[str] = Field(None, min_length=1, max_length=30)

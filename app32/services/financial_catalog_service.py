@@ -15,6 +15,7 @@ from models.financial import (
     FinancialChartAccount,
     FinancialCorrectionIndex,
     FinancialCostCenter,
+    FinancialCustomerPortfolio,
     FinancialCounterparty,
     FinancialDiscountRule,
     FinancialPaymentMethod,
@@ -32,6 +33,8 @@ from schemas.financial import (
     FinancialCorrectionIndexUpdateInput,
     FinancialCostCenterInput,
     FinancialCostCenterUpdateInput,
+    FinancialCustomerPortfolioInput,
+    FinancialCustomerPortfolioUpdateInput,
     FinancialCounterpartyInput,
     FinancialCounterpartyUpdateInput,
     FinancialDiscountRuleInput,
@@ -67,12 +70,19 @@ class FinancialCatalogService:
             "code_field": "code",
             "company_fk_fields": ["parent_id"],
         },
+        "customer_portfolios": {
+            "model": FinancialCustomerPortfolio,
+            "create_schema": FinancialCustomerPortfolioInput,
+            "update_schema": FinancialCustomerPortfolioUpdateInput,
+            "code_field": "code",
+            "company_fk_fields": ["parent_id"],
+        },
         "counterparties": {
             "model": FinancialCounterparty,
             "create_schema": FinancialCounterpartyInput,
             "update_schema": FinancialCounterpartyUpdateInput,
             "code_field": "code",
-            "company_fk_fields": ["default_chart_account_id", "default_cost_center_id"],
+            "company_fk_fields": ["customer_portfolio_id", "default_chart_account_id", "default_cost_center_id"],
         },
         "account_categories": {
             "model": FinancialAccountCategory,
@@ -177,7 +187,14 @@ class FinancialCatalogService:
         if not suffix:
             return None
 
-        parent_model = FinancialChartAccount if catalog_type == "chart_accounts" else FinancialCostCenter
+        parent_model_map = {
+            "chart_accounts": FinancialChartAccount,
+            "cost_centers": FinancialCostCenter,
+            "customer_portfolios": FinancialCustomerPortfolio,
+        }
+        parent_model = parent_model_map.get(catalog_type)
+        if not parent_model:
+            return suffix
         if not parent_id:
             return suffix
 
@@ -385,7 +402,7 @@ class FinancialCatalogService:
         prepared = dict(data or {})
         metadata = dict(prepared.get("metadata_json") or {})
 
-        if catalog_type in {"chart_accounts", "cost_centers"}:
+        if catalog_type in {"chart_accounts", "cost_centers", "customer_portfolios"}:
             has_code_suffix = "code_suffix" in prepared
             has_reduced_code = "reduced_code" in prepared
             has_external_code = "external_code" in prepared
@@ -407,7 +424,7 @@ class FinancialCatalogService:
             if has_external_code:
                 metadata["external_code"] = external_code
 
-        if catalog_type in {"chart_accounts", "cost_centers"}:
+        if catalog_type in {"chart_accounts", "cost_centers", "customer_portfolios"}:
             has_level_type = "account_level_type" in prepared
             account_level_type = prepared.pop("account_level_type", None)
             if account_level_type:
@@ -525,6 +542,24 @@ class FinancialCatalogService:
             ):
                 return "O centro pai selecionado cria um ciclo inválido na hierarquia."
 
+        if catalog_type == "customer_portfolios" and data.get("parent_id"):
+            parent = FinancialCustomerPortfolio.query.filter(
+                FinancialCustomerPortfolio.id == data["parent_id"],
+                FinancialCustomerPortfolio.company_id == company_id,
+                FinancialCustomerPortfolio.deleted_at.is_(None),
+            ).first()
+            if not parent:
+                return "Carteira pai fora do escopo da empresa."
+            if parent.accepts_posting:
+                return "Carteira analítica não pode ser usada como carteira pai."
+            if FinancialCatalogService._would_create_cycle(
+                model=FinancialCustomerPortfolio,
+                company_id=company_id,
+                item_id=data.get("id"),
+                parent_id=data["parent_id"],
+            ):
+                return "A carteira pai selecionada cria um ciclo inválido na hierarquia."
+
         if catalog_type == "counterparties" and data.get("default_chart_account_id"):
             chart = FinancialChartAccount.query.filter(
                 FinancialChartAccount.id == data["default_chart_account_id"],
@@ -542,6 +577,17 @@ class FinancialCatalogService:
             ).first()
             if not center:
                 return "Centro padrão fora do escopo da empresa."
+
+        if catalog_type == "counterparties" and data.get("customer_portfolio_id"):
+            portfolio = FinancialCustomerPortfolio.query.filter(
+                FinancialCustomerPortfolio.id == data["customer_portfolio_id"],
+                FinancialCustomerPortfolio.company_id == company_id,
+                FinancialCustomerPortfolio.deleted_at.is_(None),
+            ).first()
+            if not portfolio:
+                return "Carteira do cliente fora do escopo da empresa."
+            if not portfolio.accepts_posting:
+                return "Selecione uma carteira analítica para vincular o cliente."
 
         if catalog_type == "counterparties":
             is_customer, is_supplier = FinancialCatalogService._extract_counterparty_roles(data)
@@ -809,8 +855,13 @@ class FinancialCatalogService:
                 config["model"],
                 data["company_id"],
             )
-        if catalog_type in {"chart_accounts", "cost_centers"} and not data.get("code"):
-            return None, "Selecione a conta pai e informe o complemento do código."
+        if catalog_type in {"chart_accounts", "cost_centers", "customer_portfolios"} and not data.get("code"):
+            label = {
+                "chart_accounts": "Selecione a conta pai e informe o complemento do código.",
+                "cost_centers": "Selecione o centro pai e informe o complemento do código.",
+                "customer_portfolios": "Selecione a carteira pai e informe o complemento do código.",
+            }
+            return None, label[catalog_type]
 
         scope_error = FinancialCatalogService._validate_scope(
             company_id=data["company_id"],
@@ -1103,6 +1154,23 @@ class FinancialCatalogService:
             ).first()
             if has_children:
                 return None, "Não é possível excluir um centro que possui centros filhos."
+
+        if catalog_type == "customer_portfolios":
+            has_children = FinancialCustomerPortfolio.query.filter(
+                FinancialCustomerPortfolio.parent_id == item_id,
+                FinancialCustomerPortfolio.company_id == company_id,
+                FinancialCustomerPortfolio.deleted_at.is_(None),
+            ).first()
+            if has_children:
+                return None, "Não é possível excluir uma carteira que possui carteiras filhas."
+
+            linked_customer = FinancialCounterparty.query.filter(
+                FinancialCounterparty.customer_portfolio_id == item_id,
+                FinancialCounterparty.company_id == company_id,
+                FinancialCounterparty.deleted_at.is_(None),
+            ).first()
+            if linked_customer:
+                return None, "Não é possível excluir uma carteira já vinculada a clientes."
 
         try:
             if catalog_type == "cost_centers" and getattr(item, "is_default_suggestion", False):

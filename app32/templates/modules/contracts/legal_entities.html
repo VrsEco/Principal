@@ -32,7 +32,7 @@
             <input type="hidden" name="entity_id" value="{{ selected_entity.id if selected_entity else '' }}">
             <div class="panel-header"><h2>{{ 'Editar PJ' if selected_entity else 'Nova PJ' }}</h2></div>
             <div class="panel-body form-grid">
-                <label><span>Código</span><input type="text" name="code" value="{{ selected_entity.code if selected_entity else '' }}"></label>
+                <label><span>Código</span><input type="text" name="code" value="{{ selected_entity.code if selected_entity else next_code_preview }}" readonly><small class="field-hint">Gerado automaticamente no padrão empresa.emissora.sequencial.</small></label>
                 <label><span>CNPJ</span><input type="text" name="cnpj" value="{{ selected_entity.cnpj if selected_entity else '' }}" required></label>
                 <label class="full-width"><span>Razão social</span><input type="text" name="legal_name" value="{{ selected_entity.legal_name if selected_entity else '' }}" required></label>
                 <label><span>Nome fantasia</span><input type="text" name="trade_name" value="{{ selected_entity.trade_name if selected_entity else '' }}"></label>

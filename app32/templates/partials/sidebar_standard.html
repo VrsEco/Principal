@@ -145,17 +145,17 @@
                     <a href="/contracts/customers/portfolio" class="sub-nav-link {{ 'active' if request.path == '/contracts/customers/portfolio' }}">
                         <span>Carteira de Clientes</span>
                     </a>
-                    <a href="/contracts/legal-entities" class="sub-nav-link {{ 'active' if request.path == '/contracts/legal-entities' }}">
-                        <span>PJs Emissoras</span>
-                    </a>
                     <a href="/contracts/customers" class="sub-nav-link {{ 'active' if request.path == '/contracts/customers' or request.path == '/contracts/parties' or '/contracts/parties/' in request.path }}">
                         <span>Clientes</span>
                     </a>
+                    <a href="/contracts/legal-entities" class="sub-nav-link {{ 'active' if request.path == '/contracts/legal-entities' }}">
+                        <span>PJs Emissoras</span>
+                    </a>
                     <a href="/contracts/catalogs/items?catalog_view=structure" class="sub-nav-link {{ 'active' if request.path == '/contracts/catalogs/items' and request.args.get('catalog_view') == 'structure' }}">
-                        <span>Grupo e Sub-Grupos de Produtos e Serviços</span>
+                        <span>Grupo de Produtos / Serviços</span>
                     </a>
                     <a href="/contracts/catalogs/items?catalog_view=items" class="sub-nav-link {{ 'active' if request.path == '/contracts/catalogs/items' and request.args.get('catalog_view') == 'items' }}">
-                        <span>Serviços/Produtos</span>
+                        <span>Produtos / Serviços</span>
                     </a>
                 </div>
             </div>

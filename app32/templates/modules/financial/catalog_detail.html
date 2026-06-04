@@ -1,13 +1,17 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Financeiro - {{ catalog_page.title }}{% endblock %}
+{% block title %}{{ workspace_current_label if workspace_current_label is defined else ('Financeiro - ' ~ catalog_page.title) }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="/financial/entries">Financeiro</a>
+<a href="{{ workspace_origin_href if workspace_origin_href is defined else '/financial/entries' }}">{{ workspace_origin_label if workspace_origin_label is defined else 'Financeiro' }}</a>
 <span class="sep">/</span>
-<span class="current">{{ catalog_page.title }}</span>
+{% if workspace_section_label is defined %}
+<a href="{{ workspace_section_href if workspace_section_href is defined else '#' }}">{{ workspace_section_label }}</a>
+<span class="sep">/</span>
+{% endif %}
+<span class="current">{{ workspace_current_label if workspace_current_label is defined else catalog_page.title }}</span>
 {% endblock %}
 
 {% block navbar_actions %}{% endblock %}
@@ -17,6 +21,9 @@
     <header class="cw-header">
         <div>
             <h1>{{ catalog_page.title }}</h1>
+            {% if catalog_page.description %}
+            <p class="subtitle">{{ catalog_page.description }}</p>
+            {% endif %}
         </div>
         <button class="btn btn-primary" type="button" onclick="startNewItem()">{{ catalog_page.new_label or 'Novo cadastro' }}</button>
     </header>
@@ -62,6 +69,7 @@
         align-items:flex-start;
         gap:1rem;
     }
+    .subtitle { color:var(--text-secondary); max-width:840px; margin-top:.35rem; }
     .cw-shell { display:grid; grid-template-columns:320px minmax(0,1fr) 250px; gap:1rem; align-items:start; }
     .cw-shell.single-page { grid-template-columns:320px minmax(0,1fr); }
     .cw-shell.chart-accounts-layout.single-page { grid-template-columns:minmax(460px, 560px) minmax(0,1fr); }
@@ -719,6 +727,23 @@
                 { name: 'manager_employee_id', label: 'Gestor', section: 'main', type: 'number' },
                 { name: 'is_default_suggestion', label: 'Registro padrão', section: 'main', type: 'select', options: [['false', 'Não'], ['true', 'Sim']], hint: 'Quando marcado, o Financeiro sugere este centro automaticamente.' },
                 { name: 'description', label: 'Outros dados / observações', section: 'main', type: 'textarea', colSpan: 2 },
+            ],
+        },
+        customer_portfolios: {
+            singlePage: true,
+            titleField: 'name',
+            sections: [
+                { key: 'main', label: 'Dados principais' },
+            ],
+            fields: [
+                { name: 'code', type: 'hidden', section: 'main' },
+                { name: 'parent_id', label: 'Carteira pai', section: 'main', type: 'dynamic-select', optionSource: 'hierarchy_parent', placeholderOption: 'Sem carteira pai' },
+                { name: 'code_suffix', label: 'Código da carteira', section: 'main', inputmode: 'numeric', maxlength: 10, oninput: 'handleCodeSuffixInput(this)', hintId: 'cw-code-preview', hint: 'Código completo: -' },
+                { name: 'name', label: 'Nome', section: 'main', required: true },
+                { name: 'account_level_type', label: 'Estrutura', section: 'main', type: 'select', options: [['analytic', 'Analítica'], ['synthetic', 'Sintética']] },
+                { name: 'reduced_code', label: 'Código reduzido', section: 'main', maxlength: 3, hint: 'Até 3 caracteres alfanuméricos' },
+                { name: 'external_code', label: 'Código externo', section: 'main', maxlength: 120, hint: 'Campo livre para referência do CRM/ERP externo' },
+                { name: 'description', label: 'Observações', section: 'main', type: 'textarea', colSpan: 2 },
             ],
         },
         account_categories: {
@@ -1516,7 +1541,7 @@
                             <div class="cw-list-item-actions" onclick="event.stopPropagation()">
                                 ${(activeCatalog === 'cost_centers' && item.is_default_suggestion) ? '<span class="cw-tree-badge">Padrão</span>' : ''}
                                 <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
-                                ${((['chart_accounts', 'cost_centers'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
+                                ${((['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) && item.accepts_posting !== true) ? `<button type="button" class="btn btn-accent" onclick="startChildItem(${item.id})">Adicionar filha</button>` : ''}
                                 <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                                 <button type="button" class="btn btn-danger" onclick="deleteItem(${item.id})">Excluir</button>
                             </div>
@@ -1750,7 +1775,7 @@
         if (getCatalogDef().singlePage) {
             shell?.classList.add('single-page');
         }
-        if (activeCatalog === 'chart_accounts') {
+        if (['chart_accounts', 'customer_portfolios'].includes(activeCatalog)) {
             shell?.classList.add('chart-accounts-layout');
         }
         renderSectionNav();

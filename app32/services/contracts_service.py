@@ -990,10 +990,36 @@ class ContractService:
         return visible_keys[0] if visible_keys else "cliente"
 
     @staticmethod
+    def preview_next_contracting_legal_entity_code(company_id: int) -> str:
+        return ContractService._next_contracting_legal_entity_code(company_id)
+
+    @staticmethod
+    def _next_contracting_legal_entity_code(company_id: int) -> str:
+        company_code = ContractService._resolve_company_code(company_id)
+        code_pattern = re.compile(rf"^{re.escape(company_code)}\.([A-Z0-9]+)\.(\d+)$")
+        next_emitter_code = 1
+        next_sequence = 1
+
+        rows = ContractingLegalEntity.query.with_entities(ContractingLegalEntity.code).filter(
+            ContractingLegalEntity.company_id == company_id
+        ).all()
+        for (code,) in rows:
+            normalized_code = str(code or "").strip().upper()
+            match = code_pattern.match(normalized_code)
+            if not match:
+                continue
+            emitter_token, sequence_token = match.groups()
+            if emitter_token.isdigit():
+                next_emitter_code = max(next_emitter_code, int(emitter_token) + 1)
+            next_sequence = max(next_sequence, int(sequence_token) + 1)
+
+        return f"{company_code}.{next_emitter_code}.{next_sequence:03d}"
+
+    @staticmethod
     def create_contracting_legal_entity(*, company_id: int, payload: dict):
         entity = ContractingLegalEntity(
             company_id=company_id,
-            code=ContractService._normalize_text(payload.get("code")) or ContractService._next_structured_code(ContractingLegalEntity, company_id, "J"),
+            code=ContractService._next_contracting_legal_entity_code(company_id),
             is_active=True,
         )
         ContractService.update_contracting_legal_entity(entity=entity, payload=payload, is_new=True)

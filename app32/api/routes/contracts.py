@@ -66,6 +66,20 @@ def _build_commercial_counterparty_page() -> dict:
     }
 
 
+def _build_customer_portfolio_page() -> dict:
+    return {
+        "api_type": "customer_portfolios",
+        "title": "Carteira de Clientes",
+        "new_label": "Nova carteira",
+        "eyebrow": "Cadastros comerciais",
+        "description": "Estruture a carteira comercial em árvore e vincule apenas carteiras analíticas aos clientes.",
+    }
+
+
+def _is_contract_catalog_structure_item(item) -> bool:
+    return bool(item) and ContractsCatalogService.get_level_label(item) in {"Grupo", "Sub-Grupo"}
+
+
 def _build_contract_detail_context(company: Company, contract, active_tab: str) -> dict:
     financial_terms = ContractFinancialTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
     fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
@@ -388,17 +402,18 @@ def contracts_customer_portfolio():
     company = get_active_company()
     if not company:
         abort(400, description="Empresa ativa não localizada.")
-    portfolio_tree = ContractService.list_customer_contract_tree(company.id)
-    portfolio_summary = ContractService.get_customer_portfolio_summary(company.id)
     return render_template(
-        "modules/contracts/customers_portfolio.html",
+        "modules/financial/catalog_detail.html",
         company=company,
         company_id=company.id,
-        portfolio_tree=portfolio_tree,
-        portfolio_summary=portfolio_summary,
-        contract_status_label=ContractService.get_contract_status_label,
-        contract_start_date=ContractService.get_contract_start_date,
-        contract_next_action=ContractService.get_contract_next_action,
+        catalog_slug="customer-portfolios",
+        catalog_pages={"customer-portfolios": _build_customer_portfolio_page()},
+        catalog_page=_build_customer_portfolio_page(),
+        workspace_origin_label="Gestão Comercial",
+        workspace_origin_href=f"/contracts?company_id={company.id}",
+        workspace_section_label="Cadastros",
+        workspace_section_href=f"/contracts/customers/portfolio?company_id={company.id}",
+        workspace_current_label="Carteira de Clientes",
     )
 
 
@@ -417,13 +432,17 @@ def contracts_customers_workspace():
         catalog_page=_build_commercial_counterparty_page(),
         selected_counterparty_id=request.args.get("counterparty_id", type=int),
         workspace_origin_label="Gestão Comercial",
+        workspace_origin_href=f"/contracts?company_id={company.id}",
         workspace_section_label="Cadastros",
+        workspace_section_href=f"/contracts/customers/portfolio?company_id={company.id}",
         workspace_current_label="Clientes",
         workspace_back_href=f"/contracts/customers/portfolio?company_id={company.id}",
         workspace_back_label="Carteira de Clientes",
-        workspace_subtitle="Cadastro mestre comercial compartilhado com contratos. Marque Cliente para habilitar o favorecido na abertura de contrato.",
-        workspace_new_label="Novo cliente",
+        workspace_subtitle="Lista simples dos favorecidos habilitados como cliente. A classificação Cliente/Fornecedor permanece bloqueada aqui e só pode ser alterada no cadastro de favorecidos.",
+        workspace_new_enabled=False,
         workspace_list_label="Clientes",
+        customer_only_mode=True,
+        lock_operational_classification=True,
     )
 
 
@@ -562,15 +581,69 @@ def contracts_items_catalog():
             flash(f"Falha ao processar catálogo de itens: {exc}", "error")
 
     items = ContractsCatalogService.list_items(company.id)
+    catalog_tree = ContractsCatalogService.build_tree(company.id)
     selected_item = ContractsCatalogService.get_item(company.id, selected_item_id) if selected_item_id else None
     if selected_item and selected_item.parent_id:
         selected_parent_id = selected_item.parent_id
     selected_parent = ContractsCatalogService.get_item(company.id, selected_parent_id) if selected_parent_id else None
+
+    if catalog_view == "structure":
+        if selected_item and not _is_contract_catalog_structure_item(selected_item):
+            selected_item = None
+        if selected_parent and ContractsCatalogService.get_level_label(selected_parent) != "Grupo":
+            selected_parent = None
+
+        def _filter_structure_tree(nodes):
+            filtered = []
+            for node in nodes:
+                if not _is_contract_catalog_structure_item(node.get("item")):
+                    continue
+                clone = dict(node)
+                clone["children"] = _filter_structure_tree(node.get("children") or [])
+                filtered.append(clone)
+            return filtered
+
+        structure_items = [item for item in items if _is_contract_catalog_structure_item(item)]
+        structure_tree = _filter_structure_tree(catalog_tree)
+        structure_parent_candidates = [
+            item
+            for item in items
+            if ContractsCatalogService.get_level_label(item) == "Grupo" and (not selected_item or item.id != selected_item.id)
+        ]
+        return render_template(
+            "modules/contracts/contracts_items_catalog_structure.html",
+            company=company,
+            company_id=company.id,
+            catalog_tree=structure_tree,
+            items=structure_items,
+            parent_candidates=structure_parent_candidates,
+            selected_item=selected_item,
+            selected_parent=selected_parent,
+            level_label=ContractsCatalogService.get_level_label,
+            level_label_by_parent=ContractsCatalogService.get_level_label_by_parent,
+            catalog_view=catalog_view,
+        )
+
+    if catalog_view == "items":
+        return render_template(
+            "modules/contracts/contracts_items_catalog_items.html",
+            company=company,
+            company_id=company.id,
+            catalog_tree=catalog_tree,
+            items=items,
+            parent_candidates=ContractsCatalogService.list_parent_candidates(company.id, selected_item.id if selected_item else None),
+            selected_item=selected_item,
+            selected_parent=selected_parent,
+            level_label=ContractsCatalogService.get_level_label,
+            level_label_by_parent=ContractsCatalogService.get_level_label_by_parent,
+            catalog_view=catalog_view,
+        )
+
     return render_template(
         "modules/contracts/contracts_items_catalog.html",
         company=company,
         company_id=company.id,
-        catalog_tree=ContractsCatalogService.build_tree(company.id),
+        catalog_tree=catalog_tree,
         items=items,
         parent_candidates=ContractsCatalogService.list_parent_candidates(company.id, selected_item.id if selected_item else None),
         selected_item=selected_item,
@@ -617,6 +690,7 @@ def contracts_legal_entities():
         company_id=company.id,
         legal_entities=legal_entities,
         selected_entity=selected_entity,
+        next_code_preview=ContractService.preview_next_contracting_legal_entity_code(company.id),
         page_origin_label="Gestão Comercial",
         page_section_label="Cadastros",
         page_title="PJs Emissoras",
