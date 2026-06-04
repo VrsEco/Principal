@@ -766,7 +766,6 @@
                 </div>
                 <div class="cp-list-item-actions" onclick="event.stopPropagation()">
                     <button type="button" class="btn btn-secondary" onclick="selectItemById(${item.id})">Editar</button>
-                    ${item.is_customer ? `<a class="btn btn-secondary" href="/contracts/new?company_id=${companyId}&counterparty_id=${item.id}" target="_self">Usar em contrato</a>` : ''}
                     <button type="button" class="btn ${item.is_active ? 'btn-danger' : 'btn-primary'}" onclick="toggleItem(${item.id}, ${!item.is_active})">${item.is_active ? 'Inativar' : 'Reativar'}</button>
                 </div>
             </article>

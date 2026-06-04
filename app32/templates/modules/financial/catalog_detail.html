@@ -861,7 +861,7 @@
     }
 
     function initializeCollapsedTreeNodes(items) {
-        if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
+        if (!['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) return;
         const treeMap = buildTreeMap(items);
         const ids = new Set(items.map(item => item.id));
         const savedRaw = window.localStorage.getItem(treeNodesStorageKey);
@@ -1101,7 +1101,7 @@
         return allItems
             .filter(item => {
                 if (blockedIds.has(item.id)) return false;
-                if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
+                if (['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) {
                     if (item.accepts_posting === true) return false;
                 }
                 return true;
@@ -1158,7 +1158,7 @@
     }
 
     function updateGeneratedCode() {
-        if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
+        if (!['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) return;
         const form = document.getElementById('cw-form');
         if (!form) return;
         const codeField = form.querySelector('[name="code"]');
@@ -1232,6 +1232,10 @@
             if (levelField && !levelField.value) levelField.value = 'analytic';
         }
         if (activeCatalog === 'cost_centers') {
+            const levelField = form.querySelector('[name="account_level_type"]');
+            if (levelField && !levelField.value) levelField.value = 'analytic';
+        }
+        if (activeCatalog === 'customer_portfolios') {
             const levelField = form.querySelector('[name="account_level_type"]');
             if (levelField && !levelField.value) levelField.value = 'analytic';
         }
@@ -1309,13 +1313,15 @@
     }
 
     function startChildItem(parentId) {
-        if (!['chart_accounts', 'cost_centers'].includes(activeCatalog)) return;
+        if (!['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) return;
         const parentItem = allItems.find(item => item.id === parentId);
         if (!parentItem) return;
-        if (['chart_accounts', 'cost_centers'].includes(activeCatalog) && parentItem.accepts_posting === true) {
+        if (['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog) && parentItem.accepts_posting === true) {
             alert(activeCatalog === 'chart_accounts'
                 ? 'Só é possível adicionar conta filha em contas sintéticas.'
-                : 'Só é possível adicionar centro filho em centros sintéticos.');
+                : activeCatalog === 'cost_centers'
+                    ? 'Só é possível adicionar centro filho em centros sintéticos.'
+                    : 'Só é possível adicionar carteira filha em carteiras sintéticas.');
             return;
         }
 
@@ -1368,7 +1374,7 @@
             }
             handleDocumentInput(form.querySelector('[name="holder_document"]'));
         }
-        if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
+        if (['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) {
             const suffixField = form.querySelector('[name="code_suffix"]');
             const reducedCodeField = form.querySelector('[name="reduced_code"]');
             const externalCodeField = form.querySelector('[name="external_code"]');
@@ -1381,7 +1387,7 @@
             if (notesField) {
                 notesField.value = item?.metadata_json?.notes || '';
             }
-            if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
+            if (['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) {
                 const levelField = form.querySelector('[name="account_level_type"]');
                 if (levelField) {
                     levelField.value = item?.metadata_json?.account_level_type || (item.accepts_posting ? 'analytic' : 'synthetic');
@@ -1459,7 +1465,7 @@
             list.innerHTML = '<div class="empty-state">Nenhum cadastro encontrado.</div>';
             return;
         }
-        if (['chart_accounts', 'cost_centers'].includes(activeCatalog)) {
+        if (['chart_accounts', 'cost_centers', 'customer_portfolios'].includes(activeCatalog)) {
             renderHierarchicalTree(items, list);
             return;
         }

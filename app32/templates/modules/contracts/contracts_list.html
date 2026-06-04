@@ -432,6 +432,7 @@
         </main>
 
         <aside class="contracts-tabs-rail">
+            {% if not is_new_contract %}
             <div class="contracts-sidebar-card">
                 <h3>Abas do contrato</h3>
                 <nav class="contracts-tab-nav">
@@ -446,6 +447,7 @@
                     {% endfor %}
                 </nav>
             </div>
+            {% endif %}
 
             <form method="get" class="contracts-sidebar-card contracts-filter-card">
                 <input type="hidden" name="company_id" value="{{ company_id }}">
