@@ -664,6 +664,7 @@ def contracts_list():
         "competence_rule_options": ContractService.get_competence_rule_options(),
         "renewal_rule_options": ContractService.get_renewal_rule_options(),
         "due_rule_reference_options": ContractService.get_due_rule_reference_options(),
+        "retention_trigger_options": ContractService.get_retention_trigger_options(),
         "operational_profile_options": ContractService.get_operational_profile_options(),
         "selected_operational_profile": ContractService.OPERATIONAL_PROFILE_FULL,
         "contract_catalog_items": ContractsCatalogService.list_selectable_items(company.id),

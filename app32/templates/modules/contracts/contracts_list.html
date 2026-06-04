@@ -233,6 +233,30 @@
                             <label><span>Quantidade</span><input type="number" step="0.01" min="0" name="quantity" value="1" data-contract-item-qty></label>
                             <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00" data-contract-item-unit-price></label>
                             <label><span>Preço total</span><input type="text" name="total_price" value="0,00" data-contract-item-total-price></label>
+                            <label><span>Plano de contas</span>
+                                <select name="chart_account_id">
+                                    <option value="">Selecione</option>
+                                    {% for item in references.chart_accounts %}
+                                    <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label><span>Centro de resultados</span>
+                                <select name="cost_center_id">
+                                    <option value="">Selecione</option>
+                                    {% for item in references.cost_centers %}
+                                    <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label><span>Projeto</span>
+                                <select name="project_id">
+                                    <option value="">Selecione</option>
+                                    {% for item in references.projects %}
+                                    <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
                             <div class="full-width contract-retention-flags">
                                 <span class="form-label">Retenções</span>
                                 <div class="contract-retention-flags-grid">
@@ -240,6 +264,35 @@
                                     <label><input type="checkbox" name="retention_irrf" value="1"> Retenção de IRRF</label>
                                     <label><input type="checkbox" name="retention_csrf" value="1"> Retenção de CSRF</label>
                                     <label><input type="checkbox" name="retention_inss" value="1"> Retenção de INSS</label>
+                                </div>
+                            </div>
+                            <div class="full-width contract-retention-panel">
+                                <span class="form-label">Lançamentos satélites da retenção</span>
+                                <div class="contract-retention-panel-grid">
+                                    <label><span>Conta de compensação</span>
+                                        <select name="retention_asset_account_id">
+                                            <option value="">Selecione</option>
+                                            {% for item in references.asset_accounts %}
+                                            <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label><span>Plano de contas do valor retido</span>
+                                        <select name="retention_chart_account_id">
+                                            <option value="">Selecione</option>
+                                            {% for item in references.chart_accounts %}
+                                            <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
+                                    <label><span>Gatilho da compensação</span>
+                                        <select name="retention_trigger">
+                                            <option value="">Selecione</option>
+                                            {% for value, label in retention_trigger_options %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -255,10 +308,19 @@
                                     <input type="hidden" name="section" value="itens_valores">
                                     <input type="hidden" name="return_tab" value="itens_valores">
                                     <input type="hidden" name="delete_item_id" value="{{ item.id }}">
+                                    {% set allocation = (item.metadata_json or {}).get('allocation', {}) %}
                                     {% set retention_flags = (item.metadata_json or {}).get('retention_flags', {}) %}
+                                    {% set retention_satellite = (item.metadata_json or {}).get('retention_satellite', {}) %}
                                     <div>
                                         <strong>{{ item.item_code or '-' }} · {{ item.description }}</strong>
                                         <small>{{ item.quantity }} x R$ {{ item.unit_price or '0,00' }} · Total R$ {{ item.total_price or '0,00' }}</small>
+                                        {% if allocation.get('chart_account_name') or allocation.get('cost_center_name') or allocation.get('project_name') %}
+                                        <small>
+                                            {% if allocation.get('chart_account_name') %}Conta: {{ allocation.get('chart_account_code') or '-' }} · {{ allocation.get('chart_account_name') }}{% endif %}
+                                            {% if allocation.get('cost_center_name') %} · Centro: {{ allocation.get('cost_center_code') or '-' }} · {{ allocation.get('cost_center_name') }}{% endif %}
+                                            {% if allocation.get('project_name') %} · Projeto: {{ allocation.get('project_code') or '-' }} · {{ allocation.get('project_name') }}{% endif %}
+                                        </small>
+                                        {% endif %}
                                         {% set enabled_flags = [] %}
                                         {% if retention_flags.get('iss') %}{% set _ = enabled_flags.append('ISS') %}{% endif %}
                                         {% if retention_flags.get('irrf') %}{% set _ = enabled_flags.append('IRRF') %}{% endif %}
@@ -266,6 +328,11 @@
                                         {% if retention_flags.get('inss') %}{% set _ = enabled_flags.append('INSS') %}{% endif %}
                                         {% if enabled_flags %}
                                         <small>Retenções: {{ enabled_flags|join(', ') }}</small>
+                                        <small>
+                                            Compensação: {{ retention_satellite.get('asset_account_code') or '-' }} · {{ retention_satellite.get('asset_account_name') or '-' }}
+                                            · Conta retida: {{ retention_satellite.get('chart_account_code') or '-' }} · {{ retention_satellite.get('chart_account_name') or '-' }}
+                                            · Gatilho: {{ retention_satellite.get('trigger') or '-' }}
+                                        </small>
                                         {% endif %}
                                     </div>
                                     <button class="btn btn-danger" type="submit">Remover</button>
@@ -486,6 +553,9 @@
     .contract-retention-flags-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:.65rem; }
     .contract-retention-flags-grid label { display:flex; align-items:center; gap:.55rem; padding:.78rem .9rem; border:1px solid var(--border); border-radius:12px; background:#fff; font-weight:700; color:var(--text-primary); }
     .contract-retention-flags-grid input[type="checkbox"] { width:auto; margin:0; }
+    .contract-retention-panel { display:flex; flex-direction:column; gap:.75rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
+    .contract-retention-panel .form-label { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
+    .contract-retention-panel-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:.85rem; }
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>

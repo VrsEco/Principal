@@ -13,7 +13,7 @@ from sqlalchemy import or_
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-from models import Company, Employee, db
+from models import Company, Employee, Project, db
 from models.automation import AutomationRegistry, AutomationRule
 from models.contracts import (
     Contract,
@@ -34,6 +34,7 @@ from models.contracts import (
     ContractTrigger,
 )
 from models.financial import (
+    FinancialAssetAccount,
     FinancialBankAccount,
     FinancialCorrectionIndex,
     FinancialCounterparty,
@@ -915,6 +916,11 @@ class ContractService:
                 FinancialBankAccount.company_id == company_id,
                 FinancialBankAccount.deleted_at.is_(None),
             ).order_by(FinancialBankAccount.name.asc()).all(),
+            "asset_accounts": FinancialAssetAccount.query.filter(
+                FinancialAssetAccount.company_id == company_id,
+                FinancialAssetAccount.deleted_at.is_(None),
+                FinancialAssetAccount.is_active.is_(True),
+            ).order_by(FinancialAssetAccount.name.asc()).all(),
             "payment_methods": FinancialPaymentMethod.query.filter(
                 FinancialPaymentMethod.company_id == company_id,
                 FinancialPaymentMethod.deleted_at.is_(None),
@@ -922,16 +928,95 @@ class ContractService:
             "chart_accounts": FinancialChartAccount.query.filter(
                 FinancialChartAccount.company_id == company_id,
                 FinancialChartAccount.deleted_at.is_(None),
+                FinancialChartAccount.is_active.is_(True),
+                FinancialChartAccount.accepts_posting.is_(True),
             ).order_by(FinancialChartAccount.name.asc()).all(),
             "cost_centers": FinancialCostCenter.query.filter(
                 FinancialCostCenter.company_id == company_id,
                 FinancialCostCenter.deleted_at.is_(None),
+                FinancialCostCenter.is_active.is_(True),
+                FinancialCostCenter.accepts_posting.is_(True),
             ).order_by(FinancialCostCenter.name.asc()).all(),
             "correction_indexes": FinancialCorrectionIndex.query.filter(
                 FinancialCorrectionIndex.company_id == company_id,
                 FinancialCorrectionIndex.deleted_at.is_(None),
             ).order_by(FinancialCorrectionIndex.name.asc()).all(),
+            "projects": Project.query.filter(
+                Project.company_id == company_id,
+                Project.is_deleted.is_(False),
+                Project.deleted_at.is_(None),
+            ).order_by(Project.name.asc(), Project.id.asc()).all(),
         }
+
+    @staticmethod
+    def get_retention_trigger_options():
+        return (
+            ("emissao", "Na emissão"),
+            ("vencimento", "No vencimento"),
+            ("baixa", "Na baixa"),
+        )
+
+    @staticmethod
+    def _resolve_chart_account(company_id: int, account_id: object, *, field_label: str) -> Optional[FinancialChartAccount]:
+        normalized_id = ContractService._normalize_int(account_id)
+        if not normalized_id:
+            return None
+        account = FinancialChartAccount.query.filter(
+            FinancialChartAccount.id == normalized_id,
+            FinancialChartAccount.company_id == company_id,
+            FinancialChartAccount.deleted_at.is_(None),
+            FinancialChartAccount.is_active.is_(True),
+            FinancialChartAccount.accepts_posting.is_(True),
+        ).first()
+        if not account:
+            raise ValueError(f"{field_label} inválido para a empresa ativa.")
+        return account
+
+    @staticmethod
+    def _resolve_cost_center(company_id: int, cost_center_id: object, *, field_label: str) -> Optional[FinancialCostCenter]:
+        normalized_id = ContractService._normalize_int(cost_center_id)
+        if not normalized_id:
+            return None
+        cost_center = FinancialCostCenter.query.filter(
+            FinancialCostCenter.id == normalized_id,
+            FinancialCostCenter.company_id == company_id,
+            FinancialCostCenter.deleted_at.is_(None),
+            FinancialCostCenter.is_active.is_(True),
+            FinancialCostCenter.accepts_posting.is_(True),
+        ).first()
+        if not cost_center:
+            raise ValueError(f"{field_label} inválido para a empresa ativa.")
+        return cost_center
+
+    @staticmethod
+    def _resolve_asset_account(company_id: int, asset_account_id: object, *, field_label: str) -> Optional[FinancialAssetAccount]:
+        normalized_id = ContractService._normalize_int(asset_account_id)
+        if not normalized_id:
+            return None
+        asset_account = FinancialAssetAccount.query.filter(
+            FinancialAssetAccount.id == normalized_id,
+            FinancialAssetAccount.company_id == company_id,
+            FinancialAssetAccount.deleted_at.is_(None),
+            FinancialAssetAccount.is_active.is_(True),
+        ).first()
+        if not asset_account:
+            raise ValueError(f"{field_label} inválida para a empresa ativa.")
+        return asset_account
+
+    @staticmethod
+    def _resolve_project(company_id: int, project_id: object, *, field_label: str) -> Optional[Project]:
+        normalized_id = ContractService._normalize_int(project_id)
+        if not normalized_id:
+            return None
+        project = Project.query.filter(
+            Project.id == normalized_id,
+            Project.company_id == company_id,
+            Project.is_deleted.is_(False),
+            Project.deleted_at.is_(None),
+        ).first()
+        if not project:
+            raise ValueError(f"{field_label} inválido para a empresa ativa.")
+        return project
 
     @staticmethod
     def list_contracting_legal_entities(company_id: int):
@@ -1473,6 +1558,34 @@ class ContractService:
         if total_price_raw and not unit_price_raw and quantity > 0:
             unit_price = (total_price / quantity).quantize(Decimal("0.01"))
         metadata = dict(payload.get("metadata_json") or {})
+        chart_account = ContractService._resolve_chart_account(
+            contract.company_id,
+            payload.get("chart_account_id"),
+            field_label="Plano de contas do item",
+        )
+        cost_center = ContractService._resolve_cost_center(
+            contract.company_id,
+            payload.get("cost_center_id"),
+            field_label="Centro de resultados do item",
+        )
+        project = ContractService._resolve_project(
+            contract.company_id,
+            payload.get("project_id"),
+            field_label="Projeto do item",
+        )
+        retention_compensation_account = ContractService._resolve_asset_account(
+            contract.company_id,
+            payload.get("retention_asset_account_id"),
+            field_label="Conta de compensação da retenção",
+        )
+        retention_chart_account = ContractService._resolve_chart_account(
+            contract.company_id,
+            payload.get("retention_chart_account_id"),
+            field_label="Plano de contas da retenção",
+        )
+        retention_trigger = ContractService._normalize_text(payload.get("retention_trigger")).lower() or None
+        if retention_trigger and retention_trigger not in {"emissao", "vencimento", "baixa"}:
+            raise ValueError("Gatilho da retenção inválido para o item.")
         if catalog_item:
             metadata["contract_catalog_item_id"] = catalog_item.id
             metadata["catalog_snapshot"] = {
@@ -1481,12 +1594,39 @@ class ContractService:
                 "item_kind": catalog_item.item_kind,
                 "unit_code": catalog_item.unit_code,
             }
+        metadata["allocation"] = {
+            "chart_account_id": chart_account.id if chart_account else None,
+            "chart_account_code": chart_account.code if chart_account else None,
+            "chart_account_name": chart_account.name if chart_account else None,
+            "cost_center_id": cost_center.id if cost_center else None,
+            "cost_center_code": cost_center.code if cost_center else None,
+            "cost_center_name": cost_center.name if cost_center else None,
+            "project_id": project.id if project else None,
+            "project_code": project.code if project else None,
+            "project_name": project.name if project else None,
+        }
         metadata["retention_flags"] = {
             "iss": ContractService._normalize_bool(payload.get("retention_iss")),
             "irrf": ContractService._normalize_bool(payload.get("retention_irrf")),
             "csrf": ContractService._normalize_bool(payload.get("retention_csrf")),
             "inss": ContractService._normalize_bool(payload.get("retention_inss")),
         }
+        metadata["retention_satellite"] = {
+            "asset_account_id": retention_compensation_account.id if retention_compensation_account else None,
+            "asset_account_code": retention_compensation_account.code if retention_compensation_account else None,
+            "asset_account_name": retention_compensation_account.name if retention_compensation_account else None,
+            "chart_account_id": retention_chart_account.id if retention_chart_account else None,
+            "chart_account_code": retention_chart_account.code if retention_chart_account else None,
+            "chart_account_name": retention_chart_account.name if retention_chart_account else None,
+            "trigger": retention_trigger,
+        }
+        if any(metadata["retention_flags"].values()):
+            if not retention_compensation_account:
+                raise ValueError("Informe a conta de compensação da retenção para itens com retenção.")
+            if not retention_chart_account:
+                raise ValueError("Informe o plano de contas da retenção para itens com retenção.")
+            if not retention_trigger:
+                raise ValueError("Informe o gatilho da retenção para itens com retenção.")
 
         item = ContractItem(
             company_id=contract.company_id,
