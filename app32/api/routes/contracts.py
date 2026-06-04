@@ -695,6 +695,16 @@ def contracts_items_catalog():
     selected_parent_id = request.args.get("parent_id", type=int)
     catalog_view = (request.args.get("catalog_view") or "structure").strip().lower()
 
+    def _build_structure_option_label(item):
+        if not item:
+            return ""
+        parent = item.parent
+        if parent and parent.parent:
+            return f"{parent.parent.code} · {parent.parent.name} → {parent.code} · {parent.name}"
+        if parent:
+            return f"{parent.code} · {parent.name}"
+        return f"{item.code} · {item.name}"
+
     if request.method == "POST":
         action = (request.form.get("action") or "save").strip().lower()
         try:
@@ -730,6 +740,10 @@ def contracts_items_catalog():
                         "fiscal_notes": request.form.get("fiscal_notes") or None,
                     },
                 }
+                if catalog_view == "items":
+                    parent_item = ContractsCatalogService.get_item(company.id, payload["parent_id"]) if payload.get("parent_id") else None
+                    if not parent_item or ContractsCatalogService.get_level_label(parent_item) != "Sub-Grupo":
+                        raise ValueError("Selecione um Sub-Grupo da árvore comercial para vincular o produto/serviço.")
                 item_id = request.form.get("item_id", type=int)
                 if item_id:
                     item = ContractsCatalogService.get_item(company.id, item_id)
@@ -803,13 +817,32 @@ def contracts_items_catalog():
         )
 
     if catalog_view == "items":
+        if selected_item and ContractsCatalogService.get_level_label(selected_item) != "Item":
+            if ContractsCatalogService.get_level_label(selected_item) == "Sub-Grupo":
+                selected_parent = selected_item
+            selected_item = None
+        if selected_parent and ContractsCatalogService.get_level_label(selected_parent) != "Sub-Grupo":
+            selected_parent = None
+
+        leaf_items = ContractsCatalogService.list_leaf_items(company.id)
+        leaf_parent_candidates = ContractsCatalogService.list_leaf_parent_candidates(
+            company.id,
+            selected_item.id if selected_item else None,
+        )
+        parent_options = [
+            {
+                "id": item.id,
+                "label": f"{_build_structure_option_label(item)} → {item.code} · {item.name}",
+            }
+            for item in leaf_parent_candidates
+        ]
         return render_template(
             "modules/contracts/contracts_items_catalog_items.html",
             company=company,
             company_id=company.id,
-            catalog_tree=catalog_tree,
-            items=items,
-            parent_candidates=ContractsCatalogService.list_parent_candidates(company.id, selected_item.id if selected_item else None),
+            items=leaf_items,
+            parent_candidates=leaf_parent_candidates,
+            parent_options=parent_options,
             selected_item=selected_item,
             selected_parent=selected_parent,
             level_label=ContractsCatalogService.get_level_label,

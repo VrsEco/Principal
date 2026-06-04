@@ -40,18 +40,40 @@
                 </label>
                 <div class="cw-list compact-tree" id="structure-tree-list">
                     {% macro render_node(node) %}
-                    <div class="cw-tree-node" data-tree-search="{{ (node.item.code ~ ' ' ~ node.item.name)|lower }}">
-                        <div class="cw-list-item {{ 'active' if selected_item and selected_item.id == node.item.id else '' }}">
+                    <div class="cw-tree-node {{ 'is-parent' if node.children else 'is-leaf' }} {{ 'is-analytic' if not node.children else 'is-synthetic' }}" data-tree-search="{{ (node.item.code ~ ' ' ~ node.item.name)|lower }}">
+                        <article class="cw-list-item {{ 'active' if selected_item and selected_item.id == node.item.id else '' }}">
                             <a class="cw-list-item-line" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=structure&item_id={{ node.item.id }}">
-                                <div class="cw-list-item-title">
-                                    <strong>{{ node.item.code }} · {{ node.item.name }}</strong>
-                                    <span>{{ node.level_label }}</span>
+                                <div class="cw-tree-title-wrap">
+                                    <button
+                                        type="button"
+                                        class="cw-tree-toggle {{ '' if node.children else 'placeholder' }}"
+                                        data-tree-toggle="{{ node.item.id }}"
+                                        {% if node.children %}
+                                        onclick="event.preventDefault(); event.stopPropagation(); toggleTreeNode('{{ node.item.id }}')"
+                                        aria-expanded="true"
+                                        title="Expandir ou recolher nível {{ node.item.name }}"
+                                        {% else %}
+                                        tabindex="-1"
+                                        {% endif %}
+                                    >{% if node.children %}▾{% endif %}</button>
+                                    <div class="cw-tree-title-content">
+                                        <strong>{{ node.item.code }}</strong>
+                                        <span class="cw-tree-separator">-</span>
+                                        <span>{{ node.item.name }}</span>
+                                    </div>
                                 </div>
                                 <span class="cw-list-item-status">{{ 'Ativo' if node.item.is_active else 'Inativo' }}</span>
                             </a>
-                        </div>
+                            <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                                <span class="cw-tree-badge">{{ node.level_label }}</span>
+                                <a class="btn btn-secondary" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=structure&item_id={{ node.item.id }}">Editar</a>
+                                {% if node.level_label == 'Grupo' %}
+                                <a class="btn btn-accent" href="/contracts/catalogs/items?company_id={{ company_id }}&catalog_view=structure&parent_id={{ node.item.id }}">Adicionar filha</a>
+                                {% endif %}
+                            </div>
+                        </article>
                         {% if node.children %}
-                        <div class="cw-tree-children">
+                        <div class="cw-tree-children" data-tree-children="{{ node.item.id }}">
                             {% for child in node.children %}
                                 {{ render_node(child) }}
                             {% endfor %}
@@ -154,14 +176,31 @@
     .cw-search input,.cw-form input,.cw-form select,.cw-form textarea { background:var(--surface-secondary); border:1px solid var(--border); border-radius:12px; padding:.78rem .9rem; color:var(--text-primary); width:100%; }
     .cw-list { display:flex; flex-direction:column; gap:.4rem; max-height:calc(100vh - 320px); overflow:auto; padding-right:.2rem; }
     .cw-list.compact-tree { gap:.2rem; }
-    .cw-tree,.cw-tree-node { display:flex; flex-direction:column; gap:.35rem; }
-    .cw-tree-children { display:flex; flex-direction:column; gap:.2rem; margin-left:.7rem; padding-left:.75rem; border-left:1px dashed var(--border); }
-    .cw-list-item { border:1px solid transparent; background:transparent; border-radius:10px; padding:.45rem .5rem; transition:all .15s ease; }
-    .cw-list-item:hover,.cw-list-item.active { border-color:rgba(37,99,235,.12); background:var(--surface-secondary); }
-    .cw-list-item-line { display:flex; align-items:center; justify-content:space-between; gap:.75rem; text-decoration:none; color:inherit; }
+    .cw-tree { display:flex; flex-direction:column; gap:.1rem; }
+    .cw-tree-node { display:flex; flex-direction:column; gap:.12rem; }
+    .cw-tree-children { display:flex; flex-direction:column; gap:.12rem; margin-left:.7rem; padding-left:.75rem; border-left:1px dashed var(--border); }
+    .cw-tree-children.collapsed { display:none; }
+    .cw-list-item { border:1px solid #e6ebf3; background:#fff; border-radius:10px; padding:.42rem .55rem; transition:all .15s ease; }
+    .cw-list-item:hover,.cw-list-item.active { border-color:rgba(37,99,235,.18); background:#f8fbff; }
+    .cw-tree-node.is-parent > .cw-list-item { background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
+    .cw-tree-node.is-analytic > .cw-list-item { background:#fcfcfd; border-color:#edf1f6; }
+    .cw-list-item-line { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; text-decoration:none; color:inherit; }
     .cw-list-item-title { min-width:0; display:flex; flex-direction:column; gap:.2rem; }
     .cw-list-item-title strong,.cw-list-item-title span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .cw-list-item-title span,.cw-list-item-status,.field-hint { color:var(--text-secondary); font-size:.78rem; }
+    .cw-list-item-title span,.field-hint { color:var(--text-secondary); font-size:.78rem; }
+    .cw-list-item-status { display:inline-flex; align-items:center; justify-content:center; padding:.12rem .36rem; border-radius:999px; background:#f3f4f6; color:#6b7280; font-size:.58rem; line-height:1; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+    .cw-tree-toggle { display:inline-flex; align-items:center; justify-content:center; width:1.3rem; height:1.3rem; border:1px solid var(--border); border-radius:6px; background:var(--surface-secondary); color:var(--text-secondary); font-weight:700; cursor:pointer; flex-shrink:0; font-size:.78rem; padding:0; margin-top:.06rem; }
+    .cw-tree-toggle:hover { color:var(--text-primary); border-color:rgba(37,99,235,.22); }
+    .cw-tree-toggle.placeholder { visibility:hidden; }
+    .cw-tree-title-wrap { display:flex; align-items:flex-start; gap:.4rem; min-width:0; flex:1; }
+    .cw-tree-title-content { min-width:0; display:flex; align-items:baseline; gap:.25rem; flex-wrap:wrap; }
+    .cw-tree-title-content strong { font-size:.82rem; line-height:1.15; font-weight:800; color:var(--text-primary); }
+    .cw-tree-title-content span { color:var(--text-primary); font-size:.8rem; line-height:1.15; }
+    .cw-tree-title-content .cw-tree-separator { color:var(--text-tertiary); font-weight:600; }
+    .cw-list-item-actions { display:flex; gap:.25rem; flex-wrap:wrap; margin-top:.28rem; margin-left:1.7rem; }
+    .cw-list-item-actions .btn { padding:.18rem .42rem; font-size:.68rem; border-radius:8px; }
+    .cw-tree-badge { display:inline-flex; align-items:center; justify-content:center; padding:.16rem .45rem; border-radius:8px; font-size:.65rem; line-height:1; font-weight:700; border:1px solid #bbf7d0; background:#dcfce7; color:#166534; text-transform:none; letter-spacing:0; }
+    .btn-accent { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
     .cw-panel { padding:1.25rem; }
     .cw-panel-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
     .cw-panel-header h2 { margin:0; }
@@ -180,6 +219,34 @@
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('structure-search');
         const nodes = Array.from(document.querySelectorAll('[data-tree-search]'));
+        const collapsedNodes = new Set();
+        const storageKey = `contractsStructureCollapsedNodes:{{ company_id }}`;
+        const savedRaw = window.localStorage.getItem(storageKey);
+        if (savedRaw) {
+            try {
+                JSON.parse(savedRaw).forEach((value) => collapsedNodes.add(String(value)));
+            } catch (error) {
+                console.warn('Falha ao restaurar estado da árvore comercial.', error);
+            }
+        }
+
+        const persistCollapsedNodes = () => {
+            window.localStorage.setItem(storageKey, JSON.stringify(Array.from(collapsedNodes)));
+        };
+
+        const syncCollapsedTreeNodes = () => {
+            document.querySelectorAll('[data-tree-children]').forEach((children) => {
+                const nodeId = String(children.dataset.treeChildren || '');
+                const collapsed = collapsedNodes.has(nodeId);
+                children.classList.toggle('collapsed', collapsed);
+                const toggle = document.querySelector(`.cw-tree-toggle[data-tree-toggle="${nodeId}"]`);
+                if (toggle) {
+                    toggle.textContent = collapsed ? '▸' : '▾';
+                    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                }
+            });
+        };
+
         if (searchInput && nodes.length) {
             searchInput.addEventListener('input', function () {
                 const query = (searchInput.value || '').trim().toLowerCase();
@@ -189,6 +256,16 @@
                 });
             });
         }
+
+        window.toggleTreeNode = function (itemId) {
+            const key = String(itemId);
+            if (collapsedNodes.has(key)) collapsedNodes.delete(key);
+            else collapsedNodes.add(key);
+            persistCollapsedNodes();
+            syncCollapsedTreeNodes();
+        };
+
+        syncCollapsedTreeNodes();
     });
 </script>
 {% endblock %}

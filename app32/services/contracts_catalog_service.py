@@ -240,6 +240,30 @@ class ContractsCatalogService:
         return [item for item in items if ContractsCatalogService._is_selectable_level(item)]
 
     @staticmethod
+    def list_leaf_items(company_id: int):
+        items = (
+            ContractCatalogItem.query.filter(
+                ContractCatalogItem.company_id == company_id,
+                ContractCatalogItem.deleted_at.is_(None),
+            )
+            .order_by(ContractCatalogItem.code.asc(), ContractCatalogItem.name.asc())
+            .all()
+        )
+        return [item for item in items if ContractsCatalogService._is_selectable_level(item)]
+
+    @staticmethod
+    def list_leaf_parent_candidates(company_id: int, selected_item_id: Optional[int] = None):
+        candidates = ContractsCatalogService.list_items(company_id)
+        filtered = []
+        for item in candidates:
+            if selected_item_id and item.id == selected_item_id:
+                continue
+            if ContractsCatalogService.get_level_label(item) != "Sub-Grupo":
+                continue
+            filtered.append(item)
+        return filtered
+
+    @staticmethod
     def get_item(company_id: int, item_id: int) -> Optional[ContractCatalogItem]:
         return ContractCatalogItem.query.filter(
             ContractCatalogItem.id == item_id,
