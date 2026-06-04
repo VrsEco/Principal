@@ -439,7 +439,9 @@ class ContractFinancialService:
         policy.trigger_event = trigger_event
         policy.settlement_scope = "full"
         policy.auto_apply = True
-        policy.bank_account_id = ContractFinancialService._normalize_int(retention_detail.get("asset_account_id"))
+        policy.bank_account_id = ContractFinancialService._normalize_int(
+            retention_detail.get("bank_account_id") or retention_detail.get("asset_account_id")
+        )
         policy.chart_account_id = ContractFinancialService._normalize_int(retention_detail.get("chart_account_id"))
         policy.notes = (
             f"Retenção {retention_kind.upper()} do item {contract_item_id or '-'} "

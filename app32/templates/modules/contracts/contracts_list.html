@@ -233,14 +233,15 @@
                             <label><span>Quantidade</span><input type="number" step="0.01" min="0" name="quantity" value="1" data-contract-item-qty></label>
                             <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00" data-contract-item-unit-price></label>
                             <label><span>Preço total</span><input type="text" name="total_price" value="0,00" data-contract-item-total-price></label>
-                            <label><span>Plano de contas</span>
-                                <select name="chart_account_id">
+                                <label><span>Plano de contas</span>
+                                <input type="text" class="contracts-select-search" placeholder="Buscar plano de contas" data-contract-select-filter-target="contract-item-chart-account">
+                                <select name="chart_account_id" id="contract-item-chart-account">
                                     <option value="">Selecione</option>
                                     {% for item in references.chart_accounts %}
                                     <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
                                     {% endfor %}
                                 </select>
-                            </label>
+                                </label>
                             <label><span>Centro de resultados</span>
                                 <select name="cost_center_id">
                                     <option value="">Selecione</option>
@@ -260,14 +261,17 @@
                             <div class="full-width contract-retention-stack">
                                 <span class="form-label">Retenções e lançamentos satélites</span>
                                 {% for retention_key, retention_label in item_retention_options %}
-                                <div class="contract-retention-detail-card">
+                                <div class="contract-retention-detail-card is-collapsed" data-retention-card>
                                     <div class="contract-retention-detail-head">
                                         <label class="checkbox-inline">
-                                            <input type="checkbox" name="retention_{{ retention_key }}_enabled" value="1">
+                                            <input type="checkbox" name="retention_{{ retention_key }}_enabled" value="1" data-retention-enabled>
                                             {{ retention_label }}
                                         </label>
+                                        <button class="btn btn-ghost btn-sm contract-retention-toggle" type="button" data-retention-toggle aria-expanded="false">
+                                            {{ retention_label }}
+                                        </button>
                                     </div>
-                                    <div class="contract-retention-detail-grid">
+                                    <div class="contract-retention-detail-grid" data-retention-body hidden>
                                         <label><span>Abatimento da base</span>
                                             <select name="retention_{{ retention_key }}_deduction_mode">
                                                 {% for value, label in item_retention_deduction_mode_options %}
@@ -284,16 +288,17 @@
                                             </select>
                                         </label>
                                         <label><span>% / valor retido</span><input type="text" name="retention_{{ retention_key }}_value" value="0,00"></label>
-                                        <label><span>Conta de compensação</span>
-                                            <select name="retention_{{ retention_key }}_asset_account_id">
+                                        <label><span>Conta Bancária Para Compensação</span>
+                                            <select name="retention_{{ retention_key }}_bank_account_id">
                                                 <option value="">Selecione</option>
-                                                {% for item in references.asset_accounts %}
+                                                {% for item in references.bank_accounts %}
                                                 <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
                                                 {% endfor %}
                                             </select>
                                         </label>
                                         <label><span>Plano de contas do valor retido</span>
-                                            <select name="retention_{{ retention_key }}_chart_account_id">
+                                            <input type="text" class="contracts-select-search" placeholder="Buscar plano de contas" data-contract-select-filter-target="retention-{{ retention_key }}-chart-account">
+                                            <select name="retention_{{ retention_key }}_chart_account_id" id="retention-{{ retention_key }}-chart-account">
                                                 <option value="">Selecione</option>
                                                 {% for item in references.chart_accounts %}
                                                 <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
@@ -350,7 +355,7 @@
                                             {{ retention.get('label') or retention.get('kind') }} · Base: {{ retention.get('base_deduction_mode') }} {{ retention.get('base_deduction_value') }}
                                             · Retenção: {{ retention.get('retention_value_mode') }} {{ retention.get('retention_value') }}
                                             · Valor calculado: R$ {{ retention.get('retention_amount') }}
-                                            · Compensação: {{ retention.get('asset_account_code') or '-' }} · {{ retention.get('asset_account_name') or '-' }}
+                                            · Compensação: {{ retention.get('bank_account_code') or retention.get('asset_account_code') or '-' }} · {{ retention.get('bank_account_name') or retention.get('asset_account_name') or '-' }}
                                             · Conta retida: {{ retention.get('chart_account_code') or '-' }} · {{ retention.get('chart_account_name') or '-' }}
                                             · Gatilho: {{ retention.get('trigger') or '-' }}
                                         </small>
@@ -582,7 +587,11 @@
     .contract-retention-stack .form-label { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
     .contract-retention-detail-card { display:flex; flex-direction:column; gap:.8rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
     .contract-retention-detail-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+    .contract-retention-toggle { min-width:190px; justify-content:center; }
+    .contract-retention-detail-card.is-collapsed { gap:0; }
+    .contract-retention-detail-card.is-collapsed .contract-retention-detail-head { margin:0; }
     .contract-retention-detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:.85rem; }
+    .contracts-select-search { margin:.45rem 0 .5rem; }
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>
@@ -651,6 +660,26 @@ document.addEventListener('DOMContentLoaded', function () {
         return Number(raw) || 0;
     };
 
+    const normalizeSelectSearch = (value) => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+    const filterContractSelectOptions = (targetId, searchTerm) => {
+        const select = document.getElementById(targetId);
+        if (!select) return;
+        const needle = normalizeSelectSearch(searchTerm);
+        Array.from(select.options).forEach((option, index) => {
+            if (index === 0) {
+                option.hidden = false;
+                return;
+            }
+            const haystack = normalizeSelectSearch(option.textContent);
+            option.hidden = Boolean(needle) && !haystack.includes(needle);
+        });
+    };
+
     const formatCurrencyInput = (value) => {
         return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
     };
@@ -673,6 +702,45 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         syncTotalPrice();
     }
+
+    const syncRetentionCard = (card, expanded) => {
+        const body = card.querySelector('[data-retention-body]');
+        const toggle = card.querySelector('[data-retention-toggle]');
+        if (!body || !toggle) return;
+        card.classList.toggle('is-collapsed', !expanded);
+        body.hidden = !expanded;
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        toggle.textContent = expanded ? 'Ocultar detalhes' : (toggle.dataset.retentionLabel || toggle.textContent);
+    };
+
+    document.querySelectorAll('[data-retention-card]').forEach((card) => {
+        const toggle = card.querySelector('[data-retention-toggle]');
+        const checkbox = card.querySelector('[data-retention-enabled]');
+        if (toggle) toggle.dataset.retentionLabel = toggle.textContent.trim();
+
+        syncRetentionCard(card, false);
+
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const expanded = toggle.getAttribute('aria-expanded') === 'true';
+                syncRetentionCard(card, !expanded);
+            });
+        }
+
+        if (checkbox) {
+            checkbox.addEventListener('change', function () {
+                syncRetentionCard(card, checkbox.checked);
+            });
+        }
+    });
+
+    document.querySelectorAll('[data-contract-select-filter-target]').forEach((input) => {
+        const targetId = input.dataset.contractSelectFilterTarget;
+        filterContractSelectOptions(targetId, '');
+        input.addEventListener('input', function () {
+            filterContractSelectOptions(targetId, input.value || '');
+        });
+    });
 });
  </script>
 {% set sidebar_right_html %}

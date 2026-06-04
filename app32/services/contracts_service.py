@@ -944,7 +944,7 @@ class ContractService:
                 FinancialChartAccount.deleted_at.is_(None),
                 FinancialChartAccount.is_active.is_(True),
                 FinancialChartAccount.accepts_posting.is_(True),
-            ).order_by(FinancialChartAccount.name.asc()).all(),
+            ).order_by(FinancialChartAccount.code.asc(), FinancialChartAccount.name.asc()).all(),
             "cost_centers": FinancialCostCenter.query.filter(
                 FinancialCostCenter.company_id == company_id,
                 FinancialCostCenter.deleted_at.is_(None),
@@ -1078,6 +1078,20 @@ class ContractService:
         if not asset_account:
             raise ValueError(f"{field_label} inválida para a empresa ativa.")
         return asset_account
+
+    @staticmethod
+    def _resolve_bank_account(company_id: int, bank_account_id: object, *, field_label: str) -> Optional[FinancialBankAccount]:
+        normalized_id = ContractService._normalize_int(bank_account_id)
+        if not normalized_id:
+            return None
+        bank_account = FinancialBankAccount.query.filter(
+            FinancialBankAccount.id == normalized_id,
+            FinancialBankAccount.company_id == company_id,
+            FinancialBankAccount.deleted_at.is_(None),
+        ).first()
+        if not bank_account:
+            raise ValueError(f"{field_label} inválida para a empresa ativa.")
+        return bank_account
 
     @staticmethod
     def _resolve_project(company_id: int, project_id: object, *, field_label: str) -> Optional[Project]:
@@ -1684,10 +1698,10 @@ class ContractService:
             if value_mode not in {"percent", "amount"}:
                 raise ValueError(f"Tipo do valor da retenção inválido para {retention_label}.")
             value_amount = ContractService._normalize_decimal(payload.get(f"retention_{retention_key}_value"))
-            compensation_account = ContractService._resolve_asset_account(
+            compensation_bank_account = ContractService._resolve_bank_account(
                 contract.company_id,
-                payload.get(f"retention_{retention_key}_asset_account_id"),
-                field_label=f"Conta de compensação da retenção {retention_label}",
+                payload.get(f"retention_{retention_key}_bank_account_id"),
+                field_label=f"Conta bancária para compensação da retenção {retention_label}",
             )
             retention_chart_account = ContractService._resolve_chart_account(
                 contract.company_id,
@@ -1697,8 +1711,8 @@ class ContractService:
             retention_trigger = ContractService._normalize_text(payload.get(f"retention_{retention_key}_trigger")).lower() or None
             if retention_trigger not in {"emissao", "vencimento", "baixa"}:
                 raise ValueError(f"Informe um gatilho válido para a retenção {retention_label}.")
-            if not compensation_account:
-                raise ValueError(f"Informe a conta de compensação da retenção {retention_label}.")
+            if not compensation_bank_account:
+                raise ValueError(f"Informe a conta bancária para compensação da retenção {retention_label}.")
             if not retention_chart_account:
                 raise ValueError(f"Informe o plano de contas da retenção {retention_label}.")
             if value_amount <= Decimal("0.00"):
@@ -1720,9 +1734,12 @@ class ContractService:
                     "retention_value_mode": value_mode,
                     "retention_value": float(value_amount),
                     "retention_amount": float(retention_amount),
-                    "asset_account_id": compensation_account.id,
-                    "asset_account_code": compensation_account.code,
-                    "asset_account_name": compensation_account.name,
+                    "bank_account_id": compensation_bank_account.id,
+                    "bank_account_code": compensation_bank_account.code,
+                    "bank_account_name": compensation_bank_account.name,
+                    "asset_account_id": compensation_bank_account.id,
+                    "asset_account_code": compensation_bank_account.code,
+                    "asset_account_name": compensation_bank_account.name,
                     "chart_account_id": retention_chart_account.id,
                     "chart_account_code": retention_chart_account.code,
                     "chart_account_name": retention_chart_account.name,
