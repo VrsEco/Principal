@@ -189,29 +189,7 @@
                             {% endfor %}
                         </select>
                     </label>
-                    <label><span>Status</span>
-                        <select name="status">
-                            {% for status in ['draft', 'active', 'signed', 'implanting', 'inactive', 'closed'] %}
-                            <option value="{{ status }}" {% if selected_contract.status == status %}selected{% endif %}>{{ status }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
                     <label><span>Código</span><input type="text" value="{{ selected_contract.code }}" disabled></label>
-                    <label><span>Tipo</span>
-                        <select name="contract_type">
-                            <option value="">Selecione</option>
-                            {% for value, label in contract_type_options %}
-                            <option value="{{ value }}" {% if selected_contract.contract_type == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
-                    <label><span>Moeda</span>
-                        <select name="currency_code">
-                            {% for value, label in currency_options %}
-                            <option value="{{ value }}" {% if selected_contract.currency_code == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </label>
                     <label><span>Gestor</span>
                         <select name="manager_employee_id">
                             <option value="">Selecione</option>
@@ -245,19 +223,25 @@
                         </div>
                         <div class="panel-body form-grid">
                             <label class="full-width"><span>Produto / Serviço</span>
-                                <select name="contract_catalog_item_id">
-                                    <option value="">Seleção manual</option>
+                                <select name="contract_catalog_item_id" required>
+                                    <option value="">Selecione</option>
                                     {% for item in contract_catalog_items %}
                                     <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
                                     {% endfor %}
                                 </select>
                             </label>
-                            <label><span>Código</span><input type="text" name="item_code"></label>
-                            <label><span>Tipo</span><input type="text" name="item_type" placeholder="service / product"></label>
-                            <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
-                            <label><span>Quantidade</span><input type="number" step="0.01" name="quantity" value="1"></label>
-                            <label><span>Unidade</span><input type="text" name="unit_code"></label>
-                            <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00"></label>
+                            <label><span>Quantidade</span><input type="number" step="0.01" min="0" name="quantity" value="1" data-contract-item-qty></label>
+                            <label><span>Preço unitário</span><input type="text" name="unit_price" value="0,00" data-contract-item-unit-price></label>
+                            <label><span>Preço total</span><input type="text" name="total_price" value="0,00" data-contract-item-total-price></label>
+                            <div class="full-width contract-retention-flags">
+                                <span class="form-label">Retenções</span>
+                                <div class="contract-retention-flags-grid">
+                                    <label><input type="checkbox" name="retention_iss" value="1"> Retenção de ISS</label>
+                                    <label><input type="checkbox" name="retention_irrf" value="1"> Retenção de IRRF</label>
+                                    <label><input type="checkbox" name="retention_csrf" value="1"> Retenção de CSRF</label>
+                                    <label><input type="checkbox" name="retention_inss" value="1"> Retenção de INSS</label>
+                                </div>
+                            </div>
                         </div>
                         <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar item</button></div>
                     </form>
@@ -271,9 +255,18 @@
                                     <input type="hidden" name="section" value="itens_valores">
                                     <input type="hidden" name="return_tab" value="itens_valores">
                                     <input type="hidden" name="delete_item_id" value="{{ item.id }}">
+                                    {% set retention_flags = (item.metadata_json or {}).get('retention_flags', {}) %}
                                     <div>
                                         <strong>{{ item.item_code or '-' }} · {{ item.description }}</strong>
                                         <small>{{ item.quantity }} x R$ {{ item.unit_price or '0,00' }} · Total R$ {{ item.total_price or '0,00' }}</small>
+                                        {% set enabled_flags = [] %}
+                                        {% if retention_flags.get('iss') %}{% set _ = enabled_flags.append('ISS') %}{% endif %}
+                                        {% if retention_flags.get('irrf') %}{% set _ = enabled_flags.append('IRRF') %}{% endif %}
+                                        {% if retention_flags.get('csrf') %}{% set _ = enabled_flags.append('CSRF') %}{% endif %}
+                                        {% if retention_flags.get('inss') %}{% set _ = enabled_flags.append('INSS') %}{% endif %}
+                                        {% if enabled_flags %}
+                                        <small>Retenções: {{ enabled_flags|join(', ') }}</small>
+                                        {% endif %}
                                     </div>
                                     <button class="btn btn-danger" type="submit">Remover</button>
                                 </form>
@@ -321,56 +314,13 @@
                     </div>
                     <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar regras</button></div>
                 </form>
-                <div class="contracts-tab-grid">
-                    <form method="post" class="panel form-panel">
-                        <input type="hidden" name="section" value="faturamento">
-                        <input type="hidden" name="return_tab" value="faturamento">
-                        <input type="hidden" name="form_action" value="add_billing_item">
-                        <div class="panel-header"><h2>Item de faturamento</h2></div>
-                        <div class="panel-body form-grid">
-                            <label><span>Código</span><input type="text" name="billing_code"></label>
-                            <label><span>Item do contrato</span>
-                                <select name="contract_item_id">
-                                    <option value="">Sem vínculo</option>
-                                    {% for item in selected_contract.items.all() %}
-                                    <option value="{{ item.id }}">{{ item.item_code or '-' }} · {{ item.description }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label class="full-width"><span>Descrição</span><textarea name="description" rows="3" required></textarea></label>
-                            <label><span>Valor</span><input type="text" name="amount" value="0,00"></label>
-                            <label><span>Periodicidade</span>
-                                <select name="billing_periodicity">
-                                    <option value="">Usar regra do contrato</option>
-                                    {% for value, label in periodicity_options %}
-                                    <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </label>
-                            <label class="checkbox-inline"><input type="checkbox" name="is_recurring" checked> Recorrente</label>
-                        </div>
-                        <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar faturamento</button></div>
-                    </form>
-                    <div class="panel">
-                        <div class="panel-header"><h2>Itens de faturamento</h2></div>
-                        <div class="panel-body">
-                            {% if selected_contract.billing_items.count() %}
-                            <div class="list-stack">
-                                {% for item in selected_contract.billing_items.all() %}
-                                <form method="post" class="list-item list-item-form">
-                                    <input type="hidden" name="section" value="faturamento">
-                                    <input type="hidden" name="return_tab" value="faturamento">
-                                    <input type="hidden" name="delete_billing_item_id" value="{{ item.id }}">
-                                    <div>
-                                        <strong>{{ item.billing_code or '-' }} · {{ item.description }}</strong>
-                                        <small>R$ {{ item.amount or '0,00' }} · {{ item.billing_periodicity or 'sem periodicidade' }}</small>
-                                    </div>
-                                    <button class="btn btn-danger" type="submit">Remover</button>
-                                </form>
-                                {% endfor %}
-                            </div>
-                            {% else %}<p class="empty-state">Nenhum item de faturamento cadastrado.</p>{% endif %}
-                        </div>
+                <div class="panel">
+                    <div class="panel-header"><h2>Origem dos valores de faturamento</h2></div>
+                    <div class="panel-body">
+                        <p class="empty-state" style="margin:0;">
+                            Os itens e valores utilizados no faturamento já são definidos na aba <strong>Itens e Valores do Contrato</strong>.
+                            Esta tela permanece apenas para as regras de competência, periodicidade e vencimento.
+                        </p>
                     </div>
                 </div>
 
@@ -531,6 +481,11 @@
     .contracts-filter-card input, .contracts-filter-card select { width:100%; padding:.7rem .8rem; border:1px solid var(--border); border-radius:12px; background:#fff; color:var(--text-primary); }
     .contracts-filter-actions { display:flex; gap:.55rem; flex-wrap:wrap; margin-top:.25rem; }
     .contracts-filter-actions .btn { flex:1; padding:.7rem .75rem; }
+    .contract-retention-flags { display:flex; flex-direction:column; gap:.75rem; }
+    .contract-retention-flags .form-label { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
+    .contract-retention-flags-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:.65rem; }
+    .contract-retention-flags-grid label { display:flex; align-items:center; gap:.55rem; padding:.78rem .9rem; border:1px solid var(--border); border-radius:12px; background:#fff; font-weight:700; color:var(--text-primary); }
+    .contract-retention-flags-grid input[type="checkbox"] { width:auto; margin:0; }
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>
@@ -587,6 +542,40 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     syncCollapsedTreeNodes();
+
+    const quantityInput = document.querySelector('[data-contract-item-qty]');
+    const unitPriceInput = document.querySelector('[data-contract-item-unit-price]');
+    const totalPriceInput = document.querySelector('[data-contract-item-total-price]');
+
+    const parseCurrencyInput = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) return 0;
+        if (raw.includes(',')) return Number(raw.replace(/\./g, '').replace(',', '.')) || 0;
+        return Number(raw) || 0;
+    };
+
+    const formatCurrencyInput = (value) => {
+        return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+    };
+
+    const syncTotalPrice = () => {
+        if (!quantityInput || !unitPriceInput || !totalPriceInput || totalPriceInput.dataset.manual === 'true') return;
+        const quantity = parseCurrencyInput(quantityInput.value);
+        const unitPrice = parseCurrencyInput(unitPriceInput.value);
+        totalPriceInput.value = formatCurrencyInput(quantity * unitPrice);
+    };
+
+    if (quantityInput && unitPriceInput && totalPriceInput) {
+        quantityInput.addEventListener('input', syncTotalPrice);
+        unitPriceInput.addEventListener('input', syncTotalPrice);
+        totalPriceInput.addEventListener('input', function () {
+            totalPriceInput.dataset.manual = 'true';
+        });
+        totalPriceInput.addEventListener('blur', function () {
+            totalPriceInput.value = formatCurrencyInput(parseCurrencyInput(totalPriceInput.value));
+        });
+        syncTotalPrice();
+    }
 });
 </script>
 {% block sidebar_right %}

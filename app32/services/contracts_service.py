@@ -1454,10 +1454,24 @@ class ContractService:
             if not ContractsCatalogService._is_selectable_level(catalog_item):
                 raise ValueError("Somente itens do catálogo podem ser utilizados no contrato.")
 
-        description = ContractService._normalize_text(payload.get("description")) or (catalog_item.name if catalog_item else "Item contratual")
-        item_code = ContractService._normalize_text(payload.get("item_code")) or (catalog_item.code if catalog_item else None)
-        item_type = ContractService._normalize_text(payload.get("item_type")) or (catalog_item.item_kind if catalog_item else None)
-        unit_code = ContractService._normalize_text(payload.get("unit_code")) or (catalog_item.unit_code if catalog_item else None)
+        if not catalog_item and not ContractService._normalize_text(payload.get("description")):
+            raise ValueError("Selecione um produto/serviço do catálogo para adicionar ao contrato.")
+
+        description = catalog_item.name if catalog_item else (ContractService._normalize_text(payload.get("description")) or "Item contratual")
+        item_code = catalog_item.code if catalog_item else (ContractService._normalize_text(payload.get("item_code")) or None)
+        item_type = catalog_item.item_kind if catalog_item else (ContractService._normalize_text(payload.get("item_type")) or None)
+        unit_code = catalog_item.unit_code if catalog_item else (ContractService._normalize_text(payload.get("unit_code")) or None)
+        quantity = ContractService._normalize_decimal(payload.get("quantity"), default="1")
+        unit_price_raw = ContractService._normalize_text(payload.get("unit_price"))
+        total_price_raw = ContractService._normalize_text(payload.get("total_price"))
+        unit_price = ContractService._normalize_decimal(unit_price_raw)
+        total_price = (
+            ContractService._normalize_decimal(total_price_raw)
+            if total_price_raw
+            else ContractService.calculate_total_price(quantity, unit_price)
+        )
+        if total_price_raw and not unit_price_raw and quantity > 0:
+            unit_price = (total_price / quantity).quantize(Decimal("0.01"))
         metadata = dict(payload.get("metadata_json") or {})
         if catalog_item:
             metadata["contract_catalog_item_id"] = catalog_item.id
@@ -1467,6 +1481,12 @@ class ContractService:
                 "item_kind": catalog_item.item_kind,
                 "unit_code": catalog_item.unit_code,
             }
+        metadata["retention_flags"] = {
+            "iss": ContractService._normalize_bool(payload.get("retention_iss")),
+            "irrf": ContractService._normalize_bool(payload.get("retention_irrf")),
+            "csrf": ContractService._normalize_bool(payload.get("retention_csrf")),
+            "inss": ContractService._normalize_bool(payload.get("retention_inss")),
+        }
 
         item = ContractItem(
             company_id=contract.company_id,
@@ -1475,10 +1495,10 @@ class ContractService:
             item_code=item_code,
             item_type=item_type,
             description=description,
-            quantity=ContractService._normalize_decimal(payload.get("quantity"), default="1"),
+            quantity=quantity,
             unit_code=unit_code,
-            unit_price=ContractService._normalize_decimal(payload.get("unit_price")),
-            total_price=ContractService.calculate_total_price(payload.get("quantity"), payload.get("unit_price")),
+            unit_price=unit_price,
+            total_price=total_price,
             order_index=ContractService._normalize_int(payload.get("order_index")) or 0,
             notes=ContractService._normalize_text(payload.get("notes")) or None,
             metadata_json=metadata,
