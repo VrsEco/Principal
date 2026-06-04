@@ -556,7 +556,14 @@ class ContractService:
         contract_items = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()
         billing_items = contract.billing_items.order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc()).all()
         total_contract_value = sum((item.total_price or Decimal("0")) for item in contract_items)
+        total_retention_value = Decimal("0.00")
+        for item in contract_items:
+            retention_summary = dict((item.metadata_json or {}).get("retention_summary") or {})
+            total_retention_value += ContractService._normalize_decimal(retention_summary.get("total_retention_amount"))
         total_billing_value = sum((item.amount or Decimal("0")) for item in billing_items)
+        total_contract_value = total_contract_value.quantize(Decimal("0.01")) if contract_items else Decimal("0.00")
+        total_retention_value = total_retention_value.quantize(Decimal("0.01")) if contract_items else Decimal("0.00")
+        net_contract_value = (total_contract_value - total_retention_value).quantize(Decimal("0.01")) if contract_items else Decimal("0.00")
 
         return {
             "status_group": ContractService.get_contract_status_group(contract),
@@ -571,7 +578,9 @@ class ContractService:
             "clause_count": contract.clauses.count(),
             "note_count": contract.notes_log.count(),
             "event_count": contract.events.count(),
-            "total_contract_value": total_contract_value.quantize(Decimal("0.01")) if contract_items else Decimal("0.00"),
+            "total_contract_value": total_contract_value,
+            "total_retention_value": total_retention_value,
+            "net_contract_value": net_contract_value,
             "total_billing_value": total_billing_value.quantize(Decimal("0.01")) if billing_items else Decimal("0.00"),
             "updated_at": contract.updated_at,
             "created_at": contract.created_at,

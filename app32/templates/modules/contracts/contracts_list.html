@@ -168,10 +168,10 @@
                     <p>{{ selected_contract.party.name if selected_contract.party else 'Cliente não informado' }}</p>
                 </div>
                 <div class="contract-summary-pills">
-                    <span class="mini-badge {{ 'active' if contract_status_group(selected_contract) == 'active' else '' }}">{{ selected_contract.status }}</span>
                     <span class="mini-badge">Itens: {{ summary.contract_item_count or 0 }}</span>
-                    <span class="mini-badge">Valor contrato: R$ {{ summary.total_contract_value or '0,00' }}</span>
-                    <span class="mini-badge">Faturamento: R$ {{ summary.total_billing_value or '0,00' }}</span>
+                    <span class="mini-badge">Valor Bruto: {{ summary.total_contract_value|format_currency_br }}</span>
+                    <span class="mini-badge">Retenções: {{ summary.total_retention_value|format_currency_br }}</span>
+                    <span class="mini-badge">Valor Líquido: {{ summary.net_contract_value|format_currency_br }}</span>
                 </div>
             </section>
 
@@ -267,7 +267,7 @@
                                             <input type="checkbox" name="retention_{{ retention_key }}_enabled" value="1" data-retention-enabled>
                                             {{ retention_label }}
                                         </label>
-                                        <button class="btn btn-ghost btn-sm contract-retention-toggle" type="button" data-retention-toggle aria-expanded="false">
+                                        <button class="btn btn-ghost btn-sm contract-retention-toggle" type="button" data-retention-toggle aria-expanded="false" onclick="window.toggleContractRetentionCard && window.toggleContractRetentionCard(this); return false;">
                                             {{ retention_label }}
                                         </button>
                                     </div>
@@ -591,12 +591,33 @@
     .contract-retention-detail-card.is-collapsed { gap:0; }
     .contract-retention-detail-card.is-collapsed .contract-retention-detail-head { margin:0; }
     .contract-retention-detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:.85rem; }
+    .contract-retention-detail-card.is-collapsed .contract-retention-detail-grid { display:none !important; }
     .contracts-select-search { margin:.45rem 0 .5rem; }
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    window.toggleContractRetentionCard = function (trigger) {
+        const card = trigger?.closest?.('[data-retention-card]');
+        if (!card) return false;
+        const body = card.querySelector('[data-retention-body]');
+        const toggle = card.querySelector('[data-retention-toggle]');
+        const retentionLabel = toggle?.dataset?.retentionLabel || toggle?.textContent?.trim() || 'Retenção';
+        const expanded = toggle?.getAttribute('aria-expanded') === 'true';
+        const nextExpanded = !expanded;
+        card.classList.toggle('is-collapsed', !nextExpanded);
+        if (body) {
+            body.hidden = !nextExpanded;
+            body.style.display = nextExpanded ? 'grid' : 'none';
+        }
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+            toggle.textContent = nextExpanded ? 'Ocultar detalhes' : retentionLabel;
+        }
+        return false;
+    };
+
     const collapsedNodes = new Set();
     const storageKey = 'contractsListCollapsedNodes:{{ company_id }}';
     const savedRaw = window.localStorage.getItem(storageKey);
@@ -709,6 +730,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!body || !toggle) return;
         card.classList.toggle('is-collapsed', !expanded);
         body.hidden = !expanded;
+        body.style.display = expanded ? 'grid' : 'none';
         toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         toggle.textContent = expanded ? 'Ocultar detalhes' : (toggle.dataset.retentionLabel || toggle.textContent);
     };
@@ -722,8 +744,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (toggle) {
             toggle.addEventListener('click', function () {
-                const expanded = toggle.getAttribute('aria-expanded') === 'true';
-                syncRetentionCard(card, !expanded);
+                window.toggleContractRetentionCard(toggle);
             });
         }
 
