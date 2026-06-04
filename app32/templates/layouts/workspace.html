@@ -64,7 +64,13 @@
         </main>
 
         <!-- Sidebar Direita (Detalhes e Contexto) -->
-        {% set sidebar_right_content %}{% block sidebar_right %}{% endblock %}{% endset %}
+        {% set sidebar_right_content %}
+            {% block sidebar_right %}
+                {% if sidebar_right_html is defined %}
+                    {{ sidebar_right_html | safe }}
+                {% endif %}
+            {% endblock %}
+        {% endset %}
         {% if sidebar_right_content | trim %}
         <aside class="workspace-sidebar-right collapsed" id="sidebar-right">
             {{ sidebar_right_content }}

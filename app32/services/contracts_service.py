@@ -86,6 +86,20 @@ class ContractService:
             ],
         },
     }
+    ITEM_RETENTION_OPTIONS = (
+        ("iss", "ISS"),
+        ("irrf", "IRRF"),
+        ("csrf", "CSRF"),
+        ("inss", "INSS"),
+    )
+    ITEM_RETENTION_DEDUCTION_MODES = (
+        ("percent", "%"),
+        ("amount", "Valor"),
+    )
+    ITEM_RETENTION_VALUE_MODES = (
+        ("percent", "%"),
+        ("amount", "Valor"),
+    )
 
     @staticmethod
     def _normalize_text(value: object) -> str:
@@ -957,6 +971,68 @@ class ContractService:
         )
 
     @staticmethod
+    def get_item_retention_options():
+        return ContractService.ITEM_RETENTION_OPTIONS
+
+    @staticmethod
+    def get_item_retention_deduction_mode_options():
+        return ContractService.ITEM_RETENTION_DEDUCTION_MODES
+
+    @staticmethod
+    def get_item_retention_value_mode_options():
+        return ContractService.ITEM_RETENTION_VALUE_MODES
+
+    @staticmethod
+    def _retention_label(kind: str) -> str:
+        normalized = ContractService._normalize_text(kind).lower()
+        for key, label in ContractService.ITEM_RETENTION_OPTIONS:
+            if key == normalized:
+                return label
+        return normalized.upper() if normalized else "Retenção"
+
+    @staticmethod
+    def _build_project_domain_metadata(project: Optional[Project]) -> dict:
+        if not project:
+            return {
+                "domain_type": None,
+                "domain_source_kind": None,
+                "domain_source_id": None,
+                "domain_label": None,
+                "domain_value": None,
+            }
+        return {
+            "domain_type": "project",
+            "domain_source_kind": "manual",
+            "domain_source_id": project.id,
+            "domain_label": f"{project.code} · {project.name}",
+            "domain_value": f"manual:project:{project.id}",
+        }
+
+    @staticmethod
+    def _calculate_retention_amount(
+        *,
+        gross_amount: Decimal,
+        deduction_mode: str,
+        deduction_value: Decimal,
+        value_mode: str,
+        value_amount: Decimal,
+    ) -> tuple[Decimal, Decimal]:
+        effective_base = gross_amount
+        if deduction_value > Decimal("0.00"):
+            if deduction_mode == "percent":
+                effective_base = gross_amount - ((gross_amount * deduction_value) / Decimal("100"))
+            else:
+                effective_base = gross_amount - deduction_value
+        effective_base = max(effective_base, Decimal("0.00")).quantize(Decimal("0.01"))
+        if value_amount <= Decimal("0.00"):
+            return effective_base, Decimal("0.00")
+        if value_mode == "percent":
+            retention_amount = (effective_base * value_amount / Decimal("100")).quantize(Decimal("0.01"))
+        else:
+            retention_amount = value_amount.quantize(Decimal("0.01"))
+        return effective_base, max(retention_amount, Decimal("0.00")).quantize(Decimal("0.01"))
+
+    @staticmethod
     def _resolve_chart_account(company_id: int, account_id: object, *, field_label: str) -> Optional[FinancialChartAccount]:
         normalized_id = ContractService._normalize_int(account_id)
         if not normalized_id:
@@ -1573,19 +1649,6 @@ class ContractService:
             payload.get("project_id"),
             field_label="Projeto do item",
         )
-        retention_compensation_account = ContractService._resolve_asset_account(
-            contract.company_id,
-            payload.get("retention_asset_account_id"),
-            field_label="Conta de compensação da retenção",
-        )
-        retention_chart_account = ContractService._resolve_chart_account(
-            contract.company_id,
-            payload.get("retention_chart_account_id"),
-            field_label="Plano de contas da retenção",
-        )
-        retention_trigger = ContractService._normalize_text(payload.get("retention_trigger")).lower() or None
-        if retention_trigger and retention_trigger not in {"emissao", "vencimento", "baixa"}:
-            raise ValueError("Gatilho da retenção inválido para o item.")
         if catalog_item:
             metadata["contract_catalog_item_id"] = catalog_item.id
             metadata["catalog_snapshot"] = {
@@ -1605,28 +1668,77 @@ class ContractService:
             "project_code": project.code if project else None,
             "project_name": project.name if project else None,
         }
-        metadata["retention_flags"] = {
-            "iss": ContractService._normalize_bool(payload.get("retention_iss")),
-            "irrf": ContractService._normalize_bool(payload.get("retention_irrf")),
-            "csrf": ContractService._normalize_bool(payload.get("retention_csrf")),
-            "inss": ContractService._normalize_bool(payload.get("retention_inss")),
-        }
-        metadata["retention_satellite"] = {
-            "asset_account_id": retention_compensation_account.id if retention_compensation_account else None,
-            "asset_account_code": retention_compensation_account.code if retention_compensation_account else None,
-            "asset_account_name": retention_compensation_account.name if retention_compensation_account else None,
-            "chart_account_id": retention_chart_account.id if retention_chart_account else None,
-            "chart_account_code": retention_chart_account.code if retention_chart_account else None,
-            "chart_account_name": retention_chart_account.name if retention_chart_account else None,
-            "trigger": retention_trigger,
-        }
-        if any(metadata["retention_flags"].values()):
-            if not retention_compensation_account:
-                raise ValueError("Informe a conta de compensação da retenção para itens com retenção.")
+        project_domain = ContractService._build_project_domain_metadata(project)
+        retention_details = []
+        retention_flags = {}
+        for retention_key, retention_label in ContractService.get_item_retention_options():
+            enabled = ContractService._normalize_bool(payload.get(f"retention_{retention_key}_enabled"))
+            retention_flags[retention_key] = enabled
+            if not enabled:
+                continue
+            deduction_mode = ContractService._normalize_text(payload.get(f"retention_{retention_key}_deduction_mode")).lower() or "percent"
+            if deduction_mode not in {"percent", "amount"}:
+                raise ValueError(f"Abatimento da base inválido para retenção {retention_label}.")
+            deduction_value = ContractService._normalize_decimal(payload.get(f"retention_{retention_key}_deduction_value"))
+            value_mode = ContractService._normalize_text(payload.get(f"retention_{retention_key}_value_mode")).lower() or "percent"
+            if value_mode not in {"percent", "amount"}:
+                raise ValueError(f"Tipo do valor da retenção inválido para {retention_label}.")
+            value_amount = ContractService._normalize_decimal(payload.get(f"retention_{retention_key}_value"))
+            compensation_account = ContractService._resolve_asset_account(
+                contract.company_id,
+                payload.get(f"retention_{retention_key}_asset_account_id"),
+                field_label=f"Conta de compensação da retenção {retention_label}",
+            )
+            retention_chart_account = ContractService._resolve_chart_account(
+                contract.company_id,
+                payload.get(f"retention_{retention_key}_chart_account_id"),
+                field_label=f"Plano de contas da retenção {retention_label}",
+            )
+            retention_trigger = ContractService._normalize_text(payload.get(f"retention_{retention_key}_trigger")).lower() or None
+            if retention_trigger not in {"emissao", "vencimento", "baixa"}:
+                raise ValueError(f"Informe um gatilho válido para a retenção {retention_label}.")
+            if not compensation_account:
+                raise ValueError(f"Informe a conta de compensação da retenção {retention_label}.")
             if not retention_chart_account:
-                raise ValueError("Informe o plano de contas da retenção para itens com retenção.")
-            if not retention_trigger:
-                raise ValueError("Informe o gatilho da retenção para itens com retenção.")
+                raise ValueError(f"Informe o plano de contas da retenção {retention_label}.")
+            if value_amount <= Decimal("0.00"):
+                raise ValueError(f"Informe o valor da retenção {retention_label}.")
+            calculation_base, retention_amount = ContractService._calculate_retention_amount(
+                gross_amount=total_price,
+                deduction_mode=deduction_mode,
+                deduction_value=deduction_value,
+                value_mode=value_mode,
+                value_amount=value_amount,
+            )
+            retention_details.append(
+                {
+                    "kind": retention_key,
+                    "label": retention_label,
+                    "base_deduction_mode": deduction_mode,
+                    "base_deduction_value": float(deduction_value),
+                    "calculation_base": float(calculation_base),
+                    "retention_value_mode": value_mode,
+                    "retention_value": float(value_amount),
+                    "retention_amount": float(retention_amount),
+                    "asset_account_id": compensation_account.id,
+                    "asset_account_code": compensation_account.code,
+                    "asset_account_name": compensation_account.name,
+                    "chart_account_id": retention_chart_account.id,
+                    "chart_account_code": retention_chart_account.code,
+                    "chart_account_name": retention_chart_account.name,
+                    "trigger": retention_trigger,
+                    "project_id": project.id if project else None,
+                    "project_code": project.code if project else None,
+                    "project_name": project.name if project else None,
+                    **project_domain,
+                }
+            )
+        metadata["retention_flags"] = retention_flags
+        metadata["retention_details"] = retention_details
+        metadata["retention_summary"] = {
+            "total_retention_amount": float(sum(Decimal(str(item.get("retention_amount") or 0)) for item in retention_details)),
+            "retention_count": len(retention_details),
+        }
 
         item = ContractItem(
             company_id=contract.company_id,
@@ -1691,8 +1803,15 @@ class ContractService:
         competence_end = ContractService._normalize_date(payload.get("competence_end")) or competence_start
         issue_date = ContractService._normalize_date(payload.get("issue_date")) or date.today()
         due_date = ContractService._normalize_date(payload.get("due_date")) or ContractService.resolve_due_date(issue_date=issue_date, due_rule=contract.due_rule)
-        items = contract.billing_items.order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc()).all()
-        total_amount = sum((item.amount or Decimal("0")) for item in items)
+        items = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()
+        total_amount = sum((item.total_price or Decimal("0")) for item in items)
+        total_retentions = Decimal("0.00")
+        for item in items:
+            retention_details = list((item.metadata_json or {}).get("retention_details") or [])
+            total_retentions += sum(
+                ContractService._normalize_decimal(detail.get("retention_amount"))
+                for detail in retention_details
+            )
         return {
             "competence_start": competence_start,
             "competence_end": competence_end,
@@ -1700,6 +1819,8 @@ class ContractService:
             "due_date": due_date,
             "item_count": len(items),
             "gross_amount": total_amount.quantize(Decimal("0.01")) if items else Decimal("0.00"),
+            "retention_amount": total_retentions.quantize(Decimal("0.01")) if items else Decimal("0.00"),
+            "net_amount": (total_amount - total_retentions).quantize(Decimal("0.01")) if items else Decimal("0.00"),
         }
 
     @staticmethod
@@ -1763,6 +1884,29 @@ class ContractService:
         }
 
     @staticmethod
+    def _build_native_billing_item_snapshot(contract_item: ContractItem) -> dict:
+        item_metadata = dict(contract_item.metadata_json or {})
+        allocation = dict(item_metadata.get("allocation") or {})
+        retention_details = list(item_metadata.get("retention_details") or [])
+        gross_amount = ContractService._normalize_decimal(contract_item.total_price)
+        retention_total = sum(
+            ContractService._normalize_decimal(detail.get("retention_amount"))
+            for detail in retention_details
+        )
+        return {
+            "contract_item_id": contract_item.id,
+            "item_code": contract_item.item_code,
+            "description": contract_item.description,
+            "quantity": float(contract_item.quantity or 0),
+            "unit_price": float(contract_item.unit_price or 0),
+            "gross_amount": float(gross_amount),
+            "net_amount": float((gross_amount - retention_total).quantize(Decimal("0.01"))),
+            "retention_amount": float(retention_total.quantize(Decimal("0.01"))),
+            "allocation": allocation,
+            "retention_details": retention_details,
+        }
+
+    @staticmethod
     def generate_native_billing(*, contract: Contract, payload: dict, user_id: Optional[int]):
         if not contract.party_id:
             raise ValueError("Defina o cliente do contrato antes de gerar o faturamento nativo.")
@@ -1772,10 +1916,10 @@ class ContractService:
         competence_end = preview["competence_end"]
         issue_date = preview["issue_date"]
         due_date = preview["due_date"]
-        billing_items = contract.billing_items.order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc()).all()
+        contract_items = contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()
 
-        if not billing_items:
-            raise ValueError("Cadastre ao menos um item de faturamento nativo antes de gerar a competência.")
+        if not contract_items:
+            raise ValueError("Cadastre ao menos um item contratual antes de gerar a competência.")
 
         fiscal_snapshot = ContractService.build_contract_fiscal_snapshot(contract)
 
@@ -1803,38 +1947,50 @@ class ContractService:
             issue_date=issue_date,
             due_date=due_date,
             gross_amount=preview["gross_amount"],
-            net_amount=preview["gross_amount"],
+            net_amount=preview["net_amount"],
             idempotency_key=idempotency_key,
             generated_by_user_id=user_id,
             metadata_json={
                 "contract_version": contract.version,
                 "generated_from": "contract_native_module",
-                "item_count": len(billing_items),
+                "item_count": len(contract_items),
+                "retention_amount": float(preview["retention_amount"]),
                 "fiscal_snapshot": fiscal_snapshot,
             },
         )
         db.session.add(native_billing)
         db.session.flush()
 
-        for item in billing_items:
+        retention_summary = {}
+        for item in contract_items:
+            snapshot = ContractService._build_native_billing_item_snapshot(item)
+            for retention in snapshot["retention_details"]:
+                key = retention.get("kind")
+                retention_summary[key] = round(float(retention_summary.get(key) or 0) + float(retention.get("retention_amount") or 0), 2)
             db.session.add(
                 ContractNativeBillingItem(
                     company_id=contract.company_id,
                     contract_native_billing_id=native_billing.id,
-                    contract_billing_item_id=item.id,
-                    contract_item_id=item.contract_item_id,
+                    contract_billing_item_id=None,
+                    contract_item_id=item.id,
                     description=item.description,
-                    amount=item.amount,
-                    competence_rule=item.competence_rule,
-                    due_rule=item.due_rule,
-                    trigger_type=item.trigger_type,
-                    trigger_reference_date=item.trigger_reference_date,
+                    amount=item.total_price,
+                    competence_rule=contract.competence_rule,
+                    due_rule=contract.due_rule,
+                    trigger_type="contract_item",
+                    trigger_reference_date="contract_rule",
                     metadata_json={
-                        "billing_periodicity": item.billing_periodicity,
-                        "is_recurring": item.is_recurring,
+                        "billing_periodicity": contract.periodicity,
+                        "is_recurring": True,
+                        **snapshot,
                     },
                 )
             )
+
+        native_billing.metadata_json = {
+            **dict(native_billing.metadata_json or {}),
+            "retention_summary": retention_summary,
+        }
 
         contract.last_billing_at = issue_date
         contract.updated_by_user_id = user_id

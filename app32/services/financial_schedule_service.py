@@ -30,6 +30,7 @@ from models.financial import (
     FinancialEntry,
     FinancialEntryAllocation,
     FinancialSchedule,
+    FinancialScheduleLink,
     FinancialSettlement,
 )
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine, FinancialBudgetVersion
@@ -628,6 +629,9 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Título Financeiro não encontrado no escopo da empresa."
+        schedule_metadata = dict(getattr(schedule, "metadata_json", None) or {})
+        if schedule_metadata.get("managed_by_contract_billing"):
+            return None, "Título financeiro gerido pelo faturamento contratual. Edite o faturamento no módulo de Contratos."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
@@ -776,6 +780,9 @@ class FinancialScheduleService:
         ).first()
         if not schedule:
             return None, "Título Financeiro não encontrado no escopo da empresa."
+        schedule_metadata = dict(getattr(schedule, "metadata_json", None) or {})
+        if schedule_metadata.get("managed_by_contract_billing"):
+            return None, "Título financeiro gerido pelo faturamento contratual. Exclua ou reprocesse no módulo de Contratos."
         from services.financial_bordero_service import FinancialBorderoService
 
         active_bordero = FinancialBorderoService.get_active_bordero_for_schedule(company_id=company_id, schedule_id=schedule.id)
@@ -1735,6 +1742,15 @@ class FinancialScheduleService:
         payload["display_variant"] = "negative" if payload["signed_template_amount"] < 0 else "positive"
         metadata = dict(schedule.metadata_json or {})
         payload["metadata_json"] = metadata
+        payload["is_contract_managed"] = bool(metadata.get("managed_by_contract_billing"))
+        payload["contract_management_url"] = metadata.get("contract_management_url")
+        payload["contract_reference"] = {
+            "contract_id": metadata.get("contract_id"),
+            "contract_code": metadata.get("contract_code"),
+            "contract_native_billing_id": metadata.get("contract_native_billing_id"),
+            "financial_role": metadata.get("financial_role"),
+            "satellite_nature": metadata.get("satellite_nature"),
+        }
         payload["attachments"] = list(metadata.get("attachments") or [])
         payload["allocations"] = FinancialScheduleService._normalize_schedule_allocations(
             company_id=schedule.company_id,
@@ -1777,6 +1793,49 @@ class FinancialScheduleService:
             ).order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc()).all()
             payload["related_entries"] = [FinancialService.serialize_entry(item) for item in entries]
             payload["has_entries"] = bool(entries)
+        if metadata.get("managed_by_contract_billing"):
+            parent_link = FinancialScheduleLink.query.filter(
+                FinancialScheduleLink.company_id == schedule.company_id,
+                FinancialScheduleLink.child_schedule_id == schedule.id,
+                FinancialScheduleLink.deleted_at.is_(None),
+            ).order_by(FinancialScheduleLink.id.desc()).first()
+            child_links = FinancialScheduleLink.query.filter(
+                FinancialScheduleLink.company_id == schedule.company_id,
+                FinancialScheduleLink.parent_schedule_id == schedule.id,
+                FinancialScheduleLink.deleted_at.is_(None),
+            ).order_by(FinancialScheduleLink.id.asc()).all()
+            payload["contract_parent_title"] = None
+            payload["contract_satellites"] = []
+            if parent_link and parent_link.parent_schedule:
+                parent = parent_link.parent_schedule
+                parent_meta = dict(parent.metadata_json or {})
+                payload["contract_parent_title"] = {
+                    "id": parent.id,
+                    "schedule_code": parent.schedule_code,
+                    "description": parent.description,
+                    "financial_role": parent_meta.get("financial_role"),
+                    "contract_id": parent_meta.get("contract_id"),
+                    "contract_code": parent_meta.get("contract_code"),
+                }
+            for link in child_links:
+                child = link.child_schedule
+                if child is None:
+                    continue
+                child_meta = dict(child.metadata_json or {})
+                payload["contract_satellites"].append(
+                    {
+                        "id": child.id,
+                        "schedule_code": child.schedule_code,
+                        "description": child.description,
+                        "title_nature": link.title_nature,
+                        "trigger_key": dict(link.metadata_json or {}).get("trigger_key"),
+                        "retention_kind": dict(link.metadata_json or {}).get("retention_kind"),
+                        "financial_role": child_meta.get("financial_role"),
+                        "contract_item_id": dict(link.metadata_json or {}).get("contract_item_id"),
+                        "open_amount": FinancialTitleBalanceService.calculate_for_schedule(schedule=child).get("principal_open"),
+                        "template_amount": float(child.template_amount or 0),
+                    }
+                )
         if include_summary:
             payload["summary"] = FinancialScheduleService._build_schedule_summary(schedule)
             if payload["summary"] is not None:

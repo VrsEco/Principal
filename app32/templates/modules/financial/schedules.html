@@ -31,6 +31,7 @@
                     <button type="button" class="sched-tab" data-tab="recorrencia" onclick="switchScheduleTab('recorrencia')">Recorrência</button>
                     <button type="button" class="sched-tab" data-tab="anexos" onclick="switchScheduleTab('anexos')">Anexos</button>
                     <button type="button" class="sched-tab hidden" data-tab="baixas" id="baixas-tab-button" onclick="switchScheduleTab('baixas')">Baixas</button>
+                    <button type="button" class="sched-tab hidden" data-tab="satelites" id="satellites-tab-button" onclick="switchScheduleTab('satelites')">Lançamentos Satélites</button>
                     <button type="button" class="sched-tab hidden" data-tab="memoria-calculo" id="calculation-log-tab-button" onclick="switchScheduleTab('memoria-calculo')">Memória de cálculo</button>
                 </div>
 
@@ -203,6 +204,11 @@
                     <section class="sched-tab-panel" data-panel="baixas">
                         <div id="baixas-empty" class="empty-state">Nenhuma baixa vinculada a este título financeiro.</div>
                         <div id="baixas-list" class="baixas-list"></div>
+                    </section>
+
+                    <section class="sched-tab-panel" data-panel="satelites">
+                        <div id="satellites-empty" class="empty-state">Nenhum lançamento satélite vinculado a este título financeiro.</div>
+                        <div id="satellites-list" class="baixas-list"></div>
                     </section>
 
                     <section class="sched-tab-panel" data-panel="memoria-calculo">

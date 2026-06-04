@@ -170,6 +170,9 @@
         const borderoCode = item.bordero?.code || summary.bordero_code || '';
         const isBorderoLocked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);
         const isBorderoVirtual = Boolean(item.is_bordero_virtual);
+        const isContractManaged = Boolean(item.is_contract_managed || item.metadata_json?.managed_by_contract_billing);
+        const parentTitle = item.contract_parent_title;
+        const contractBadge = isContractManaged ? '<span class="sched-pill sched-pill--bordero-item">Contrato</span>' : '';
         const actionsHtml = isBorderoVirtual
           ? `<div class="sched-row-actions">
               <a class="btn btn-primary" href="/financial/borderos/${item.bordero_id}?company_id=${companyId}">Abrir borderô</a>
@@ -179,6 +182,12 @@
                 <a class="btn btn-primary" href="/financial/borderos/${item.bordero?.id || item.bordero_id}?company_id=${companyId}">Abrir borderô</a>
                 <a class="btn btn-secondary" href="/financial/schedules/${item.id}?company_id=${companyId}">Consultar título</a>
               </div>`
+            : isContractManaged
+              ? `<div class="sched-row-actions">
+                  <a class="btn btn-primary" href="/financial/schedules/${item.id}?company_id=${companyId}">Consultar</a>
+                  <button type="button" class="btn btn-secondary" disabled title="Título gerido pelo faturamento contratual.">Editar bloqueado</button>
+                  <button type="button" class="btn btn-danger" disabled title="Exclusão somente pelo módulo de Contratos.">Excluir bloqueado</button>
+                </div>`
             : `<div class="sched-row-actions">
                 <button type="button" class="btn btn-primary" data-action="settle" data-id="${item.id}" ${(hasOpenBalance && !isBorderoLocked) ? '' : 'disabled'}>Baixar</button>
                 <a class="btn btn-secondary" href="/financial/schedules/${item.id}?company_id=${companyId}">Editar</a>
@@ -191,7 +200,8 @@
           <td>${isBorderoVirtual ? (item.bordero_code || item.schedule_code || '-') : item.id}</td>
           <td class="sched-history">
             <strong>${item.name || item.description || 'Sem histórico'}</strong>
-            <small>${item.schedule_code || '-'} · ${item.status || '-'}${borderoCode && !isBorderoVirtual ? ` · ${borderoCode}` : ''}</small>
+            <small>${item.schedule_code || '-'} · ${item.status || '-'}${borderoCode && !isBorderoVirtual ? ` · ${borderoCode}` : ''}${parentTitle?.schedule_code ? ` · principal ${parentTitle.schedule_code}` : ''}</small>
+            ${contractBadge}
           </td>
           <td><span class="sched-pill ${typeClass(item.entry_type)}">${typeLabel(item.entry_type)}</span></td>
           <td><span class="${amountClass(item.signed_template_amount ?? 0)}">${money(item.signed_template_amount ?? item.template_amount ?? 0)}</span></td>

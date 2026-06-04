@@ -166,6 +166,8 @@
     anexos: 'anexos',
     attachments: 'anexos',
     baixas: 'baixas',
+    satelites: 'satelites',
+    satellites: 'satelites',
     settlement: 'baixas',
     settlements: 'baixas',
     liquidacao: 'baixas',
@@ -186,6 +188,10 @@
     const normalizedTab = normalizeScheduleTab(initialOpenTab);
     if (normalizedTab === 'baixas' && !($('baixas-tab-button')?.classList.contains('hidden'))) {
       switchTab('baixas');
+      return;
+    }
+    if (normalizedTab === 'satelites' && !($('satellites-tab-button')?.classList.contains('hidden'))) {
+      switchTab('satelites');
       return;
     }
     if (normalizedTab === 'memoria-calculo' && !($('calculation-log-tab-button')?.classList.contains('hidden'))) {
@@ -984,6 +990,7 @@
 
   function renderBaixas(entries) {
     const directEntrySchedule = isDirectEntrySchedule(selectedSchedule);
+    const contractManagedSchedule = Boolean(selectedSchedule?.is_contract_managed || selectedSchedule?.metadata_json?.managed_by_contract_billing);
     $('baixas-empty').classList.toggle('hidden', !!entries.length);
     $('baixas-list').innerHTML = entries.map((entry, index) => `
       <article class="baixa-card">
@@ -991,9 +998,45 @@
         <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
           <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção Financeira</th><th>Descontos</th><th>Total</th><th>Ações</th></tr></thead>
-          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${directEntrySchedule ? `<button type="button" class="btn btn-danger btn-xs" data-direct-entry-delete="${selectedSchedule?.id || ''}">Excluir lançamento rápido</button>` : (canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>')}</td></tr>`).join('') : '<tr><td colspan="8">Sem baixas registradas.</td></tr>'}</tbody>
+          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${contractManagedSchedule ? '<small>Gerido por contrato</small>' : (directEntrySchedule ? `<button type="button" class="btn btn-danger btn-xs" data-direct-entry-delete="${selectedSchedule?.id || ''}">Excluir lançamento rápido</button>` : (canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>'))}</td></tr>`).join('') : '<tr><td colspan="8">Sem baixas registradas.</td></tr>'}</tbody>
         </table>
       </article>`).join('');
+  }
+
+  function renderSatellites(schedule = selectedSchedule) {
+    const satellites = Array.isArray(schedule?.contract_satellites) ? schedule.contract_satellites : [];
+    const parentTitle = schedule?.contract_parent_title || null;
+    $('satellites-empty')?.classList.toggle('hidden', satellites.length > 0 || !!parentTitle);
+    if (!$('satellites-list')) return;
+    const parentHtml = parentTitle ? `
+      <article class="baixa-card">
+        <strong>Título principal vinculado</strong>
+        <small>${escapeHtml(parentTitle.schedule_code || '-')} · ${escapeHtml(parentTitle.contract_code || '-')}</small>
+        <table class="settlement-table">
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Título principal</td><td><a href="/financial/schedules/${parentTitle.id}?company_id=${companyId}">${escapeHtml(parentTitle.schedule_code || String(parentTitle.id || '-'))}</a></td></tr>
+            <tr><td>Contrato</td><td>${escapeHtml(parentTitle.contract_code || '-')}</td></tr>
+            <tr><td>Papel</td><td>${escapeHtml(parentTitle.financial_role || 'main')}</td></tr>
+          </tbody>
+        </table>
+      </article>` : '';
+    $('satellites-list').innerHTML = `${parentHtml}${satellites.map((item, index) => `
+      <article class="baixa-card">
+        <strong>${index + 1}. ${escapeHtml(item.description || item.schedule_code || 'Satélite')}</strong>
+        <small>${escapeHtml(item.schedule_code || '-')} · ${escapeHtml((item.retention_kind || item.title_nature || '').toUpperCase() || '-')} · ${money(item.template_amount || 0)}</small>
+        <table class="settlement-table">
+          <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+          <tbody>
+            <tr><td>Título</td><td><a href="/financial/schedules/${item.id}?company_id=${companyId}">${escapeHtml(item.schedule_code || String(item.id || '-'))}</a></td></tr>
+            <tr><td>Retenção</td><td>${escapeHtml((item.retention_kind || item.title_nature || '-').toUpperCase())}</td></tr>
+            <tr><td>Gatilho</td><td>${escapeHtml(item.trigger_key || '-')}</td></tr>
+            <tr><td>Valor original</td><td>${money(item.template_amount || 0)}</td></tr>
+            <tr><td>Saldo em aberto</td><td>${money(item.open_amount || 0)}</td></tr>
+            <tr><td>Item do contrato</td><td>${escapeHtml(item.contract_item_id || '-')}</td></tr>
+          </tbody>
+        </table>
+      </article>`).join('')}`;
   }
 
   async function loadCalculationLogs(scheduleId) {
@@ -1261,8 +1304,10 @@
     hydrateAllocations(schedule);
     renderAttachments(schedule.attachments || []);
     renderBaixas(schedule.related_entries || []);
+    renderSatellites(schedule);
     renderCalculationLogs(schedule, selectedCalculationLogs);
     $('baixas-tab-button').classList.toggle('hidden', !(schedule.related_entries || []).length);
+    $('satellites-tab-button')?.classList.toggle('hidden', !((schedule.contract_satellites || []).length || schedule.contract_parent_title));
     Array.from(form.elements).forEach((field) => {
       if (!field || ['schedule_id', 'schedule_code'].includes(field.name)) return;
       if (field.matches?.('[data-settlement-delete]')) {
@@ -1460,8 +1505,10 @@
     renderAllocations();
     renderAttachments([]);
     renderBaixas([]);
+    renderSatellites(null);
     renderCalculationLogs(null, []);
     $('baixas-tab-button')?.classList.add('hidden');
+    $('satellites-tab-button')?.classList.add('hidden');
     $('calculation-log-tab-button')?.classList.add('hidden');
     setFieldValue('field-frequency', 'weekly');
     setFieldValue('field-competence-mode', 'same_competence');
@@ -1709,6 +1756,10 @@
   window.handleScheduleAction = async (action) => {
     try {
       if (borderoLocked) throw new Error(`Título Financeiro bloqueado pelo ${selectedSchedule?.bordero?.code || 'borderô'}.`);
+      if (selectedSchedule?.is_contract_managed || selectedSchedule?.metadata_json?.managed_by_contract_billing) {
+        if (action === 'cancel') return window.location.href = '/financial/schedules';
+        throw new Error('Título financeiro gerido pelo faturamento contratual. Faça alterações no módulo de Contratos.');
+      }
       if (action === 'cancel') return window.location.href = '/financial/schedules';
       if (action === 'save_and_settle' && hasActiveSettlements(selectedSchedule)) {
         await openSettlementCompositionModal(selectedSchedule);
@@ -1796,6 +1847,9 @@
   async function deleteSettlement(settlementId) {
     try {
       if (!settlementId || !selectedSchedule?.id) return;
+      if (selectedSchedule?.is_contract_managed || selectedSchedule?.metadata_json?.managed_by_contract_billing) {
+        throw new Error('Baixas de títulos contratuais devem ser geridas no módulo de Contratos.');
+      }
       if (isDirectEntrySchedule(selectedSchedule)) {
         throw new Error('Lançamento rápido não permite excluir apenas a baixa. Exclua o lançamento rápido inteiro.');
       }

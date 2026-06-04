@@ -257,43 +257,60 @@
                                     {% endfor %}
                                 </select>
                             </label>
-                            <div class="full-width contract-retention-flags">
-                                <span class="form-label">Retenções</span>
-                                <div class="contract-retention-flags-grid">
-                                    <label><input type="checkbox" name="retention_iss" value="1"> Retenção de ISS</label>
-                                    <label><input type="checkbox" name="retention_irrf" value="1"> Retenção de IRRF</label>
-                                    <label><input type="checkbox" name="retention_csrf" value="1"> Retenção de CSRF</label>
-                                    <label><input type="checkbox" name="retention_inss" value="1"> Retenção de INSS</label>
+                            <div class="full-width contract-retention-stack">
+                                <span class="form-label">Retenções e lançamentos satélites</span>
+                                {% for retention_key, retention_label in item_retention_options %}
+                                <div class="contract-retention-detail-card">
+                                    <div class="contract-retention-detail-head">
+                                        <label class="checkbox-inline">
+                                            <input type="checkbox" name="retention_{{ retention_key }}_enabled" value="1">
+                                            {{ retention_label }}
+                                        </label>
+                                    </div>
+                                    <div class="contract-retention-detail-grid">
+                                        <label><span>Abatimento da base</span>
+                                            <select name="retention_{{ retention_key }}_deduction_mode">
+                                                {% for value, label in item_retention_deduction_mode_options %}
+                                                <option value="{{ value }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label><span>Valor abatimento</span><input type="text" name="retention_{{ retention_key }}_deduction_value" value="0,00"></label>
+                                        <label><span>Valor da retenção</span>
+                                            <select name="retention_{{ retention_key }}_value_mode">
+                                                {% for value, label in item_retention_value_mode_options %}
+                                                <option value="{{ value }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label><span>% / valor retido</span><input type="text" name="retention_{{ retention_key }}_value" value="0,00"></label>
+                                        <label><span>Conta de compensação</span>
+                                            <select name="retention_{{ retention_key }}_asset_account_id">
+                                                <option value="">Selecione</option>
+                                                {% for item in references.asset_accounts %}
+                                                <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label><span>Plano de contas do valor retido</span>
+                                            <select name="retention_{{ retention_key }}_chart_account_id">
+                                                <option value="">Selecione</option>
+                                                {% for item in references.chart_accounts %}
+                                                <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                        <label><span>Gatilho da compensação</span>
+                                            <select name="retention_{{ retention_key }}_trigger">
+                                                <option value="">Selecione</option>
+                                                {% for value, label in retention_trigger_options %}
+                                                <option value="{{ value }}">{{ label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="full-width contract-retention-panel">
-                                <span class="form-label">Lançamentos satélites da retenção</span>
-                                <div class="contract-retention-panel-grid">
-                                    <label><span>Conta de compensação</span>
-                                        <select name="retention_asset_account_id">
-                                            <option value="">Selecione</option>
-                                            {% for item in references.asset_accounts %}
-                                            <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </label>
-                                    <label><span>Plano de contas do valor retido</span>
-                                        <select name="retention_chart_account_id">
-                                            <option value="">Selecione</option>
-                                            {% for item in references.chart_accounts %}
-                                            <option value="{{ item.id }}">{{ item.code }} · {{ item.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </label>
-                                    <label><span>Gatilho da compensação</span>
-                                        <select name="retention_trigger">
-                                            <option value="">Selecione</option>
-                                            {% for value, label in retention_trigger_options %}
-                                            <option value="{{ value }}">{{ label }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </label>
-                                </div>
+                                {% endfor %}
                             </div>
                         </div>
                         <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar item</button></div>
@@ -310,7 +327,7 @@
                                     <input type="hidden" name="delete_item_id" value="{{ item.id }}">
                                     {% set allocation = (item.metadata_json or {}).get('allocation', {}) %}
                                     {% set retention_flags = (item.metadata_json or {}).get('retention_flags', {}) %}
-                                    {% set retention_satellite = (item.metadata_json or {}).get('retention_satellite', {}) %}
+                                    {% set retention_details = (item.metadata_json or {}).get('retention_details', []) %}
                                     <div>
                                         <strong>{{ item.item_code or '-' }} · {{ item.description }}</strong>
                                         <small>{{ item.quantity }} x R$ {{ item.unit_price or '0,00' }} · Total R$ {{ item.total_price or '0,00' }}</small>
@@ -328,11 +345,16 @@
                                         {% if retention_flags.get('inss') %}{% set _ = enabled_flags.append('INSS') %}{% endif %}
                                         {% if enabled_flags %}
                                         <small>Retenções: {{ enabled_flags|join(', ') }}</small>
+                                        {% for retention in retention_details %}
                                         <small>
-                                            Compensação: {{ retention_satellite.get('asset_account_code') or '-' }} · {{ retention_satellite.get('asset_account_name') or '-' }}
-                                            · Conta retida: {{ retention_satellite.get('chart_account_code') or '-' }} · {{ retention_satellite.get('chart_account_name') or '-' }}
-                                            · Gatilho: {{ retention_satellite.get('trigger') or '-' }}
+                                            {{ retention.get('label') or retention.get('kind') }} · Base: {{ retention.get('base_deduction_mode') }} {{ retention.get('base_deduction_value') }}
+                                            · Retenção: {{ retention.get('retention_value_mode') }} {{ retention.get('retention_value') }}
+                                            · Valor calculado: R$ {{ retention.get('retention_amount') }}
+                                            · Compensação: {{ retention.get('asset_account_code') or '-' }} · {{ retention.get('asset_account_name') or '-' }}
+                                            · Conta retida: {{ retention.get('chart_account_code') or '-' }} · {{ retention.get('chart_account_name') or '-' }}
+                                            · Gatilho: {{ retention.get('trigger') or '-' }}
                                         </small>
+                                        {% endfor %}
                                         {% endif %}
                                     </div>
                                     <button class="btn btn-danger" type="submit">Remover</button>
@@ -556,6 +578,11 @@
     .contract-retention-panel { display:flex; flex-direction:column; gap:.75rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
     .contract-retention-panel .form-label { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
     .contract-retention-panel-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:.85rem; }
+    .contract-retention-stack { display:flex; flex-direction:column; gap:.85rem; }
+    .contract-retention-stack .form-label { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-secondary); }
+    .contract-retention-detail-card { display:flex; flex-direction:column; gap:.8rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
+    .contract-retention-detail-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+    .contract-retention-detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:.85rem; }
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>
@@ -647,8 +674,8 @@ document.addEventListener('DOMContentLoaded', function () {
         syncTotalPrice();
     }
 });
-</script>
-{% block sidebar_right %}
+ </script>
+{% set sidebar_right_html %}
 <div class="contracts-sidebar-card contracts-filter-card">
     <div class="sidebar-header-ws">
         <h3 class="text-h3">Filtros</h3>
@@ -698,6 +725,6 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     </form>
 </div>
-{% endblock %}
+{% endset %}
 {% include "modules/contracts/_styles.html" %}
 {% endblock %}

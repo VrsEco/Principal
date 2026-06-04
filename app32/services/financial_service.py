@@ -2495,6 +2495,9 @@ class FinancialService:
                 FinancialEntry.deleted_at.is_(None),
             ).first()
             schedule = FinancialService._resolve_linked_schedule(entry, company_id)
+            schedule_metadata = dict(getattr(schedule, "metadata_json", None) or {}) if schedule is not None else {}
+            if schedule_metadata.get("managed_by_contract_billing"):
+                return None, "Baixa gerida pelo faturamento contratual. Faça o estorno/reprocessamento no módulo de Contratos."
             bordero_child_metadata = dict(getattr(settlement, "metadata_json", {}) or {})
             bordero_child_delete_allowed = bool(
                 allow_bordero_child_delete
