@@ -19,6 +19,25 @@ TAB_ALIASES = {
     "gatilhos": "periodicidade",
     "anexos": "documentos",
 }
+CONTRACTS_LIST_TABS = (
+    {"key": "geral", "label": "Geral"},
+    {"key": "itens_valores", "label": "Itens e Valores do Contrato"},
+    {"key": "faturamento", "label": "Dados para Faturamento"},
+    {"key": "financeiro", "label": "Dados para Financeiro"},
+    {"key": "fiscal", "label": "Dados Fiscal / Emissão de NF"},
+    {"key": "observacoes", "label": "Observações"},
+)
+CONTRACTS_LIST_TAB_ALIASES = {
+    "resumo": "geral",
+    "cliente": "geral",
+    "itens": "itens_valores",
+    "itens_valores": "itens_valores",
+    "dados_faturamento": "faturamento",
+    "cobranca": "financeiro",
+    "dados_financeiro": "financeiro",
+    "dados_fiscal": "fiscal",
+    "nf": "fiscal",
+}
 
 
 def get_active_company():
@@ -42,6 +61,13 @@ def _normalize_contract_tab(tab_name: str | None) -> str:
     return TAB_ALIASES.get(raw_tab, raw_tab)
 
 
+def _normalize_contracts_list_tab(tab_name: str | None) -> str:
+    raw_tab = (tab_name or "geral").strip().lower()
+    normalized = CONTRACTS_LIST_TAB_ALIASES.get(raw_tab, raw_tab)
+    allowed = {item["key"] for item in CONTRACTS_LIST_TABS}
+    return normalized if normalized in allowed else "geral"
+
+
 def _normalize_contract_form_payload(form_data) -> dict:
     payload = dict(form_data)
     due_rule = ContractService.build_due_rule(
@@ -54,6 +80,87 @@ def _normalize_contract_form_payload(form_data) -> dict:
     payload.pop("due_rule_day", None)
     payload.pop("competence_rule", None)
     return payload
+
+
+def _normalize_contracts_list_form_payload(form_data) -> dict:
+    payload = dict(form_data)
+    due_rule = ContractService.build_due_rule(
+        reference=payload.get("due_rule_reference"),
+        day=payload.get("due_rule_day"),
+    )
+    if due_rule or "due_rule_reference" in payload or "due_rule_day" in payload:
+        payload["due_rule"] = due_rule
+    payload.pop("due_rule_reference", None)
+    payload.pop("due_rule_day", None)
+    payload.pop("section", None)
+    payload.pop("return_tab", None)
+    payload.pop("form_action", None)
+    return payload
+
+
+def _process_contracts_list_submission(company: Company, contract, active_tab: str) -> str:
+    tab = _normalize_contracts_list_tab(request.form.get("section") or active_tab)
+    return_tab = _normalize_contracts_list_tab(request.form.get("return_tab") or tab)
+    user_id = current_user.id if current_user.is_authenticated else None
+    form_action = (request.form.get("form_action") or "").strip().lower()
+
+    if tab == "geral":
+        ContractService.update_contract_general(
+            contract=contract,
+            payload=_normalize_contracts_list_form_payload(request.form),
+            user_id=user_id,
+        )
+        flash("Dados gerais do contrato atualizados.", "success")
+    elif tab == "itens_valores":
+        if request.form.get("delete_item_id"):
+            ContractService.delete_contract_item(contract=contract, item_id=int(request.form["delete_item_id"]))
+            flash("Item do contrato removido.", "success")
+        else:
+            ContractService.add_contract_item(contract=contract, payload=request.form.to_dict())
+            flash("Item e valor do contrato incluídos.", "success")
+    elif tab == "faturamento":
+        if request.form.get("delete_billing_item_id"):
+            ContractService.delete_billing_item(contract=contract, item_id=int(request.form["delete_billing_item_id"]))
+            flash("Item de faturamento removido.", "success")
+        elif request.form.get("generate_native_billing"):
+            native_billing = ContractService.generate_native_billing(contract=contract, payload=request.form.to_dict(), user_id=user_id)
+            flash(f"Faturamento nativo {native_billing.billing_code} gerado com sucesso.", "success")
+        elif form_action == "save_contract_billing_rules":
+            ContractService.update_contract_general(
+                contract=contract,
+                payload=_normalize_contracts_list_form_payload(request.form),
+                user_id=user_id,
+            )
+            flash("Regras de faturamento do contrato atualizadas.", "success")
+        else:
+            ContractService.add_billing_item(
+                contract=contract,
+                payload=_normalize_contracts_list_form_payload(request.form),
+            )
+            flash("Item de faturamento incluído.", "success")
+    elif tab == "financeiro":
+        if (
+            request.form.get("delete_satellite_policy_id")
+            or request.form.get("generate_financial_titles_for_billing_id")
+            or request.form.get("satellite_policy_template_key")
+            or request.form.get("satellite_nature")
+        ):
+            _process_contract_section_submission(company, contract, "financeiro")
+        else:
+            ContractService.upsert_financial_terms(contract=contract, payload=request.form.to_dict(), user_id=user_id)
+            flash("Dados financeiros do contrato atualizados.", "success")
+    elif tab == "fiscal":
+        if request.form.get("delete_retention_id") or request.form.get("retention_type"):
+            _process_contract_section_submission(company, contract, "fiscal")
+        else:
+            ContractService.upsert_fiscal_terms(contract=contract, payload=request.form.to_dict(), user_id=user_id)
+            flash("Dados fiscais e de emissão de NF atualizados.", "success")
+    elif tab == "observacoes":
+        ContractService.update_contract_notes(contract=contract, payload=request.form.to_dict(), user_id=user_id)
+        flash("Observações do contrato atualizadas.", "success")
+    else:
+        flash("Aba do contrato não reconhecida.", "error")
+    return return_tab
 
 
 def _build_commercial_counterparty_page() -> dict:
@@ -478,12 +585,15 @@ def contracts_party_manage(party_id: int | None = None):
     )
 
 
-@contracts_bp.route("/contracts/list")
+@contracts_bp.route("/contracts/list", methods=["GET", "POST"])
 @permission_required("contracts", "view")
 def contracts_list():
     company = get_active_company()
     if not company:
         abort(400, description="Empresa ativa não localizada.")
+    active_list_tab = _normalize_contracts_list_tab(request.args.get("tab"))
+    selected_contract_id = request.args.get("contract_id", type=int)
+    mode = (request.args.get("mode") or "").strip().lower()
     filters = {
         "status": request.args.get("status"),
         "party_id": request.args.get("party_id", type=int),
@@ -491,19 +601,87 @@ def contracts_list():
         "search": request.args.get("search"),
     }
     contracts = ContractService.list_contracts_filtered(company.id, filters)
+    selected_contract = None
+    if mode != "new":
+        if selected_contract_id:
+            selected_contract = ContractService.get_contract(company.id, selected_contract_id)
+            if not selected_contract:
+                abort(404)
+        elif contracts:
+            selected_contract = contracts[0]
+
+    if request.method == "POST":
+        form_action = (request.form.get("form_action") or "").strip().lower()
+        if form_action == "create_contract" or mode == "new":
+            if not has_permission(company.id, "contracts", "create"):
+                abort(403)
+            try:
+                contract = ContractService.create_contract(
+                    company_id=company.id,
+                    payload=_normalize_contracts_list_form_payload(request.form),
+                    user_id=current_user.id if current_user.is_authenticated else None,
+                )
+                flash("Contrato criado com sucesso.", "success")
+                return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=contract.id, tab="geral"))
+            except Exception as exc:
+                flash(f"Não foi possível criar o contrato: {exc}", "error")
+                selected_contract = None
+                mode = "new"
+        else:
+            if not selected_contract:
+                abort(404)
+            if not has_permission(company.id, "contracts", "edit"):
+                abort(403)
+            try:
+                active_list_tab = _process_contracts_list_submission(company, selected_contract, active_list_tab)
+                return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=selected_contract.id, tab=active_list_tab))
+            except Exception as exc:
+                flash(f"Falha ao processar a aba '{active_list_tab}': {exc}", "error")
+
     managers = Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all()
-    return render_template(
-        "modules/contracts/contracts_list.html",
-        company=company,
-        company_id=company.id,
-        contracts=contracts,
-        parties=ContractService.list_customer_parties(company.id),
-        managers=managers,
-        filters=filters,
-        kpis=ContractService.get_contracts_kpis(company.id),
-        contract_status_group=ContractService.get_contract_status_group,
-        contract_next_action=ContractService.get_contract_next_action,
-    )
+    parties = ContractService.list_customer_parties(company.id)
+    context = {
+        "company": company,
+        "company_id": company.id,
+        "contracts": contracts,
+        "contract": selected_contract,
+        "selected_contract": selected_contract,
+        "selected_contract_summary": ContractService.get_contract_workspace_summary(selected_contract) if selected_contract else None,
+        "contract_tree": ContractService.build_contract_list_tree(company.id, filters),
+        "contracts_list_tabs": CONTRACTS_LIST_TABS,
+        "active_list_tab": active_list_tab,
+        "is_new_contract": mode == "new" or selected_contract is None,
+        "parties": parties,
+        "managers": managers,
+        "filters": filters,
+        "kpis": ContractService.get_contracts_kpis(company.id),
+        "contract_status_group": ContractService.get_contract_status_group,
+        "contract_status_label": ContractService.get_contract_status_label,
+        "contract_next_action": ContractService.get_contract_next_action,
+        "contract_type_options": ContractService.get_contract_type_options(),
+        "currency_options": ContractService.get_currency_options(),
+        "periodicity_options": ContractService.get_periodicity_options(),
+        "competence_rule_options": ContractService.get_competence_rule_options(),
+        "renewal_rule_options": ContractService.get_renewal_rule_options(),
+        "due_rule_reference_options": ContractService.get_due_rule_reference_options(),
+        "operational_profile_options": ContractService.get_operational_profile_options(),
+        "selected_operational_profile": ContractService.OPERATIONAL_PROFILE_FULL,
+        "contract_catalog_items": ContractsCatalogService.list_selectable_items(company.id),
+        "references": ContractService.list_financial_references(company.id),
+        "financial_terms": None,
+        "fiscal_terms": None,
+        "native_billings": [],
+        "native_billing_preview": None,
+        "contracting_legal_entities": ContractService.list_contracting_legal_entities(company.id),
+        "due_rule_state": {"reference": None, "day": None, "label": "-", "is_structured": False},
+    }
+    if selected_contract:
+        detail_context = _build_contract_detail_context(company, selected_contract, "resumo")
+        context.update(detail_context)
+        context["active_list_tab"] = active_list_tab
+        context["contracts_list_tabs"] = CONTRACTS_LIST_TABS
+        context["is_new_contract"] = False
+    return render_template("modules/contracts/contracts_list.html", **context)
 
 
 @contracts_bp.route("/contracts/catalogs/items", methods=["GET", "POST"])

@@ -13,7 +13,7 @@ from sqlalchemy import or_
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
-from models import Company, db
+from models import Company, Employee, db
 from models.automation import AutomationRegistry, AutomationRule
 from models.contracts import (
     Contract,
@@ -836,6 +836,35 @@ class ContractService:
         return tree
 
     @staticmethod
+    def build_contract_list_tree(company_id: int, filters: Optional[dict] = None) -> list[dict]:
+        ContractService.sync_parties_from_counterparties(company_id, only_customer=True)
+        parties = ContractService.list_customer_parties(company_id)
+        contracts = ContractService.list_contracts_filtered(company_id, filters or {})
+        parties_by_id = {party.id: party for party in parties}
+        for contract in contracts:
+            if contract.party and contract.party.id not in parties_by_id:
+                parties_by_id[contract.party.id] = contract.party
+
+        contracts_by_party: dict[int, list[Contract]] = {}
+        for contract in contracts:
+            contracts_by_party.setdefault(contract.party_id, []).append(contract)
+
+        tree = []
+        for party in sorted(parties_by_id.values(), key=lambda item: ((item.name or "").lower(), item.id)):
+            party_contracts = contracts_by_party.get(party.id, [])
+            tree.append(
+                {
+                    "party": party,
+                    "contracts": party_contracts,
+                    "contract_count": len(party_contracts),
+                    "active_count": sum(
+                        1 for item in party_contracts if ContractService.get_contract_status_group(item) == "active"
+                    ),
+                }
+            )
+        return tree
+
+    @staticmethod
     def get_customer_portfolio_summary(company_id: int) -> dict:
         tree = ContractService.list_customer_contract_tree(company_id)
         total_customers = len(tree)
@@ -1136,7 +1165,12 @@ class ContractService:
         if title:
             contract.title = title
         if "party_id" in payload:
-            contract.party_id = ContractService._normalize_int(payload.get("party_id")) or contract.party_id
+            party_id = ContractService._normalize_int(payload.get("party_id")) or contract.party_id
+            if party_id:
+                party = ContractService.get_party(contract.company_id, party_id)
+                if not party or not party.is_customer:
+                    raise ValueError("Cliente inválido para a empresa ativa.")
+                contract.party_id = party_id
         if "status" in payload:
             normalized_status = ContractService._normalize_text(payload.get("status")).lower()
             if normalized_status in {"active", "inactive"}:
@@ -1150,7 +1184,12 @@ class ContractService:
         if "currency_code" in payload:
             contract.currency_code = ContractService._normalize_text(payload.get("currency_code")) or "BRL"
         if "manager_employee_id" in payload:
-            contract.manager_employee_id = ContractService._normalize_int(payload.get("manager_employee_id"))
+            manager_employee_id = ContractService._normalize_int(payload.get("manager_employee_id"))
+            if manager_employee_id:
+                manager = Employee.query.filter_by(id=manager_employee_id, company_id=contract.company_id, status="active").first()
+                if not manager:
+                    raise ValueError("Gestor inválido para a empresa ativa.")
+            contract.manager_employee_id = manager_employee_id
         if "contracting_legal_entity_id" in payload:
             contract.contracting_legal_entity_id = ContractService._normalize_int(payload.get("contracting_legal_entity_id"))
         if "signed_at" in payload:
