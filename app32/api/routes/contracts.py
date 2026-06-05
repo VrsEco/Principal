@@ -1092,18 +1092,37 @@ def contracts_billing_done():
         if not has_permission(company.id, "contracts", "create"):
             abort(403)
         try:
+            form_action = (request.form.get("form_action") or "").strip()
             native_billing_id = request.form.get("native_billing_id", type=int)
             if not native_billing_id:
-                raise ValueError("Faturamento não informado para cancelamento.")
-            ContractService.cancel_native_billing(
-                company_id=company.id,
-                native_billing_id=native_billing_id,
-                user_id=_current_user_id(),
-                reason=request.form.get("cancel_reason"),
-            )
-            flash("Faturamento cancelado e vínculos financeiros satélites marcados para auditoria.", "success")
+                raise ValueError("Faturamento não informado.")
+            if form_action == "generate_financial_titles":
+                native_billing = ContractNativeBilling.query.filter(
+                    ContractNativeBilling.company_id == company.id,
+                    ContractNativeBilling.id == native_billing_id,
+                    ContractNativeBilling.status != "cancelled",
+                ).first()
+                if not native_billing:
+                    raise ValueError("Faturamento não localizado para integração financeira.")
+                contract = native_billing.contract
+                if not contract:
+                    raise ValueError("Contrato do faturamento não localizado para integração financeira.")
+                ContractFinancialService.ensure_financial_titles_for_native_billing(
+                    contract=contract,
+                    native_billing=native_billing,
+                    user_id=_current_user_id(),
+                )
+                flash("Integração financeira do faturamento executada com sucesso.", "success")
+            else:
+                ContractService.cancel_native_billing(
+                    company_id=company.id,
+                    native_billing_id=native_billing_id,
+                    user_id=_current_user_id(),
+                    reason=request.form.get("cancel_reason"),
+                )
+                flash("Faturamento cancelado e vínculos financeiros satélites marcados para auditoria.", "success")
         except Exception as exc:
-            flash(f"Não foi possível cancelar o faturamento: {exc}", "error")
+            flash(f"Não foi possível processar o faturamento: {exc}", "error")
         return redirect(url_for("contracts.contracts_billing_done", company_id=company.id))
 
     filters = _billing_done_filters_from_request()

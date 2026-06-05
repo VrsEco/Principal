@@ -1403,6 +1403,27 @@ class ContractService:
         return [tab for tab in registry if tab["key"] in allowed_keys]
 
     @staticmethod
+    def contract_requires_financial_integration(contract: Optional[Contract]) -> bool:
+        if not contract:
+            return False
+        visible_keys = {tab["key"] for tab in ContractService.get_visible_tabs(contract)}
+        return "financeiro" in visible_keys
+
+    @staticmethod
+    def native_billing_has_financial_integration(native_billing: Optional[ContractNativeBilling]) -> bool:
+        metadata = dict((native_billing.metadata_json or {}) if native_billing else {})
+        integration = dict(metadata.get("financial_integration") or {})
+        return ContractService._normalize_int(integration.get("main_schedule_id")) is not None
+
+    @staticmethod
+    def native_billing_has_financial_anomaly(*, contract: Optional[Contract], native_billing: Optional[ContractNativeBilling]) -> bool:
+        if not native_billing or native_billing.status == "cancelled":
+            return False
+        if not ContractService.contract_requires_financial_integration(contract):
+            return False
+        return not ContractService.native_billing_has_financial_integration(native_billing)
+
+    @staticmethod
     def resolve_active_tab(contract: Optional[Contract], requested_tab: Optional[str]) -> str:
         visible_tabs = ContractService.get_visible_tabs(contract)
         visible_keys = [tab["key"] for tab in visible_tabs]
@@ -2303,14 +2324,22 @@ class ContractService:
             financial_integration = dict(metadata.get("financial_integration") or {})
             gross_amount = ContractService._normalize_decimal(billing.gross_amount)
             net_amount = ContractService._normalize_decimal(billing.net_amount)
+            contract = billing.contract
+            financial_required = ContractService.contract_requires_financial_integration(contract)
+            financial_anomaly = ContractService.native_billing_has_financial_anomaly(
+                contract=contract,
+                native_billing=billing,
+            )
             rows.append(
                 {
                     "billing": billing,
-                    "contract": billing.contract,
+                    "contract": contract,
                     "party": billing.party,
                     "retention_amount": (gross_amount - net_amount).quantize(Decimal("0.01")),
                     "financial_integration": financial_integration,
                     "item_count": billing.items.count(),
+                    "financial_required": financial_required,
+                    "financial_anomaly": financial_anomaly,
                 }
             )
         return rows
@@ -2601,6 +2630,10 @@ class ContractService:
             user_id=user_id,
             auto_commit=False,
         )
+        if ContractService.native_billing_has_financial_anomaly(contract=contract, native_billing=native_billing):
+            raise ValueError(
+                "Faturamento gerado sem integração financeira obrigatória. Operação cancelada para preservar a consistência."
+            )
         db.session.commit()
         return native_billing
 
