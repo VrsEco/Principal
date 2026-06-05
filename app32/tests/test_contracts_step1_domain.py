@@ -493,7 +493,7 @@ def test_build_fiscal_invoice_nfse_row_exports_iss_retention_for_salvador():
 
     row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
 
-    assert row["Aliquota_ISS"] == "2,73"
+    assert row["Aliquota_ISS"] == "2.73"
     assert row["Valor_ISS"] == "131,07"
     assert row["Retencao_ISS"] == "131,07"
     assert row.get("Retencao_OUTROS") is None

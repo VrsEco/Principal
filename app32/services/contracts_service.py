@@ -3091,6 +3091,17 @@ class ContractService:
         return text.replace(".", ",")
 
     @staticmethod
+    def _decimal_to_export_text(value: object, places: int = 2, strip_trailing: bool = False) -> Optional[str]:
+        amount = ContractService._normalize_decimal(value)
+        if amount == Decimal("0.00"):
+            return None
+        quantizer = Decimal("1") if places <= 0 else Decimal("1").scaleb(-places)
+        text = f"{amount.quantize(quantizer):f}"
+        if strip_trailing and "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text
+
+    @staticmethod
     def _metadata_value(sources: list[dict], *keys: str) -> Optional[str]:
         normalized_keys = {str(key or "").strip().lower(): key for key in keys}
         for source in sources:
@@ -3340,7 +3351,7 @@ class ContractService:
             "CNAE": ContractService._normalize_export_code(
                 ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae")
             ),
-            "Aliquota_ISS": ContractService._decimal_to_br_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
+            "Aliquota_ISS": ContractService._decimal_to_export_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
             "Valor_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
             "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,
             "Retencao_INSS": ContractService._decimal_to_br_text(retention_totals.get("inss")) if retention_totals.get("inss") else None,
