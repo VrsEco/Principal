@@ -168,6 +168,7 @@
                     <p>{{ selected_contract.party.name if selected_contract.party else 'Cliente não informado' }}</p>
                 </div>
                 <div class="contract-summary-pills">
+                    <span class="mini-badge">{{ contract_status_label(selected_contract) }}</span>
                     <span class="mini-badge">Itens: {{ summary.contract_item_count or 0 }}</span>
                     <span class="mini-badge">Valor Bruto: {{ summary.total_contract_value|format_currency_br }}</span>
                     <span class="mini-badge">Retenções: {{ summary.total_retention_value|format_currency_br }}</span>
@@ -209,7 +210,20 @@
                         </select>
                     </label>
                 </div>
-                <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar geral</button></div>
+                <div class="panel-footer contract-general-footer">
+                    <div class="contract-general-footer__main">
+                        <button class="btn btn-primary" type="submit">Salvar geral</button>
+                    </div>
+                    <div class="contract-general-footer__danger">
+                        {% if selected_contract.status != 'suspended' %}
+                        <button class="btn btn-secondary" type="submit" name="form_action" value="suspend_contract" onclick="return confirm('Deseja suspender este contrato?');">Suspender</button>
+                        {% endif %}
+                        {% if selected_contract.status != 'closed' %}
+                        <button class="btn btn-secondary" type="submit" name="form_action" value="close_contract" onclick="return confirm('Deseja encerrar este contrato?');">Encerrar contrato</button>
+                        {% endif %}
+                        <button class="btn btn-danger" type="submit" name="form_action" value="delete_contract" onclick="return confirm('Deseja excluir este contrato? Esta ação oculta o contrato da operação.');">Excluir</button>
+                    </div>
+                </div>
             </form>
             {% else %}
                 {% if active_list_tab == 'itens_valores' %}
@@ -605,6 +619,8 @@
     .contract-retention-detail-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:.85rem; }
     .contract-retention-detail-card.is-collapsed .contract-retention-detail-grid { display:none !important; }
     .contracts-select-search { margin:.45rem 0 .5rem; }
+    .contract-general-footer { display:flex; align-items:center; justify-content:space-between; gap:.75rem; flex-wrap:wrap; }
+    .contract-general-footer__main, .contract-general-footer__danger { display:flex; gap:.55rem; flex-wrap:wrap; }
     @media (max-width:1180px) { .contracts-cw-shell { grid-template-columns:280px minmax(0,1fr); } .contracts-tabs-rail { position:static; grid-column:1 / -1; } }
     @media (max-width:900px) { .contracts-cw-page { padding:0 1rem 1.25rem; } .contracts-cw-header, .contract-selected-header { flex-direction:column; } .contracts-cw-shell, .contracts-kpi-strip, .contracts-tab-grid { grid-template-columns:1fr; } .contracts-list-rail { position:static; } }
 </style>

@@ -59,7 +59,7 @@ from services.contract_fiscal_invoice_spreadsheet import (
 
 class ContractService:
     ACTIVE_STATUSES = {"active", "signed", "implanting"}
-    INACTIVE_STATUSES = {"inactive", "closed", "draft"}
+    INACTIVE_STATUSES = {"inactive", "closed", "draft", "suspended"}
     TAB_REGISTRY = (
         {"key": "cliente", "label": "Cliente", "scope": "core", "description": "Favorecido cliente vinculado ao contrato."},
         {"key": "itens", "label": "Itens do Contrato", "scope": "core", "description": "Escopo, serviços e itens negociados."},
@@ -576,7 +576,17 @@ class ContractService:
 
     @staticmethod
     def get_contract_status_label(contract: Contract) -> str:
-        return "Ativo" if ContractService.get_contract_status_group(contract) == "active" else "Inativo"
+        status = ContractService._normalize_text(getattr(contract, "status", "")).lower()
+        label_map = {
+            "draft": "Rascunho",
+            "active": "Ativo",
+            "signed": "Ativo",
+            "implanting": "Implantação",
+            "inactive": "Inativo",
+            "suspended": "Suspenso",
+            "closed": "Encerrado",
+        }
+        return label_map.get(status, "Ativo" if ContractService.get_contract_status_group(contract) == "active" else "Inativo")
 
     @staticmethod
     def get_contract_workspace_summary(contract: Optional[Contract]) -> dict:
@@ -1659,6 +1669,97 @@ class ContractService:
     @staticmethod
     def update_contract_summary(*, contract: Contract, payload: dict, user_id: Optional[int]):
         return ContractService.update_contract_general(contract=contract, payload=payload, user_id=user_id)
+
+    @staticmethod
+    def suspend_contract(*, contract: Contract, user_id: Optional[int], reason: Optional[str] = None):
+        previous_status = ContractService._normalize_text(contract.status).lower() or "draft"
+        if previous_status == "suspended":
+            return contract
+        contract.status = "suspended"
+        contract.updated_by_user_id = user_id
+        metadata = dict(contract.metadata_json or {})
+        lifecycle = dict(metadata.get("lifecycle") or {})
+        lifecycle["suspended_at"] = datetime.utcnow().isoformat()
+        lifecycle["suspended_by_user_id"] = user_id
+        lifecycle["suspension_reason"] = ContractService._normalize_text(reason) or None
+        metadata["lifecycle"] = lifecycle
+        contract.metadata_json = metadata
+        ContractService.record_event(
+            contract=contract,
+            event_type="contract.suspended",
+            description="Contrato suspenso.",
+            payload={
+                "previous_status": previous_status,
+                "current_status": contract.status,
+                "reason": lifecycle.get("suspension_reason"),
+            },
+            user_id=user_id,
+            auto_commit=False,
+        )
+        db.session.commit()
+        return contract
+
+    @staticmethod
+    def close_contract(*, contract: Contract, user_id: Optional[int], reason: Optional[str] = None, termination_date: Optional[date] = None):
+        previous_status = ContractService._normalize_text(contract.status).lower() or "draft"
+        if previous_status == "closed":
+            return contract
+        normalized_reason = ContractService._normalize_text(reason) or "manual_close"
+        normalized_termination_date = termination_date or contract.termination_date or date.today()
+        contract.status = "closed"
+        contract.end_reason = normalized_reason
+        contract.termination_date = normalized_termination_date
+        contract.updated_by_user_id = user_id
+        metadata = dict(contract.metadata_json or {})
+        lifecycle = dict(metadata.get("lifecycle") or {})
+        lifecycle["closed_at"] = datetime.utcnow().isoformat()
+        lifecycle["closed_by_user_id"] = user_id
+        lifecycle["close_reason"] = normalized_reason
+        metadata["lifecycle"] = lifecycle
+        contract.metadata_json = metadata
+        ContractService.record_event(
+            contract=contract,
+            event_type="contract.closed",
+            description="Contrato encerrado.",
+            payload={
+                "previous_status": previous_status,
+                "current_status": contract.status,
+                "reason": normalized_reason,
+                "termination_date": normalized_termination_date.isoformat() if normalized_termination_date else None,
+            },
+            user_id=user_id,
+            auto_commit=False,
+        )
+        db.session.commit()
+        return contract
+
+    @staticmethod
+    def delete_contract(*, contract: Contract, user_id: Optional[int], reason: Optional[str] = None):
+        if contract.deleted_at:
+            return contract
+        contract.deleted_at = datetime.utcnow()
+        contract.updated_by_user_id = user_id
+        metadata = dict(contract.metadata_json or {})
+        deletion = dict(metadata.get("deletion") or {})
+        deletion["deleted_at"] = contract.deleted_at.isoformat()
+        deletion["deleted_by_user_id"] = user_id
+        deletion["reason"] = ContractService._normalize_text(reason) or "manual_delete"
+        metadata["deletion"] = deletion
+        contract.metadata_json = metadata
+        ContractService.record_event(
+            contract=contract,
+            event_type="contract.deleted",
+            description="Contrato excluído logicamente.",
+            payload={
+                "status": contract.status,
+                "reason": deletion.get("reason"),
+                "deleted_at": contract.deleted_at.isoformat(),
+            },
+            user_id=user_id,
+            auto_commit=False,
+        )
+        db.session.commit()
+        return contract
 
     @staticmethod
     def update_contract_customer(*, contract: Contract, payload: dict, user_id: Optional[int]):

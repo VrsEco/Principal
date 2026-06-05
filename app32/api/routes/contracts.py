@@ -716,6 +716,30 @@ def contracts_list():
             if not has_permission(company.id, "contracts", "edit"):
                 abort(403)
             try:
+                if form_action == "delete_contract":
+                    ContractService.delete_contract(
+                        contract=selected_contract,
+                        user_id=current_user.id if current_user.is_authenticated else None,
+                        reason=request.form.get("action_reason") or "manual_delete",
+                    )
+                    flash("Contrato excluído com sucesso.", "success")
+                    return redirect(url_for("contracts.contracts_list", company_id=company.id))
+                if form_action == "suspend_contract":
+                    ContractService.suspend_contract(
+                        contract=selected_contract,
+                        user_id=current_user.id if current_user.is_authenticated else None,
+                        reason=request.form.get("action_reason") or "manual_suspend",
+                    )
+                    flash("Contrato suspenso com sucesso.", "success")
+                    return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=selected_contract.id, tab=active_list_tab))
+                if form_action == "close_contract":
+                    ContractService.close_contract(
+                        contract=selected_contract,
+                        user_id=current_user.id if current_user.is_authenticated else None,
+                        reason=request.form.get("action_reason") or "manual_close",
+                    )
+                    flash("Contrato encerrado com sucesso.", "success")
+                    return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=selected_contract.id, tab=active_list_tab))
                 active_list_tab = _process_contracts_list_submission(company, selected_contract, active_list_tab)
                 return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=selected_contract.id, tab=active_list_tab))
             except Exception as exc:
