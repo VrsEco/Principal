@@ -3049,8 +3049,6 @@ class ContractService:
         iss_rate = retention_rates.get("iss")
         if ContractService._should_export_iss_as_other(fiscal_data, all_sources):
             other_amount += iss_amount
-            iss_amount = Decimal("0.00")
-            iss_rate = None
         if not iss_rate and iss_amount > Decimal("0.00") and gross_amount > Decimal("0.00"):
             iss_rate = (iss_amount / gross_amount * Decimal("100")).quantize(Decimal("0.0001"))
 
@@ -3077,8 +3075,8 @@ class ContractService:
             "Email": (party.email if party else None) or ContractService._metadata_value(party_sources, "email", "Email"),
             "Valor": float(gross_amount.quantize(Decimal("0.01"))),
             "Codigo_Servico": ContractService._metadata_value_with_fallback(
-                item_sources,
                 fiscal_sources,
+                item_sources,
                 "Codigo_Servico",
                 "codigo_servico",
                 "service_code",
@@ -3168,15 +3166,17 @@ class ContractService:
                 "c_class_trib",
             ),
             "IBSCBS_Tipo_Operacao": ContractService._metadata_value_with_fallback(
-                item_sources,
                 fiscal_sources,
+                item_sources,
                 "IBSCBS_Tipo_Operacao",
                 "ibscbs_tipo_operacao",
                 "tipo_operacao",
                 "service_list_code",
                 "service_list_item",
             ),
-            "NBS": ContractService._metadata_value_with_fallback(item_sources, fiscal_sources, "NBS", "nbs"),
+            "NBS": ContractService._digits_only(
+                ContractService._metadata_value_with_fallback(item_sources, fiscal_sources, "NBS", "nbs")
+            ),
             "CNAE": ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae"),
             "Aliquota_ISS": ContractService._decimal_to_br_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
             "Valor_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,

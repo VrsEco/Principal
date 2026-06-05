@@ -272,7 +272,7 @@ def test_native_billing_fiscal_export_payload_reads_snapshot_metadata():
     assert payload["service_code"] == "1401"
 
 
-def test_build_fiscal_invoice_nfse_row_prioritizes_item_fiscal_metadata_over_snapshot():
+def test_build_fiscal_invoice_nfse_row_prioritizes_snapshot_for_service_codes_and_normalizes_nbs():
     class _FakeItemsQuery:
         def __init__(self, items):
             self._items = items
@@ -341,9 +341,82 @@ def test_build_fiscal_invoice_nfse_row_prioritizes_item_fiscal_metadata_over_sna
 
     row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
 
-    assert row["Codigo_Servico"] == "702"
+    assert row["Codigo_Servico"] == "1401001"
     assert row["IBSCBS_Indicador_Operacao"] == "050101"
     assert row["IBSCBS_Codigo_Classificacao"] == "000001"
-    assert row["IBSCBS_Tipo_Operacao"] == "Tributado Integralmente"
-    assert row["NBS"] == "1.1803.29.00"
+    assert row["IBSCBS_Tipo_Operacao"] == "1401101"
+    assert row["NBS"] == "118032900"
     assert row["CNAE"] == "4322302"
+
+
+def test_build_fiscal_invoice_nfse_row_keeps_iss_and_duplicates_to_outros_for_non_salvador():
+    class _FakeItemsQuery:
+        def __init__(self, items):
+            self._items = items
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return list(self._items)
+
+    class _FakeCatalogItem:
+        metadata_json = {}
+
+    class _FakeContractItem:
+        metadata_json = {}
+        contract_catalog_item = _FakeCatalogItem()
+
+    class _FakeBillingItem:
+        metadata_json = {
+            "retention_details": [
+                {
+                    "kind": "iss",
+                    "retention_value_mode": "percent",
+                    "retention_value": 5,
+                    "calculated_amount": 314.28,
+                }
+            ]
+        }
+        contract_item = _FakeContractItem()
+        description = "Tratamento dos Sistemas de Refrigeração."
+        amount = Decimal("6285.60")
+
+    class _FakeParty:
+        legal_name = "BOMIX INDUSTRIA DE EMBALAGENS LTDA"
+        name = "BOMIX INDUSTRIA DE EMBALAGENS LTDA"
+        document_number = "01.561.279/0001-45"
+        email = "fiscal@bomix.com.br"
+        metadata_json = {"city_code_ibge": "2930709"}
+        financial_counterparty_id = None
+
+    class _FakeContract:
+        party = _FakeParty()
+        code = "AA.BOMIX.001"
+
+    class _FakeBilling:
+        billing_code = "AA.BOMIX.FAT.001"
+        issue_date = None
+        gross_amount = Decimal("6285.60")
+        net_amount = Decimal("5971.32")
+        metadata_json = {
+            "fiscal_snapshot": {
+                "service_city": "Simões Filho",
+            },
+            "fiscal_invoice": {
+                "fiscal_data": {
+                    "customer_name": "BOMIX INDUSTRIA DE EMBALAGENS LTDA",
+                    "customer_document": "01.561.279/0001-45",
+                    "service_city": "Simões Filho",
+                }
+            },
+        }
+        party = _FakeParty()
+        contract = _FakeContract()
+        items = _FakeItemsQuery([_FakeBillingItem()])
+
+    row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
+
+    assert row["Aliquota_ISS"] == "5"
+    assert row["Valor_ISS"] == "314,28"
+    assert row["Retencao_OUTROS"] == "314,28"
