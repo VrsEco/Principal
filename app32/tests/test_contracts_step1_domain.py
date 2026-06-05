@@ -420,3 +420,91 @@ def test_build_fiscal_invoice_nfse_row_keeps_iss_and_duplicates_to_outros_for_no
     assert row["Aliquota_ISS"] == "5"
     assert row["Valor_ISS"] == "314,28"
     assert row["Retencao_OUTROS"] == "314,28"
+
+
+def test_build_fiscal_invoice_nfse_row_normalizes_codes_and_address_defaults():
+    class _FakeItemsQuery:
+        def __init__(self, items):
+            self._items = items
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return list(self._items)
+
+    class _FakeCatalogItem:
+        metadata_json = {
+            "service_code": "14.01.001",
+            "tipo_operacao": "Tributado Integralmente",
+            "nbs": "1.200.11.000",
+            "cindop": "05.01.01",
+            "cclasstrib": "00.00.01",
+        }
+
+    class _FakeContractItem:
+        metadata_json = {}
+        contract_catalog_item = _FakeCatalogItem()
+
+    class _FakeBillingItem:
+        metadata_json = {}
+        contract_item = _FakeContractItem()
+        description = "Tratamento e monitoramento do sistema de água."
+        amount = Decimal("9250.00")
+
+    class _FakeParty:
+        legal_name = "CONDOMINIO DO NORTH WAY SHOPPING"
+        name = "CONDOMINIO DO NORTH WAY SHOPPING"
+        document_number = "22.424.335/0001-70"
+        email = "flavio@aclf.com.br"
+        metadata_json = {
+            "cep": "53.401-445",
+            "street": "Rod. PE-15 S/N, KM:16.5",
+            "district": "Paulista",
+            "city_code_ibge": "2611606",
+            "city_name": "Recife",
+            "state": "pe",
+        }
+        financial_counterparty_id = None
+
+    class _FakeContract:
+        party = _FakeParty()
+        code = "AA.NORTHWAY.001"
+
+    class _FakeBilling:
+        billing_code = "AA.NORTHWAY.FAT.001"
+        issue_date = None
+        gross_amount = Decimal("9250.00")
+        net_amount = Decimal("8787.50")
+        metadata_json = {
+            "fiscal_snapshot": {
+                "service_code": "14.01.001",
+                "service_list_item": "14.01.101",
+                "issuer_cnae": "43.22-3/02",
+            },
+            "fiscal_invoice": {
+                "fiscal_data": {
+                    "customer_name": "CONDOMINIO DO NORTH WAY SHOPPING",
+                    "customer_document": "22.424.335/0001-70",
+                    "service_code": "14.01.001",
+                    "service_list_item": "14.01.101",
+                    "issuer_cnae": "43.22-3/02",
+                    "service_city": "Recife",
+                }
+            },
+        }
+        party = _FakeParty()
+        contract = _FakeContract()
+        items = _FakeItemsQuery([_FakeBillingItem()])
+
+    row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
+
+    assert row["Codigo_Servico"] == "1401001"
+    assert row["IBSCBS_Indicador_Operacao"] == "050101"
+    assert row["IBSCBS_Codigo_Classificacao"] == "000001"
+    assert row["IBSCBS_Tipo_Operacao"] == "1401101"
+    assert row["NBS"] == "120011000"
+    assert row["CNAE"] == "4322302"
+    assert row["Endereco_Numero"] == "s/n"
+    assert row["Endereco_Cidade_Codigo"] == "2611606"
+    assert row["Endereco_Estado"] == "PE"

@@ -3067,6 +3067,19 @@ class ContractService:
         return digits or None
 
     @staticmethod
+    def _normalize_export_code(value: object) -> Optional[str]:
+        text = ContractService._normalize_text(value)
+        if not text:
+            return None
+        digits = ContractService._digits_only(text)
+        return digits or text
+
+    @staticmethod
+    def _normalize_export_uf(value: object) -> Optional[str]:
+        text = ContractService._normalize_text(value)
+        return text.upper() if text else None
+
+    @staticmethod
     def _decimal_to_br_text(value: object, places: int = 2, strip_trailing: bool = False) -> Optional[str]:
         amount = ContractService._normalize_decimal(value)
         if amount == Decimal("0.00"):
@@ -3208,13 +3221,15 @@ class ContractService:
             "Nome": fiscal_data.get("customer_name") or (party.legal_name or party.name if party else None),
             "Email": (party.email if party else None) or ContractService._metadata_value(party_sources, "email", "Email"),
             "Valor": float(gross_amount.quantize(Decimal("0.01"))),
-            "Codigo_Servico": ContractService._metadata_value_with_fallback(
-                fiscal_sources,
-                item_sources,
-                "Codigo_Servico",
-                "codigo_servico",
-                "service_code",
-                "municipal_service_code",
+            "Codigo_Servico": ContractService._normalize_export_code(
+                ContractService._metadata_value_with_fallback(
+                    fiscal_sources,
+                    item_sources,
+                    "Codigo_Servico",
+                    "codigo_servico",
+                    "service_code",
+                    "municipal_service_code",
+                )
             ),
             "Endereco_Pais": ContractService._metadata_value(
                 party_sources,
@@ -3243,7 +3258,7 @@ class ContractService:
                 "address_number",
                 "numero",
                 "number",
-            ),
+            ) or "s/n",
             "Endereco_Complemento": ContractService._metadata_value(
                 party_sources,
                 "Endereco_Complemento",
@@ -3259,13 +3274,15 @@ class ContractService:
                 "bairro",
                 "neighborhood",
             ),
-            "Endereco_Cidade_Codigo": ContractService._metadata_value(
-                party_sources,
-                "Endereco_Cidade_Codigo",
-                "endereco_cidade_codigo",
-                "city_code_ibge",
-                "ibge_city_code",
-                "codigo_ibge",
+            "Endereco_Cidade_Codigo": ContractService._normalize_export_code(
+                ContractService._metadata_value(
+                    party_sources,
+                    "Endereco_Cidade_Codigo",
+                    "endereco_cidade_codigo",
+                    "city_code_ibge",
+                    "ibge_city_code",
+                    "codigo_ibge",
+                )
             ),
             "Endereco_Cidade_Nome": ContractService._metadata_value(
                 party_sources,
@@ -3276,42 +3293,52 @@ class ContractService:
                 "cidade",
                 "municipio",
             ),
-            "Endereco_Estado": ContractService._metadata_value(
-                party_sources,
-                "Endereco_Estado",
-                "endereco_estado",
-                "uf",
-                "state",
-                "estado",
+            "Endereco_Estado": ContractService._normalize_export_uf(
+                ContractService._metadata_value(
+                    party_sources,
+                    "Endereco_Estado",
+                    "endereco_estado",
+                    "uf",
+                    "state",
+                    "estado",
+                )
             ),
             "Descricao": description,
-            "IBSCBS_Indicador_Operacao": ContractService._metadata_value(
-                all_sources,
-                "IBSCBS_Indicador_Operacao",
-                "ibscbs_indicador_operacao",
-                "cindop",
-                "c_ind_op",
+            "IBSCBS_Indicador_Operacao": ContractService._normalize_export_code(
+                ContractService._metadata_value(
+                    all_sources,
+                    "IBSCBS_Indicador_Operacao",
+                    "ibscbs_indicador_operacao",
+                    "cindop",
+                    "c_ind_op",
+                )
             ),
-            "IBSCBS_Codigo_Classificacao": ContractService._metadata_value(
-                all_sources,
-                "IBSCBS_Codigo_Classificacao",
-                "ibscbs_codigo_classificacao",
-                "cclasstrib",
-                "c_class_trib",
+            "IBSCBS_Codigo_Classificacao": ContractService._normalize_export_code(
+                ContractService._metadata_value(
+                    all_sources,
+                    "IBSCBS_Codigo_Classificacao",
+                    "ibscbs_codigo_classificacao",
+                    "cclasstrib",
+                    "c_class_trib",
+                )
             ),
-            "IBSCBS_Tipo_Operacao": ContractService._metadata_value_with_fallback(
-                fiscal_sources,
-                item_sources,
-                "IBSCBS_Tipo_Operacao",
-                "ibscbs_tipo_operacao",
-                "tipo_operacao",
-                "service_list_code",
-                "service_list_item",
+            "IBSCBS_Tipo_Operacao": ContractService._normalize_export_code(
+                ContractService._metadata_value_with_fallback(
+                    fiscal_sources,
+                    item_sources,
+                    "IBSCBS_Tipo_Operacao",
+                    "ibscbs_tipo_operacao",
+                    "tipo_operacao",
+                    "service_list_code",
+                    "service_list_item",
+                )
             ),
             "NBS": ContractService._digits_only(
                 ContractService._metadata_value_with_fallback(item_sources, fiscal_sources, "NBS", "nbs")
             ),
-            "CNAE": ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae"),
+            "CNAE": ContractService._normalize_export_code(
+                ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae")
+            ),
             "Aliquota_ISS": ContractService._decimal_to_br_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
             "Valor_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
             "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,
