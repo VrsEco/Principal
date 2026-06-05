@@ -3194,7 +3194,8 @@ class ContractService:
         iss_amount = retention_totals.get("iss", Decimal("0.00"))
         other_amount = retention_totals.get("other", Decimal("0.00"))
         iss_rate = retention_rates.get("iss")
-        if ContractService._should_export_iss_as_other(fiscal_data, all_sources):
+        export_iss_as_other = ContractService._should_export_iss_as_other(fiscal_data, all_sources)
+        if export_iss_as_other:
             other_amount += iss_amount
         if not iss_rate and iss_amount > Decimal("0.00") and gross_amount > Decimal("0.00"):
             iss_rate = (iss_amount / gross_amount * Decimal("100")).quantize(Decimal("0.0001"))
@@ -3344,6 +3345,7 @@ class ContractService:
             "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,
             "Retencao_INSS": ContractService._decimal_to_br_text(retention_totals.get("inss")) if retention_totals.get("inss") else None,
             "Retencao_CSLL": ContractService._decimal_to_br_text(retention_totals.get("csrf")) if retention_totals.get("csrf") else None,
+            "Retencao_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") and not export_iss_as_other else None,
             "Retencao_OUTROS": ContractService._decimal_to_br_text(other_amount) if other_amount > Decimal("0.00") else None,
         }
         return {key: value for key, value in row.items() if value not in (None, "")}

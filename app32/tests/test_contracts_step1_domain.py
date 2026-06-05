@@ -420,6 +420,83 @@ def test_build_fiscal_invoice_nfse_row_keeps_iss_and_duplicates_to_outros_for_no
     assert row["Aliquota_ISS"] == "5"
     assert row["Valor_ISS"] == "314,28"
     assert row["Retencao_OUTROS"] == "314,28"
+    assert row.get("Retencao_ISS") is None
+
+
+def test_build_fiscal_invoice_nfse_row_exports_iss_retention_for_salvador():
+    class _FakeItemsQuery:
+        def __init__(self, items):
+            self._items = items
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return list(self._items)
+
+    class _FakeCatalogItem:
+        metadata_json = {}
+
+    class _FakeContractItem:
+        metadata_json = {}
+        contract_catalog_item = _FakeCatalogItem()
+
+    class _FakeBillingItem:
+        metadata_json = {
+            "retention_details": [
+                {
+                    "kind": "iss",
+                    "retention_value_mode": "percent",
+                    "retention_value": 2.73,
+                    "calculated_amount": 131.07,
+                }
+            ]
+        }
+        contract_item = _FakeContractItem()
+        description = "Tratamento de água"
+        amount = Decimal("4801.15")
+
+    class _FakeParty:
+        legal_name = "REDE BAHIA"
+        name = "REDE BAHIA"
+        document_number = "13.425.269/0001-61"
+        email = "fiscal@redebahia.com.br"
+        metadata_json = {"city_code_ibge": "2927408"}
+        financial_counterparty_id = None
+
+    class _FakeContract:
+        party = _FakeParty()
+        code = "AL.N.005"
+
+    class _FakeBilling:
+        billing_code = "AL.B.003"
+        issue_date = None
+        gross_amount = Decimal("4801.15")
+        net_amount = Decimal("4670.08")
+        metadata_json = {
+            "fiscal_snapshot": {
+                "service_city": "Salvador",
+                "iss_city": "Salvador",
+            },
+            "fiscal_invoice": {
+                "fiscal_data": {
+                    "customer_name": "REDE BAHIA",
+                    "customer_document": "13.425.269/0001-61",
+                    "service_city": "Salvador",
+                    "iss_city": "Salvador",
+                }
+            },
+        }
+        party = _FakeParty()
+        contract = _FakeContract()
+        items = _FakeItemsQuery([_FakeBillingItem()])
+
+    row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
+
+    assert row["Aliquota_ISS"] == "2,73"
+    assert row["Valor_ISS"] == "131,07"
+    assert row["Retencao_ISS"] == "131,07"
+    assert row.get("Retencao_OUTROS") is None
 
 
 def test_build_fiscal_invoice_nfse_row_normalizes_codes_and_address_defaults():
