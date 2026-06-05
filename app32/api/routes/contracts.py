@@ -1155,14 +1155,14 @@ def contracts_fiscal_invoices():
                 )
                 flash(f"{result['updated']} nota(s) removida(s) do lote.", "success")
             elif action == "export_integration":
-                export = ContractService.build_fiscal_invoice_integration_csv(
+                export = ContractService.build_fiscal_invoice_integration_spreadsheet(
                     company_id=company.id,
                     billing_ids=selected_ids,
                     user_id=_current_user_id(),
                 )
                 return Response(
                     export["content"],
-                    mimetype="text/csv; charset=utf-8",
+                    mimetype=export.get("mimetype") or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     headers={"Content-Disposition": f"attachment; filename={export['filename']}"},
                 )
             elif action == "mark_emitted":

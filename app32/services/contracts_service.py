@@ -50,6 +50,10 @@ from models.financial import (
     FinancialScheduleLink,
 )
 from services.contracts_catalog_service import ContractsCatalogService
+from services.contract_fiscal_invoice_spreadsheet import (
+    NFSE_XLSX_MIMETYPE,
+    build_nfse_integration_workbook,
+)
 
 
 class ContractService:
@@ -2531,12 +2535,14 @@ class ContractService:
             "issuer_cnpj": legal_entity.cnpj if legal_entity else None,
             "issuer_municipal_registration": legal_entity.municipal_registration if legal_entity else None,
             "issuer_tax_regime": legal_entity.tax_regime if legal_entity else None,
+            "issuer_cnae": legal_entity.cnae if legal_entity else None,
+            "issuer_city_code_ibge": legal_entity.city_code_ibge if legal_entity else None,
             "integration_mode": (fiscal_terms.integration_mode if fiscal_terms else None) or (legal_entity.integration_mode if legal_entity else None),
             "nfs_provider": (fiscal_terms.nfs_provider if fiscal_terms else None) or (legal_entity.nfs_provider if legal_entity else None),
             "default_rps_series": fiscal_terms.default_rps_series if fiscal_terms else None,
-            "service_code": None,
-            "service_list_item": None,
-            "operation_nature": None,
+            "service_code": fiscal_terms.service_code if fiscal_terms else None,
+            "service_list_item": fiscal_terms.service_list_item if fiscal_terms else None,
+            "operation_nature": fiscal_terms.operation_nature if fiscal_terms else None,
             "service_city": fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None),
             "iss_city": fiscal_terms.iss_city if fiscal_terms else None,
             "withholding_flags": {},
@@ -2556,6 +2562,7 @@ class ContractService:
             "customer_document": contract.party.document_number if contract and contract.party else None,
             "issuer_cnpj": snapshot.get("issuer_cnpj"),
             "issuer_legal_name": snapshot.get("issuer_legal_name"),
+            "issuer_cnae": snapshot.get("issuer_cnae"),
             "integration_mode": snapshot.get("integration_mode"),
             "nfs_provider": snapshot.get("nfs_provider"),
             "default_rps_series": snapshot.get("default_rps_series"),
@@ -2592,6 +2599,9 @@ class ContractService:
                 "integration_mode": fiscal_payload.get("integration_mode"),
                 "nfs_provider": fiscal_payload.get("nfs_provider"),
                 "rps_series": fiscal_payload.get("default_rps_series"),
+                "service_code": fiscal_payload.get("service_code"),
+                "service_list_item": fiscal_payload.get("service_list_item"),
+                "issuer_cnae": fiscal_payload.get("issuer_cnae"),
                 "service_city": fiscal_payload.get("service_city"),
                 "iss_city": fiscal_payload.get("iss_city"),
                 "fiscal_notes": fiscal_payload.get("fiscal_notes"),
@@ -2834,66 +2844,266 @@ class ContractService:
         return {"updated": len(billings), "status": status}
 
     @staticmethod
-    def build_fiscal_invoice_integration_csv(*, company_id: int, billing_ids: list[int], user_id: Optional[int]) -> dict:
-        billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
-        output = io.StringIO()
-        writer = csv.writer(output, delimiter=";")
-        writer.writerow(
-            [
-                "billing_code",
-                "batch_code",
-                "contract_code",
-                "customer_name",
-                "customer_document",
-                "issuer_cnpj",
-                "nfs_provider",
-                "rps_series",
-                "service_city",
-                "iss_city",
-                "competence_start",
-                "issue_date",
-                "due_date",
-                "gross_amount",
-                "retention_amount",
-                "net_amount",
-                "fiscal_notes",
-            ]
+    def _digits_only(value: object) -> Optional[str]:
+        digits = re.sub(r"\D", "", str(value or ""))
+        return digits or None
+
+    @staticmethod
+    def _decimal_to_br_text(value: object, places: int = 2, strip_trailing: bool = False) -> Optional[str]:
+        amount = ContractService._normalize_decimal(value)
+        if amount == Decimal("0.00"):
+            return None
+        quantizer = Decimal("1") if places <= 0 else Decimal("1").scaleb(-places)
+        text = f"{amount.quantize(quantizer):f}"
+        if strip_trailing and "." in text:
+            text = text.rstrip("0").rstrip(".")
+        return text.replace(".", ",")
+
+    @staticmethod
+    def _metadata_value(sources: list[dict], *keys: str) -> Optional[str]:
+        normalized_keys = {str(key or "").strip().lower(): key for key in keys}
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            for key in keys:
+                value = source.get(key)
+                if value not in (None, ""):
+                    return str(value).strip()
+            lower_source = {str(key or "").strip().lower(): value for key, value in source.items()}
+            for normalized_key in normalized_keys:
+                value = lower_source.get(normalized_key)
+                if value not in (None, ""):
+                    return str(value).strip()
+        return None
+
+    @staticmethod
+    def _metadata_sources(*payloads: object) -> list[dict]:
+        sources: list[dict] = []
+        for payload in payloads:
+            if not isinstance(payload, dict):
+                continue
+            sources.append(payload)
+            for nested_key in ("address", "endereco", "billing_address", "fiscal_address", "tomador_address"):
+                nested = payload.get(nested_key)
+                if isinstance(nested, dict):
+                    sources.append(nested)
+        return sources
+
+    @staticmethod
+    def _party_metadata_sources(company_id: int, party: Optional[ContractParty]) -> list[dict]:
+        if not party:
+            return []
+        sources = ContractService._metadata_sources(party.metadata_json or {})
+        counterparty_id = ContractService._normalize_int(getattr(party, "financial_counterparty_id", None))
+        if counterparty_id:
+            counterparty = FinancialCounterparty.query.filter(
+                FinancialCounterparty.id == counterparty_id,
+                FinancialCounterparty.company_id == company_id,
+                FinancialCounterparty.deleted_at.is_(None),
+            ).first()
+            if counterparty:
+                sources.extend(ContractService._metadata_sources(counterparty.metadata_json or {}))
+        return sources
+
+    @staticmethod
+    def _billing_item_metadata_sources(native_billing: ContractNativeBilling) -> list[dict]:
+        sources: list[dict] = []
+        for billing_item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all():
+            sources.extend(ContractService._metadata_sources(billing_item.metadata_json or {}))
+            contract_item = billing_item.contract_item
+            if contract_item:
+                sources.extend(ContractService._metadata_sources(contract_item.metadata_json or {}))
+                catalog_item = contract_item.contract_catalog_item
+                if catalog_item:
+                    sources.extend(ContractService._metadata_sources(catalog_item.metadata_json or {}))
+        return sources
+
+    @staticmethod
+    def _billing_item_descriptions(native_billing: ContractNativeBilling) -> str:
+        descriptions = [
+            ContractService._normalize_text(item.description)
+            for item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all()
+            if ContractService._normalize_text(item.description)
+        ]
+        return "; ".join(descriptions)
+
+    @staticmethod
+    def _retention_totals_by_kind(native_billing: ContractNativeBilling) -> tuple[dict[str, Decimal], dict[str, Decimal]]:
+        totals: dict[str, Decimal] = {}
+        rates: dict[str, Decimal] = {}
+        for billing_item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all():
+            metadata = dict(billing_item.metadata_json or {})
+            for detail in list(metadata.get("retention_details") or []):
+                kind = (ContractService._normalize_text((detail or {}).get("kind")) or "").lower()
+                if not kind:
+                    continue
+                amount = ContractService._normalize_decimal(
+                    (detail or {}).get("calculated_amount") or (detail or {}).get("retention_amount")
+                )
+                totals[kind] = totals.get(kind, Decimal("0.00")) + amount
+                if (ContractService._normalize_text((detail or {}).get("retention_value_mode")) or "").lower() == "percent":
+                    rates[kind] = ContractService._normalize_decimal((detail or {}).get("retention_value"))
+        return totals, rates
+
+    @staticmethod
+    def _build_fiscal_invoice_nfse_row(*, company_id: int, native_billing: ContractNativeBilling) -> dict:
+        state = ContractService._get_fiscal_invoice_state(native_billing)
+        fiscal_data = dict(state.get("fiscal_data") or {})
+        party = native_billing.party
+        party_sources = ContractService._party_metadata_sources(company_id, party)
+        item_sources = ContractService._billing_item_metadata_sources(native_billing)
+        fiscal_sources = ContractService._metadata_sources(fiscal_data, dict((native_billing.metadata_json or {}).get("fiscal_snapshot") or {}))
+        all_sources = item_sources + fiscal_sources
+        retention_totals, retention_rates = ContractService._retention_totals_by_kind(native_billing)
+        gross_amount = ContractService._normalize_decimal(native_billing.gross_amount)
+        iss_amount = retention_totals.get("iss", Decimal("0.00"))
+        iss_rate = retention_rates.get("iss")
+        if not iss_rate and iss_amount > Decimal("0.00") and gross_amount > Decimal("0.00"):
+            iss_rate = (iss_amount / gross_amount * Decimal("100")).quantize(Decimal("0.0001"))
+
+        description = (
+            ContractService._normalize_text(fiscal_data.get("fiscal_notes"))
+            or ContractService._metadata_value(all_sources, "fiscal_notes", "descricao", "description")
+            or ContractService._billing_item_descriptions(native_billing)
         )
+        if iss_amount > Decimal("0.00"):
+            description = f"{description or 'Serviços prestados'} - Valor do ISS retido: {ContractService._decimal_to_br_text(iss_amount)}"
+
+        row = {
+            "CPF_CNPJ": ContractService._digits_only(
+                fiscal_data.get("customer_document") or (party.document_number if party else None)
+            ),
+            "Nome": fiscal_data.get("customer_name") or (party.legal_name or party.name if party else None),
+            "Email": (party.email if party else None) or ContractService._metadata_value(party_sources, "email", "Email"),
+            "Valor": float(gross_amount.quantize(Decimal("0.01"))),
+            "Codigo_Servico": ContractService._metadata_value(
+                all_sources,
+                "Codigo_Servico",
+                "codigo_servico",
+                "service_code",
+                "municipal_service_code",
+            ),
+            "Endereco_Pais": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Pais",
+                "endereco_pais",
+                "country_code",
+                "country",
+                "pais",
+            ) or "BRA",
+            "Endereco_Cep": ContractService._digits_only(
+                ContractService._metadata_value(party_sources, "Endereco_Cep", "endereco_cep", "zip_code", "zipcode", "postal_code", "cep")
+            ),
+            "Endereco_Logradouro": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Logradouro",
+                "endereco_logradouro",
+                "address_line",
+                "street",
+                "logradouro",
+                "address",
+            ),
+            "Endereco_Numero": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Numero",
+                "endereco_numero",
+                "address_number",
+                "numero",
+                "number",
+            ),
+            "Endereco_Complemento": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Complemento",
+                "endereco_complemento",
+                "complement",
+                "complemento",
+            ),
+            "Endereco_Bairro": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Bairro",
+                "endereco_bairro",
+                "district",
+                "bairro",
+                "neighborhood",
+            ),
+            "Endereco_Cidade_Codigo": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Cidade_Codigo",
+                "endereco_cidade_codigo",
+                "city_code_ibge",
+                "ibge_city_code",
+                "codigo_ibge",
+            ),
+            "Endereco_Cidade_Nome": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Cidade_Nome",
+                "endereco_cidade_nome",
+                "city_name",
+                "city",
+                "cidade",
+                "municipio",
+            ),
+            "Endereco_Estado": ContractService._metadata_value(
+                party_sources,
+                "Endereco_Estado",
+                "endereco_estado",
+                "uf",
+                "state",
+                "estado",
+            ),
+            "Descricao": description,
+            "IBSCBS_Indicador_Operacao": ContractService._metadata_value(
+                all_sources,
+                "IBSCBS_Indicador_Operacao",
+                "ibscbs_indicador_operacao",
+                "cindop",
+                "c_ind_op",
+            ),
+            "IBSCBS_Codigo_Classificacao": ContractService._metadata_value(
+                all_sources,
+                "IBSCBS_Codigo_Classificacao",
+                "ibscbs_codigo_classificacao",
+                "cclasstrib",
+                "c_class_trib",
+            ),
+            "IBSCBS_Tipo_Operacao": ContractService._metadata_value(
+                all_sources,
+                "IBSCBS_Tipo_Operacao",
+                "ibscbs_tipo_operacao",
+                "tipo_operacao",
+                "service_list_code",
+                "service_list_item",
+            ),
+            "NBS": ContractService._metadata_value(all_sources, "NBS", "nbs"),
+            "CNAE": ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae"),
+            "Aliquota_ISS": ContractService._decimal_to_br_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
+            "Valor_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
+            "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,
+            "Retencao_INSS": ContractService._decimal_to_br_text(retention_totals.get("inss")) if retention_totals.get("inss") else None,
+            "Retencao_CSLL": ContractService._decimal_to_br_text(retention_totals.get("csrf")) if retention_totals.get("csrf") else None,
+            "Retencao_OUTROS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
+        }
+        return {key: value for key, value in row.items() if value not in (None, "")}
+
+    @staticmethod
+    def build_fiscal_invoice_integration_spreadsheet(*, company_id: int, billing_ids: list[int], user_id: Optional[int]) -> dict:
+        billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
+        rows = [
+            ContractService._build_fiscal_invoice_nfse_row(company_id=company_id, native_billing=billing)
+            for billing in billings
+        ]
+        content = build_nfse_integration_workbook(rows)
         now = datetime.utcnow().isoformat()
         for billing in billings:
             state = ContractService._get_fiscal_invoice_state(billing)
-            fiscal_data = dict(state.get("fiscal_data") or {})
-            gross_amount = ContractService._normalize_decimal(billing.gross_amount)
-            net_amount = ContractService._normalize_decimal(billing.net_amount)
-            writer.writerow(
-                [
-                    billing.billing_code,
-                    state.get("batch_code") or "",
-                    billing.contract.code if billing.contract else "",
-                    fiscal_data.get("customer_name") or (billing.party.name if billing.party else ""),
-                    fiscal_data.get("customer_document") or (billing.party.document_number if billing.party else ""),
-                    fiscal_data.get("issuer_cnpj") or "",
-                    fiscal_data.get("nfs_provider") or "",
-                    fiscal_data.get("rps_series") or "",
-                    fiscal_data.get("service_city") or "",
-                    fiscal_data.get("iss_city") or "",
-                    billing.competence_start.isoformat() if billing.competence_start else "",
-                    billing.issue_date.isoformat() if billing.issue_date else "",
-                    billing.due_date.isoformat() if billing.due_date else "",
-                    str(gross_amount).replace(".", ","),
-                    str((gross_amount - net_amount).quantize(Decimal("0.01"))).replace(".", ","),
-                    str(net_amount).replace(".", ","),
-                    fiscal_data.get("fiscal_notes") or "",
-                ]
-            )
             exports = list(state.get("integration_exports") or [])
-            exports.append({"exported_at": now, "exported_by_user_id": user_id})
+            exports.append({"exported_at": now, "exported_by_user_id": user_id, "format": "xlsx_nfse_save_water"})
             state["integration_exports"] = exports
             state["last_integration_export_at"] = now
             ContractService._set_fiscal_invoice_state(billing, state)
         db.session.commit()
-        filename = f"notas_fiscais_integracao_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
-        return {"filename": filename, "content": ("\ufeff" + output.getvalue()).encode("utf-8")}
+        filename = f"notas_fiscais_integracao_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return {"filename": filename, "content": content, "mimetype": NFSE_XLSX_MIMETYPE, "row_count": len(rows)}
 
     @staticmethod
     def _save_fiscal_invoice_upload(company_id: int, billing_id: Optional[int], file: FileStorage) -> dict:
