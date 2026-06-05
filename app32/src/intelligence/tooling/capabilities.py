@@ -1079,6 +1079,8 @@ for _alias_tool_name, _canonical_tool_name in _STRATEGIC_ALIGNMENT_ALIAS_CAPABIL
     _PRESET_CAPABILITIES[_alias_tool_name] = dict(_PRESET_CAPABILITIES[_canonical_tool_name])
 
 _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
+    ("billing", "finance"),
+    ("fiscal", "finance"),
     ("process", "processes"),
     ("auction", "real_estate_auctions"),
     ("real_estate", "real_estate_auctions"),
@@ -1090,6 +1092,11 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("project", "projects"),
     ("user", "identity"),
     ("company", "governance"),
+    ("issuer", "governance"),
+    ("portfolio", "governance"),
+    ("customer", "governance"),
+    ("commercial", "governance"),
+    ("contract", "governance"),
     ("finance", "finance"),
     ("financial", "finance"),
     ("rule", "governance"),

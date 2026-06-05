@@ -19,6 +19,7 @@ from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_exec
 from src.core.mcp_http_auth import get_http_request_context, get_http_request_identity
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
+from src.core.mcp_commercial_tools import register_commercial_mcp_tools
 from src.core.mcp_runtime import wrap_mcp_callable
 from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_example_tools import register_domain_example_tools
@@ -525,6 +526,50 @@ _supplemental_mcp_tools = (
     *tuple(
         SimpleNamespace(
             name=tool_name,
+            description=f"Capability MCP comercial registrada para {tool_name}.",
+        )
+        for tool_name in (
+            "list_commercial_customer_portfolios",
+            "create_commercial_customer_portfolio",
+            "update_commercial_customer_portfolio",
+            "toggle_commercial_customer_portfolio",
+            "list_commercial_customers",
+            "update_commercial_customer",
+            "list_commercial_issuers",
+            "create_commercial_issuer",
+            "update_commercial_issuer",
+            "list_commercial_catalog_structure",
+            "create_commercial_catalog_structure_item",
+            "update_commercial_catalog_structure_item",
+            "toggle_commercial_catalog_structure_item",
+            "list_commercial_products_services",
+            "create_commercial_product_service",
+            "update_commercial_product_service",
+            "toggle_commercial_product_service",
+            "list_commercial_contracts",
+            "get_commercial_contract_workspace",
+            "create_commercial_contract",
+            "update_commercial_contract_general",
+            "upsert_commercial_contract_financial_terms",
+            "upsert_commercial_contract_fiscal_terms",
+            "add_commercial_contract_item",
+            "update_commercial_contract_item",
+            "list_commercial_billing_queue",
+            "preview_commercial_billing_batch",
+            "generate_commercial_billing_batch",
+            "list_commercial_billings_done",
+            "cancel_commercial_billing",
+            "list_commercial_fiscal_workspace",
+            "update_commercial_fiscal_entry",
+            "assign_commercial_fiscal_batch",
+            "remove_commercial_fiscal_batch",
+            "update_commercial_fiscal_status",
+            "export_commercial_fiscal_integration_spreadsheet",
+        )
+    ),
+    *tuple(
+        SimpleNamespace(
+            name=tool_name,
             description=f"Capability MCP financeira registrada para {tool_name}.",
         )
         for tool_name in (
@@ -617,6 +662,7 @@ catalog = ToolCatalog(
         registrar
         for registrar in (
         register_analysis_catalog_tools,
+        register_commercial_mcp_tools,
         register_crud_contract_tools,
         register_domain_example_tools,
         register_domain_playbook_tools,
