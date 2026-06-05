@@ -1078,6 +1078,139 @@ _STRATEGIC_ALIGNMENT_ALIAS_CAPABILITIES = {
 for _alias_tool_name, _canonical_tool_name in _STRATEGIC_ALIGNMENT_ALIAS_CAPABILITIES.items():
     _PRESET_CAPABILITIES[_alias_tool_name] = dict(_PRESET_CAPABILITIES[_canonical_tool_name])
 
+
+def _register_commercial_capability(
+    tool_name: str,
+    *,
+    domain: str,
+    action: str,
+    scopes: tuple[str, ...] | None = None,
+    risk: ToolRiskLevel | None = None,
+    human_gate: bool = False,
+    human_gate_reason: str | None = None,
+) -> None:
+    resolved_scopes = scopes
+    if resolved_scopes is None:
+        if action == "delete":
+            resolved_scopes = (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value)
+        else:
+            resolved_scopes = (
+                ToolScope.SAPIENS.value,
+                ToolScope.MCP_USER.value,
+                ToolScope.MCP_ADMIN.value,
+            )
+    if domain == "finance" and action in {"read", "discover", "analyze"}:
+        resolved_scopes = tuple(dict.fromkeys((*resolved_scopes, ToolScope.MCP_ANALYTICS.value)))
+
+    resolved_risk = risk
+    if resolved_risk is None:
+        if action in {"read", "discover", "analyze"}:
+            resolved_risk = ToolRiskLevel.LOW
+        elif action == "delete":
+            resolved_risk = ToolRiskLevel.HIGH
+        else:
+            resolved_risk = ToolRiskLevel.MEDIUM
+
+    permission_action = {
+        "read": "read",
+        "discover": "read",
+        "analyze": "read",
+        "create": "create",
+        "update": "update",
+        "delete": "delete",
+    }.get(action, "read")
+
+    tags = ["tenant_safe", "commercial", action]
+    if domain == "finance":
+        tags.append("finance")
+    if action in {"create", "update", "delete"}:
+        tags.append("mutation")
+    else:
+        tags.append("read")
+
+    required_context = (TOOL_CONTEXT_COMPANY,)
+    if action in {"create", "update", "delete"}:
+        required_context = (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY)
+
+    _PRESET_CAPABILITIES[tool_name] = {
+        "domain": domain,
+        "scopes": resolved_scopes,
+        "risk": resolved_risk,
+        "permissions": (f"{domain}.{permission_action}",),
+        "human_gate": human_gate,
+        "human_gate_reason": human_gate_reason,
+        "tags": tuple(tags),
+        "required_context": required_context,
+    }
+
+
+for _tool_name, _action in (
+    ("list_commercial_customer_portfolios", "read"),
+    ("create_commercial_customer_portfolio", "create"),
+    ("update_commercial_customer_portfolio", "update"),
+    ("toggle_commercial_customer_portfolio", "update"),
+    ("list_commercial_customers", "read"),
+    ("update_commercial_customer", "update"),
+    ("list_commercial_issuers", "read"),
+    ("create_commercial_issuer", "create"),
+    ("update_commercial_issuer", "update"),
+    ("list_commercial_catalog_structure", "read"),
+    ("create_commercial_catalog_structure_item", "create"),
+    ("update_commercial_catalog_structure_item", "update"),
+    ("toggle_commercial_catalog_structure_item", "update"),
+    ("list_commercial_products_services", "read"),
+    ("create_commercial_product_service", "create"),
+    ("update_commercial_product_service", "update"),
+    ("toggle_commercial_product_service", "update"),
+    ("list_commercial_contracts", "read"),
+    ("get_commercial_contract_workspace", "read"),
+    ("create_commercial_contract", "create"),
+    ("update_commercial_contract_general", "update"),
+    ("suspend_commercial_contract", "update"),
+    ("close_commercial_contract", "update"),
+    ("delete_commercial_contract", "delete"),
+    ("add_commercial_contract_item", "create"),
+    ("update_commercial_contract_item", "update"),
+):
+    _register_commercial_capability(
+        _tool_name,
+        domain="governance",
+        action=_action,
+        human_gate=_tool_name in {"suspend_commercial_contract", "close_commercial_contract", "delete_commercial_contract"},
+        human_gate_reason=(
+            "Mudança de lifecycle contratual exige confirmação explícita e trilha auditável."
+            if _tool_name in {"suspend_commercial_contract", "close_commercial_contract", "delete_commercial_contract"}
+            else None
+        ),
+    )
+
+for _tool_name, _action in (
+    ("upsert_commercial_contract_financial_terms", "update"),
+    ("upsert_commercial_contract_fiscal_terms", "update"),
+    ("list_commercial_billing_queue", "read"),
+    ("preview_commercial_billing_batch", "read"),
+    ("generate_commercial_billing_batch", "create"),
+    ("list_commercial_billings_done", "read"),
+    ("cancel_commercial_billing", "update"),
+    ("list_commercial_fiscal_workspace", "read"),
+    ("update_commercial_fiscal_entry", "update"),
+    ("assign_commercial_fiscal_batch", "update"),
+    ("remove_commercial_fiscal_batch", "update"),
+    ("update_commercial_fiscal_status", "update"),
+    ("export_commercial_fiscal_integration_spreadsheet", "read"),
+):
+    _register_commercial_capability(
+        _tool_name,
+        domain="finance",
+        action=_action,
+        human_gate=_tool_name in {"generate_commercial_billing_batch", "cancel_commercial_billing"},
+        human_gate_reason=(
+            "Operação financeira comercial exige confirmação explícita e trilha auditável."
+            if _tool_name in {"generate_commercial_billing_batch", "cancel_commercial_billing"}
+            else None
+        ),
+    )
+
 _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("billing", "finance"),
     ("fiscal", "finance"),

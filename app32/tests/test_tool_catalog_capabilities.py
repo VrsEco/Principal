@@ -30,6 +30,9 @@ def test_catalog_exposes_known_capability_metadata():
     strategy_area_okr_capability = catalog.get_tool_capability("create_area_okr")
     strategy_global_kr_capability = catalog.get_tool_capability("create_global_key_result")
     strategy_area_kr_capability = catalog.get_tool_capability("create_area_key_result")
+    commercial_contracts_capability = catalog.get_tool_capability("list_commercial_contracts")
+    commercial_delete_capability = catalog.get_tool_capability("delete_commercial_contract")
+    commercial_billing_capability = catalog.get_tool_capability("list_commercial_billing_queue")
 
     assert capability is not None
     assert capability.domain == "analytics"
@@ -92,6 +95,19 @@ def test_catalog_exposes_known_capability_metadata():
     assert strategy_area_kr_capability is not None
     assert strategy_area_kr_capability.domain == "strategy"
     assert "okrs.key_results.create" in strategy_area_kr_capability.permissions
+    assert commercial_contracts_capability is not None
+    assert commercial_contracts_capability.domain == "governance"
+    assert ToolScope.MCP_USER.value in commercial_contracts_capability.scopes
+    assert "governance.read" in commercial_contracts_capability.permissions
+    assert commercial_delete_capability is not None
+    assert commercial_delete_capability.domain == "governance"
+    assert ToolScope.MCP_ADMIN.value in commercial_delete_capability.scopes
+    assert ToolScope.MCP_USER.value not in commercial_delete_capability.scopes
+    assert commercial_delete_capability.human_gate is True
+    assert commercial_billing_capability is not None
+    assert commercial_billing_capability.domain == "finance"
+    assert ToolScope.MCP_ANALYTICS.value in commercial_billing_capability.scopes
+    assert "finance.read" in commercial_billing_capability.permissions
 
 
 def test_catalog_manifest_filters_by_scope():
@@ -123,6 +139,11 @@ def test_catalog_manifest_filters_by_scope():
     assert "request_engineering_suggestion" in user_tool_names
     assert "list_my_engineering_suggestions" in user_tool_names
     assert "update_macro_process" in user_tool_names
+    assert "suspend_commercial_contract" in user_tool_names
+    assert "close_commercial_contract" in user_tool_names
+    assert "delete_commercial_contract" in admin_tool_names
+    assert "delete_commercial_contract" not in user_tool_names
+    assert "list_commercial_billing_queue" in analytics_tool_names
     assert "delete_meeting_secure" in admin_tool_names
     assert "delete_meeting_secure" not in user_tool_names
 

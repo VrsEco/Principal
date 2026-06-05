@@ -357,6 +357,79 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=contract.to_dict())
 
     @mcp.tool()
+    def suspend_commercial_contract(
+        company_id: int,
+        contract_id: int,
+        user_id: Optional[int] = None,
+        reason: Optional[str] = None,
+    ) -> dict:
+        """Suspende um contrato comercial com trilha de motivo no lifecycle."""
+        from services.contracts_service import ContractService
+
+        def _callback():
+            contract = ContractService.get_contract(company_id, contract_id)
+            if not contract:
+                raise ValueError("Contrato não localizado para a empresa ativa.")
+            return ContractService.suspend_contract(contract=contract, user_id=user_id, reason=reason)
+
+        try:
+            contract = _run_action(_callback)
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(item=contract.to_dict())
+
+    @mcp.tool()
+    def close_commercial_contract(
+        company_id: int,
+        contract_id: int,
+        user_id: Optional[int] = None,
+        reason: Optional[str] = None,
+        termination_date: Optional[str] = None,
+    ) -> dict:
+        """Encerra um contrato comercial e registra motivo/data de término."""
+        from services.contracts_service import ContractService
+
+        def _callback():
+            contract = ContractService.get_contract(company_id, contract_id)
+            if not contract:
+                raise ValueError("Contrato não localizado para a empresa ativa.")
+            normalized_termination_date = ContractService._normalize_date(termination_date)
+            return ContractService.close_contract(
+                contract=contract,
+                user_id=user_id,
+                reason=reason,
+                termination_date=normalized_termination_date,
+            )
+
+        try:
+            contract = _run_action(_callback)
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(item=contract.to_dict())
+
+    @mcp.tool()
+    def delete_commercial_contract(
+        company_id: int,
+        contract_id: int,
+        user_id: Optional[int] = None,
+        reason: Optional[str] = None,
+    ) -> dict:
+        """Exclui logicamente um contrato comercial com auditoria de lifecycle."""
+        from services.contracts_service import ContractService
+
+        def _callback():
+            contract = ContractService.get_contract(company_id, contract_id)
+            if not contract:
+                raise ValueError("Contrato não localizado para a empresa ativa.")
+            return ContractService.delete_contract(contract=contract, user_id=user_id, reason=reason)
+
+        try:
+            contract = _run_action(_callback)
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(item=contract.to_dict())
+
+    @mcp.tool()
     def upsert_commercial_contract_financial_terms(company_id: int, contract_id: int, payload: dict, user_id: Optional[int] = None) -> dict:
         """Atualiza as regras financeiras do contrato comercial."""
         from services.contracts_service import ContractService
