@@ -322,6 +322,11 @@
                                                 {% endfor %}
                                             </select>
                                         </label>
+                                        <label class="full-width"><span>Observação fiscal da retenção</span><input type="text" name="retention_{{ retention_key }}_fiscal_observation_text" value="{{ retention_state.get('fiscal_observation_text') or '' }}" placeholder="Ex.: ISS Retido: 314,28"></label>
+                                        <label class="checkbox-inline full-width">
+                                            <input type="checkbox" name="retention_{{ retention_key }}_include_in_fiscal_description" value="1" {% if retention_state.get('include_in_fiscal_description') %}checked{% endif %}>
+                                            Incluir observação desta retenção na descrição/observação fiscal
+                                        </label>
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -357,6 +362,7 @@
                                         {% if retention_flags.get('irrf') %}{% set _ = enabled_flags.append('IRRF') %}{% endif %}
                                         {% if retention_flags.get('csrf') %}{% set _ = enabled_flags.append('CSRF') %}{% endif %}
                                         {% if retention_flags.get('inss') %}{% set _ = enabled_flags.append('INSS') %}{% endif %}
+                                        {% if retention_flags.get('other') %}{% set _ = enabled_flags.append('Outras Retenções') %}{% endif %}
                                         {% if enabled_flags %}
                                         <small>Retenções: {{ enabled_flags|join(', ') }}</small>
                                         {% for retention in retention_details %}
@@ -367,6 +373,7 @@
                                             · Compensação: {{ retention.get('bank_account_code') or retention.get('asset_account_code') or '-' }} · {{ retention.get('bank_account_name') or retention.get('asset_account_name') or '-' }}
                                             · Conta retida: {{ retention.get('chart_account_code') or '-' }} · {{ retention.get('chart_account_name') or '-' }}
                                             · Gatilho: {{ retention.get('trigger') or '-' }}
+                                            {% if retention.get('include_in_fiscal_description') %} · Obs. fiscal: {{ retention.get('fiscal_observation_text') or 'Sim' }}{% endif %}
                                         </small>
                                         {% endfor %}
                                         {% endif %}

@@ -26,6 +26,7 @@ class ContractFinancialService:
         "pis_withheld": "PIS Retido",
         "cofins_withheld": "COFINS Retido",
         "csll_withheld": "CSLL Retida",
+        "other_withheld": "Outras Retenções",
         "contractual_retention": "Retenção Contratual",
         "financial_retention": "Retenção Financeira",
     }
@@ -35,6 +36,7 @@ class ContractFinancialService:
         "irrf": "irrf_withheld",
         "inss": "inss_withheld",
         "csrf": "csrf_withheld",
+        "other": "other_withheld",
     }
     TRIGGER_TO_POLICY_EVENT = {
         "baixa": "on_partial_settlement",
@@ -79,6 +81,10 @@ class ContractFinancialService:
     @staticmethod
     def _current_timestamp() -> str:
         return datetime.utcnow().isoformat()
+
+    @staticmethod
+    def _sanitize_json(value):
+        return FinancialScheduleService._sanitize_json(value)
 
     @staticmethod
     def get_satellite_policy_template_options() -> list[dict]:
@@ -376,6 +382,7 @@ class ContractFinancialService:
             "cost_center_id": cost_center_id,
             "notes": getattr(financial_terms, "notes", None) if financial_terms else None,
             "metadata_json": metadata_json,
+            "allocations": item_allocations,
         }
 
     @staticmethod
@@ -459,7 +466,7 @@ class ContractFinancialService:
 
     @staticmethod
     def _entry_type_for_satellite(nature: str) -> tuple[str, str]:
-        if nature in {"iss_withheld", "inss_withheld", "irrf_withheld", "pis_withheld", "cofins_withheld", "csll_withheld"}:
+        if nature in {"iss_withheld", "inss_withheld", "irrf_withheld", "pis_withheld", "cofins_withheld", "csll_withheld", "other_withheld"}:
             return "payable", "debit"
         return "receivable", "credit"
 
@@ -479,6 +486,33 @@ class ContractFinancialService:
             due_date = competence_date
         entry_type, movement_nature = ContractFinancialService._entry_type_for_satellite(policy.satellite_nature)
         retention_kind = ContractFinancialService._normalize_text(retention_detail.get("kind")).lower()
+        allocation_notes = f"{ContractFinancialService._retention_label(policy.satellite_nature)} · {native_billing.billing_code}"
+        domain_type = "project" if ContractFinancialService._normalize_int(retention_detail.get("project_id")) else None
+        domain_source_id = ContractFinancialService._normalize_int(retention_detail.get("project_id"))
+        domain_label = (
+            f"{ContractFinancialService._normalize_text(retention_detail.get('project_code'))} · "
+            f"{ContractFinancialService._normalize_text(retention_detail.get('project_name'))}"
+        ).strip(" ·") or None
+        child_allocations = [
+            {
+                "chart_account_id": policy.chart_account_id or main_schedule.chart_account_id,
+                "cost_center_id": main_schedule.cost_center_id,
+                "allocation_type": "amount",
+                "percentage": 100,
+                "allocated_amount": float(amount),
+                "notes": allocation_notes,
+                "domain_type": domain_type,
+                "domain_source_kind": "manual" if domain_source_id else None,
+                "domain_source_id": domain_source_id,
+                "domain_label": domain_label,
+                "domain_value": f"manual:project:{domain_source_id}" if domain_source_id else None,
+                "metadata_json": {
+                    "contract_item_id": ContractFinancialService._normalize_int(retention_detail.get("contract_item_id")),
+                    "contract_native_billing_item_id": ContractFinancialService._normalize_int(retention_detail.get("contract_native_billing_item_id")),
+                    "retention_kind": retention_kind,
+                },
+            }
+        ]
         metadata_json = {
             "source_module": "contracts",
             "contract_id": contract.id,
@@ -494,10 +528,11 @@ class ContractFinancialService:
             "contract_satellite_engine_managed": True,
             "retention_kind": retention_kind,
             "trigger_key": ContractFinancialService._normalize_text(retention_detail.get("trigger")).lower() or "baixa",
-            "retention_detail": {
+            "retention_detail": ContractFinancialService._sanitize_json({
                 **dict(retention_detail or {}),
                 "calculated_amount": float(amount),
-            },
+            }),
+            "allocations": child_allocations,
             "generated_from": "contract_native_billing",
         }
         return {
@@ -523,6 +558,7 @@ class ContractFinancialService:
             "cost_center_id": main_schedule.cost_center_id,
             "notes": policy.notes,
             "metadata_json": metadata_json,
+            "allocations": child_allocations,
         }
 
     @staticmethod
@@ -742,7 +778,7 @@ class ContractFinancialService:
                         policy_id=policy.id,
                         link_type="satellite",
                         title_nature=policy.satellite_nature,
-                        metadata_json={
+                        metadata_json=ContractFinancialService._sanitize_json({
                             "contract_id": contract.id,
                             "contract_native_billing_id": native_billing.id,
                             "contract_item_id": ContractFinancialService._normalize_int(retention_detail.get("contract_item_id")),
@@ -754,7 +790,7 @@ class ContractFinancialService:
                                 "calculated_amount": float(amount),
                             },
                             "created_at": ContractFinancialService._current_timestamp(),
-                        },
+                        }),
                     )
                 )
                 child_schedule = FinancialSchedule.query.filter(

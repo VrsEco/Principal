@@ -4,6 +4,7 @@ import re
 import csv
 import io
 import mimetypes
+import unicodedata
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import calendar
@@ -102,6 +103,7 @@ class ContractService:
         ("irrf", "IRRF"),
         ("csrf", "CSRF"),
         ("inss", "INSS"),
+        ("other", "Outras Retenções"),
     )
     ITEM_RETENTION_DEDUCTION_MODES = (
         ("percent", "%"),
@@ -1133,6 +1135,80 @@ class ContractService:
         return normalized.upper() if normalized else "Retenção"
 
     @staticmethod
+    def _normalize_city_name(value: object) -> str:
+        normalized = ContractService._normalize_text(value)
+        if not normalized:
+            return ""
+        return (
+            unicodedata.normalize("NFKD", normalized)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .strip()
+            .lower()
+        )
+
+    @staticmethod
+    def _is_salvador_city(value: object) -> bool:
+        normalized = ContractService._normalize_city_name(value)
+        return normalized in {"salvador", "salvador/ba", "salvador - ba", "salvador ba"}
+
+    @staticmethod
+    def _should_export_iss_as_other(fiscal_data: Optional[dict], fallback_sources: Optional[list[dict]] = None) -> bool:
+        fiscal_data = fiscal_data or {}
+        fallback_sources = fallback_sources or []
+        iss_city = ContractService._normalize_text(fiscal_data.get("iss_city"))
+        service_city = ContractService._normalize_text(fiscal_data.get("service_city"))
+        resolved_city = (
+            iss_city
+            or service_city
+            or ContractService._metadata_value(fallback_sources, "iss_city", "cidade_iss", "city_iss")
+            or ContractService._metadata_value(fallback_sources, "service_city", "cidade_servico", "city_service")
+        )
+        if not resolved_city:
+            return False
+        return not ContractService._is_salvador_city(resolved_city)
+
+    @staticmethod
+    def _collect_retention_observation_lines(*, native_billing: ContractNativeBilling, fiscal_data: Optional[dict], fallback_sources: Optional[list[dict]] = None) -> list[str]:
+        fallback_sources = fallback_sources or []
+        iss_as_other = ContractService._should_export_iss_as_other(fiscal_data, fallback_sources)
+        lines: list[str] = []
+        seen: set[str] = set()
+        for billing_item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all():
+            item_metadata = dict(billing_item.metadata_json or {})
+            for detail in list(item_metadata.get("retention_details") or []):
+                retention = dict(detail or {})
+                kind = ContractService._normalize_text(retention.get("kind")).lower()
+                amount = ContractService._normalize_decimal(
+                    retention.get("calculated_amount") or retention.get("retention_amount")
+                ).quantize(Decimal("0.01"))
+                if amount <= Decimal("0.00"):
+                    continue
+                include_flag = ContractService._normalize_bool(
+                    retention.get("include_in_fiscal_description")
+                    or retention.get("include_in_observations")
+                )
+                observation_text = ContractService._normalize_text(
+                    retention.get("fiscal_observation_text")
+                    or retention.get("observation_text")
+                )
+                if kind == "iss" and iss_as_other:
+                    include_flag = True
+                    if not observation_text:
+                        observation_text = f"ISS Retido: {ContractService._decimal_to_br_text(amount)}"
+                if not include_flag:
+                    continue
+                if not observation_text:
+                    observation_text = (
+                        f"{ContractService._retention_label(kind)}: {ContractService._decimal_to_br_text(amount)}"
+                    )
+                normalized_key = observation_text.strip().lower()
+                if normalized_key and normalized_key not in seen:
+                    seen.add(normalized_key)
+                    lines.append(observation_text.strip())
+        return lines
+
+    @staticmethod
     def _build_project_domain_metadata(project: Optional[Project]) -> dict:
         if not project:
             return {
@@ -1875,6 +1951,12 @@ class ContractService:
             retention_trigger = ContractService._normalize_text(payload.get(f"retention_{retention_key}_trigger")).lower() or None
             if retention_trigger not in {"emissao", "vencimento", "baixa"}:
                 raise ValueError(f"Informe um gatilho válido para a retenção {retention_label}.")
+            fiscal_observation_text = ContractService._normalize_text(
+                payload.get(f"retention_{retention_key}_fiscal_observation_text")
+            ) or None
+            include_in_fiscal_description = ContractService._normalize_bool(
+                payload.get(f"retention_{retention_key}_include_in_fiscal_description")
+            )
             if not compensation_bank_account:
                 raise ValueError(f"Informe a conta bancária para compensação da retenção {retention_label}.")
             if not retention_chart_account:
@@ -1908,6 +1990,8 @@ class ContractService:
                     "chart_account_code": retention_chart_account.code,
                     "chart_account_name": retention_chart_account.name,
                     "trigger": retention_trigger,
+                    "fiscal_observation_text": fiscal_observation_text,
+                    "include_in_fiscal_description": include_in_fiscal_description,
                     "project_id": project.id if project else None,
                     "project_code": project.code if project else None,
                     "project_name": project.name if project else None,
@@ -2957,7 +3041,12 @@ class ContractService:
         retention_totals, retention_rates = ContractService._retention_totals_by_kind(native_billing)
         gross_amount = ContractService._normalize_decimal(native_billing.gross_amount)
         iss_amount = retention_totals.get("iss", Decimal("0.00"))
+        other_amount = retention_totals.get("other", Decimal("0.00"))
         iss_rate = retention_rates.get("iss")
+        if ContractService._should_export_iss_as_other(fiscal_data, all_sources):
+            other_amount += iss_amount
+            iss_amount = Decimal("0.00")
+            iss_rate = None
         if not iss_rate and iss_amount > Decimal("0.00") and gross_amount > Decimal("0.00"):
             iss_rate = (iss_amount / gross_amount * Decimal("100")).quantize(Decimal("0.0001"))
 
@@ -2966,8 +3055,15 @@ class ContractService:
             or ContractService._metadata_value(all_sources, "fiscal_notes", "descricao", "description")
             or ContractService._billing_item_descriptions(native_billing)
         )
-        if iss_amount > Decimal("0.00"):
-            description = f"{description or 'Serviços prestados'} - Valor do ISS retido: {ContractService._decimal_to_br_text(iss_amount)}"
+        description_lines = [description or "Serviços prestados"]
+        for line in ContractService._collect_retention_observation_lines(
+            native_billing=native_billing,
+            fiscal_data=fiscal_data,
+            fallback_sources=all_sources,
+        ):
+            if line and line not in description_lines:
+                description_lines.append(line)
+        description = "\n".join(line for line in description_lines if line)
 
         row = {
             "CPF_CNPJ": ContractService._digits_only(
@@ -3081,7 +3177,7 @@ class ContractService:
             "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,
             "Retencao_INSS": ContractService._decimal_to_br_text(retention_totals.get("inss")) if retention_totals.get("inss") else None,
             "Retencao_CSLL": ContractService._decimal_to_br_text(retention_totals.get("csrf")) if retention_totals.get("csrf") else None,
-            "Retencao_OUTROS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
+            "Retencao_OUTROS": ContractService._decimal_to_br_text(other_amount) if other_amount > Decimal("0.00") else None,
         }
         return {key: value for key, value in row.items() if value not in (None, "")}
 
