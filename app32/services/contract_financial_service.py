@@ -382,7 +382,6 @@ class ContractFinancialService:
             "cost_center_id": cost_center_id,
             "notes": getattr(financial_terms, "notes", None) if financial_terms else None,
             "metadata_json": metadata_json,
-            "allocations": item_allocations,
         }
 
     @staticmethod
@@ -558,7 +557,6 @@ class ContractFinancialService:
             "cost_center_id": main_schedule.cost_center_id,
             "notes": policy.notes,
             "metadata_json": metadata_json,
-            "allocations": child_allocations,
         }
 
     @staticmethod
