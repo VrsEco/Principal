@@ -395,6 +395,7 @@ class ContractFinancialService:
         details: list[dict] = []
         for billing_item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all():
             item_metadata = dict(billing_item.metadata_json or {})
+            allocation = dict(item_metadata.get("allocation") or {})
             for detail in list(item_metadata.get("retention_details") or []):
                 normalized = dict(detail or {})
                 amount = ContractFinancialService._money(normalized.get("calculated_amount"))
@@ -407,6 +408,12 @@ class ContractFinancialService:
                 normalized["item_amount"] = ContractFinancialService._money(
                     item_metadata.get("gross_amount") or billing_item.amount
                 )
+                normalized["cost_center_id"] = normalized.get("cost_center_id") or allocation.get("cost_center_id")
+                normalized["cost_center_code"] = normalized.get("cost_center_code") or allocation.get("cost_center_code")
+                normalized["cost_center_name"] = normalized.get("cost_center_name") or allocation.get("cost_center_name")
+                normalized["project_id"] = normalized.get("project_id") or allocation.get("project_id")
+                normalized["project_code"] = normalized.get("project_code") or allocation.get("project_code")
+                normalized["project_name"] = normalized.get("project_name") or allocation.get("project_name")
                 details.append(normalized)
         return details
 
@@ -495,7 +502,10 @@ class ContractFinancialService:
         child_allocations = [
             {
                 "chart_account_id": policy.chart_account_id or main_schedule.chart_account_id,
-                "cost_center_id": main_schedule.cost_center_id,
+                "cost_center_id": (
+                    ContractFinancialService._normalize_int(retention_detail.get("cost_center_id"))
+                    or main_schedule.cost_center_id
+                ),
                 "allocation_type": "amount",
                 "percentage": 100,
                 "allocated_amount": float(amount),
