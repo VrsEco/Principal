@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import re
+import csv
+import io
+import mimetypes
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import calendar
 from pathlib import Path
 from typing import Optional
 from uuid import uuid4
+import xml.etree.ElementTree as ET
 
 from flask import current_app
 from sqlalchemy import or_
@@ -2554,11 +2558,13 @@ class ContractService:
             "issuer_legal_name": snapshot.get("issuer_legal_name"),
             "integration_mode": snapshot.get("integration_mode"),
             "nfs_provider": snapshot.get("nfs_provider"),
+            "default_rps_series": snapshot.get("default_rps_series"),
             "service_code": snapshot.get("service_code"),
             "service_list_item": snapshot.get("service_list_item"),
             "operation_nature": snapshot.get("operation_nature"),
             "service_city": snapshot.get("service_city"),
             "iss_city": snapshot.get("iss_city"),
+            "fiscal_notes": snapshot.get("fiscal_notes"),
             "issue_date": native_billing.issue_date.isoformat() if native_billing.issue_date else None,
             "gross_amount": float(native_billing.gross_amount or 0),
             "net_amount": float(native_billing.net_amount or 0),
@@ -2571,6 +2577,544 @@ class ContractService:
                 for item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all()
             ],
         }
+
+    @staticmethod
+    def _get_fiscal_invoice_state(native_billing: ContractNativeBilling) -> dict:
+        metadata = dict(native_billing.metadata_json or {})
+        state = dict(metadata.get("fiscal_invoice") or {})
+        fiscal_payload = ContractService.build_native_billing_fiscal_export_payload(native_billing)
+        fiscal_data = {
+            **{
+                "customer_name": fiscal_payload.get("customer_name"),
+                "customer_document": fiscal_payload.get("customer_document"),
+                "issuer_cnpj": fiscal_payload.get("issuer_cnpj"),
+                "issuer_legal_name": fiscal_payload.get("issuer_legal_name"),
+                "integration_mode": fiscal_payload.get("integration_mode"),
+                "nfs_provider": fiscal_payload.get("nfs_provider"),
+                "rps_series": fiscal_payload.get("default_rps_series"),
+                "service_city": fiscal_payload.get("service_city"),
+                "iss_city": fiscal_payload.get("iss_city"),
+                "fiscal_notes": fiscal_payload.get("fiscal_notes"),
+                "invoice_number": None,
+                "issued_at": None,
+            },
+            **dict(state.get("fiscal_data") or {}),
+        }
+        state.setdefault("status", "pending")
+        state.setdefault("batch_code", None)
+        state.setdefault("batch_assigned_at", None)
+        state["fiscal_data"] = fiscal_data
+        state.setdefault("attachments", [])
+        state.setdefault("integration_exports", [])
+        return state
+
+    @staticmethod
+    def _set_fiscal_invoice_state(native_billing: ContractNativeBilling, state: dict):
+        metadata = dict(native_billing.metadata_json or {})
+        metadata["fiscal_invoice"] = state
+        native_billing.metadata_json = metadata
+
+    @staticmethod
+    def _list_fiscal_invoice_billings(company_id: int, filters: Optional[dict] = None) -> list[ContractNativeBilling]:
+        filters = dict(filters or {})
+        query = (
+            ContractNativeBilling.query.filter(
+                ContractNativeBilling.company_id == company_id,
+                ContractNativeBilling.status != "cancelled",
+            )
+            .outerjoin(Contract, Contract.id == ContractNativeBilling.contract_id)
+            .outerjoin(ContractParty, ContractParty.id == ContractNativeBilling.party_id)
+        )
+        party_id = ContractService._normalize_int(filters.get("party_id"))
+        if party_id:
+            query = query.filter(ContractNativeBilling.party_id == party_id)
+        search = ContractService._normalize_text(filters.get("search"))
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    ContractNativeBilling.billing_code.ilike(pattern),
+                    Contract.code.ilike(pattern),
+                    Contract.title.ilike(pattern),
+                    ContractParty.name.ilike(pattern),
+                    ContractParty.document_number.ilike(pattern),
+                )
+            )
+        return query.order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc()).all()
+
+    @staticmethod
+    def list_fiscal_invoice_workspace(company_id: int, filters: Optional[dict] = None) -> dict:
+        filters = dict(filters or {})
+        fiscal_status = ContractService._normalize_text(filters.get("fiscal_status") or "active").lower()
+        batch_code = ContractService._normalize_text(filters.get("batch_code"))
+        billings = ContractService._list_fiscal_invoice_billings(company_id, filters)
+        rows: list[dict] = []
+        batch_counts: dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        for billing in billings:
+            state = ContractService._get_fiscal_invoice_state(billing)
+            status = ContractService._normalize_text(state.get("status") or "pending").lower()
+            current_batch = ContractService._normalize_text(state.get("batch_code"))
+            status_counts[status] = status_counts.get(status, 0) + 1
+            if current_batch and status != "deleted":
+                batch_counts[current_batch] = batch_counts.get(current_batch, 0) + 1
+
+            if fiscal_status == "active" and status == "deleted":
+                continue
+            if fiscal_status and fiscal_status not in {"active", "all"} and status != fiscal_status:
+                continue
+            if batch_code == "__without_batch__" and current_batch:
+                continue
+            if batch_code and batch_code != "__without_batch__" and current_batch != batch_code:
+                continue
+
+            gross_amount = ContractService._normalize_decimal(billing.gross_amount)
+            net_amount = ContractService._normalize_decimal(billing.net_amount)
+            rows.append(
+                {
+                    "billing": billing,
+                    "contract": billing.contract,
+                    "party": billing.party,
+                    "fiscal_invoice": state,
+                    "fiscal_data": dict(state.get("fiscal_data") or {}),
+                    "batch_code": current_batch,
+                    "retention_amount": (gross_amount - net_amount).quantize(Decimal("0.01")),
+                    "item_count": billing.items.count(),
+                }
+            )
+        batches = [
+            {"batch_code": code, "item_count": count, "status": "active"}
+            for code, count in sorted(batch_counts.items())
+        ]
+        return {
+            "rows": rows,
+            "batches": batches,
+            "kpis": {
+                "total": len(rows),
+                "pending": sum(1 for row in rows if row["fiscal_invoice"].get("status") == "pending"),
+                "batched": sum(1 for row in rows if row.get("batch_code")),
+                "emitted": sum(1 for row in rows if row["fiscal_invoice"].get("status") == "emitted"),
+                "cancelled": sum(1 for row in rows if row["fiscal_invoice"].get("status") == "cancelled"),
+            },
+            "status_counts": status_counts,
+        }
+
+    @staticmethod
+    def _next_fiscal_invoice_batch_code(company_id: int) -> str:
+        last_number = 0
+        for billing in ContractNativeBilling.query.filter(ContractNativeBilling.company_id == company_id).all():
+            batch_code = ContractService._normalize_text(
+                ContractService._get_fiscal_invoice_state(billing).get("batch_code")
+            ) or ""
+            match = re.search(r"NF\.(\d+)$", batch_code)
+            if match:
+                last_number = max(last_number, int(match.group(1)))
+        return f"NF.{last_number + 1:03d}"
+
+    @staticmethod
+    def _get_fiscal_invoice_billings_by_ids(company_id: int, billing_ids: list[int]) -> list[ContractNativeBilling]:
+        normalized_ids = [item for item in ContractService._normalize_id_list(billing_ids) if item]
+        if not normalized_ids:
+            return []
+        return (
+            ContractNativeBilling.query.filter(
+                ContractNativeBilling.company_id == company_id,
+                ContractNativeBilling.id.in_(normalized_ids),
+                ContractNativeBilling.status != "cancelled",
+            )
+            .order_by(ContractNativeBilling.id.asc())
+            .all()
+        )
+
+    @staticmethod
+    def assign_fiscal_invoice_batch(*, company_id: int, billing_ids: list[int], batch_code: Optional[str], user_id: Optional[int]) -> dict:
+        billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
+        resolved_batch_code = ContractService._normalize_text(batch_code) or ContractService._next_fiscal_invoice_batch_code(company_id)
+        now = datetime.utcnow().isoformat()
+        for billing in billings:
+            state = ContractService._get_fiscal_invoice_state(billing)
+            state["batch_code"] = resolved_batch_code
+            state["batch_assigned_at"] = now
+            state["batch_assigned_by_user_id"] = user_id
+            if state.get("status") in {None, "", "deleted"}:
+                state["status"] = "pending"
+            ContractService._set_fiscal_invoice_state(billing, state)
+        db.session.commit()
+        return {"updated": len(billings), "batch_code": resolved_batch_code}
+
+    @staticmethod
+    def remove_fiscal_invoice_batch(*, company_id: int, billing_ids: list[int], user_id: Optional[int]) -> dict:
+        billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
+        now = datetime.utcnow().isoformat()
+        for billing in billings:
+            state = ContractService._get_fiscal_invoice_state(billing)
+            state["previous_batch_code"] = state.get("batch_code")
+            state["batch_code"] = None
+            state["batch_removed_at"] = now
+            state["batch_removed_by_user_id"] = user_id
+            ContractService._set_fiscal_invoice_state(billing, state)
+        db.session.commit()
+        return {"updated": len(billings)}
+
+    @staticmethod
+    def update_fiscal_invoice_data(*, company_id: int, billing_id: int, payload: dict, user_id: Optional[int]) -> ContractNativeBilling:
+        billing = ContractNativeBilling.query.filter(
+            ContractNativeBilling.company_id == company_id,
+            ContractNativeBilling.id == billing_id,
+            ContractNativeBilling.status != "cancelled",
+        ).first()
+        if not billing:
+            raise ValueError("Registro fiscal não localizado para a empresa ativa.")
+        state = ContractService._get_fiscal_invoice_state(billing)
+        fiscal_data = dict(state.get("fiscal_data") or {})
+        for key in (
+            "customer_name",
+            "customer_document",
+            "issuer_cnpj",
+            "issuer_legal_name",
+            "integration_mode",
+            "nfs_provider",
+            "rps_series",
+            "service_city",
+            "iss_city",
+            "fiscal_notes",
+            "invoice_number",
+            "issued_at",
+        ):
+            if key in payload:
+                fiscal_data[key] = ContractService._normalize_text(payload.get(key)) or None
+        state["fiscal_data"] = fiscal_data
+        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_by_user_id"] = user_id
+        ContractService._set_fiscal_invoice_state(billing, state)
+        db.session.commit()
+        return billing
+
+    @staticmethod
+    def update_fiscal_invoice_status(
+        *,
+        company_id: int,
+        billing_ids: list[int],
+        status: str,
+        payload: Optional[dict] = None,
+        user_id: Optional[int],
+    ) -> dict:
+        status = (ContractService._normalize_text(status) or "").lower()
+        if status not in {"pending", "emitted", "cancelled", "deleted"}:
+            raise ValueError("Status fiscal inválido.")
+        payload = payload or {}
+        billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
+        now = datetime.utcnow().isoformat()
+        for billing in billings:
+            state = ContractService._get_fiscal_invoice_state(billing)
+            fiscal_data = dict(state.get("fiscal_data") or {})
+            if status == "emitted":
+                fiscal_data["invoice_number"] = ContractService._normalize_text(payload.get("invoice_number")) or fiscal_data.get("invoice_number")
+                fiscal_data["issued_at"] = (
+                    ContractService._normalize_text(payload.get("issued_at"))
+                    or fiscal_data.get("issued_at")
+                    or date.today().isoformat()
+                )
+                state["emitted_at"] = now
+                state["emitted_by_user_id"] = user_id
+            elif status == "cancelled":
+                state["cancelled_at"] = now
+                state["cancelled_by_user_id"] = user_id
+                state["cancellation_reason"] = ContractService._normalize_text(payload.get("reason")) or None
+            elif status == "deleted":
+                state["deleted_at"] = now
+                state["deleted_by_user_id"] = user_id
+                state["batch_code"] = None
+            state["status"] = status
+            state["fiscal_data"] = fiscal_data
+            state["updated_at"] = now
+            state["updated_by_user_id"] = user_id
+            ContractService._set_fiscal_invoice_state(billing, state)
+        db.session.commit()
+        return {"updated": len(billings), "status": status}
+
+    @staticmethod
+    def build_fiscal_invoice_integration_csv(*, company_id: int, billing_ids: list[int], user_id: Optional[int]) -> dict:
+        billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
+        output = io.StringIO()
+        writer = csv.writer(output, delimiter=";")
+        writer.writerow(
+            [
+                "billing_code",
+                "batch_code",
+                "contract_code",
+                "customer_name",
+                "customer_document",
+                "issuer_cnpj",
+                "nfs_provider",
+                "rps_series",
+                "service_city",
+                "iss_city",
+                "competence_start",
+                "issue_date",
+                "due_date",
+                "gross_amount",
+                "retention_amount",
+                "net_amount",
+                "fiscal_notes",
+            ]
+        )
+        now = datetime.utcnow().isoformat()
+        for billing in billings:
+            state = ContractService._get_fiscal_invoice_state(billing)
+            fiscal_data = dict(state.get("fiscal_data") or {})
+            gross_amount = ContractService._normalize_decimal(billing.gross_amount)
+            net_amount = ContractService._normalize_decimal(billing.net_amount)
+            writer.writerow(
+                [
+                    billing.billing_code,
+                    state.get("batch_code") or "",
+                    billing.contract.code if billing.contract else "",
+                    fiscal_data.get("customer_name") or (billing.party.name if billing.party else ""),
+                    fiscal_data.get("customer_document") or (billing.party.document_number if billing.party else ""),
+                    fiscal_data.get("issuer_cnpj") or "",
+                    fiscal_data.get("nfs_provider") or "",
+                    fiscal_data.get("rps_series") or "",
+                    fiscal_data.get("service_city") or "",
+                    fiscal_data.get("iss_city") or "",
+                    billing.competence_start.isoformat() if billing.competence_start else "",
+                    billing.issue_date.isoformat() if billing.issue_date else "",
+                    billing.due_date.isoformat() if billing.due_date else "",
+                    str(gross_amount).replace(".", ","),
+                    str((gross_amount - net_amount).quantize(Decimal("0.01"))).replace(".", ","),
+                    str(net_amount).replace(".", ","),
+                    fiscal_data.get("fiscal_notes") or "",
+                ]
+            )
+            exports = list(state.get("integration_exports") or [])
+            exports.append({"exported_at": now, "exported_by_user_id": user_id})
+            state["integration_exports"] = exports
+            state["last_integration_export_at"] = now
+            ContractService._set_fiscal_invoice_state(billing, state)
+        db.session.commit()
+        filename = f"notas_fiscais_integracao_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+        return {"filename": filename, "content": ("\ufeff" + output.getvalue()).encode("utf-8")}
+
+    @staticmethod
+    def _save_fiscal_invoice_upload(company_id: int, billing_id: Optional[int], file: FileStorage) -> dict:
+        safe_name = secure_filename(file.filename or "arquivo") or "arquivo"
+        suffix = Path(safe_name).suffix.lower()
+        stored_name = f"{uuid4().hex}{suffix}"
+        relative_dir = Path("contracts") / "fiscal_invoices" / str(company_id) / (str(billing_id) if billing_id else "imports")
+        target_dir = Path(current_app.config["UPLOAD_FOLDER"]) / relative_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        file.stream.seek(0)
+        file.save(target_dir / stored_name)
+        mime_type = file.mimetype or mimetypes.guess_type(safe_name)[0] or "application/octet-stream"
+        relative_path = (relative_dir / stored_name).as_posix()
+        return {
+            "id": uuid4().hex,
+            "file_name": safe_name,
+            "stored_name": stored_name,
+            "mime_type": mime_type,
+            "extension": suffix,
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "url": f"/uploads/{relative_path}",
+            "path": relative_path,
+        }
+
+    @staticmethod
+    def _extract_xml_invoice_data(raw_bytes: bytes) -> dict:
+        try:
+            root = ET.fromstring(raw_bytes)
+        except ET.ParseError:
+            return {}
+
+        def local_name(tag: str) -> str:
+            return str(tag or "").split("}")[-1]
+
+        values: dict[str, list[str]] = {}
+        for element in root.iter():
+            text = (element.text or "").strip()
+            if not text:
+                continue
+            values.setdefault(local_name(element.tag), []).append(text)
+
+        def first(*names: str) -> Optional[str]:
+            for name in names:
+                items = values.get(name)
+                if items:
+                    return items[0]
+            return None
+
+        return {
+            "invoice_number": first("nNF", "Numero", "NumeroNfse", "numero"),
+            "issued_at": first("dhEmi", "dEmi", "DataEmissao", "dataEmissao"),
+            "customer_document": first("CNPJ", "CPF", "CpfCnpj", "cnpj", "cpf"),
+            "customer_name": first("xNome", "RazaoSocial", "NomeRazaoSocial"),
+            "gross_amount": first("vNF", "ValorServicos", "ValorNfse", "valor"),
+        }
+
+    @staticmethod
+    def _match_fiscal_invoice_upload(company_id: int, extracted: dict) -> Optional[ContractNativeBilling]:
+        document_digits = re.sub(r"\D", "", str(extracted.get("customer_document") or ""))
+        gross_amount = ContractService._normalize_decimal(extracted.get("gross_amount")) if extracted.get("gross_amount") else None
+        if not document_digits and gross_amount is None:
+            return None
+        candidates = ContractNativeBilling.query.filter(
+            ContractNativeBilling.company_id == company_id,
+            ContractNativeBilling.status != "cancelled",
+        ).order_by(ContractNativeBilling.id.desc()).limit(300).all()
+        for billing in candidates:
+            party_digits = re.sub(r"\D", "", str(billing.party.document_number if billing.party else ""))
+            if document_digits and party_digits and document_digits[-8:] != party_digits[-8:]:
+                continue
+            if gross_amount is not None:
+                diff = abs(ContractService._normalize_decimal(billing.gross_amount) - gross_amount)
+                if diff > Decimal("0.05"):
+                    continue
+                return billing
+        return None
+
+    @staticmethod
+    def _extract_tabular_invoice_rows(raw_bytes: bytes, filename: str) -> list[dict]:
+        suffix = Path(filename or "").suffix.lower()
+
+        def normalize_key(value) -> str:
+            return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
+
+        def normalize_row(row: dict) -> dict:
+            row = {normalize_key(key): value for key, value in row.items()}
+
+            def first(*names: str):
+                for name in names:
+                    value = row.get(normalize_key(name))
+                    if value not in (None, ""):
+                        return str(value).strip()
+                return None
+
+            return {
+                "invoice_number": first("invoice_number", "numero_nf", "n_nf", "nf", "nota_fiscal", "numero_nota"),
+                "issued_at": first("issued_at", "data_emissao", "emissao", "data_da_emissao"),
+                "customer_document": first("customer_document", "documento_cliente", "cnpj", "cpf", "cpf_cnpj"),
+                "customer_name": first("customer_name", "cliente", "razao_social", "tomador"),
+                "gross_amount": first("gross_amount", "valor_bruto", "valor_servicos", "valor_nf", "valor"),
+            }
+
+        if suffix == ".csv":
+            text = None
+            for encoding in ("utf-8-sig", "utf-8", "latin-1"):
+                try:
+                    text = raw_bytes.decode(encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            if not text:
+                return []
+            sample = text[:2048]
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=";,|\t,")
+                reader = csv.DictReader(io.StringIO(text), dialect=dialect)
+            except csv.Error:
+                reader = csv.DictReader(io.StringIO(text), delimiter=";")
+            return [normalize_row(row) for row in reader if any(row.values())]
+
+        if suffix == ".xlsx":
+            try:
+                from openpyxl import load_workbook  # type: ignore
+            except Exception:
+                return []
+            workbook = load_workbook(io.BytesIO(raw_bytes), read_only=True, data_only=True)
+            worksheet = workbook.active
+            rows = worksheet.iter_rows(values_only=True)
+            headers = next(rows, None)
+            if not headers:
+                return []
+            parsed_rows = []
+            for values in rows:
+                row = dict(zip(headers, values))
+                if any(value not in (None, "") for value in row.values()):
+                    parsed_rows.append(normalize_row(row))
+            return parsed_rows
+
+        return []
+
+    @staticmethod
+    def _apply_fiscal_invoice_upload_to_billing(
+        *,
+        company_id: int,
+        billing: ContractNativeBilling,
+        file: FileStorage,
+        extracted: dict,
+        user_id: Optional[int],
+    ) -> None:
+        attachment = ContractService._save_fiscal_invoice_upload(company_id, billing.id, file)
+        state = ContractService._get_fiscal_invoice_state(billing)
+        attachments = list(state.get("attachments") or [])
+        attachments.append(attachment)
+        fiscal_data = dict(state.get("fiscal_data") or {})
+        for key in ("invoice_number", "issued_at", "customer_document", "customer_name"):
+            if extracted.get(key):
+                fiscal_data[key] = extracted[key]
+        if extracted.get("invoice_number") or extracted.get("issued_at"):
+            state["status"] = "emitted"
+            state["emitted_at"] = state.get("emitted_at") or datetime.utcnow().isoformat()
+            state["emitted_by_user_id"] = state.get("emitted_by_user_id") or user_id
+        state["attachments"] = attachments
+        state["fiscal_data"] = fiscal_data
+        state["updated_at"] = datetime.utcnow().isoformat()
+        state["updated_by_user_id"] = user_id
+        ContractService._set_fiscal_invoice_state(billing, state)
+
+    @staticmethod
+    def upload_fiscal_invoice_files(*, company_id: int, billing_ids: list[int], files: list[FileStorage], user_id: Optional[int]) -> dict:
+        selected_billings = ContractService._get_fiscal_invoice_billings_by_ids(company_id, billing_ids)
+        updated = 0
+        unmatched = 0
+        for file in files:
+            if not file or not file.filename:
+                continue
+            file.stream.seek(0)
+            raw_bytes = file.read()
+            file.stream.seek(0)
+            lower_filename = file.filename.lower()
+            extracted_rows = []
+            if lower_filename.endswith(".xml"):
+                extracted_rows = [ContractService._extract_xml_invoice_data(raw_bytes)]
+            elif lower_filename.endswith((".csv", ".xlsx")):
+                extracted_rows = ContractService._extract_tabular_invoice_rows(raw_bytes, file.filename)
+            extracted_rows = [row for row in extracted_rows if row]
+
+            if selected_billings:
+                extracted = extracted_rows[0] if len(selected_billings) == 1 and extracted_rows else {}
+                for billing in selected_billings:
+                    ContractService._apply_fiscal_invoice_upload_to_billing(
+                        company_id=company_id,
+                        billing=billing,
+                        file=file,
+                        extracted=extracted,
+                        user_id=user_id,
+                    )
+                    updated += 1
+                continue
+
+            if not extracted_rows:
+                ContractService._save_fiscal_invoice_upload(company_id, None, file)
+                unmatched += 1
+                continue
+
+            for extracted in extracted_rows:
+                matched = ContractService._match_fiscal_invoice_upload(company_id, extracted)
+                if not matched:
+                    unmatched += 1
+                    continue
+                file.stream.seek(0)
+                ContractService._apply_fiscal_invoice_upload_to_billing(
+                    company_id=company_id,
+                    billing=matched,
+                    file=file,
+                    extracted=extracted,
+                    user_id=user_id,
+                )
+                updated += 1
+        db.session.commit()
+        return {"updated": updated, "unmatched": unmatched}
+
 
     @staticmethod
     def delete_billing_item(*, contract: Contract, item_id: int) -> bool:

@@ -159,7 +159,7 @@
                     </a>
                 </div>
             </div>
-            <div class="sidebar-subgroup {{ 'open' if request.path == '/contracts' or request.path == '/contracts/dashboard' or request.path == '/contracts/list' or request.path == '/contracts/new' or request.path.startswith('/contracts/billing') or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path) }}">
+            <div class="sidebar-subgroup {{ 'open' if request.path == '/contracts' or request.path == '/contracts/dashboard' or request.path == '/contracts/list' or request.path == '/contracts/new' or request.path.startswith('/contracts/billing') or request.path == '/contracts/invoices' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path) }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     Gestão de Contratos
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -168,7 +168,7 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
-                    <a href="/contracts/list" class="sub-nav-link {{ 'active' if ((request.path == '/contracts/list' and request.args.get('tab') != 'fiscal') or request.path == '/contracts/new' or request.path == '/contracts' or request.path == '/contracts/dashboard' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path and not request.path.startswith('/contracts/billing') and request.args.get('tab') != 'fiscal')) }}">
+                    <a href="/contracts/list" class="sub-nav-link {{ 'active' if ((request.path == '/contracts/list' and request.args.get('tab') != 'fiscal') or request.path == '/contracts/new' or request.path == '/contracts' or request.path == '/contracts/dashboard' or ('/contracts/' in request.path and '/contracts/parties/' not in request.path and '/contracts/catalogs/items' not in request.path and '/contracts/legal-entities' not in request.path and '/contracts/customers' not in request.path and not request.path.startswith('/contracts/billing') and request.path != '/contracts/invoices' and request.args.get('tab') != 'fiscal')) }}">
                         <span>Cadastro de Contratos</span>
                     </a>
                     <a href="/contracts/billing" class="sub-nav-link {{ 'active' if request.path in ['/contracts/billing', '/contracts/billing/review'] }}">
@@ -177,7 +177,7 @@
                     <a href="/contracts/billing/done" class="sub-nav-link {{ 'active' if request.path == '/contracts/billing/done' }}">
                         <span>Faturamentos Feitos</span>
                     </a>
-                    <a href="/contracts/list?tab=fiscal" class="sub-nav-link {{ 'active' if request.path == '/contracts/list' and request.args.get('tab') == 'fiscal' }}">
+                    <a href="/contracts/invoices" class="sub-nav-link {{ 'active' if request.path == '/contracts/invoices' }}">
                         <span>Notas Fiscais</span>
                     </a>
                 </div>

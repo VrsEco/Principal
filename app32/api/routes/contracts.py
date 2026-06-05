@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
 from models import Company, Employee
@@ -106,6 +106,15 @@ def _billing_done_filters_from_request() -> dict:
         "search": request.args.get("search"),
         "competence_from": request.args.get("competence_from"),
         "competence_to": request.args.get("competence_to"),
+    }
+
+
+def _fiscal_invoice_filters_from_request() -> dict:
+    return {
+        "search": request.args.get("search"),
+        "party_id": request.args.get("party_id", type=int),
+        "fiscal_status": request.args.get("fiscal_status") or "active",
+        "batch_code": request.args.get("batch_code"),
     }
 
 
@@ -1106,6 +1115,120 @@ def contracts_billing_done():
         billing_rows=billing_rows,
         parties=ContractService.list_customer_parties(company.id),
         filters=filters,
+    )
+
+
+@contracts_bp.route("/contracts/invoices", methods=["GET", "POST"])
+@permission_required("contracts", "view")
+def contracts_fiscal_invoices():
+    company = get_active_company()
+    if not company:
+        abort(400, description="Empresa ativa não localizada.")
+
+    if request.method == "POST":
+        if not has_permission(company.id, "contracts", "create"):
+            abort(403)
+        action = (request.form.get("form_action") or "").strip()
+        selected_ids = _parse_int_list(request.form.getlist("billing_ids"))
+        try:
+            if action == "create_batch":
+                result = ContractService.assign_fiscal_invoice_batch(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    batch_code=None,
+                    user_id=_current_user_id(),
+                )
+                flash(f"Lote {result['batch_code']} criado com {result['updated']} nota(s).", "success")
+            elif action == "assign_batch":
+                result = ContractService.assign_fiscal_invoice_batch(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    batch_code=request.form.get("target_batch_code"),
+                    user_id=_current_user_id(),
+                )
+                flash(f"{result['updated']} nota(s) incluída(s) no lote {result['batch_code']}.", "success")
+            elif action == "remove_batch":
+                result = ContractService.remove_fiscal_invoice_batch(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    user_id=_current_user_id(),
+                )
+                flash(f"{result['updated']} nota(s) removida(s) do lote.", "success")
+            elif action == "export_integration":
+                export = ContractService.build_fiscal_invoice_integration_csv(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    user_id=_current_user_id(),
+                )
+                return Response(
+                    export["content"],
+                    mimetype="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename={export['filename']}"},
+                )
+            elif action == "mark_emitted":
+                result = ContractService.update_fiscal_invoice_status(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    status="emitted",
+                    payload=request.form.to_dict(),
+                    user_id=_current_user_id(),
+                )
+                flash(f"{result['updated']} nota(s) marcada(s) como emitida(s).", "success")
+            elif action == "mark_cancelled":
+                result = ContractService.update_fiscal_invoice_status(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    status="cancelled",
+                    payload=request.form.to_dict(),
+                    user_id=_current_user_id(),
+                )
+                flash(f"{result['updated']} nota(s) marcada(s) como cancelada(s).", "success")
+            elif action == "delete_invoice":
+                result = ContractService.update_fiscal_invoice_status(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    status="deleted",
+                    payload=request.form.to_dict(),
+                    user_id=_current_user_id(),
+                )
+                flash(f"{result['updated']} nota(s) excluída(s) da fila fiscal.", "success")
+            elif action == "update_fiscal_data":
+                billing_id = request.form.get("billing_id", type=int)
+                if not billing_id:
+                    raise ValueError("Registro fiscal não informado.")
+                ContractService.update_fiscal_invoice_data(
+                    company_id=company.id,
+                    billing_id=billing_id,
+                    payload=request.form.to_dict(),
+                    user_id=_current_user_id(),
+                )
+                flash("Dados fiscais atualizados.", "success")
+            elif action == "upload_files":
+                files = request.files.getlist("invoice_files")
+                result = ContractService.upload_fiscal_invoice_files(
+                    company_id=company.id,
+                    billing_ids=selected_ids,
+                    files=files,
+                    user_id=_current_user_id(),
+                )
+                flash(f"Upload processado: {result['updated']} vínculo(s), {result['unmatched']} arquivo(s) sem correspondência.", "success")
+            else:
+                flash("Ação fiscal não reconhecida.", "error")
+        except Exception as exc:
+            flash(f"Falha na operação fiscal: {exc}", "error")
+        return redirect(url_for("contracts.contracts_fiscal_invoices", company_id=company.id))
+
+    filters = _fiscal_invoice_filters_from_request()
+    workspace = ContractService.list_fiscal_invoice_workspace(company.id, filters)
+    return render_template(
+        "modules/contracts/contracts_fiscal_invoices.html",
+        company=company,
+        company_id=company.id,
+        invoice_rows=workspace["rows"],
+        invoice_batches=workspace["batches"],
+        invoice_kpis=workspace["kpis"],
+        filters=filters,
+        parties=ContractService.list_customer_parties(company.id),
     )
 
 

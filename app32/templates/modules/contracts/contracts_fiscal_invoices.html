@@ -1,0 +1,228 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Notas Fiscais{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/contracts/list?company_id={{ company_id }}">Gestão Comercial</a>
+<span class="sep">/</span>
+<span>Gestão de Contratos</span>
+<span class="sep">/</span>
+<span class="current">Notas Fiscais</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="contracts-page contracts-invoices-page fade-in">
+    <header class="contracts-header">
+        <div>
+            <p class="eyebrow">Fiscal / Emissão de NF</p>
+            <h1>Notas Fiscais</h1>
+            <p class="subtitle">Fila fiscal formada automaticamente pelos faturamentos gerados. Organize lotes, edite dados fiscais, exporte a planilha de integração e registre emissão/cancelamento.</p>
+        </div>
+        <div class="page-actions">
+            <a class="btn btn-secondary" href="/contracts/billing?company_id={{ company_id }}">Faturar</a>
+            <a class="btn btn-secondary" href="/contracts/billing/done?company_id={{ company_id }}">Faturamentos Feitos</a>
+        </div>
+    </header>
+
+    <section class="stats-grid">
+        <article class="stat-card"><span class="stat-label">Na tela</span><strong>{{ invoice_kpis.total }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Pendentes</span><strong>{{ invoice_kpis.pending }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Em lote</span><strong>{{ invoice_kpis.batched }}</strong></article>
+        <article class="stat-card"><span class="stat-label">Emitidas</span><strong>{{ invoice_kpis.emitted }}</strong></article>
+    </section>
+
+    <form id="nf-bulk-form" method="post" action="{{ url_for('contracts.contracts_fiscal_invoices', company_id=company_id) }}" enctype="multipart/form-data" class="nf-toolbar panel">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <div class="nf-toolbar-row">
+            <label class="nf-select-all"><input type="checkbox" id="nf-select-all"> <span>Selecionar todos filtrados</span></label>
+            <button class="btn btn-secondary" type="submit" name="form_action" value="create_batch">Criar novo lote</button>
+            <select name="target_batch_code" class="nf-batch-select">
+                <option value="">Escolha lote existente</option>
+                {% for batch in invoice_batches %}<option value="{{ batch.batch_code }}">{{ batch.batch_code }} · {{ batch.item_count }} nota(s)</option>{% endfor %}
+            </select>
+            <button class="btn btn-secondary" type="submit" name="form_action" value="assign_batch">Incluir em lote existente</button>
+            <button class="btn btn-secondary" type="submit" name="form_action" value="remove_batch">Excluir do lote</button>
+        </div>
+        <div class="nf-toolbar-row">
+            <button class="btn btn-primary" type="submit" name="form_action" value="export_integration">Gerar planilha de integração</button>
+            <button class="btn btn-secondary" type="submit" name="form_action" value="mark_emitted">Marcar como emitidas</button>
+            <input class="nf-inline-input" type="date" name="issued_at" title="Data de emissão">
+            <input class="nf-inline-input" type="text" name="invoice_number" placeholder="Nº NF opcional">
+            <button class="btn btn-secondary" type="submit" name="form_action" value="mark_cancelled" onclick="return confirm('Marcar as notas selecionadas como canceladas?')">Marcar cancelada</button>
+            <button class="btn btn-secondary" type="submit" name="form_action" value="delete_invoice" onclick="return confirm('Excluir as notas selecionadas da fila fiscal?')">Excluir nota</button>
+        </div>
+        <div class="nf-toolbar-row nf-upload-row">
+            <input type="file" name="invoice_files" multiple accept=".csv,.xml,.pdf,.xlsx,.xls">
+            <button class="btn btn-secondary" type="submit" name="form_action" value="upload_files">Upload planilha/XML/PDF</button>
+            <small>Com notas selecionadas, o arquivo é anexado nelas. Sem seleção, XML/CSV/XLSX tenta identificar cliente/valor automaticamente.</small>
+        </div>
+    </form>
+
+    <section class="panel nf-list-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Registros fiscais</h2>
+                <p class="panel-subtitle">Cada linha representa um faturamento disponível para emissão fiscal.</p>
+            </div>
+            <span class="mini-badge">{{ invoice_rows|length }} resultado(s)</span>
+        </div>
+        <div class="panel-body">
+            {% if invoice_rows %}
+            <div class="nf-table-wrap">
+                <table class="data-table nf-table">
+                    <thead>
+                        <tr>
+                            <th>Sel.</th>
+                            <th>Faturamento / Cliente</th>
+                            <th>Lote</th>
+                            <th>Valores</th>
+                            <th>Dados fiscais</th>
+                            <th>Status</th>
+                            <th>Anexos</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in invoice_rows %}
+                        {% set billing = row.billing %}
+                        {% set fiscal = row.fiscal_invoice %}
+                        {% set data = row.fiscal_data %}
+                        <tr class="nf-row nf-status-{{ fiscal.status }}">
+                            <td><input class="nf-row-check" form="nf-bulk-form" type="checkbox" name="billing_ids" value="{{ billing.id }}"></td>
+                            <td>
+                                <strong>{{ billing.billing_code }}</strong>
+                                <div>{{ row.contract.code if row.contract else '-' }} · {{ row.contract.title if row.contract else '-' }}</div>
+                                <small>{{ row.party.name if row.party else data.customer_name or '-' }}</small>
+                            </td>
+                            <td>
+                                {% if row.batch_code %}<span class="mini-badge badge-info">{{ row.batch_code }}</span>{% else %}<span class="muted">Sem lote</span>{% endif %}
+                            </td>
+                            <td>
+                                <div>Bruto: <strong>{{ billing.gross_amount|format_currency_br }}</strong></div>
+                                <div>Ret.: <strong>{{ row.retention_amount|format_currency_br }}</strong></div>
+                                <div>Líquido: <strong>{{ billing.net_amount|format_currency_br }}</strong></div>
+                            </td>
+                            <td>
+                                <div><strong>{{ data.nfs_provider or 'Manual' }}</strong></div>
+                                <small>{{ data.service_city or '-' }} / ISS {{ data.iss_city or '-' }}</small>
+                                {% if data.invoice_number %}<small>NF {{ data.invoice_number }} · {{ data.issued_at or '-' }}</small>{% endif %}
+                            </td>
+                            <td><span class="mini-badge nf-badge nf-badge-{{ fiscal.status }}">{{ fiscal.status }}</span></td>
+                            <td>
+                                {% if fiscal.attachments %}
+                                    {% for attachment in fiscal.attachments %}
+                                    <a class="nf-attachment" href="{{ attachment.url }}" target="_blank">{{ attachment.file_name }}</a>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="muted">Sem anexos</span>
+                                {% endif %}
+                            </td>
+                            <td><button class="btn btn-secondary btn-sm" type="button" onclick="document.getElementById('nf-dialog-{{ billing.id }}').showModal()">Editar dados fiscais</button></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="empty-state">Nenhuma nota fiscal encontrada para os filtros informados.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    {% for row in invoice_rows %}
+    {% set billing = row.billing %}
+    {% set data = row.fiscal_data %}
+    <dialog class="nf-dialog" id="nf-dialog-{{ billing.id }}">
+        <form method="post" action="{{ url_for('contracts.contracts_fiscal_invoices', company_id=company_id) }}">
+            <input type="hidden" name="company_id" value="{{ company_id }}">
+            <input type="hidden" name="form_action" value="update_fiscal_data">
+            <input type="hidden" name="billing_id" value="{{ billing.id }}">
+            <header class="nf-dialog-header">
+                <div>
+                    <h3>Dados fiscais · {{ billing.billing_code }}</h3>
+                    <p>{{ row.party.name if row.party else '-' }}</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="this.closest('dialog').close()">Fechar</button>
+            </header>
+            <div class="form-grid nf-dialog-grid">
+                <label><span>Cliente</span><input type="text" name="customer_name" value="{{ data.customer_name or '' }}"></label>
+                <label><span>Documento cliente</span><input type="text" name="customer_document" value="{{ data.customer_document or '' }}"></label>
+                <label><span>CNPJ emissor</span><input type="text" name="issuer_cnpj" value="{{ data.issuer_cnpj or '' }}"></label>
+                <label><span>Razão social emissor</span><input type="text" name="issuer_legal_name" value="{{ data.issuer_legal_name or '' }}"></label>
+                <label><span>Modo integração</span><input type="text" name="integration_mode" value="{{ data.integration_mode or '' }}"></label>
+                <label><span>Provedor NFS-e</span><input type="text" name="nfs_provider" value="{{ data.nfs_provider or '' }}"></label>
+                <label><span>Série RPS</span><input type="text" name="rps_series" value="{{ data.rps_series or '' }}"></label>
+                <label><span>Número NF</span><input type="text" name="invoice_number" value="{{ data.invoice_number or '' }}"></label>
+                <label><span>Data emissão</span><input type="date" name="issued_at" value="{{ data.issued_at[:10] if data.issued_at else '' }}"></label>
+                <label><span>Cidade serviço</span><input type="text" name="service_city" value="{{ data.service_city or '' }}"></label>
+                <label><span>Cidade ISS</span><input type="text" name="iss_city" value="{{ data.iss_city or '' }}"></label>
+                <label class="full-width"><span>Observação fiscal</span><textarea name="fiscal_notes" rows="4">{{ data.fiscal_notes or '' }}</textarea></label>
+            </div>
+            <footer class="nf-dialog-footer">
+                <button class="btn btn-primary" type="submit">Salvar dados fiscais</button>
+            </footer>
+        </form>
+    </dialog>
+    {% endfor %}
+</div>
+{% include "modules/contracts/_styles.html" %}
+<style>
+.contracts-invoices-page .nf-toolbar{padding:1rem;margin-bottom:1rem}.nf-toolbar-row{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:.65rem}.nf-toolbar-row:last-child{margin-bottom:0}.nf-select-all{display:flex;align-items:center;gap:.4rem;font-weight:800;color:var(--text-secondary)}.nf-batch-select,.nf-inline-input,.nf-toolbar input[type=file]{border:1px solid var(--border);border-radius:12px;padding:.65rem .75rem;background:var(--surface);color:var(--text-primary)}.nf-upload-row small{color:var(--text-secondary)}.panel-subtitle{margin:.25rem 0 0;color:var(--text-secondary);font-size:.9rem}.nf-table-wrap{overflow:auto}.nf-table th:first-child,.nf-table td:first-child{width:54px;text-align:center}.nf-table small{display:block;color:var(--text-secondary);margin-top:.25rem}.muted{color:var(--text-secondary)}.badge-info{background:rgba(37,99,235,.1);color:#1d4ed8}.nf-badge-pending{background:rgba(234,179,8,.15);color:#a16207}.nf-badge-emitted{background:rgba(34,197,94,.14);color:#15803d}.nf-badge-cancelled{background:rgba(239,68,68,.12);color:#b91c1c}.nf-badge-deleted{background:rgba(100,116,139,.14);color:#475569}.nf-attachment{display:block;color:#2563eb;font-size:.82rem;margin:.1rem 0}.btn-sm{padding:.5rem .65rem;font-size:.82rem}.nf-dialog{width:min(920px,94vw);border:0;border-radius:20px;padding:0;box-shadow:0 24px 70px rgba(15,23,42,.25)}.nf-dialog::backdrop{background:rgba(15,23,42,.42)}.nf-dialog form{padding:1.25rem}.nf-dialog-header,.nf-dialog-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.nf-dialog-header{border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem}.nf-dialog-header h3{margin:0}.nf-dialog-header p{margin:.25rem 0 0;color:var(--text-secondary)}.nf-dialog-grid .full-width{grid-column:1/-1}.nf-dialog-footer{justify-content:flex-end;border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem}.contracts-invoice-filter-form{display:flex;flex-direction:column;gap:1rem}.contracts-invoice-filter-form .filter-group{display:flex;flex-direction:column;gap:.35rem}.contracts-invoice-filter-form input,.contracts-invoice-filter-form select{width:100%;border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;background:var(--surface);color:var(--text-primary)}.sidebar-actions-stack{display:flex;flex-direction:column;gap:.65rem;margin-top:.4rem}
+</style>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+    <p class="sched-sidebar-subtitle">Filtre a fila fiscal e selecione as notas exibidas para ações em massa.</p>
+</div>
+<div class="sidebar-content-ws">
+    <form method="get" action="{{ url_for('contracts.contracts_fiscal_invoices') }}" class="contracts-invoice-filter-form">
+        <input type="hidden" name="company_id" value="{{ company_id }}">
+        <div class="filter-group"><label class="filter-label">Buscar</label><input type="search" name="search" value="{{ filters.search or '' }}" placeholder="Faturamento, contrato, cliente ou documento"></div>
+        <div class="filter-group">
+            <label class="filter-label">Status fiscal</label>
+            <select name="fiscal_status">
+                <option value="active" {% if filters.fiscal_status == 'active' %}selected{% endif %}>Ativas exceto excluídas</option>
+                <option value="pending" {% if filters.fiscal_status == 'pending' %}selected{% endif %}>Pendentes</option>
+                <option value="emitted" {% if filters.fiscal_status == 'emitted' %}selected{% endif %}>Emitidas</option>
+                <option value="cancelled" {% if filters.fiscal_status == 'cancelled' %}selected{% endif %}>Canceladas</option>
+                <option value="deleted" {% if filters.fiscal_status == 'deleted' %}selected{% endif %}>Excluídas</option>
+                <option value="all" {% if filters.fiscal_status == 'all' %}selected{% endif %}>Todas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Lote</label>
+            <select name="batch_code">
+                <option value="">Todos</option>
+                <option value="__without_batch__" {% if filters.batch_code == '__without_batch__' %}selected{% endif %}>Sem lote</option>
+                {% for batch in invoice_batches %}<option value="{{ batch.batch_code }}" {% if filters.batch_code == batch.batch_code %}selected{% endif %}>{{ batch.batch_code }} · {{ batch.item_count }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Cliente</label>
+            <select name="party_id">
+                <option value="">Todos</option>
+                {% for party in parties %}<option value="{{ party.id }}" {% if filters.party_id == party.id %}selected{% endif %}>{{ party.code }} · {{ party.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="sidebar-actions-stack">
+            <button class="btn btn-primary w-100" type="submit">Aplicar filtros</button>
+            <a class="btn btn-secondary w-100" href="{{ url_for('contracts.contracts_fiscal_invoices', company_id=company_id) }}">Limpar filtros</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    const all = document.getElementById('nf-select-all');
+    if (!all) return;
+    const checks = () => Array.from(document.querySelectorAll('.nf-row-check'));
+    all.addEventListener('change', () => checks().forEach(item => { item.checked = all.checked; }));
+})();
+</script>
+{% endblock %}
