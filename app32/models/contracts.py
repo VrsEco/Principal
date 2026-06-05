@@ -87,6 +87,7 @@ class ContractingLegalEntity(db.Model):
     integration_mode = db.Column(db.String(30), nullable=False, default="manual")
     api_profile_id = db.Column(db.Integer)
     spreadsheet_profile_id = db.Column(db.Integer)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
     is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -117,6 +118,7 @@ class ContractingLegalEntity(db.Model):
             "integration_mode": self.integration_mode,
             "api_profile_id": self.api_profile_id,
             "spreadsheet_profile_id": self.spreadsheet_profile_id,
+            "metadata_json": self.metadata_json or {},
             "is_active": bool(self.is_active),
         }
 

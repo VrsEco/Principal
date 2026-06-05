@@ -1019,6 +1019,11 @@ def contracts_legal_entities():
         company_id=company.id,
         legal_entities=legal_entities,
         selected_entity=selected_entity,
+        selected_iss_rule=(
+            ContractService.get_contracting_legal_entity_active_iss_rule(selected_entity)
+            or ContractService.get_contracting_legal_entity_latest_iss_rule(selected_entity)
+        ) if selected_entity else None,
+        selected_iss_rules=ContractService.list_contracting_legal_entity_iss_rules(selected_entity) if selected_entity else [],
         next_code_preview=ContractService.preview_next_contracting_legal_entity_code(company.id),
         page_origin_label="Gestão Comercial",
         page_section_label="Cadastros",

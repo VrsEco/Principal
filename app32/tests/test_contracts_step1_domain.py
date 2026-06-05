@@ -2,7 +2,7 @@ from datetime import date, datetime
 
 from decimal import Decimal
 
-from models.contracts import Contract, ContractClause, ContractEvent, ContractFiscalTerm, ContractNativeBilling, ContractNote, ContractTrigger, ContractingLegalEntity
+from models.contracts import Contract, ContractCatalogItem, ContractClause, ContractEvent, ContractFiscalTerm, ContractItem, ContractNativeBilling, ContractNote, ContractTrigger, ContractingLegalEntity
 from services.contracts_service import ContractService
 
 
@@ -44,6 +44,7 @@ def test_contracting_legal_entity_and_fiscal_term_to_dict_expose_compliance_fiel
         nfs_provider="prefeitura_salvador",
         integration_mode="api",
         api_profile_id=5,
+        metadata_json={"iss_rate_rules": [{"effective_from": "2026-06-01", "percent": "2.73"}]},
         is_active=True,
     )
     fiscal_term = ContractFiscalTerm(
@@ -59,8 +60,66 @@ def test_contracting_legal_entity_and_fiscal_term_to_dict_expose_compliance_fiel
     )
 
     assert legal_entity.to_dict()["cnpj"] == "00.000.000/0001-00"
+    assert legal_entity.to_dict()["metadata_json"]["iss_rate_rules"][0]["percent"] == "2.73"
     assert fiscal_term.to_dict()["contracting_legal_entity_id"] == 12
     assert fiscal_term.to_dict()["withholding_flags"]["iss_withheld"] is True
+
+
+def test_get_contracting_legal_entity_active_iss_rule_prefers_current_vigencia():
+    legal_entity = ContractingLegalEntity(
+        metadata_json={
+            "iss_rate_rules": [
+                {"effective_from": "2026-06-01", "effective_to": "2026-06-30", "percent": "2.73"},
+                {"effective_from": "2026-07-01", "percent": "3.10"},
+            ]
+        }
+    )
+
+    june_rule = ContractService.get_contracting_legal_entity_active_iss_rule(legal_entity, date(2026, 6, 5))
+    july_rule = ContractService.get_contracting_legal_entity_active_iss_rule(legal_entity, date(2026, 7, 5))
+
+    assert june_rule["percent"] == "2.73"
+    assert july_rule["percent"] == "3.1"
+
+
+def test_build_native_billing_item_snapshot_prefers_issuer_iss_rate_over_item_rate():
+    legal_entity = ContractingLegalEntity(
+        metadata_json={
+            "iss_rate_rules": [
+                {"effective_from": "2026-06-01", "effective_to": "2026-06-30", "percent": "2.73"}
+            ]
+        }
+    )
+    contract = Contract(company_id=1, contracting_legal_entity=legal_entity, billing_start_at=date(2026, 1, 1))
+    catalog_item = ContractCatalogItem(metadata_json={"iss_rate_percent": "5"})
+    item = ContractItem(
+        id=88,
+        total_price=Decimal("1000.00"),
+        quantity=Decimal("1.00"),
+        unit_price=Decimal("1000.00"),
+        description="Serviço recorrente",
+        metadata_json={
+            "retention_details": [
+                {
+                    "kind": "iss",
+                    "base_deduction_mode": "percent",
+                    "base_deduction_value": 0,
+                    "retention_value_mode": "percent",
+                    "retention_value": 5,
+                    "retention_amount": 50,
+                }
+            ]
+        },
+    )
+    item.contract = contract
+    item.contract_catalog_item = catalog_item
+
+    snapshot = ContractService._build_native_billing_item_snapshot(item, reference_date=date(2026, 6, 5))
+
+    assert snapshot["retention_amount"] == 27.3
+    assert snapshot["net_amount"] == 972.7
+    assert snapshot["retention_details"][0]["rate_source"] == "issuer"
+    assert snapshot["retention_details"][0]["retention_value"] == 2.73
 
 
 def test_contract_clause_note_and_event_to_dict_are_tenant_safe():

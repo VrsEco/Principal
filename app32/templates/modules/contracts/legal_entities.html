@@ -50,8 +50,28 @@
                         <option value="spreadsheet" {% if selected_entity and selected_entity.integration_mode == 'spreadsheet' %}selected{% endif %}>Planilha</option>
                     </select>
                 </label>
+                <label><span>Alíquota ISS da emissora (%)</span><input type="text" name="iss_rate_percent" value="{{ selected_iss_rule.percent if selected_iss_rule else '' }}" placeholder="2.73"><small class="field-hint">Usada primeiro no cálculo do ISS; se não houver vigência ativa, o sistema tenta usar a alíquota do serviço.</small></label>
+                <label><span>Início vigência ISS</span><input type="date" name="iss_rate_effective_from" value="{{ selected_iss_rule.effective_from if selected_iss_rule else '' }}"></label>
+                <label><span>Fim vigência ISS</span><input type="date" name="iss_rate_effective_to" value="{{ selected_iss_rule.effective_to if selected_iss_rule and selected_iss_rule.effective_to else '' }}"></label>
                 <label><span>Perfil API</span><input type="number" name="api_profile_id" value="{{ selected_entity.api_profile_id if selected_entity and selected_entity.api_profile_id else '' }}"></label>
                 <label><span>Perfil planilha</span><input type="number" name="spreadsheet_profile_id" value="{{ selected_entity.spreadsheet_profile_id if selected_entity and selected_entity.spreadsheet_profile_id else '' }}"></label>
+                <div class="full-width">
+                    <span>Histórico de vigências do ISS</span>
+                    {% if selected_iss_rules %}
+                    <div class="list-stack" style="margin-top: .5rem;">
+                        {% for rule in selected_iss_rules|reverse %}
+                        <article class="list-item">
+                            <div>
+                                <strong>{{ rule.percent }}%</strong>
+                                <small>{{ rule.effective_from }}{% if rule.effective_to %} até {{ rule.effective_to }}{% else %} · sem fim definido{% endif %}</small>
+                            </div>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="empty-state" style="margin-top: .5rem;">Nenhuma vigência de ISS cadastrada para esta PJ.</p>
+                    {% endif %}
+                </div>
             </div>
             <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar PJ</button></div>
         </form>

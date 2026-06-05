@@ -162,6 +162,10 @@ class ContractService:
             return None
 
     @staticmethod
+    def _serialize_date(value: Optional[date]) -> Optional[str]:
+        return value.isoformat() if value else None
+
+    @staticmethod
     def infer_document_type(value: object) -> Optional[str]:
         digits = re.sub(r"\D", "", str(value or ""))
         if len(digits) == 11:
@@ -1337,6 +1341,124 @@ class ContractService:
         return project
 
     @staticmethod
+    def _contracting_legal_entity_metadata(entity: Optional[ContractingLegalEntity]) -> dict:
+        return dict(getattr(entity, "metadata_json", None) or {})
+
+    @staticmethod
+    def _normalize_legal_entity_iss_rules(raw_rules: object) -> list[dict]:
+        normalized: list[dict] = []
+        for raw in list(raw_rules or []):
+            if not isinstance(raw, dict):
+                continue
+            effective_from = ContractService._normalize_date(raw.get("effective_from"))
+            effective_to = ContractService._normalize_date(raw.get("effective_to"))
+            percent = ContractService._normalize_decimal(raw.get("percent")).quantize(Decimal("0.0001"))
+            if percent <= Decimal("0.00") or not effective_from:
+                continue
+            normalized.append(
+                {
+                    "effective_from": effective_from,
+                    "effective_to": effective_to,
+                    "percent": percent,
+                }
+            )
+        normalized.sort(key=lambda item: (item["effective_from"], item.get("effective_to") or date.max))
+        return normalized
+
+    @staticmethod
+    def list_contracting_legal_entity_iss_rules(entity: Optional[ContractingLegalEntity]) -> list[dict]:
+        rules = ContractService._normalize_legal_entity_iss_rules(
+            ContractService._contracting_legal_entity_metadata(entity).get("iss_rate_rules")
+        )
+        return [
+            {
+                "effective_from": ContractService._serialize_date(rule["effective_from"]),
+                "effective_to": ContractService._serialize_date(rule.get("effective_to")),
+                "percent": ContractService._decimal_to_export_text(rule["percent"], places=4, strip_trailing=True),
+            }
+            for rule in rules
+        ]
+
+    @staticmethod
+    def get_contracting_legal_entity_active_iss_rule(
+        entity: Optional[ContractingLegalEntity],
+        reference_date: Optional[date] = None,
+    ) -> Optional[dict]:
+        rules = ContractService._normalize_legal_entity_iss_rules(
+            ContractService._contracting_legal_entity_metadata(entity).get("iss_rate_rules")
+        )
+        if not rules:
+            return None
+        target_date = reference_date or date.today()
+        for rule in sorted(rules, key=lambda item: item["effective_from"], reverse=True):
+            effective_to = rule.get("effective_to")
+            if rule["effective_from"] <= target_date and (effective_to is None or target_date <= effective_to):
+                return {
+                    "effective_from": ContractService._serialize_date(rule["effective_from"]),
+                    "effective_to": ContractService._serialize_date(effective_to),
+                    "percent": ContractService._decimal_to_export_text(rule["percent"], places=4, strip_trailing=True),
+                }
+        return None
+
+    @staticmethod
+    def get_contracting_legal_entity_latest_iss_rule(entity: Optional[ContractingLegalEntity]) -> Optional[dict]:
+        rules = ContractService.list_contracting_legal_entity_iss_rules(entity)
+        return rules[-1] if rules else None
+
+    @staticmethod
+    def _resolve_catalog_item_iss_rate_percent(catalog_item: Optional[ContractCatalogItem]) -> Decimal:
+        metadata = dict(getattr(catalog_item, "metadata_json", None) or {})
+        for key in ("iss_rate_percent", "iss_aliquot_percent", "aliquota_iss_percent", "aliquota_iss"):
+            rate = ContractService._normalize_decimal(metadata.get(key))
+            if rate > Decimal("0.00"):
+                return rate.quantize(Decimal("0.0001"))
+        return Decimal("0.00")
+
+    @staticmethod
+    def _resolve_contract_issuer_iss_rate(
+        contract: Optional[Contract],
+        reference_date: Optional[date] = None,
+    ) -> tuple[Decimal, Optional[dict]]:
+        if contract is None:
+            return Decimal("0.00"), None
+        legal_entity = getattr(contract, "contracting_legal_entity", None)
+        if legal_entity is None and getattr(contract, "contracting_legal_entity_id", None):
+            legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, contract.contracting_legal_entity_id)
+        if legal_entity is None and getattr(contract, "id", None) and getattr(contract, "company_id", None):
+            fiscal_term = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=contract.company_id).first()
+            if fiscal_term and fiscal_term.contracting_legal_entity_id:
+                legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, fiscal_term.contracting_legal_entity_id)
+        if legal_entity is None:
+            return Decimal("0.00"), None
+        active_rule = ContractService.get_contracting_legal_entity_active_iss_rule(legal_entity, reference_date)
+        if not active_rule:
+            return Decimal("0.00"), None
+        return ContractService._normalize_decimal(active_rule.get("percent")).quantize(Decimal("0.0001")), active_rule
+
+    @staticmethod
+    def _resolve_effective_iss_rate_percent(
+        *,
+        contract: Optional[Contract],
+        catalog_item: Optional[ContractCatalogItem],
+        reference_date: Optional[date] = None,
+        fallback_rate: object = None,
+    ) -> tuple[Decimal, Optional[str], Optional[dict]]:
+        issuer_rate, issuer_rule = ContractService._resolve_contract_issuer_iss_rate(contract, reference_date)
+        if issuer_rate > Decimal("0.00"):
+            return issuer_rate, "issuer", issuer_rule
+        service_rate = ContractService._resolve_catalog_item_iss_rate_percent(catalog_item)
+        if service_rate > Decimal("0.00"):
+            return service_rate, "service", {
+                "effective_from": None,
+                "effective_to": None,
+                "percent": ContractService._decimal_to_export_text(service_rate, places=4, strip_trailing=True),
+            }
+        normalized_fallback = ContractService._normalize_decimal(fallback_rate)
+        if normalized_fallback > Decimal("0.00"):
+            return normalized_fallback.quantize(Decimal("0.0001")), "item", None
+        return Decimal("0.00"), None, None
+
+    @staticmethod
     def list_contracting_legal_entities(company_id: int):
         return (
             ContractingLegalEntity.query.filter(
@@ -1507,6 +1629,45 @@ class ContractService:
         entity.integration_mode = ContractService._normalize_text(payload.get("integration_mode")) or "manual"
         entity.api_profile_id = ContractService._normalize_int(payload.get("api_profile_id"))
         entity.spreadsheet_profile_id = ContractService._normalize_int(payload.get("spreadsheet_profile_id"))
+        metadata = ContractService._contracting_legal_entity_metadata(entity)
+        raw_iss_rate = payload.get("iss_rate_percent")
+        raw_effective_from = payload.get("iss_rate_effective_from")
+        raw_effective_to = payload.get("iss_rate_effective_to")
+        if raw_iss_rate is not None or raw_effective_from is not None or raw_effective_to is not None:
+            iss_rate_percent = ContractService._normalize_decimal(raw_iss_rate).quantize(Decimal("0.0001"))
+            effective_from = ContractService._normalize_date(raw_effective_from)
+            effective_to = ContractService._normalize_date(raw_effective_to)
+            if iss_rate_percent > Decimal("0.00") and not effective_from:
+                raise ValueError("Informe a data de início da vigência do ISS da PJ emissora.")
+            if effective_to and effective_from and effective_to < effective_from:
+                raise ValueError("A data final da vigência do ISS não pode ser menor que a inicial.")
+            rules = ContractService._normalize_legal_entity_iss_rules(metadata.get("iss_rate_rules"))
+            if iss_rate_percent > Decimal("0.00") and effective_from:
+                replaced = False
+                for rule in rules:
+                    if rule["effective_from"] == effective_from:
+                        rule["effective_to"] = effective_to
+                        rule["percent"] = iss_rate_percent
+                        replaced = True
+                        break
+                if not replaced:
+                    rules.append(
+                        {
+                            "effective_from": effective_from,
+                            "effective_to": effective_to,
+                            "percent": iss_rate_percent,
+                        }
+                    )
+                rules.sort(key=lambda item: (item["effective_from"], item.get("effective_to") or date.max))
+            metadata["iss_rate_rules"] = [
+                {
+                    "effective_from": ContractService._serialize_date(rule["effective_from"]),
+                    "effective_to": ContractService._serialize_date(rule.get("effective_to")),
+                    "percent": ContractService._decimal_to_export_text(rule["percent"], places=4, strip_trailing=True),
+                }
+                for rule in rules
+            ]
+        entity.metadata_json = metadata
         entity.is_active = ContractService._normalize_bool(payload.get("is_active")) if payload.get("is_active") is not None else True
         if not entity.legal_name:
             raise ValueError("Informe a razão social da PJ contratada.")
@@ -2060,6 +2221,17 @@ class ContractService:
             if value_mode not in {"percent", "amount"}:
                 raise ValueError(f"Tipo do valor da retenção inválido para {retention_label}.")
             value_amount = ContractService._normalize_decimal(payload.get(f"retention_{retention_key}_value"))
+            rate_source = "manual"
+            rate_rule = None
+            if retention_key == "iss" and value_mode == "percent":
+                resolved_rate, rate_source, rate_rule = ContractService._resolve_effective_iss_rate_percent(
+                    contract=contract,
+                    catalog_item=catalog_item,
+                    reference_date=contract.billing_start_at or contract.service_start_at or date.today(),
+                    fallback_rate=value_amount,
+                )
+                if resolved_rate > Decimal("0.00"):
+                    value_amount = resolved_rate
             compensation_bank_account = ContractService._resolve_bank_account(
                 contract.company_id,
                 payload.get(f"retention_{retention_key}_bank_account_id"),
@@ -2114,6 +2286,8 @@ class ContractService:
                     "trigger": retention_trigger,
                     "fiscal_observation_text": fiscal_observation_text,
                     "include_in_fiscal_description": include_in_fiscal_description,
+                    "rate_source": rate_source,
+                    "issuer_rate_rule": rate_rule,
                     "project_id": project.id if project else None,
                     "project_code": project.code if project else None,
                     "project_name": project.name if project else None,
@@ -2312,7 +2486,7 @@ class ContractService:
             or issue_date
         )
         items = ContractService._resolve_native_billing_contract_items(contract, payload)
-        item_snapshots = [ContractService._build_native_billing_item_snapshot(item) for item in items]
+        item_snapshots = [ContractService._build_native_billing_item_snapshot(item, reference_date=issue_date) for item in items]
         gross_amount = sum((ContractService._normalize_decimal(item.get("gross_amount")) for item in item_snapshots), Decimal("0.00"))
         retention_amount = sum((ContractService._normalize_decimal(item.get("retention_amount")) for item in item_snapshots), Decimal("0.00"))
         net_amount = gross_amount - retention_amount
@@ -2563,18 +2737,48 @@ class ContractService:
         return native_billing
 
     @staticmethod
-    def _build_native_billing_item_snapshot(contract_item: ContractItem) -> dict:
+    def _build_native_billing_item_snapshot(contract_item: ContractItem, reference_date: Optional[date] = None) -> dict:
         item_metadata = dict(getattr(contract_item, "metadata_json", None) or {})
         allocation = dict(item_metadata.get("allocation") or {})
         retention_details = []
         gross_amount = ContractService._normalize_decimal(
             getattr(contract_item, "total_price", None) if getattr(contract_item, "total_price", None) is not None else getattr(contract_item, "amount", 0)
         )
+        contract = getattr(contract_item, "contract", None)
+        catalog_item = getattr(contract_item, "contract_catalog_item", None)
         for detail in list(item_metadata.get("retention_details") or []):
             normalized = dict(detail or {})
-            retention_amount = ContractService._normalize_decimal(
-                normalized.get("calculated_amount") or normalized.get("retention_amount")
-            ).quantize(Decimal("0.01"))
+            if (
+                (ContractService._normalize_text(normalized.get("kind")) or "").lower() == "iss"
+                and (ContractService._normalize_text(normalized.get("retention_value_mode")) or "percent").lower() == "percent"
+            ):
+                effective_rate, rate_source, rate_rule = ContractService._resolve_effective_iss_rate_percent(
+                    contract=contract,
+                    catalog_item=catalog_item,
+                    reference_date=reference_date,
+                    fallback_rate=normalized.get("retention_value"),
+                )
+                if effective_rate > Decimal("0.00"):
+                    normalized["retention_value"] = float(effective_rate)
+                    normalized["rate_source"] = rate_source
+                    normalized["issuer_rate_rule"] = rate_rule
+                    calculation_base, retention_amount = ContractService._calculate_retention_amount(
+                        gross_amount=gross_amount,
+                        deduction_mode=normalized.get("base_deduction_mode"),
+                        deduction_value=normalized.get("base_deduction_value"),
+                        value_mode="percent",
+                        value_amount=effective_rate,
+                    )
+                    normalized["calculation_base"] = float(calculation_base)
+                else:
+                    retention_amount = ContractService._normalize_decimal(
+                        normalized.get("calculated_amount") or normalized.get("retention_amount")
+                    )
+            else:
+                retention_amount = ContractService._normalize_decimal(
+                    normalized.get("calculated_amount") or normalized.get("retention_amount")
+                )
+            retention_amount = retention_amount.quantize(Decimal("0.01"))
             if retention_amount <= Decimal("0.00"):
                 continue
             normalized["retention_amount"] = float(retention_amount)
@@ -2613,7 +2817,7 @@ class ContractService:
         if not contract_items:
             raise ValueError("Cadastre ou selecione ao menos um item contratual antes de gerar a competência.")
 
-        fiscal_snapshot = ContractService.build_contract_fiscal_snapshot(contract)
+        fiscal_snapshot = ContractService.build_contract_fiscal_snapshot(contract, reference_date=issue_date)
 
         idempotency_key = ContractService.build_native_billing_idempotency_key(
             contract=contract,
@@ -2670,7 +2874,7 @@ class ContractService:
             for snapshot in preview.get("items", [])
         }
         for item in contract_items:
-            snapshot = snapshots_by_item_id.get(item.id) or ContractService._build_native_billing_item_snapshot(item)
+            snapshot = snapshots_by_item_id.get(item.id) or ContractService._build_native_billing_item_snapshot(item, reference_date=issue_date)
             for retention in snapshot["retention_details"]:
                 key = retention.get("kind")
                 retention_summary[key] = round(
@@ -2739,13 +2943,14 @@ class ContractService:
         return native_billing
 
     @staticmethod
-    def build_contract_fiscal_snapshot(contract: Contract) -> dict:
+    def build_contract_fiscal_snapshot(contract: Contract, reference_date: Optional[date] = None) -> dict:
         fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=contract.company_id).first()
         legal_entity = None
         if fiscal_terms and fiscal_terms.contracting_legal_entity_id:
             legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, fiscal_terms.contracting_legal_entity_id)
         if legal_entity is None and contract.contracting_legal_entity_id:
             legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, contract.contracting_legal_entity_id)
+        issuer_iss_rate, issuer_iss_rule = ContractService._resolve_contract_issuer_iss_rate(contract, reference_date)
         return {
             "contracting_legal_entity_id": legal_entity.id if legal_entity else None,
             "issuer_legal_name": legal_entity.legal_name if legal_entity else None,
@@ -2763,6 +2968,9 @@ class ContractService:
             "operation_nature": fiscal_terms.operation_nature if fiscal_terms else None,
             "service_city": fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None),
             "iss_city": fiscal_terms.iss_city if fiscal_terms else None,
+            "issuer_iss_rate": ContractService._decimal_to_export_text(issuer_iss_rate, places=4, strip_trailing=True) if issuer_iss_rate else None,
+            "issuer_iss_rate_effective_from": (issuer_iss_rule or {}).get("effective_from"),
+            "issuer_iss_rate_effective_to": (issuer_iss_rule or {}).get("effective_to"),
             "withholding_flags": {},
             "fiscal_notes": fiscal_terms.tax_observation if fiscal_terms else None,
         }
@@ -2789,6 +2997,7 @@ class ContractService:
             "operation_nature": snapshot.get("operation_nature"),
             "service_city": snapshot.get("service_city"),
             "iss_city": snapshot.get("iss_city"),
+            "issuer_iss_rate": snapshot.get("issuer_iss_rate"),
             "fiscal_notes": snapshot.get("fiscal_notes"),
             "issue_date": native_billing.issue_date.isoformat() if native_billing.issue_date else None,
             "gross_amount": float(native_billing.gross_amount or 0),
@@ -2820,6 +3029,7 @@ class ContractService:
                 "service_code": fiscal_payload.get("service_code"),
                 "service_list_item": fiscal_payload.get("service_list_item"),
                 "issuer_cnae": fiscal_payload.get("issuer_cnae"),
+                "issuer_iss_rate": fiscal_payload.get("issuer_iss_rate"),
                 "service_city": fiscal_payload.get("service_city"),
                 "iss_city": fiscal_payload.get("iss_city"),
                 "fiscal_notes": fiscal_payload.get("fiscal_notes"),
