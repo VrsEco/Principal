@@ -715,6 +715,73 @@ class ContractFinancialService:
         return execution
 
     @staticmethod
+    def _execute_pending_immediate_satellites(
+        *,
+        company_id: int,
+        native_billing: ContractNativeBilling,
+        main_schedule: FinancialSchedule,
+    ) -> dict:
+        links = (
+            FinancialScheduleLink.query.filter(
+                FinancialScheduleLink.company_id == company_id,
+                FinancialScheduleLink.parent_schedule_id == main_schedule.id,
+                FinancialScheduleLink.deleted_at.is_(None),
+            )
+            .order_by(FinancialScheduleLink.id.asc())
+            .all()
+        )
+        executed_items: list[dict] = []
+        for link in links:
+            retention_detail = dict(link.metadata_json or {}).get("retention_detail") or {}
+            trigger_key = ContractFinancialService._normalize_text(
+                retention_detail.get("trigger") or dict(link.metadata_json or {}).get("trigger_key")
+            ).lower()
+            if trigger_key not in {"emissao", "vencimento"}:
+                continue
+            policy = link.policy
+            child_schedule = link.child_schedule or ContractFinancialService._resolve_schedule_by_id(company_id, link.child_schedule_id)
+            if not policy or child_schedule is None or policy.deleted_at is not None:
+                continue
+            trigger_event = ContractFinancialService.TRIGGER_TO_POLICY_EVENT.get(trigger_key, "on_partial_settlement")
+            existing_execution = FinancialSatelliteExecution.query.filter(
+                FinancialSatelliteExecution.company_id == company_id,
+                FinancialSatelliteExecution.policy_id == policy.id,
+                FinancialSatelliteExecution.child_schedule_id == child_schedule.id,
+                FinancialSatelliteExecution.trigger_event == trigger_event,
+                FinancialSatelliteExecution.trigger_settlement_id.is_(None),
+                FinancialSatelliteExecution.reversed_at.is_(None),
+            ).first()
+            if existing_execution:
+                continue
+            executed_amount = ContractFinancialService._money(
+                retention_detail.get("calculated_amount")
+                or retention_detail.get("retention_amount")
+                or child_schedule.template_amount
+            )
+            if executed_amount <= ContractFinancialService.SETTLEMENT_TOLERANCE:
+                continue
+            settlement_date = (
+                native_billing.issue_date
+                if trigger_key == "emissao"
+                else (native_billing.due_date or native_billing.issue_date or date.today())
+            )
+            execution = ContractFinancialService._execute_satellite_pair(
+                company_id=company_id,
+                parent_schedule=main_schedule,
+                child_schedule=child_schedule,
+                policy=policy,
+                executed_amount=executed_amount,
+                settlement_date=settlement_date,
+                trigger_event=trigger_event,
+                trigger_settlement_id=None,
+                retention_detail=retention_detail,
+            )
+            if execution is None:
+                continue
+            executed_items.append(execution.to_dict())
+        return {"executed": len(executed_items), "items": executed_items}
+
+    @staticmethod
     def ensure_financial_titles_for_native_billing(
         *,
         contract: Contract,
@@ -733,10 +800,20 @@ class ContractFinancialService:
                     FinancialSchedule.deleted_at.is_(None),
                 ).first()
                 if existing_schedule:
+                    immediate_sync = ContractFinancialService._execute_pending_immediate_satellites(
+                        company_id=contract.company_id,
+                        native_billing=native_billing,
+                        main_schedule=existing_schedule,
+                    )
+                    if auto_commit:
+                        db.session.commit()
+                    else:
+                        db.session.flush()
                     return {
                         "main_schedule_id": existing_schedule.id,
                         "created": False,
                         "satellite_count": len(integration.get("satellite_schedule_ids") or []),
+                        "immediate_execution_count": immediate_sync.get("executed", 0),
                     }
 
             financial_terms = ContractFinancialService._resolve_financial_term(contract)
@@ -765,7 +842,6 @@ class ContractFinancialService:
                 raise ValueError("Título principal gerado não localizado para o contrato.")
 
             satellite_schedule_ids: list[int] = []
-            immediate_policies: list[tuple[FinancialSchedule, FinancialSatellitePolicy, dict]] = []
             for retention_detail in ContractFinancialService._extract_native_billing_retention_details(native_billing):
                 amount = ContractFinancialService._money(retention_detail.get("calculated_amount"))
                 if amount <= Decimal("0.00"):
@@ -815,15 +891,6 @@ class ContractFinancialService:
                         }),
                     )
                 )
-                child_schedule = FinancialSchedule.query.filter(
-                    FinancialSchedule.id == child_schedule_id,
-                    FinancialSchedule.company_id == contract.company_id,
-                    FinancialSchedule.deleted_at.is_(None),
-                ).first()
-                trigger_key = ContractFinancialService._normalize_text(retention_detail.get("trigger")).lower()
-                if child_schedule is not None and trigger_key in {"emissao", "vencimento"}:
-                    immediate_policies.append((child_schedule, policy, retention_detail))
-
             main_schedule.metadata_json = {
                 **dict(main_schedule.metadata_json or {}),
                 "root_schedule_id": main_schedule.id,
@@ -838,21 +905,11 @@ class ContractFinancialService:
             }
             native_billing.metadata_json = metadata
 
-            for child_schedule, policy, retention_detail in immediate_policies:
-                trigger_key = ContractFinancialService._normalize_text(retention_detail.get("trigger")).lower()
-                trigger_event = ContractFinancialService.TRIGGER_TO_POLICY_EVENT.get(trigger_key, "on_partial_settlement")
-                settlement_date = native_billing.issue_date if trigger_key == "emissao" else (native_billing.due_date or native_billing.issue_date or date.today())
-                ContractFinancialService._execute_satellite_pair(
-                    company_id=contract.company_id,
-                    parent_schedule=main_schedule,
-                    child_schedule=child_schedule,
-                    policy=policy,
-                    executed_amount=ContractFinancialService._money(retention_detail.get("calculated_amount")),
-                    settlement_date=settlement_date,
-                    trigger_event=trigger_event,
-                    trigger_settlement_id=None,
-                    retention_detail=retention_detail,
-                )
+            immediate_sync = ContractFinancialService._execute_pending_immediate_satellites(
+                company_id=contract.company_id,
+                native_billing=native_billing,
+                main_schedule=main_schedule,
+            )
 
             from services.contracts_service import ContractService
 
@@ -876,6 +933,7 @@ class ContractFinancialService:
                 "main_schedule_id": main_schedule.id,
                 "created": True,
                 "satellite_count": len(satellite_schedule_ids),
+                "immediate_execution_count": immediate_sync.get("executed", 0),
             }
         except Exception:
             db.session.rollback()
