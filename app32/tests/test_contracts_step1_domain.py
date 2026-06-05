@@ -270,3 +270,80 @@ def test_native_billing_fiscal_export_payload_reads_snapshot_metadata():
 
     assert payload["issuer_cnpj"] == "00.000.000/0001-00"
     assert payload["service_code"] == "1401"
+
+
+def test_build_fiscal_invoice_nfse_row_prioritizes_item_fiscal_metadata_over_snapshot():
+    class _FakeItemsQuery:
+        def __init__(self, items):
+            self._items = items
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return list(self._items)
+
+    class _FakeCatalogItem:
+        metadata_json = {
+            "service_code": "702",
+            "tipo_operacao": "Tributado Integralmente",
+            "nbs": "1.1803.29.00",
+            "cindop": "050101",
+            "cclasstrib": "000001",
+        }
+
+    class _FakeContractItem:
+        metadata_json = {}
+        contract_catalog_item = _FakeCatalogItem()
+
+    class _FakeBillingItem:
+        metadata_json = {}
+        contract_item = _FakeContractItem()
+        description = "Tratamento de água industrial"
+        amount = Decimal("6285.60")
+
+    class _FakeParty:
+        legal_name = "BOMIX INDUSTRIA DE EMBALAGENS LTDA"
+        name = "BOMIX INDUSTRIA DE EMBALAGENS LTDA"
+        document_number = "01.561.279/0001-45"
+        email = "fiscal@bomix.com.br"
+        metadata_json = {}
+        financial_counterparty_id = None
+
+    class _FakeContract:
+        party = _FakeParty()
+        code = "AA.BOMIX.001"
+
+    class _FakeBilling:
+        billing_code = "AA.BOMIX.FAT.001"
+        issue_date = None
+        gross_amount = Decimal("6285.60")
+        net_amount = Decimal("6285.60")
+        metadata_json = {
+            "fiscal_snapshot": {
+                "service_code": "1401001",
+                "service_list_item": "1401101",
+                "issuer_cnae": "4322302",
+            },
+            "fiscal_invoice": {
+                "fiscal_data": {
+                    "customer_name": "BOMIX INDUSTRIA DE EMBALAGENS LTDA",
+                    "customer_document": "01.561.279/0001-45",
+                    "service_code": "1401001",
+                    "service_list_item": "1401101",
+                    "issuer_cnae": "4322302",
+                }
+            },
+        }
+        party = _FakeParty()
+        contract = _FakeContract()
+        items = _FakeItemsQuery([_FakeBillingItem()])
+
+    row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
+
+    assert row["Codigo_Servico"] == "702"
+    assert row["IBSCBS_Indicador_Operacao"] == "050101"
+    assert row["IBSCBS_Codigo_Classificacao"] == "000001"
+    assert row["IBSCBS_Tipo_Operacao"] == "Tributado Integralmente"
+    assert row["NBS"] == "1.1803.29.00"
+    assert row["CNAE"] == "4322302"
