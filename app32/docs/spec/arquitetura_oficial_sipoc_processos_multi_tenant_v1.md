@@ -33,6 +33,8 @@ Quando adotado pelo cliente, o SIPOC passa a ser a **camada de enquadramento do 
 - preparação do AS-IS da análise BPMS;
 - apoio à leitura regulatória e de compliance quando o processo estiver sujeito a obrigações legais, normativas ou setoriais.
 
+Além do SIPOC de Processo, o APP32 pode suportar **SIPOC de Macroprocesso** quando houver necessidade de leitura executiva da cadeia ponta a ponta.
+
 ## 3. Princípios oficiais
 
 1. **company_id é obrigatório em toda leitura e escrita**
@@ -83,10 +85,16 @@ Observação:
 - esta ordem descreve o encaixe conceitual do SIPOC **quando ele existir**;
 - a ausência de SIPOC não bloqueia BPMN, POP, rotinas, indicadores ou análise BPMS.
 
+Posicionamento oficial por nível:
+
+- **SIPOC de Macroprocesso**: fica na tela `https://app.gestaoversus.com.br/process-map`, após `Macroprocessos`;
+- **SIPOC de Processo**: fica no detalhe do processo, antes de `Fluxo/BPMN`.
+
 ### 4.3 Papel semântico
 
 - **Mapa de Processos**: portfólio e hierarquia
-- **SIPOC**: enquadramento executivo
+- **SIPOC de Macroprocesso**: enquadramento executivo da cadeia
+- **SIPOC de Processo**: enquadramento executivo do processo
 - **BPMN**: fluxo formal
 - **POP**: passo a passo operacional
 - **Rotinas**: cadência e agenda
@@ -218,11 +226,17 @@ Quando o processo possuir sensibilidade regulatória, o cliente pode optar por r
 
 ### 6.1 Limite de detalhamento
 
-O bloco `process` do SIPOC deve conter:
+No **SIPOC de Processo**, o bloco `process` deve conter:
 
-- mínimo de 3 macroetapas;
-- máximo recomendado de 7 macroetapas;
+- mínimo de 3 atividades de alto nível;
+- máximo recomendado de 7 atividades de alto nível;
 - nomes orientados a transformação de entrada em saída.
+
+No **SIPOC de Macroprocesso**, o bloco `process` deve conter:
+
+- processos filhos ou grandes etapas da cadeia;
+- sem descer para atividades operacionais;
+- linguagem executiva e interfuncional.
 
 ### 6.2 Publicação mínima
 

@@ -272,9 +272,9 @@ def validate_snapshot_for_publish(snapshot: ProcessSipocSnapshot) -> list[str]:
     if lane_counts.get("input", 0) < 1:
         errors.append("Cadastre ao menos 1 entrada.")
     if lane_counts.get("process", 0) < 3:
-        errors.append("Cadastre pelo menos 3 macroetapas no processo.")
+        errors.append("Cadastre pelo menos 3 atividades de alto nível no processo.")
     if lane_counts.get("process", 0) > 7:
-        errors.append("O SIPOC recomenda no máximo 7 macroetapas no processo.")
+        errors.append("O SIPOC recomenda no máximo 7 atividades de alto nível no processo.")
     if lane_counts.get("output", 0) < 1:
         errors.append("Cadastre ao menos 1 saída.")
     if lane_counts.get("customer", 0) < 1:

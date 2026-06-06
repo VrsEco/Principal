@@ -32,6 +32,7 @@
         {% if not is_collaborator %}
         <button class="arch-tab" onclick="switchTab('areas')">🏢 Áreas</button>
         <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
+        <button class="arch-tab" onclick="switchTab('macro-sipoc')">🧩 SIPOC de Macroprocesso</button>
         <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
         {% endif %}
     </div>
@@ -215,6 +216,37 @@
         </div>
     </div>
 
+    <!-- Painel: SIPOC de Macroprocesso -->
+    <div id="panel-macro-sipoc" class="arch-panel">
+        <div class="card p-5" style="padding: 2.5rem !important;">
+            <div class="process-section__header" style="margin-bottom: 1rem;">
+                <div>
+                    <span class="process-section__eyebrow">Modelagem executiva</span>
+                    <h2 class="text-h2">SIPOC de Macroprocesso</h2>
+                    <p class="process-section__description">
+                        Esta camada fica no <strong>Mapa de Processos</strong>, após <strong>Macroprocessos</strong>,
+                        para enquadrar a cadeia ponta a ponta em nível executivo antes do detalhamento por processos.
+                    </p>
+                </div>
+            </div>
+
+            <div class="arch-info-block">
+                <div class="arch-info-card">
+                    <h3>Quando usar</h3>
+                    <p>Use para explicitar fornecedores, entradas, processos filhos, saídas e clientes da cadeia de valor do macroprocesso.</p>
+                </div>
+                <div class="arch-info-card">
+                    <h3>Bloco Process no Macroprocesso</h3>
+                    <p>No SIPOC de Macroprocesso, o bloco <strong>Process</strong> representa os <strong>processos filhos</strong> ou grandes etapas da cadeia, e não atividades detalhadas.</p>
+                </div>
+                <div class="arch-info-card">
+                    <h3>Bloco Process no Processo</h3>
+                    <p>No SIPOC do Processo, o bloco <strong>Process</strong> representa as <strong>atividades do processo</strong>, preparando BPMN, POP, controles e automação.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Painel: Gestão de Processos -->
     <div id="panel-processes" class="arch-panel">
         <div class="grid-form-list">
@@ -299,6 +331,31 @@
     .arch-container {
         padding: 2.5rem;
         padding-bottom: 5rem;
+    }
+
+    .arch-info-block {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .arch-info-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-secondary);
+        padding: 1.25rem;
+    }
+
+    .arch-info-card h3 {
+        margin: 0 0 0.6rem 0;
+        font-size: 1rem;
+        color: var(--text-primary);
+    }
+
+    .arch-info-card p {
+        margin: 0;
+        color: var(--text-secondary);
+        line-height: 1.55;
     }
 
     .card {

@@ -45,7 +45,7 @@ def test_validate_snapshot_for_publish_requires_boundaries_and_lanes(monkeypatch
     assert "Preencha o fim do processo." in errors
     assert "Cadastre ao menos 1 fornecedor." in errors
     assert "Cadastre ao menos 1 entrada." in errors
-    assert "Cadastre pelo menos 3 macroetapas no processo." in errors
+    assert "Cadastre pelo menos 3 atividades de alto nível no processo." in errors
     assert "Cadastre ao menos 1 saída." in errors
     assert "Cadastre ao menos 1 cliente." in errors
 
