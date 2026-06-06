@@ -101,7 +101,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in preview.items %}
+                                {% for item in preview["items"] %}
                                 <tr>
                                     <td><input type="checkbox" name="item_ids_{{ contract.id }}" value="{{ item.contract_item_id }}" checked></td>
                                     <td>
