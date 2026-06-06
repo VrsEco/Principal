@@ -93,7 +93,7 @@
             <div class="mcp-choice-grid" id="mcpRuntimeChoices">
                 <button type="button" class="mcp-choice-card is-active" data-choice-group="runtime" data-choice-value="claude">
                     <strong>Claude</strong>
-                    <small>Claude Code / Desktop Code</small>
+                    <small>Windows Desktop / CLI avançado</small>
                 </button>
                 <button type="button" class="mcp-choice-card" data-choice-group="runtime" data-choice-value="antigravity">
                     <strong>Antigravity</strong>
@@ -175,12 +175,12 @@
                 <span>4</span>
                 <div>
                     <h2 id="install-title">Instalação</h2>
-                    <p>Escolha o formato indispensável para copiar.</p>
+                    <p>Escolha o perfil de instalação para copiar.</p>
                 </div>
             </div>
             <div class="mcp-install-options" role="tablist" aria-label="Tipo de instalação">
-                <button type="button" class="mcp-install-pill is-active" data-install-mode="prompt">Instalação via Prompt</button>
-                <button type="button" class="mcp-install-pill" data-install-mode="powershell">Instalação via PowerShell</button>
+                <button type="button" class="mcp-install-pill is-active" data-install-mode="prompt">Usuário Normal</button>
+                <button type="button" class="mcp-install-pill" data-install-mode="powershell">Usuário Avançado</button>
                 <button type="button" class="mcp-install-pill" data-install-mode="technical">Instalação Técnica</button>
             </div>
             <div class="mcp-summary-grid" aria-label="Resumo técnico mínimo">
@@ -494,12 +494,20 @@
         if (!config || !latestMcpPlaintextToken) return config;
         const replacePlaceholder = (value) => String(value || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', latestMcpPlaintextToken);
         const rawJson = config.json && typeof config.json === 'object' ? { ...config.json, token: latestMcpPlaintextToken } : config.json;
+        const installProfiles = config.install_profiles && typeof config.install_profiles === 'object'
+            ? JSON.parse(replacePlaceholder(JSON.stringify(config.install_profiles)))
+            : config.install_profiles;
         return {
             ...config,
             text: replacePlaceholder(config.text),
             json: rawJson,
             install_command: replacePlaceholder(config.install_command),
             powershell_install_command: replacePlaceholder(config.powershell_install_command),
+            normal_install_command: replacePlaceholder(config.normal_install_command),
+            normal_install_text: replacePlaceholder(config.normal_install_text),
+            advanced_install_command: replacePlaceholder(config.advanced_install_command),
+            advanced_install_text: replacePlaceholder(config.advanced_install_text),
+            install_profiles: installProfiles,
             cli_install_text: replacePlaceholder(config.cli_install_text),
             technical_config_text: replacePlaceholder(config.technical_config_text),
             activation_prompt: replacePlaceholder(config.activation_prompt),
@@ -512,12 +520,12 @@
     function outputForMode(config, mode) {
         if (!config) return '';
         if (mode === 'powershell') {
-            return config.powershell_install_command || config.copy_install_command_text || config.install_command || config.guided_install_text || config.instruction_text || '';
+            return config.advanced_install_text || config.advanced_install_command || config.powershell_install_command || config.copy_install_command_text || config.install_command || config.guided_install_text || config.instruction_text || '';
         }
         if (mode === 'technical') {
             return config.technical_config_text || `${config.text || ''}\n\nJSON:\n${JSON.stringify(config.json || {}, null, 2)}`;
         }
-        return config.activation_prompt || config.guided_install_text || config.cli_install_text || config.instruction_text || '';
+        return config.normal_install_text || config.normal_install_command || config.activation_prompt || config.guided_install_text || config.cli_install_text || config.instruction_text || '';
     }
 
     function renderMcpStatus(status) {

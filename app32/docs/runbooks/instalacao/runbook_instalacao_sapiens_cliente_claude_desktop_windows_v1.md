@@ -1,310 +1,221 @@
-# Runbook de Instalação do Sapiens Cliente no Claude Desktop (Windows) v1
+# Runbook de Instalação do Sapiens Cliente no Claude Desktop Windows v2
 
-Status: oficial  
-Escopo: instalar o `Sapiens Cliente` no `Claude Desktop (Windows)` usando `mcp-remote` e Bearer Token pessoal
+Status: oficial
+Classe documental: Runbook
+Escopo: instalar o `Sapiens Cliente` no `Claude Windows Desktop` para usuário final, sem exigir `claude` CLI.
 
-## 1. Objetivo
+## 1. Decisão oficial
 
-Descrever o fluxo oficial validado em campo para conectar o `Sapiens Cliente` ao `Claude Desktop (Windows)` sem OAuth, usando:
+O padrão para cliente final é:
 
-- `mcp-remote`
-- `npx.cmd`
-- `claude_desktop_config.json`
-- Bearer Token pessoal do APP32
+- **Usuário Normal — Claude Windows Desktop**;
+- instalador PowerShell oficial do APP32;
+- proxy `stdio -> StreamableHTTP/SSE` versionado em `%APPDATA%\Claude\sapiens-proxy.js`;
+- configuração em `claude_desktop_config.json` com `command`, `args` e `env`;
+- autenticação por Bearer Token pessoal do APP32.
+
+O uso direto de `mcp-remote` no `claude_desktop_config.json` fica como legado/fallback técnico, não como caminho oficial.
 
 ---
 
-## 2. Resultado esperado
+## 2. Quando usar este runbook
 
-Ao final deste runbook, o usuário deve ter:
+Use este runbook quando o usuário operar no aplicativo Claude instalado no Windows e não quiser/não souber usar terminal avançado do Claude.
 
-- o `Claude Desktop` com uma conexão MCP chamada `Sapiens Cliente`
-- a conexão apontando para `https://app.gestaoversus.com.br/mcp/user/`
-- autenticação por Bearer Token pessoal
-- entrada inicial pelo `Harness Coordenador do Squad Cliente`
-- bootstrap remoto do bundle mínimo via `resolve_app32_instruction_bundle_tool`
+Para usuário técnico que usa Claude Code, Claude CLI ou aba Code, usar o modo:
+
+- **Usuário Avançado — Claude CLI via PowerShell**;
+- uma linha PowerShell gerada pelo APP32;
+- registro via `claude mcp add --scope user --transport http`.
 
 ---
 
 ## 3. Pré-requisitos
 
-Antes da instalação, validar:
+Confirmar:
 
-1. acesso ao `/profile` do APP32
-2. token MCP pessoal ativo
-3. Windows com `node` e `npm` instalados
-4. `npx` disponível
-5. `Claude Desktop` instalado no mesmo usuário Windows
+1. conta ativa no APP32;
+2. acesso à empresa correta;
+3. token MCP pessoal ativo/recém-gerado;
+4. Claude Desktop instalado no Windows;
+5. Node.js LTS disponível com `node --version`.
 
----
+Se Node.js estiver ausente, instalar em:
 
-## 4. Validar Node.js
+- https://nodejs.org
 
-No PowerShell:
-
-```powershell
-node --version
-npm --version
-```
-
-Se falhar, instalar Node.js em:
-
-- [https://nodejs.org](https://nodejs.org)
+Depois da instalação, fechar e reabrir o PowerShell.
 
 ---
 
-## 5. Localizar o `npx.cmd` correto
+## 4. Comando oficial — Usuário Normal
 
-No PowerShell:
+Na tela `/profile`, escolher:
 
-```powershell
-where.exe npx
-```
+1. ferramenta: `Claude`;
+2. squad: `Cliente`;
+3. modo: `Usuário Normal`;
+4. criar/renovar token;
+5. copiar o comando gerado.
 
-Preferir o caminho sem espaços, normalmente:
+O comando baixa e executa:
 
 ```text
-C:\Users\{usuario}\AppData\Roaming\npm\npx.cmd
+app32/scripts/installers/install-sapiens-claude-desktop-windows.ps1
 ```
 
-### Regra
-Evitar `C:\Program Files\nodejs\npx.cmd` quando houver alternativa sem espaço no caminho.
+Parâmetros principais:
+
+- `-ServerName 'Sapiens Cliente'`
+- `-ServerUrl 'https://app.gestaoversus.com.br/mcp/user/'`
+- `-BearerToken '<token pessoal>'`
+- `-Profile 'squad_cliente'`
+- `-Surface 'user'`
+- `-HarnessKey 'harness_coordenador_cliente_v1'`
 
 ---
 
-## 6. Testar o proxy `mcp-remote`
+## 5. O que o instalador faz
 
-Use o token gerado no APP32:
+O instalador:
 
-```powershell
-npx -y mcp-remote https://app.gestaoversus.com.br/mcp/user/ --header "Authorization:Bearer TOKEN_DO_USUARIO"
-```
+1. valida Node.js 18+;
+2. resolve o `claude_desktop_config.json` em `%APPDATA%\Claude` ou no pacote Windows Store `LocalCache\Roaming\Claude`;
+3. cria backup do config existente;
+4. grava `sapiens-proxy.js` no diretório do Claude;
+5. atualiza somente a entrada `mcpServers['Sapiens Cliente']`, preservando outras configurações;
+6. injeta token por `env`, não hardcoded no proxy;
+7. executa smoke `initialize` antes do restart.
 
-### Resultado esperado
+Configuração esperada:
 
-Algo equivalente a:
-
-```text
-Connected to remote server using StreamableHTTPClientTransport
-Local STDIO server running
-Proxy established successfully...
-```
-
-Depois do teste:
-
-- pressione `Ctrl+C`
-
----
-
-## 7. Localizar o arquivo do Claude Desktop
-
-O arquivo fica em:
-
-```text
-C:\Users\{usuario}\AppData\Local\Packages\Claude_XXXXX\LocalCache\Roaming\Claude\claude_desktop_config.json
-```
-
-Para localizar a pasta `Claude_*`:
-
-```powershell
-Get-ChildItem "$env:LOCALAPPDATA\Packages" | Where-Object { $_.Name -like "Claude*" } | Select-Object Name
-```
-
----
-
-## 8. Gravar a conexão MCP
-
-Exemplo oficial:
-
-```powershell
-$npxPath = "C:\Users\$env:USERNAME\AppData\Roaming\npm\npx.cmd"
-$configPath = (Get-ChildItem "$env:LOCALAPPDATA\Packages" | Where-Object { $_.Name -like "Claude*" } | Select-Object -First 1 -ExpandProperty FullName) + "\LocalCache\Roaming\Claude\claude_desktop_config.json"
-$token = "TOKEN_DO_USUARIO"
-
-if (Test-Path $configPath) {
-    $config = Get-Content $configPath -Raw | ConvertFrom-Json
-} else {
-    New-Item -ItemType Directory -Force -Path (Split-Path $configPath) | Out-Null
-    $config = [PSCustomObject]@{}
+```json
+{
+  "mcpServers": {
+    "Sapiens Cliente": {
+      "command": "C:\Program Files\nodejs\node.exe",
+      "args": ["C:\Users\usuario\AppData\Roaming\Claude\sapiens-proxy.js"],
+      "env": {
+        "SAPIENS_MCP_URL": "https://app.gestaoversus.com.br/mcp/user/",
+        "SAPIENS_MCP_TOKEN": "mcpu_..."
+      }
+    }
+  }
 }
-
-if (-not $config.mcpServers) {
-    $config | Add-Member -MemberType NoteProperty -Name "mcpServers" -Value ([PSCustomObject]@{})
-}
-
-$server = [PSCustomObject]@{
-    command = $npxPath
-    args    = @(
-        "-y",
-        "mcp-remote",
-        "https://app.gestaoversus.com.br/mcp/user/",
-        "--header",
-        "Authorization:Bearer $token"
-    )
-}
-
-$config.mcpServers | Add-Member -MemberType NoteProperty -Name "Sapiens Cliente" -Value $server -Force
-
-$json = $config | ConvertTo-Json -Depth 10
-[System.IO.File]::WriteAllText($configPath, $json, [System.Text.UTF8Encoding]::new($false))
-Write-Host "MCP Sapiens Cliente configurado com sucesso. Reinicie o Claude Desktop."
 ```
 
 ---
 
-## 9. Reiniciar o Claude Desktop
+## 6. Regras do proxy
 
-Depois de gravar:
+O proxy oficial deve:
 
-1. feche o Claude completamente
-2. feche também pela bandeja do sistema, se ele permanecer aberto
-3. abra o Claude novamente
+- ler JSON-RPC newline-delimited do `stdin`;
+- fazer `POST` para o MCP remoto com Bearer Token;
+- aceitar `text/event-stream`;
+- normalizar `
+
+` para `
+` antes de separar blocos SSE;
+- retornar no `stdout` somente JSON-RPC;
+- cancelar/destruir a leitura SSE após receber a resposta do `id` esperado;
+- não encerrar antes de esvaziar fila e detectar `stdin` fechado.
+
+Essas regras existem porque o Claude Desktop local usa MCP por `stdio` e o servidor APP32 responde por StreamableHTTP/SSE.
 
 ---
 
-## 10. Validação
+## 7. Validação pós-instalação
 
-Depois do restart:
+Depois do instalador:
 
-1. abra `Configurações → Conectores`
-2. confirme que `Sapiens Cliente` apareceu em `Desktop`
-3. abra uma conversa e cole o prompt de ativação canônico:
+1. fechar o Claude Desktop completamente, inclusive bandeja do sistema;
+2. abrir novamente;
+3. entrar em `Configurações > Conectores`;
+4. confirmar `Sapiens Cliente` sem erro;
+5. abrir conversa nova e usar o prompt/entrada oficial `Sapiens On`.
+
+Startup esperado:
+
+- `bootstrap_session_context`;
+- `describe_app32_available_sapiens_squads_tool`;
+- `resolve_app32_sapiens_activation_tool`;
+- `resolve_app32_instruction_bundle_tool`;
+- `describe_app32_squad_runtime_tool`;
+- `list_user_app32_capabilities`.
+
+Resultado esperado:
 
 ```text
-Use a conexão MCP Sapiens Cliente desta sessão.
-
-Antes de responder, rode nesta ordem:
-1. resolve_app32_instruction_bundle_tool
-2. describe_app32_squad_runtime_tool
-3. list_user_app32_capabilities
-4. describe_app32_profile_contracts_tool
-5. describe_app32_surface_playbooks_tool
-6. describe_app32_domain_playbooks_tool
-
-Se o bootstrap funcionar, confirme na primeira linha exatamente `Sapiens Cliente Ativado`.
-Se o runtime suportar título de sessão, prefira `Sapiens Cliente On`.
-Depois disso, responda dizendo qual squad, surface e harness de entrada estão ativos.
+Sapiens Cliente On
 ```
-
-### Resultado esperado
-
-O Claude deve:
-
-1. usar a conexão MCP instalada
-2. carregar o bundle mínimo remoto
-3. executar o bootstrap oficial
-4. responder com confirmação curta de ativação
 
 ---
 
-## 11. Ativação canônica e comandos opcionais
+## 8. Erros comuns
 
-### Caminho canônico
+### Node.js ausente
 
-No Claude Code / aba Code do Claude Desktop, o caminho canônico de ativação é:
+Sinal:
 
-- usar a conexão MCP registrada
-- colar o prompt de ativação canônico do APP32
-- confirmar o bootstrap real da sessão
+- instalador falha em `Node.js não encontrado`.
 
-### Comandos opcionais
+Ação:
 
-Além da conexão MCP, o Claude Desktop/Code pode receber comandos slash oficiais para ativação, em modo best effort:
+- instalar Node.js LTS;
+- reabrir PowerShell;
+- executar o comando novamente.
 
-- `/sapiens-cliente-on`
-- `/sapiens-on`
+### Configuração inválida ignorada pelo Claude
 
-Quando houver mais de um Squad instalado na mesma máquina, o comando genérico `/sapiens-on` deve pedir confirmação do usuário antes de ativar o Squad correto.
+Sinal:
 
-Pergunta esperada:
+- Claude informa que a configuração MCP foi ignorada.
 
-```text
-Escolha entre: Cliente, Versus ou Engenharia.
-```
+Causa provável:
 
-### Instalação dos comandos slash
+- uso manual de `type: http` ou `url` sem `command` em `claude_desktop_config.json`.
 
-Script canônico versionado no APP32:
+Ação:
 
-- `C:\GestaoVersus\app32\app32\scripts\installers\install-claude-sapiens-slash-commands.ps1`
+- reinstalar usando o modo `Usuário Normal` do APP32.
 
-Exemplo:
+### Token inválido ou expirado
+
+Sinal:
+
+- smoke falha com HTTP 401/403.
+
+Ação:
+
+- voltar ao `/profile`;
+- renovar token;
+- executar novamente o comando de instalação.
+
+---
+
+## 9. Relação com Usuário Avançado
+
+O modo avançado continua suportado e é o caminho correto para Claude CLI/Claude Code:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File ".\app32\scripts\installers\install-claude-sapiens-slash-commands.ps1" -AvailableSquads squad_cliente,squad_versus
+claude mcp add --scope user --transport http sapiens-user "https://app.gestaoversus.com.br/mcp/user/" --header "Authorization: Bearer <token>"
 ```
 
-### Regra importante
+Na UI, ele aparece como:
 
-Ativação oficial usa barra inicial.
+- **Usuário Avançado — Claude CLI via PowerShell**.
 
-Correto:
-
-- `/sapiens-cliente-on`
-- `/sapiens-on`
-
-Não tratar texto livre como comando instalado:
-
-- `sapiens on`
-- `sapiens cliente on`
-
-### Regra de fallback
-
-Se a instalação específica do Claude não carregar os custom commands locais, a homologação continua válida desde que:
-
-1. `claude mcp list` mostre `Sapiens Cliente` como `Connected`
-2. o prompt canônico consiga carregar o bundle e o runtime
-3. a sessão confirme `Sapiens Cliente Ativado`
+Não usar esse modo como padrão para usuário final do Claude Windows Desktop.
 
 ---
 
-## 12. Limpeza controlada antes da reinstalação
+## 10. Critério de aceite
 
-Se houver suspeita de instalação antiga, drift ou comandos slash desatualizados, fazer este reset antes de reinstalar:
+A instalação está aprovada quando:
 
-1. fechar o Claude Desktop completamente
-2. remover os comandos/skills antigos em:
-   - `%USERPROFILE%\.claude\commands`
-   - `%USERPROFILE%\.claude\skills`
-3. revisar o `claude_desktop_config.json` e remover entradas antigas do `Sapiens Cliente`, se houver
-4. reinstalar a conexão MCP
-5. reinstalar os comandos slash oficiais
-6. reabrir o Claude
-
-### Critério
-
-Se o objetivo for homologar o novo modelo como cliente real, a limpeza controlada é recomendada.
-
----
-
-## 13. Observações importantes
-
-- a configuração do `claude_desktop_config.json` vale para o usuário Windows local
-- o token é pessoal do APP32; cada pessoa deve usar o seu
-- se aparecer erro com `C:\Program`, o caminho do `npx` usado está com espaço
-- o pacote correto é `mcp-remote`, sem prefixo `@anthropic/`
-- alguns builds do Claude Code podem conectar MCP normalmente e ainda assim não catalogar arquivos locais em `~/.claude/commands` ou `.claude/commands`
-- nesses casos, o APP32 deve tratar os slash commands como opcionais e manter o prompt de ativação como caminho operacional canônico
-
----
-
-## 14. Homologação de campo validada em 2026-05-17
-
-Resultado observado na instalação validada:
-
-1. `claude mcp list` retornou `Sapiens Cliente ... ✓ Connected`
-2. o bootstrap real carregou:
-   - `Squad Cliente`
-   - `surface user`
-   - `SC-COORD`
-   - `harness_coordenador_cliente_v1`
-   - bundle `2026-05-17.2`
-3. os custom commands locais do Claude não foram catalogados nessa instalação específica
-4. o prompt de ativação canônico funcionou integralmente
-
-### Decisão operacional
-
-Para Claude Code / aba Code do Claude Desktop:
-
-- MCP + prompt canônico = caminho oficial e robusto
-- slash commands = conveniência opcional, sem dependência operacional
+1. o instalador conclui sem erro;
+2. o smoke `initialize` retorna `serverInfo`;
+3. o Claude Desktop reabre com `Sapiens Cliente` ativo;
+4. `Sapiens On` executa o bootstrap real;
+5. a sessão expõe `Squad Cliente`, `surface=user` e `harness_coordenador_cliente_v1`.

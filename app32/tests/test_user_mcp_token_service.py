@@ -91,7 +91,7 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
 
     config = service.build_client_config(user_id=7, plaintext_token="mcpu_token_real", company_id=9)
 
-    assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Code / aba Code do Claude Desktop." in config["activation_prompt"]
+    assert "Instale a conexão MCP Sapiens Cliente no cliente Claude Windows Desktop / Claude CLI." in config["activation_prompt"]
     assert "Harness Coordenador do Squad Cliente" in config["activation_prompt"]
     assert "Identidade MCP confirmada:" in config["activation_prompt"]
     assert "- user_id: 7" in config["activation_prompt"]
@@ -109,8 +109,10 @@ def test_build_client_config_exposes_activation_prompt_and_technical_output(monk
     assert '"Authorization": "Bearer mcpu_token_real"' in config["technical_config_text"]
     assert '"experience_label": "Sapiens Cliente"' in config["technical_config_text"]
     assert config["guided_connection_fields"][0]["label"] == "Nome da conexão"
+    assert any(field["label"] == "Usuário Normal" for field in config["guided_connection_fields"])
+    assert any(field["label"] == "Usuário Avançado" for field in config["guided_connection_fields"])
     assert any(field["label"] == "Registry MCP do Claude Code" for field in config["guided_connection_fields"])
-    assert config["guided_install_steps"][0].startswith("No terminal do Windows, confirme que o Claude Code")
+    assert config["guided_install_steps"][0].startswith("Usuário Normal")
     assert config["identity"]["user_id"] == 7
     assert config["identity"]["active_company_id"] == 9
     assert config["identity"]["accessible_company_ids"] == [9]
@@ -162,7 +164,7 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     )
 
     assert config["runtime"] == "claude"
-    assert config["runtime_label"] == "Claude Code / aba Code do Claude Desktop"
+    assert config["runtime_label"] == "Claude Windows Desktop / Claude CLI"
     assert config["resolved_profile"] == "squad_cliente"
     assert config["resolved_surface"] == "user"
     assert config["install_mode"] == "self_service"
@@ -174,16 +176,25 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert config["harness_label"] == "Harness Coordenador do Squad Cliente"
     assert config["install_command"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
     assert config["copy_install_command_text"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
+    assert "Usuário Avançado — Claude CLI via PowerShell" in config["cli_install_text"]
     assert "claude mcp add --scope user --transport http sapiens-user" in config["cli_install_text"]
     assert config["powershell_install_command"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
     decoded = base64.b64decode(config["install_command"].split(" -EncodedCommand ", 1)[1]).decode("utf-16le")
-    assert "install-sapiens-runtime.ps1" in decoded
-    assert "-ClientRuntime 'claude'" in decoded
+    assert "install-sapiens-claude-desktop-windows.ps1" in decoded
+    assert "-ServerName 'Sapiens Cliente'" in decoded
     assert "-ServerUrl 'https://app.gestaoversus.com.br/mcp/user/'" in decoded
     assert "-BearerToken 'mcpu_token_real'" in decoded
-    assert "comando único do APP32" in config["instruction_text"]
-    assert "claude mcp add" in config["instruction_text"]
-    assert "Claude Code, Codex ou Antigravity" in config["instruction_text"]
+    assert config["normal_install_command"] == config["install_command"]
+    assert "proxy stdio" in config["normal_install_text"]
+    assert config["install_profiles"]["normal"]["label"] == "Usuário Normal - Claude Windows Desktop"
+    assert config["advanced_install_command"].startswith("powershell -ExecutionPolicy Bypass -EncodedCommand ")
+    advanced_decoded = base64.b64decode(config["advanced_install_command"].split(" -EncodedCommand ", 1)[1]).decode("utf-16le")
+    assert "install-sapiens-runtime.ps1" in advanced_decoded
+    assert "-ClientRuntime 'claude'" in advanced_decoded
+    assert "Usuário Normal" in config["instruction_text"]
+    assert "Usuário Avançado" in config["instruction_text"]
+    assert "Claude CLI/registry HTTP" in config["instruction_text"]
+    assert "proxy stdio" in config["instruction_text"]
     assert "/sapiens-cliente-on" in config["activation_prompt"]
     assert "/sapiens-on" in config["activation_prompt"]
     assert "Use a conexão MCP Sapiens Cliente desta sessão." in config["activation_prompt"]

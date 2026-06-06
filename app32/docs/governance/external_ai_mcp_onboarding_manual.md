@@ -45,12 +45,12 @@ Toda IA externa deve consultar:
 
 ## Diretriz canônica para Claude
 
-- O caminho homologado é **Claude Code** ou a **aba Code do Claude Desktop**.
-- A aba **Chat** / **Connectors** do Claude Desktop não deve ser usada como referência principal para MCP local.
+- Para cliente final, o caminho homologado é **Usuário Normal — Claude Windows Desktop** com instalador APP32 e proxy `stdio`.
+- Para usuário técnico, o caminho homologado é **Usuário Avançado — Claude CLI / Claude Code**.
 - O onboarding deve privilegiar:
-  1. `claude mcp add ...`
-  2. validação com `claude mcp list`
-  3. prompt de bootstrap/ativação
+  1. no Usuário Normal, `install-sapiens-claude-desktop-windows.ps1` + smoke `initialize`;
+  2. no Usuário Avançado, `claude mcp add ...` + validação com `claude mcp list`;
+  3. prompt de bootstrap/ativação.
 - Slash commands personalizados podem existir, mas são **opcionais**.
 
 ## Regra de permissão real do usuário
@@ -77,8 +77,8 @@ AI_MCP_EXTERNAL_ONBOARDING_OK 4 5
 
 Checklist adicional de homologação Claude:
 
-- `claude mcp list` mostra o servidor esperado como `Connected`;
-- a conversa de teste roda na **aba Code** ou no **Claude Code CLI**;
+- no Usuário Normal, o Claude Desktop mostra `Sapiens Cliente` como conector local sem erro;
+- no Usuário Avançado, `claude mcp list` mostra o servidor esperado como `Connected`;
 - bootstrap MCP consegue chamar tools explícitas, não apenas reconhecer o servidor.
 
 ## Uso via MCP

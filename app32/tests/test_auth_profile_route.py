@@ -167,8 +167,8 @@ def test_profile_get_hides_advanced_squads_for_non_admin(monkeypatch):
     assert 'Criar token' in html
     assert 'Renovar' in html
     assert 'Revogar' in html
-    assert 'Instalação via Prompt' in html
-    assert 'Instalação via PowerShell' in html
+    assert 'Usuário Normal' in html
+    assert 'Usuário Avançado' in html
     assert 'Instalação Técnica' in html
     assert 'Copiar Comando' in html
     assert 'Copie seu token agora' in html

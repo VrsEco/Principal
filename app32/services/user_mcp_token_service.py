@@ -40,9 +40,10 @@ PROFILE_TO_FALLBACK_ROLE = {
     "collaborator": "colaborador",
 }
 RUNTIME_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-sapiens-runtime.ps1"
+CLAUDE_DESKTOP_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-sapiens-claude-desktop-windows.ps1"
 CLAUDE_SLASH_INSTALLER_RAW_URL = "https://raw.githubusercontent.com/VrsEco/Principal/main/app32/scripts/installers/install-claude-sapiens-slash-commands.ps1"
 RUNTIME_LABELS = {
-    "claude": "Claude Code / aba Code do Claude Desktop",
+    "claude": "Claude Windows Desktop / Claude CLI",
     "codex": "Codex",
     "antigravity": "Antigravity",
     "other": "Genérica",
@@ -277,6 +278,45 @@ class UserMcpTokenService:
         return f"powershell -ExecutionPolicy Bypass -EncodedCommand {encoded}"
 
     @classmethod
+    def _build_claude_desktop_windows_install_command(
+        cls,
+        *,
+        url: str,
+        token_value: str,
+        profile_key: str,
+        surface: str,
+        experience_label: str,
+        canonical_label: str,
+        harness_key: str | None,
+        harness_label: str | None,
+        command_alias: str | None,
+    ) -> str:
+        def _ps_quote(value: str | None) -> str:
+            return "'" + str(value or "").replace("'", "''") + "'"
+
+        script = " ".join(
+            [
+                f"$u={_ps_quote(CLAUDE_DESKTOP_INSTALLER_RAW_URL)};",
+                "$f=Join-Path $env:TEMP 'install-sapiens-claude-desktop-windows.ps1';",
+                "Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile $f;",
+                "& $f",
+                f"-ServerName {_ps_quote(experience_label)}",
+                f"-ServerUrl {_ps_quote(url)}",
+                f"-BearerToken {_ps_quote(token_value)}",
+                f"-Profile {_ps_quote(profile_key)}",
+                f"-Surface {_ps_quote(surface)}",
+                f"-ExperienceLabel {_ps_quote(experience_label)}",
+                f"-CanonicalLabel {_ps_quote(canonical_label)}",
+                f"-HarnessKey {_ps_quote(harness_key or '')}",
+                f"-HarnessLabel {_ps_quote(harness_label or '')}",
+                f"-CommandAlias {_ps_quote(command_alias or '')};",
+                "Remove-Item $f -Force",
+            ]
+        )
+        encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
+        return f"powershell -ExecutionPolicy Bypass -EncodedCommand {encoded}"
+
+    @classmethod
     def _build_guided_connection_fields(
         cls,
         *,
@@ -294,7 +334,14 @@ class UserMcpTokenService:
         if runtime_config.get("runtime") == "claude":
             fields.extend(
                 [
-                    {"label": "Comando Claude", "value": "claude mcp add --scope user --transport http ..."},
+                    {
+                        "label": "Usuário Normal",
+                        "value": r"Claude Windows Desktop + proxy stdio em %APPDATA%\Claude",
+                    },
+                    {
+                        "label": "Usuário Avançado",
+                        "value": "Claude CLI via PowerShell usando claude mcp add --transport http",
+                    },
                     {
                         "label": "Registry MCP do Claude Code",
                         "value": r"~/.claude.json (ou equivalente gerenciado da instalação)",
@@ -534,6 +581,62 @@ class UserMcpTokenService:
         )
 
     @classmethod
+    def _build_claude_desktop_normal_install_text(
+        cls,
+        *,
+        connection_name: str,
+        install_command: str,
+    ) -> str:
+        return "\n".join(
+            [
+                f"Usuário Normal — Claude Windows Desktop: instale {connection_name} sem usar Claude CLI.",
+                "",
+                "Use no PowerShell do Windows:",
+                install_command,
+                "",
+                "O instalador vai:",
+                "1. validar Node.js;",
+                "2. gravar o proxy stdio versionado em %APPDATA%\\Claude;",
+                "3. atualizar claude_desktop_config.json preservando outras conexões;",
+                "4. executar smoke MCP initialize;",
+                "5. pedir para fechar e reabrir o Claude Desktop.",
+                "",
+                "Depois do restart, use Sapiens On na conversa.",
+            ]
+        )
+
+    @classmethod
+    def _build_claude_cli_advanced_install_text(
+        cls,
+        *,
+        connection_name: str,
+        install_command: str,
+        url: str,
+        token_value: str,
+    ) -> str:
+        native_command = (
+            f'claude mcp add --scope user --transport http sapiens-user "{url}" '
+            f'--header "Authorization: Bearer {token_value}"'
+        )
+        return "\n".join(
+            [
+                f"Usuário Avançado — Claude CLI via PowerShell: instale {connection_name} em uma linha.",
+                "",
+                "Use no PowerShell do Windows:",
+                install_command,
+                "",
+                "O instalador baixa o script oficial e registra o MCP com o CLI do Claude.",
+                "Comando interno equivalente:",
+                native_command,
+                "",
+                "Validação:",
+                "1. rode claude mcp list;",
+                "2. confirme sapiens-user como Connected;",
+                "3. abra nova sessão e use Sapiens On.",
+            ]
+        )
+
+    @classmethod
     def _build_guided_install_steps(
         cls,
         *,
@@ -564,14 +667,13 @@ class UserMcpTokenService:
                 token_value=token_value,
             )
             return [
-                "No terminal do Windows, confirme que o Claude Code está instalado com claude --version.",
-                "Copie o comando único do APP32 e execute exatamente como foi gerado.",
-                "Se estiver no Claude Desktop, abra a aba Code. Não use a aba Chat para este onboarding MCP local.",
-                f"O instalador vai registrar o MCP no registry real do Claude Code usando internamente: {claude_add_command}.",
-                "Se o Claude solicitar aprovação do servidor, confirme a inclusão do MCP user.",
-                "Rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
-                "Se necessário, confira o registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação) e valide que mcpServers.sapiens-user foi gravado ali.",
-                "Abra uma nova sessão do Claude Code, ou uma nova sessão na aba Code do Claude Desktop, e use o prompt de ativação recomendado pelo APP32.",
+                "Usuário Normal: use o comando de instalação do Claude Windows Desktop; ele cria o proxy stdio local e atualiza claude_desktop_config.json.",
+                "Usuário Normal: confirme que Node.js LTS está instalado quando o instalador solicitar; não é necessário Claude CLI.",
+                "Usuário Normal: feche e reabra o Claude Desktop depois do smoke do proxy.",
+                "Usuário Avançado: use a instalação via PowerShell/Claude CLI quando operar no Claude Code ou na aba Code.",
+                f"Usuário Avançado: o instalador registra internamente o MCP com {claude_add_command}.",
+                "Usuário Avançado: rode claude mcp list e confirme que a entrada sapiens-user aparece como HTTP, sem fluxo OAuth.",
+                "Após qualquer modo, abra uma nova sessão e use o prompt de ativação recomendado pelo APP32.",
                 "Como smoke inicial, digite Sapiens On e confirme o bootstrap remoto pelo instruction registry.",
             ]
         if runtime == "codex" and runtime_config.get("install_command"):
@@ -653,12 +755,15 @@ class UserMcpTokenService:
                     f"- Surface: {runtime_config['resolved_surface']}",
                     f"- Harness inicial: {runtime_config['harness_label'] or '-'}",
                     "",
-                    "Comando oficial recomendado para o Claude Code:",
+                    "Usuário Normal — Claude Windows Desktop:",
+                    "Use a opção de instalação normal gerada pelo APP32. Ela grava um proxy stdio local no Claude Desktop e não exige Claude CLI.",
+                    "",
+                    "Usuário Avançado — Claude CLI / Claude Code:",
                     "```bash",
                     claude_mcp_add_command,
                     "```",
                     "",
-                    "JSON de referência esperado no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação):",
+                    "JSON de referência avançada esperado no registry do Claude Code (~/.claude.json ou equivalente gerenciado da instalação):",
                     "```json",
                     claude_config_snippet,
                     "```",
@@ -898,7 +1003,8 @@ class UserMcpTokenService:
                 availability_label = "Instalação automática"
                 instruction_text = (
                     f"Você está preparando o {experience_label} para uso no {runtime_label}. "
-                    "Use a instalação via CLI para o caminho nativo do Claude ou a instalação via PowerShell para automatizar tudo."
+                    "Padrão recomendado: Usuário Normal no Claude Windows Desktop. "
+                    "Alternativa avançada: Claude CLI via PowerShell em uma linha."
                 )
             elif normalized_runtime == "other":
                 instruction_text = (
@@ -1653,7 +1759,7 @@ class UserMcpTokenService:
                 f"Harness inicial: {runtime_config['harness_label'] or '-'}"
             )
             server_name = f"sapiens-{runtime_config['resolved_surface']}"
-            installation_command = (
+            advanced_install_command = (
                 cls._build_generic_install_command(
                     runtime_key=runtime_config["runtime"],
                     url=url,
@@ -1670,6 +1776,10 @@ class UserMcpTokenService:
                 if runtime_config["install_mode"] == "self_service"
                 else runtime_config["install_command"]
             )
+            installation_command = advanced_install_command
+            normal_install_command = None
+            normal_install_text = None
+            advanced_install_text = None
             cli_install_text = cls._build_cli_install_text(
                 runtime_config=runtime_config,
                 connection_name=connection_name,
@@ -1679,16 +1789,35 @@ class UserMcpTokenService:
             installation_instruction = runtime_config["instruction_text"]
             copy_install_command_text = installation_command
             if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente":
-                claude_mcp_add_command = cls._build_claude_mcp_add_command(
-                    runtime_config=runtime_config,
+                normal_install_command = cls._build_claude_desktop_windows_install_command(
+                    url=url,
+                    token_value=token_value,
+                    profile_key=runtime_config["resolved_profile"],
+                    surface=runtime_config["resolved_surface"],
+                    experience_label=runtime_config["experience_label"],
+                    canonical_label=runtime_config["squad_label"],
+                    harness_key=runtime_config["harness_key"],
+                    harness_label=runtime_config["harness_label"],
+                    command_alias=runtime_config["command_alias"],
+                )
+                installation_command = normal_install_command
+                copy_install_command_text = normal_install_command
+                normal_install_text = cls._build_claude_desktop_normal_install_text(
+                    connection_name=connection_name,
+                    install_command=normal_install_command,
+                )
+                advanced_install_text = cls._build_claude_cli_advanced_install_text(
+                    connection_name=connection_name,
+                    install_command=advanced_install_command or "",
                     url=url,
                     token_value=token_value,
                 )
+                cli_install_text = advanced_install_text
                 installation_instruction = (
-                    "Experiência recomendada: usar o comando único do APP32. "
-                    "Ele baixa o instalador oficial e registra o servidor HTTP no registry real do Claude Code pelo próprio CLI `claude mcp add`."
+                    "Experiência recomendada: Usuário Normal no Claude Windows Desktop. "
+                    "Use o instalador Desktop para gravar proxy stdio local. "
+                    "Se for usuário técnico, use a opção Usuário Avançado para registrar via Claude CLI."
                 )
-                copy_install_command_text = installation_command
             if runtime_config["squad"] == "squad_cliente":
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
@@ -1706,10 +1835,16 @@ class UserMcpTokenService:
                     "Este perfil usa rollout controlado. A credencial final pode ser provisionada pela Versus ou por administrador autorizado."
                 )
             if installation_command and runtime_config["install_mode"] == "self_service":
+                install_scope_text = (
+                    "No Claude, o modo Normal baixa o instalador Desktop e grava proxy stdio local; "
+                    "o modo Avançado usa Claude CLI/registry HTTP."
+                    if runtime_config["runtime"] == "claude" and runtime_config["squad"] == "squad_cliente"
+                    else "O instalador baixa o script oficial online e grava a configuração somente no cliente escolhido: Claude Code, Codex ou Antigravity."
+                )
                 installation_instruction = (
                     f"{installation_instruction}\n\n"
                     f"Comando sugerido:\n{installation_command}\n\n"
-                    "O instalador baixa o script oficial online e grava a configuração somente no cliente escolhido: Claude Code, Codex ou Antigravity."
+                    f"{install_scope_text}"
                 )
             elif installation_command:
                 installation_instruction = (
@@ -1761,7 +1896,7 @@ class UserMcpTokenService:
                         if activation_commands_install_command
                         else ""
                     )
-                    + "\n\nImportante: o caminho canônico de operação é o MCP registrado por `claude mcp add` + prompt de ativação no Claude Code ou na aba Code do Claude Desktop. Slash commands são opcionais e podem variar conforme a versão do runtime."
+                    + "\n\nImportante: no Claude Windows Desktop, o caminho canônico para usuário normal é o proxy stdio instalado no `claude_desktop_config.json` + prompt de ativação. Para usuário avançado no Claude Code/CLI, o caminho canônico é `claude mcp add` + prompt de ativação. Slash commands são opcionais e podem variar conforme a versão do runtime."
                 )
             return {
                 "client_name": (client_name or "").strip() or None,
@@ -1799,6 +1934,22 @@ class UserMcpTokenService:
                 "install_command": installation_command,
                 "copy_install_command_text": copy_install_command_text,
                 "powershell_install_command": installation_command,
+                "normal_install_command": normal_install_command,
+                "normal_install_text": normal_install_text,
+                "advanced_install_command": advanced_install_command,
+                "advanced_install_text": advanced_install_text,
+                "install_profiles": {
+                    "normal": {
+                        "label": "Usuário Normal - Claude Windows Desktop",
+                        "command": normal_install_command,
+                        "description": "Instalador Desktop com proxy stdio local e claude_desktop_config.json.",
+                    } if normal_install_command else None,
+                    "advanced": {
+                        "label": "Usuário Avançado - Claude CLI via PowerShell",
+                        "command": advanced_install_command,
+                        "description": "Instalador CLI que usa claude mcp add --transport http.",
+                    } if advanced_install_command else None,
+                },
                 "cli_install_text": cli_install_text,
                 "instruction_text": installation_instruction,
                 "supports_personal_token": runtime_config["supports_personal_token"],

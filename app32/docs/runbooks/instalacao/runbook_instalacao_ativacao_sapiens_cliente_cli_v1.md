@@ -86,7 +86,8 @@ Na interface, deve entrar na aba:
 ## 5.2 Escolher o cliente
 
 Na tela, o usuário deve selecionar o cliente alvo:
-- Claude Desktop (Windows)
+- Claude Windows Desktop — Usuário Normal
+- Claude CLI / Claude Code — Usuário Avançado
 - Codex
 - Antigravity
 - Outro cliente MCP
@@ -157,15 +158,28 @@ Também podem existir:
 
 ## 6. Fluxo guiado no cliente MCP
 
-## 6.0 Caso validado para Claude Desktop (Windows)
+## 6.0 Casos oficiais para Claude
 
-Quando o cliente escolhido for `Claude Desktop (Windows)`, o fluxo oficial não usa conector remoto puro.
+### Usuário Normal — Claude Windows Desktop
+
+Fluxo recomendado para cliente final. Não exige `claude` CLI.
 
 Ele usa:
-- `npx.cmd`
-- pacote `mcp-remote`
-- arquivo local `claude_desktop_config.json`
-- Bearer Token pessoal do APP32
+- instalador oficial `install-sapiens-claude-desktop-windows.ps1`;
+- proxy local `sapiens-proxy.js`;
+- arquivo `claude_desktop_config.json`;
+- Bearer Token pessoal do APP32 em `env`;
+- smoke `initialize` antes do restart.
+
+### Usuário Avançado — Claude CLI / Claude Code
+
+Fluxo recomendado para usuário técnico.
+
+Ele usa:
+- uma linha PowerShell gerada pelo APP32;
+- `install-sapiens-runtime.ps1`;
+- `claude mcp add --scope user --transport http`;
+- validação por `claude mcp list`.
 
 ### Runbook específico
 Ver:
@@ -245,13 +259,14 @@ Uma vez ativa, a experiência deve iniciar no:
 - `Squad Cliente`
 - com entrada pelo `Harness Coordenador do Squad Cliente`
 
-### Caso Claude Desktop / Claude Code
+### Caso Claude Windows Desktop / Claude CLI
 
 O caminho canônico de ativação é:
 
-1. usar a conexão MCP registrada do `Sapiens Cliente`
-2. colar o prompt de ativação canônico do APP32
-3. confirmar o bootstrap real da sessão
+1. no Usuário Normal, usar a conexão local `Sapiens Cliente` registrada em `claude_desktop_config.json` via proxy stdio;
+2. no Usuário Avançado, usar a conexão registrada por `claude mcp add`;
+3. colar o prompt de ativação canônico do APP32;
+4. confirmar o bootstrap real da sessão
 
 Prompt canônico de referência:
 
@@ -342,9 +357,11 @@ Na homologação de campo validada:
 
 ### Decisão oficial
 
-No Claude Code / aba Code do Claude Desktop:
+Para Claude:
 
-- prompt canônico = caminho oficial
+- Usuário Normal no Claude Windows Desktop = padrão para cliente final;
+- Usuário Avançado no Claude CLI/Claude Code = padrão para usuário técnico;
+- prompt canônico = caminho oficial de ativação;
 - slash command local = opcional / best effort
 
 ---
