@@ -558,7 +558,7 @@ class ContractFinancialService:
             "first_due_date": due_date,
             "next_due_date": due_date,
             "description": f"{ContractFinancialService._retention_label(policy.satellite_nature)} do faturamento {native_billing.billing_code}",
-            "memo": policy.notes or retention.notes,
+            "memo": policy.notes or ContractFinancialService._normalize_text(retention_detail.get("notes")) or None,
             "document_number_prefix": f"{native_billing.billing_code}-{policy.satellite_nature[:8].upper()}",
             "template_amount": amount,
             "bank_account_id": policy.bank_account_id or main_schedule.bank_account_id,

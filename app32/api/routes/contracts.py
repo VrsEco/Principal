@@ -4,7 +4,7 @@ from flask import Blueprint, Response, abort, flash, redirect, render_template, 
 from flask_login import current_user
 
 from models import Company, Employee
-from models.contracts import ContractDocument, ContractFinancialTerm, ContractFiscalTerm
+from models.contracts import ContractDocument, ContractFinancialTerm, ContractFiscalTerm, ContractNativeBilling
 from services.contract_financial_service import ContractFinancialService
 from services.contracts_catalog_service import ContractsCatalogService
 from services.contracts_service import ContractService

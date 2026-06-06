@@ -21,6 +21,17 @@ def test_schedule_javascript_uses_titulo_financeiro_copy():
     assert "Deseja realmente excluir este título financeiro?" in list_js
 
 
+def test_schedule_local_automations_are_top_level_tab_not_bottom_card():
+    schedule_template = Path(r"C:\GestaoVersus\app32\app32\templates\modules\financial\schedules.html").read_text(encoding="utf-8")
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert 'data-tab="automacoes"' in schedule_template
+    assert 'data-panel="automacoes"' in schedule_template
+    assert "financial-automation-card" not in schedule_template
+    assert "automacoes: 'automacoes'" in schedule_js
+    assert "targetTab === 'automacoes'" in schedule_js
+
+
 def test_settlement_delete_button_is_bound_to_baixas_list():
     schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
 
