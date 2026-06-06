@@ -285,6 +285,17 @@
             </select>
         </div>
         <div class="filter-group">
+            <label class="filter-label">PJ emissora</label>
+            <select name="issuer_legal_entity_id">
+                <option value="">Todas</option>
+                {% for entity in issuing_legal_entities %}
+                <option value="{{ entity.id }}" {% if filters.issuer_legal_entity_id == entity.id %}selected{% endif %}>
+                    {{ entity.code }} · {{ entity.legal_name }}{% if entity.cnpj %} · {{ entity.cnpj }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
             <label class="filter-label">Lote</label>
             <select name="batch_code">
                 <option value="">Todos</option>

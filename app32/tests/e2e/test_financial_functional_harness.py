@@ -19,13 +19,19 @@ def test_financial_functional_harness_validates_actions(monkeypatch):
         def login(self): return {"success": True}
         def select_company(self): return {"success": True}
         def request(self, method, path, *, json_payload=None):
+            if "/financial/schedules/123" in path:
+                return _Response("text/html", text='data-tab="automacoes" data-panel="automacoes" Automações do título financeiro')
             if path.endswith("export-pdf"):
                 return _Response("application/pdf", content=b"%PDF-1.4")
             if path.endswith("export-xlsx"):
                 return _Response("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", content=b"PK")
+            if path.startswith("/financial/schedules"):
+                return _Response("text/html", text="Títulos Financeiros Favorecido")
             if "extrato-bancario" in path:
                 return _Response("text/html", text="Extrato bancario")
             return _Response("text/html", text="Relatório financeiro")
+        def request_json(self, method, path, *, json_payload=None, operation):
+            return [{"id": 123, "counterparty_id": 77, "summary": {"counterparty_name": "Cliente Teste"}}]
         def assert_not_login_redirect(self, response, *, operation): return None
 
     monkeypatch.setattr(
@@ -33,6 +39,8 @@ def test_financial_functional_harness_validates_actions(monkeypatch):
         lambda _settings: _FakeHTTP(),
     )
     results = execute_financial_functional_probe(settings=_settings())
-    assert len(results) == 5
+    assert len(results) == 8
     assert all(result.success for result in results)
     assert any(result.check_name == "financial.bordero_create_page" for result in results)
+    assert any(result.check_name == "financial.schedule_local_automations_tab" for result in results)
+    assert any(result.check_name == "financial.schedules_api_counterparty_contract" for result in results)

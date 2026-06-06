@@ -187,7 +187,17 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         command_kind="python",
         command_args=("app32/tests/e2e/scripts/run_financial_functional_probe.py",),
         destructive=False,
-        summary="Executa páginas e exportações principais do módulo financeiro.",
+        summary="Executa páginas, API de títulos com favorecido resolvido, aba Automações e exportações principais do módulo financeiro.",
+    ),
+    "contracts_functional_probe": E2ESuiteDefinition(
+        suite_id="contracts_functional_probe",
+        label="Probe funcional de contratos e notas fiscais",
+        domain="contracts",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_contracts_functional_probe.py",),
+        destructive=False,
+        summary="Valida a fila de notas fiscais, filtro por PJ emissora e painel de ações em lote.",
     ),
     "reports_functional_probe": E2ESuiteDefinition(
         suite_id="reports_functional_probe",

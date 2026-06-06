@@ -211,6 +211,24 @@ modules:
         actions: [abrir, validar_render]
         owner: QA_AUTOMATION
         scenario: scripts/run_financial_functional_probe.py
+      - key: financial.schedules_list_page
+        route: /financial/schedules?company_id=<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render, filtrar_favorecido]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+      - key: financial.schedules_api_counterparty_contract
+        route: /api/financial/schedules?company_id=<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_titulos, validar_favorecido_resolvido, validar_company_id]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+      - key: financial.schedule_local_automations_tab
+        route: /financial/schedules/<schedule_id>?company_id=<company_id>&open_tab=automacoes
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_aba_automacoes, validar_render]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
       - key: financial.bank_statement_page
         route: /financial/reports/extrato-bancario
         environment_modes: [DEV_FULL, PROD_SAFE]
@@ -229,6 +247,27 @@ modules:
         actions: [exportar_planilha]
         owner: QA_AUTOMATION
         scenario: scripts/run_financial_functional_probe.py
+  - name: contracts
+    criticality: alta
+    items:
+      - key: contracts.fiscal_invoices_workspace
+        route: /contracts/invoices?company_id=<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render, validar_company_id]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_contracts_functional_probe.py
+      - key: contracts.fiscal_invoices_issuer_filter
+        route: /contracts/invoices?company_id=<company_id>&issuer_legal_entity_id=<issuer_legal_entity_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [filtrar_pj_emissora, validar_fila_fiscal]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_contracts_functional_probe.py
+      - key: contracts.fiscal_invoices_bulk_actions_panel
+        route: /contracts/invoices?company_id=<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [validar_acoes_lote, validar_upload_retorno, validar_exportacao_xlsx]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_contracts_functional_probe.py
   - name: reports
     criticality: média
     items:

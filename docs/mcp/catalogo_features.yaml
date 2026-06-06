@@ -1,4 +1,4 @@
-version: "2026-05-20.3"
+version: "2026-06-06.1"
 owner: "sapiens-mcp"
 description: "Catálogo resumido e seguro para bootstrap do MCP Sapiens."
 bootstrap:
@@ -30,6 +30,30 @@ domains:
   - id: "finance"
     nome: "Financeiro"
     descricao: "Consultas executivas e operacionais financeiras conforme surface."
+  - id: "governance"
+    nome: "Governança e Gestão Comercial"
+    descricao: "Contratos, clientes, catálogo comercial, surfaces MCP, instruction registry e governança operacional."
+  - id: "real_estate_auctions"
+    nome: "Leilões Imobiliários"
+    descricao: "Pipeline multi-tenant de oportunidades imobiliárias, fontes, diligência e ficha financeira."
+  - id: "strategy"
+    nome: "Estratégia"
+    descricao: "Identidade organizacional, alinhamento estratégico e leitura executiva governada."
+  - id: "projects"
+    nome: "Projetos"
+    descricao: "Projetos e atividades tenant-safe usados como base operacional por agentes."
+  - id: "meetings"
+    nome: "Reuniões"
+    descricao: "Agendas, registros e acompanhamentos de reuniões dentro do tenant."
+  - id: "workload"
+    nome: "Capacidade e Workload"
+    descricao: "Leituras analíticas de capacidade, carga e alocação de equipe."
+  - id: "identity_self_service"
+    nome: "Identidade do Usuário"
+    descricao: "Empresas, perfil e contexto de sessão do usuário autenticado."
+  - id: "operations"
+    nome: "Operações Técnicas"
+    descricao: "Escalonamentos, integrações e suporte operacional técnico."
 features:
   - id: "rotina_tarefas"
     nome: "Tarefas da Rotina"
@@ -162,3 +186,185 @@ features:
       - "analytics"
     detalhe_disponivel: true
     guia_ref: "features/financeiro_fluxo_caixa.md"
+
+  - id: "gestao_comercial_contratos"
+    nome: "Gestão Comercial — Contratos, Clientes e Catálogo"
+    dominio: "governance"
+    objetivo: "Operar leitura e manutenção governada de carteiras de clientes, PJs emissoras, catálogo comercial, contratos e itens."
+    quando_usar:
+      - "consultar dashboard ou lista de contratos comerciais"
+      - "manter carteira de clientes, clientes, emissores ou produtos/serviços"
+      - "criar, atualizar, suspender, encerrar ou excluir contrato comercial com trilha auditável"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "user_id"
+        - "contract_id"
+        - "filters"
+        - "payload"
+    saidas:
+      - "dashboard_comercial"
+      - "contratos"
+      - "clientes"
+      - "catalogo_comercial"
+      - "workspace_do_contrato"
+    surfaces:
+      - "user"
+      - "admin"
+    detalhe_disponivel: false
+
+  - id: "gestao_comercial_faturamento_fiscal"
+    nome: "Gestão Comercial — Faturamento, Títulos e NFS-e"
+    dominio: "finance"
+    objetivo: "Apoiar revisão, geração, cancelamento, integração financeira e esteira fiscal de faturamentos comerciais."
+    quando_usar:
+      - "listar contratos aptos para faturamento"
+      - "montar revisão de faturamento antes da confirmação"
+      - "gerar faturamentos, títulos financeiros ou planilha de integração fiscal"
+      - "controlar status, lote e dados fiscais de NFS-e"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "user_id"
+        - "billing_id"
+        - "billing_ids"
+        - "contract_ids"
+        - "review_payloads"
+        - "filters"
+    saidas:
+      - "fila_de_faturamento"
+      - "revisao_de_faturamento"
+      - "faturamentos_gerados"
+      - "workspace_fiscal"
+      - "planilha_base64"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: false
+
+  - id: "financeiro_operacional"
+    nome: "Financeiro Operacional e Orçamentário"
+    dominio: "finance"
+    objetivo: "Executar e consultar cadastros, títulos, lançamentos, borderôs, orçamento, conciliação, classificação, fechamento e relatórios."
+    quando_usar:
+      - "consultar ou criar títulos financeiros"
+      - "operar lançamentos, liquidações, borderôs e conciliações"
+      - "gerar relatórios e dashboard executivo financeiro"
+      - "trabalhar com orçamento matricial ou classificação automática"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "user_id"
+        - "filters"
+        - "payload"
+        - "periodo"
+    saidas:
+      - "registros_financeiros"
+      - "titulos"
+      - "relatorios"
+      - "matriz_orcamentaria"
+      - "resumo_executivo"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: false
+
+  - id: "leiloes_imobiliarios_pipeline"
+    nome: "Leilões Imobiliários"
+    dominio: "real_estate_auctions"
+    objetivo: "Consultar e operar pipeline de oportunidades imobiliárias, fontes, eventos, ficha financeira, diligência e anexos."
+    quando_usar:
+      - "listar oportunidades de leilão"
+      - "consultar detalhe de imóvel"
+      - "registrar fonte, evento, diligência ou ficha financeira"
+      - "arquivar oportunidade imobiliária"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "property_id"
+        - "source_id"
+        - "event_id"
+        - "payload"
+        - "filters"
+    saidas:
+      - "workspace_de_leiloes"
+      - "imoveis"
+      - "fontes"
+      - "eventos"
+      - "ficha_financeira"
+      - "due_diligence"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+    detalhe_disponivel: false
+
+  - id: "jornada_operacional_work_journey"
+    nome: "Jornada Operacional"
+    dominio: "routine"
+    objetivo: "Operar blocos, regras, agenda, tarefas, calendário, capacidade, ausências e transferências da rotina."
+    quando_usar:
+      - "organizar a jornada diária ou semanal"
+      - "consultar tarefas alocadas, atrasadas ou não alocadas"
+      - "mover agenda, gerar agenda ou avaliar capacidade"
+      - "solicitar ou aprovar ausências e transferências"
+    entradas:
+      obrigatorias:
+        - "company_id"
+      opcionais:
+        - "user_id"
+        - "employee_id"
+        - "block_id"
+        - "task_id"
+        - "filters"
+        - "payload"
+    saidas:
+      - "quadro_da_jornada"
+      - "agenda"
+      - "tarefas"
+      - "capacidade"
+      - "ausencias"
+      - "transferencias"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+      - "ops"
+    detalhe_disponivel: false
+
+  - id: "governanca_mcp_catalogo"
+    nome: "Governança MCP e Instruction Registry"
+    dominio: "governance"
+    objetivo: "Descobrir capabilities, contracts, playbooks, surfaces, readiness, release, usage, instruction bundles e contexto de sessão MCP."
+    quando_usar:
+      - "entender quais tools estão publicadas"
+      - "verificar permission matrix, profile contracts ou playbooks de surface"
+      - "fazer bootstrap de sessão, selecionar empresa ou resolver instruction bundle"
+      - "avaliar readiness, release checklist, usage dashboard ou ativação Sapiens"
+    entradas:
+      obrigatorias:
+        - "surface"
+      opcionais:
+        - "company_id"
+        - "user_id"
+        - "domain"
+        - "feature_id"
+        - "profile"
+    saidas:
+      - "manifesto_de_capabilities"
+      - "catalogo_de_features"
+      - "contratos_mcp"
+      - "playbooks"
+      - "contexto_da_sessao"
+    surfaces:
+      - "user"
+      - "admin"
+      - "analytics"
+      - "ops"
+    detalhe_disponivel: false

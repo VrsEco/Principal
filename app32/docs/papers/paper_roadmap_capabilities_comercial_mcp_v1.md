@@ -79,3 +79,22 @@ Seguir em duas fases:
 Este paper vira `SPEC` quando houver decisão oficial entre:
 - manter Comercial como composição intencional de Projects/Processes
 - ou evoluir para catálogo Comercial canônico dedicado
+
+## Atualização operacional — 2026-06-06
+
+### Decisão de mapeamento atual
+- A Gestão Comercial passou a aparecer explicitamente no catálogo Tool First e no catálogo documental MCP.
+- Não foi criado domínio canônico `commercial` nesta etapa.
+- As capabilities comerciais foram publicadas usando domínios canônicos já aceitos:
+  - `governance` para clientes, carteiras, emissores, catálogo comercial, contratos e workspace.
+  - `finance` para faturamento, integração financeira, títulos, NFS-e, lotes fiscais e exportação.
+
+### Cobertura publicada
+- Dashboard comercial: `get_commercial_dashboard`.
+- Contratos/clientes/catálogo: `list_commercial_contracts`, `get_commercial_contract_workspace`, CRUDs de carteira, clientes, emissores, estrutura e produtos/serviços.
+- Faturamento: `list_commercial_billing_queue`, `build_commercial_billing_review`, `preview_commercial_billing_batch`, `generate_commercial_billing_batch`, `list_commercial_billings_done`, `cancel_commercial_billing`.
+- Integração financeira/fiscal: `generate_commercial_financial_titles_for_billing`, `list_commercial_fiscal_workspace`, `update_commercial_fiscal_entry`, `assign_commercial_fiscal_batch`, `remove_commercial_fiscal_batch`, `update_commercial_fiscal_status`, `export_commercial_fiscal_integration_spreadsheet`.
+
+### Lacuna remanescente
+- A criação do domínio canônico `commercial` continua pendente de SPEC própria, RBAC, permission matrix e política explícita.
+- O upload MCP de XML/planilha fiscal permanece planejado porque exige contrato seguro para binários/base64 e limites de payload.

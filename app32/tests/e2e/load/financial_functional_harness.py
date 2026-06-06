@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import urlencode
 from typing import Any
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
@@ -15,6 +16,36 @@ class FinancialFunctionalProbeResult:
     success: bool
     status_code: int
     details: dict[str, Any]
+
+
+def _path_with_query(path: str, **params: Any) -> str:
+    query = {
+        key: value
+        for key, value in params.items()
+        if value not in (None, "")
+    }
+    if not query:
+        return path
+    return f"{path}?{urlencode(query)}"
+
+
+def _extract_schedules(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for key in ("items", "schedules", "data", "results"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+    return []
+
+
+def _counterparty_contract_ok(schedules: list[dict[str, Any]]) -> bool:
+    for item in schedules:
+        summary = item.get("summary")
+        if not isinstance(summary, dict) or "counterparty_name" not in summary:
+            return False
+    return True
 
 
 def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> list[FinancialFunctionalProbeResult]:
@@ -33,6 +64,51 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
     bordero_create_html = http.request("GET", f"/financial/borderos/new?company_id={settings.company_id}&bordero_type=receivable")
     bordero_create_html.raise_for_status()
     http.assert_not_login_redirect(bordero_create_html, operation="financial.bordero_create_page")
+
+    schedules_list_html = http.request("GET", _path_with_query("/financial/schedules", company_id=settings.company_id))
+    schedules_list_html.raise_for_status()
+    http.assert_not_login_redirect(schedules_list_html, operation="financial.schedules_list_page")
+
+    schedules_payload = http.request_json(
+        "GET",
+        _path_with_query("/api/financial/schedules", company_id=settings.company_id),
+        operation="financial.schedules_api_counterparty_contract",
+    )
+    schedules = _extract_schedules(schedules_payload)
+    selected_schedule_id = next((item.get("id") for item in schedules if item.get("id")), None)
+
+    if selected_schedule_id:
+        schedule_automation_html = http.request(
+            "GET",
+            _path_with_query(
+                f"/financial/schedules/{selected_schedule_id}",
+                company_id=settings.company_id,
+                open_tab="automacoes",
+            ),
+        )
+        schedule_automation_html.raise_for_status()
+        http.assert_not_login_redirect(schedule_automation_html, operation="financial.schedule_local_automations_tab")
+        schedule_automation_success = is_html_success(
+            schedule_automation_html.text,
+            all_markers=(
+                'data-tab="automacoes"',
+                'data-panel="automacoes"',
+                "Automações do título financeiro",
+            ),
+        )
+        schedule_automation_status_code = schedule_automation_html.status_code
+        schedule_automation_details: dict[str, Any] = {
+            "schedule_id": selected_schedule_id,
+            "content_type": str(schedule_automation_html.headers.get("Content-Type") or ""),
+            "has_public_error": contains_public_error(schedule_automation_html.text),
+        }
+    else:
+        schedule_automation_success = True
+        schedule_automation_status_code = 204
+        schedule_automation_details = {
+            "skipped": True,
+            "reason": "Sem título financeiro disponível para validar a aba local de automações.",
+        }
 
     pdf_response = http.request("GET", "/financial/reports/agendamento/export-pdf")
     pdf_response.raise_for_status()
@@ -81,6 +157,45 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
                 "content_type": str(bordero_create_html.headers.get("Content-Type") or ""),
                 "has_public_error": contains_public_error(bordero_create_html.text),
             },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.schedules_list_page",
+            route=_path_with_query("/financial/schedules", company_id=settings.company_id),
+            success=is_html_success(
+                schedules_list_html.text,
+                all_markers=("Títulos Financeiros", "Favorecido"),
+            ),
+            status_code=schedules_list_html.status_code,
+            details={
+                "content_type": str(schedules_list_html.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(schedules_list_html.text),
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.schedules_api_counterparty_contract",
+            route=_path_with_query("/api/financial/schedules", company_id=settings.company_id),
+            success=_counterparty_contract_ok(schedules),
+            status_code=200,
+            details={
+                "total_schedules": len(schedules),
+                "with_counterparty_id": sum(1 for item in schedules if item.get("counterparty_id") not in (None, "")),
+                "contract": "summary.counterparty_name obrigatório para evitar regressão de favorecido/JSON safety.",
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.schedule_local_automations_tab",
+            route=(
+                _path_with_query(
+                    f"/financial/schedules/{selected_schedule_id}",
+                    company_id=settings.company_id,
+                    open_tab="automacoes",
+                )
+                if selected_schedule_id
+                else "/financial/schedules/<id>?open_tab=automacoes"
+            ),
+            success=schedule_automation_success,
+            status_code=schedule_automation_status_code,
+            details=schedule_automation_details,
         ),
         FinancialFunctionalProbeResult(
             check_name="financial.schedule_report_pdf",
