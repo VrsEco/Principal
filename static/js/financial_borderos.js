@@ -207,7 +207,7 @@
     state.bordero = bordero;
     page.dataset.borderoType = bordero.bordero_type || '';
     $('bordero-title').textContent = `${bordero.bordero_code} · ${bordero.name || bordero.description || 'Borderô financeiro'}`;
-    banner.textContent = `${typeLabel(bordero.bordero_type)} · ${statusLabel(bordero.status)} · os títulos permanecem congelados e a baixa acontece somente no nível do borderô.`;
+    banner.textContent = `${typeLabel(bordero.bordero_type)} · ${statusLabel(bordero.status)} · os títulos permanecem congelados e a baixa do borderô liquida cada Título Financeiro pelo fluxo oficial.`;
     $('detail-code').textContent = bordero.bordero_code || '-';
     $('detail-status').textContent = statusLabel(bordero.status);
     $('detail-total').textContent = money(bordero.signed_total_amount || bordero.total_amount || 0);
@@ -300,7 +300,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    window.location.href = `/financial/borderos/${created.id}`;
+    window.location.href = `/financial/borderos/${created.id}?company_id=${companyId}`;
   }
 
   async function saveBordero() {
