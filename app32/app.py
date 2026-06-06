@@ -679,6 +679,9 @@ def register_api_resources(api):
         ProcessAreaListResource, ProcessAreaResource,
         MacroProcessListResource, MacroProcessResource,
         ProcessListResource, ProcessResource,
+        ProcessSipocSnapshotResource, ProcessSipocItemListResource, ProcessSipocItemResource,
+        ProcessSipocRegulatoryItemListResource, ProcessSipocRegulatoryItemResource,
+        ProcessSipocPublishResource, ProcessSipocArchiveResource,
         ProcessBpmnDiagramResource, ProcessBpmnDiagramExportResource, ProcessBpmnPopBindingResource,
         ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
         ProcessBpmnAiAssistantResource,
@@ -852,6 +855,13 @@ def register_api_resources(api):
     api.add_resource(MacroProcessResource, '/api/macro-processes/<int:macro_id>')
     api.add_resource(ProcessListResource, '/api/processes', '/api/companies/<int:company_id>/processes')
     api.add_resource(ProcessResource, '/api/processes/<int:process_id>')
+    api.add_resource(ProcessSipocSnapshotResource, '/api/processes/<int:process_id>/sipoc', '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>')
+    api.add_resource(ProcessSipocItemListResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/items')
+    api.add_resource(ProcessSipocItemResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/items/<int:item_id>')
+    api.add_resource(ProcessSipocRegulatoryItemListResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/regulatory-items')
+    api.add_resource(ProcessSipocRegulatoryItemResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/regulatory-items/<int:regulatory_item_id>')
+    api.add_resource(ProcessSipocPublishResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/publish')
+    api.add_resource(ProcessSipocArchiveResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/archive')
     api.add_resource(ProcessBpmnDiagramResource, '/api/processes/<int:process_id>/bpmn-diagram')
     api.add_resource(ProcessBpmnDiagramExportResource, '/api/processes/<int:process_id>/bpmn-diagram/export')
     api.add_resource(ProcessBpmnPopBindingResource, '/api/processes/<int:process_id>/bpmn-pop-bindings')

@@ -187,6 +187,91 @@ class ProcessBpmsAnalysis(db.Model):
             'updated_at': self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
         }
 
+
+class ProcessSipocSnapshot(db.Model):
+    __tablename__ = 'process_sipoc_snapshots'
+    __table_args__ = (
+        db.UniqueConstraint('process_id', 'version', name='uq_process_sipoc_snapshot_process_version'),
+        {'extend_existing': True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    process_id = db.Column(db.Integer, db.ForeignKey('processes.id'), nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    status = db.Column(db.String(30), nullable=False, default='draft')
+    title = db.Column(db.String(255), nullable=True)
+    objective = db.Column(db.Text, nullable=True)
+    start_boundary = db.Column(db.Text, nullable=True)
+    end_boundary = db.Column(db.Text, nullable=True)
+    trigger_event = db.Column(db.Text, nullable=True)
+    customer_requirements = db.Column(db.Text, nullable=True)
+    constraints_notes = db.Column(db.Text, nullable=True)
+    measures_notes = db.Column(db.Text, nullable=True)
+    risks_notes = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    published_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    process = db.relationship('Process', backref=db.backref('sipoc_snapshots', lazy='dynamic', cascade='all, delete-orphan'))
+
+
+class ProcessSipocItem(db.Model):
+    __tablename__ = 'process_sipoc_items'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    sipoc_snapshot_id = db.Column(db.Integer, db.ForeignKey('process_sipoc_snapshots.id'), nullable=False, index=True)
+    lane = db.Column(db.String(30), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    order_index = db.Column(db.Integer, nullable=False, default=0)
+    source_type = db.Column(db.String(30), nullable=True)
+    source_ref = db.Column(db.String(255), nullable=True)
+    is_critical = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    snapshot = db.relationship(
+        'ProcessSipocSnapshot',
+        backref=db.backref('items', lazy='dynamic', cascade='all, delete-orphan')
+    )
+
+
+class ProcessSipocRegulatoryItem(db.Model):
+    __tablename__ = 'process_sipoc_regulatory_items'
+    __table_args__ = {'extend_existing': True}
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
+    sipoc_snapshot_id = db.Column(db.Integer, db.ForeignKey('process_sipoc_snapshots.id'), nullable=False, index=True)
+    sipoc_item_id = db.Column(db.Integer, db.ForeignKey('process_sipoc_items.id'), nullable=True, index=True)
+    regulatory_domain = db.Column(db.String(80), nullable=False)
+    regulatory_code = db.Column(db.String(120), nullable=True)
+    regulatory_name = db.Column(db.String(255), nullable=False)
+    regulator_entity = db.Column(db.String(255), nullable=True)
+    requirement_summary = db.Column(db.Text, nullable=True)
+    affected_scope_type = db.Column(db.String(30), nullable=False, default='process')
+    control_requirements = db.Column(db.Text, nullable=True)
+    risk_level = db.Column(db.String(20), nullable=False, default='medium')
+    evidence_requirements = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    snapshot = db.relationship(
+        'ProcessSipocSnapshot',
+        backref=db.backref('regulatory_items', lazy='dynamic', cascade='all, delete-orphan')
+    )
+    sipoc_item = db.relationship(
+        'ProcessSipocItem',
+        backref=db.backref('regulatory_links', lazy='dynamic')
+    )
+
 class ProcessRoutine(db.Model):
     __tablename__ = 'process_routines'
     __table_args__ = {'extend_existing': True}

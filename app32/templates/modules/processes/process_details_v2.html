@@ -78,14 +78,35 @@
     </section>
 
     <div class="tabs-nav process-tabs-nav">
-        <button class="tab-btn process-tab-btn active" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
+        <button class="tab-btn process-tab-btn active" onclick="switchTab('sipoc')"><span class="process-tab-btn__icon">🧩</span><span>SIPOC</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('routine')"><span class="process-tab-btn__icon">📅</span><span>Rotinas</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('indicators')"><span class="process-tab-btn__icon">📊</span><span>Indicadores</span></button>
     </div>
 
+    <div id="tab-sipoc" class="tab-content active">
+        <section class="process-section mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Modelagem executiva</span>
+                    <h2 class="text-h2">SIPOC do Processo</h2>
+                    <p class="process-section__description">Enquadre o processo em nível macro antes do fluxo BPMN, com fornecedores, entradas, saídas, clientes e apoio regulatório.</p>
+                </div>
+                <div class="process-section__actions">
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="createSipocDraft()">Criar rascunho</button>
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveSipocMeta()">Salvar SIPOC</button>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="publishSipoc()">Publicar SIPOC</button>
+                </div>
+            </div>
+            <div class="process-section__body">
+                <div id="sipocWorkspace"></div>
+            </div>
+        </section>
+    </div>
+
     <!-- Tab: Modeling -->
-    <div id="tab-modeling" class="tab-content active">
+    <div id="tab-modeling" class="tab-content">
         <section class="process-section mt-4">
             <div class="process-section__header">
                 <div>
@@ -1457,6 +1478,7 @@
     window.companyId = companyId;
     let state = {
         process: initialProcess || null,
+        sipoc: null,
         routines: [],
         indicators: [],
         schedules: [],
@@ -1592,6 +1614,7 @@
             }
 
             const results = await Promise.allSettled([
+                fetchSipoc(),
                 fetchRoutines(),
                 fetchIndicators(),
                 fetchSchedules()
@@ -1599,12 +1622,13 @@
 
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
-                    const loaders = ['roteiros', 'indicadores', 'agendamentos'];
+                    const loaders = ['sipoc', 'roteiros', 'indicadores', 'agendamentos'];
                     console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
                 }
             });
 
             renderProcess();
+            renderSipoc();
             renderRoutines();
             renderIndicators();
             renderInstances();
@@ -1645,6 +1669,17 @@
         } catch (e) {
             console.error('Erro ao buscar roteiros:', e);
             state.routines = [];
+        }
+    }
+
+    async function fetchSipoc() {
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc`);
+            if (!res.ok) throw new Error('Falha ao carregar SIPOC');
+            state.sipoc = await res.json();
+        } catch (e) {
+            console.warn('Erro ao buscar SIPOC:', e);
+            state.sipoc = null;
         }
     }
 
@@ -1744,6 +1779,422 @@
         }
 
         renderFlow();
+    }
+
+    function renderSipoc() {
+        const host = document.getElementById('sipocWorkspace');
+        if (!host) return;
+
+        const bundle = state.sipoc;
+        const snapshot = bundle?.current_snapshot || null;
+
+        if (!snapshot) {
+            host.innerHTML = `
+                <div class="sipoc-empty-state">
+                    <div class="empty-icon">🧩</div>
+                    <h3 style="margin:0 0 0.5rem 0;">Nenhum SIPOC cadastrado</h3>
+                    <p style="margin:0 0 1rem 0;">O SIPOC é opcional por cliente. Crie um rascunho quando houver necessidade de enquadramento executivo do processo.</p>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="createSipocDraft()">Criar rascunho SIPOC</button>
+                </div>
+            `;
+            return;
+        }
+
+        const snapshotStatus = snapshot.status === 'published' ? 'Publicado' : (snapshot.status === 'archived' ? 'Arquivado' : 'Rascunho');
+        const publishedInfo = snapshot.published_at ? ` · publicado em ${new Date(snapshot.published_at).toLocaleString('pt-BR')}` : '';
+        const laneNames = {
+            supplier: 'Suppliers · Fornecedores',
+            input: 'Inputs · Entradas',
+            process: 'Process · Macroetapas',
+            output: 'Outputs · Saídas',
+            customer: 'Customers · Clientes'
+        };
+        const laneHelp = {
+            supplier: 'Quem fornece insumos, dados ou aprovações para o processo começar e fluir.',
+            input: 'Dados, documentos, autorizações e parâmetros indispensáveis para execução.',
+            process: 'Entre 3 e 7 etapas de alto nível. Aqui o SIPOC prepara BPMN, POP, controles e automação.',
+            output: 'Resultados tangíveis do processo, incluindo status, registros e evidências.',
+            customer: 'Quem recebe ou depende das saídas do processo para seguir operando.'
+        };
+
+        host.innerHTML = `
+            <div class="process-meta-chips" style="margin-bottom:1rem;">
+                <span class="process-chip process-chip--primary">Versão ${escapeHtml(snapshot.version || '--')}</span>
+                <span class="process-chip process-chip--neutral">Status: ${escapeHtml(snapshotStatus)}${escapeHtml(publishedInfo)}</span>
+                <span class="process-chip process-chip--success">SIPOC antes do Fluxo</span>
+            </div>
+
+            <div class="sipoc-meta-grid">
+                <div class="sipoc-meta-card">
+                    <label>Título</label>
+                    <input id="sipoc-title" class="form-control" value="${escapeHtml(snapshot.title || '')}" placeholder="Ex.: SIPOC do Processo">
+                </div>
+                <div class="sipoc-meta-card">
+                    <label>Início do processo</label>
+                    <textarea id="sipoc-start" class="form-control" rows="3" placeholder="Defina o marco inicial do processo">${escapeHtml(snapshot.start_boundary || '')}</textarea>
+                </div>
+                <div class="sipoc-meta-card">
+                    <label>Fim do processo</label>
+                    <textarea id="sipoc-end" class="form-control" rows="3" placeholder="Defina o marco final do processo">${escapeHtml(snapshot.end_boundary || '')}</textarea>
+                </div>
+                <div class="sipoc-meta-card">
+                    <label>Evento disparador</label>
+                    <textarea id="sipoc-trigger" class="form-control" rows="3" placeholder="O que dispara o processo?">${escapeHtml(snapshot.trigger_event || '')}</textarea>
+                </div>
+            </div>
+
+            <div class="sipoc-meta-grid">
+                <div class="sipoc-meta-card">
+                    <label>Objetivo</label>
+                    <textarea id="sipoc-objective" class="form-control" rows="4" placeholder="Objetivo executivo do processo">${escapeHtml(snapshot.objective || '')}</textarea>
+                </div>
+                <div class="sipoc-meta-card">
+                    <label>Requisitos do cliente</label>
+                    <textarea id="sipoc-customer-requirements" class="form-control" rows="4" placeholder="Quais requisitos e expectativas críticas do cliente?">${escapeHtml(snapshot.customer_requirements || '')}</textarea>
+                </div>
+                <div class="sipoc-meta-card">
+                    <label>Restrições</label>
+                    <textarea id="sipoc-constraints" class="form-control" rows="4" placeholder="Políticas, dependências e restrições operacionais">${escapeHtml(snapshot.constraints_notes || '')}</textarea>
+                </div>
+                <div class="sipoc-meta-card">
+                    <label>Riscos</label>
+                    <textarea id="sipoc-risks" class="form-control" rows="4" placeholder="Riscos críticos do processo">${escapeHtml(snapshot.risks_notes || '')}</textarea>
+                </div>
+            </div>
+
+            <div class="sipoc-lanes-grid">
+                ${['supplier', 'input', 'process', 'output', 'customer'].map((lane) => renderSipocLane(snapshot, lane, laneNames[lane], laneHelp[lane])).join('')}
+            </div>
+
+            <div class="sipoc-support-grid">
+                <div class="sipoc-support-card">
+                    <h3>Requisitos regulatórios aplicáveis</h3>
+                    <table class="sipoc-regulatory-table">
+                        <thead>
+                            <tr>
+                                <th>Domínio</th>
+                                <th>Norma / Regra</th>
+                                <th>Órgão</th>
+                                <th>Escopo</th>
+                                <th>Criticidade</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${renderRegulatoryRows(snapshot)}
+                        </tbody>
+                    </table>
+                    <div class="sipoc-support-actions">
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="createRegulatoryItem()">Adicionar item regulatório</button>
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1rem;">
+                    <div class="sipoc-support-card">
+                        <h3>Medidas e indicadores</h3>
+                        <label>Medidas / indicadores executivos</label>
+                        <textarea id="sipoc-measures" class="form-control" rows="6" placeholder="Ex.: SLA, retrabalho, conformidade, prazo, tempo total">${escapeHtml(snapshot.measures_notes || '')}</textarea>
+                    </div>
+                    <div class="sipoc-support-card">
+                        <h3>Observações complementares</h3>
+                        <label>Notas adicionais</label>
+                        <textarea id="sipoc-notes" class="form-control" rows="6" placeholder="Observações adicionais do SIPOC">${escapeHtml(snapshot.notes || '')}</textarea>
+                        ${snapshot.publication_errors && snapshot.publication_errors.length ? `
+                            <div class="sipoc-empty-state" style="padding:1rem; text-align:left;">
+                                <strong style="display:block; margin-bottom:0.5rem;">Pendências para publicação</strong>
+                                <ul style="margin:0; padding-left:1rem;">
+                                    ${snapshot.publication_errors.map((error) => `<li>${escapeHtml(error)}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderSipocLane(snapshot, lane, title, helpText) {
+        const items = snapshot.items?.[lane] || [];
+        return `
+            <div class="sipoc-lane">
+                <div class="sipoc-lane-head">
+                    <strong>${escapeHtml(title)}</strong>
+                    <small>${escapeHtml(helpText)}</small>
+                </div>
+                <div class="sipoc-lane-list">
+                    ${items.length ? items.map((item) => `
+                        <div class="sipoc-item-card">
+                            <strong>${escapeHtml(item.title || '')}</strong>
+                            <p>${escapeHtml(item.description || 'Sem descrição complementar.')}</p>
+                            ${item.is_critical ? '<span class="sipoc-badge-critical">Crítico</span>' : ''}
+                            <div class="sipoc-item-card__actions">
+                                <button class="btn btn-secondary btn-sm" type="button" onclick="editSipocItem(${snapshot.id}, ${item.id})">Editar</button>
+                                <button class="btn btn-secondary btn-sm" type="button" onclick="deleteSipocItem(${snapshot.id}, ${item.id})">Excluir</button>
+                            </div>
+                        </div>
+                    `).join('') : '<div class="sipoc-inline-muted">Nenhum item cadastrado.</div>'}
+                </div>
+                <div class="sipoc-lane-create">
+                    <input id="sipoc-${lane}-title" class="form-control form-control-sm" placeholder="Novo item em ${escapeHtml(title)}">
+                    <textarea id="sipoc-${lane}-description" class="form-control form-control-sm" rows="3" placeholder="Descrição complementar"></textarea>
+                    <div class="sipoc-lane-create__actions">
+                        <button class="btn btn-primary btn-sm" type="button" onclick="createSipocItem('${lane}')">Adicionar</button>
+                        <label style="display:flex; align-items:center; gap:0.35rem; font-size:0.8rem; color:var(--text-secondary);">
+                            <input type="checkbox" id="sipoc-${lane}-critical">
+                            Crítico
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderRegulatoryRows(snapshot) {
+        const rows = snapshot.regulatory_items || [];
+        if (!rows.length) {
+            return '<tr><td colspan="6" class="sipoc-inline-muted">Nenhum item regulatório cadastrado.</td></tr>';
+        }
+        const macroOptions = [];
+        Object.values(snapshot.items || {}).forEach((laneItems) => {
+            (laneItems || []).forEach((item) => macroOptions.push(item));
+        });
+        return rows.map((item) => {
+            const scopeLabel = item.sipoc_item_id
+                ? (macroOptions.find((entry) => Number(entry.id) === Number(item.sipoc_item_id))?.title || 'Macroetapa vinculada')
+                : 'Processo';
+            return `
+                <tr>
+                    <td><strong>${escapeHtml(item.regulatory_domain || '')}</strong></td>
+                    <td>${escapeHtml(item.regulatory_code || '')}${item.regulatory_code ? ' · ' : ''}${escapeHtml(item.regulatory_name || '')}<div class="sipoc-inline-muted">${escapeHtml(item.requirement_summary || '')}</div></td>
+                    <td>${escapeHtml(item.regulator_entity || '--')}</td>
+                    <td>${escapeHtml(scopeLabel)}</td>
+                    <td>${escapeHtml(item.risk_level || 'medium')}</td>
+                    <td>
+                        <div class="sipoc-item-card__actions">
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="editRegulatoryItem(${snapshot.id}, ${item.id})">Editar</button>
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="deleteRegulatoryItem(${snapshot.id}, ${item.id})">Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function createSipocDraft() {
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc`, { method: 'POST' });
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload.error || 'Falha ao criar rascunho SIPOC.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao criar rascunho SIPOC.');
+        }
+    }
+
+    async function saveSipocMeta() {
+        const snapshot = state.sipoc?.current_snapshot;
+        if (!snapshot) {
+            alert('Crie um rascunho SIPOC antes de salvar.');
+            return;
+        }
+        try {
+            const payload = {
+                title: document.getElementById('sipoc-title')?.value || '',
+                objective: document.getElementById('sipoc-objective')?.value || '',
+                start_boundary: document.getElementById('sipoc-start')?.value || '',
+                end_boundary: document.getElementById('sipoc-end')?.value || '',
+                trigger_event: document.getElementById('sipoc-trigger')?.value || '',
+                customer_requirements: document.getElementById('sipoc-customer-requirements')?.value || '',
+                constraints_notes: document.getElementById('sipoc-constraints')?.value || '',
+                measures_notes: document.getElementById('sipoc-measures')?.value || '',
+                risks_notes: document.getElementById('sipoc-risks')?.value || '',
+                notes: document.getElementById('sipoc-notes')?.value || ''
+            };
+            const res = await fetch(`/api/processes/${processId}/sipoc/${snapshot.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao salvar SIPOC.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao salvar SIPOC.');
+        }
+    }
+
+    async function createSipocItem(lane) {
+        const snapshot = state.sipoc?.current_snapshot;
+        if (!snapshot) {
+            alert('Crie um rascunho SIPOC antes de adicionar itens.');
+            return;
+        }
+        const title = document.getElementById(`sipoc-${lane}-title`)?.value || '';
+        if (!title.trim()) {
+            alert('Informe o título do item.');
+            return;
+        }
+        const description = document.getElementById(`sipoc-${lane}-description`)?.value || '';
+        const isCritical = document.getElementById(`sipoc-${lane}-critical`)?.checked || false;
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${snapshot.id}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lane, title, description, is_critical: isCritical })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao adicionar item SIPOC.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao adicionar item SIPOC.');
+        }
+    }
+
+    async function editSipocItem(sipocId, itemId) {
+        const item = findSipocItemById(itemId);
+        if (!item) return;
+        const title = prompt('Título do item SIPOC:', item.title || '');
+        if (title === null) return;
+        const description = prompt('Descrição do item SIPOC:', item.description || '') ?? '';
+        const isCritical = confirm('Marcar este item como crítico? OK = sim / Cancelar = não');
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${sipocId}/items/${itemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description, is_critical: isCritical, lane: item.lane, order_index: item.order_index })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao atualizar item SIPOC.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao atualizar item SIPOC.');
+        }
+    }
+
+    async function deleteSipocItem(sipocId, itemId) {
+        if (!confirm('Deseja remover este item SIPOC?')) return;
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${sipocId}/items/${itemId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao remover item SIPOC.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao remover item SIPOC.');
+        }
+    }
+
+    async function createRegulatoryItem() {
+        const snapshot = state.sipoc?.current_snapshot;
+        if (!snapshot) {
+            alert('Crie um rascunho SIPOC antes de adicionar requisitos regulatórios.');
+            return;
+        }
+        const domain = prompt('Domínio regulatório (ex.: Trabalhista, Fiscal, ANM, ANP):', '');
+        if (!domain) return;
+        const code = prompt('Código/lei/norma (ex.: Lei XYZ, NPT, XPTO):', '') || '';
+        const name = prompt('Nome curto da norma ou obrigação:', code || '');
+        if (!name) return;
+        const entity = prompt('Órgão regulador / entidade:', '') || '';
+        const summary = prompt('Resumo da obrigação e impacto operacional:', '') || '';
+        const risk = prompt('Criticidade (low, medium, high, critical):', 'medium') || 'medium';
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${snapshot.id}/regulatory-items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    regulatory_domain: domain,
+                    regulatory_code: code,
+                    regulatory_name: name,
+                    regulator_entity: entity,
+                    requirement_summary: summary,
+                    risk_level: risk
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao adicionar item regulatório.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao adicionar item regulatório.');
+        }
+    }
+
+    async function editRegulatoryItem(sipocId, regulatoryItemId) {
+        const item = (state.sipoc?.current_snapshot?.regulatory_items || []).find((entry) => Number(entry.id) === Number(regulatoryItemId));
+        if (!item) return;
+        const domain = prompt('Domínio regulatório:', item.regulatory_domain || '');
+        if (domain === null) return;
+        const code = prompt('Código/lei/norma:', item.regulatory_code || '') || '';
+        const name = prompt('Nome curto da norma ou obrigação:', item.regulatory_name || '');
+        if (!name) return;
+        const entity = prompt('Órgão regulador / entidade:', item.regulator_entity || '') || '';
+        const summary = prompt('Resumo da obrigação e impacto operacional:', item.requirement_summary || '') || '';
+        const risk = prompt('Criticidade (low, medium, high, critical):', item.risk_level || 'medium') || 'medium';
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${sipocId}/regulatory-items/${regulatoryItemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    regulatory_domain: domain,
+                    regulatory_code: code,
+                    regulatory_name: name,
+                    regulator_entity: entity,
+                    requirement_summary: summary,
+                    risk_level: risk
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao atualizar item regulatório.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao atualizar item regulatório.');
+        }
+    }
+
+    async function deleteRegulatoryItem(sipocId, regulatoryItemId) {
+        if (!confirm('Deseja remover este item regulatório?')) return;
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${sipocId}/regulatory-items/${regulatoryItemId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao remover item regulatório.');
+            await fetchSipoc();
+            renderSipoc();
+        } catch (error) {
+            alert(error.message || 'Erro ao remover item regulatório.');
+        }
+    }
+
+    async function publishSipoc() {
+        const snapshot = state.sipoc?.current_snapshot;
+        if (!snapshot) {
+            alert('Crie um rascunho SIPOC antes de publicar.');
+            return;
+        }
+        await saveSipocMeta();
+        try {
+            const res = await fetch(`/api/processes/${processId}/sipoc/${snapshot.id}/publish`, { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Falha ao publicar SIPOC.');
+            await fetchSipoc();
+            renderSipoc();
+            alert('SIPOC publicado com sucesso.');
+        } catch (error) {
+            alert(error.message || 'Erro ao publicar SIPOC.');
+        }
+    }
+
+    function findSipocItemById(itemId) {
+        const items = state.sipoc?.current_snapshot?.items || {};
+        for (const lane of Object.keys(items)) {
+            const found = (items[lane] || []).find((entry) => Number(entry.id) === Number(itemId));
+            if (found) return found;
+        }
+        return null;
     }
 
     function renderFlow() {
@@ -2990,6 +3441,182 @@
         padding: 2px 6px;
         border-radius: 4px;
         text-transform: uppercase;
+    }
+
+    .sipoc-empty-state {
+        border: 1px dashed var(--border);
+        border-radius: 18px;
+        padding: 1.5rem;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    .sipoc-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sipoc-meta-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-secondary);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sipoc-meta-card label,
+    .sipoc-lane-head small,
+    .sipoc-regulatory-table th,
+    .sipoc-support-card label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-tertiary);
+    }
+
+    .sipoc-lanes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sipoc-lane {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        min-height: 420px;
+        overflow: hidden;
+    }
+
+    .sipoc-lane-head {
+        padding: 0.95rem 1rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.96));
+    }
+
+    .sipoc-lane-head strong {
+        display: block;
+        color: var(--primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .sipoc-lane-list {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        flex: 1;
+    }
+
+    .sipoc-item-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        padding: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sipoc-item-card strong {
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+
+    .sipoc-item-card p {
+        margin: 0;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .sipoc-item-card__actions,
+    .sipoc-lane-create__actions,
+    .sipoc-support-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .sipoc-badge-critical {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #fee2e2;
+        color: #dc2626;
+        font-size: 0.72rem;
+        font-weight: 700;
+        width: fit-content;
+    }
+
+    .sipoc-lane-create {
+        padding: 0 1rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sipoc-support-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 1rem;
+    }
+
+    .sipoc-support-card {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface-secondary);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .sipoc-support-card h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--text-primary);
+    }
+
+    .sipoc-regulatory-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .sipoc-regulatory-table th,
+    .sipoc-regulatory-table td {
+        border-bottom: 1px solid var(--border);
+        padding: 0.6rem 0.4rem;
+        vertical-align: top;
+        text-align: left;
+        font-size: 0.8rem;
+    }
+
+    .sipoc-inline-muted {
+        color: var(--text-tertiary);
+        font-size: 0.78rem;
+    }
+
+    @media (max-width: 1200px) {
+        .sipoc-lanes-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sipoc-meta-grid,
+        .sipoc-support-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
 </style>

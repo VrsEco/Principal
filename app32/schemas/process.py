@@ -1,7 +1,7 @@
 from marshmallow import fields, pre_load
 from . import ma
 from marshmallow import fields, EXCLUDE
-from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceExecution, ProcessActivityExecutionContract
+from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceExecution, ProcessActivityExecutionContract
 
 class ProcessStepSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -39,6 +39,42 @@ class ProcessBpmnDiagramSchema(ma.SQLAlchemyAutoSchema):
     updated_at = fields.String(dump_only=True)
     published_at = fields.String(dump_only=True)
     metadata_json = fields.Dict(allow_none=True)
+
+
+class ProcessSipocItemSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProcessSipocItem
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+
+
+class ProcessSipocRegulatoryItemSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProcessSipocRegulatoryItem
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+
+
+class ProcessSipocSnapshotSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ProcessSipocSnapshot
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+    published_at = fields.String(dump_only=True)
+    items = fields.List(fields.Nested(ProcessSipocItemSchema), dump_only=True)
+    regulatory_items = fields.List(fields.Nested(ProcessSipocRegulatoryItemSchema), dump_only=True)
 
 class ProcessSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -210,6 +246,12 @@ process_routine_schema = ProcessRoutineSchema()
 process_routines_schema = ProcessRoutineSchema(many=True)
 process_bpmn_diagram_schema = ProcessBpmnDiagramSchema()
 process_bpmn_diagrams_schema = ProcessBpmnDiagramSchema(many=True)
+process_sipoc_snapshot_schema = ProcessSipocSnapshotSchema()
+process_sipoc_snapshots_schema = ProcessSipocSnapshotSchema(many=True)
+process_sipoc_item_schema = ProcessSipocItemSchema()
+process_sipoc_items_schema = ProcessSipocItemSchema(many=True)
+process_sipoc_regulatory_item_schema = ProcessSipocRegulatoryItemSchema()
+process_sipoc_regulatory_items_schema = ProcessSipocRegulatoryItemSchema(many=True)
 process_step_schema = ProcessStepSchema()
 process_steps_schema = ProcessStepSchema(many=True)
 process_instance_schema = ProcessInstanceSchema()

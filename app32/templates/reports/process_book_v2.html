@@ -229,6 +229,101 @@
       gap: 12px;
     }
 
+    .sipoc-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .sipoc-lanes-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .sipoc-lane-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      overflow: hidden;
+    }
+
+    .sipoc-lane-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(239, 246, 255, 0.9);
+    }
+
+    .sipoc-lane-head strong {
+      display: block;
+      color: var(--brand);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .sipoc-lane-head span {
+      display: block;
+      font-size: 10px;
+      color: var(--muted-2);
+      line-height: 1.4;
+    }
+
+    .sipoc-item-list {
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .sipoc-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      padding: 8px 10px;
+    }
+
+    .sipoc-item-title {
+      font-size: 11px;
+      font-weight: 800;
+      margin-bottom: 4px;
+      line-height: 1.35;
+    }
+
+    .sipoc-item-text {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .sipoc-support-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 12px;
+    }
+
+    .sipoc-regulatory-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .sipoc-regulatory-table th,
+    .sipoc-regulatory-table td {
+      border: 1px solid var(--border);
+      padding: 7px 6px;
+      font-size: 9px;
+      vertical-align: top;
+      line-height: 1.4;
+    }
+
+    .sipoc-regulatory-table th {
+      background: #fffbeb;
+      color: var(--warning);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
     .mini-list {
       display: grid;
       gap: 8px;
@@ -816,6 +911,120 @@
         </div>
       </div>
     </section>
+
+    {% if sipoc %}
+    <section class="page section-page">
+      <div class="page-inner">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>SIPOC</h2>
+            <p>Camada executiva do processo, posicionada antes do fluxo detalhado.</p>
+          </div>
+          <div class="section-badge">Versão {{ sipoc.version }} · {{ sipoc.status }}</div>
+        </div>
+
+        <div class="sipoc-summary-grid">
+          <div class="detail-card"><span class="detail-label">Objetivo</span><div class="detail-value">{{ sipoc.objective or 'Não informado' }}</div></div>
+          <div class="detail-card"><span class="detail-label">Início</span><div class="detail-value">{{ sipoc.start_boundary or 'Não informado' }}</div></div>
+          <div class="detail-card"><span class="detail-label">Fim</span><div class="detail-value">{{ sipoc.end_boundary or 'Não informado' }}</div></div>
+          <div class="detail-card"><span class="detail-label">Evento disparador</span><div class="detail-value">{{ sipoc.trigger_event or 'Não informado' }}</div></div>
+        </div>
+
+        <div class="sipoc-lanes-grid">
+          {% for lane_key, lane_title, lane_help in [
+            ('supplier', 'Suppliers · Fornecedores', 'Quem fornece insumos, dados ou aprovações'),
+            ('input', 'Inputs · Entradas', 'Dados, documentos e parâmetros indispensáveis'),
+            ('process', 'Process · Macroetapas', 'Macroetapas que antecedem o BPMN'),
+            ('output', 'Outputs · Saídas', 'Resultados tangíveis do processo'),
+            ('customer', 'Customers · Clientes', 'Quem recebe ou depende das saídas')
+          ] %}
+          <div class="sipoc-lane-card">
+            <div class="sipoc-lane-head">
+              <strong>{{ lane_title }}</strong>
+              <span>{{ lane_help }}</span>
+            </div>
+            <div class="sipoc-item-list">
+              {% if sipoc.items and sipoc.items.get(lane_key) %}
+                {% for item in sipoc.items.get(lane_key) %}
+                <div class="sipoc-item">
+                  <div class="sipoc-item-title">{{ item.title }}</div>
+                  <div class="sipoc-item-text">{{ item.description or 'Sem descrição complementar.' }}</div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="sipoc-item-text">Nenhum item cadastrado.</div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="sipoc-support-grid">
+          <div class="panel">
+            <h2 class="panel-title">Requisitos regulatórios aplicáveis</h2>
+            {% if sipoc.regulatory_items %}
+            <table class="sipoc-regulatory-table">
+              <thead>
+                <tr>
+                  <th>Domínio</th>
+                  <th>Norma / Regra</th>
+                  <th>Órgão</th>
+                  <th>Escopo</th>
+                  <th>Criticidade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in sipoc.regulatory_items %}
+                <tr>
+                  <td>{{ item.regulatory_domain }}</td>
+                  <td>
+                    {% if item.regulatory_code %}<strong>{{ item.regulatory_code }}</strong><br>{% endif %}
+                    {{ item.regulatory_name }}
+                    {% if item.requirement_summary %}<div style="margin-top:4px; color: var(--muted);">{{ item.requirement_summary }}</div>{% endif %}
+                  </td>
+                  <td>{{ item.regulator_entity or '-' }}</td>
+                  <td>{{ 'Macroetapa vinculada' if item.sipoc_item_id else 'Processo' }}</td>
+                  <td>{{ item.risk_level }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state" style="padding:18px 12px; font-size:11px;">Nenhum requisito regulatório registrado.</div>
+            {% endif %}
+          </div>
+
+          <div class="panel">
+            <h2 class="panel-title">Complementos executivos</h2>
+            <div class="mini-list">
+              <div class="mini-item">
+                <div class="mini-item-title">Requisitos do cliente</div>
+                <div class="mini-item-text">{{ sipoc.customer_requirements or 'Não informado.' }}</div>
+              </div>
+              <div class="mini-item">
+                <div class="mini-item-title">Medidas / indicadores</div>
+                <div class="mini-item-text">{{ sipoc.measures_notes or 'Não informado.' }}</div>
+              </div>
+              <div class="mini-item">
+                <div class="mini-item-title">Restrições</div>
+                <div class="mini-item-text">{{ sipoc.constraints_notes or 'Não informado.' }}</div>
+              </div>
+              <div class="mini-item">
+                <div class="mini-item-title">Riscos</div>
+                <div class="mini-item-text">{{ sipoc.risks_notes or 'Não informado.' }}</div>
+              </div>
+              {% if sipoc.notes %}
+              <div class="mini-item">
+                <div class="mini-item-title">Observações</div>
+                <div class="mini-item-text">{{ sipoc.notes }}</div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% endif %}
 
     <section class="page section-flow">
       <div class="page-inner">

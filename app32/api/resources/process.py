@@ -13,6 +13,9 @@ from schemas.process import (
     process_area_schema, process_areas_schema,
     macro_process_schema, macro_processes_schema,
     process_schema, processes_schema,
+    process_sipoc_snapshot_schema,
+    process_sipoc_item_schema,
+    process_sipoc_regulatory_item_schema,
     process_routine_schema, process_routines_schema,
     process_step_schema, process_steps_schema,
     process_instance_schema, process_instances_schema,
@@ -25,6 +28,9 @@ from models import (
     MacroProcess,
     Process,
     ProcessBpmnDiagram,
+    ProcessSipocSnapshot,
+    ProcessSipocItem,
+    ProcessSipocRegulatoryItem,
     ProcessRoutine,
     ProcessStep,
     ProcessInstance,
@@ -86,6 +92,19 @@ from services.process_execution_mode_service import (
 )
 from services.process_ai_modeler_assistant_service import ProcessAIModelerAssistantService
 from services.process_flow_copilot_service import build_process_flow_copilot_analysis
+from services.process_sipoc_service import (
+    archive_sipoc_snapshot,
+    create_regulatory_item,
+    create_sipoc_draft,
+    create_sipoc_item,
+    delete_regulatory_item,
+    delete_sipoc_item,
+    get_process_sipoc_bundle,
+    publish_sipoc_snapshot,
+    update_regulatory_item,
+    update_sipoc_item,
+    update_sipoc_snapshot,
+)
 from services.process_ai_runtime_service import (
     execute_ai_contract,
     should_auto_run_ai_execution,
@@ -2037,6 +2056,249 @@ class ProcessBpmnAiAssistantResource(Resource):
                 process_id,
                 getattr(process, 'company_id', None),
             )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocSnapshotResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            return get_process_sipoc_bundle(process_id=process.id, company_id=process.company_id), 200
+        except ValueError as exc:
+            return {"error": str(exc)}, 404
+        except Exception:
+            current_app.logger.exception("Erro ao carregar SIPOC process_id=%s", process_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def post(self, process_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = create_sipoc_draft(
+                process_id=process.id,
+                company_id=process.company_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 201
+        except ValueError as exc:
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar rascunho SIPOC process_id=%s", process_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def put(self, process_id, sipoc_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = update_sipoc_snapshot(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                data=data,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar SIPOC process_id=%s sipoc_id=%s", process_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocItemListResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, process_id, sipoc_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = create_sipoc_item(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                data=data,
+            )
+            return payload, 201
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar item SIPOC process_id=%s sipoc_id=%s", process_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocItemResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, process_id, sipoc_id, item_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = update_sipoc_item(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                item_id=item_id,
+                data=data,
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar item SIPOC process_id=%s sipoc_id=%s item_id=%s", process_id, sipoc_id, item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, process_id, sipoc_id, item_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            delete_sipoc_item(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                item_id=item_id,
+            )
+            return {"message": "Item SIPOC removido com sucesso."}, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao remover item SIPOC process_id=%s sipoc_id=%s item_id=%s", process_id, sipoc_id, item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocRegulatoryItemListResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, process_id, sipoc_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = create_regulatory_item(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                data=data,
+            )
+            return payload, 201
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar item regulatório SIPOC process_id=%s sipoc_id=%s", process_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocRegulatoryItemResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, process_id, sipoc_id, regulatory_item_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = update_regulatory_item(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                regulatory_item_id=regulatory_item_id,
+                data=data,
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar item regulatório SIPOC process_id=%s sipoc_id=%s regulatory_item_id=%s", process_id, sipoc_id, regulatory_item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, process_id, sipoc_id, regulatory_item_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            delete_regulatory_item(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                regulatory_item_id=regulatory_item_id,
+            )
+            return {"message": "Item regulatório removido com sucesso."}, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao remover item regulatório SIPOC process_id=%s sipoc_id=%s regulatory_item_id=%s", process_id, sipoc_id, regulatory_item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocPublishResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, process_id, sipoc_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = publish_sipoc_snapshot(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao publicar SIPOC process_id=%s sipoc_id=%s", process_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessSipocArchiveResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, process_id, sipoc_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = archive_sipoc_snapshot(
+                process_id=process.id,
+                company_id=process.company_id,
+                sipoc_id=sipoc_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao arquivar SIPOC process_id=%s sipoc_id=%s", process_id, sipoc_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 

@@ -22,7 +22,8 @@ from models import (
     RoutineCollaborator,
 )
 from services.process_bpmn_service import sanitize_svg_snapshot
-from utils.indicator_filters import build_indicator_process_filter
+from services.process_sipoc_service import build_book_sipoc_context
+from utils.indicator_filters import PROCESS_SOURCE_MODULES, build_indicator_process_filter
 
 
 STRUCTURING_LABELS = {
@@ -77,6 +78,7 @@ class ProcessBookContext:
     company: Company
     generated_at: str
     first_page: dict[str, Any]
+    sipoc: dict[str, Any] | None
     pop_activities: list[dict[str, Any]]
     routines: list[dict[str, Any]]
     indicators: list[dict[str, Any]]
@@ -87,6 +89,7 @@ class ProcessBookContext:
             "company": self.company,
             "generated_at": self.generated_at,
             "first_page": self.first_page,
+            "sipoc": self.sipoc,
             "pop_activities": self.pop_activities,
             "routines": self.routines,
             "indicators": self.indicators,
@@ -112,6 +115,7 @@ def build_process_book_context(process_id: int, company_id: int, request_root: s
     pop_activities = _load_pop_activities(process_id=process.id, company_id=company_id, root_url=root_url)
     routines = _load_routines(process_id=process.id, company_id=company_id)
     indicators = _load_indicators(process_id=process.id, company_id=company_id)
+    sipoc = build_book_sipoc_context(process_id=process.id, company_id=company_id)
 
     context = ProcessBookContext(
         process=process,
@@ -126,6 +130,7 @@ def build_process_book_context(process_id: int, company_id: int, request_root: s
             routine_count=len(routines),
             indicator_count=len(indicators),
         ),
+        sipoc=sipoc,
         pop_activities=pop_activities,
         routines=routines,
         indicators=indicators,
@@ -331,7 +336,7 @@ def _load_indicators(*, process_id: int, company_id: int) -> list[dict[str, Any]
     indicators = (
         Indicator.query.options(joinedload(Indicator.group))
         .filter(Indicator.company_id == company_id)
-        .filter(build_indicator_process_filter(process_id))
+        .filter(_build_indicator_process_filter(process_id))
         .order_by(Indicator.code.asc(), Indicator.id.asc())
         .all()
     )
@@ -373,6 +378,18 @@ def _load_indicators(*, process_id: int, company_id: int) -> list[dict[str, Any]
         )
 
     return payload
+
+
+def _build_indicator_process_filter(process_id: int):
+    if hasattr(Indicator, "source_module") and hasattr(Indicator, "source_id"):
+        return or_(
+            Indicator.process_id == process_id,
+            and_(
+                Indicator.source_module.in_(PROCESS_SOURCE_MODULES),
+                Indicator.source_id == process_id,
+            ),
+        )
+    return build_indicator_process_filter(process_id)
 
 
 def _resolve_asset_url(path: str | None, *, root_url: str) -> str | None:
