@@ -162,6 +162,18 @@ class ContractService:
             return None
 
     @staticmethod
+    def _normalize_metadata_dict(value: object) -> dict:
+        if isinstance(value, dict):
+            return dict(value)
+        return {}
+
+    @staticmethod
+    def _normalize_metadata_dict_list(value: object) -> list[dict]:
+        if not isinstance(value, list):
+            return []
+        return [dict(item) for item in value if isinstance(item, dict)]
+
+    @staticmethod
     def _serialize_date(value: Optional[date]) -> Optional[str]:
         return value.isoformat() if value else None
 
@@ -2738,16 +2750,17 @@ class ContractService:
 
     @staticmethod
     def _build_native_billing_item_snapshot(contract_item: ContractItem, reference_date: Optional[date] = None) -> dict:
-        item_metadata = dict(getattr(contract_item, "metadata_json", None) or {})
-        allocation = dict(item_metadata.get("allocation") or {})
+        item_metadata = ContractService._normalize_metadata_dict(getattr(contract_item, "metadata_json", None))
+        allocation = ContractService._normalize_metadata_dict(item_metadata.get("allocation"))
+        raw_retention_details = ContractService._normalize_metadata_dict_list(item_metadata.get("retention_details"))
         retention_details = []
         gross_amount = ContractService._normalize_decimal(
             getattr(contract_item, "total_price", None) if getattr(contract_item, "total_price", None) is not None else getattr(contract_item, "amount", 0)
         )
         contract = getattr(contract_item, "contract", None)
         catalog_item = getattr(contract_item, "contract_catalog_item", None)
-        for detail in list(item_metadata.get("retention_details") or []):
-            normalized = dict(detail or {})
+        for detail in raw_retention_details:
+            normalized = dict(detail)
             if (
                 (ContractService._normalize_text(normalized.get("kind")) or "").lower() == "iss"
                 and (ContractService._normalize_text(normalized.get("retention_value_mode")) or "percent").lower() == "percent"

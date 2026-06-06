@@ -122,6 +122,28 @@ def test_build_native_billing_item_snapshot_prefers_issuer_iss_rate_over_item_ra
     assert snapshot["retention_details"][0]["retention_value"] == 2.73
 
 
+def test_build_native_billing_item_snapshot_ignores_malformed_retention_metadata():
+    item = ContractItem(
+        id=89,
+        total_price=Decimal("250.00"),
+        quantity=Decimal("1.00"),
+        unit_price=Decimal("250.00"),
+        description="Serviço com metadado legado",
+        metadata_json={
+            "allocation": "invalid",
+            "retention_details": "invalid",
+        },
+    )
+
+    snapshot = ContractService._build_native_billing_item_snapshot(item, reference_date=date(2026, 6, 5))
+
+    assert snapshot["gross_amount"] == 250.0
+    assert snapshot["net_amount"] == 250.0
+    assert snapshot["retention_amount"] == 0.0
+    assert snapshot["allocation"] == {}
+    assert snapshot["retention_details"] == []
+
+
 def test_contract_clause_note_and_event_to_dict_are_tenant_safe():
     clause = ContractClause(
         id=2,
