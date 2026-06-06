@@ -17,7 +17,11 @@ const state = {
     processes: [],
     employees: [],
     companyId: normalizedCompanyId,
-    viewType: localStorage.getItem('arch_view_type') || 'classic'
+    viewType: localStorage.getItem('arch_view_type') || 'classic',
+    macroSipoc: {
+        selectedMacroId: null,
+        bundles: {}
+    }
 };
 
 const FORM_ALLOWED_FIELDS = {
@@ -77,7 +81,8 @@ async function initArchitecture() {
     await refreshData();
     renderMap();
     renderTables();
-    populateSelects();
+    await populateSelects();
+    await initializeMacroSipoc();
     updatePrintDate();
 }
 
@@ -141,6 +146,7 @@ function switchTab(tabId) {
     });
 
     if (tabId === 'visual') renderMap();
+    if (tabId === 'macro-sipoc') renderMacroSipoc();
 
     // Smooth scroll to top of panel
     const tabsEl = document.querySelector('.arch-tabs');
@@ -335,6 +341,205 @@ function renderTables() {
     }
 }
 
+async function initializeMacroSipoc() {
+    const selector = document.getElementById('macroSipocSelector');
+    if (!selector) return;
+    if (!state.macros.length) {
+        state.macroSipoc.selectedMacroId = null;
+        renderMacroSipoc();
+        return;
+    }
+    if (!state.macroSipoc.selectedMacroId) {
+        state.macroSipoc.selectedMacroId = String(state.macros[0].id);
+    }
+    selector.value = String(state.macroSipoc.selectedMacroId);
+    await fetchMacroSipoc(state.macroSipoc.selectedMacroId);
+    renderMacroSipoc();
+}
+
+async function fetchMacroSipoc(macroId) {
+    if (!macroId) return null;
+    const res = await fetch(`/api/macro-processes/${macroId}/sipoc`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao carregar SIPOC do macroprocesso.');
+    state.macroSipoc.bundles[String(macroId)] = data;
+    return data;
+}
+
+function getCurrentMacroSipocBundle() {
+    const macroId = String(state.macroSipoc.selectedMacroId || '');
+    return state.macroSipoc.bundles[macroId] || null;
+}
+
+function getCurrentMacroSipocSnapshot() {
+    return getCurrentMacroSipocBundle()?.current_snapshot || null;
+}
+
+function renderMacroSipoc() {
+    const workspace = document.getElementById('macroSipocWorkspace');
+    if (!workspace) return;
+
+    if (!state.macros.length) {
+        workspace.innerHTML = `<div class="sipoc-empty-state">Cadastre ao menos um macroprocesso para começar o SIPOC executivo da cadeia.</div>`;
+        return;
+    }
+
+    const macroId = String(state.macroSipoc.selectedMacroId || '');
+    const macro = state.macros.find(item => String(item.id) === macroId);
+    const bundle = getCurrentMacroSipocBundle();
+    const snapshot = bundle?.current_snapshot || null;
+
+    if (!macro) {
+        workspace.innerHTML = `<div class="sipoc-empty-state">Selecione um macroprocesso para visualizar ou modelar o SIPOC.</div>`;
+        return;
+    }
+
+    if (!snapshot) {
+        workspace.innerHTML = `
+            <div class="sipoc-empty-state">
+                <strong>${escapeHtml(macro.name)}</strong><br>
+                Este macroprocesso ainda não possui SIPOC. Crie um rascunho para iniciar a modelagem executiva.
+            </div>
+        `;
+        return;
+    }
+
+    const laneNames = {
+        supplier: 'Suppliers · Fornecedores',
+        input: 'Inputs · Entradas',
+        process: 'Process · Processos filhos',
+        output: 'Outputs · Saídas',
+        customer: 'Customers · Clientes'
+    };
+    const laneHelp = {
+        supplier: 'Quem fornece insumos, aprovações, dados ou requisitos para a cadeia começar.',
+        input: 'Entradas executivas, documentos, parâmetros e demandas que abastecem o macroprocesso.',
+        process: 'Entre 3 e 7 processos filhos ou grandes etapas da cadeia. Aqui o SIPOC enquadra a arquitetura ponta a ponta.',
+        output: 'Resultados, entregas e artefatos gerados pela cadeia do macroprocesso.',
+        customer: 'Quem recebe, depende ou consome as saídas geradas pela cadeia.'
+    };
+
+    workspace.innerHTML = `
+        <div class="sipoc-meta-grid">
+            ${renderSipocMetaCard('Status', `${snapshot.status || 'draft'} · v${snapshot.version || 1}`, false)}
+            ${renderSipocMetaCard('Objetivo', snapshot.objective || '', true, 'Descreva o objetivo executivo do macroprocesso...', 'macroSipocObjective')}
+            ${renderSipocMetaCard('Início', snapshot.start_boundary || '', true, 'Marco inicial da cadeia...', 'macroSipocStart')}
+            ${renderSipocMetaCard('Fim', snapshot.end_boundary || '', true, 'Marco final da cadeia...', 'macroSipocEnd')}
+        </div>
+        <div class="sipoc-meta-grid">
+            ${renderSipocMetaCard('Evento disparador', snapshot.trigger_event || '', true, 'Gatilho de início do macroprocesso...', 'macroSipocTrigger')}
+            ${renderSipocMetaCard('Requisitos do cliente', snapshot.customer_requirements || '', true, 'Critérios e expectativas principais...', 'macroSipocCustomerReq')}
+            ${renderSipocMetaCard('Restrições', snapshot.constraints_notes || '', true, 'Restrições, políticas e limites...', 'macroSipocConstraints')}
+            ${renderSipocMetaCard('Medidas / indicadores', snapshot.measures_notes || '', true, 'KPIs e medidas executivas...', 'macroSipocMeasures')}
+        </div>
+        <div class="sipoc-lanes-grid">
+            ${Object.keys(laneNames).map(lane => renderSipocLane(snapshot, lane, laneNames[lane], laneHelp[lane], true)).join('')}
+        </div>
+        <div class="sipoc-support-grid">
+            <div class="sipoc-support-card">
+                <label>Requisitos regulatórios aplicáveis</label>
+                <h3>Compliance do macroprocesso</h3>
+                <div class="sipoc-support-actions">
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="createMacroSipocRegulatoryItem()">Novo requisito regulatório</button>
+                </div>
+                ${renderSipocRegulatoryTable(snapshot, true)}
+            </div>
+            <div class="sipoc-support-card">
+                <label>Complementos executivos</label>
+                <h3>Observações e riscos</h3>
+                <textarea id="macroSipocRisks" class="form-control" rows="5" placeholder="Riscos executivos, handoffs sensíveis e pontos de atenção...">${escapeHtml(snapshot.risks_notes || '')}</textarea>
+                <textarea id="macroSipocNotes" class="form-control" rows="5" placeholder="Observações complementares do macroprocesso...">${escapeHtml(snapshot.notes || '')}</textarea>
+            </div>
+        </div>
+        ${snapshot.status === 'draft' && snapshot.publication_errors?.length ? `
+            <div class="alert alert-warning" style="margin-top: 1rem;">
+                <strong>Pendências para publicação:</strong>
+                <ul style="margin: 0.5rem 0 0 1rem;">
+                    ${snapshot.publication_errors.map(error => `<li>${escapeHtml(error)}</li>`).join('')}
+                </ul>
+            </div>
+        ` : ''}
+    `;
+}
+
+function renderSipocMetaCard(label, value, editable = false, placeholder = '', fieldId = '') {
+    if (!editable) {
+        return `<div class="sipoc-meta-card"><label>${escapeHtml(label)}</label><div>${escapeHtml(value || 'Não informado')}</div></div>`;
+    }
+    return `
+        <div class="sipoc-meta-card">
+            <label>${escapeHtml(label)}</label>
+            <textarea id="${fieldId}" class="form-control" rows="3" placeholder="${escapeHtml(placeholder)}">${escapeHtml(value || '')}</textarea>
+        </div>
+    `;
+}
+
+function renderSipocLane(snapshot, lane, title, help, isMacro = false) {
+    const items = snapshot.items?.[lane] || [];
+    return `
+        <div class="sipoc-lane">
+            <div class="sipoc-lane-head">
+                <strong>${escapeHtml(title)}</strong>
+                <small>${escapeHtml(help)}</small>
+            </div>
+            <div class="sipoc-lane-list">
+                ${items.length ? items.map(item => `
+                    <div class="sipoc-item-card">
+                        ${item.is_critical ? '<span class="sipoc-badge-critical">Crítico</span>' : ''}
+                        <strong>${escapeHtml(item.title)}</strong>
+                        <p>${escapeHtml(item.description || 'Sem descrição complementar.')}</p>
+                        <div class="sipoc-item-card__actions">
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="${isMacro ? `editMacroSipocItem(${snapshot.id}, ${item.id})` : ''}">Editar</button>
+                            <button class="btn btn-secondary btn-sm" type="button" onclick="${isMacro ? `deleteMacroSipocItem(${snapshot.id}, ${item.id})` : ''}">Remover</button>
+                        </div>
+                    </div>
+                `).join('') : '<div class="sipoc-inline-muted">Nenhum item cadastrado.</div>'}
+            </div>
+            <div class="sipoc-lane-create">
+                <button class="btn btn-primary btn-sm" type="button" onclick="${isMacro ? `createMacroSipocItem('${lane}')` : ''}">Adicionar item</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderSipocRegulatoryTable(snapshot, isMacro = false) {
+    const items = snapshot.regulatory_items || [];
+    if (!items.length) {
+        return `<div class="sipoc-inline-muted">Nenhum requisito regulatório registrado.</div>`;
+    }
+    return `
+        <table class="sipoc-regulatory-table">
+            <thead>
+                <tr>
+                    <th>Domínio</th>
+                    <th>Norma / Regra</th>
+                    <th>Órgão</th>
+                    <th>Escopo</th>
+                    <th>Criticidade</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${items.map(item => `
+                    <tr>
+                        <td>${escapeHtml(item.regulatory_domain || '-')}</td>
+                        <td><strong>${escapeHtml(item.regulatory_code || '')}</strong>${item.regulatory_code ? '<br>' : ''}${escapeHtml(item.regulatory_name || '-')}</td>
+                        <td>${escapeHtml(item.regulator_entity || '-')}</td>
+                        <td>${item.sipoc_item_id ? 'Processo filho vinculado' : 'Macroprocesso'}</td>
+                        <td>${escapeHtml(item.risk_level || 'medium')}</td>
+                        <td>
+                            <div class="sipoc-item-card__actions">
+                                <button class="btn btn-secondary btn-sm" type="button" onclick="${isMacro ? `editMacroSipocRegulatoryItem(${snapshot.id}, ${item.id})` : ''}">Editar</button>
+                                <button class="btn btn-secondary btn-sm" type="button" onclick="${isMacro ? `deleteMacroSipocRegulatoryItem(${snapshot.id}, ${item.id})` : ''}">Remover</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
 async function populateSelects() {
     const sMacroArea = document.getElementById('selectMacroArea');
     const sMacroOwner = document.getElementById('selectMacroOwner');
@@ -349,6 +554,21 @@ async function populateSelects() {
     if (sProcessMacro) {
         sProcessMacro.innerHTML = '<option value="">Selecione o macro...</option>' +
             state.macros.map(m => `<option value="${m.id}">${m.code ? m.code + ' - ' : ''}${m.name}</option>`).join('');
+    }
+
+    const macroSipocSelector = document.getElementById('macroSipocSelector');
+    if (macroSipocSelector) {
+        const current = macroSipocSelector.value || state.macroSipoc.selectedMacroId || '';
+        macroSipocSelector.innerHTML = '<option value="">Selecione um macroprocesso...</option>' +
+            state.macros.map(m => `<option value="${m.id}">${m.code ? m.code + ' - ' : ''}${escapeHtml(m.name)}</option>`).join('');
+        if (current) macroSipocSelector.value = String(current);
+        macroSipocSelector.onchange = async (event) => {
+            state.macroSipoc.selectedMacroId = event.target.value || null;
+            if (state.macroSipoc.selectedMacroId) {
+                await fetchMacroSipoc(state.macroSipoc.selectedMacroId);
+            }
+            renderMacroSipoc();
+        };
     }
 
     if (sMacroOwner || sProcessResponsible) {
@@ -466,6 +686,245 @@ async function handleFormSubmit(e, endpoint) {
     } catch (e) {
         console.error(e);
         alert("Erro técnico: Não foi possível processar a requisição. Verifique o console ou a conexão.");
+    }
+}
+
+function getMacroSipocMetaPayload() {
+    return {
+        objective: document.getElementById('macroSipocObjective')?.value?.trim() || '',
+        start_boundary: document.getElementById('macroSipocStart')?.value?.trim() || '',
+        end_boundary: document.getElementById('macroSipocEnd')?.value?.trim() || '',
+        trigger_event: document.getElementById('macroSipocTrigger')?.value?.trim() || '',
+        customer_requirements: document.getElementById('macroSipocCustomerReq')?.value?.trim() || '',
+        constraints_notes: document.getElementById('macroSipocConstraints')?.value?.trim() || '',
+        measures_notes: document.getElementById('macroSipocMeasures')?.value?.trim() || '',
+        risks_notes: document.getElementById('macroSipocRisks')?.value?.trim() || '',
+        notes: document.getElementById('macroSipocNotes')?.value?.trim() || ''
+    };
+}
+
+async function createMacroSipocDraft() {
+    const macroId = state.macroSipoc.selectedMacroId;
+    if (!macroId) {
+        alert('Selecione um macroprocesso antes de criar o SIPOC.');
+        return;
+    }
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao criar rascunho SIPOC do macroprocesso.');
+        state.macroSipoc.bundles[String(macroId)] = {
+            ...(state.macroSipoc.bundles[String(macroId)] || {}),
+            current_snapshot: data,
+            draft_snapshot: data,
+            has_sipoc: true
+        };
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao criar SIPOC do macroprocesso.');
+    }
+}
+
+async function saveMacroSipocMeta() {
+    const macroId = state.macroSipoc.selectedMacroId;
+    const snapshot = getCurrentMacroSipocSnapshot();
+    if (!macroId || !snapshot) {
+        alert('Crie um rascunho SIPOC antes de salvar.');
+        return false;
+    }
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${snapshot.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(getMacroSipocMetaPayload())
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao salvar SIPOC do macroprocesso.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+        return true;
+    } catch (error) {
+        alert(error.message || 'Erro ao salvar SIPOC do macroprocesso.');
+        return false;
+    }
+}
+
+async function createMacroSipocItem(lane) {
+    const macroId = state.macroSipoc.selectedMacroId;
+    const snapshot = getCurrentMacroSipocSnapshot();
+    if (!macroId || !snapshot) {
+        alert('Crie um rascunho SIPOC antes de adicionar itens.');
+        return;
+    }
+    const title = prompt('Título do item SIPOC:', '');
+    if (!title) return;
+    const description = prompt('Descrição complementar do item:', '') || '';
+    const isCritical = confirm('Este item é crítico?');
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${snapshot.id}/items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lane, title, description, is_critical: isCritical })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao criar item SIPOC.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao criar item SIPOC.');
+    }
+}
+
+function findMacroSipocItemById(itemId) {
+    const items = getCurrentMacroSipocSnapshot()?.items || {};
+    for (const lane of Object.keys(items)) {
+        const found = (items[lane] || []).find(entry => Number(entry.id) === Number(itemId));
+        if (found) return found;
+    }
+    return null;
+}
+
+async function editMacroSipocItem(sipocId, itemId) {
+    const macroId = state.macroSipoc.selectedMacroId;
+    const item = findMacroSipocItemById(itemId);
+    if (!macroId || !item) return;
+    const title = prompt('Título do item SIPOC:', item.title || '');
+    if (!title) return;
+    const description = prompt('Descrição complementar do item:', item.description || '') || '';
+    const isCritical = confirm('Marcar item como crítico?\n\nOK = crítico | Cancelar = não crítico');
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${sipocId}/items/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description, lane: item.lane, order_index: item.order_index, is_critical: isCritical })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao atualizar item SIPOC.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao atualizar item SIPOC.');
+    }
+}
+
+async function deleteMacroSipocItem(sipocId, itemId) {
+    const macroId = state.macroSipoc.selectedMacroId;
+    if (!macroId || !confirm('Deseja remover este item SIPOC?')) return;
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${sipocId}/items/${itemId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao remover item SIPOC.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao remover item SIPOC.');
+    }
+}
+
+async function createMacroSipocRegulatoryItem() {
+    const macroId = state.macroSipoc.selectedMacroId;
+    const snapshot = getCurrentMacroSipocSnapshot();
+    if (!macroId || !snapshot) {
+        alert('Crie um rascunho SIPOC antes de adicionar requisitos regulatórios.');
+        return;
+    }
+    const domain = prompt('Domínio regulatório (ex.: Trabalhista, Fiscal, ANP, ANM):', '');
+    if (!domain) return;
+    const code = prompt('Código/lei/norma:', '') || '';
+    const name = prompt('Nome curto da norma ou obrigação:', code || '');
+    if (!name) return;
+    const entity = prompt('Órgão regulador / entidade:', '') || '';
+    const summary = prompt('Resumo da obrigação e impacto operacional:', '') || '';
+    const risk = prompt('Criticidade (low, medium, high, critical):', 'medium') || 'medium';
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${snapshot.id}/regulatory-items`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                regulatory_domain: domain,
+                regulatory_code: code,
+                regulatory_name: name,
+                regulator_entity: entity,
+                requirement_summary: summary,
+                risk_level: risk
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao adicionar requisito regulatório.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao adicionar requisito regulatório.');
+    }
+}
+
+async function editMacroSipocRegulatoryItem(sipocId, regulatoryItemId) {
+    const macroId = state.macroSipoc.selectedMacroId;
+    const item = (getCurrentMacroSipocSnapshot()?.regulatory_items || []).find(entry => Number(entry.id) === Number(regulatoryItemId));
+    if (!macroId || !item) return;
+    const domain = prompt('Domínio regulatório:', item.regulatory_domain || '');
+    if (domain === null || !domain) return;
+    const code = prompt('Código/lei/norma:', item.regulatory_code || '') || '';
+    const name = prompt('Nome curto da norma ou obrigação:', item.regulatory_name || '');
+    if (!name) return;
+    const entity = prompt('Órgão regulador / entidade:', item.regulator_entity || '') || '';
+    const summary = prompt('Resumo da obrigação e impacto operacional:', item.requirement_summary || '') || '';
+    const risk = prompt('Criticidade (low, medium, high, critical):', item.risk_level || 'medium') || 'medium';
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${sipocId}/regulatory-items/${regulatoryItemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                regulatory_domain: domain,
+                regulatory_code: code,
+                regulatory_name: name,
+                regulator_entity: entity,
+                requirement_summary: summary,
+                risk_level: risk
+            })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao atualizar requisito regulatório.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao atualizar requisito regulatório.');
+    }
+}
+
+async function deleteMacroSipocRegulatoryItem(sipocId, regulatoryItemId) {
+    const macroId = state.macroSipoc.selectedMacroId;
+    if (!macroId || !confirm('Deseja remover este requisito regulatório?')) return;
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${sipocId}/regulatory-items/${regulatoryItemId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao remover requisito regulatório.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+    } catch (error) {
+        alert(error.message || 'Erro ao remover requisito regulatório.');
+    }
+}
+
+async function publishMacroSipoc() {
+    const macroId = state.macroSipoc.selectedMacroId;
+    const snapshot = getCurrentMacroSipocSnapshot();
+    if (!macroId || !snapshot) {
+        alert('Crie um rascunho SIPOC antes de publicar.');
+        return;
+    }
+    const saved = await saveMacroSipocMeta();
+    if (!saved) return;
+    try {
+        const res = await fetch(`/api/macro-processes/${macroId}/sipoc/${snapshot.id}/publish`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Falha ao publicar SIPOC do macroprocesso.');
+        await fetchMacroSipoc(macroId);
+        renderMacroSipoc();
+        alert('SIPOC do macroprocesso publicado com sucesso.');
+    } catch (error) {
+        alert(error.message || 'Erro ao publicar SIPOC do macroprocesso.');
     }
 }
 

@@ -12,6 +12,9 @@ from werkzeug.utils import secure_filename
 from schemas.process import (
     process_area_schema, process_areas_schema,
     macro_process_schema, macro_processes_schema,
+    macro_process_sipoc_snapshot_schema,
+    macro_process_sipoc_item_schema,
+    macro_process_sipoc_regulatory_item_schema,
     process_schema, processes_schema,
     process_sipoc_snapshot_schema,
     process_sipoc_item_schema,
@@ -28,6 +31,9 @@ from models import (
     MacroProcess,
     Process,
     ProcessBpmnDiagram,
+    MacroProcessSipocSnapshot,
+    MacroProcessSipocItem,
+    MacroProcessSipocRegulatoryItem,
     ProcessSipocSnapshot,
     ProcessSipocItem,
     ProcessSipocRegulatoryItem,
@@ -104,6 +110,19 @@ from services.process_sipoc_service import (
     update_regulatory_item,
     update_sipoc_item,
     update_sipoc_snapshot,
+)
+from services.macro_process_sipoc_service import (
+    archive_sipoc_snapshot as archive_macro_process_sipoc_snapshot,
+    create_regulatory_item as create_macro_process_regulatory_item,
+    create_sipoc_draft as create_macro_process_sipoc_draft,
+    create_sipoc_item as create_macro_process_sipoc_item,
+    delete_regulatory_item as delete_macro_process_regulatory_item,
+    delete_sipoc_item as delete_macro_process_sipoc_item,
+    get_macro_process_sipoc_bundle,
+    publish_sipoc_snapshot as publish_macro_process_sipoc_snapshot,
+    update_regulatory_item as update_macro_process_regulatory_item,
+    update_sipoc_item as update_macro_process_sipoc_item,
+    update_sipoc_snapshot as update_macro_process_sipoc_snapshot,
 )
 from services.process_ai_runtime_service import (
     execute_ai_contract,
@@ -487,6 +506,21 @@ def _get_process_with_access(process_id: int, action: str = 'view', sync_session
         session['active_company_id'] = process.company_id
 
     return process
+
+
+def _get_macro_process_with_access(macro_id: int, action: str = 'view', sync_session: bool = False):
+    macro = MacroProcess.query.get_or_404(macro_id)
+
+    if not current_user.is_authenticated:
+        return None
+
+    if not has_permission(macro.company_id, 'processes', action):
+        return None
+
+    if sync_session:
+        session['active_company_id'] = macro.company_id
+
+    return macro
 
 
 def _dump_process_with_bpmn_flow(process: Process) -> dict:
@@ -2056,6 +2090,249 @@ class ProcessBpmnAiAssistantResource(Resource):
                 process_id,
                 getattr(process, 'company_id', None),
             )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocSnapshotResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, macro_id):
+        macro = _get_macro_process_with_access(macro_id, action='view', sync_session=True)
+        if not macro:
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            return get_macro_process_sipoc_bundle(macro_process_id=macro.id, company_id=macro.company_id), 200
+        except ValueError as exc:
+            return {"error": str(exc)}, 404
+        except Exception:
+            current_app.logger.exception("Erro ao carregar SIPOC do macroprocesso macro_id=%s", macro_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def post(self, macro_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = create_macro_process_sipoc_draft(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 201
+        except ValueError as exc:
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar rascunho SIPOC do macroprocesso macro_id=%s", macro_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def put(self, macro_id, sipoc_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = update_macro_process_sipoc_snapshot(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                data=data,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar SIPOC do macroprocesso macro_id=%s sipoc_id=%s", macro_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocItemListResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, macro_id, sipoc_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = create_macro_process_sipoc_item(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                data=data,
+            )
+            return payload, 201
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar item SIPOC do macroprocesso macro_id=%s sipoc_id=%s", macro_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocItemResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, macro_id, sipoc_id, item_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = update_macro_process_sipoc_item(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                item_id=item_id,
+                data=data,
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar item SIPOC do macroprocesso macro_id=%s sipoc_id=%s item_id=%s", macro_id, sipoc_id, item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, macro_id, sipoc_id, item_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            delete_macro_process_sipoc_item(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                item_id=item_id,
+            )
+            return {"message": "Item SIPOC removido com sucesso."}, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao remover item SIPOC do macroprocesso macro_id=%s sipoc_id=%s item_id=%s", macro_id, sipoc_id, item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocRegulatoryItemListResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, macro_id, sipoc_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = create_macro_process_regulatory_item(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                data=data,
+            )
+            return payload, 201
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar item regulatório do macroprocesso macro_id=%s sipoc_id=%s", macro_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocRegulatoryItemResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, macro_id, sipoc_id, regulatory_item_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            data = request.get_json(silent=True) or {}
+            payload = update_macro_process_regulatory_item(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                regulatory_item_id=regulatory_item_id,
+                data=data,
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar item regulatório do macroprocesso macro_id=%s sipoc_id=%s regulatory_item_id=%s", macro_id, sipoc_id, regulatory_item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, macro_id, sipoc_id, regulatory_item_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            delete_macro_process_regulatory_item(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                regulatory_item_id=regulatory_item_id,
+            )
+            return {"message": "Item regulatório removido com sucesso."}, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao remover item regulatório do macroprocesso macro_id=%s sipoc_id=%s regulatory_item_id=%s", macro_id, sipoc_id, regulatory_item_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocPublishResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, macro_id, sipoc_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = publish_macro_process_sipoc_snapshot(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao publicar SIPOC do macroprocesso macro_id=%s sipoc_id=%s", macro_id, sipoc_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class MacroProcessSipocArchiveResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, macro_id, sipoc_id):
+        macro = _get_macro_process_with_access(macro_id, action='edit', sync_session=True)
+        if not macro or not can_model_process(macro.company_id):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            payload = archive_macro_process_sipoc_snapshot(
+                macro_process_id=macro.id,
+                company_id=macro.company_id,
+                sipoc_id=sipoc_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return payload, 200
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao arquivar SIPOC do macroprocesso macro_id=%s sipoc_id=%s", macro_id, sipoc_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 

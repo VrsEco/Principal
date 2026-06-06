@@ -228,6 +228,14 @@
                         para enquadrar a cadeia ponta a ponta em nível executivo antes do detalhamento por processos.
                     </p>
                 </div>
+                <div class="process-section__actions macro-sipoc-toolbar">
+                    <select id="macroSipocSelector" class="form-control" style="min-width: 280px;">
+                        <option value="">Selecione um macroprocesso...</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="createMacroSipocDraft()">Criar rascunho</button>
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="saveMacroSipocMeta()">Salvar SIPOC</button>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="publishMacroSipoc()">Publicar SIPOC</button>
+                </div>
             </div>
 
             <div class="arch-info-block">
@@ -244,6 +252,8 @@
                     <p>No SIPOC do Processo, o bloco <strong>Process</strong> representa as <strong>atividades do processo</strong>, preparando BPMN, POP, controles e automação.</p>
                 </div>
             </div>
+
+            <div id="macroSipocWorkspace" class="macro-sipoc-workspace"></div>
         </div>
     </div>
 
@@ -358,6 +368,173 @@
         line-height: 1.55;
     }
 
+    .macro-sipoc-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .macro-sipoc-workspace {
+        margin-top: 1.25rem;
+    }
+
+    .sipoc-empty-state {
+        border: 1px dashed var(--border);
+        border-radius: 18px;
+        padding: 1.5rem;
+        background: var(--surface-secondary);
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    .sipoc-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+
+    .sipoc-meta-card,
+    .sipoc-support-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-secondary);
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .sipoc-meta-card label,
+    .sipoc-lane-head small,
+    .sipoc-regulatory-table th,
+    .sipoc-support-card label {
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-tertiary);
+    }
+
+    .sipoc-lanes-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .sipoc-lane {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface);
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
+        overflow: hidden;
+    }
+
+    .sipoc-lane-head {
+        padding: 0.95rem 1rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.96));
+    }
+
+    .sipoc-lane-head strong {
+        display: block;
+        color: var(--primary);
+        margin-bottom: 0.25rem;
+    }
+
+    .sipoc-lane-list {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        flex: 1;
+    }
+
+    .sipoc-item-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        padding: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sipoc-item-card strong {
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+
+    .sipoc-item-card p {
+        margin: 0;
+        font-size: 0.82rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .sipoc-item-card__actions,
+    .sipoc-lane-create__actions,
+    .sipoc-support-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .sipoc-badge-critical {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        background: #fee2e2;
+        color: #dc2626;
+        font-size: 0.72rem;
+        font-weight: 700;
+        width: fit-content;
+    }
+
+    .sipoc-lane-create {
+        padding: 0 1rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .sipoc-support-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 1rem;
+    }
+
+    .sipoc-support-card h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--text-primary);
+    }
+
+    .sipoc-regulatory-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .sipoc-regulatory-table th,
+    .sipoc-regulatory-table td {
+        border-bottom: 1px solid var(--border);
+        padding: 0.6rem 0.4rem;
+        vertical-align: top;
+        text-align: left;
+        font-size: 0.8rem;
+    }
+
+    .sipoc-inline-muted {
+        color: var(--text-tertiary);
+        font-size: 0.78rem;
+    }
+
     .card {
         border-radius: 16px;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
@@ -426,6 +603,19 @@
             grid-template-columns: 1fr;
             /* Stack vertically on medium/small screens */
         }
+
+        .arch-info-block {
+            grid-template-columns: 1fr;
+        }
+
+        .sipoc-lanes-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sipoc-meta-grid,
+        .sipoc-support-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .arch-form .form-row {
@@ -443,6 +633,15 @@
         .card.p-5 {
             padding: 1.5rem !important;
             /* Smaller padding on mobile */
+        }
+
+        .sipoc-lanes-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .macro-sipoc-toolbar {
+            flex-direction: column;
+            align-items: stretch;
         }
     }
 
@@ -871,5 +1070,5 @@
     }
 </style>
 
-<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260512-2') }}"></script>
+<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260606-3') }}"></script>
 {% endblock %}

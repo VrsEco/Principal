@@ -44,6 +44,45 @@ def test_process_map_template_places_macro_sipoc_after_macros():
 
     assert macros_idx < macro_sipoc_idx < processes_idx
     assert 'SIPOC de Macroprocesso' in content
+    assert 'macroSipocWorkspace' in content
+    assert 'macroSipocSelector' in content
+
+
+def test_process_map_template_uses_macro_sipoc_script_version_and_structure():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'templates',
+            'modules',
+            'processes',
+            'process_map_v2.html',
+        )
+    )
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert "filename='js/process_architecture.js', v='20260606-3'" in content
+    assert '.macro-sipoc-toolbar' in content
+
+
+def test_process_architecture_script_supports_macro_sipoc_workflow():
+    js_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'static',
+            'js',
+            'process_architecture.js',
+        )
+    )
+    with open(js_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'initializeMacroSipoc' in content
+    assert 'renderMacroSipoc' in content
+    assert '/api/macro-processes/${macroId}/sipoc' in content
+    assert 'Process · Processos filhos' in content
 
 
 def test_process_book_template_renders_sipoc_before_flow_section():

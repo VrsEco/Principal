@@ -1528,6 +1528,29 @@ Pendências para Book 3.0 completo:
 - incluir histórico formal de versões do processo/documento;
 - incluir seção de riscos, controles e evidências auditáveis.
 
+### 12.2 Book do Macroprocesso v0.1 - fronteira de entrega ao cliente
+
+**Decisão conceitual em aberto:** o Book do Macroprocesso pode existir como artefato executivo para cliente, mas a versão inicial não deve expor automaticamente toda a camada interna de governança, automação, riscos e integração com agentes.
+
+Itens que permanecem como **pendência interna de arquitetura**, sem compromisso de entrega ao cliente no primeiro modelo:
+
+- matriz consolidada completa: processo x rotina x indicador x risco x evidência x contrato de execução;
+- riscos, controles, gaps e plano de melhoria em nível analítico;
+- contratos de execução por atividade;
+- anexo AI-readable para MCP/Sapiens.
+
+Diretriz provisória:
+
+- a versão cliente do Book do Macroprocesso deve priorizar leitura executiva, escopo, SIPOC, mapa integrado, processos, rotinas, responsáveis e indicadores;
+- a camada de riscos, controles, gaps, contratos de execução e AI-readable deve permanecer como artefato interno até decisão comercial, jurídica e metodológica;
+- se esses itens forem expostos ao cliente no futuro, devem passar por uma SPEC própria com regra de visibilidade, classificação de sensibilidade e escopo por `company_id`.
+
+Modelo visual de análise:
+
+- gerar PDF estático de demonstração, sem acoplar ainda ao runtime do APP32;
+- usar dados fictícios e linguagem cliente-safe;
+- omitir os blocos internos acima ou marcá-los apenas como pendências fora da versão cliente.
+
 ---
 
 ## 13. MVP recomendado

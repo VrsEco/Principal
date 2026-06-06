@@ -21,7 +21,7 @@ from .okr_area import OKRArea, KeyResultArea
 # Execution
 from .portfolio import Portfolio
 from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
-from .process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessBpmsAnalysis, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator, ProcessInstanceExecution, ProcessActivityExecutionContract
+from .process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessBpmsAnalysis, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, MacroProcessSipocSnapshot, MacroProcessSipocItem, MacroProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator, ProcessInstanceExecution, ProcessActivityExecutionContract
 from .process_portal import ProcessPortalPublication, ProcessPortalPublicationGrant
 from .strategy_alignment import (
     IndicatorLineOfSight,
@@ -180,7 +180,7 @@ __all__ = [
     'Indicator', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
-    'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
+    'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'MacroProcessSipocSnapshot', 'MacroProcessSipocItem', 'MacroProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
     'OrganizationalIdentity', 'ProcessStrategyProfile', 'ProcessStrategicAlignmentLink', 'IndicatorLineOfSight', 'StrategyMaturationItem',
     'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCustomerPortfolio', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialManualDomain', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialSatellitePolicy', 'FinancialScheduleLink', 'FinancialSatelliteExecution', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',

@@ -678,6 +678,9 @@ def register_api_resources(api):
     from api.resources.process import (
         ProcessAreaListResource, ProcessAreaResource,
         MacroProcessListResource, MacroProcessResource,
+        MacroProcessSipocSnapshotResource, MacroProcessSipocItemListResource, MacroProcessSipocItemResource,
+        MacroProcessSipocRegulatoryItemListResource, MacroProcessSipocRegulatoryItemResource,
+        MacroProcessSipocPublishResource, MacroProcessSipocArchiveResource,
         ProcessListResource, ProcessResource,
         ProcessSipocSnapshotResource, ProcessSipocItemListResource, ProcessSipocItemResource,
         ProcessSipocRegulatoryItemListResource, ProcessSipocRegulatoryItemResource,
@@ -853,6 +856,13 @@ def register_api_resources(api):
     api.add_resource(ProcessAreaResource, '/api/process-areas/<int:area_id>')
     api.add_resource(MacroProcessListResource, '/api/macro-processes')
     api.add_resource(MacroProcessResource, '/api/macro-processes/<int:macro_id>')
+    api.add_resource(MacroProcessSipocSnapshotResource, '/api/macro-processes/<int:macro_id>/sipoc', '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>')
+    api.add_resource(MacroProcessSipocItemListResource, '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>/items')
+    api.add_resource(MacroProcessSipocItemResource, '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>/items/<int:item_id>')
+    api.add_resource(MacroProcessSipocRegulatoryItemListResource, '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>/regulatory-items')
+    api.add_resource(MacroProcessSipocRegulatoryItemResource, '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>/regulatory-items/<int:regulatory_item_id>')
+    api.add_resource(MacroProcessSipocPublishResource, '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>/publish')
+    api.add_resource(MacroProcessSipocArchiveResource, '/api/macro-processes/<int:macro_id>/sipoc/<int:sipoc_id>/archive')
     api.add_resource(ProcessListResource, '/api/processes', '/api/companies/<int:company_id>/processes')
     api.add_resource(ProcessResource, '/api/processes/<int:process_id>')
     api.add_resource(ProcessSipocSnapshotResource, '/api/processes/<int:process_id>/sipoc', '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>')

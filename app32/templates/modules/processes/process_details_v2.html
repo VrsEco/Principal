@@ -3608,6 +3608,12 @@
         font-size: 0.78rem;
     }
 
+    @media (max-width: 1500px) {
+        .sipoc-lanes-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
     @media (max-width: 1200px) {
         .sipoc-lanes-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3616,6 +3622,20 @@
         .sipoc-meta-grid,
         .sipoc-support-grid {
             grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .sipoc-lanes-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .process-section__actions {
+            width: 100%;
+        }
+
+        .process-section__actions .btn {
+            width: 100%;
         }
     }
 

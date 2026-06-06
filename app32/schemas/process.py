@@ -1,7 +1,7 @@
 from marshmallow import fields, pre_load
 from . import ma
 from marshmallow import fields, EXCLUDE
-from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceExecution, ProcessActivityExecutionContract
+from models.process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, MacroProcessSipocSnapshot, MacroProcessSipocItem, MacroProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceExecution, ProcessActivityExecutionContract
 
 class ProcessStepSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -75,6 +75,42 @@ class ProcessSipocSnapshotSchema(ma.SQLAlchemyAutoSchema):
     published_at = fields.String(dump_only=True)
     items = fields.List(fields.Nested(ProcessSipocItemSchema), dump_only=True)
     regulatory_items = fields.List(fields.Nested(ProcessSipocRegulatoryItemSchema), dump_only=True)
+
+
+class MacroProcessSipocItemSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = MacroProcessSipocItem
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+
+
+class MacroProcessSipocRegulatoryItemSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = MacroProcessSipocRegulatoryItem
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+
+
+class MacroProcessSipocSnapshotSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = MacroProcessSipocSnapshot
+        load_instance = True
+        include_fk = True
+        unknown = EXCLUDE
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+    published_at = fields.String(dump_only=True)
+    items = fields.List(fields.Nested(MacroProcessSipocItemSchema), dump_only=True)
+    regulatory_items = fields.List(fields.Nested(MacroProcessSipocRegulatoryItemSchema), dump_only=True)
 
 class ProcessSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -252,6 +288,12 @@ process_sipoc_item_schema = ProcessSipocItemSchema()
 process_sipoc_items_schema = ProcessSipocItemSchema(many=True)
 process_sipoc_regulatory_item_schema = ProcessSipocRegulatoryItemSchema()
 process_sipoc_regulatory_items_schema = ProcessSipocRegulatoryItemSchema(many=True)
+macro_process_sipoc_snapshot_schema = MacroProcessSipocSnapshotSchema()
+macro_process_sipoc_snapshots_schema = MacroProcessSipocSnapshotSchema(many=True)
+macro_process_sipoc_item_schema = MacroProcessSipocItemSchema()
+macro_process_sipoc_items_schema = MacroProcessSipocItemSchema(many=True)
+macro_process_sipoc_regulatory_item_schema = MacroProcessSipocRegulatoryItemSchema()
+macro_process_sipoc_regulatory_items_schema = MacroProcessSipocRegulatoryItemSchema(many=True)
 process_step_schema = ProcessStepSchema()
 process_steps_schema = ProcessStepSchema(many=True)
 process_instance_schema = ProcessInstanceSchema()
