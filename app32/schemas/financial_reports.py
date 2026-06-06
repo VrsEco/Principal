@@ -89,3 +89,4 @@ class FinancialManagementReportFiltersInput(BaseModel):
     order_direction: Literal['asc', 'desc'] = 'asc'
     orientation: Literal['portrait', 'landscape'] = 'landscape'
     output_mode: Literal['screen', 'pdf'] = 'screen'
+    dossier_mode: Literal['complete', 'simple'] = 'complete'
