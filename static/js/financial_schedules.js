@@ -165,6 +165,12 @@
     recurrence: 'recorrencia',
     anexos: 'anexos',
     attachments: 'anexos',
+    automacoes: 'automacoes',
+    'automações': 'automacoes',
+    'automacoes-locais': 'automacoes',
+    'automações-locais': 'automacoes',
+    automation: 'automacoes',
+    automations: 'automacoes',
     baixas: 'baixas',
     settlement: 'baixas',
     settlements: 'baixas',
@@ -176,8 +182,12 @@
   }[String(rawTab || '').trim().toLowerCase()] || 'agendamento');
 
   function switchTab(tab) {
-    document.querySelectorAll('.sched-tab').forEach((el) => el.classList.toggle('active', el.dataset.tab === tab));
-    document.querySelectorAll('.sched-tab-panel').forEach((el) => el.classList.toggle('active', el.dataset.panel === tab));
+    const requestedTab = String(tab || '').trim().toLowerCase();
+    const hasTargetPanel = !!document.querySelector(`.sched-tab-panel[data-panel="${requestedTab}"]`);
+    const targetTab = hasTargetPanel ? requestedTab : 'agendamento';
+    form.classList.toggle('hidden', targetTab === 'automacoes');
+    document.querySelectorAll('.sched-tab').forEach((el) => el.classList.toggle('active', el.dataset.tab === targetTab));
+    document.querySelectorAll('.sched-tab-panel').forEach((el) => el.classList.toggle('active', el.dataset.panel === targetTab));
   }
   window.switchScheduleTab = switchTab;
 

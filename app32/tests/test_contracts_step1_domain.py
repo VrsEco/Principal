@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from decimal import Decimal
+from types import SimpleNamespace
 
 from models.contracts import Contract, ContractCatalogItem, ContractClause, ContractEvent, ContractFiscalTerm, ContractItem, ContractNativeBilling, ContractNote, ContractTrigger, ContractingLegalEntity
 from services.contracts_service import ContractService
@@ -336,6 +337,7 @@ def test_native_billing_fiscal_export_payload_reads_snapshot_metadata():
         net_amount = Decimal("100.00")
         metadata_json = {
             "fiscal_snapshot": {
+                "contracting_legal_entity_id": 12,
                 "issuer_cnpj": "00.000.000/0001-00",
                 "issuer_legal_name": "Empresa Grupo A Ltda",
                 "integration_mode": "api",
@@ -350,7 +352,57 @@ def test_native_billing_fiscal_export_payload_reads_snapshot_metadata():
     payload = ContractService.build_native_billing_fiscal_export_payload(billing)
 
     assert payload["issuer_cnpj"] == "00.000.000/0001-00"
+    assert payload["contracting_legal_entity_id"] == 12
     assert payload["service_code"] == "1401"
+
+
+def test_fiscal_invoice_workspace_filters_by_issuer_legal_entity(monkeypatch):
+    class _FakeItems:
+        def count(self):
+            return 0
+
+    billing_a = SimpleNamespace(
+        id=1,
+        gross_amount=Decimal("100.00"),
+        net_amount=Decimal("90.00"),
+        contract=SimpleNamespace(id=10, code="AA.N.001", title="Contrato A"),
+        party=SimpleNamespace(id=20, name="Cliente A"),
+        items=_FakeItems(),
+        issuer_legal_entity_id=12,
+    )
+    billing_b = SimpleNamespace(
+        id=2,
+        gross_amount=Decimal("200.00"),
+        net_amount=Decimal("180.00"),
+        contract=SimpleNamespace(id=11, code="AA.N.002", title="Contrato B"),
+        party=SimpleNamespace(id=21, name="Cliente B"),
+        items=_FakeItems(),
+        issuer_legal_entity_id=13,
+    )
+
+    monkeypatch.setattr(
+        ContractService,
+        "_list_fiscal_invoice_billings",
+        staticmethod(lambda company_id, filters: [billing_a, billing_b]),
+    )
+    monkeypatch.setattr(
+        ContractService,
+        "_get_fiscal_invoice_state",
+        staticmethod(
+            lambda billing: {
+                "status": "pending",
+                "batch_code": None,
+                "fiscal_data": {"contracting_legal_entity_id": billing.issuer_legal_entity_id},
+                "attachments": [],
+            }
+        ),
+    )
+
+    workspace = ContractService.list_fiscal_invoice_workspace(1, {"issuer_legal_entity_id": 12})
+
+    assert [row["billing"].id for row in workspace["rows"]] == [1]
+    assert workspace["kpis"]["total"] == 1
+    assert workspace["kpis"]["pending"] == 1
 
 
 def test_build_fiscal_invoice_nfse_row_prioritizes_catalog_for_service_code_and_normalizes_nbs():

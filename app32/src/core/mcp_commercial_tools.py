@@ -282,6 +282,16 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(item=item.to_dict())
 
     @mcp.tool()
+    def get_commercial_dashboard(company_id: int) -> dict:
+        """Retorna KPIs e resumo executivo da Gestão Comercial no tenant."""
+        from services.contracts_service import ContractService
+
+        dashboard = _run_action(ContractService.get_dashboard, company_id)
+        kpis = _run_action(ContractService.get_contracts_kpis, company_id)
+        customer_portfolio = _run_action(ContractService.get_customer_portfolio_summary, company_id)
+        return _ok(dashboard=dashboard or {}, kpis=kpis or {}, customer_portfolio=customer_portfolio or {})
+
+    @mcp.tool()
     def list_commercial_contracts(company_id: int, filters: Optional[dict] = None) -> dict:
         """Lista contratos da gestão comercial com árvore cliente->contratos."""
         from services.contracts_service import ContractService
@@ -525,6 +535,22 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         return _ok(items=normalized, count=len(normalized))
 
     @mcp.tool()
+    def build_commercial_billing_review(company_id: int, contract_ids: list[int], overrides: Optional[dict] = None) -> dict:
+        """Monta as linhas da revisão de faturamento comercial antes da confirmação."""
+        from services.contracts_service import ContractService
+
+        try:
+            rows = _run_action(
+                ContractService.build_billing_review_rows,
+                company_id,
+                contract_ids or [],
+                overrides,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(items=rows, count=len(rows))
+
+    @mcp.tool()
     def preview_commercial_billing_batch(company_id: int, review_payloads: list[dict]) -> dict:
         """Pré-visualiza um lote de faturamento comercial antes de gerar."""
         from services.contracts_service import ContractService
@@ -563,7 +589,7 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
         from services.contracts_service import ContractService
 
         result = _run_action(
-            ContractService.generate_native_billing_batch,
+            ContractService.confirm_native_billing_review,
             company_id=company_id,
             review_payloads=review_payloads or [],
             user_id=user_id,
@@ -595,6 +621,35 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
                 }
             )
         return _ok(items=normalized, count=len(normalized))
+
+    @mcp.tool()
+    def generate_commercial_financial_titles_for_billing(company_id: int, billing_id: int, user_id: Optional[int] = None) -> dict:
+        """Gera os títulos financeiros satélites de um faturamento comercial já criado."""
+        from models.contracts import ContractNativeBilling
+        from services.contract_financial_service import ContractFinancialService
+
+        def _callback():
+            native_billing = ContractNativeBilling.query.filter(
+                ContractNativeBilling.company_id == company_id,
+                ContractNativeBilling.id == billing_id,
+                ContractNativeBilling.status != "cancelled",
+            ).first()
+            if not native_billing:
+                raise ValueError("Faturamento não localizado para integração financeira.")
+            contract = native_billing.contract
+            if not contract or contract.company_id != company_id:
+                raise ValueError("Contrato do faturamento não localizado para a empresa ativa.")
+            return ContractFinancialService.ensure_financial_titles_for_native_billing(
+                contract=contract,
+                native_billing=native_billing,
+                user_id=user_id,
+            )
+
+        try:
+            result = _run_action(_callback)
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(**(result or {}))
 
     @mcp.tool()
     def cancel_commercial_billing(company_id: int, billing_id: int, user_id: Optional[int] = None, reason: Optional[str] = None) -> dict:

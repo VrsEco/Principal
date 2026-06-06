@@ -68,6 +68,71 @@ def test_sanitize_json_converts_decimal_date_datetime_and_sequences():
     assert sanitized["nested"][0]["discount"] == 5.25
 
 
+def test_schedule_summary_resolves_counterparty_name_from_tenant_lookup(monkeypatch):
+    monkeypatch.setattr(
+        schedule_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda schedule: {
+            "entry_count": 0,
+            "principal_amount": 1000,
+            "principal_settled": 0,
+            "principal_open": 1000,
+            "total_open": 1000,
+            "signed_principal_amount": 1000,
+            "signed_principal_settled": 0,
+            "signed_total_open": 1000,
+            "settlement_state": "open",
+            "settlement_total_amount": 0,
+            "adjustments_generated": 0,
+            "adjustments_settled": 0,
+            "adjustments_open": 0,
+            "discounts_open": 0,
+            "discounts_applied": 0,
+            "has_open_balance": True,
+            "enters_transactional_views": True,
+        },
+    )
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 801,
+            "company_id": 10,
+            "schedule_code": "AG-000801",
+            "status": "active",
+            "entry_type": "receivable",
+            "counterparty_id": 77,
+            "metadata_json": {"counterparty_name": ""},
+        },
+    )()
+
+    summary = FinancialScheduleService._build_schedule_summary(
+        schedule,
+        counterparty_names={77: "Cliente Resolvido pelo Cadastro"},
+    )
+
+    assert summary["counterparty_name"] == "Cliente Resolvido pelo Cadastro"
+
+
+def test_resolve_schedule_counterparty_name_uses_metadata_only_as_fallback():
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 802,
+            "company_id": 10,
+            "counterparty_id": 77,
+        },
+    )()
+
+    resolved = FinancialScheduleService._resolve_schedule_counterparty_name(
+        schedule=schedule,
+        metadata_json={"counterparty_name": "Snapshot antigo"},
+        counterparty_names={77: "Cadastro atual"},
+    )
+
+    assert resolved == "Cadastro atual"
+
 
 def test_build_entry_payload_uses_same_competence_mode_by_default(monkeypatch):
     monkeypatch.setattr(
@@ -1437,6 +1502,11 @@ def test_list_default_suggestions_returns_cost_center_domain_and_budget_chain(mo
             None,
         ),
     )
+    monkeypatch.setattr(
+        schedule_module.FinancialManualDomainService,
+        "get_default_suggestion",
+        lambda **kwargs: (None, None),
+    )
 
     result, error = FinancialScheduleService.list_default_suggestions(company_id=9, allowed_company_ids=[9])
 
@@ -1445,6 +1515,7 @@ def test_list_default_suggestions_returns_cost_center_domain_and_budget_chain(mo
         "cost_center_id": 7,
         "cost_center_label": "1.01 - Administrativo",
         "domain_type": "project",
+        "domain_source_kind": "routine",
         "domain_source_id": 21,
         "domain_label": "AA.J.21 - Projeto Padrão",
         "budget_version_id": 11,

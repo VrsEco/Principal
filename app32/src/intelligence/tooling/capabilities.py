@@ -31,6 +31,15 @@ class ToolRiskLevel(str, Enum):
     CRITICAL = "critical"
 
 
+def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
+    normalized: list[str] = []
+    for scope in scopes:
+        value = scope.value if isinstance(scope, ToolScope) else str(scope)
+        if value not in normalized:
+            normalized.append(value)
+    return tuple(normalized)
+
+
 @dataclass(frozen=True)
 class ToolCapability:
     """Metadados de segurança e descoberta para uma tool do APP32."""
@@ -1162,6 +1171,7 @@ for _tool_name, _action in (
     ("create_commercial_product_service", "create"),
     ("update_commercial_product_service", "update"),
     ("toggle_commercial_product_service", "update"),
+    ("get_commercial_dashboard", "read"),
     ("list_commercial_contracts", "read"),
     ("get_commercial_contract_workspace", "read"),
     ("create_commercial_contract", "create"),
@@ -1188,9 +1198,11 @@ for _tool_name, _action in (
     ("upsert_commercial_contract_financial_terms", "update"),
     ("upsert_commercial_contract_fiscal_terms", "update"),
     ("list_commercial_billing_queue", "read"),
+    ("build_commercial_billing_review", "read"),
     ("preview_commercial_billing_batch", "read"),
     ("generate_commercial_billing_batch", "create"),
     ("list_commercial_billings_done", "read"),
+    ("generate_commercial_financial_titles_for_billing", "create"),
     ("cancel_commercial_billing", "update"),
     ("list_commercial_fiscal_workspace", "read"),
     ("update_commercial_fiscal_entry", "update"),
@@ -1203,12 +1215,219 @@ for _tool_name, _action in (
         _tool_name,
         domain="finance",
         action=_action,
-        human_gate=_tool_name in {"generate_commercial_billing_batch", "cancel_commercial_billing"},
+        human_gate=_tool_name in {
+            "generate_commercial_billing_batch",
+            "generate_commercial_financial_titles_for_billing",
+            "cancel_commercial_billing",
+        },
         human_gate_reason=(
             "Operação financeira comercial exige confirmação explícita e trilha auditável."
-            if _tool_name in {"generate_commercial_billing_batch", "cancel_commercial_billing"}
+            if _tool_name in {
+                "generate_commercial_billing_batch",
+                "generate_commercial_financial_titles_for_billing",
+                "cancel_commercial_billing",
+            }
             else None
         ),
+    )
+
+_ALL_MCP_SURFACES: tuple[str, ...] = (
+    ToolScope.SAPIENS.value,
+    ToolScope.MCP_USER.value,
+    ToolScope.MCP_ADMIN.value,
+    ToolScope.MCP_ANALYTICS.value,
+    ToolScope.MCP_OPS.value,
+)
+
+
+def _register_mcp_support_capability(
+    tool_name: str,
+    *,
+    domain: str = "governance",
+    action: str = "read",
+    scopes: tuple[str, ...] | None = None,
+    risk: ToolRiskLevel | None = None,
+    permissions: tuple[str, ...] | None = None,
+    human_gate: bool = False,
+    human_gate_reason: str | None = None,
+    tags: tuple[str, ...] = (),
+    required_context: tuple[str, ...] | None = None,
+) -> None:
+    is_mutation = action in {"create", "update", "delete", "approve", "execute", "review"}
+    resolved_risk = risk or (
+        ToolRiskLevel.HIGH
+        if action == "delete"
+        else ToolRiskLevel.MEDIUM
+        if is_mutation
+        else ToolRiskLevel.LOW
+    )
+    resolved_permissions = permissions or (f"{domain}.{'delete' if action == 'delete' else 'update' if is_mutation else 'read'}",)
+    resolved_context = required_context
+    if resolved_context is None:
+        resolved_context = (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY) if is_mutation else ()
+    resolved_scopes = scopes or _ALL_MCP_SURFACES
+
+    _PRESET_CAPABILITIES[tool_name] = {
+        "domain": domain,
+        "scopes": _normalize_scopes(resolved_scopes),
+        "risk": resolved_risk,
+        "permissions": resolved_permissions,
+        "human_gate": human_gate,
+        "human_gate_reason": human_gate_reason,
+        "tags": tuple(dict.fromkeys(("tenant_safe", "mcp_support", action, *tags))),
+        "required_context": resolved_context,
+    }
+
+
+for _tool_name in (
+    "bootstrap_session_context",
+    "list_feature_catalog",
+    "get_feature_guide",
+    "get_feature_examples",
+    "get_feature_constraints",
+    "describe_app32_analysis_catalog_tool",
+    "describe_app32_crud_contracts_tool",
+    "describe_app32_domain_examples_tool",
+    "describe_app32_domain_playbooks_tool",
+    "describe_app32_external_ai_onboarding_tool",
+    "describe_app32_external_llm_factory_surface_tool",
+    "describe_app32_implantation_persona_profile_tool",
+    "describe_app32_instruction_registry_tool",
+    "resolve_app32_instruction_bundle_tool",
+    "describe_app32_operational_readiness_tool",
+    "describe_app32_permission_matrix_tool",
+    "describe_app32_profile_contracts_tool",
+    "describe_app32_release_checklist_tool",
+    "describe_app32_sapiens_factory_tool",
+    "trace_app32_capability_dependencies_tool",
+    "describe_app32_available_sapiens_squads_tool",
+    "describe_app32_session_company_scope_tool",
+    "describe_app32_squad_runtime_tool",
+    "describe_app32_surface_playbooks_tool",
+    "describe_app32_tool_freeze_procedure_tool",
+    "describe_app32_usage_dashboard_tool",
+    "list_app32_integrations_catalog",
+):
+    _register_mcp_support_capability(_tool_name, tags=("catalog", "read"))
+
+for _tool_name in (
+    "preview_app32_implantation_persona_profile_update_tool",
+    "assess_app32_change_request_tool",
+    "evaluate_app32_external_llm_factory_session_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        action="analyze",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+        risk=ToolRiskLevel.MEDIUM,
+        permissions=("governance.read",),
+        tags=("assessment",),
+    )
+
+for _tool_name in (
+    "apply_app32_implantation_persona_profile_update_tool",
+    "resolve_app32_sapiens_activation_tool",
+    "select_app32_session_company_tool",
+    "clear_app32_session_company_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        action="update",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        risk=ToolRiskLevel.MEDIUM,
+        permissions=("governance.update",),
+        human_gate=_tool_name in {
+            "apply_app32_implantation_persona_profile_update_tool",
+            "resolve_app32_sapiens_activation_tool",
+        },
+        human_gate_reason=(
+            "Atualização de runtime/persona Sapiens exige confirmação explícita."
+            if _tool_name
+            in {"apply_app32_implantation_persona_profile_update_tool", "resolve_app32_sapiens_activation_tool"}
+            else None
+        ),
+        tags=("mutation", "session"),
+    )
+
+_register_mcp_support_capability(
+    "request_new_app32_integration",
+    domain="operations",
+    action="create",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_OPS.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.MEDIUM,
+    permissions=("support.escalate",),
+    tags=("integration", "backlog"),
+)
+
+_register_mcp_support_capability(
+    "get_incentive_indicators",
+    domain="finance",
+    action="read",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+    risk=ToolRiskLevel.LOW,
+    permissions=("finance.read",),
+    required_context=(TOOL_CONTEXT_COMPANY,),
+    tags=("incentives", "read"),
+)
+
+for _tool_name in (
+    "list_work_journey_absences_tool",
+    "list_work_journey_transfers_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="routine",
+        action="read",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+        permissions=("work_journey.read",),
+        required_context=(TOOL_CONTEXT_COMPANY,),
+        tags=("work_journey", "read"),
+    )
+
+for _tool_name in (
+    "create_work_journey_absence_request_tool",
+    "create_work_journey_transfer_request_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="routine",
+        action="create",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        permissions=("work_journey.create",),
+        tags=("work_journey", "mutation"),
+    )
+
+for _tool_name in (
+    "approve_work_journey_absence_request_tool",
+    "approve_work_journey_transfer_request_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="routine",
+        action="update",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+        risk=ToolRiskLevel.MEDIUM,
+        permissions=("work_journey.approve",),
+        human_gate=True,
+        human_gate_reason="Aprovação de ausência/transferência altera a jornada operacional e exige confirmação.",
+        tags=("work_journey", "approval", "mutation"),
+    )
+
+for _tool_name in (
+    "delete_work_journey_block_tool",
+    "delete_work_journey_rule_tool",
+    "delete_work_journey_manual_task_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="routine",
+        action="delete",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+        risk=ToolRiskLevel.HIGH,
+        permissions=("work_journey.delete",),
+        human_gate=True,
+        human_gate_reason="Exclusão de jornada operacional exige confirmação explícita e trilha auditável.",
+        tags=("work_journey", "delete"),
     )
 
 _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
@@ -1220,6 +1439,9 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("leil", "real_estate_auctions"),
     ("plan", "strategy"),
     ("meeting", "meetings"),
+    ("journey", "routine"),
+    ("absence", "routine"),
+    ("transfer", "routine"),
     ("task", "routine"),
     ("work", "routine"),
     ("project", "projects"),
@@ -1230,8 +1452,20 @@ _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("customer", "governance"),
     ("commercial", "governance"),
     ("contract", "governance"),
+    ("catalog", "governance"),
+    ("registry", "governance"),
+    ("permission", "governance"),
+    ("surface", "governance"),
+    ("profile", "governance"),
+    ("readiness", "governance"),
+    ("release", "governance"),
+    ("usage", "governance"),
+    ("squad", "governance"),
+    ("session_company", "governance"),
+    ("persona", "governance"),
     ("finance", "finance"),
     ("financial", "finance"),
+    ("incentive", "finance"),
     ("rule", "governance"),
     ("technical", "operations"),
     ("diagnostic", "operations"),
@@ -1268,15 +1502,6 @@ _FINANCE_UPDATE_PREFIXES = (
     "upsert_",
     "review_",
 )
-
-
-def _normalize_scopes(scopes: Iterable[str | ToolScope]) -> tuple[str, ...]:
-    normalized: list[str] = []
-    for scope in scopes:
-        value = scope.value if isinstance(scope, ToolScope) else str(scope)
-        if value not in normalized:
-            normalized.append(value)
-    return tuple(normalized)
 
 
 def _expand_domain_aliases(domains: set[str]) -> set[str]:

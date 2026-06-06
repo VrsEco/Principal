@@ -10,13 +10,13 @@ if str(ROOT_DIR) not in sys.path:
 
 from app32.tests.e2e.config.contracts import validate_execution_contract
 from app32.tests.e2e.config.environments import load_environment_settings
-from app32.tests.e2e.load.financial_functional_harness import execute_financial_functional_probe
+from app32.tests.e2e.load.contracts_functional_harness import execute_contracts_functional_probe
 
 
 def main() -> int:
     settings = load_environment_settings()
     validate_execution_contract(settings)
-    results = execute_financial_functional_probe(settings=settings)
+    results = execute_contracts_functional_probe(settings=settings)
     print(json.dumps([result.__dict__ for result in results], ensure_ascii=False, indent=2))
     return 0 if all(result.success for result in results) else 1
 

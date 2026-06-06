@@ -42,6 +42,11 @@ class E2EOperationsCenterService:
         "meetings": "Reuniões",
         "integrations": "Integrações",
         "work_journey": "Calendário e rotina",
+        "processes": "Processos",
+        "financial": "Financeiro",
+        "contracts": "Contratos e fiscal",
+        "reports": "Relatórios",
+        "admin": "Administração",
     }
     COVERAGE_TYPE_LABELS = {
         "screen": "Telas e páginas",
@@ -555,6 +560,14 @@ class E2EOperationsCenterService:
             {
                 "label": "Relatórios operacionais",
                 "command": "python app32/tests/e2e/scripts/build_operational_load_reports.py",
+            },
+            {
+                "label": "Probe financeiro",
+                "command": "python app32/tests/e2e/scripts/run_financial_functional_probe.py",
+            },
+            {
+                "label": "Probe contratos/fiscal",
+                "command": "python app32/tests/e2e/scripts/run_contracts_functional_probe.py",
             },
             {
                 "label": "Runner agendado oficial",

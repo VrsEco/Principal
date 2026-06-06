@@ -2999,6 +2999,7 @@ class ContractService:
             "contract_code": contract.code if contract else None,
             "customer_name": contract.party.name if contract and contract.party else None,
             "customer_document": contract.party.document_number if contract and contract.party else None,
+            "contracting_legal_entity_id": snapshot.get("contracting_legal_entity_id"),
             "issuer_cnpj": snapshot.get("issuer_cnpj"),
             "issuer_legal_name": snapshot.get("issuer_legal_name"),
             "issuer_cnae": snapshot.get("issuer_cnae"),
@@ -3034,6 +3035,7 @@ class ContractService:
             **{
                 "customer_name": fiscal_payload.get("customer_name"),
                 "customer_document": fiscal_payload.get("customer_document"),
+                "contracting_legal_entity_id": fiscal_payload.get("contracting_legal_entity_id"),
                 "issuer_cnpj": fiscal_payload.get("issuer_cnpj"),
                 "issuer_legal_name": fiscal_payload.get("issuer_legal_name"),
                 "integration_mode": fiscal_payload.get("integration_mode"),
@@ -3098,12 +3100,18 @@ class ContractService:
         filters = dict(filters or {})
         fiscal_status = ContractService._normalize_text(filters.get("fiscal_status") or "active").lower()
         batch_code = ContractService._normalize_text(filters.get("batch_code"))
+        issuer_legal_entity_id = ContractService._normalize_int(filters.get("issuer_legal_entity_id"))
         billings = ContractService._list_fiscal_invoice_billings(company_id, filters)
         rows: list[dict] = []
         batch_counts: dict[str, int] = {}
         status_counts: dict[str, int] = {}
         for billing in billings:
             state = ContractService._get_fiscal_invoice_state(billing)
+            fiscal_data = dict(state.get("fiscal_data") or {})
+            if issuer_legal_entity_id and ContractService._normalize_int(
+                fiscal_data.get("contracting_legal_entity_id")
+            ) != issuer_legal_entity_id:
+                continue
             status = ContractService._normalize_text(state.get("status") or "pending").lower()
             current_batch = ContractService._normalize_text(state.get("batch_code"))
             status_counts[status] = status_counts.get(status, 0) + 1
@@ -3127,7 +3135,7 @@ class ContractService:
                     "contract": billing.contract,
                     "party": billing.party,
                     "fiscal_invoice": state,
-                    "fiscal_data": dict(state.get("fiscal_data") or {}),
+                    "fiscal_data": fiscal_data,
                     "batch_code": current_batch,
                     "retention_amount": (gross_amount - net_amount).quantize(Decimal("0.01")),
                     "item_count": billing.items.count(),

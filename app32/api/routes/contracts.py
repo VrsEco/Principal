@@ -113,6 +113,7 @@ def _fiscal_invoice_filters_from_request() -> dict:
     return {
         "search": request.args.get("search"),
         "party_id": request.args.get("party_id", type=int),
+        "issuer_legal_entity_id": request.args.get("issuer_legal_entity_id", type=int),
         "fiscal_status": request.args.get("fiscal_status") or "active",
         "batch_code": request.args.get("batch_code"),
     }
@@ -1277,6 +1278,7 @@ def contracts_fiscal_invoices():
         invoice_kpis=workspace["kpis"],
         filters=filters,
         parties=ContractService.list_customer_parties(company.id),
+        issuing_legal_entities=ContractService.list_contracting_legal_entities(company.id),
     )
 
 

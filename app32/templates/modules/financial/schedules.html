@@ -30,6 +30,9 @@
                     <button type="button" class="sched-tab active" data-tab="agendamento" onclick="switchScheduleTab('agendamento')">Título Financeiro</button>
                     <button type="button" class="sched-tab" data-tab="recorrencia" onclick="switchScheduleTab('recorrencia')">Recorrência</button>
                     <button type="button" class="sched-tab" data-tab="anexos" onclick="switchScheduleTab('anexos')">Anexos</button>
+                    {% if schedule %}
+                    <button type="button" class="sched-tab" data-tab="automacoes" id="automation-tab-button" onclick="switchScheduleTab('automacoes')">Automações locais</button>
+                    {% endif %}
                     <button type="button" class="sched-tab hidden" data-tab="baixas" id="baixas-tab-button" onclick="switchScheduleTab('baixas')">Baixas</button>
                     <button type="button" class="sched-tab hidden" data-tab="satelites" id="satellites-tab-button" onclick="switchScheduleTab('satelites')">Lançamentos Satélites</button>
                     <button type="button" class="sched-tab hidden" data-tab="memoria-calculo" id="calculation-log-tab-button" onclick="switchScheduleTab('memoria-calculo')">Memória de cálculo</button>
@@ -225,68 +228,68 @@
                         <button type="button" class="btn btn-success" onclick="handleScheduleAction('save_and_back')">Salvar e Voltar</button>
                     </footer>
                 </form>
-            </section>
 
-            {% if schedule %}
-            <section class="sched-card financial-automation-card">
-                <div class="sched-section-head">
-                    <div>
-                        <span class="sched-section-eyebrow">Automações locais</span>
-                        <h2>Automações do título financeiro</h2>
-                        <p>Crie aqui as automações específicas do título. Todas também aparecem na Central de Automações.</p>
+                {% if schedule %}
+                <section class="sched-tab-panel financial-automation-panel" data-panel="automacoes">
+                    <div class="sched-section-head">
+                        <div>
+                            <span class="sched-section-eyebrow">Automações locais</span>
+                            <h2>Automações do título financeiro</h2>
+                            <p>Crie aqui as automações específicas do título. Todas também aparecem na Central de Automações.</p>
+                        </div>
+                        <a class="btn btn-secondary" href="/ai-automation-mesh">Abrir central</a>
                     </div>
-                    <a class="btn btn-secondary" href="/ai-automation-mesh">Abrir central</a>
-                </div>
 
-                <div class="sched-automation-grid">
-                    <form method="post" action="/financial/schedules/{{ schedule.id }}/automations?company_id={{ company_id }}" class="sched-automation-form">
-                        <label class="field">
-                            <span>Modelo pronto</span>
-                            <select name="automation_template_key" required>
-                                <option value="">Selecione</option>
-                                {% for item in schedule_automation_templates %}
-                                <option value="{{ item.key }}">{{ item.label }} — {{ item.description }}</option>
-                                {% endfor %}
-                            </select>
-                        </label>
-                        <button type="submit" class="btn btn-primary">Criar automação</button>
-                    </form>
+                    <div class="sched-automation-grid">
+                        <form method="post" action="/financial/schedules/{{ schedule.id }}/automations?company_id={{ company_id }}" class="sched-automation-form">
+                            <label class="field">
+                                <span>Modelo pronto</span>
+                                <select name="automation_template_key" required>
+                                    <option value="">Selecione</option>
+                                    {% for item in schedule_automation_templates %}
+                                    <option value="{{ item.key }}">{{ item.label }} — {{ item.description }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button type="submit" class="btn btn-primary">Criar automação</button>
+                        </form>
 
-                    <div class="sched-automation-list">
-                        {% if schedule_automations %}
-                        {% for item in schedule_automations %}
-                        <article class="sched-automation-item">
-                            <div>
-                                <strong>{{ item.name }}</strong>
-                                <small>
-                                    {{ item.origin_type }} · {{ item.trigger_type }} · próxima:
-                                    {{ item.next_execution_at.strftime('%d/%m/%Y %H:%M') if item.next_execution_at else '-' }}
-                                </small>
-                                <p>
-                                    Status: {{ item.status }}
-                                    {% if item.rules.first() %}
-                                    · Regra: {{ item.rules.first().rule_code }}
+                        <div class="sched-automation-list">
+                            {% if schedule_automations %}
+                            {% for item in schedule_automations %}
+                            <article class="sched-automation-item">
+                                <div>
+                                    <strong>{{ item.name }}</strong>
+                                    <small>
+                                        {{ item.origin_type }} · {{ item.trigger_type }} · próxima:
+                                        {{ item.next_execution_at.strftime('%d/%m/%Y %H:%M') if item.next_execution_at else '-' }}
+                                    </small>
+                                    <p>
+                                        Status: {{ item.status }}
+                                        {% if item.rules.first() %}
+                                        · Regra: {{ item.rules.first().rule_code }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <form method="post" action="/financial/schedules/{{ schedule.id }}/automations?company_id={{ company_id }}" class="inline-actions">
+                                    {% if item.is_active %}
+                                    <input type="hidden" name="pause_automation_id" value="{{ item.id }}">
+                                    <button type="submit" class="btn btn-danger">Pausar</button>
+                                    {% else %}
+                                    <input type="hidden" name="activate_automation_id" value="{{ item.id }}">
+                                    <button type="submit" class="btn btn-primary">Ativar</button>
                                     {% endif %}
-                                </p>
-                            </div>
-                            <form method="post" action="/financial/schedules/{{ schedule.id }}/automations?company_id={{ company_id }}" class="inline-actions">
-                                {% if item.is_active %}
-                                <input type="hidden" name="pause_automation_id" value="{{ item.id }}">
-                                <button type="submit" class="btn btn-danger">Pausar</button>
-                                {% else %}
-                                <input type="hidden" name="activate_automation_id" value="{{ item.id }}">
-                                <button type="submit" class="btn btn-primary">Ativar</button>
-                                {% endif %}
-                            </form>
-                        </article>
-                        {% endfor %}
-                        {% else %}
-                        <div class="empty-state">Nenhuma automação cadastrada para este título financeiro.</div>
-                        {% endif %}
+                                </form>
+                            </article>
+                            {% endfor %}
+                            {% else %}
+                            <div class="empty-state">Nenhuma automação cadastrada para este título financeiro.</div>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
+                </section>
+                {% endif %}
             </section>
-            {% endif %}
         </main>
     </section>
 </div>
@@ -381,7 +384,7 @@
 </div>
 
 <style>
-    .financial-automation-card { margin-top: 1rem; }
+    .financial-automation-panel { padding: 1rem; }
     .sched-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
     .sched-section-eyebrow { display:inline-block; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:700; margin-bottom:.4rem; }
     .sched-section-head h2 { margin:0; }
@@ -389,6 +392,7 @@
     .sched-automation-grid { display:grid; grid-template-columns: minmax(280px, 360px) 1fr; gap:1rem; }
     .sched-automation-form, .sched-automation-list { background: var(--surface-secondary); border:1px solid var(--border); border-radius:18px; padding:1rem; }
     .sched-automation-form { display:flex; flex-direction:column; gap:.9rem; }
+    .sched-automation-form select { background: var(--form-bg); border: 1px solid var(--form-border); border-radius: 12px; padding: .82rem .9rem; color: var(--text-primary); width: 100%; }
     .sched-automation-list { display:flex; flex-direction:column; gap:.8rem; }
     .sched-automation-item { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; border:1px solid var(--border); border-radius:14px; padding:.9rem; background:var(--surface); }
     .sched-automation-item small, .sched-automation-item p { color:var(--text-secondary); margin:.2rem 0 0; }
