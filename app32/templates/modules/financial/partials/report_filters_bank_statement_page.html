@@ -1,18 +1,29 @@
 {% import 'modules/financial/partials/_report_workspace_macros.html' as report_macros %}
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
+{% set dossier_complete_query = report_query ~ ('&' if report_query else '') ~ 'dossier_mode=complete' %}
+{% set dossier_simple_query = report_query ~ ('&' if report_query else '') ~ 'dossier_mode=simple' %}
 {% set report_filters = report.filters if report else [] %}
 {% set report_summary_cards = report.summary_cards if report else [] %}
 {% set report_rows = report.rows if report else [] %}
+{% set is_dossier_report = report_definition.code == 'bank_statement_dossier' %}
 
 <div class="report-workspace-page bank-report-page fade-in"
      data-report-workspace-root
      data-filter-count-target="bank-report-filter-count">
     {% call report_macros.workspace_header(report_definition, 'bank-report-header', 'bank-report-eyebrow', 'bank-report-subtitle', 'bank-report-header-actions') %}
+    {% if is_dossier_report %}
+    <a class="btn btn-secondary" href="/financial/reports/extrato-bancario{% if report_query %}?{{ report_query }}{% endif %}">Ver extrato padrão</a>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf?{{ dossier_complete_query }}" target="_blank" rel="noopener">Dossiê completo</a>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf?{{ dossier_simple_query }}" target="_blank" rel="noopener">Dossiê simples</a>
+    {% else %}
     <a class="btn btn-secondary" href="/financial/reconciliation{% if company_id %}?company_id={{ company_id }}{% endif %}">Abrir conciliação</a>
     <a class="btn btn-secondary" href="/financial/catalogs/bank-accounts{% if company_id %}?company_id={{ company_id }}{% endif %}">Contas bancárias</a>
     <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
     <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+    <a class="btn btn-secondary" href="/financial/reports/dossie-extrato-bancario/export-pdf?{{ dossier_complete_query }}" target="_blank" rel="noopener">Dossiê completo</a>
+    <a class="btn btn-secondary" href="/financial/reports/dossie-extrato-bancario/export-pdf?{{ dossier_simple_query }}" target="_blank" rel="noopener">Dossiê simples</a>
     <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+    {% endif %}
     {% endcall %}
 
     <div class="report-workspace-viewer bank-report-viewer">
@@ -43,6 +54,15 @@
                 'bank-stat__value',
                 'bank-stat__label'
             ) }}
+
+            {% if is_dossier_report %}
+            <section class="report-workspace-section bank-section bank-section--dossier">
+                <div class="bank-dossier-callout">
+                    <strong>Comprovantes localizados:</strong>
+                    <span>{{ report.dossier_document_count if report else 0 }} documento(s) anexado(s) aos títulos, lançamentos ou baixas deste extrato.</span>
+                </div>
+            </section>
+            {% endif %}
 
             <section class="report-workspace-section bank-section bank-section--table">
                 {% if report_rows %}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 from calendar import monthrange
 from collections import defaultdict
@@ -8,12 +9,14 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from flask import current_app, has_app_context
 from financial_domain import build_title_operational_state_metadata
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import Image as RLImage
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from sqlalchemy import or_
 
 from models import db
@@ -62,6 +65,7 @@ class FinancialReportService:
     REPORT_TYPES: tuple[str, ...] = (
         "schedule_report",
         "bank_statement",
+        "bank_statement_dossier",
         "income_statement",
         "income_statement_2",
         "cash_flow",
@@ -82,6 +86,13 @@ class FinancialReportService:
             "slug": "extrato-bancario",
             "label": "Extrato Bancário",
             "description": "Extrato gerencial das baixas por conta bancária com saldo inicial, entradas, saídas, saldo final e composição consolidada.",
+            "filters": ("period", "bank_account", "include_reconciled_only"),
+        },
+        "bank_statement_dossier": {
+            "code": "bank_statement_dossier",
+            "slug": "dossie-extrato-bancario",
+            "label": "Dossiê do Extrato Bancário",
+            "description": "Dossiê documental do extrato bancário com capa opcional, extrato padrão e comprovantes anexados.",
             "filters": ("period", "bank_account", "include_reconciled_only"),
         },
         "income_statement": {
@@ -1914,16 +1925,111 @@ class FinancialReportService:
         )
 
     @staticmethod
+    def _iso_date_or_none(value: Any) -> Optional[str]:
+        return value.isoformat() if hasattr(value, "isoformat") else None
+
+    @staticmethod
+    def _bank_statement_dimension_labels(
+        *,
+        entry: Any,
+        allocation_breakdown: Dict[str, Any],
+        allocations_by_entry: Dict[int, List[Any]],
+        dimension_key: str,
+        names_by_id: Dict[int, str],
+    ) -> List[str]:
+        identifiers: List[int] = []
+
+        def _add(raw_value: Any) -> None:
+            try:
+                parsed = int(raw_value)
+            except (TypeError, ValueError):
+                return
+            if parsed > 0 and parsed not in identifiers:
+                identifiers.append(parsed)
+
+        entry_id = getattr(entry, "id", None)
+        if entry_id is not None:
+            for allocation in allocations_by_entry.get(int(entry_id), []):
+                _add(getattr(allocation, dimension_key, None))
+
+        for component_payload in dict(allocation_breakdown or {}).values():
+            component = dict(component_payload or {})
+            for item in component.get("items") or []:
+                _add(dict(item or {}).get(dimension_key))
+
+        _add(getattr(entry, dimension_key, None))
+        return [names_by_id.get(item_id, str(item_id)) for item_id in identifiers]
+
+    @staticmethod
+    def _metadata_attachments(entity: Any) -> List[Dict[str, Any]]:
+        metadata = dict(getattr(entity, "metadata_json", {}) or {})
+        attachments = metadata.get("attachments") or []
+        if not isinstance(attachments, list):
+            return []
+        return [dict(item or {}) for item in attachments if isinstance(item, dict)]
+
+    @staticmethod
+    def _bank_statement_dossier_attachment_payloads(
+        *,
+        row_context: Dict[str, Any],
+        source_type: str,
+        source_label: str,
+        attachments: Sequence[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        documents: List[Dict[str, Any]] = []
+        for attachment in attachments or []:
+            name = str(attachment.get("name") or attachment.get("file_name") or "Anexo").strip() or "Anexo"
+            documents.append(
+                {
+                    **row_context,
+                    "source_type": source_type,
+                    "source_label": source_label,
+                    "document_name": name,
+                    "document_url": attachment.get("url"),
+                    "content_type": attachment.get("content_type") or attachment.get("mime_type"),
+                    "attachment": dict(attachment),
+                }
+            )
+        return documents
+
+    @staticmethod
     def _build_bank_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
         counterparty_names = FinancialReportService._name_map(FinancialCounterparty, company_id)
+        chart_names = FinancialReportService._name_map(FinancialChartAccount, company_id)
+        center_names = FinancialReportService._name_map(FinancialCostCenter, company_id)
         settlements = FinancialReportService._settlement_query(company_id, filters).order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc()).all()
         entry_ids = [item.financial_entry_id for item in settlements]
         entries = {}
         if entry_ids:
             for entry in FinancialEntry.query.filter(FinancialEntry.company_id == company_id, FinancialEntry.id.in_(entry_ids), FinancialEntry.deleted_at.is_(None)).all():
                 entries[entry.id] = entry
+        is_dossier = filters.report_type == "bank_statement_dossier"
+        schedules_by_id: Dict[int, Any] = {}
+        allocations_by_entry: Dict[int, List[Any]] = defaultdict(list)
+        if is_dossier and entries:
+            schedule_ids = {
+                int(schedule_id)
+                for schedule_id in (getattr(entry, "financial_schedule_id", None) for entry in entries.values())
+                if schedule_id
+            }
+            if schedule_ids:
+                for schedule in FinancialSchedule.query.filter(
+                    FinancialSchedule.company_id == company_id,
+                    FinancialSchedule.id.in_(schedule_ids),
+                    FinancialSchedule.deleted_at.is_(None),
+                ).all():
+                    schedules_by_id[int(schedule.id)] = schedule
+            try:
+                for allocation in FinancialEntryAllocation.query.filter(
+                    FinancialEntryAllocation.company_id == company_id,
+                    FinancialEntryAllocation.financial_entry_id.in_(entry_ids),
+                    FinancialEntryAllocation.deleted_at.is_(None),
+                ).all():
+                    allocations_by_entry[int(allocation.financial_entry_id)].append(allocation)
+            except Exception:
+                allocations_by_entry = defaultdict(list)
 
         history_query = FinancialSettlement.query.filter(
             FinancialSettlement.company_id == company_id,
@@ -1940,6 +2046,7 @@ class FinancialReportService:
         inflow = Decimal("0")
         outflow = Decimal("0")
         rows: List[Dict[str, Any]] = []
+        dossier_documents: List[Dict[str, Any]] = []
         for settlement in settlements:
             entry = entries.get(settlement.financial_entry_id)
             if not entry:
@@ -1947,6 +2054,22 @@ class FinancialReportService:
             settlement_payload = FinancialService.serialize_settlement(settlement, entry=entry, include_components=True)
             component_summary = dict(settlement_payload.get("settlement_component_summary") or {})
             allocation_breakdown = dict(settlement_payload.get("settlement_allocation_breakdown") or {})
+            chart_labels = FinancialReportService._bank_statement_dimension_labels(
+                entry=entry,
+                allocation_breakdown=allocation_breakdown,
+                allocations_by_entry=allocations_by_entry,
+                dimension_key="chart_account_id",
+                names_by_id=chart_names,
+            )
+            center_labels = FinancialReportService._bank_statement_dimension_labels(
+                entry=entry,
+                allocation_breakdown=allocation_breakdown,
+                allocations_by_entry=allocations_by_entry,
+                dimension_key="cost_center_id",
+                names_by_id=center_names,
+            )
+            schedule = schedules_by_id.get(int(getattr(entry, "financial_schedule_id", 0) or 0))
+            counterparty_label = counterparty_names.get(getattr(entry, "counterparty_id", None), "Não informado")
             amount = Decimal(settlement.net_amount or 0)
             movement_tone = "positive" if entry.movement_nature == "credit" else "negative"
             if entry.movement_nature == "credit":
@@ -1955,14 +2078,23 @@ class FinancialReportService:
             else:
                 outflow += amount
                 running -= amount
-            rows.append(
-                {
+            row_payload = {
+                    "settlement_id": getattr(settlement, "id", None),
+                    "financial_entry_id": getattr(entry, "id", None),
+                    "financial_schedule_id": getattr(entry, "financial_schedule_id", None),
                     "data": settlement.settlement_date.isoformat(),
                     "codigo": settlement.settlement_code,
                     "conta_bancaria": bank_names.get(settlement.bank_account_id, "Não informada"),
                     "lancamento": entry.entry_code,
                     "descricao": entry.description,
-                    "favorecido": counterparty_names.get(entry.counterparty_id, "Não informado"),
+                    "favorecido": counterparty_label,
+                    "competencia": FinancialReportService._iso_date_or_none(getattr(entry, "competence_date", None)),
+                    "vencimento": FinancialReportService._iso_date_or_none(getattr(entry, "due_date", None)),
+                    "liquidacao": FinancialReportService._iso_date_or_none(getattr(settlement, "settlement_date", None)),
+                    "plano_contas": ", ".join(chart_labels) if chart_labels else "Não informado",
+                    "centro_resultados": ", ".join(center_labels) if center_labels else "Não informado",
+                    "titulo": getattr(schedule, "schedule_code", None) or getattr(entry, "financial_schedule_id", None) or "Não informado",
+                    "titulo_nome": getattr(schedule, "name", None),
                     "movimento": "Entrada" if entry.movement_nature == "credit" else "Saída",
                     "movimento_tone": movement_tone,
                     "valor": FinancialReportService._serialize_money(amount),
@@ -1979,6 +2111,70 @@ class FinancialReportService:
                     "saldo": FinancialReportService._serialize_money(running),
                     "saldo_label": FinancialReportService._format_currency(running),
                     "saldo_tone": "negative" if running < 0 else "neutral",
+                }
+            rows.append(row_payload)
+            if is_dossier:
+                row_context = {
+                    "settlement_id": row_payload["settlement_id"],
+                    "financial_entry_id": row_payload["financial_entry_id"],
+                    "financial_schedule_id": row_payload["financial_schedule_id"],
+                    "settlement_code": row_payload["codigo"],
+                    "entry_code": row_payload["lancamento"],
+                    "title_code": row_payload["titulo"],
+                    "description": row_payload["descricao"],
+                    "competence_date": row_payload["competencia"],
+                    "due_date": row_payload["vencimento"],
+                    "settlement_date": row_payload["liquidacao"],
+                    "chart_account": row_payload["plano_contas"],
+                    "cost_center": row_payload["centro_resultados"],
+                    "counterparty": row_payload["favorecido"],
+                    "bank_account": row_payload["conta_bancaria"],
+                    "movement": row_payload["movimento"],
+                    "amount": row_payload["valor_label"],
+                }
+                dossier_documents.extend(
+                    FinancialReportService._bank_statement_dossier_attachment_payloads(
+                        row_context=row_context,
+                        source_type="title",
+                        source_label="Título financeiro",
+                        attachments=FinancialReportService._metadata_attachments(schedule) if schedule else [],
+                    )
+                )
+                dossier_documents.extend(
+                    FinancialReportService._bank_statement_dossier_attachment_payloads(
+                        row_context=row_context,
+                        source_type="entry",
+                        source_label="Lançamento",
+                        attachments=FinancialReportService._metadata_attachments(entry),
+                    )
+                )
+                dossier_documents.extend(
+                    FinancialReportService._bank_statement_dossier_attachment_payloads(
+                        row_context=row_context,
+                        source_type="settlement",
+                        source_label="Baixa",
+                        attachments=FinancialReportService._metadata_attachments(settlement),
+                    )
+                )
+        totals = {
+            "opening_balance": FinancialReportService._serialize_money(balance_base),
+            "inflow": FinancialReportService._serialize_money(inflow),
+            "outflow": FinancialReportService._serialize_money(outflow),
+            "closing_balance": FinancialReportService._serialize_money(running),
+        }
+        extra: Dict[str, Any] = {}
+        if is_dossier:
+            totals["dossier_document_count"] = len(dossier_documents)
+            extra.update(
+                {
+                    "statement_title": "Extrato Bancário",
+                    "statement_subtitle": FinancialReportService.REPORT_DEFINITIONS["bank_statement"]["description"],
+                    "dossier_documents": dossier_documents,
+                    "dossier_document_count": len(dossier_documents),
+                    "dossier_modes": [
+                        {"key": "complete", "label": "Completo com capa"},
+                        {"key": "simple", "label": "Somente extrato e anexos"},
+                    ],
                 }
             )
         return FinancialReportService._report_payload(
@@ -2008,12 +2204,8 @@ class FinancialReportService:
                 {"key": "saldo", "label": "Saldo"},
             ],
             rows=rows,
-            totals={
-                "opening_balance": FinancialReportService._serialize_money(balance_base),
-                "inflow": FinancialReportService._serialize_money(inflow),
-                "outflow": FinancialReportService._serialize_money(outflow),
-                "closing_balance": FinancialReportService._serialize_money(running),
-            },
+            totals=totals,
+            extra=extra,
         )
 
     @staticmethod
@@ -4199,6 +4391,7 @@ class FinancialReportService:
         builder_map = {
             "schedule_report": FinancialReportService._build_schedule_report,
             "bank_statement": FinancialReportService._build_bank_statement,
+            "bank_statement_dossier": FinancialReportService._build_bank_statement,
             "income_statement": FinancialReportService._build_income_statement,
             "income_statement_2": FinancialReportService._build_income_statement_2,
             "cash_flow": FinancialReportService._build_cash_flow,
@@ -4216,6 +4409,7 @@ class FinancialReportService:
                 "period_end": normalized_filters.period_end.isoformat(),
                 "orientation": normalized_filters.orientation,
                 "output_mode": normalized_filters.output_mode,
+                "dossier_mode": normalized_filters.dossier_mode,
                 "items": payload.get("rows", []),
             }
         )
@@ -5302,6 +5496,7 @@ class FinancialReportService:
         doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=24, rightMargin=24, topMargin=26, bottomMargin=36)
         styles = getSampleStyleSheet()
         available_width = pagesize[0] - doc.leftMargin - doc.rightMargin
+        available_height = pagesize[1] - doc.topMargin - doc.bottomMargin
 
         if report_payload.get("report_type") == "schedule_report":
             elements = FinancialReportService._build_schedule_pdf_elements(
@@ -5322,6 +5517,21 @@ class FinancialReportService:
                 report_payload=report_payload,
                 styles=styles,
                 available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
+        if report_payload.get("report_type") == "bank_statement_dossier":
+            elements = FinancialReportService._build_bank_statement_dossier_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+                available_height=available_height,
             )
             doc.build(
                 elements,
@@ -6456,6 +6666,349 @@ class FinancialReportService:
             f"Emitido em: {FinancialReportService._pdf_generated_at_label(report_payload)}",
         )
         canvas.restoreState()
+
+    @staticmethod
+    def _resolve_dossier_attachment_path(attachment: Dict[str, Any]) -> Optional[str]:
+        raw_url = str(attachment.get("url") or attachment.get("document_url") or "").strip()
+        if raw_url.startswith(("http://", "https://")):
+            return None
+
+        relative_path = raw_url
+        if relative_path.startswith("/uploads/"):
+            relative_path = relative_path[len("/uploads/"):]
+        elif relative_path.startswith("uploads/"):
+            relative_path = relative_path[len("uploads/"):]
+
+        relative_path = relative_path.replace("\\", "/").lstrip("/")
+        if not relative_path or ".." in relative_path.split("/"):
+            return None
+
+        upload_root = current_app.config.get("UPLOAD_FOLDER", "uploads") if has_app_context() else "uploads"
+        root_abs = os.path.abspath(upload_root)
+        candidate = os.path.abspath(os.path.join(root_abs, relative_path))
+        try:
+            if os.path.commonpath([root_abs, candidate]) != root_abs:
+                return None
+        except ValueError:
+            return None
+        return candidate if os.path.exists(candidate) else None
+
+    @staticmethod
+    def _scaled_reportlab_image(source: Any, *, max_width: float, max_height: float, pixel_size: Optional[Tuple[int, int]] = None) -> Optional[RLImage]:
+        try:
+            if pixel_size is None:
+                from PIL import Image as PILImage
+
+                with PILImage.open(source) as image:
+                    pixel_size = image.size
+            raw_width, raw_height = pixel_size
+            if raw_width <= 0 or raw_height <= 0:
+                return None
+            scale = min(max_width / float(raw_width), max_height / float(raw_height), 1.0)
+            flowable = RLImage(source, width=float(raw_width) * scale, height=float(raw_height) * scale)
+            if hasattr(source, "getvalue"):
+                setattr(flowable, "_gv_source_buffer", source)
+            return flowable
+        except Exception:
+            return None
+
+    @staticmethod
+    def _render_pdf_first_page_as_image(path: str, *, max_width: float, max_height: float) -> Optional[RLImage]:
+        try:
+            import fitz
+            from PIL import Image as PILImage
+
+            pdf = fitz.open(path)
+            try:
+                if pdf.page_count < 1:
+                    return None
+                page = pdf.load_page(0)
+                pixmap = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+                image_bytes = pixmap.tobytes("png")
+            finally:
+                pdf.close()
+            buffer = io.BytesIO(image_bytes)
+            with PILImage.open(io.BytesIO(image_bytes)) as image:
+                size = image.size
+            return FinancialReportService._scaled_reportlab_image(buffer, max_width=max_width, max_height=max_height, pixel_size=size)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _build_dossier_attachment_preview(document: Dict[str, Any], *, max_width: float, max_height: float, placeholder_style) -> Any:
+        attachment = dict(document.get("attachment") or {})
+        path = FinancialReportService._resolve_dossier_attachment_path(attachment)
+        name = str(document.get("document_name") or attachment.get("name") or "Anexo")
+        content_type = str(document.get("content_type") or attachment.get("content_type") or "").lower()
+        extension = os.path.splitext(name.lower())[1]
+        flowable = None
+        if path:
+            if content_type.startswith("image/") or extension in {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}:
+                flowable = FinancialReportService._scaled_reportlab_image(path, max_width=max_width, max_height=max_height)
+            elif content_type == "application/pdf" or extension == ".pdf":
+                flowable = FinancialReportService._render_pdf_first_page_as_image(path, max_width=max_width, max_height=max_height)
+        if flowable is not None:
+            return flowable
+        return Paragraph(
+            f"<b>{name}</b><br/>Prévia indisponível para este anexo. Consulte o arquivo original no sistema.",
+            placeholder_style,
+        )
+
+    @staticmethod
+    def _build_bank_statement_dossier_cover(*, report_payload: Dict[str, Any], styles, available_width: float, available_height: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "BankStatementDossierCoverTitle",
+            parent=styles["Heading1"],
+            fontSize=24,
+            leading=28,
+            alignment=TA_CENTER,
+            textColor=colors.white,
+            spaceAfter=8,
+        )
+        subtitle_style = ParagraphStyle(
+            "BankStatementDossierCoverSubtitle",
+            parent=styles["BodyText"],
+            fontSize=10,
+            leading=13,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#E2E8F0"),
+        )
+        meta_style = ParagraphStyle(
+            "BankStatementDossierCoverMeta",
+            parent=styles["BodyText"],
+            fontSize=8.5,
+            leading=11,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        card_style = ParagraphStyle(
+            "BankStatementDossierCoverCard",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=12,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        company_name = str(report_payload.get("company_name") or "Empresa ativa").strip()
+        period = f"{report_payload.get('period_start', '-')} até {report_payload.get('period_end', '-')}"
+        mode_label = "Completo com capa" if report_payload.get("dossier_mode") != "simple" else "Somente extrato e anexos"
+        document_count = int(report_payload.get("dossier_document_count") or 0)
+
+        hero = Table(
+            [[
+                [
+                    Paragraph("Gestão Financeira", subtitle_style),
+                    Paragraph("Dossiê do Extrato Bancário", title_style),
+                    Paragraph(company_name, subtitle_style),
+                    Paragraph(f"Período: {period} · Emitido em {FinancialReportService._pdf_generated_at_label(report_payload)}", subtitle_style),
+                ]
+            ]],
+            colWidths=[available_width],
+            hAlign="LEFT",
+        )
+        hero.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 20),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 20),
+                    ("TOPPADDING", (0, 0), (-1, -1), 28),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 28),
+                ]
+            )
+        )
+        cards = Table(
+            [[
+                Paragraph(f"<b>Modo</b><br/>{mode_label}", card_style),
+                Paragraph(f"<b>Movimentos</b><br/>{len(report_payload.get('rows') or [])}", card_style),
+                Paragraph(f"<b>Comprovantes</b><br/>{document_count}", card_style),
+            ]],
+            colWidths=[available_width / 3, available_width / 3, available_width / 3],
+            hAlign="LEFT",
+        )
+        cards.setStyle(
+            TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 12),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ]
+            )
+        )
+        note = Paragraph(
+            "Este dossiê preserva o Extrato Bancário padrão e adiciona, em sequência, os documentos anexados aos títulos, lançamentos e baixas localizados no período.",
+            meta_style,
+        )
+        return [Spacer(1, max(12, available_height * 0.08)), hero, Spacer(1, 18), cards, Spacer(1, 14), note]
+
+    @staticmethod
+    def _build_bank_statement_dossier_document_block(
+        *,
+        document: Dict[str, Any],
+        available_width: float,
+        block_height: float,
+        preview_style,
+        label_style,
+        value_style,
+    ) -> List[Any]:
+        left_width = available_width * (2 / 3)
+        right_width = available_width - left_width
+        preview = FinancialReportService._build_dossier_attachment_preview(
+            document,
+            max_width=left_width - 18,
+            max_height=block_height - 34,
+            placeholder_style=preview_style,
+        )
+        left_cell = [
+            Paragraph(
+                f"<b>{document.get('source_label') or 'Anexo'}</b> · {document.get('document_name') or 'Documento'}",
+                label_style,
+            ),
+            Spacer(1, 3),
+            preview,
+        ]
+        detail_rows = []
+        for label, key in [
+            ("Competência", "competence_date"),
+            ("Vencimento", "due_date"),
+            ("Liquidação", "settlement_date"),
+            ("Plano de contas", "chart_account"),
+            ("Centro de resultados", "cost_center"),
+            ("Fornecedor", "counterparty"),
+            ("Lançamento", "entry_code"),
+            ("Baixa", "settlement_code"),
+            ("Valor", "amount"),
+            ("Origem", "source_label"),
+        ]:
+            detail_rows.append([Paragraph(f"<b>{label}</b>", label_style), Paragraph(str(document.get(key) or "-"), value_style)])
+        details = Table(detail_rows, colWidths=[right_width * 0.38, right_width * 0.62], hAlign="LEFT")
+        details.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                    ("TOPPADDING", (0, 0), (-1, -1), 2),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ]
+            )
+        )
+        return [left_cell, details]
+
+    @staticmethod
+    def _build_bank_statement_dossier_documents_pages(*, report_payload: Dict[str, Any], styles, available_width: float, available_height: float) -> List[Any]:
+        documents = list(report_payload.get("dossier_documents") or [])
+        title_style = ParagraphStyle(
+            "BankStatementDossierAttachmentTitle",
+            parent=styles["BodyText"],
+            fontSize=7.8,
+            leading=9,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+        )
+        value_style = ParagraphStyle(
+            "BankStatementDossierAttachmentValue",
+            parent=styles["BodyText"],
+            fontSize=6.7,
+            leading=7.6,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        placeholder_style = ParagraphStyle(
+            "BankStatementDossierAttachmentPlaceholder",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#475569"),
+        )
+        if not documents:
+            return [
+                Paragraph("Comprovantes / Anexos", title_style),
+                Spacer(1, 8),
+                Paragraph("Nenhum anexo localizado nos títulos, lançamentos ou baixas do extrato para os filtros informados.", placeholder_style),
+            ]
+
+        elements: List[Any] = []
+        block_height = available_height / 3
+        for page_index, start in enumerate(range(0, len(documents), 3)):
+            chunk = documents[start:start + 3]
+            if page_index:
+                elements.append(PageBreak())
+            rows = [
+                FinancialReportService._build_bank_statement_dossier_document_block(
+                    document=document,
+                    available_width=available_width,
+                    block_height=block_height,
+                    preview_style=placeholder_style,
+                    label_style=title_style,
+                    value_style=value_style,
+                )
+                for document in chunk
+            ]
+            page_table = Table(
+                rows,
+                colWidths=[available_width * (2 / 3), available_width / 3],
+                rowHeights=[block_height for _ in rows],
+                hAlign="LEFT",
+            )
+            page_table.setStyle(
+                TableStyle(
+                    [
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                        ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                        ("TOPPADDING", (0, 0), (-1, -1), 7),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                        ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#F8FAFC")),
+                    ]
+                )
+            )
+            elements.append(page_table)
+        return elements
+
+    @staticmethod
+    def _build_bank_statement_dossier_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float, available_height: float) -> List[Any]:
+        elements: List[Any] = []
+        if report_payload.get("dossier_mode") != "simple":
+            elements.extend(
+                FinancialReportService._build_bank_statement_dossier_cover(
+                    report_payload=report_payload,
+                    styles=styles,
+                    available_width=available_width,
+                    available_height=available_height,
+                )
+            )
+            elements.append(PageBreak())
+
+        statement_payload = {
+            **report_payload,
+            "report_type": "bank_statement",
+            "title": report_payload.get("statement_title") or "Extrato Bancário",
+            "subtitle": report_payload.get("statement_subtitle") or FinancialReportService.REPORT_DEFINITIONS["bank_statement"]["description"],
+        }
+        elements.extend(
+            FinancialReportService._build_bank_statement_pdf_elements(
+                report_payload=statement_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+        )
+        elements.append(PageBreak())
+        elements.extend(
+            FinancialReportService._build_bank_statement_dossier_documents_pages(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+                available_height=available_height,
+            )
+        )
+        return elements
 
     @staticmethod
     def _build_bank_statement_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:

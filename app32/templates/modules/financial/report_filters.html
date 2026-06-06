@@ -10,7 +10,7 @@
 {% elif report_definition.code in ['income_statement', 'income_statement_2'] %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419d') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421e') }}">
-{% elif report_definition.code == 'bank_statement' %}
+{% elif report_definition.code in ['bank_statement', 'bank_statement_dossier'] %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419b') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_filters_bank_statement.css', v='20260419b') }}">
 {% elif report_definition.code == 'ledger' %}
@@ -41,7 +41,7 @@
     </button>
     <div class="user-avatar-mini" title="Meu Perfil">MV</div>
 </div>
-{% elif report_definition.code == 'bank_statement' %}
+{% elif report_definition.code in ['bank_statement', 'bank_statement_dossier'] %}
 <div style="display:flex;align-items:center;gap:.75rem;">
     <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -97,7 +97,7 @@
 {% set is_ledger = report_definition.code == 'ledger' %}
 {% set is_working_capital = report_definition.code == 'working_capital' %}
 {% set is_schedule_report = report_definition.code == 'schedule_report' %}
-{% set is_bank_statement = report_definition.code == 'bank_statement' %}
+{% set is_bank_statement = report_definition.code in ['bank_statement', 'bank_statement_dossier'] %}
 {% set competence_start = (filters.get('competence_start', [default_period_start]) | first) %}
 {% set competence_end = (filters.get('competence_end', [default_period_end]) | first) %}
 {% set due_start = (filters.get('due_start', ['']) | first) %}
@@ -842,7 +842,7 @@
 {% elif report_definition.code == 'income_statement_2' %}
   {% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_income_statement_2_sidebar.html' %}
-{% elif report_definition.code == 'bank_statement' %}
+{% elif report_definition.code in ['bank_statement', 'bank_statement_dossier'] %}
 {% set filters = current_filters or {} %}
 {% include 'modules/financial/partials/report_filters_bank_statement_sidebar.html' %}
 {% elif report_definition.code == 'ledger' %}
@@ -861,7 +861,7 @@
 {% elif report_definition.code in ['income_statement', 'income_statement_2'] %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260518-searchable-rateio-hotfix-served-assets') }}"></script>
 <script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421d') }}"></script>
-{% elif report_definition.code == 'bank_statement' %}
+{% elif report_definition.code in ['bank_statement', 'bank_statement_dossier'] %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260518-searchable-rateio-hotfix-served-assets') }}"></script>
 {% elif report_definition.code == 'ledger' %}
 <script src="{{ url_for('static', filename='js/financial_report_workspace.js', v='20260518-searchable-rateio-hotfix-served-assets') }}"></script>

@@ -92,6 +92,81 @@ def test_bank_statement_filters_page_builds_report_context(monkeypatch):
     assert "slug=extrato-bancario" in html
 
 
+def test_bank_statement_dossier_filters_page_builds_report_context(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        financial_reports_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=7, name="Empresa Teste"),
+    )
+    monkeypatch.setattr(financial_reports_route, "get_accessible_company_ids", lambda: [7])
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "get_report_definition_or_error",
+        lambda slug: (
+            {
+                "code": "bank_statement_dossier",
+                "slug": "dossie-extrato-bancario",
+                "label": "Dossiê do Extrato Bancário",
+                "description": "Dossiê documental.",
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "get_filter_options",
+        lambda **kwargs: ({"bank_accounts": []}, None),
+    )
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "default_period",
+        lambda: (__import__("datetime").date(2026, 4, 1), __import__("datetime").date(2026, 4, 19)),
+    )
+
+    def _fake_build_management_report(**kwargs):
+        captured.update(kwargs)
+        return (
+            {
+                "title": "Dossiê do Extrato Bancário",
+                "summary_cards": [],
+                "general_info": [],
+                "rows": [],
+                "filters": [],
+                "dossier_document_count": 0,
+                "dossier_documents": [],
+            },
+            None,
+        )
+
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "build_management_report",
+        _fake_build_management_report,
+    )
+    monkeypatch.setattr(
+        financial_reports_route,
+        "render_template",
+        lambda template_name, **context: f"{template_name}|report={context.get('report') is not None}|slug={context['report_definition']['slug']}",
+    )
+
+    client = app.test_client()
+    response = client.get(
+        "/financial/reports/dossie-extrato-bancario?dossier_mode=simple&dossier_mode=complete",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "modules/financial/report_filters.html" in html
+    assert "report=True" in html
+    assert "slug=dossie-extrato-bancario" in html
+    assert captured["report_type"] == "bank_statement_dossier"
+    assert captured["filters"]["dossier_mode"] == "complete"
+
+
 def test_bank_statement_view_redirects_to_filters(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
