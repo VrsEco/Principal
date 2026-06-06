@@ -23,6 +23,7 @@ from werkzeug.utils import secure_filename
 from models import db
 from models.financial import (
     FinancialChartAccount,
+    FinancialCounterparty,
     FinancialCorrectionIndex,
     FinancialCostCenter,
     FinancialDiscountRule,
@@ -185,7 +186,18 @@ class FinancialScheduleService:
             query = query.filter(FinancialSchedule.status == status)
 
         schedules = query.order_by(FinancialSchedule.next_due_date.asc(), FinancialSchedule.id.desc()).all()
-        return [FinancialScheduleService._serialize_schedule(schedule, include_summary=True) for schedule in schedules], None
+        counterparty_names = FinancialScheduleService._build_counterparty_name_lookup(
+            company_id=company_id,
+            schedules=schedules,
+        )
+        return [
+            FinancialScheduleService._serialize_schedule(
+                schedule,
+                include_summary=True,
+                counterparty_names=counterparty_names,
+            )
+            for schedule in schedules
+        ], None
 
     @staticmethod
     def get_schedule_detail(
@@ -1729,6 +1741,7 @@ class FinancialScheduleService:
         *,
         include_related_entries: bool = False,
         include_summary: bool = False,
+        counterparty_names: Optional[Dict[int, str]] = None,
     ) -> Dict[str, Any]:
         from services.financial_bordero_service import FinancialBorderoService
 
@@ -1741,6 +1754,14 @@ class FinancialScheduleService:
         payload["entity_legacy_label"] = FINANCIAL_OPERATIONAL_GLOSSARY["schedule"]["legacy_singular"]
         payload["display_variant"] = "negative" if payload["signed_template_amount"] < 0 else "positive"
         metadata = dict(schedule.metadata_json or {})
+        resolved_counterparty_name = FinancialScheduleService._resolve_schedule_counterparty_name(
+            schedule=schedule,
+            metadata_json=metadata,
+            counterparty_names=counterparty_names,
+        )
+        if resolved_counterparty_name:
+            payload["counterparty_name"] = resolved_counterparty_name
+            metadata["counterparty_name"] = resolved_counterparty_name
         payload["metadata_json"] = metadata
         payload["is_contract_managed"] = bool(metadata.get("managed_by_contract_billing"))
         payload["contract_management_url"] = metadata.get("contract_management_url")
@@ -1837,11 +1858,78 @@ class FinancialScheduleService:
                     }
                 )
         if include_summary:
-            payload["summary"] = FinancialScheduleService._build_schedule_summary(schedule)
+            payload["summary"] = FinancialScheduleService._build_schedule_summary(
+                schedule,
+                counterparty_names=counterparty_names,
+            )
             if payload["summary"] is not None:
                 payload["summary"]["bordero_code"] = active_bordero.bordero_code if active_bordero else None
                 payload["summary"]["is_bordero_locked"] = bool(active_bordero)
         return build_financial_title_contract_payload(payload)
+
+    @staticmethod
+    def _build_counterparty_name_lookup(
+        *,
+        company_id: int,
+        schedules: Sequence[FinancialSchedule],
+    ) -> Dict[int, str]:
+        counterparty_ids = {
+            int(schedule.counterparty_id)
+            for schedule in schedules
+            if getattr(schedule, "counterparty_id", None) not in (None, "")
+        }
+        if not counterparty_ids:
+            return {}
+
+        counterparties = FinancialCounterparty.query.filter(
+            FinancialCounterparty.company_id == company_id,
+            FinancialCounterparty.id.in_(counterparty_ids),
+            FinancialCounterparty.deleted_at.is_(None),
+        ).all()
+        return {
+            int(counterparty.id): str(counterparty.name).strip()
+            for counterparty in counterparties
+            if getattr(counterparty, "id", None) is not None and str(getattr(counterparty, "name", "") or "").strip()
+        }
+
+    @staticmethod
+    def _resolve_schedule_counterparty_name(
+        *,
+        schedule: FinancialSchedule,
+        metadata_json: Optional[Dict[str, Any]],
+        counterparty_names: Optional[Dict[int, str]] = None,
+    ) -> Optional[str]:
+        metadata_name = str((metadata_json or {}).get("counterparty_name") or "").strip()
+        counterparty_id = getattr(schedule, "counterparty_id", None)
+        if counterparty_id in (None, ""):
+            return metadata_name or None
+
+        try:
+            normalized_counterparty_id = int(counterparty_id)
+        except (TypeError, ValueError):
+            return metadata_name or None
+
+        lookup_name = str((counterparty_names or {}).get(normalized_counterparty_id) or "").strip()
+        if lookup_name:
+            return lookup_name
+
+        try:
+            counterparty = FinancialCounterparty.query.filter(
+                FinancialCounterparty.company_id == getattr(schedule, "company_id", None),
+                FinancialCounterparty.id == normalized_counterparty_id,
+                FinancialCounterparty.deleted_at.is_(None),
+            ).first()
+        except Exception:
+            logger.debug(
+                "Não foi possível resolver favorecido do título %s por counterparty_id=%s",
+                getattr(schedule, "id", None),
+                normalized_counterparty_id,
+                exc_info=True,
+            )
+            counterparty = None
+
+        counterparty_name = str(getattr(counterparty, "name", "") or "").strip() if counterparty else ""
+        return counterparty_name or metadata_name or None
 
     @staticmethod
     def _derive_budget_links_from_allocations(
@@ -1890,7 +1978,11 @@ class FinancialScheduleService:
         )
 
     @staticmethod
-    def _build_schedule_summary(schedule: FinancialSchedule) -> Dict[str, Any]:
+    def _build_schedule_summary(
+        schedule: FinancialSchedule,
+        *,
+        counterparty_names: Optional[Dict[int, str]] = None,
+    ) -> Dict[str, Any]:
         metadata = dict(schedule.metadata_json or {})
         balance = FinancialTitleBalanceService.calculate_for_schedule(schedule=schedule)
         operational_state = build_title_operational_state_metadata(
@@ -1959,7 +2051,11 @@ class FinancialScheduleService:
             ),
             "total_open": balance.get("total_open"),
             "signed_total_open": balance.get("signed_total_open"),
-            "counterparty_name": metadata.get("counterparty_name"),
+            "counterparty_name": FinancialScheduleService._resolve_schedule_counterparty_name(
+                schedule=schedule,
+                metadata_json=metadata,
+                counterparty_names=counterparty_names,
+            ),
             "operational_state": operational_state["code"],
             "operational_state_label": operational_state["label"],
             "has_open_balance": bool(balance.get("has_open_balance")) or title_state_has_open_balance(operational_state_code),
