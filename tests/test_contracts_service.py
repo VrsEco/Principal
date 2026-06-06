@@ -289,7 +289,7 @@ def test_contracts_catalog_service_payload_removes_product_only_fields():
     assert "cest" not in metadata
 
 
-def test_contracts_catalog_product_payload_removes_service_only_fields():
+def test_contracts_catalog_product_payload_keeps_nfse_service_code_and_removes_service_only_fields():
     item_kind, description, unit_code, metadata = ContractsCatalogService._normalize_item_payload(
         level_depth=2,
         item_kind="product",
@@ -306,9 +306,9 @@ def test_contracts_catalog_product_payload_removes_service_only_fields():
     assert item_kind == "product"
     assert metadata["sku"] == "ABC"
     assert metadata["ncm"] == "1234"
+    assert metadata["service_code"] == "SVC01"
     assert metadata["cst_ibs_cbs"] == "000"
     assert metadata["stock_control"] is False
-    assert "service_code" not in metadata
     assert "nbs" not in metadata
 
 
