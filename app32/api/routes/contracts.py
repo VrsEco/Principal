@@ -232,7 +232,7 @@ def _process_contracts_list_submission(company: Company, contract, active_tab: s
             ContractService.upsert_financial_terms(contract=contract, payload=request.form.to_dict(), user_id=user_id)
             flash("Dados financeiros do contrato atualizados.", "success")
     elif tab == "fiscal":
-        if request.form.get("delete_retention_id") or request.form.get("retention_type"):
+        if request.form.get("delete_retention_id") or request.form.get("retention_id") or request.form.get("retention_type"):
             _process_contract_section_submission(company, contract, "fiscal")
         else:
             ContractService.upsert_fiscal_terms(contract=contract, payload=request.form.to_dict(), user_id=user_id)
@@ -398,6 +398,13 @@ def _process_contract_section_submission(company: Company, contract, active_tab:
         if request.form.get("delete_retention_id"):
             ContractService.delete_retention(contract=contract, retention_id=int(request.form["delete_retention_id"]))
             flash("Retenção removida.", "success")
+        elif request.form.get("retention_id"):
+            ContractService.update_retention(
+                contract=contract,
+                retention_id=int(request.form["retention_id"]),
+                payload=request.form.to_dict(),
+            )
+            flash("Retenção atualizada.", "success")
         elif request.form.get("retention_type"):
             ContractService.add_retention(contract=contract, payload=request.form.to_dict())
             flash("Retenção adicionada.", "success")

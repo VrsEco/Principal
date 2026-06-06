@@ -2958,12 +2958,14 @@ class ContractService:
     @staticmethod
     def build_contract_fiscal_snapshot(contract: Contract, reference_date: Optional[date] = None) -> dict:
         fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=contract.company_id).first()
+        fiscal_metadata = dict(fiscal_terms.metadata_json or {}) if fiscal_terms else {}
         legal_entity = None
         if fiscal_terms and fiscal_terms.contracting_legal_entity_id:
             legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, fiscal_terms.contracting_legal_entity_id)
         if legal_entity is None and contract.contracting_legal_entity_id:
             legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, contract.contracting_legal_entity_id)
         issuer_iss_rate, issuer_iss_rule = ContractService._resolve_contract_issuer_iss_rate(contract, reference_date)
+        service_city = fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None)
         return {
             "contracting_legal_entity_id": legal_entity.id if legal_entity else None,
             "issuer_legal_name": legal_entity.legal_name if legal_entity else None,
@@ -2979,8 +2981,13 @@ class ContractService:
             "service_code": fiscal_terms.service_code if fiscal_terms else None,
             "service_list_item": fiscal_terms.service_list_item if fiscal_terms else None,
             "operation_nature": fiscal_terms.operation_nature if fiscal_terms else None,
-            "service_city": fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None),
+            "service_city": service_city,
             "iss_city": fiscal_terms.iss_city if fiscal_terms else None,
+            "service_state": fiscal_metadata.get("service_state") or (legal_entity.uf if legal_entity and service_city == legal_entity.service_city else None),
+            "service_city_code_ibge": fiscal_metadata.get("service_city_code_ibge")
+            or (legal_entity.city_code_ibge if legal_entity and service_city == legal_entity.service_city else None),
+            "service_location_country": fiscal_metadata.get("service_location_country") or "BRA",
+            "tax_iss_at_service_location": ContractService._normalize_bool(fiscal_metadata.get("tax_iss_at_service_location")),
             "issuer_iss_rate": ContractService._decimal_to_export_text(issuer_iss_rate, places=4, strip_trailing=True) if issuer_iss_rate else None,
             "issuer_iss_rate_effective_from": (issuer_iss_rule or {}).get("effective_from"),
             "issuer_iss_rate_effective_to": (issuer_iss_rule or {}).get("effective_to"),
@@ -3010,6 +3017,10 @@ class ContractService:
             "operation_nature": snapshot.get("operation_nature"),
             "service_city": snapshot.get("service_city"),
             "iss_city": snapshot.get("iss_city"),
+            "service_state": snapshot.get("service_state"),
+            "service_city_code_ibge": snapshot.get("service_city_code_ibge"),
+            "service_location_country": snapshot.get("service_location_country"),
+            "tax_iss_at_service_location": snapshot.get("tax_iss_at_service_location"),
             "issuer_iss_rate": snapshot.get("issuer_iss_rate"),
             "fiscal_notes": snapshot.get("fiscal_notes"),
             "issue_date": native_billing.issue_date.isoformat() if native_billing.issue_date else None,
@@ -3045,6 +3056,10 @@ class ContractService:
                 "issuer_iss_rate": fiscal_payload.get("issuer_iss_rate"),
                 "service_city": fiscal_payload.get("service_city"),
                 "iss_city": fiscal_payload.get("iss_city"),
+                "service_state": fiscal_payload.get("service_state"),
+                "service_city_code_ibge": fiscal_payload.get("service_city_code_ibge"),
+                "service_location_country": fiscal_payload.get("service_location_country") or "BRA",
+                "tax_iss_at_service_location": fiscal_payload.get("tax_iss_at_service_location"),
                 "fiscal_notes": fiscal_payload.get("fiscal_notes"),
                 "invoice_number": None,
                 "issued_at": None,
@@ -3228,12 +3243,16 @@ class ContractService:
             "rps_series",
             "service_city",
             "iss_city",
+            "service_state",
+            "service_city_code_ibge",
+            "service_location_country",
             "fiscal_notes",
             "invoice_number",
             "issued_at",
         ):
             if key in payload:
                 fiscal_data[key] = ContractService._normalize_text(payload.get(key)) or None
+        fiscal_data["tax_iss_at_service_location"] = ContractService._normalize_bool(payload.get("tax_iss_at_service_location"))
         state["fiscal_data"] = fiscal_data
         state["updated_at"] = datetime.utcnow().isoformat()
         state["updated_by_user_id"] = user_id
@@ -3433,6 +3452,83 @@ class ContractService:
         return Decimal("0.00")
 
     @staticmethod
+    def _service_location_export_fields(fiscal_data: Optional[dict], sources: Optional[list[dict]] = None) -> dict:
+        fiscal_data = fiscal_data or {}
+        sources = sources or []
+        service_city = ContractService._normalize_text(
+            fiscal_data.get("service_city")
+            or ContractService._metadata_value(
+                sources,
+                "Cidade_Prestacao_Servico",
+                "cidade_prestacao_servico",
+                "service_city",
+                "cidade_servico",
+                "city_service",
+            )
+        )
+        if not service_city or ContractService._is_salvador_city(service_city):
+            return {}
+
+        iss_city = ContractService._normalize_text(
+            fiscal_data.get("iss_city")
+            or ContractService._metadata_value(sources, "iss_city", "cidade_iss", "city_iss")
+        )
+        raw_tax_at_service_location = (
+            fiscal_data.get("tax_iss_at_service_location")
+            if "tax_iss_at_service_location" in fiscal_data
+            else ContractService._metadata_value(
+                sources,
+                "tax_iss_at_service_location",
+                "iss_tributado_no_local_prestacao",
+                "tributar_iss_no_local_prestacao",
+            )
+        )
+        tax_at_service_location = ContractService._normalize_bool(raw_tax_at_service_location)
+        same_tax_city = bool(iss_city) and ContractService._normalize_city_name(iss_city) == ContractService._normalize_city_name(service_city)
+        if not (tax_at_service_location or same_tax_city):
+            return {}
+
+        service_state = ContractService._normalize_export_uf(
+            fiscal_data.get("service_state")
+            or ContractService._metadata_value(
+                sources,
+                "Estado_Prestacao_Servico",
+                "estado_prestacao_servico",
+                "service_state",
+                "service_uf",
+                "uf_prestacao",
+            )
+        )
+        city_code = ContractService._normalize_export_code(
+            fiscal_data.get("service_city_code_ibge")
+            or ContractService._metadata_value(
+                sources,
+                "Codigo_Cidade_Prestacao_Servico",
+                "codigo_cidade_prestacao_servico",
+                "service_city_code_ibge",
+                "service_city_code",
+                "codigo_ibge_prestacao",
+            )
+        )
+        country = ContractService._normalize_export_code(
+            fiscal_data.get("service_location_country")
+            or ContractService._metadata_value(
+                sources,
+                "Pais_Prestacao_Servico",
+                "pais_prestacao_servico",
+                "service_location_country",
+                "country_service",
+            )
+            or "BRA"
+        )
+        return {
+            "Pais_Prestacao_Servico": country,
+            "Estado_Prestacao_Servico": service_state,
+            "Cidade_Prestacao_Servico": service_city,
+            "Codigo_Cidade_Prestacao_Servico": city_code,
+        }
+
+    @staticmethod
     def _build_fiscal_invoice_nfse_row(*, company_id: int, native_billing: ContractNativeBilling) -> dict:
         state = ContractService._get_fiscal_invoice_state(native_billing)
         fiscal_data = dict(state.get("fiscal_data") or {})
@@ -3595,6 +3691,7 @@ class ContractService:
             "CNAE": ContractService._normalize_export_code(
                 ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae")
             ),
+            **ContractService._service_location_export_fields(fiscal_data, all_sources),
             "Aliquota_ISS": ContractService._decimal_to_export_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
             "Valor_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
             "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,
@@ -3916,6 +4013,10 @@ class ContractService:
         nfs_provider = ContractService._normalize_text(payload.get("nfs_provider")) or legal_entity.nfs_provider or None
         service_city = ContractService._normalize_text(payload.get("service_city")) or legal_entity.service_city or None
         iss_city = ContractService._normalize_text(payload.get("iss_city")) or service_city
+        service_state = (ContractService._normalize_text(payload.get("service_state")) or None)
+        service_city_code_ibge = ContractService._normalize_text(payload.get("service_city_code_ibge")) or None
+        service_location_country = ContractService._normalize_text(payload.get("service_location_country")) or "BRA"
+        tax_iss_at_service_location = ContractService._normalize_bool(payload.get("tax_iss_at_service_location"))
 
         contract.contracting_legal_entity_id = legal_entity.id
         contract.updated_by_user_id = user_id
@@ -3939,6 +4040,10 @@ class ContractService:
             **(record.metadata_json or {}),
             "issuer_cnpj": legal_entity.cnpj,
             "issuer_legal_name": legal_entity.legal_name,
+            "service_state": service_state,
+            "service_city_code_ibge": service_city_code_ibge,
+            "service_location_country": service_location_country,
+            "tax_iss_at_service_location": tax_iss_at_service_location,
             "compliance_rule": "contracting_legal_entity_equals_nf_issuer",
         }
         ContractService.record_event(
@@ -3970,6 +4075,23 @@ class ContractService:
             notes=ContractService._normalize_text(payload.get("notes")) or None,
         )
         db.session.add(retention)
+        db.session.commit()
+        return retention
+
+    @staticmethod
+    def update_retention(*, contract: Contract, retention_id: int, payload: dict) -> ContractRetention:
+        retention = ContractRetention.query.filter_by(
+            id=retention_id,
+            company_id=contract.company_id,
+            contract_id=contract.id,
+        ).first()
+        if not retention:
+            raise ValueError("Retenção não localizada para o contrato ativo.")
+        retention.retention_type = ContractService._normalize_text(payload.get("retention_type")) or retention.retention_type
+        retention.calculation_mode = ContractService._normalize_text(payload.get("calculation_mode")) or None
+        retention.rate_percent = ContractService._normalize_decimal(payload.get("rate_percent"))
+        retention.fixed_amount = ContractService._normalize_decimal(payload.get("fixed_amount"))
+        retention.notes = ContractService._normalize_text(payload.get("notes")) or None
         db.session.commit()
         return retention
 

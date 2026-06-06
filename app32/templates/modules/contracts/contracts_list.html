@@ -297,8 +297,8 @@
                                             <input type="checkbox" name="retention_{{ retention_key }}_enabled" value="1" data-retention-enabled {% if (edit_state.retention_flags or {}).get(retention_key) %}checked{% endif %}>
                                             {{ retention_label }}
                                         </label>
-                                        <button class="btn btn-ghost btn-sm contract-retention-toggle" type="button" data-retention-toggle aria-expanded="false" onclick="window.toggleContractRetentionCard && window.toggleContractRetentionCard(this); return false;">
-                                            {{ retention_label }}
+                                        <button class="btn btn-ghost btn-sm contract-retention-toggle" type="button" data-retention-toggle data-retention-label="{{ retention_label }}" data-retention-collapsed-label="Ver detalhes" aria-expanded="false">
+                                            Ver detalhes
                                         </button>
                                     </div>
                                     <div class="contract-retention-detail-grid" data-retention-body hidden>
@@ -488,9 +488,11 @@
                 </form>
 
                 {% elif active_list_tab == 'fiscal' %}
+                {% set fiscal_metadata = fiscal_terms.metadata_json if fiscal_terms and fiscal_terms.metadata_json else {} %}
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="fiscal">
                     <input type="hidden" name="return_tab" value="fiscal">
+                    <input type="hidden" name="service_location_country" value="{{ fiscal_metadata.get('service_location_country', 'BRA') }}">
                     <div class="panel-header"><h2>Dados Fiscal / Emissão de NF</h2></div>
                     <div class="panel-body form-grid">
                         <div class="full-width inline-hint">A emissão fiscal do contrato agora guarda apenas o contexto macro da NFS-e. Tipo fiscal do serviço e retenções passam a ser tratados por item.</div>
@@ -511,8 +513,15 @@
                         </label>
                         <label><span>Provedor NFS-e</span><input type="text" name="nfs_provider" value="{{ fiscal_terms.nfs_provider if fiscal_terms else '' }}"></label>
                         <label><span>Série RPS</span><input type="text" name="default_rps_series" value="{{ fiscal_terms.default_rps_series if fiscal_terms else '' }}"></label>
-                        <label><span>Cidade serviço</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else '' }}"></label>
+                        <label><span>Cidade da prestação</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else '' }}"></label>
                         <label><span>Cidade ISS</span><input type="text" name="iss_city" value="{{ fiscal_terms.iss_city if fiscal_terms else '' }}"></label>
+                        <label><span>UF da prestação</span><input type="text" name="service_state" value="{{ fiscal_metadata.get('service_state', '') }}" maxlength="2" placeholder="BA"></label>
+                        <label><span>Código IBGE da prestação</span><input type="text" name="service_city_code_ibge" value="{{ fiscal_metadata.get('service_city_code_ibge', '') }}" placeholder="Ex.: 2930709"></label>
+                        <label class="checkbox-card full-width">
+                            <strong>Tributar ISS no local da prestação</strong>
+                            <span class="field-hint">Quando marcado e a prestação for fora de Salvador, a exportação preenche AP/AQ/AR.</span>
+                            <input type="checkbox" name="tax_iss_at_service_location" value="1" {% if fiscal_metadata.get('tax_iss_at_service_location') %}checked{% endif %}>
+                        </label>
                         <label class="full-width"><span>Observação fiscal</span><textarea name="tax_observation" rows="4">{{ fiscal_terms.tax_observation if fiscal_terms else '' }}</textarea></label>
                     </div>
                     <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar fiscal</button></div>
@@ -640,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!card) return false;
         const body = card.querySelector('[data-retention-body]');
         const toggle = card.querySelector('[data-retention-toggle]');
-        const retentionLabel = toggle?.dataset?.retentionLabel || toggle?.textContent?.trim() || 'Retenção';
+        const collapsedLabel = toggle?.dataset?.retentionCollapsedLabel || 'Ver detalhes';
         const expanded = toggle?.getAttribute('aria-expanded') === 'true';
         const nextExpanded = !expanded;
         card.classList.toggle('is-collapsed', !nextExpanded);
@@ -650,7 +659,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (toggle) {
             toggle.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
-            toggle.textContent = nextExpanded ? 'Ocultar detalhes' : retentionLabel;
+            toggle.textContent = nextExpanded ? 'Ocultar detalhes' : collapsedLabel;
         }
         return false;
     };
@@ -769,13 +778,13 @@ document.addEventListener('DOMContentLoaded', function () {
         body.hidden = !expanded;
         body.style.display = expanded ? 'grid' : 'none';
         toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-        toggle.textContent = expanded ? 'Ocultar detalhes' : (toggle.dataset.retentionLabel || toggle.textContent);
+        toggle.textContent = expanded ? 'Ocultar detalhes' : (toggle.dataset.retentionCollapsedLabel || 'Ver detalhes');
     };
 
     document.querySelectorAll('[data-retention-card]').forEach((card) => {
         const toggle = card.querySelector('[data-retention-toggle]');
         const checkbox = card.querySelector('[data-retention-enabled]');
-        if (toggle) toggle.dataset.retentionLabel = toggle.textContent.trim();
+        if (toggle && !toggle.dataset.retentionCollapsedLabel) toggle.dataset.retentionCollapsedLabel = toggle.textContent.trim() || 'Ver detalhes';
 
         syncRetentionCard(card, false);
 

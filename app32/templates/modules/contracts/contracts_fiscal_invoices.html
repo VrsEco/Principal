@@ -156,8 +156,16 @@
                 <label><span>Série RPS</span><input type="text" name="rps_series" value="{{ data.rps_series or '' }}"></label>
                 <label><span>Número NF</span><input type="text" name="invoice_number" value="{{ data.invoice_number or '' }}"></label>
                 <label><span>Data emissão</span><input type="date" name="issued_at" value="{{ data.issued_at[:10] if data.issued_at else '' }}"></label>
-                <label><span>Cidade serviço</span><input type="text" name="service_city" value="{{ data.service_city or '' }}"></label>
+                <input type="hidden" name="service_location_country" value="{{ data.service_location_country or 'BRA' }}">
+                <label><span>Cidade da prestação</span><input type="text" name="service_city" value="{{ data.service_city or '' }}"></label>
                 <label><span>Cidade ISS</span><input type="text" name="iss_city" value="{{ data.iss_city or '' }}"></label>
+                <label><span>UF da prestação</span><input type="text" name="service_state" value="{{ data.service_state or '' }}" maxlength="2" placeholder="BA"></label>
+                <label><span>Código IBGE da prestação</span><input type="text" name="service_city_code_ibge" value="{{ data.service_city_code_ibge or '' }}" placeholder="Ex.: 2930709"></label>
+                <label class="checkbox-card full-width">
+                    <strong>Tributar ISS no local da prestação</strong>
+                    <span class="field-hint">Preenche Estado/Cidade/Código da prestação na planilha quando fora de Salvador.</span>
+                    <input type="checkbox" name="tax_iss_at_service_location" value="1" {% if data.tax_iss_at_service_location %}checked{% endif %}>
+                </label>
                 <label class="full-width"><span>Observação fiscal</span><textarea name="fiscal_notes" rows="4">{{ data.fiscal_notes or '' }}</textarea></label>
             </div>
             <footer class="nf-dialog-footer">

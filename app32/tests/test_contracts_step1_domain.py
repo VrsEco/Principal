@@ -483,12 +483,20 @@ def test_build_fiscal_invoice_nfse_row_keeps_iss_and_duplicates_to_outros_for_no
         metadata_json = {
             "fiscal_snapshot": {
                 "service_city": "Simões Filho",
+                "iss_city": "Simões Filho",
+                "service_state": "BA",
+                "service_city_code_ibge": "2930709",
+                "tax_iss_at_service_location": True,
             },
             "fiscal_invoice": {
                 "fiscal_data": {
                     "customer_name": "BOMIX INDUSTRIA DE EMBALAGENS LTDA",
                     "customer_document": "01.561.279/0001-45",
                     "service_city": "Simões Filho",
+                    "iss_city": "Simões Filho",
+                    "service_state": "BA",
+                    "service_city_code_ibge": "2930709",
+                    "tax_iss_at_service_location": True,
                 }
             },
         }
@@ -502,6 +510,10 @@ def test_build_fiscal_invoice_nfse_row_keeps_iss_and_duplicates_to_outros_for_no
     assert row["Valor_ISS"] == "314,28"
     assert row["Retencao_OUTROS"] == "314,28"
     assert row.get("Retencao_ISS") is None
+    assert row["Pais_Prestacao_Servico"] == "BRA"
+    assert row["Estado_Prestacao_Servico"] == "BA"
+    assert row["Cidade_Prestacao_Servico"] == "Simões Filho"
+    assert row["Codigo_Cidade_Prestacao_Servico"] == "2930709"
 
 
 def test_build_fiscal_invoice_nfse_row_exports_iss_retention_for_salvador():
@@ -578,6 +590,9 @@ def test_build_fiscal_invoice_nfse_row_exports_iss_retention_for_salvador():
     assert row["Valor_ISS"] == "131,07"
     assert row["Retencao_ISS"] == "131,07"
     assert row.get("Retencao_OUTROS") is None
+    assert "Estado_Prestacao_Servico" not in row
+    assert "Cidade_Prestacao_Servico" not in row
+    assert "Codigo_Cidade_Prestacao_Servico" not in row
 
 
 def test_build_fiscal_invoice_nfse_row_normalizes_codes_and_address_defaults():

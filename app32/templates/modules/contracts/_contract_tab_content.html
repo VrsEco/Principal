@@ -398,8 +398,10 @@
             {% set selected_contracting_entity = (fiscal_terms.contracting_legal_entity if fiscal_terms and fiscal_terms.contracting_legal_entity else contract.contracting_legal_entity) %}
             {% set withholding_flags = fiscal_terms.withholding_flags if fiscal_terms and fiscal_terms.withholding_flags else {} %}
             <div class="grid-two">
+                {% set fiscal_metadata = fiscal_terms.metadata_json if fiscal_terms and fiscal_terms.metadata_json else {} %}
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="fiscal">
+                    <input type="hidden" name="service_location_country" value="{{ fiscal_metadata.get('service_location_country', 'BRA') }}">
                     <div class="panel-header">
                         <h2>Fiscal do contrato</h2>
                         <a class="btn btn-secondary" href="/contracts/legal-entities?company_id={{ company_id }}">Cadastrar PJ</a>
@@ -440,8 +442,14 @@
                         <label><span>Código do serviço</span><input type="text" name="service_code" value="{{ fiscal_terms.service_code if fiscal_terms else '' }}" required></label>
                         <label><span>Item da lista</span><input type="text" name="service_list_item" value="{{ fiscal_terms.service_list_item if fiscal_terms else '' }}" required></label>
                         <label><span>Natureza da operação</span><input type="text" name="operation_nature" value="{{ fiscal_terms.operation_nature if fiscal_terms else '' }}" required></label>
-                        <label><span>Cidade do serviço</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else (selected_contracting_entity.service_city if selected_contracting_entity else '') }}"></label>
+                        <label><span>Cidade da prestação</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else (selected_contracting_entity.service_city if selected_contracting_entity else '') }}"></label>
                         <label><span>Cidade do ISS</span><input type="text" name="iss_city" value="{{ fiscal_terms.iss_city if fiscal_terms else '' }}"></label>
+                        <label><span>UF da prestação</span><input type="text" name="service_state" value="{{ fiscal_metadata.get('service_state', '') }}" maxlength="2" placeholder="BA"></label>
+                        <label><span>Código IBGE da prestação</span><input type="text" name="service_city_code_ibge" value="{{ fiscal_metadata.get('service_city_code_ibge', '') }}" placeholder="Ex.: 2930709"></label>
+                        <label class="checkbox-inline full-width">
+                            <input type="checkbox" name="tax_iss_at_service_location" value="1" {% if fiscal_metadata.get('tax_iss_at_service_location') %}checked{% endif %}>
+                            Tributar ISS no local da prestação quando fora de Salvador
+                        </label>
                         <label><span>Perfil API</span><input type="number" name="api_profile_id" value="{{ fiscal_terms.api_profile_id if fiscal_terms and fiscal_terms.api_profile_id else (selected_contracting_entity.api_profile_id if selected_contracting_entity and selected_contracting_entity.api_profile_id else '') }}"></label>
                         <label><span>Perfil planilha</span><input type="number" name="spreadsheet_profile_id" value="{{ fiscal_terms.spreadsheet_profile_id if fiscal_terms and fiscal_terms.spreadsheet_profile_id else (selected_contracting_entity.spreadsheet_profile_id if selected_contracting_entity and selected_contracting_entity.spreadsheet_profile_id else '') }}"></label>
                         <label><span>Natureza tributária</span><input type="text" name="tax_nature" value="{{ fiscal_terms.tax_nature if fiscal_terms else '' }}"></label>
@@ -461,28 +469,42 @@
                     <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar fiscal</button></div>
                 </form>
                 <div class="panel form-panel">
-                    <form method="post">
-                        <input type="hidden" name="section" value="fiscal">
-                        <div class="panel-header"><h2>Retenções</h2></div>
-                        <div class="panel-body form-grid">
-                            <label><span>Tipo</span><input type="text" name="retention_type"></label>
-                            <label><span>Modo</span><input type="text" name="calculation_mode"></label>
-                            <label><span>Percentual</span><input type="text" name="rate_percent" value="0,00"></label>
-                            <label><span>Valor fixo</span><input type="text" name="fixed_amount" value="0,00"></label>
-                            <label class="full-width"><span>Observações</span><textarea name="notes" rows="3"></textarea></label>
-                        </div>
-                        <div class="panel-footer"><button class="btn btn-primary" type="submit">Adicionar retenção</button></div>
-                    </form>
+                    <div class="panel-header"><h2>Retenções</h2></div>
                     <div class="panel-body">
+                        <details class="contract-retention-accordion" open>
+                            <summary>Cadastrar nova retenção</summary>
+                            <form method="post" class="form-grid contract-retention-edit-form">
+                                <input type="hidden" name="section" value="fiscal">
+                                <label><span>Tipo</span><input type="text" name="retention_type"></label>
+                                <label><span>Modo</span><input type="text" name="calculation_mode"></label>
+                                <label><span>Percentual</span><input type="text" name="rate_percent" value="0,00"></label>
+                                <label><span>Valor fixo</span><input type="text" name="fixed_amount" value="0,00"></label>
+                                <label class="full-width"><span>Observações</span><textarea name="notes" rows="3"></textarea></label>
+                                <div class="panel-footer full-width"><button class="btn btn-primary" type="submit">Adicionar retenção</button></div>
+                            </form>
+                        </details>
                         {% if contract.retentions.count() %}
                         <div class="list-stack">
                             {% for retention in contract.retentions.all() %}
-                            <form method="post" class="list-item list-item-form">
-                                <input type="hidden" name="section" value="fiscal">
-                                <input type="hidden" name="delete_retention_id" value="{{ retention.id }}">
-                                <div><strong>{{ retention.retention_type }}</strong><small>{{ retention.calculation_mode or '-' }} · {{ retention.rate_percent or retention.fixed_amount or 0 }}</small></div>
-                                <button class="btn btn-danger" type="submit">Remover</button>
-                            </form>
+                            <details class="contract-retention-accordion">
+                                <summary>
+                                    <strong>{{ retention.retention_type }}</strong>
+                                    <small>{{ retention.calculation_mode or '-' }} · {{ retention.rate_percent or retention.fixed_amount or 0 }}</small>
+                                </summary>
+                                <form method="post" class="form-grid contract-retention-edit-form">
+                                    <input type="hidden" name="section" value="fiscal">
+                                    <input type="hidden" name="retention_id" value="{{ retention.id }}">
+                                    <label><span>Tipo</span><input type="text" name="retention_type" value="{{ retention.retention_type or '' }}"></label>
+                                    <label><span>Modo</span><input type="text" name="calculation_mode" value="{{ retention.calculation_mode or '' }}"></label>
+                                    <label><span>Percentual</span><input type="text" name="rate_percent" value="{{ retention.rate_percent or '0,00' }}"></label>
+                                    <label><span>Valor fixo</span><input type="text" name="fixed_amount" value="{{ retention.fixed_amount or '0,00' }}"></label>
+                                    <label class="full-width"><span>Observações</span><textarea name="notes" rows="3">{{ retention.notes or '' }}</textarea></label>
+                                    <div class="panel-footer full-width">
+                                        <button class="btn btn-primary" type="submit">Salvar retenção</button>
+                                        <button class="btn btn-danger" type="submit" name="delete_retention_id" value="{{ retention.id }}" formnovalidate>Remover</button>
+                                    </div>
+                                </form>
+                            </details>
                             {% endfor %}
                         </div>
                         {% else %}<p class="empty-state">Nenhuma retenção cadastrada.</p>{% endif %}
