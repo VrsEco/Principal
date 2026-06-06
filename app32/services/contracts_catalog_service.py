@@ -11,6 +11,7 @@ class ContractsCatalogService:
     MAX_DEPTH = 2
     PRODUCT_METADATA_FIELDS = {
         "sku",
+        "service_code",
         "ncm",
         "cest",
         "cfop",

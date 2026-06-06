@@ -195,6 +195,10 @@
                                 </div>
                                 <div class="cw-form-grid nested-grid">
                                     <label>
+                                        <span>Código do Serviço (NFS-e)</span>
+                                        <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}" placeholder="Ex.: 0710002">
+                                    </label>
+                                    <label>
                                         <span>Item/Subitem LC 116</span>
                                         <input type="text" name="service_list_code" value="{{ metadata.get('service_list_code', '') }}" placeholder="Ex.: 1.07">
                                     </label>
@@ -218,6 +222,11 @@
                                     </div>
                                 </div>
                                 <div class="cw-form-grid nested-grid">
+                                    <label>
+                                        <span>Código do Serviço (NFS-e)</span>
+                                        <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}" placeholder="Ex.: 0710002">
+                                        <small class="field-hint">Usado na coluna Codigo_Servico da planilha de integração.</small>
+                                    </label>
                                     <label>
                                         <span>NCM</span>
                                         <input type="text" name="ncm" value="{{ metadata.get('ncm', '') }}">
@@ -251,10 +260,6 @@
                         <div class="cw-form-grid">
                             <div class="cw-kind-panel full-width" data-item-kind-panel="service" {% if current_kind != 'service' %}hidden{% endif %}>
                                 <div class="cw-form-grid nested-grid">
-                                    <label>
-                                        <span>Código interno do serviço</span>
-                                        <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}">
-                                    </label>
                                     <label>
                                         <span>Unidade de faturamento</span>
                                         <input type="text" value="{{ selected_item.unit_code if selected_item else '' }}" disabled>

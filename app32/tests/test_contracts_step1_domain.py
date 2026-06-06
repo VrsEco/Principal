@@ -353,7 +353,7 @@ def test_native_billing_fiscal_export_payload_reads_snapshot_metadata():
     assert payload["service_code"] == "1401"
 
 
-def test_build_fiscal_invoice_nfse_row_prioritizes_snapshot_for_service_codes_and_normalizes_nbs():
+def test_build_fiscal_invoice_nfse_row_prioritizes_catalog_for_service_code_and_normalizes_nbs():
     class _FakeItemsQuery:
         def __init__(self, items):
             self._items = items
@@ -422,7 +422,7 @@ def test_build_fiscal_invoice_nfse_row_prioritizes_snapshot_for_service_codes_an
 
     row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
 
-    assert row["Codigo_Servico"] == "1401001"
+    assert row["Codigo_Servico"] == "702"
     assert row["IBSCBS_Indicador_Operacao"] == "050101"
     assert row["IBSCBS_Codigo_Classificacao"] == "000001"
     assert row["IBSCBS_Tipo_Operacao"] == "1401101"

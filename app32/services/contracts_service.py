@@ -3479,8 +3479,8 @@ class ContractService:
             "Valor": float(gross_amount.quantize(Decimal("0.01"))),
             "Codigo_Servico": ContractService._normalize_export_code(
                 ContractService._metadata_value_with_fallback(
-                    fiscal_sources,
                     item_sources,
+                    fiscal_sources,
                     "Codigo_Servico",
                     "codigo_servico",
                     "service_code",

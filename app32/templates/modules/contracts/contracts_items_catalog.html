@@ -185,8 +185,8 @@
                         </div>
                         <div class="form-grid" style="padding-top: 1rem;">
                             <label>
-                                <span>Código interno do serviço</span>
-                                <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}">
+                                <span>Código do Serviço (NFS-e)</span>
+                                <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}" placeholder="Ex.: 0710002">
                             </label>
                             <label>
                                 <span>Item/Subitem LC 116</span>
@@ -213,6 +213,11 @@
                             </div>
                         </div>
                         <div class="form-grid" style="padding-top: 1rem;">
+                            <label>
+                                <span>Código do Serviço (NFS-e)</span>
+                                <input type="text" name="service_code" value="{{ metadata.get('service_code', '') }}" placeholder="Ex.: 0710002">
+                                <small class="field-hint">Usado na coluna Codigo_Servico da planilha de integração.</small>
+                            </label>
                             <label>
                                 <span>SKU / referência</span>
                                 <input type="text" name="sku" value="{{ metadata.get('sku', '') }}">
