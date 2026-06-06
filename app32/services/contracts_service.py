@@ -3415,6 +3415,24 @@ class ContractService:
         return totals, rates
 
     @staticmethod
+    def _issuer_iss_rate_from_fiscal_sources(fiscal_data: Optional[dict], fiscal_sources: Optional[list[dict]] = None) -> Decimal:
+        rate = ContractService._normalize_decimal((fiscal_data or {}).get("issuer_iss_rate"))
+        if rate > Decimal("0.00"):
+            return rate.quantize(Decimal("0.0001"))
+        rate = ContractService._normalize_decimal(
+            ContractService._metadata_value(
+                fiscal_sources,
+                "issuer_iss_rate",
+                "aliquota_iss_emissora",
+                "iss_rate_percent",
+                "aliquota_iss_percent",
+            )
+        )
+        if rate > Decimal("0.00"):
+            return rate.quantize(Decimal("0.0001"))
+        return Decimal("0.00")
+
+    @staticmethod
     def _build_fiscal_invoice_nfse_row(*, company_id: int, native_billing: ContractNativeBilling) -> dict:
         state = ContractService._get_fiscal_invoice_state(native_billing)
         fiscal_data = dict(state.get("fiscal_data") or {})
@@ -3428,6 +3446,9 @@ class ContractService:
         iss_amount = retention_totals.get("iss", Decimal("0.00"))
         other_amount = retention_totals.get("other", Decimal("0.00"))
         iss_rate = retention_rates.get("iss")
+        issuer_iss_rate = ContractService._issuer_iss_rate_from_fiscal_sources(fiscal_data, fiscal_sources)
+        if issuer_iss_rate > Decimal("0.00"):
+            iss_rate = issuer_iss_rate
         export_iss_as_other = ContractService._should_export_iss_as_other(fiscal_data, all_sources)
         if export_iss_as_other:
             other_amount += iss_amount
