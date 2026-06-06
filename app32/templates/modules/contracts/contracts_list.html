@@ -34,20 +34,21 @@
     </section>
 
     <section class="contracts-cw-shell">
-        <aside class="contracts-list-rail">
-            <div class="contracts-sidebar-card">
-                <div class="contracts-sidebar-header">
+        <aside class="contracts-list-rail cw-list-rail">
+            <div class="contracts-sidebar-card cw-sidebar-card">
+                <div class="contracts-sidebar-header cw-sidebar-header">
                     <h3>Clientes e contratos</h3>
                     <span class="cw-counter">{{ contracts|length }}</span>
                 </div>
-                <label class="contracts-tree-search">
+                <label class="contracts-tree-search cw-search">
                     <span>Buscar</span>
                     <input id="contracts-tree-search" type="search" placeholder="Cliente, código ou contrato">
                 </label>
-                <div class="contracts-tree-list compact-tree" id="contracts-tree-list">
+                <div class="contracts-tree-list cw-list compact-tree" id="contracts-tree-list">
+                    <div class="cw-tree">
                     {% for branch in contract_tree %}
                     {% if not has_active_filters or branch.contract_count %}
-                    <div class="cw-tree-node is-parent is-synthetic" data-tree-node data-search-text="{{ (branch.party.code ~ ' ' ~ branch.party.name)|lower }}">
+                    <div class="cw-tree-node is-parent is-synthetic" data-tree-node data-tree-search="{{ (branch.party.code ~ ' ' ~ branch.party.name)|lower }}" data-search-text="{{ (branch.party.code ~ ' ' ~ branch.party.name)|lower }}">
                         <article class="cw-list-item {{ 'active' if selected_contract and selected_contract.party_id == branch.party.id else '' }}">
                             <div class="cw-list-item-line">
                                 <div class="cw-tree-title-wrap">
@@ -65,29 +66,34 @@
                                         <span>{{ branch.party.name }}</span>
                                     </div>
                                 </div>
-                                <span class="cw-tree-badge">{{ branch.active_count }}/{{ branch.contract_count }}</span>
+                                <span class="cw-list-item-status">{{ branch.active_count }}/{{ branch.contract_count }} ativos</span>
+                            </div>
+                            <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                                <span class="cw-tree-badge">Cliente</span>
                             </div>
                         </article>
                         <div class="cw-tree-children" data-tree-children="{{ branch.party.id }}">
                             {% if branch.contracts %}
                                 {% for item in branch.contracts %}
                                 {% set next_action = contract_next_action(item) %}
-                                <a class="cw-list-item {{ 'active' if selected_id == item.id else '' }}" href="/contracts/list?company_id={{ company_id }}&contract_id={{ item.id }}&tab={{ active_list_tab }}">
-                                    <div class="cw-list-item-line">
-                                        <div class="cw-tree-title-wrap">
-                                            <button type="button" class="cw-tree-toggle placeholder" tabindex="-1"></button>
-                                            <div class="cw-tree-title-content">
-                                                <strong>{{ item.code }}</strong>
-                                                <span class="cw-tree-separator">-</span>
-                                                <span>{{ item.title }}</span>
+                                <div class="cw-tree-node is-leaf is-analytic" data-contract-search-text="{{ (item.code ~ ' ' ~ item.title ~ ' ' ~ branch.party.code ~ ' ' ~ branch.party.name)|lower }}">
+                                    <article class="cw-list-item {{ 'active' if selected_id == item.id else '' }}">
+                                        <a class="cw-list-item-line" href="/contracts/list?company_id={{ company_id }}&contract_id={{ item.id }}&tab={{ active_list_tab }}">
+                                            <div class="cw-tree-title-wrap">
+                                                <button type="button" class="cw-tree-toggle placeholder" tabindex="-1"></button>
+                                                <div class="cw-tree-title-content">
+                                                    <strong>{{ item.code }}</strong>
+                                                    <span class="cw-tree-separator">-</span>
+                                                    <span>{{ item.title }}</span>
+                                                </div>
                                             </div>
+                                            <span class="cw-list-item-status">{{ contract_status_label(item) }}</span>
+                                        </a>
+                                        <div class="cw-list-item-actions" onclick="event.stopPropagation()">
+                                            <span class="mini-badge {{ next_action.tone }}">{{ next_action.label }}</span>
                                         </div>
-                                    </div>
-                                    <div class="cw-list-item-actions" onclick="event.stopPropagation()">
-                                        <span class="mini-badge {{ next_action.tone }}">{{ next_action.label }}</span>
-                                    </div>
-                                </a>
-                                <div hidden data-contract-search-text="{{ (item.code ~ ' ' ~ item.title ~ ' ' ~ branch.party.code ~ ' ' ~ branch.party.name)|lower }}"></div>
+                                    </article>
+                                </div>
                                 {% endfor %}
                             {% else %}
                                 <p class="contracts-empty-branch">Nenhum contrato ainda.</p>
@@ -99,6 +105,7 @@
                     {% if not contract_tree %}
                     <p class="empty-state">Nenhum cliente habilitado para contratos.</p>
                     {% endif %}
+                    </div>
                 </div>
             </div>
         </aside>
@@ -556,14 +563,15 @@
     .contracts-kpi-strip strong { font-size:1.45rem; }
     .contracts-cw-shell { display:grid; grid-template-columns:320px minmax(0,1fr) 270px; gap:1rem; align-items:start; }
     .contracts-list-rail, .contracts-tabs-rail { position:sticky; top:1rem; display:flex; flex-direction:column; gap:1rem; min-width:0; }
-    .contracts-sidebar-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
-    .contracts-sidebar-header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.85rem; }
+    .contracts-sidebar-card,.cw-sidebar-card { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); padding:1rem; }
+    .contracts-sidebar-header,.cw-sidebar-header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.85rem; }
     .contracts-sidebar-card h3 { margin:0; }
     .cw-counter { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:30px; border-radius:999px; background:var(--primary-light); color:var(--primary); font-size:.78rem; font-weight:800; }
-    .contracts-tree-search { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem; color:var(--text-secondary); font-weight:600; }
-    .contracts-tree-search input { width:100%; padding:.78rem .9rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); color:var(--text-primary); }
-    .contracts-tree-list { display:flex; flex-direction:column; gap:.2rem; max-height:calc(100vh - 340px); overflow:auto; padding-right:.2rem; }
+    .contracts-tree-search,.cw-search { display:flex; flex-direction:column; gap:.4rem; margin:1rem 0; color:var(--text-secondary); font-weight:600; }
+    .contracts-tree-search input,.cw-search input { width:100%; padding:.78rem .9rem; border:1px solid var(--border); border-radius:12px; background:var(--surface-secondary); color:var(--text-primary); }
+    .contracts-tree-list,.cw-list { display:flex; flex-direction:column; gap:.4rem; max-height:calc(100vh - 340px); overflow:auto; padding-right:.2rem; }
     .contracts-tree-list[hidden] { display:none !important; }
+    .cw-list.compact-tree { gap:.2rem; }
     .cw-tree { display:flex; flex-direction:column; gap:.1rem; }
     .cw-tree-node { display:flex; flex-direction:column; gap:.12rem; }
     .cw-tree-children { display:flex; flex-direction:column; gap:.12rem; margin-left:.7rem; padding-left:.75rem; border-left:1px dashed var(--border); }
@@ -572,7 +580,7 @@
     .cw-list-item:hover,.cw-list-item.active { border-color:rgba(37,99,235,.18); background:#f8fbff; }
     .cw-tree-node.is-parent > .cw-list-item { background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
     .cw-tree-node.is-analytic > .cw-list-item { background:#fcfcfd; border-color:#edf1f6; }
-    .cw-list-item-line { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; }
+    .cw-list-item-line { display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; text-decoration:none; color:inherit; }
     .cw-tree-toggle { display:inline-flex; align-items:center; justify-content:center; width:1.3rem; height:1.3rem; border:1px solid var(--border); border-radius:6px; background:var(--surface-secondary); color:var(--text-secondary); font-weight:700; cursor:pointer; flex-shrink:0; font-size:.78rem; padding:0; margin-top:.06rem; }
     .cw-tree-toggle:hover { color:var(--text-primary); border-color:rgba(37,99,235,.22); }
     .cw-tree-toggle.placeholder { visibility:hidden; }
@@ -581,6 +589,7 @@
     .cw-tree-title-content strong { font-size:.82rem; line-height:1.15; font-weight:800; color:var(--text-primary); }
     .cw-tree-title-content span { color:var(--text-primary); font-size:.8rem; line-height:1.15; }
     .cw-tree-separator { color:var(--text-tertiary); font-weight:600; }
+    .cw-list-item-status { display:inline-flex; align-items:center; justify-content:center; padding:.12rem .36rem; border-radius:999px; background:#f3f4f6; color:#6b7280; font-size:.58rem; line-height:1; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
     .cw-tree-badge { display:inline-flex; align-items:center; justify-content:center; padding:.16rem .45rem; border-radius:8px; font-size:.65rem; line-height:1; font-weight:700; border:1px solid #bbf7d0; background:#dcfce7; color:#166534; text-transform:none; letter-spacing:0; }
     .cw-list-item-actions { display:flex; gap:.25rem; flex-wrap:wrap; margin-top:.28rem; margin-left:1.7rem; }
     .cw-list-item-actions .mini-badge { display:inline-flex; }
