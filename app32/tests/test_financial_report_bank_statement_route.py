@@ -1,14 +1,17 @@
 import os
 import sys
+from io import BytesIO
 from types import SimpleNamespace
 
 from flask import Flask, render_template
 from flask_login import LoginManager
+from pypdf import PdfReader
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from api.routes import financial as financial_route
 from api.routes import financial_reports as financial_reports_route
+from services.financial_report_service import FinancialReportService
 from utils import permissions as permission_utils
 
 
@@ -178,6 +181,173 @@ def test_bank_statement_view_redirects_to_filters(monkeypatch):
     assert response.headers["Location"].endswith(
         "/financial/reports/extrato-bancario?period_start=2026-04-01&period_end=2026-04-19"
     )
+
+
+def test_bank_statement_dossier_layout_test_forces_landscape(monkeypatch):
+    app = _build_app()
+    captured = {}
+    monkeypatch.setattr(permission_utils, "has_permission", lambda company_id, resource, action: True)
+    monkeypatch.setattr(
+        financial_reports_route,
+        "get_active_company",
+        lambda: SimpleNamespace(id=7, name="Empresa Teste"),
+    )
+    monkeypatch.setattr(financial_reports_route, "get_accessible_company_ids", lambda: [7])
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "get_report_definition_or_error",
+        lambda slug: (
+            {
+                "code": "bank_statement_dossier",
+                "slug": "dossie-extrato-bancario",
+                "label": "Dossiê do Extrato Bancário",
+                "description": "Dossiê documental.",
+            },
+            None,
+        ),
+    )
+
+    def _fake_build_management_report(**kwargs):
+        captured.update(kwargs)
+        return (
+            {
+                "title": "Dossiê do Extrato Bancário",
+                "summary_cards": [],
+                "rows": [],
+                "filters": [],
+                "dossier_document_count": 1,
+                "dossier_documents": [
+                    {
+                        "source_label": "Baixa",
+                        "document_name": "comprovante.pdf",
+                        "document_url": "/uploads/comprovante.pdf",
+                        "content_type": "application/pdf",
+                        "attachment": {"url": "/uploads/comprovante.pdf", "content_type": "application/pdf"},
+                    }
+                ],
+            },
+            None,
+        )
+
+    monkeypatch.setattr(
+        financial_reports_route.FinancialReportService,
+        "build_management_report",
+        _fake_build_management_report,
+    )
+    monkeypatch.setattr(
+        financial_reports_route,
+        "render_template",
+        lambda template_name, **context: f"{template_name}|docs={context['report']['dossier_document_count']}",
+    )
+
+    client = app.test_client()
+    response = client.get("/financial/reports/dossie-extrato-bancario/layout-test?period_start=2026-06-01&period_end=2026-06-30")
+
+    assert response.status_code == 200
+    assert "modules/financial/report_layout_bank_statement_dossier_landscape_test.html" in response.get_data(as_text=True)
+    assert "docs=1" in response.get_data(as_text=True)
+    assert captured["report_type"] == "bank_statement_dossier"
+    assert captured["filters"]["orientation"] == "landscape"
+
+
+def test_bank_statement_dossier_page_renames_landscape_test_button_to_receipts():
+    app = _build_app()
+    company = SimpleNamespace(id=7, name="Empresa Teste")
+    report = {
+        "report_type": "bank_statement_dossier",
+        "report_slug": "dossie-extrato-bancario",
+        "title": "Dossiê do Extrato Bancário",
+        "filters": [],
+        "summary_cards": [],
+        "rows": [],
+        "dossier_document_count": 0,
+        "dossier_documents": [],
+        "generated_at": "07/06/2026 10:00",
+    }
+
+    with app.test_request_context("/financial/reports/dossie-extrato-bancario?company_id=7"):
+        html = render_template(
+            "modules/financial/partials/report_filters_bank_statement_page.html",
+            company=company,
+            company_id=company.id,
+            report_definition={
+                "code": "bank_statement_dossier",
+                "slug": "dossie-extrato-bancario",
+                "label": "Dossiê do Extrato Bancário",
+                "description": "Dossiê documental.",
+            },
+            report=report,
+        )
+
+    assert "Comprovantes" in html
+    assert "Página teste (paisagem)" not in html
+
+
+def test_bank_statement_dossier_pdf_uses_portrait_statement_portrait_dre_and_landscape_receipts():
+    pdf_bytes = FinancialReportService.export_pdf(
+        {
+            "report_type": "bank_statement_dossier",
+            "report_slug": "dossie-extrato-bancario",
+            "title": "Dossiê do Extrato Bancário",
+            "statement_title": "Extrato Bancário",
+            "statement_subtitle": "Extrato gerencial.",
+            "company_name": "Empresa Teste",
+            "generated_at": "07/06/2026 10:00",
+            "filters": [{"label": "Período", "value": "2026-06-01 até 2026-06-30"}],
+            "summary_cards": [{"label": "Saldo final", "value": "R$ 100,00", "tone": "primary"}],
+            "columns": [{"key": "data", "label": "Data"}, {"key": "valor", "label": "Valor"}],
+            "rows": [{"data": "2026-06-07", "valor": "100.00", "valor_label": "R$ 100,00"}],
+            "dossier_income_statement": {
+                "title": "Demonstração de Resultados 01",
+                "company_name": "Empresa Teste",
+                "generated_at": "07/06/2026 10:00",
+                "filters": [{"label": "Período", "value": "2026-06-01 até 2026-06-30"}],
+                "hierarchy_rows": [
+                    {
+                        "codigo": "3.1.01",
+                        "descricao": "Receitas",
+                        "level": 0,
+                        "liquidacao_label": "R$ 100,00",
+                        "competencia_label": "R$ 999,00",
+                        "vencimento_label": "R$ 888,00",
+                    }
+                ],
+            },
+            "dossier_documents": [
+                {
+                    "source_label": "Baixa",
+                    "document_name": "comprovante.pdf",
+                    "settlement_date": "2026-06-07",
+                    "counterparty": "Fornecedor Teste",
+                    "chart_account": "3.1.01 - Receitas",
+                    "amount": "R$ 100,00",
+                    "attachment": {"url": "/uploads/comprovante.pdf", "content_type": "application/pdf"},
+                }
+            ],
+            "dossier_document_count": 1,
+        }
+    )
+
+    reader = PdfReader(BytesIO(pdf_bytes))
+    assert len(reader.pages) >= 3
+
+    first_width = float(reader.pages[0].mediabox.width)
+    first_height = float(reader.pages[0].mediabox.height)
+    second_width = float(reader.pages[1].mediabox.width)
+    second_height = float(reader.pages[1].mediabox.height)
+    last_width = float(reader.pages[-1].mediabox.width)
+    last_height = float(reader.pages[-1].mediabox.height)
+
+    assert first_height > first_width
+    assert second_height > second_width
+    assert last_width > last_height
+
+    dre_text = reader.pages[1].extract_text() or ""
+    assert "Demonstração de Resultados" in dre_text
+    assert "Face de liquidação" in dre_text
+    assert "R$ 100,00" in dre_text
+    assert "R$ 999,00" not in dre_text
+    assert "R$ 888,00" not in dre_text
 
 
 def test_cash_flow_projected_titles_route_returns_json(monkeypatch):

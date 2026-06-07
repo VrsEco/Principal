@@ -92,7 +92,7 @@ class FinancialReportService:
             "code": "bank_statement_dossier",
             "slug": "dossie-extrato-bancario",
             "label": "Dossiê do Extrato Bancário",
-            "description": "Dossiê documental do extrato bancário com capa opcional, extrato padrão e comprovantes anexados.",
+            "description": "Dossiê documental com extrato bancário, DRE por liquidação e comprovantes anexados.",
             "filters": ("period", "bank_account", "include_reconciled_only"),
         },
         "income_statement": {
@@ -2167,16 +2167,46 @@ class FinancialReportService:
         }
         extra: Dict[str, Any] = {}
         if is_dossier:
+            income_statement_payload: Dict[str, Any]
+            income_updates = {
+                "report_type": "income_statement",
+                "orientation": "portrait",
+                "show_competence_column": False,
+                "show_due_column": False,
+                "show_liquidation_column": True,
+                "include_open": False,
+                "include_settled": True,
+                "period_start": filters.period_start,
+                "period_end": filters.period_end,
+            }
+            try:
+                if hasattr(filters, "model_copy"):
+                    income_statement_filters = filters.model_copy(update=income_updates)
+                else:
+                    income_statement_filters = FinancialManagementReportFiltersInput(**income_updates)
+                income_statement_payload = FinancialReportService._build_income_statement(company_id, income_statement_filters)
+            except Exception:
+                income_statement_payload = {
+                    "title": "Demonstração de Resultados 01",
+                    "filters": [
+                        FinancialReportService._report_info(
+                            "Período",
+                            f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}",
+                        )
+                    ],
+                    "hierarchy_rows": [],
+                }
             totals["dossier_document_count"] = len(dossier_documents)
             extra.update(
                 {
                     "statement_title": "Extrato Bancário",
                     "statement_subtitle": FinancialReportService.REPORT_DEFINITIONS["bank_statement"]["description"],
+                    "dossier_income_statement": income_statement_payload,
                     "dossier_documents": dossier_documents,
                     "dossier_document_count": len(dossier_documents),
                     "dossier_modes": [
-                        {"key": "complete", "label": "Completo com capa"},
-                        {"key": "simple", "label": "Somente extrato e anexos"},
+                        {"key": "complete", "label": "Extrato, DRE e comprovantes"},
+                        {"key": "simple", "label": "Extrato, DRE e comprovantes"},
                     ],
                 }
             )
@@ -5493,7 +5523,96 @@ class FinancialReportService:
         return output.getvalue()
 
     @staticmethod
+    def _build_pdf_document_bytes(*, elements: List[Any], pagesize, report_payload: Dict[str, Any]) -> bytes:
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=24, rightMargin=24, topMargin=26, bottomMargin=36)
+        doc.build(
+            elements,
+            onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+        )
+        buffer.seek(0)
+        return buffer.getvalue()
+
+    @staticmethod
+    def _merge_pdf_bytes(parts: Sequence[bytes]) -> bytes:
+        from pypdf import PdfReader, PdfWriter
+
+        writer = PdfWriter()
+        for part in parts:
+            if not part:
+                continue
+            reader = PdfReader(io.BytesIO(part))
+            for page in reader.pages:
+                writer.add_page(page)
+        output = io.BytesIO()
+        writer.write(output)
+        output.seek(0)
+        return output.getvalue()
+
+    @staticmethod
+    def _export_bank_statement_dossier_pdf(report_payload: Dict[str, Any]) -> bytes:
+        styles = getSampleStyleSheet()
+
+        portrait_doc = SimpleDocTemplate(io.BytesIO(), pagesize=A4, leftMargin=24, rightMargin=24, topMargin=26, bottomMargin=36)
+        portrait_width = A4[0] - portrait_doc.leftMargin - portrait_doc.rightMargin
+
+        statement_payload = {
+            **report_payload,
+            "report_type": "bank_statement",
+            "orientation": "portrait",
+            "title": report_payload.get("statement_title") or "Extrato Bancário",
+            "subtitle": report_payload.get("statement_subtitle") or FinancialReportService.REPORT_DEFINITIONS["bank_statement"]["description"],
+        }
+        portrait_elements: List[Any] = []
+        portrait_elements.extend(
+            FinancialReportService._build_bank_statement_pdf_elements(
+                report_payload=statement_payload,
+                styles=styles,
+                available_width=portrait_width,
+            )
+        )
+        portrait_elements.append(PageBreak())
+        income_statement_payload = {
+            **(report_payload.get("dossier_income_statement") or {}),
+            "company_name": report_payload.get("company_name") or (report_payload.get("dossier_income_statement") or {}).get("company_name"),
+        }
+        portrait_elements.extend(
+            FinancialReportService._build_income_statement_liquidation_pdf_elements(
+                report_payload=income_statement_payload,
+                styles=styles,
+                available_width=portrait_width,
+            )
+        )
+
+        portrait_pdf = FinancialReportService._build_pdf_document_bytes(
+            elements=portrait_elements,
+            pagesize=A4,
+            report_payload={**report_payload, "orientation": "portrait"},
+        )
+
+        landscape_size = landscape(A4)
+        landscape_doc = SimpleDocTemplate(io.BytesIO(), pagesize=landscape_size, leftMargin=20, rightMargin=20, topMargin=22, bottomMargin=32)
+        landscape_width = landscape_size[0] - landscape_doc.leftMargin - landscape_doc.rightMargin
+        landscape_height = landscape_size[1] - landscape_doc.topMargin - landscape_doc.bottomMargin
+        documents_pdf = FinancialReportService._build_pdf_document_bytes(
+            elements=FinancialReportService._build_bank_statement_dossier_documents_pages(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=landscape_width,
+                available_height=landscape_height,
+            ),
+            pagesize=landscape_size,
+            report_payload={**report_payload, "orientation": "landscape"},
+        )
+
+        return FinancialReportService._merge_pdf_bytes([portrait_pdf, documents_pdf])
+
+    @staticmethod
     def export_pdf(report_payload: Dict[str, Any]) -> bytes:
+        if report_payload.get("report_type") == "bank_statement_dossier":
+            return FinancialReportService._export_bank_statement_dossier_pdf(report_payload)
+
         buffer = io.BytesIO()
         pagesize = landscape(A4) if report_payload.get("orientation", "landscape") == "landscape" else A4
         doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=24, rightMargin=24, topMargin=26, bottomMargin=36)
@@ -5520,21 +5639,6 @@ class FinancialReportService:
                 report_payload=report_payload,
                 styles=styles,
                 available_width=available_width,
-            )
-            doc.build(
-                elements,
-                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
-                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
-            )
-            buffer.seek(0)
-            return buffer.getvalue()
-
-        if report_payload.get("report_type") == "bank_statement_dossier":
-            elements = FinancialReportService._build_bank_statement_dossier_pdf_elements(
-                report_payload=report_payload,
-                styles=styles,
-                available_width=available_width,
-                available_height=available_height,
             )
             doc.build(
                 elements,
@@ -6758,6 +6862,147 @@ class FinancialReportService:
         )
 
     @staticmethod
+    def _build_income_statement_liquidation_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "DossierIncomeStatementTitle",
+            parent=styles["Heading1"],
+            fontSize=17,
+            leading=21,
+            textColor=colors.white,
+            spaceAfter=3,
+        )
+        subtitle_style = ParagraphStyle(
+            "DossierIncomeStatementSubtitle",
+            parent=styles["BodyText"],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#E2E8F0"),
+        )
+        section_title_style = ParagraphStyle(
+            "DossierIncomeStatementSection",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=5,
+        )
+        filter_cell_style = ParagraphStyle(
+            "DossierIncomeStatementFilter",
+            parent=styles["BodyText"],
+            fontSize=7.4,
+            leading=8.6,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        header_style = ParagraphStyle(
+            "DossierIncomeStatementHeader",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+        )
+        cell_style = ParagraphStyle(
+            "DossierIncomeStatementCell",
+            parent=styles["BodyText"],
+            fontSize=7,
+            leading=8.3,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        amount_style = ParagraphStyle(
+            "DossierIncomeStatementAmount",
+            parent=cell_style,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+        )
+        empty_style = ParagraphStyle(
+            "DossierIncomeStatementEmpty",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#475569"),
+        )
+
+        company_name = str(report_payload.get("company_name") or "Empresa ativa").strip()
+        hero_content = [
+            Paragraph("Gestão Financeira · Demonstração de Resultados", subtitle_style),
+            Paragraph(report_payload.get("title") or "Demonstração de Resultados 01", title_style),
+            Paragraph(company_name, subtitle_style),
+            Paragraph("Face de liquidação", subtitle_style),
+            Paragraph(f"Emitido em {FinancialReportService._pdf_generated_at_label(report_payload)}", subtitle_style),
+        ]
+        hero_table = Table([[hero_content]], colWidths=[available_width], hAlign="LEFT")
+        hero_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 14),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                    ("TOPPADDING", (0, 0), (-1, -1), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ]
+            )
+        )
+
+        elements: List[Any] = [hero_table, Spacer(1, 8)]
+        elements.append(Paragraph("Filtros aplicados", section_title_style))
+        elements.append(
+            FinancialReportService._build_schedule_pdf_filter_cards(
+                report_filters=report_payload.get("filters") or [],
+                available_width=available_width,
+                content_style=filter_cell_style,
+            )
+        )
+        elements.append(Spacer(1, 8))
+        elements.append(Paragraph("Resultado por liquidação", section_title_style))
+
+        source_rows = list(report_payload.get("hierarchy_rows") or report_payload.get("rows") or [])
+        if not source_rows:
+            elements.append(Paragraph("Nenhum resultado por liquidação encontrado para os filtros informados.", empty_style))
+            return elements
+
+        table_data: List[List[Any]] = [
+            [Paragraph("Código", header_style), Paragraph("Descrição", header_style), Paragraph("Liquidação", header_style)]
+        ]
+        for row in source_rows:
+            level = int(row.get("level") or 0)
+            description = f"{'&nbsp;' * (level * 4)}{row.get('descricao') or row.get('description') or row.get('account_label') or '-'}"
+            liquidation_value = row.get("liquidacao_label") or row.get("liquidation_label") or row.get("liquidacao") or row.get("liquidation") or "R$ 0,00"
+            table_data.append(
+                [
+                    Paragraph(str(row.get("codigo") or row.get("code") or ""), cell_style),
+                    Paragraph(str(description), cell_style),
+                    Paragraph(str(liquidation_value), amount_style),
+                ]
+            )
+
+        table = Table(
+            table_data,
+            colWidths=[available_width * 0.18, available_width * 0.58, available_width * 0.24],
+            repeatRows=1,
+            hAlign="LEFT",
+        )
+        table_styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1D4ED8")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.45, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+        for row_index in range(1, len(table_data)):
+            background = colors.HexColor("#FFFFFF") if row_index % 2 else colors.HexColor("#F8FAFC")
+            table_styles.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
+        table.setStyle(TableStyle(table_styles))
+        elements.append(table)
+        return elements
+
+    @staticmethod
     def _build_bank_statement_dossier_cover(*, report_payload: Dict[str, Any], styles, available_width: float, available_height: float) -> List[Any]:
         title_style = ParagraphStyle(
             "BankStatementDossierCoverTitle",
@@ -6908,16 +7153,16 @@ class FinancialReportService:
         title_style = ParagraphStyle(
             "BankStatementDossierAttachmentTitle",
             parent=styles["BodyText"],
-            fontSize=7.8,
-            leading=9,
+            fontSize=7.5,
+            leading=8.5,
             fontName="Helvetica-Bold",
             textColor=colors.HexColor("#0F172A"),
         )
         value_style = ParagraphStyle(
             "BankStatementDossierAttachmentValue",
             parent=styles["BodyText"],
-            fontSize=6.7,
-            leading=7.6,
+            fontSize=6.3,
+            leading=7.2,
             textColor=colors.HexColor("#0F172A"),
         )
         placeholder_style = ParagraphStyle(
@@ -6928,47 +7173,94 @@ class FinancialReportService:
             alignment=TA_CENTER,
             textColor=colors.HexColor("#475569"),
         )
+        page_title_style = ParagraphStyle(
+            "BankStatementDossierAttachmentPageTitle",
+            parent=styles["Heading2"],
+            fontSize=11,
+            leading=13,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=6,
+        )
         if not documents:
             return [
-                Paragraph("Comprovantes / Anexos", title_style),
+                Paragraph("Comprovantes", page_title_style),
                 Spacer(1, 8),
                 Paragraph("Nenhum anexo localizado nos títulos, lançamentos ou baixas do extrato para os filtros informados.", placeholder_style),
             ]
 
         elements: List[Any] = []
-        block_height = available_height / 3
-        for page_index, start in enumerate(range(0, len(documents), 3)):
-            chunk = documents[start:start + 3]
+        content_height = max(120, available_height - 24)
+        cell_width = available_width / 2
+        cell_height = content_height / 2
+
+        def _document_card(document: Dict[str, Any]) -> Table:
+            preview = FinancialReportService._build_dossier_attachment_preview(
+                document,
+                max_width=cell_width - 22,
+                max_height=cell_height * 0.52,
+                placeholder_style=placeholder_style,
+            )
+            meta_lines = [
+                f"<b>Liquidação:</b> {document.get('settlement_date') or '-'}",
+                f"<b>Fornecedor:</b> {document.get('counterparty') or '-'}",
+                f"<b>Plano:</b> {document.get('chart_account') or '-'}",
+                f"<b>Valor:</b> {document.get('amount') or '-'}",
+            ]
+            card = Table(
+                [[
+                    [
+                        Paragraph(
+                            f"{document.get('source_label') or 'Anexo'} · {document.get('document_name') or 'Documento'}",
+                            title_style,
+                        ),
+                        Spacer(1, 3),
+                        preview,
+                        Spacer(1, 4),
+                        Paragraph("<br/>".join(meta_lines), value_style),
+                    ]
+                ]],
+                colWidths=[cell_width - 12],
+                hAlign="LEFT",
+            )
+            card.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                        ("BOX", (0, 0), (-1, -1), 0.45, colors.HexColor("#CBD5E1")),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                        ("TOPPADDING", (0, 0), (-1, -1), 6),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ]
+                )
+            )
+            return card
+
+        for page_index, start in enumerate(range(0, len(documents), 4)):
+            chunk = documents[start:start + 4]
             if page_index:
                 elements.append(PageBreak())
-            rows = [
-                FinancialReportService._build_bank_statement_dossier_document_block(
-                    document=document,
-                    available_width=available_width,
-                    block_height=block_height,
-                    preview_style=placeholder_style,
-                    label_style=title_style,
-                    value_style=value_style,
-                )
-                for document in chunk
-            ]
+            elements.append(Paragraph("Comprovantes", page_title_style))
+            cards = [_document_card(document) for document in chunk]
+            while len(cards) < 4:
+                cards.append(Paragraph("", placeholder_style))
+            rows = [cards[0:2], cards[2:4]]
             page_table = Table(
                 rows,
-                colWidths=[available_width * (2 / 3), available_width / 3],
-                rowHeights=[block_height for _ in rows],
+                colWidths=[cell_width, cell_width],
+                rowHeights=[cell_height, cell_height],
                 hAlign="LEFT",
             )
             page_table.setStyle(
                 TableStyle(
                     [
-                        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-                        ("BACKGROUND", (0, 0), (-1, -1), colors.white),
                         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 7),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-                        ("TOPPADDING", (0, 0), (-1, -1), 7),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                        ("BACKGROUND", (1, 0), (1, -1), colors.HexColor("#F8FAFC")),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                     ]
                 )
             )

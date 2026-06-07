@@ -1,0 +1,108 @@
+{% set report_query = request.query_string.decode('utf-8') if request.query_string else '' %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title if report else 'Dossiê do Extrato Bancário' }} · Comprovantes em paisagem</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_dossier_landscape_test.css', v='20260607a') }}">
+</head>
+<body class="dossier-landscape-test-body">
+    <main class="dossier-landscape-test">
+        <header class="dossier-landscape-test__header">
+            <div>
+                <p class="dossier-landscape-test__eyebrow">Comprovantes · Paisagem · 4 por página</p>
+                <h1>{{ report.title if report else 'Dossiê do Extrato Bancário' }}</h1>
+                <p class="dossier-landscape-test__subtitle">
+                    {{ company.name if company and company.name else 'Empresa ativa' }}
+                    {% if report and report.generated_at %} · {{ report.generated_at }}{% endif %}
+                </p>
+            </div>
+            <div class="dossier-landscape-test__actions">
+                <a class="dossier-landscape-test__link" href="/financial/reports/{{ report_definition.slug }}{% if report_query %}?{{ report_query }}{% endif %}">Voltar ao relatório</a>
+                <a class="dossier-landscape-test__link" href="/financial/reports/{{ report_definition.slug }}/export-pdf?{{ report_query }}" target="_blank" rel="noopener">Abrir PDF atual</a>
+            </div>
+        </header>
+
+        <section class="dossier-landscape-test__summary">
+            <div class="dossier-landscape-test__summary-card">
+                <span class="label">Comprovantes</span>
+                <strong>{{ report.dossier_document_count if report else 0 }}</strong>
+            </div>
+            <div class="dossier-landscape-test__summary-card">
+                <span class="label">Distribuição</span>
+                <strong>4 por página em paisagem</strong>
+            </div>
+            <div class="dossier-landscape-test__summary-card">
+                <span class="label">Regra visual</span>
+                <strong>Documento até 3/4 · Informações 1/4</strong>
+            </div>
+        </section>
+
+        {% set documents = report.dossier_documents if report else [] %}
+        {% if documents %}
+            {% for batch in documents|batch(4, none) %}
+            <section class="dossier-landscape-sheet">
+                <div class="dossier-landscape-sheet__header">
+                    <span>Lote {{ loop.index }}</span>
+                    <span>{{ ((loop.index - 1) * 4) + 1 }}–{{ [loop.index * 4, report.dossier_document_count]|min }} de {{ report.dossier_document_count }}</span>
+                </div>
+                <div class="dossier-landscape-grid">
+                    {% for document in batch %}
+                        {% if document %}
+                        {% set attachment = document.attachment or {} %}
+                        {% set doc_url = attachment.preview_public_url or attachment.optimized_public_url or attachment.original_public_url or document.document_url or attachment.url %}
+                        {% set file_name = document.document_name or attachment.name or 'Documento' %}
+                        {% set content_type = ((document.content_type or attachment.content_type or attachment.mime_type) or '')|lower %}
+                        {% set extension = file_name.rsplit('.', 1)[-1]|lower if '.' in file_name else '' %}
+                        {% set is_image = content_type.startswith('image/') or extension in ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] %}
+                        {% set is_pdf = content_type == 'application/pdf' or extension == 'pdf' %}
+                        <article class="dossier-landscape-card">
+                            <div class="dossier-landscape-card__preview">
+                                <div class="dossier-landscape-card__badge">{{ document.source_label or 'Anexo' }}</div>
+                                {% if doc_url and is_image %}
+                                <img src="{{ doc_url }}" alt="{{ file_name }}" loading="lazy">
+                                {% elif doc_url and is_pdf %}
+                                <iframe src="{{ doc_url }}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" title="{{ file_name }}"></iframe>
+                                {% elif doc_url %}
+                                <div class="dossier-landscape-card__fallback">
+                                    <strong>Prévia indisponível</strong>
+                                    <a href="{{ doc_url }}" target="_blank" rel="noopener">Abrir documento</a>
+                                </div>
+                                {% else %}
+                                <div class="dossier-landscape-card__fallback">
+                                    <strong>Documento sem URL pública</strong>
+                                    <span>Verifique o anexo original no cadastro.</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="dossier-landscape-card__meta">
+                                <div class="dossier-landscape-card__title">
+                                    <strong>{{ file_name }}</strong>
+                                    <span>{{ document.source_label or 'Anexo' }}</span>
+                                </div>
+                                <dl>
+                                    <div><dt>Favorecido</dt><dd>{{ document.counterparty or '-' }}</dd></div>
+                                    <div><dt>Valor</dt><dd>{{ document.amount or '-' }}</dd></div>
+                                    <div><dt>Liquidação</dt><dd>{{ document.settlement_date or '-' }}</dd></div>
+                                    <div><dt>Lançamento</dt><dd>{{ document.entry_code or '-' }}</dd></div>
+                                    <div><dt>Plano</dt><dd>{{ document.chart_account or '-' }}</dd></div>
+                                    <div><dt>Centro</dt><dd>{{ document.cost_center or '-' }}</dd></div>
+                                </dl>
+                            </div>
+                        </article>
+                        {% else %}
+                        <article class="dossier-landscape-card dossier-landscape-card--empty"></article>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+            {% endfor %}
+        {% else %}
+            <section class="dossier-landscape-sheet dossier-landscape-sheet--empty">
+                <p>Nenhum comprovante foi localizado para os filtros informados.</p>
+            </section>
+        {% endif %}
+    </main>
+</body>
+</html>

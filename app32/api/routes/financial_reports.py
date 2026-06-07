@@ -216,6 +216,37 @@ def financial_report_view_page(report_slug: str):
     )
 
 
+@financial_bp.route('/financial/reports/<report_slug>/layout-test')
+@permission_required('financial', 'view')
+def financial_report_layout_test_page(report_slug: str):
+    company = get_active_company()
+    if not company:
+        abort(400, description='Empresa ativa não identificada para relatórios financeiros.')
+
+    report_definition, error = FinancialReportService.get_report_definition_or_error(report_slug)
+    if error or not report_definition or report_definition["code"] != "bank_statement_dossier":
+        abort(404, description='Pré-visualização disponível apenas para o Dossiê do Extrato Bancário.')
+
+    filters = _request_filters_payload()
+    filters["orientation"] = "landscape"
+    report, error = FinancialReportService.build_management_report(
+        company_id=company.id,
+        report_type=report_definition["code"],
+        filters=filters,
+        allowed_company_ids=get_accessible_company_ids(),
+    )
+    if error:
+        abort(400, description=error)
+    report["company_name"] = company.name
+    return render_template(
+        'modules/financial/report_layout_bank_statement_dossier_landscape_test.html',
+        company=company,
+        company_id=company.id,
+        report_definition=report_definition,
+        report=report,
+    )
+
+
 @financial_bp.route('/financial/reports/<report_slug>/drilldown')
 @permission_required('financial', 'view')
 def financial_report_income_statement_drilldown(report_slug: str):

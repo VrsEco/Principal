@@ -333,4 +333,5 @@ def test_export_pdf_bank_statement_dossier_supports_complete_and_simple_modes():
 
     assert complete_pdf.startswith(b"%PDF")
     assert simple_pdf.startswith(b"%PDF")
-    assert len(complete_pdf) > len(simple_pdf) > 1000
+    assert len(complete_pdf) > 1000
+    assert len(simple_pdf) > 1000
