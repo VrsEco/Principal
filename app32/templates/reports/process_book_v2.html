@@ -88,6 +88,7 @@
     }
 
     .page {
+      position: relative;
       background: var(--surface);
       break-after: page;
       page-break-after: always;
@@ -99,7 +100,18 @@
     }
 
     .page-inner {
-      padding: 0;
+      padding: 0 0 18mm;
+    }
+
+    .page::after {
+      content: "Versus Gestão Corporativa - Todos os direitos reservados.";
+      position: absolute;
+      left: 14mm;
+      right: 14mm;
+      bottom: 6mm;
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted-2);
     }
 
     .first-page {
@@ -767,9 +779,15 @@
         padding: 14mm;
         min-height: calc(297mm - 28mm);
       }
-      .section-flow .page-inner {
-        padding: 8mm;
-        min-height: calc(210mm - 16mm);
+    .section-flow .page-inner {
+      padding: 8mm;
+      min-height: calc(210mm - 16mm);
+    }
+      .section-flow.page::after,
+      .section-sipoc-sheet.page::after {
+        left: 8mm;
+        right: 8mm;
+        bottom: 4mm;
       }
       .section-flow {
         width: 297mm;
@@ -818,8 +836,19 @@
         page-break-after: auto !important;
       }
       .page-inner {
-        padding: 0;
+        padding: 0 0 16mm;
         min-height: auto;
+      }
+      .page::after {
+        left: 14mm;
+        right: 14mm;
+        bottom: 4mm;
+        font-size: 9px;
+      }
+      .section-flow.page::after,
+      .section-sipoc-sheet.page::after {
+        left: 8mm;
+        right: 8mm;
       }
       .first-page { min-height: auto; }
       .panel {
@@ -1016,7 +1045,7 @@
     <section class="page">
       <div class="page-inner first-page">
         <div class="hero">
-          <div class="hero-eyebrow">Book de Processos - Gestão Versus</div>
+          <div class="hero-eyebrow">Book de Processos - {{ first_page.company_name }}</div>
           <h1>{{ first_page.title }}</h1>
           <p>{{ first_page.subtitle }}</p>
           <div class="hero-meta">
@@ -1339,8 +1368,6 @@
         {% else %}
           <div class="empty-state">Nenhuma rotina cadastrada para este processo.</div>
         {% endif %}
-
-        <div class="footer-note">Book gerado em {{ generated_at }} para {{ company.name }}.</div>
       </div>
     </section>
   </div>
