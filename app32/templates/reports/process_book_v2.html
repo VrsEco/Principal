@@ -944,8 +944,9 @@
               <span>{{ lane_help }}</span>
             </div>
             <div class="sipoc-item-list">
-              {% if sipoc.items and sipoc.items.get(lane_key) %}
-                {% for item in sipoc.items.get(lane_key) %}
+              {% set sipoc_items = sipoc.get('items', {}) if sipoc else {} %}
+              {% if sipoc_items and sipoc_items.get(lane_key) %}
+                {% for item in sipoc_items.get(lane_key) %}
                 <div class="sipoc-item">
                   <div class="sipoc-item-title">{{ item.title }}</div>
                   <div class="sipoc-item-text">{{ item.description or 'Sem descrição complementar.' }}</div>

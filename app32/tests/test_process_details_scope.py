@@ -245,6 +245,15 @@ def test_process_details_template_uses_app32_visual_pattern():
     assert 'indicator-process-card' not in content
 
 
+def test_process_book_template_uses_dict_safe_access_for_sipoc_items():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'reports', 'process_book_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert "sipoc.get('items', {})" in content
+    assert 'sipoc.items.get(lane_key)' not in content
+
+
 def test_process_details_template_supports_pop_step_video_workflow():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:
