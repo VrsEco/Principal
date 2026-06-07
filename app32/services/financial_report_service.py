@@ -245,6 +245,9 @@ class FinancialReportService:
                 return None, "Selecione ao menos um tipo para o DRE."
             if not any([data.show_competence_column, data.show_due_column, data.show_liquidation_column]):
                 return None, "Selecione ao menos uma coluna principal para o DRE."
+        if data.report_type == "bank_statement_dossier" and "orientation" not in payload:
+            data = data.model_copy(update={"orientation": "portrait"})
+
         if data.report_type == "schedule_report":
             updates = {"orientation": "portrait"}
             if not data.competence_start:
