@@ -111,6 +111,7 @@ fi
 # 5. MCP HTTP remoto (reinício controlado para refletir novas tools/contratos após deploy)
 echo "🧠 Reiniciando runtime MCP HTTP remoto para refletir o código recém-publicado..."
 MCP_HEALTH_URL="http://127.0.0.1:8101/healthz"
+MCP_PUBLIC_HEALTH_URL="https://app.gestaoversus.com.br/mcp/healthz"
 MCP_STDOUT_LOG="$APP/logs/mcp_http_stdout.log"
 MCP_STDERR_LOG="$APP/logs/mcp_http_stderr.log"
 
@@ -148,23 +149,51 @@ if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
         "$APP/scripts/start_mcp_http.sh" \
         >> "$MCP_STDOUT_LOG" 2>> "$MCP_STDERR_LOG" < /dev/null &
 
-    MCP_OK=0
-    for i in {1..20}; do
+    MCP_LOCAL_OK=0
+    for i in {1..30}; do
         set +e
         curl -fsS --max-time 5 "$MCP_HEALTH_URL" >/dev/null
         MCP_HEALTH_CODE=$?
         set -e
         if [ "$MCP_HEALTH_CODE" -eq 0 ]; then
-            MCP_OK=1
+            MCP_LOCAL_OK=1
             break
         fi
         sleep 1
     done
 
-    if [ "$MCP_OK" -eq 1 ]; then
+    MCP_FINAL_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null || true)
+    if [ -n "$MCP_FINAL_PIDS" ]; then
+        echo "   - Listener MCP HTTP ativo na porta 8101 com PID(s): $MCP_FINAL_PIDS"
+    else
+        echo "⚠️  Aviso: nenhum PID do listener MCP HTTP foi encontrado na porta 8101 após o restart."
+    fi
+
+    MCP_PUBLIC_OK=0
+    if [ "$MCP_LOCAL_OK" -eq 1 ]; then
+        for i in {1..20}; do
+            set +e
+            curl -k -fsS --max-time 8 "$MCP_PUBLIC_HEALTH_URL" >/dev/null
+            MCP_PUBLIC_HEALTH_CODE=$?
+            set -e
+            if [ "$MCP_PUBLIC_HEALTH_CODE" -eq 0 ]; then
+                MCP_PUBLIC_OK=1
+                break
+            fi
+            sleep 1
+        done
+    fi
+
+    if [ "$MCP_LOCAL_OK" -eq 1 ]; then
         echo "✅ MCP HTTP remoto ativo em 127.0.0.1:8101 com código atualizado."
     else
         echo "⚠️  Aviso: MCP HTTP remoto não respondeu ao health local após restart."
+    fi
+
+    if [ "$MCP_PUBLIC_OK" -eq 1 ]; then
+        echo "✅ MCP HTTP remoto respondeu também no health público /mcp/healthz."
+    else
+        echo "⚠️  Aviso: MCP HTTP remoto não respondeu ao health público /mcp/healthz após restart."
     fi
 else
     echo "⚠️  Aviso: script start_mcp_http.sh não encontrado; pulando MCP HTTP remoto."
