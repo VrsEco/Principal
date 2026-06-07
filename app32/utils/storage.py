@@ -174,6 +174,18 @@ def _query_upload_owner_company_ids(normalized_path):
              WHERE c.logo_primary IN (:path_0, :path_1, :path_2)
                 OR c.logo_secondary IN (:path_0, :path_1, :path_2)
                 OR c.logo_icon IN (:path_0, :path_1, :path_2)
+
+            UNION ALL
+
+            SELECT fad.company_id
+              FROM financial_automation_documents fad
+             WHERE fad.deleted_at IS NULL
+               AND (
+                    fad.stored_relative_path IN (:path_0, :path_1, :path_2)
+                 OR fad.original_relative_path IN (:path_0, :path_1, :path_2)
+                 OR fad.optimized_relative_path IN (:path_0, :path_1, :path_2)
+                 OR fad.preview_relative_path IN (:path_0, :path_1, :path_2)
+               )
         ) upload_owners
         WHERE company_id IS NOT NULL
         """

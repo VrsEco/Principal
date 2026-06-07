@@ -5,7 +5,7 @@ from flask import Flask
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from utils.storage import build_upload_file_response
+from utils.storage import _query_upload_owner_company_ids, build_upload_file_response
 
 
 def _build_app(tmp_path):
@@ -45,3 +45,24 @@ def test_build_upload_file_response_falls_back_to_gcs(monkeypatch, tmp_path):
     assert response.mimetype == "image/png"
     response.direct_passthrough = False
     assert response.get_data() == b"gcs-image"
+
+
+def test_query_upload_owner_company_ids_includes_financial_automation_documents(monkeypatch):
+    captured = {}
+
+    class _Result:
+        @staticmethod
+        def scalars():
+            return [10]
+
+    def _fake_execute(query, params):
+        captured["sql"] = str(query)
+        captured["params"] = params
+        return _Result()
+
+    monkeypatch.setattr("utils.storage.db.session.execute", _fake_execute)
+
+    company_ids = _query_upload_owner_company_ids("financial/automation/10/derived/arquivo_preview.webp")
+
+    assert company_ids == {10}
+    assert "financial_automation_documents" in captured["sql"]
