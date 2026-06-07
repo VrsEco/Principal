@@ -32,6 +32,11 @@
       margin: 8mm;
     }
 
+    @page sipoc-landscape-sheet {
+      size: A4 landscape;
+      margin: 8mm;
+    }
+
     body {
       margin: 0;
       font-family: "Segoe UI", Arial, sans-serif;
@@ -524,6 +529,124 @@
       page: process-flow-landscape;
     }
 
+    .section-sipoc-sheet {
+      page: sipoc-landscape-sheet;
+    }
+
+    .section-sipoc-sheet .page-inner {
+      padding: 5.5mm 6.5mm 5.5mm;
+    }
+
+    .section-sipoc-sheet .section-header {
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+    }
+
+    .section-sipoc-sheet .section-title-wrap h2 {
+      font-size: 17px;
+    }
+
+    .section-sipoc-sheet .section-title-wrap p {
+      font-size: 10px;
+      line-height: 1.3;
+    }
+
+    .section-sipoc-sheet .section-badge {
+      padding: 5px 8px;
+      font-size: 8.5px;
+    }
+
+    .section-sipoc-sheet .panel,
+    .section-sipoc-sheet .detail-card,
+    .section-sipoc-sheet .mini-item,
+    .section-sipoc-sheet .sipoc-item {
+      border-radius: 10px;
+    }
+
+    .section-sipoc-sheet .panel {
+      padding: 10px 11px;
+    }
+
+    .section-sipoc-sheet .panel-title {
+      margin-bottom: 7px;
+      font-size: 11px;
+    }
+
+    .section-sipoc-sheet .sipoc-summary-grid,
+    .section-sipoc-sheet .sipoc-lanes-grid,
+    .section-sipoc-sheet .sipoc-support-grid {
+      gap: 7px;
+      margin-bottom: 7px;
+    }
+
+    .section-sipoc-sheet .sipoc-summary-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .section-sipoc-sheet .sipoc-summary-grid .detail-card {
+      min-height: 72px;
+    }
+
+    .section-sipoc-sheet .sipoc-lane-head {
+      padding: 7px 8px;
+    }
+
+    .section-sipoc-sheet .sipoc-lane-head strong {
+      font-size: 10px;
+      margin-bottom: 3px;
+    }
+
+    .section-sipoc-sheet .sipoc-lane-head span,
+    .section-sipoc-sheet .sipoc-item-text,
+    .section-sipoc-sheet .mini-item-text {
+      font-size: 8.1px;
+      line-height: 1.26;
+    }
+
+    .section-sipoc-sheet .sipoc-item-list,
+    .section-sipoc-sheet .mini-list {
+      gap: 4px;
+      padding: 7px;
+    }
+
+    .section-sipoc-sheet .sipoc-lane-card {
+      min-height: 268px;
+    }
+
+    .section-sipoc-sheet .sipoc-item {
+      padding: 6px 7px;
+    }
+
+    .section-sipoc-sheet .sipoc-item-title,
+    .section-sipoc-sheet .mini-item-title {
+      font-size: 8.7px;
+      line-height: 1.2;
+      margin-bottom: 3px;
+    }
+
+    .section-sipoc-sheet .detail-label,
+    .section-sipoc-sheet .mini-label {
+      font-size: 8px;
+    }
+
+    .section-sipoc-sheet .detail-value,
+    .section-sipoc-sheet .mini-value {
+      font-size: 10px;
+      line-height: 1.26;
+    }
+
+    .section-sipoc-sheet .sipoc-support-grid {
+      grid-template-columns: 1.22fr 0.88fr;
+      align-items: stretch;
+    }
+
+    .section-sipoc-sheet .sipoc-regulatory-table th,
+    .section-sipoc-sheet .sipoc-regulatory-table td {
+      padding: 4px 4px;
+      font-size: 7.4px;
+      line-height: 1.22;
+    }
+
     .step-header {
       font-size: 10px;
       font-weight: 800;
@@ -660,6 +783,13 @@
       }
       .section-flow .flow-frame {
         min-height: 154mm;
+      }
+      .section-sipoc-sheet {
+        width: 297mm;
+        min-height: 210mm;
+      }
+      .section-sipoc-sheet .page-inner {
+        min-height: calc(210mm - 12mm);
       }
     }
 
@@ -809,6 +939,35 @@
         break-before: page;
         page-break-before: always;
       }
+      .section-sipoc-sheet {
+        page: sipoc-landscape-sheet;
+        width: calc(297mm - 16mm);
+        height: calc(210mm - 16mm);
+        max-height: calc(210mm - 16mm);
+        overflow: hidden;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .section-sipoc-sheet .page-inner {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+      }
+      .section-sipoc-sheet .sipoc-summary-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .section-sipoc-sheet .sipoc-lanes-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+      .section-sipoc-sheet .sipoc-support-grid {
+        grid-template-columns: 1.2fr 0.85fr;
+      }
+      .section-sipoc-sheet .detail-card,
+      .section-sipoc-sheet .mini-item,
+      .section-sipoc-sheet .sipoc-item {
+        padding: 6px 7px;
+      }
       .section-flow + .section-page {
         break-before: auto;
         page-break-before: auto;
@@ -913,7 +1072,7 @@
     </section>
 
     {% if sipoc %}
-    <section class="page section-page">
+    <section class="page section-page section-sipoc-sheet">
       <div class="page-inner">
         <div class="section-header">
           <div class="section-title-wrap">
