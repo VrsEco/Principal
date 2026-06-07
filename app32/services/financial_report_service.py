@@ -7061,6 +7061,21 @@ class FinancialReportService:
             alignment=TA_CENTER,
             fontName="Helvetica-Bold",
         )
+        amount_positive_style = ParagraphStyle(
+            "DossierIncomeStatementAmountPositive",
+            parent=amount_style,
+            textColor=colors.HexColor("#2563EB"),
+        )
+        amount_negative_style = ParagraphStyle(
+            "DossierIncomeStatementAmountNegative",
+            parent=amount_style,
+            textColor=colors.HexColor("#DC2626"),
+        )
+        amount_neutral_style = ParagraphStyle(
+            "DossierIncomeStatementAmountNeutral",
+            parent=amount_style,
+            textColor=colors.HexColor("#0F172A"),
+        )
         result_label_style = ParagraphStyle(
             "DossierIncomeStatementResultLabel",
             parent=styles["BodyText"],
@@ -7075,6 +7090,21 @@ class FinancialReportService:
             alignment=TA_RIGHT,
             fontSize=11,
             leading=13,
+        )
+        result_value_positive_style = ParagraphStyle(
+            "DossierIncomeStatementResultValuePositive",
+            parent=result_value_style,
+            textColor=colors.HexColor("#2563EB"),
+        )
+        result_value_negative_style = ParagraphStyle(
+            "DossierIncomeStatementResultValueNegative",
+            parent=result_value_style,
+            textColor=colors.HexColor("#DC2626"),
+        )
+        result_value_neutral_style = ParagraphStyle(
+            "DossierIncomeStatementResultValueNeutral",
+            parent=result_value_style,
+            textColor=colors.white,
         )
         empty_style = ParagraphStyle(
             "DossierIncomeStatementEmpty",
@@ -7124,6 +7154,48 @@ class FinancialReportService:
             elements.append(Paragraph("Nenhum resultado por liquidação encontrado para os filtros informados.", empty_style))
             return elements
 
+        def _row_liquidation_amount(row: Dict[str, Any]) -> Decimal:
+            raw_value = row.get("liquidacao")
+            if raw_value is None:
+                raw_value = row.get("liquidation")
+            if isinstance(raw_value, (Decimal, int, float)):
+                return Decimal(str(raw_value or 0))
+            raw_label = str(
+                row.get("liquidacao_label")
+                or row.get("liquidation_label")
+                or raw_value
+                or "0"
+            ).strip()
+            is_negative = raw_label.startswith("-") or raw_label.startswith("−") or "R$-" in raw_label.replace(" ", "")
+            normalized = (
+                raw_label.replace("R$", "")
+                .replace(" ", "")
+                .replace("−", "-")
+                .replace(".", "")
+                .replace(",", ".")
+            )
+            try:
+                amount = Decimal(normalized or "0")
+            except Exception:
+                amount = Decimal("0")
+            if is_negative and amount > 0:
+                amount = -amount
+            return amount
+
+        def _dre_pdf_amount_style(amount: Decimal):
+            if amount < 0:
+                return amount_negative_style
+            if amount > 0:
+                return amount_positive_style
+            return amount_neutral_style
+
+        def _dre_pdf_result_value_style(amount: Decimal):
+            if amount < 0:
+                return result_value_negative_style
+            if amount > 0:
+                return result_value_positive_style
+            return result_value_neutral_style
+
         table_data: List[List[Any]] = [
             [Paragraph("Código", header_style), Paragraph("Descrição", header_style), Paragraph("Liquidação", header_style)]
         ]
@@ -7131,11 +7203,12 @@ class FinancialReportService:
             level = int(row.get("level") or 0)
             description = f"{'&nbsp;' * (level * 4)}{row.get('descricao') or row.get('description') or row.get('account_label') or '-'}"
             liquidation_value = row.get("liquidacao_label") or row.get("liquidation_label") or row.get("liquidacao") or row.get("liquidation") or "R$ 0,00"
+            liquidation_amount = _row_liquidation_amount(row)
             table_data.append(
                 [
                     Paragraph(str(row.get("codigo") or row.get("code") or ""), cell_style),
                     Paragraph(str(description), cell_style),
-                    Paragraph(str(liquidation_value), amount_style),
+                    Paragraph(str(liquidation_value), _dre_pdf_amount_style(liquidation_amount)),
                 ]
             )
 
@@ -7161,40 +7234,12 @@ class FinancialReportService:
         table.setStyle(TableStyle(table_styles))
         elements.append(table)
 
-        def _row_liquidation_amount(row: Dict[str, Any]) -> Decimal:
-            raw_value = row.get("liquidacao")
-            if raw_value is None:
-                raw_value = row.get("liquidation")
-            if isinstance(raw_value, (Decimal, int, float)):
-                return Decimal(str(raw_value or 0))
-            raw_label = str(
-                row.get("liquidacao_label")
-                or row.get("liquidation_label")
-                or raw_value
-                or "0"
-            ).strip()
-            is_negative = raw_label.startswith("-") or raw_label.startswith("−")
-            normalized = (
-                raw_label.replace("R$", "")
-                .replace(" ", "")
-                .replace("−", "-")
-                .replace(".", "")
-                .replace(",", ".")
-            )
-            try:
-                amount = Decimal(normalized or "0")
-            except Exception:
-                amount = Decimal("0")
-            if is_negative and amount > 0:
-                amount = -amount
-            return amount
-
         result_rows = [row for row in source_rows if int(row.get("level") or 0) == 0] or source_rows
         result_amount = sum((_row_liquidation_amount(row) for row in result_rows), Decimal("0"))
         result_table = Table(
             [[
                 Paragraph("Resultado", result_label_style),
-                Paragraph(FinancialReportService._format_currency(result_amount), result_value_style),
+                Paragraph(FinancialReportService._format_currency(result_amount), _dre_pdf_result_value_style(result_amount)),
             ]],
             colWidths=[available_width * 0.58, available_width * 0.42],
             hAlign="LEFT",
