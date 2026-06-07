@@ -36,6 +36,11 @@ echo "📦 Atualizando dependências Python..."
 $PIP install -r requirements.txt --quiet
 echo "✅ Dependências em conformidade."
 
+# 2.1 Assets canônicos de portfólio de processos
+echo "🖼️  Sincronizando assets canônicos do portfólio de processos..."
+$PYTHON scripts/sync_process_portfolio_assets.py
+echo "✅ Assets de portfólio sincronizados."
+
 # 3. Migrações de Banco (Alembic)
 echo "🗃️  Verificando migrações de banco de dados..."
 set +e
