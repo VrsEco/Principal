@@ -1087,15 +1087,18 @@ def register_blueprints(app):
     @app.route('/uploads/<path:filename>')
     @login_required
     def serve_uploaded_file(filename):
-        from flask import abort, send_from_directory
-        from utils.storage import user_can_access_upload
+        from flask import abort
+        from utils.storage import build_upload_file_response, user_can_access_upload
 
         normalized_filename = normalize_relative_upload_path(filename)
         if not normalized_filename:
             abort(404)
         if not user_can_access_upload(normalized_filename):
             abort(403)
-        return send_from_directory(app.config['UPLOAD_FOLDER'], normalized_filename)
+        try:
+            return build_upload_file_response(normalized_filename)
+        except FileNotFoundError:
+            abort(404)
 
     from api.routes.main import main_bp
     from api.routes.auth import auth_bp
