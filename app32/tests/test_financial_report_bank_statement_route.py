@@ -316,20 +316,47 @@ def test_bank_statement_dossier_pdf_uses_portrait_statement_portrait_dre_and_lan
             "dossier_documents": [
                 {
                     "source_label": "Baixa",
-                    "document_name": "comprovante.pdf",
+                    "document_name": "comprovante-01.pdf",
                     "settlement_date": "2026-06-07",
                     "counterparty": "Fornecedor Teste",
                     "chart_account": "3.1.01 - Receitas",
                     "amount": "R$ 100,00",
-                    "attachment": {"url": "/uploads/comprovante.pdf", "content_type": "application/pdf"},
-                }
+                    "attachment": {"url": "/uploads/comprovante-01.pdf", "content_type": "application/pdf"},
+                },
+                {
+                    "source_label": "Título financeiro",
+                    "document_name": "comprovante-02.jpg",
+                    "settlement_date": "2026-06-07",
+                    "counterparty": "Fornecedor Teste 2",
+                    "chart_account": "4.1.01 - Despesas",
+                    "amount": "R$ 40,00",
+                    "attachment": {"url": "/uploads/comprovante-02.jpg", "content_type": "image/jpeg"},
+                },
+                {
+                    "source_label": "Lançamento",
+                    "document_name": "comprovante-03.png",
+                    "settlement_date": "2026-06-07",
+                    "counterparty": "Fornecedor Teste 3",
+                    "chart_account": "4.1.01 - Despesas",
+                    "amount": "R$ 30,00",
+                    "attachment": {"url": "/uploads/comprovante-03.png", "content_type": "image/png"},
+                },
+                {
+                    "source_label": "Baixa",
+                    "document_name": "comprovante-04.pdf",
+                    "settlement_date": "2026-06-07",
+                    "counterparty": "Fornecedor Teste 4",
+                    "chart_account": "4.1.01 - Despesas",
+                    "amount": "R$ 20,00",
+                    "attachment": {"url": "/uploads/comprovante-04.pdf", "content_type": "application/pdf"},
+                },
             ],
-            "dossier_document_count": 1,
+            "dossier_document_count": 4,
         }
     )
 
     reader = PdfReader(BytesIO(pdf_bytes))
-    assert len(reader.pages) >= 3
+    assert len(reader.pages) == 3
 
     first_width = float(reader.pages[0].mediabox.width)
     first_height = float(reader.pages[0].mediabox.height)
@@ -348,6 +375,14 @@ def test_bank_statement_dossier_pdf_uses_portrait_statement_portrait_dre_and_lan
     assert "R$ 100,00" in dre_text
     assert "R$ 999,00" not in dre_text
     assert "R$ 888,00" not in dre_text
+
+    receipts_text = reader.pages[-1].extract_text() or ""
+    assert "Lote 1" in receipts_text
+    assert "1-4 de 4" in receipts_text
+    assert "comprovante-01.pdf" in receipts_text
+    assert "comprovante-02.jpg" in receipts_text
+    assert "comprovante-03.png" in receipts_text
+    assert "comprovante-04.pdf" in receipts_text
 
 
 def test_cash_flow_projected_titles_route_returns_json(monkeypatch):

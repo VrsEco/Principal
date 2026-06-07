@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from flask import current_app, has_app_context
 from financial_domain import build_title_operational_state_metadata
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Image as RLImage
@@ -7153,23 +7153,23 @@ class FinancialReportService:
         title_style = ParagraphStyle(
             "BankStatementDossierAttachmentTitle",
             parent=styles["BodyText"],
-            fontSize=7.5,
-            leading=8.5,
+            fontSize=6.8,
+            leading=7.6,
             fontName="Helvetica-Bold",
             textColor=colors.HexColor("#0F172A"),
         )
         value_style = ParagraphStyle(
             "BankStatementDossierAttachmentValue",
             parent=styles["BodyText"],
-            fontSize=6.3,
-            leading=7.2,
+            fontSize=5.8,
+            leading=6.5,
             textColor=colors.HexColor("#0F172A"),
         )
         placeholder_style = ParagraphStyle(
             "BankStatementDossierAttachmentPlaceholder",
             parent=styles["BodyText"],
-            fontSize=8,
-            leading=10,
+            fontSize=7,
+            leading=8.5,
             alignment=TA_CENTER,
             textColor=colors.HexColor("#475569"),
         )
@@ -7182,6 +7182,15 @@ class FinancialReportService:
             textColor=colors.HexColor("#0F172A"),
             spaceAfter=6,
         )
+        page_range_style = ParagraphStyle(
+            "BankStatementDossierAttachmentPageRange",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            alignment=TA_RIGHT,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#1E293B"),
+        )
         if not documents:
             return [
                 Paragraph("Comprovantes", page_title_style),
@@ -7190,21 +7199,42 @@ class FinancialReportService:
             ]
 
         elements: List[Any] = []
-        # O título "Comprovantes" e o fluxo do ReportLab consomem parte do
-        # frame. Se a grade ocupar praticamente toda a altura útil, o Table
-        # quebra após a primeira linha e o PDF passa a renderizar 2 cards por
-        # página. Reservamos espaço fixo para o título/margem e mantemos a
-        # grade 2x2 dentro do mesmo frame.
-        content_height = max(120, available_height - 70)
-        cell_width = available_width / 2
-        cell_height = content_height / 2
+        # Quatro comprovantes por folha em faixa horizontal: uma única linha
+        # com quatro colunas. Esse formato aproveita melhor comprovantes
+        # verticais, recibos e notas, evitando o espaço morto do grid 2x2.
+        content_height = max(120, available_height - 42)
+        cell_width = available_width / 4
+        cell_height = content_height
 
         def _document_card(document: Dict[str, Any]) -> Table:
+            card_height = max(120, cell_height - 8)
+            header_height = 18
+            meta_height = 56
+            preview_height = max(80, card_height - header_height - meta_height - 12)
             preview = FinancialReportService._build_dossier_attachment_preview(
                 document,
-                max_width=cell_width - 22,
-                max_height=cell_height * 0.52,
+                max_width=cell_width - 16,
+                max_height=preview_height - 10,
                 placeholder_style=placeholder_style,
+            )
+            preview_box = Table(
+                [[preview]],
+                colWidths=[cell_width - 18],
+                rowHeights=[preview_height],
+                hAlign="LEFT",
+            )
+            preview_box.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ]
+                )
             )
             meta_lines = [
                 f"<b>Liquidação:</b> {document.get('settlement_date') or '-'}",
@@ -7213,19 +7243,18 @@ class FinancialReportService:
                 f"<b>Valor:</b> {document.get('amount') or '-'}",
             ]
             card = Table(
-                [[
+                [
                     [
                         Paragraph(
                             f"{document.get('source_label') or 'Anexo'} · {document.get('document_name') or 'Documento'}",
                             title_style,
-                        ),
-                        Spacer(1, 3),
-                        preview,
-                        Spacer(1, 4),
-                        Paragraph("<br/>".join(meta_lines), value_style),
-                    ]
-                ]],
-                colWidths=[cell_width - 12],
+                        )
+                    ],
+                    [preview_box],
+                    [Paragraph("<br/>".join(meta_lines), value_style)],
+                ],
+                colWidths=[cell_width - 8],
+                rowHeights=[header_height, preview_height, meta_height],
                 hAlign="LEFT",
             )
             card.setStyle(
@@ -7233,11 +7262,13 @@ class FinancialReportService:
                     [
                         ("BACKGROUND", (0, 0), (-1, -1), colors.white),
                         ("BOX", (0, 0), (-1, -1), 0.45, colors.HexColor("#CBD5E1")),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 7),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 7),
-                        ("TOPPADDING", (0, 0), (-1, -1), 6),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                        ("LINEBELOW", (0, 0), (-1, 0), 0.25, colors.HexColor("#E2E8F0")),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                        ("TOPPADDING", (0, 0), (-1, -1), 4),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
                         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("VALIGN", (0, 1), (0, 1), "MIDDLE"),
                     ]
                 )
             )
@@ -7247,25 +7278,46 @@ class FinancialReportService:
             chunk = documents[start:start + 4]
             if page_index:
                 elements.append(PageBreak())
-            elements.append(Paragraph("Comprovantes", page_title_style))
+            page_start = start + 1
+            page_end = start + len(chunk)
+            header = Table(
+                [[
+                    Paragraph(f"Lote {page_index + 1}", page_title_style),
+                    Paragraph(f"{page_start}-{page_end} de {len(documents)}", page_range_style),
+                ]],
+                colWidths=[available_width * 0.5, available_width * 0.5],
+                hAlign="LEFT",
+            )
+            header.setStyle(
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ]
+                )
+            )
+            elements.append(header)
             cards = [_document_card(document) for document in chunk]
             while len(cards) < 4:
                 cards.append(Paragraph("", placeholder_style))
-            rows = [cards[0:2], cards[2:4]]
+            rows = [cards[0:4]]
             page_table = Table(
                 rows,
-                colWidths=[cell_width, cell_width],
-                rowHeights=[cell_height, cell_height],
+                colWidths=[cell_width, cell_width, cell_width, cell_width],
+                rowHeights=[cell_height],
                 hAlign="LEFT",
             )
             page_table.setStyle(
                 TableStyle(
                     [
                         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-                        ("TOPPADDING", (0, 0), (-1, -1), 4),
-                        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
                     ]
                 )
             )
