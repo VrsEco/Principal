@@ -86,14 +86,14 @@ class FinancialReportService:
             "slug": "extrato-bancario",
             "label": "Extrato Bancário",
             "description": "Extrato gerencial das baixas por conta bancária com saldo inicial, entradas, saídas, saldo final e composição consolidada.",
-            "filters": ("period", "bank_account", "include_reconciled_only"),
+            "filters": ("period", "bank_account", "advanced_bank_statement"),
         },
         "bank_statement_dossier": {
             "code": "bank_statement_dossier",
             "slug": "dossie-extrato-bancario",
             "label": "Dossiê do Extrato Bancário",
             "description": "Dossiê documental com extrato bancário, DRE por liquidação e comprovantes anexados.",
-            "filters": ("period", "bank_account", "include_reconciled_only"),
+            "filters": ("period", "bank_account", "advanced_bank_statement"),
         },
         "income_statement": {
             "code": "income_statement",
@@ -247,6 +247,32 @@ class FinancialReportService:
                 return None, "Selecione ao menos uma coluna principal para o DRE."
         if data.report_type == "bank_statement_dossier" and "orientation" not in payload:
             data = data.model_copy(update={"orientation": "portrait"})
+        if data.report_type in {"bank_statement", "bank_statement_dossier"}:
+            updates = {}
+            if "order_by" not in payload:
+                updates["order_by"] = "settlement_date"
+            if "show_competence_date" not in payload:
+                updates["show_competence_date"] = False
+            if "show_due_date" not in payload:
+                updates["show_due_date"] = False
+            if updates:
+                data = data.model_copy(update=updates)
+            if not any([data.include_settled, data.include_partial, data.include_open]):
+                return None, "Selecione ao menos um status para o extrato bancário."
+            if not any([data.include_receivable, data.include_payable]):
+                return None, "Selecione ao menos um tipo para o extrato bancário."
+            if not any([
+                data.show_settlement_date,
+                data.show_code,
+                data.show_title_number,
+                data.show_description,
+                data.show_counterparty,
+                data.show_competence_date,
+                data.show_due_date,
+                data.show_title_amount,
+                data.show_balance_amount,
+            ]):
+                return None, "Selecione ao menos uma coluna para exibir no extrato bancário."
 
         if data.report_type == "schedule_report":
             updates = {"orientation": "portrait"}
@@ -1996,6 +2022,72 @@ class FinancialReportService:
         return documents
 
     @staticmethod
+    def _bank_statement_columns(filters: FinancialManagementReportFiltersInput) -> List[Dict[str, Any]]:
+        configured_columns = [
+            (bool(getattr(filters, "show_settlement_date", True)), "data", "Data"),
+            (bool(getattr(filters, "show_code", True)), "codigo", "Liquidação"),
+            (True, "conta_bancaria", "Conta bancária"),
+            (bool(getattr(filters, "show_title_number", True)), "lancamento", "Lançamento"),
+            (bool(getattr(filters, "show_description", True)), "descricao", "Descrição"),
+            (bool(getattr(filters, "show_counterparty", True)), "favorecido", "Favorecido"),
+            (bool(getattr(filters, "show_competence_date", False)), "competencia", "Competência"),
+            (bool(getattr(filters, "show_due_date", False)), "vencimento", "Vencimento"),
+            (True, "movimento", "Movimento"),
+            (bool(getattr(filters, "show_title_amount", True)), "valor", "Valor"),
+            (True, "conciliacao", "Conciliação"),
+            (bool(getattr(filters, "show_balance_amount", True)), "saldo", "Saldo"),
+        ]
+        return [{"key": key, "label": label} for enabled, key, label in configured_columns if enabled]
+
+    @staticmethod
+    def _bank_statement_entry_status_bucket(entry: Any) -> str:
+        status = str(getattr(entry, "status", "") or "").lower()
+        if status in {"partially_settled", "partial", "settled_partial"}:
+            return "partial"
+        return "settled"
+
+    @staticmethod
+    def _bank_statement_accepts_entry(entry: Any, filters: FinancialManagementReportFiltersInput) -> bool:
+        movement_nature = str(getattr(entry, "movement_nature", "") or "").lower()
+        if movement_nature == "credit" and not bool(getattr(filters, "include_receivable", True)):
+            return False
+        if movement_nature == "debit" and not bool(getattr(filters, "include_payable", True)):
+            return False
+        status_bucket = FinancialReportService._bank_statement_entry_status_bucket(entry)
+        if status_bucket == "partial":
+            return bool(getattr(filters, "include_partial", True))
+        return bool(getattr(filters, "include_settled", True))
+
+    @staticmethod
+    def _bank_statement_sort_key(
+        settlement: Any,
+        entry: Any,
+        *,
+        counterparty_names: Dict[int, str],
+        filters: FinancialManagementReportFiltersInput,
+    ):
+        order_by = getattr(filters, "order_by", "settlement_date") or "settlement_date"
+        counterparty_label = counterparty_names.get(getattr(entry, "counterparty_id", None), "")
+        key_map = {
+            "settlement_date": getattr(settlement, "settlement_date", None),
+            "due_date": getattr(entry, "due_date", None),
+            "competence_date": getattr(entry, "competence_date", None),
+            "code": getattr(settlement, "settlement_code", "") or "",
+            "title_number": getattr(entry, "entry_code", "") or "",
+            "description": getattr(entry, "description", "") or "",
+            "history": getattr(entry, "description", "") or "",
+            "counterparty": counterparty_label,
+            "movement_nature": getattr(entry, "movement_nature", "") or "",
+            "title_amount": Decimal(str(getattr(settlement, "net_amount", None) or 0)),
+            "correction_amount": Decimal("0"),
+            "balance_amount": Decimal(str(getattr(settlement, "net_amount", None) or 0)),
+            "installment": getattr(entry, "entry_code", "") or "",
+            "project": "",
+        }
+        value = key_map.get(order_by, key_map["settlement_date"])
+        return (value is None, value, getattr(settlement, "id", 0) or 0)
+
+    @staticmethod
     def _build_bank_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
@@ -2008,6 +2100,23 @@ class FinancialReportService:
         if entry_ids:
             for entry in FinancialEntry.query.filter(FinancialEntry.company_id == company_id, FinancialEntry.id.in_(entry_ids), FinancialEntry.deleted_at.is_(None)).all():
                 entries[entry.id] = entry
+        settlements = [
+            settlement
+            for settlement in settlements
+            if entries.get(settlement.financial_entry_id)
+            and FinancialReportService._bank_statement_accepts_entry(entries[settlement.financial_entry_id], filters)
+        ]
+        reverse_order = (getattr(filters, "order_direction", "asc") or "asc") == "desc"
+        settlements.sort(
+            key=lambda item: FinancialReportService._bank_statement_sort_key(
+                item,
+                entries[item.financial_entry_id],
+                counterparty_names=counterparty_names,
+                filters=filters,
+            ),
+            reverse=reverse_order,
+        )
+        entry_ids = [item.financial_entry_id for item in settlements]
         is_dossier = filters.report_type == "bank_statement_dossier"
         schedules_by_id: Dict[int, Any] = {}
         allocations_by_entry: Dict[int, List[Any]] = defaultdict(list)
@@ -2040,7 +2149,7 @@ class FinancialReportService:
             FinancialSettlement.settlement_status != "cancelled",
             FinancialSettlement.settlement_date < filters.period_start,
         )
-        if filters.bank_account_id:
+        if getattr(filters, "bank_account_id", None):
             history_query = history_query.filter(FinancialSettlement.bank_account_id == filters.bank_account_id)
         all_entries = {entry.id: entry for entry in FinancialEntry.query.filter(FinancialEntry.company_id == company_id, FinancialEntry.deleted_at.is_(None)).all()}
         balance_base = FinancialDashboardAnalytics.calculate_current_balance(settlements=history_query.all(), entries_by_id=all_entries, as_of_date=filters.period_start)
@@ -2220,22 +2329,14 @@ class FinancialReportService:
             ],
             general_info=[
                 FinancialReportService._report_info("Janela analisada", f"{filters.period_start.isoformat()} até {filters.period_end.isoformat()}"),
-                FinancialReportService._report_info("Recorte", bank_names.get(filters.bank_account_id, "Todas as contas bancárias")),
+                FinancialReportService._report_info("Recorte", bank_names.get(getattr(filters, "bank_account_id", None), "Todas as contas bancárias")),
                 FinancialReportService._report_info("Movimentos", str(len(rows))),
                 FinancialReportService._report_info("Somente conciliados", "Sim" if filters.include_reconciled_only else "Não"),
+                FinancialReportService._report_info("Projetar abertos", "Sim" if getattr(filters, "include_projected", False) else "Não"),
+                FinancialReportService._report_info("Considerar limites", "Sim" if getattr(filters, "include_overdraft", True) else "Não"),
+                FinancialReportService._report_info("Ordenação", f"{getattr(filters, 'order_by', 'settlement_date')} / {getattr(filters, 'order_direction', 'asc')}"),
             ],
-            columns=[
-                {"key": "data", "label": "Data"},
-                {"key": "codigo", "label": "Baixa"},
-                {"key": "conta_bancaria", "label": "Conta bancária"},
-                {"key": "lancamento", "label": "Lançamento"},
-                {"key": "descricao", "label": "Descrição"},
-                {"key": "favorecido", "label": "Favorecido"},
-                {"key": "movimento", "label": "Movimento"},
-                {"key": "valor", "label": "Valor"},
-                {"key": "conciliacao", "label": "Conciliação"},
-                {"key": "saldo", "label": "Saldo"},
-            ],
+            columns=FinancialReportService._bank_statement_columns(filters),
             rows=rows,
             totals=totals,
             extra=extra,
@@ -4342,10 +4443,54 @@ class FinancialReportService:
                         ]
                     ) or "Nenhum",
                 })
-        elif filters.report_type == "bank_statement":
-            include_reconciled_explicit = "include_reconciled_only" in raw_filters
-            if include_reconciled_explicit or filters.include_reconciled_only:
-                values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
+        elif filters.report_type in {"bank_statement", "bank_statement_dossier"}:
+            bank_order_labels = {
+                "settlement_date": "Data da baixa",
+                "due_date": "Vencimento",
+                "competence_date": "Competência",
+                "code": "Liquidação",
+                "title_number": "Lançamento",
+                "description": "Descrição",
+                "history": "Descrição",
+                "counterparty": "Favorecido",
+                "movement_nature": "Movimento",
+                "title_amount": "Valor",
+                "balance_amount": "Saldo",
+            }
+            values.append({"label": "Projetar abertos", "value": "Sim" if filters.include_projected else "Não"})
+            values.append({"label": "Somente conciliados", "value": "Sim" if filters.include_reconciled_only else "Não"})
+            values.append({"label": "Considerar limites", "value": "Sim" if filters.include_overdraft else "Não"})
+            values.append({
+                "label": "Status considerados",
+                "value": ", ".join([label for enabled, label in [
+                    (filters.include_settled, "Baixado"),
+                    (filters.include_partial, "Baixado parcial"),
+                    (filters.include_open, "Aberto"),
+                ] if enabled]) or "Nenhum",
+            })
+            values.append({
+                "label": "Tipos considerados",
+                "value": ", ".join([label for enabled, label in [
+                    (filters.include_receivable, "Recebimento"),
+                    (filters.include_payable, "Pagamento"),
+                ] if enabled]) or "Nenhum",
+            })
+            values.append({
+                "label": "Exibir",
+                "value": ", ".join([label for enabled, label in [
+                    (filters.show_settlement_date, "Data"),
+                    (filters.show_code, "Liquidação"),
+                    (filters.show_title_number, "Lançamento"),
+                    (filters.show_description, "Descrição"),
+                    (filters.show_counterparty, "Favorecido"),
+                    (filters.show_competence_date, "Competência"),
+                    (filters.show_due_date, "Vencimento"),
+                    (filters.show_title_amount, "Valor"),
+                    (filters.show_balance_amount, "Saldo"),
+                ] if enabled]) or "Nenhum",
+            })
+            values.append({"label": "Ordenar por", "value": bank_order_labels.get(filters.order_by, filters.order_by)})
+            values.append({"label": "Direção", "value": "Crescente" if filters.order_direction == "asc" else "Decrescente"})
         elif filters.report_type in {"income_statement", "income_statement_2"}:
             status_explicit = any(key in raw_filters for key in ("include_settled", "include_open"))
             if status_explicit:

@@ -157,7 +157,13 @@ def test_bank_statement_dossier_filters_page_builds_report_context(monkeypatch):
 
     client = app.test_client()
     response = client.get(
-        "/financial/reports/dossie-extrato-bancario?dossier_mode=simple&dossier_mode=complete",
+        "/financial/reports/dossie-extrato-bancario?dossier_mode=simple&dossier_mode=complete"
+        "&period_start=2026-06-01&period_end=2026-06-30"
+        "&include_projected=true&include_reconciled_only=true&include_overdraft=false"
+        "&include_settled=true&include_partial=false&include_open=true"
+        "&include_receivable=true&include_payable=false"
+        "&show_due_date=true&show_balance_amount=false"
+        "&order_by=due_date&order_direction=desc",
         follow_redirects=False,
     )
 
@@ -168,6 +174,15 @@ def test_bank_statement_dossier_filters_page_builds_report_context(monkeypatch):
     assert "slug=dossie-extrato-bancario" in html
     assert captured["report_type"] == "bank_statement_dossier"
     assert captured["filters"]["dossier_mode"] == "complete"
+    assert captured["filters"]["include_projected"] == "true"
+    assert captured["filters"]["include_reconciled_only"] == "true"
+    assert captured["filters"]["include_overdraft"] == "false"
+    assert captured["filters"]["include_partial"] == "false"
+    assert captured["filters"]["include_payable"] == "false"
+    assert captured["filters"]["show_due_date"] == "true"
+    assert captured["filters"]["show_balance_amount"] == "false"
+    assert captured["filters"]["order_by"] == "due_date"
+    assert captured["filters"]["order_direction"] == "desc"
 
 
 def test_bank_statement_view_redirects_to_filters(monkeypatch):
@@ -249,6 +264,62 @@ def test_bank_statement_dossier_layout_test_forces_landscape(monkeypatch):
     assert captured["report_type"] == "bank_statement_dossier"
     assert captured["filters"]["orientation"] == "landscape"
 
+
+
+def test_bank_statement_sidebar_exposes_advanced_filters():
+    app = _build_app()
+    report_definition = {
+        "code": "bank_statement_dossier",
+        "slug": "dossie-extrato-bancario",
+        "label": "Dossiê do Extrato Bancário",
+        "description": "Dossiê documental.",
+    }
+    options = SimpleNamespace(bank_accounts=[])
+
+    with app.test_request_context("/financial/reports/dossie-extrato-bancario?company_id=7"):
+        html = render_template(
+            "modules/financial/partials/report_filters_bank_statement_sidebar.html",
+            company_id=7,
+            default_period_start="2026-06-01",
+            default_period_end="2026-06-30",
+            filters={},
+            options=options,
+            report_definition=report_definition,
+        )
+
+    for label in [
+        "Período inicial",
+        "Período final",
+        "Projetar abertos",
+        "Somente conciliados",
+        "Considerar limites",
+        "Status considerados",
+        "Tipos considerados",
+        "Exibir",
+        "Ordenar por",
+        "Direção",
+    ]:
+        assert label in html
+    for field in [
+        "include_projected",
+        "include_reconciled_only",
+        "include_overdraft",
+        "include_settled",
+        "include_partial",
+        "include_open",
+        "include_receivable",
+        "include_payable",
+        "show_settlement_date",
+        "show_code",
+        "show_title_number",
+        "show_description",
+        "show_counterparty",
+        "show_title_amount",
+        "show_balance_amount",
+        "order_by",
+        "order_direction",
+    ]:
+        assert f'name="{field}"' in html
 
 def test_bank_statement_dossier_page_renames_landscape_test_button_to_receipts():
     app = _build_app()

@@ -1,7 +1,25 @@
 {% set period_start = (filters.get('period_start', [default_period_start]) | first) %}
 {% set period_end = (filters.get('period_end', [default_period_end]) | first) %}
 {% set selected_bank_account_id = (filters.get('bank_account_id', ['']) | first) %}
+{% set include_projected = (filters.get('include_projected', ['false']) | first) == 'true' %}
 {% set include_reconciled_only = (filters.get('include_reconciled_only', ['false']) | first) == 'true' %}
+{% set include_overdraft = (filters.get('include_overdraft', ['true']) | first) == 'true' %}
+{% set include_settled = (filters.get('include_settled', ['true']) | first) == 'true' %}
+{% set include_partial = (filters.get('include_partial', ['true']) | first) == 'true' %}
+{% set include_open = (filters.get('include_open', ['true']) | first) == 'true' %}
+{% set include_receivable = (filters.get('include_receivable', ['true']) | first) == 'true' %}
+{% set include_payable = (filters.get('include_payable', ['true']) | first) == 'true' %}
+{% set show_settlement_date = (filters.get('show_settlement_date', ['true']) | first) == 'true' %}
+{% set show_code = (filters.get('show_code', ['true']) | first) == 'true' %}
+{% set show_title_number = (filters.get('show_title_number', ['true']) | first) == 'true' %}
+{% set show_description = (filters.get('show_description', ['true']) | first) == 'true' %}
+{% set show_counterparty = (filters.get('show_counterparty', ['true']) | first) == 'true' %}
+{% set show_title_amount = (filters.get('show_title_amount', ['true']) | first) == 'true' %}
+{% set show_balance_amount = (filters.get('show_balance_amount', ['true']) | first) == 'true' %}
+{% set show_competence_date = (filters.get('show_competence_date', ['false']) | first) == 'true' %}
+{% set show_due_date = (filters.get('show_due_date', ['false']) | first) == 'true' %}
+{% set selected_order_by = (filters.get('order_by', ['settlement_date']) | first) %}
+{% set selected_order_direction = (filters.get('order_direction', ['asc']) | first) %}
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
@@ -23,11 +41,11 @@
             <p class="filter-label">Período</p>
             <div class="report-workspace-date-pair br-date-pair">
                 <label>
-                    <span>De</span>
+                    <span>Período inicial</span>
                     <input type="date" name="period_start" value="{{ period_start }}" data-filter-input data-default-value="{{ default_period_start }}">
                 </label>
                 <label>
-                    <span>Até</span>
+                    <span>Período final</span>
                     <input type="date" name="period_end" value="{{ period_end }}" data-filter-input data-default-value="{{ default_period_end }}">
                 </label>
             </div>
@@ -47,13 +65,100 @@
         </section>
 
         <section class="report-workspace-sidebar__section br-sidebar-section">
-            <p class="filter-label">Conciliação</p>
+            <p class="filter-label">Parâmetros</p>
             <div class="report-workspace-choice-grid br-checkbox-grid">
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_projected" value="false">
+                    <input type="checkbox" name="include_projected" value="true" {% if include_projected %}checked{% endif %} data-filter-input data-default-value="false">
+                    <span>Projetar abertos</span>
+                </label>
                 <label class="report-workspace-choice-card br-choice-card">
                     <input type="hidden" name="include_reconciled_only" value="false">
                     <input type="checkbox" name="include_reconciled_only" value="true" {% if include_reconciled_only %}checked{% endif %} data-filter-input data-default-value="false">
-                    <span>Somente movimentos conciliados</span>
+                    <span>Somente conciliados</span>
                 </label>
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_overdraft" value="false">
+                    <input type="checkbox" name="include_overdraft" value="true" {% if include_overdraft %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Considerar limites</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <p class="filter-label">Status considerados</p>
+            <div class="report-workspace-choice-grid br-checkbox-grid">
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_settled" value="false">
+                    <input type="checkbox" name="include_settled" value="true" {% if include_settled %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Baixado</span>
+                </label>
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_partial" value="false">
+                    <input type="checkbox" name="include_partial" value="true" {% if include_partial %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Baixado parcial</span>
+                </label>
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_open" value="false">
+                    <input type="checkbox" name="include_open" value="true" {% if include_open %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Aberto</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <p class="filter-label">Tipos considerados</p>
+            <div class="report-workspace-choice-grid br-checkbox-grid">
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_receivable" value="false">
+                    <input type="checkbox" name="include_receivable" value="true" {% if include_receivable %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Recebimentos</span>
+                </label>
+                <label class="report-workspace-choice-card br-choice-card">
+                    <input type="hidden" name="include_payable" value="false">
+                    <input type="checkbox" name="include_payable" value="true" {% if include_payable %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Pagamentos</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <p class="filter-label">Exibir</p>
+            <div class="report-workspace-choice-grid br-checkbox-grid">
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_settlement_date" value="false"><input type="checkbox" name="show_settlement_date" value="true" {% if show_settlement_date %}checked{% endif %} data-filter-input data-default-value="true"><span>Data</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_code" value="false"><input type="checkbox" name="show_code" value="true" {% if show_code %}checked{% endif %} data-filter-input data-default-value="true"><span>Liquidação</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_title_number" value="false"><input type="checkbox" name="show_title_number" value="true" {% if show_title_number %}checked{% endif %} data-filter-input data-default-value="true"><span>Lançamento</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_description" value="false"><input type="checkbox" name="show_description" value="true" {% if show_description %}checked{% endif %} data-filter-input data-default-value="true"><span>Descrição</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_counterparty" value="false"><input type="checkbox" name="show_counterparty" value="true" {% if show_counterparty %}checked{% endif %} data-filter-input data-default-value="true"><span>Favorecido</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_competence_date" value="false"><input type="checkbox" name="show_competence_date" value="true" {% if show_competence_date %}checked{% endif %} data-filter-input data-default-value="false"><span>Competência</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_due_date" value="false"><input type="checkbox" name="show_due_date" value="true" {% if show_due_date %}checked{% endif %} data-filter-input data-default-value="false"><span>Vencimento</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_title_amount" value="false"><input type="checkbox" name="show_title_amount" value="true" {% if show_title_amount %}checked{% endif %} data-filter-input data-default-value="true"><span>Valor</span></label>
+                <label class="report-workspace-choice-card br-choice-card"><input type="hidden" name="show_balance_amount" value="false"><input type="checkbox" name="show_balance_amount" value="true" {% if show_balance_amount %}checked{% endif %} data-filter-input data-default-value="true"><span>Saldo</span></label>
+            </div>
+        </section>
+
+        <section class="report-workspace-sidebar__section br-sidebar-section">
+            <div class="filter-group">
+                <label class="filter-label" for="bank-report-order-by">Ordenar por</label>
+                <select id="bank-report-order-by" name="order_by" data-filter-input data-default-value="settlement_date">
+                    <option value="settlement_date" {% if selected_order_by == 'settlement_date' %}selected{% endif %}>Data da baixa</option>
+                    <option value="due_date" {% if selected_order_by == 'due_date' %}selected{% endif %}>Vencimento</option>
+                    <option value="competence_date" {% if selected_order_by == 'competence_date' %}selected{% endif %}>Competência</option>
+                    <option value="code" {% if selected_order_by == 'code' %}selected{% endif %}>Liquidação</option>
+                    <option value="title_number" {% if selected_order_by == 'title_number' %}selected{% endif %}>Lançamento</option>
+                    <option value="description" {% if selected_order_by == 'description' %}selected{% endif %}>Descrição</option>
+                    <option value="counterparty" {% if selected_order_by == 'counterparty' %}selected{% endif %}>Favorecido</option>
+                    <option value="movement_nature" {% if selected_order_by == 'movement_nature' %}selected{% endif %}>Movimento</option>
+                    <option value="title_amount" {% if selected_order_by == 'title_amount' %}selected{% endif %}>Valor</option>
+                    <option value="balance_amount" {% if selected_order_by == 'balance_amount' %}selected{% endif %}>Saldo</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="bank-report-order-direction">Direção</label>
+                <select id="bank-report-order-direction" name="order_direction" data-filter-input data-default-value="asc">
+                    <option value="asc" {% if selected_order_direction == 'asc' %}selected{% endif %}>Crescente</option>
+                    <option value="desc" {% if selected_order_direction == 'desc' %}selected{% endif %}>Decrescente</option>
+                </select>
             </div>
         </section>
 
