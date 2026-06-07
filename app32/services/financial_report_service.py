@@ -7190,7 +7190,12 @@ class FinancialReportService:
             ]
 
         elements: List[Any] = []
-        content_height = max(120, available_height - 24)
+        # O título "Comprovantes" e o fluxo do ReportLab consomem parte do
+        # frame. Se a grade ocupar praticamente toda a altura útil, o Table
+        # quebra após a primeira linha e o PDF passa a renderizar 2 cards por
+        # página. Reservamos espaço fixo para o título/margem e mantemos a
+        # grade 2x2 dentro do mesmo frame.
+        content_height = max(120, available_height - 70)
         cell_width = available_width / 2
         cell_height = content_height / 2
 
