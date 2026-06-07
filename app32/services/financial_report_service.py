@@ -324,6 +324,13 @@ class FinancialReportService:
         return f"{signal}{FinancialReportService._format_currency(abs(amount))}"
 
     @staticmethod
+    def _format_decimal_br(value: Decimal | float | int) -> str:
+        amount = FinancialReportService._serialize_money(value)
+        inteiro, decimal = f"{abs(amount):,.2f}".split(".")
+        label = f"{inteiro.replace(',', '.')},{decimal}"
+        return f"- {label}" if amount < 0 else label
+
+    @staticmethod
     def _reconciliation_status_label(value: Optional[str]) -> str:
         return {
             "pending": "Pendente",
@@ -2032,7 +2039,6 @@ class FinancialReportService:
             (bool(getattr(filters, "show_counterparty", True)), "favorecido", "Favorecido"),
             (bool(getattr(filters, "show_competence_date", False)), "competencia", "Competência"),
             (bool(getattr(filters, "show_due_date", False)), "vencimento", "Vencimento"),
-            (True, "movimento", "Movimento"),
             (bool(getattr(filters, "show_title_amount", True)), "valor", "Valor"),
             (True, "conciliacao", "Conciliação"),
             (bool(getattr(filters, "show_balance_amount", True)), "saldo", "Saldo"),
@@ -2184,6 +2190,7 @@ class FinancialReportService:
             counterparty_label = counterparty_names.get(getattr(entry, "counterparty_id", None), "Não informado")
             amount = Decimal(settlement.net_amount or 0)
             movement_tone = "positive" if entry.movement_nature == "credit" else "negative"
+            signed_amount = amount if entry.movement_nature == "credit" else -amount
             if entry.movement_nature == "credit":
                 inflow += amount
                 running += amount
@@ -2209,8 +2216,9 @@ class FinancialReportService:
                     "titulo_nome": getattr(schedule, "name", None),
                     "movimento": "Entrada" if entry.movement_nature == "credit" else "Saída",
                     "movimento_tone": movement_tone,
-                    "valor": FinancialReportService._serialize_money(amount),
-                    "valor_label": FinancialReportService._format_signed_currency(amount, positive_sign=entry.movement_nature == "credit"),
+                    "valor": FinancialReportService._serialize_money(signed_amount),
+                    "valor_label": FinancialReportService._format_decimal_br(signed_amount),
+                    "valor_tone": "negative" if signed_amount < 0 else ("positive" if signed_amount > 0 else "neutral"),
                     "valor_principal": FinancialReportService._serialize_money(component_summary.get("principal") or settlement.principal_amount or 0),
                     "valor_correcao": FinancialReportService._serialize_money(component_summary.get("financial_correction") or 0),
                     "valor_desconto": FinancialReportService._serialize_money(component_summary.get("discount") or 0),
@@ -2221,8 +2229,8 @@ class FinancialReportService:
                     "conciliacao_label": FinancialReportService._reconciliation_status_label(settlement.reconciliation_status),
                     "conciliacao_tone": FinancialReportService._reconciliation_status_tone(settlement.reconciliation_status),
                     "saldo": FinancialReportService._serialize_money(running),
-                    "saldo_label": FinancialReportService._format_currency(running),
-                    "saldo_tone": "negative" if running < 0 else "neutral",
+                    "saldo_label": FinancialReportService._format_decimal_br(running),
+                    "saldo_tone": "negative" if running < 0 else ("positive" if running > 0 else "neutral"),
                 }
             rows.append(row_payload)
             if is_dossier:
@@ -7799,8 +7807,7 @@ class FinancialReportService:
             "lancamento": 1.45,
             "descricao": 2.75,
             "favorecido": 1.2,
-            "movimento": 0.84,
-            "valor": 0.62,
+            "valor": 0.74,
             "conciliacao": 0.86,
             "saldo": 0.72,
         }
@@ -7812,27 +7819,34 @@ class FinancialReportService:
 
         header_row = [Paragraph(str(column.get("label") or ""), header_style) for column in report_columns]
         body_rows: List[List[Any]] = []
+
+        def _amount_label_without_currency(item: Dict[str, Any], key: str, fallback: str, tone: str) -> str:
+            label = str(item.get(f"{key}_label") or fallback or "0").replace("R$", "").replace("+", "").strip()
+            if tone == "negative" and label and not label.startswith(("-", "−")):
+                return f"- {label}"
+            return label
+
         for item in report_rows:
             row_cells: List[Any] = []
             for column in report_columns:
                 key = str(column.get("key") or "")
                 raw_value = str(item.get(key, "") or "")
                 style = cell_style
-                if key in {"data", "codigo", "movimento", "conciliacao"}:
+                if key in {"data", "codigo", "conciliacao"}:
                     style = cell_center_style
                 if key in {"valor", "saldo"}:
                     tone = str(item.get(f"{key}_tone") or item.get("movimento_tone") or "neutral").lower()
                     color = {
-                        "positive": "#15803D",
-                        "negative": "#B91C1C",
-                        "primary": "#1D4ED8",
+                        "positive": "#2563EB",
+                        "negative": "#DC2626",
+                        "primary": "#2563EB",
                     }.get(tone, "#0F172A")
                     style = ParagraphStyle(
                         f"BankStatementPdfAmount_{key}_{tone}",
                         parent=cell_amount_style,
                         textColor=colors.HexColor(color),
                     )
-                    raw_value = str(item.get(f"{key}_label") or raw_value)
+                    raw_value = _amount_label_without_currency(item, key, raw_value, tone)
                 elif key == "movimento":
                     tone = str(item.get("movimento_tone") or "neutral").lower()
                     color = {

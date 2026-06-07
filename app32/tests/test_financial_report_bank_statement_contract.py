@@ -89,6 +89,11 @@ def test_build_bank_statement_exposes_component_allocations(monkeypatch):
 
     result = FinancialReportService._build_bank_statement(7, filters)
 
+    assert "movimento" not in [column["key"] for column in result["columns"]]
+    assert result["rows"][0]["valor"] == -120.0
+    assert result["rows"][0]["valor_label"] == "- 120,00"
+    assert "R$" not in result["rows"][0]["valor_label"]
+    assert result["rows"][0]["valor_tone"] == "negative"
     assert result["rows"][0]["valor_principal"] == 100.0
     assert result["rows"][0]["valor_correcao"] == 20.0
     assert result["rows"][0]["valor_desconto"] == 5.0
@@ -227,7 +232,6 @@ def test_export_pdf_bank_statement_uses_dedicated_app32_layout():
             {"key": "codigo", "label": "Liquidação"},
             {"key": "conta_bancaria", "label": "Conta bancária"},
             {"key": "descricao", "label": "Descrição"},
-            {"key": "movimento", "label": "Movimento"},
             {"key": "valor", "label": "Valor"},
             {"key": "conciliacao", "label": "Conciliação"},
             {"key": "saldo", "label": "Saldo"},
@@ -238,15 +242,15 @@ def test_export_pdf_bank_statement_uses_dedicated_app32_layout():
                 "codigo": "BX-000004",
                 "conta_bancaria": "003 - Caixinha Carol",
                 "descricao": "Averbação teste",
-                "movimento": "Saída",
                 "movimento_tone": "negative",
                 "valor": "101.86",
-                "valor_label": "R$ 101,86",
+                "valor_label": "- 101,86",
+                "valor_tone": "negative",
                 "conciliacao": "pending",
                 "conciliacao_label": "Pendente",
                 "conciliacao_tone": "neutral",
                 "saldo": "-996.28",
-                "saldo_label": "R$ -996,28",
+                "saldo_label": "- 996,28",
                 "saldo_tone": "negative",
             }
         ],
@@ -284,7 +288,6 @@ def test_export_pdf_bank_statement_dossier_supports_complete_and_simple_modes():
             {"key": "lancamento", "label": "Lançamento"},
             {"key": "descricao", "label": "Descrição"},
             {"key": "favorecido", "label": "Favorecido"},
-            {"key": "movimento", "label": "Movimento"},
             {"key": "valor", "label": "Valor"},
             {"key": "conciliacao", "label": "Conciliação"},
             {"key": "saldo", "label": "Saldo"},
@@ -297,16 +300,16 @@ def test_export_pdf_bank_statement_dossier_supports_complete_and_simple_modes():
                 "lancamento": "LAN-1",
                 "descricao": "Teste",
                 "favorecido": "Fornecedor",
-                "movimento": "Entrada",
                 "movimento_tone": "positive",
                 "valor": "10",
-                "valor_label": "+ R$ 10,00",
+                "valor_label": "10,00",
+                "valor_tone": "positive",
                 "conciliacao": "pending",
                 "conciliacao_label": "Pendente",
                 "conciliacao_tone": "neutral",
                 "saldo": "10",
-                "saldo_label": "R$ 10,00",
-                "saldo_tone": "neutral",
+                "saldo_label": "10,00",
+                "saldo_tone": "positive",
             }
         ],
         "dossier_document_count": 1,

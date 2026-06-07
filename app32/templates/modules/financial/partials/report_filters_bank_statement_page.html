@@ -84,7 +84,7 @@
                                 {% if key == 'movimento' %}
                                 <td class="col-{{ key }}"><span class="bank-chip bank-chip--{{ row.movimento_tone }}">{{ row.movimento }}</span></td>
                                 {% elif key == 'valor' %}
-                                <td class="col-{{ key }} bank-value bank-value--{{ row.movimento_tone }}">{{ row.valor_label or row.valor }}</td>
+                                <td class="col-{{ key }} bank-value bank-value--{{ row.valor_tone or row.movimento_tone }}">{{ row.valor_label or row.valor }}</td>
                                 {% elif key == 'conciliacao' %}
                                 <td class="col-{{ key }}"><span class="bank-chip bank-chip--{{ row.conciliacao_tone }}">{{ row.conciliacao_label or row.conciliacao }}</span></td>
                                 {% elif key == 'saldo' %}

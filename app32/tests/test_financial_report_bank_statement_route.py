@@ -367,7 +367,7 @@ def test_bank_statement_dossier_pdf_uses_portrait_statement_portrait_dre_and_lan
             "filters": [{"label": "Período", "value": "2026-06-01 até 2026-06-30"}],
             "summary_cards": [{"label": "Saldo final", "value": "R$ 100,00", "tone": "primary"}],
             "columns": [{"key": "data", "label": "Data"}, {"key": "valor", "label": "Valor"}],
-            "rows": [{"data": "2026-06-07", "valor": "100.00", "valor_label": "R$ 100,00"}],
+            "rows": [{"data": "2026-06-07", "valor": "100.00", "valor_label": "100,00", "valor_tone": "positive"}],
             "dossier_income_statement": {
                 "title": "Demonstração de Resultados 01",
                 "company_name": "Empresa Teste",
