@@ -13,6 +13,7 @@
     {% call report_macros.workspace_header(report_definition, 'bank-report-header', 'bank-report-eyebrow', 'bank-report-subtitle', 'bank-report-header-actions') %}
     {% if is_dossier_report %}
     <a class="btn btn-secondary" href="/financial/reports/extrato-bancario{% if report_query %}?{{ report_query }}{% endif %}">Ver extrato padrão</a>
+    <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/layout-test?{{ dossier_complete_query }}" target="_blank" rel="noopener">Comprovantes</a>
     <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf?{{ dossier_complete_query }}" target="_blank" rel="noopener">Dossiê completo</a>
     <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf?{{ dossier_simple_query }}" target="_blank" rel="noopener">Dossiê simples</a>
     {% else %}

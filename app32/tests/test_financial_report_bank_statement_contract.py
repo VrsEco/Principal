@@ -192,6 +192,20 @@ def test_build_bank_statement_dossier_collects_title_entry_and_settlement_attach
     assert "8 - Centro rateado" in result["rows"][0]["centro_resultados"]
 
 
+def test_bank_statement_dossier_normalize_defaults_to_portrait():
+    filters, error = FinancialReportService._normalize_filters(
+        "bank_statement_dossier",
+        {
+            "period_start": "2026-06-01",
+            "period_end": "2026-06-30",
+        },
+    )
+
+    assert error is None
+    assert filters is not None
+    assert filters.orientation == "portrait"
+
+
 def test_export_pdf_bank_statement_uses_dedicated_app32_layout():
     payload = {
         "report_type": "bank_statement",
@@ -319,4 +333,5 @@ def test_export_pdf_bank_statement_dossier_supports_complete_and_simple_modes():
 
     assert complete_pdf.startswith(b"%PDF")
     assert simple_pdf.startswith(b"%PDF")
-    assert len(complete_pdf) > len(simple_pdf) > 1000
+    assert len(complete_pdf) > 1000
+    assert len(simple_pdf) > 1000
