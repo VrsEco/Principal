@@ -6916,6 +6916,21 @@ class FinancialReportService:
             alignment=TA_CENTER,
             fontName="Helvetica-Bold",
         )
+        result_label_style = ParagraphStyle(
+            "DossierIncomeStatementResultLabel",
+            parent=styles["BodyText"],
+            fontSize=10,
+            leading=12,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+        )
+        result_value_style = ParagraphStyle(
+            "DossierIncomeStatementResultValue",
+            parent=result_label_style,
+            alignment=TA_RIGHT,
+            fontSize=11,
+            leading=13,
+        )
         empty_style = ParagraphStyle(
             "DossierIncomeStatementEmpty",
             parent=styles["BodyText"],
@@ -7000,6 +7015,60 @@ class FinancialReportService:
             table_styles.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
         table.setStyle(TableStyle(table_styles))
         elements.append(table)
+
+        def _row_liquidation_amount(row: Dict[str, Any]) -> Decimal:
+            raw_value = row.get("liquidacao")
+            if raw_value is None:
+                raw_value = row.get("liquidation")
+            if isinstance(raw_value, (Decimal, int, float)):
+                return Decimal(str(raw_value or 0))
+            raw_label = str(
+                row.get("liquidacao_label")
+                or row.get("liquidation_label")
+                or raw_value
+                or "0"
+            ).strip()
+            is_negative = raw_label.startswith("-") or raw_label.startswith("−")
+            normalized = (
+                raw_label.replace("R$", "")
+                .replace(" ", "")
+                .replace("−", "-")
+                .replace(".", "")
+                .replace(",", ".")
+            )
+            try:
+                amount = Decimal(normalized or "0")
+            except Exception:
+                amount = Decimal("0")
+            if is_negative and amount > 0:
+                amount = -amount
+            return amount
+
+        result_rows = [row for row in source_rows if int(row.get("level") or 0) == 0] or source_rows
+        result_amount = sum((_row_liquidation_amount(row) for row in result_rows), Decimal("0"))
+        result_table = Table(
+            [[
+                Paragraph("Resultado", result_label_style),
+                Paragraph(FinancialReportService._format_currency(result_amount), result_value_style),
+            ]],
+            colWidths=[available_width * 0.58, available_width * 0.42],
+            hAlign="LEFT",
+        )
+        result_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                    ("TOPPADDING", (0, 0), (-1, -1), 8),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        elements.append(Spacer(1, 8))
+        elements.append(result_table)
         return elements
 
     @staticmethod

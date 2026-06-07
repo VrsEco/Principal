@@ -308,9 +308,19 @@ def test_bank_statement_dossier_pdf_uses_portrait_statement_portrait_dre_and_lan
                         "descricao": "Receitas",
                         "level": 0,
                         "liquidacao_label": "R$ 100,00",
+                        "liquidacao": 100.0,
                         "competencia_label": "R$ 999,00",
                         "vencimento_label": "R$ 888,00",
-                    }
+                    },
+                    {
+                        "codigo": "4.1.01",
+                        "descricao": "Despesas",
+                        "level": 0,
+                        "liquidacao_label": "-R$ 40,00",
+                        "liquidacao": -40.0,
+                        "competencia_label": "R$ 777,00",
+                        "vencimento_label": "R$ 666,00",
+                    },
                 ],
             },
             "dossier_documents": [
@@ -373,8 +383,12 @@ def test_bank_statement_dossier_pdf_uses_portrait_statement_portrait_dre_and_lan
     assert "Demonstração de Resultados" in dre_text
     assert "Face de liquidação" in dre_text
     assert "R$ 100,00" in dre_text
+    assert "Resultado" in dre_text
+    assert "R$ 60,00" in dre_text
     assert "R$ 999,00" not in dre_text
     assert "R$ 888,00" not in dre_text
+    assert "R$ 777,00" not in dre_text
+    assert "R$ 666,00" not in dre_text
 
     receipts_text = reader.pages[-1].extract_text() or ""
     assert "Lote 1" in receipts_text
