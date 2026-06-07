@@ -29,3 +29,7 @@ def test_deploy_script_forces_mcp_http_restart_after_publish():
     assert 'kill -KILL $MCP_OLD_PIDS' in script
     assert 'pkill -TERM -f "start_mcp_http.sh|src.core.mcp_http_server"' in script
     assert 'MCP HTTP remoto ativo em 127.0.0.1:8101 com código atualizado.' in script
+    assert 'MCP_PUBLIC_HEALTH_URL="https://app.gestaoversus.com.br/mcp/healthz"' in script
+    assert 'Listener MCP HTTP ativo na porta 8101 com PID(s)' in script
+    assert 'MCP HTTP remoto respondeu também no health público /mcp/healthz.' in script
+    assert 'for i in {1..30}; do' in script
