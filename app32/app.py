@@ -104,6 +104,71 @@ def _sync_public_static_assets(app: Flask) -> None:
         )
 
 
+def _resolve_public_upload_folder(app: Flask) -> str:
+    """
+    Resolve o diretório canônico dos uploads públicos.
+
+    Regra:
+    - caminhos absolutos configurados explicitamente são respeitados
+    - caminhos relativos são ancorados no diretório público raiz da app
+      (irmão de `app.root_path`, ex.: `.../www/uploads`)
+    """
+    configured_upload_folder = app.config.get("UPLOAD_FOLDER") or "uploads"
+    if os.path.isabs(configured_upload_folder):
+        return os.path.abspath(configured_upload_folder)
+    return os.path.abspath(os.path.join(app.root_path, "..", configured_upload_folder))
+
+
+def _sync_legacy_upload_assets(app: Flask, public_upload_folder: str) -> None:
+    """
+    Sincroniza uploads legados gravados dentro de `app32/uploads` para o diretório
+    público canônico `../uploads`.
+    """
+    legacy_upload_folder = os.path.abspath(os.path.join(app.root_path, "uploads"))
+    public_upload_folder = os.path.abspath(public_upload_folder)
+
+    if legacy_upload_folder == public_upload_folder:
+        return
+    if not os.path.isdir(legacy_upload_folder):
+        return
+
+    os.makedirs(public_upload_folder, exist_ok=True)
+
+    copied_files = 0
+    for root, _, files in os.walk(legacy_upload_folder):
+        relative_root = os.path.relpath(root, legacy_upload_folder)
+        target_root = public_upload_folder if relative_root == "." else os.path.join(public_upload_folder, relative_root)
+        os.makedirs(target_root, exist_ok=True)
+
+        for filename in files:
+            source_file = os.path.join(root, filename)
+            target_file = os.path.join(target_root, filename)
+
+            should_copy = not os.path.exists(target_file)
+            if not should_copy:
+                try:
+                    source_stat = os.stat(source_file)
+                    target_stat = os.stat(target_file)
+                    should_copy = (
+                        source_stat.st_size != target_stat.st_size
+                        or source_stat.st_mtime > target_stat.st_mtime
+                    )
+                except OSError:
+                    should_copy = True
+
+            if should_copy:
+                shutil.copy2(source_file, target_file)
+                copied_files += 1
+
+    if copied_files:
+        app.logger.info(
+            "Legacy upload assets synchronized: %s files copied from %s to %s",
+            copied_files,
+            legacy_upload_folder,
+            public_upload_folder,
+        )
+
+
 def _backfill_user_channel_contacts():
     """Move legacy contacts from employees to users when user fields are empty."""
     from models.employee import Employee
@@ -220,9 +285,10 @@ def create_app(config_name=None):
         x_host=app.config.get("SECURITY_PROXY_FIX_X_HOST", 1),
     )
 
-    # Ensure Upload Dirs (keep hardcoded if not in config)
-    app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+    # Resolve uploads no diretório público canônico e sincroniza legado.
+    app.config['UPLOAD_FOLDER'] = _resolve_public_upload_folder(app)
+    app.config['MAX_CONTENT_LENGTH'] = app.config.get('MAX_CONTENT_LENGTH') or 16 * 1024 * 1024
+    _sync_legacy_upload_assets(app, app.config['UPLOAD_FOLDER'])
 
     # Extensions
     from flask_migrate import Migrate
