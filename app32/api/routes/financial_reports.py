@@ -198,6 +198,30 @@ def _build_financial_report_or_abort(report_slug: str):
     return company, report
 
 
+def _build_financial_report_with_definition_or_abort(report_slug: str, *, forced_filters: dict | None = None):
+    company = get_active_company()
+    if not company:
+        abort(400, description='Empresa ativa não identificada para relatórios financeiros.')
+
+    report_definition, error = FinancialReportService.get_report_definition_or_error(report_slug)
+    if error:
+        abort(404, description=error)
+
+    filters_payload = _request_filters_payload()
+    if forced_filters:
+        filters_payload.update(forced_filters)
+
+    report, error = FinancialReportService.build_management_report(
+        company_id=company.id,
+        report_type=report_definition["code"],
+        filters=filters_payload,
+        allowed_company_ids=get_accessible_company_ids(),
+    )
+    if error:
+        abort(400, description=error)
+    return company, report_definition, report
+
+
 @financial_bp.route('/financial/reports/<report_slug>/view')
 @permission_required('financial', 'view')
 def financial_report_view_page(report_slug: str):
@@ -212,6 +236,25 @@ def financial_report_view_page(report_slug: str):
         'modules/financial/report_view.html',
         company=company,
         company_id=company.id,
+        report=report,
+    )
+
+
+@financial_bp.route('/financial/reports/<report_slug>/layout-test')
+@permission_required('financial', 'view')
+def financial_report_layout_test_page(report_slug: str):
+    company, report_definition, report = _build_financial_report_with_definition_or_abort(
+        report_slug,
+        forced_filters={"orientation": "landscape"},
+    )
+    if report_definition["code"] != "bank_statement_dossier":
+        abort(404, description='Página de teste disponível apenas para o Dossiê do Extrato Bancário.')
+
+    return render_template(
+        'modules/financial/report_layout_bank_statement_dossier_landscape_test.html',
+        company=company,
+        company_id=company.id,
+        report_definition=report_definition,
         report=report,
     )
 

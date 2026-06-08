@@ -254,7 +254,14 @@ def upsert_process_bpmn_diagram(
     if not isinstance(bpmn_xml, str) or not bpmn_xml.strip():
         raise ValueError("bpmn_xml é obrigatório.")
 
-    if "<bpmn:definitions" not in bpmn_xml and "<definitions" not in bpmn_xml:
+    try:
+        root = ET.fromstring(bpmn_xml)
+    except ET.ParseError as exc:
+        raise ValueError("O conteúdo informado não parece ser um XML BPMN 2.0 válido.") from exc
+
+    root_tag = str(getattr(root, "tag", "") or "")
+    root_local_name = root_tag.rsplit("}", 1)[-1] if "}" in root_tag else root_tag.split(":", 1)[-1]
+    if root_local_name != "definitions":
         raise ValueError("O conteúdo informado não parece ser um XML BPMN 2.0 válido.")
 
     diagram_id = payload.get("id")

@@ -9,6 +9,7 @@ def test_financial_report_filter_static_assets_exist():
         "css/financial_report_workspace.css",
         "css/financial_report_filters_schedule.css",
         "css/financial_report_filters_bank_statement.css",
+        "css/financial_report_dossier_landscape_test.css",
         "css/financial_income_statement.css",
         "js/financial_report_workspace.js",
         "js/financial_income_statement.js",

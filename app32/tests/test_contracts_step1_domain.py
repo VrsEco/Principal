@@ -4,6 +4,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from models.contracts import Contract, ContractCatalogItem, ContractClause, ContractEvent, ContractFiscalTerm, ContractItem, ContractNativeBilling, ContractNote, ContractTrigger, ContractingLegalEntity
+import services.contracts_service as contracts_service_module
 from services.contracts_service import ContractService
 
 
@@ -550,6 +551,7 @@ def test_build_fiscal_invoice_nfse_row_keeps_iss_and_duplicates_to_outros_for_no
 
     row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
 
+    assert row["Tipo_Tributacao"] == "OutsideCity"
     assert row["Aliquota_ISS"] == "5"
     assert row["Valor_ISS"] == "314,28"
     assert row["Retencao_OUTROS"] == "314,28"
@@ -626,10 +628,147 @@ def test_build_fiscal_invoice_nfse_row_exports_iss_retention_for_salvador():
 
     row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
 
+    assert row.get("Tipo_Tributacao") is None
     assert row["Aliquota_ISS"] == "2.73"
     assert row["Valor_ISS"] == "131,07"
     assert row["Retencao_ISS"] == "131,07"
     assert row.get("Retencao_OUTROS") is None
+
+
+def test_build_fiscal_invoice_nfse_row_prioritizes_explicit_taxation_type_over_city_heuristic():
+    class _FakeItemsQuery:
+        def __init__(self, items):
+            self._items = items
+
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return list(self._items)
+
+    class _FakeCatalogItem:
+        metadata_json = {}
+
+    class _FakeContractItem:
+        metadata_json = {}
+        contract_catalog_item = _FakeCatalogItem()
+
+    class _FakeBillingItem:
+        metadata_json = {
+            "retention_details": [
+                {
+                    "kind": "iss",
+                    "retention_value_mode": "percent",
+                    "retention_value": 2.73,
+                    "calculated_amount": 131.07,
+                }
+            ]
+        }
+        contract_item = _FakeContractItem()
+        description = "Tratamento de água"
+        amount = Decimal("4801.15")
+
+    class _FakeParty:
+        legal_name = "REDE BAHIA"
+        name = "REDE BAHIA"
+        document_number = "13.425.269/0001-61"
+        email = "fiscal@redebahia.com.br"
+        metadata_json = {"city_code_ibge": "2927408"}
+        financial_counterparty_id = None
+
+    class _FakeContract:
+        party = _FakeParty()
+        code = "AL.N.005"
+
+    class _FakeBilling:
+        billing_code = "AL.B.003"
+        issue_date = None
+        gross_amount = Decimal("4801.15")
+        net_amount = Decimal("4670.08")
+        metadata_json = {
+            "fiscal_snapshot": {
+                "service_city": "Salvador",
+                "iss_city": "Salvador",
+            },
+            "fiscal_invoice": {
+                "fiscal_data": {
+                    "customer_name": "REDE BAHIA",
+                    "customer_document": "13.425.269/0001-61",
+                    "service_city": "Salvador",
+                    "iss_city": "Salvador",
+                    "tipo_tributacao": "OutsideCity",
+                }
+            },
+        }
+        party = _FakeParty()
+        contract = _FakeContract()
+        items = _FakeItemsQuery([_FakeBillingItem()])
+
+    row = ContractService._build_fiscal_invoice_nfse_row(company_id=1, native_billing=_FakeBilling())
+
+    assert row["Tipo_Tributacao"] == "OutsideCity"
+    assert row["Retencao_ISS"] == "131,07"
+    assert row.get("Retencao_OUTROS") is None
+
+
+def test_build_contract_fiscal_snapshot_sets_outsidecity_for_non_salvador_iss_city(monkeypatch):
+    class _FakeFiscalTerms:
+        contracting_legal_entity_id = 10
+        integration_mode = "manual"
+        nfs_provider = "provider"
+        default_rps_series = "A1"
+        service_code = "1401"
+        service_list_item = "14.01"
+        operation_nature = "normal"
+        service_city = "Simões Filho"
+        iss_city = "Simões Filho"
+        tax_observation = "Obs"
+
+    class _FakeContract:
+        id = 7
+        company_id = 1
+        contracting_legal_entity_id = 10
+
+    class _FakeLegalEntity:
+        id = 10
+        legal_name = "Emitente"
+        trade_name = "Emitente"
+        cnpj = "123"
+        municipal_registration = "456"
+        tax_regime = "SN"
+        cnae = "4322302"
+        city_code_ibge = "2930709"
+        integration_mode = "manual"
+        nfs_provider = "provider"
+        service_city = "Salvador"
+
+    class _FakeQuery:
+        def filter_by(self, **kwargs):
+            return self
+
+        def first(self):
+            return _FakeFiscalTerms()
+
+    class _FakeContractFiscalTerm:
+        query = _FakeQuery()
+
+    monkeypatch.setattr(contracts_service_module, "ContractFiscalTerm", _FakeContractFiscalTerm)
+    monkeypatch.setattr(
+        ContractService,
+        "get_contracting_legal_entity",
+        staticmethod(lambda company_id, entity_id: _FakeLegalEntity()),
+    )
+    monkeypatch.setattr(
+        ContractService,
+        "_resolve_contract_issuer_iss_rate",
+        staticmethod(lambda contract, reference_date=None: (Decimal("5.00"), None)),
+    )
+
+    snapshot = ContractService.build_contract_fiscal_snapshot(_FakeContract())
+
+    assert snapshot["service_city"] == "Simões Filho"
+    assert snapshot["iss_city"] == "Simões Filho"
+    assert snapshot["tipo_tributacao"] == "OutsideCity"
 
 
 def test_build_fiscal_invoice_nfse_row_normalizes_codes_and_address_defaults():

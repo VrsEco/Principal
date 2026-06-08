@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260402a') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_schedules_list.css', v='20260608a') }}">
 {% endblock %}
 
 {% block navbar_actions %}
@@ -144,6 +144,18 @@
         <input id="schedule-filter-title-amount" type="text" data-format="currency" placeholder="Valor original">
     </div>
 
+    <div class="filter-group">
+        <label class="filter-label" for="schedule-filter-chart-account-search">Plano de contas</label>
+        <input id="schedule-filter-chart-account-search" type="search" placeholder="Buscar plano de contas" data-select-filter-target="schedule-filter-chart-accounts">
+        <select id="schedule-filter-chart-accounts" class="filter-select filter-select-multiple" multiple size="6"></select>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="schedule-filter-cost-center-search">Centro de resultados</label>
+        <input id="schedule-filter-cost-center-search" type="search" placeholder="Buscar centro de resultados" data-select-filter-target="schedule-filter-cost-centers">
+        <select id="schedule-filter-cost-centers" class="filter-select filter-select-multiple" multiple size="6"></select>
+    </div>
+
     <div class="sched-sidebar-actions">
         <button type="button" class="btn btn-primary w-100" onclick="closeAllSidebars()">Aplicar Filtros</button>
         <button type="button" class="btn btn-secondary w-100 mt-2" id="schedule-sidebar-clear-filters">Limpar filtros</button>
@@ -152,5 +164,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260528a') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260608a') }}"></script>
 {% endblock %}

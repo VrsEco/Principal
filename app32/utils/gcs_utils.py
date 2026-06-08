@@ -93,3 +93,25 @@ def delete_from_gcs(blob_path):
     except Exception as e:
         logger.error(f"Error deleting from GCS ({blob_path}): {e}")
         return False
+
+
+def download_from_gcs(blob_path):
+    """Baixa um arquivo do GCS e retorna payload com bytes e content_type."""
+    bucket_name = get_gcs_config()
+    client = get_gcs_client()
+
+    if not client or not bucket_name or not blob_path:
+        return None
+
+    try:
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_path)
+        if not blob.exists():
+            return None
+        return {
+            "bytes": blob.download_as_bytes(),
+            "content_type": blob.content_type,
+        }
+    except Exception as e:
+        logger.error(f"Error downloading from GCS ({blob_path}): {e}")
+        return None

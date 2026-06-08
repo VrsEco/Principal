@@ -136,6 +136,20 @@
     const normalized = Math.abs(Number(value || 0));
     return movementNature === 'debit' ? normalized * -1 : normalized;
   };
+  const settlementBankAccountLabel = (settlement = {}) => {
+    const explicitLabel = String(
+      settlement.bank_account_display_label
+      || settlement.bank_account_label
+      || settlement.bank_account_name
+      || ''
+    ).trim();
+    if (explicitLabel) return explicitLabel;
+    const bankAccountId = Number(settlement.bank_account_id || 0);
+    if (!bankAccountId) return '-';
+    const bankAccount = (optionsCache.bank_accounts || []).find((item) => Number(item.id || 0) === bankAccountId);
+    if (!bankAccount) return `Conta #${bankAccountId}`;
+    return bankAccount.display_label || bankAccount.name || bankAccount.code || `Conta #${bankAccountId}`;
+  };
   const amountClass = (value) => Number(value || 0) < 0 ? 'amount-negative' : 'amount-positive';
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
   const asMoneyValue = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -1000,8 +1014,8 @@
         <strong>${index + 1}. ${entry.description || 'Baixa sem histórico'}</strong>
         <small>${formatIso(entry.occurred_on || entry.competence_date || entry.due_date)} · <span class="${amountClass(entry.signed_amount ?? 0)}">${money(entry.signed_amount ?? signedAmount(entry.original_amount, entry.movement_nature))}</span></small>
         <table class="settlement-table">
-          <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Principal</th><th>Correção Financeira</th><th>Descontos</th><th>Total</th><th>Ações</th></tr></thead>
-          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${directEntrySchedule ? `<button type="button" class="btn btn-danger btn-xs" data-direct-entry-delete="${selectedSchedule?.id || ''}">Excluir lançamento rápido</button>` : (canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>')}</td></tr>`).join('') : '<tr><td colspan="8">Sem baixas registradas.</td></tr>'}</tbody>
+          <thead><tr><th>Seq.</th><th>Data</th><th>Tipo</th><th>Conta bancária</th><th>Principal</th><th>Correção Financeira</th><th>Descontos</th><th>Total</th><th>Ações</th></tr></thead>
+          <tbody>${(entry.settlements || []).length ? entry.settlements.map((settlement, idx) => `<tr><td>${idx + 1}</td><td>${formatIso(settlement.settlement_date)}</td><td>${settlement.settlement_type || '-'}</td><td>${escapeHtml(settlementBankAccountLabel(settlement))}</td><td>${money(settlement.principal_amount || 0)}</td><td>${money(settlementCorrectionAmount(settlement))}</td><td>${money(settlementDiscountAmount(settlement))}</td><td>${money(settlementTotalAmount(settlement))}</td><td>${directEntrySchedule ? `<button type="button" class="btn btn-danger btn-xs" data-direct-entry-delete="${selectedSchedule?.id || ''}">Excluir lançamento rápido</button>` : (canDeleteSettlement(settlement) ? `<button type="button" class="btn btn-secondary btn-xs" data-settlement-delete="${settlement.id}">Excluir</button>` : '<small>Conciliada</small>')}</td></tr>`).join('') : '<tr><td colspan="9">Sem baixas registradas.</td></tr>'}</tbody>
         </table>
       </article>`).join('');
   }

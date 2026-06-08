@@ -1,6 +1,8 @@
 import json
 import os
 import sys
+import threading
+import time
 
 from flask import Flask
 
@@ -127,6 +129,31 @@ def test_extract_whatsapp_message_supports_image_attachment_with_image_url_and_n
     assert metadata["attachment"]["mime_type"] == "image/jpeg"
 
 
+def test_extract_whatsapp_message_supports_multiple_image_attachments():
+    payload = {
+        "phone": "5571999999999",
+        "images": [
+            {
+                "imageUrl": "https://files.example.com/receipt-photo-1.jpg",
+                "mimeType": "image/jpeg",
+            },
+            {
+                "imageUrl": "https://files.example.com/receipt-photo-2.jpg",
+                "mimeType": "image/jpeg",
+            },
+        ],
+    }
+
+    phone, text, metadata = _extract_whatsapp_message(payload)
+
+    assert phone == "5571999999999"
+    assert text == ""
+    assert len(metadata["attachments"]) == 2
+    assert metadata["attachments"][0]["url"] == "https://files.example.com/receipt-photo-1.jpg"
+    assert metadata["attachments"][1]["url"] == "https://files.example.com/receipt-photo-2.jpg"
+    assert metadata["attachment"]["url"] == "https://files.example.com/receipt-photo-1.jpg"
+
+
 def test_load_whatsapp_request_payload_from_form_json_field():
     app = Flask(__name__)
 
@@ -227,6 +254,13 @@ def test_process_whatsapp_financial_attachment_enriches_workflow_payload(monkeyp
         "message_id": "wamid.123",
         "instance_id": "instance-7",
         "thread_contact": "5571996426565",
+        "attachments": [
+            {
+                "file_name": "Taxa_Alteracao_VM.pdf",
+                "mime_type": "application/pdf",
+                "url": "https://files.example.com/Taxa_Alteracao_VM.pdf",
+            },
+        ],
         "attachment": {
             "file_name": "Taxa_Alteracao_VM.pdf",
             "mime_type": "application/pdf",
@@ -242,6 +276,150 @@ def test_process_whatsapp_financial_attachment_enriches_workflow_payload(monkeyp
     assert workflow["payload"]["_source_contact"] == "5571996426565"
     assert workflow["payload"]["_source_external_reference"] == "wamid.123"
     assert workflow["payload"]["_thread_id"] == "wa_5571996426565"
+    assert len(workflow["payload"]["_attachments"]) == 1
+
+
+def test_process_whatsapp_multiple_financial_attachments_enriches_workflow_payload(monkeypatch):
+    app = Flask(__name__)
+
+    class DummyUser:
+        id = 7
+        name = "Fabiano Ferreira"
+
+    class DummyWorkflowResult:
+        handled = True
+        response_text = "Arquivos enviados para a Central."
+        metadata = {"workflow_code": "361"}
+
+    recorded = {"messages": []}
+
+    def capture_workflow(**kwargs):
+        recorded["workflow"] = kwargs
+        return DummyWorkflowResult()
+
+    monkeypatch.setattr('src.intelligence.identity.resolve_user_identity', lambda contact, channel: DummyUser())
+    monkeypatch.setattr('src.intelligence.identity.build_identity_resolution_trace', lambda *args, **kwargs: type('Trace', (), {'to_safe_dict': lambda self: {}})())
+    monkeypatch.setattr('src.intelligence.identity.get_best_company_id', lambda user: 9)
+    monkeypatch.setattr('services.proactive_service.try_handle_summary_followup', lambda **kwargs: (False, None))
+    monkeypatch.setattr('src.intelligence.menu_engine.start_channel_workflow', capture_workflow)
+    monkeypatch.setattr(
+        'api.webhooks.whatsapp_webhook._download_attachment_bytes',
+        lambda attachment: (f"bytes::{attachment['file_name']}".encode('utf-8'), None),
+    )
+    monkeypatch.setattr('src.intelligence.execution._capture_workflow_usage_from_execution', lambda **kwargs: recorded.setdefault('usage', []).append(kwargs))
+    monkeypatch.setattr('models.agent_message.AgentMessage', lambda **kwargs: kwargs)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.add', lambda obj: recorded['messages'].append(obj))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.commit', lambda: recorded.setdefault('committed', True))
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.rollback', lambda: recorded.setdefault('rolled_back', True))
+    monkeypatch.setattr('services.whatsapp_service.whatsapp_service.send_message', lambda phone, message: recorded.setdefault('sent', []).append((phone, message)) or True)
+
+    metadata = {
+        "event_type": "ReceivedCallback",
+        "message_id": "wamid.multi",
+        "instance_id": "instance-7",
+        "thread_contact": "5571996426565",
+        "attachments": [
+            {
+                "file_name": "recibo_1.jpg",
+                "mime_type": "image/jpeg",
+                "url": "https://files.example.com/recibo_1.jpg",
+            },
+            {
+                "file_name": "recibo_2.jpg",
+                "mime_type": "image/jpeg",
+                "url": "https://files.example.com/recibo_2.jpg",
+            },
+        ],
+    }
+
+    process_whatsapp_message(app, "5571996426565", "", metadata)
+
+    workflow = recorded["workflow"]
+    assert workflow["workflow_code"] == "361"
+    assert len(workflow["payload"]["_attachments"]) == 2
+    assert workflow["payload"]["_attachments"][0]["file_name"] == "recibo_1.jpg"
+    assert workflow["payload"]["_attachments"][1]["file_name"] == "recibo_2.jpg"
+    assert workflow["payload"]["_source_label"] == "WhatsApp - 2 arquivo(s)"
+
+
+def test_process_whatsapp_serializes_parallel_events_from_same_thread(monkeypatch):
+    app = Flask(__name__)
+
+    class DummyUser:
+        id = 7
+        name = "Fabiano Ferreira"
+
+    class DummyWorkflowResult:
+        handled = True
+        response_text = ""
+        metadata = {"workflow_code": "361"}
+
+    state = {"current": 0, "max": 0, "calls": 0}
+    state_lock = threading.Lock()
+
+    def capture_workflow(**kwargs):
+        with state_lock:
+            state["current"] += 1
+            state["calls"] += 1
+            state["max"] = max(state["max"], state["current"])
+        time.sleep(0.05)
+        with state_lock:
+            state["current"] -= 1
+        return DummyWorkflowResult()
+
+    monkeypatch.setattr('src.intelligence.identity.resolve_user_identity', lambda contact, channel: DummyUser())
+    monkeypatch.setattr('src.intelligence.identity.build_identity_resolution_trace', lambda *args, **kwargs: type('Trace', (), {'to_safe_dict': lambda self: {}})())
+    monkeypatch.setattr('src.intelligence.identity.get_best_company_id', lambda user: 9)
+    monkeypatch.setattr('services.proactive_service.try_handle_summary_followup', lambda **kwargs: (False, None))
+    monkeypatch.setattr('src.intelligence.menu_engine.start_channel_workflow', capture_workflow)
+    monkeypatch.setattr(
+        'api.webhooks.whatsapp_webhook._download_attachment_bytes',
+        lambda attachment: (f"bytes::{attachment['file_name']}".encode('utf-8'), None),
+    )
+    monkeypatch.setattr('src.intelligence.execution._capture_workflow_usage_from_execution', lambda **kwargs: None)
+    monkeypatch.setattr('models.agent_message.AgentMessage', lambda **kwargs: kwargs)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.add', lambda obj: None)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.commit', lambda: None)
+    monkeypatch.setattr('api.webhooks.whatsapp_webhook.db.session.rollback', lambda: None)
+    monkeypatch.setattr('services.whatsapp_service.whatsapp_service.send_message', lambda phone, message: True)
+
+    metadata_1 = {
+        "event_type": "ReceivedCallback",
+        "message_id": "wamid.parallel.1",
+        "instance_id": "instance-7",
+        "thread_contact": "5571996426565",
+        "attachments": [
+            {
+                "file_name": "recibo_parallel_1.jpg",
+                "mime_type": "image/jpeg",
+                "url": "https://files.example.com/recibo_parallel_1.jpg",
+            },
+        ],
+    }
+    metadata_2 = {
+        "event_type": "ReceivedCallback",
+        "message_id": "wamid.parallel.2",
+        "instance_id": "instance-7",
+        "thread_contact": "5571996426565",
+        "attachments": [
+            {
+                "file_name": "recibo_parallel_2.jpg",
+                "mime_type": "image/jpeg",
+                "url": "https://files.example.com/recibo_parallel_2.jpg",
+            },
+        ],
+    }
+
+    thread_a = threading.Thread(target=process_whatsapp_message, args=(app, "5571996426565", "", metadata_1))
+    thread_b = threading.Thread(target=process_whatsapp_message, args=(app, "5571996426565", "", metadata_2))
+
+    thread_a.start()
+    thread_b.start()
+    thread_a.join()
+    thread_b.join()
+
+    assert state["calls"] == 2
+    assert state["max"] == 1
 
 
 def test_process_whatsapp_unsupported_attachment_returns_operational_message(monkeypatch):

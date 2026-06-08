@@ -1179,6 +1179,37 @@ class ContractService:
         return normalized in {"salvador", "salvador/ba", "salvador - ba", "salvador ba"}
 
     @staticmethod
+    def _normalize_taxation_type(value: object) -> Optional[str]:
+        normalized = ContractService._normalize_text(value)
+        if not normalized:
+            return None
+        compact = re.sub(r"[^a-z0-9]", "", normalized.lower())
+        aliases = {
+            "outsidecity": "OutsideCity",
+            "outcity": "OutsideCity",
+            "foradacidade": "OutsideCity",
+            "insidecity": "InsideCity",
+            "incity": "InsideCity",
+            "nacidade": "InsideCity",
+        }
+        return aliases.get(compact, normalized)
+
+    @staticmethod
+    def _resolve_taxation_type(fiscal_data: Optional[dict], fallback_sources: Optional[list[dict]] = None) -> Optional[str]:
+        fiscal_data = fiscal_data or {}
+        fallback_sources = fallback_sources or []
+        explicit_value = (
+            ContractService._normalize_taxation_type(fiscal_data.get("tipo_tributacao"))
+            or ContractService._normalize_taxation_type(fiscal_data.get("Tipo_Tributacao"))
+            or ContractService._normalize_taxation_type(
+                ContractService._metadata_value(fallback_sources, "tipo_tributacao", "Tipo_Tributacao", "taxation_type")
+            )
+        )
+        if explicit_value:
+            return explicit_value
+        return "OutsideCity" if ContractService._should_export_iss_as_other(fiscal_data, fallback_sources) else None
+
+    @staticmethod
     def _should_export_iss_as_other(fiscal_data: Optional[dict], fallback_sources: Optional[list[dict]] = None) -> bool:
         fiscal_data = fiscal_data or {}
         fallback_sources = fallback_sources or []
@@ -2964,6 +2995,14 @@ class ContractService:
         if legal_entity is None and contract.contracting_legal_entity_id:
             legal_entity = ContractService.get_contracting_legal_entity(contract.company_id, contract.contracting_legal_entity_id)
         issuer_iss_rate, issuer_iss_rule = ContractService._resolve_contract_issuer_iss_rate(contract, reference_date)
+        resolved_service_city = fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None)
+        resolved_iss_city = fiscal_terms.iss_city if fiscal_terms else None
+        taxation_type = ContractService._resolve_taxation_type(
+            {
+                "service_city": resolved_service_city,
+                "iss_city": resolved_iss_city,
+            }
+        )
         return {
             "contracting_legal_entity_id": legal_entity.id if legal_entity else None,
             "issuer_legal_name": legal_entity.legal_name if legal_entity else None,
@@ -2979,8 +3018,9 @@ class ContractService:
             "service_code": fiscal_terms.service_code if fiscal_terms else None,
             "service_list_item": fiscal_terms.service_list_item if fiscal_terms else None,
             "operation_nature": fiscal_terms.operation_nature if fiscal_terms else None,
-            "service_city": fiscal_terms.service_city if fiscal_terms else (legal_entity.service_city if legal_entity else None),
-            "iss_city": fiscal_terms.iss_city if fiscal_terms else None,
+            "service_city": resolved_service_city,
+            "iss_city": resolved_iss_city,
+            "tipo_tributacao": taxation_type,
             "issuer_iss_rate": ContractService._decimal_to_export_text(issuer_iss_rate, places=4, strip_trailing=True) if issuer_iss_rate else None,
             "issuer_iss_rate_effective_from": (issuer_iss_rule or {}).get("effective_from"),
             "issuer_iss_rate_effective_to": (issuer_iss_rule or {}).get("effective_to"),
@@ -3011,6 +3051,7 @@ class ContractService:
             "operation_nature": snapshot.get("operation_nature"),
             "service_city": snapshot.get("service_city"),
             "iss_city": snapshot.get("iss_city"),
+            "tipo_tributacao": snapshot.get("tipo_tributacao"),
             "issuer_iss_rate": snapshot.get("issuer_iss_rate"),
             "fiscal_notes": snapshot.get("fiscal_notes"),
             "issue_date": native_billing.issue_date.isoformat() if native_billing.issue_date else None,
@@ -3047,6 +3088,7 @@ class ContractService:
                 "issuer_iss_rate": fiscal_payload.get("issuer_iss_rate"),
                 "service_city": fiscal_payload.get("service_city"),
                 "iss_city": fiscal_payload.get("iss_city"),
+                "tipo_tributacao": fiscal_payload.get("tipo_tributacao"),
                 "fiscal_notes": fiscal_payload.get("fiscal_notes"),
                 "invoice_number": None,
                 "issued_at": None,
@@ -3236,6 +3278,7 @@ class ContractService:
             "rps_series",
             "service_city",
             "iss_city",
+            "tipo_tributacao",
             "fiscal_notes",
             "invoice_number",
             "issued_at",
@@ -3458,6 +3501,7 @@ class ContractService:
         if issuer_iss_rate > Decimal("0.00"):
             iss_rate = issuer_iss_rate
         export_iss_as_other = ContractService._should_export_iss_as_other(fiscal_data, all_sources)
+        taxation_type = ContractService._resolve_taxation_type(fiscal_data, all_sources)
         if export_iss_as_other:
             other_amount += iss_amount
         if not iss_rate and iss_amount > Decimal("0.00") and gross_amount > Decimal("0.00"):
@@ -3603,6 +3647,7 @@ class ContractService:
             "CNAE": ContractService._normalize_export_code(
                 ContractService._metadata_value(all_sources, "CNAE", "cnae", "issuer_cnae")
             ),
+            "Tipo_Tributacao": taxation_type,
             "Aliquota_ISS": ContractService._decimal_to_export_text(iss_rate, places=4, strip_trailing=True) if iss_rate else None,
             "Valor_ISS": ContractService._decimal_to_br_text(iss_amount) if iss_amount > Decimal("0.00") else None,
             "Retencao_IR": ContractService._decimal_to_br_text(retention_totals.get("irrf")) if retention_totals.get("irrf") else None,

@@ -621,6 +621,108 @@ def test_start_channel_workflow_preserves_hidden_attachment_payload_through_comp
     assert session.status == "idle"
 
 
+def test_start_channel_workflow_merges_pending_whatsapp_attachments_before_company_selection(monkeypatch):
+    option = AgentMenuOption(
+        code="361",
+        title="Enviar recibo para automacao",
+        action_key="finance.receipt_ingest",
+        required_fields=[],
+    )
+    option.id = 361
+    session = _DummySession(option)
+    session.status = menu_engine.COMPANY_SELECTION_STATUS
+    session.selected_option_id = option.id
+    session.collected_data = menu_engine._serialize_session_payload(
+        {
+            "_attachment": {"file_name": "recibo_1.jpg", "file_bytes": b"IMG1", "mime_type": "image/jpeg"},
+            "_attachments": [{"file_name": "recibo_1.jpg", "file_bytes": b"IMG1", "mime_type": "image/jpeg"}],
+            "_channel_label": "WhatsApp",
+            "_source_channel": "whatsapp",
+            "_source_label": "WhatsApp - recibo_1.jpg",
+                "_operation_company_choices": [
+                    {
+                        "index": 1,
+                        "company_id": 9,
+                        "company_name": "Versus Gestao Corporativa",
+                        "company_code": "AA",
+                        "label": "AA - Versus Gestao Corporativa",
+                    },
+                    {
+                        "index": 2,
+                        "company_id": 12,
+                        "company_name": "Save Water",
+                        "company_code": "AL",
+                        "label": "AL - Save Water",
+                    },
+                ],
+            }
+        )
+    captured = {}
+
+    monkeypatch.setattr(menu_engine, "_ensure_default_menu_seed", lambda: None)
+    monkeypatch.setattr(menu_engine, "_get_or_create_session", lambda **kwargs: session)
+    monkeypatch.setattr(
+        menu_engine,
+        "_find_option_by_code",
+        lambda company_id, code, include_inactive=False: option if code == option.code else None,
+    )
+    monkeypatch.setattr(menu_engine.db.session, "commit", lambda: None)
+    monkeypatch.setattr(menu_engine.db.session, "rollback", lambda: None)
+    monkeypatch.setattr(
+        menu_engine,
+        "_try_execute_direct_option_result",
+        lambda option, payload, company_id, user_id, channel="web": (
+            captured.update({"payload": dict(payload), "company_id": company_id, "channel": channel})
+            or menu_engine.DirectExecutionResult(
+                executed=True,
+                response_text=f"recibos enviados para empresa {company_id}",
+                metadata={},
+            )
+        ),
+    )
+    monkeypatch.setattr(menu_engine, "_user_can_access_company", lambda user_id, company_id: company_id in {9, 12})
+
+    result = menu_engine.start_channel_workflow(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-receipt",
+        workflow_code="361",
+        user_message="segue segundo recibo",
+        payload={
+            "_attachment": {"file_name": "recibo_2.jpg", "file_bytes": b"IMG2", "mime_type": "image/jpeg"},
+            "_attachments": [{"file_name": "recibo_2.jpg", "file_bytes": b"IMG2", "mime_type": "image/jpeg"}],
+            "_channel_label": "WhatsApp",
+            "_source_channel": "whatsapp",
+            "_source_label": "WhatsApp - recibo_2.jpg",
+        },
+    )
+
+    assert result.handled is True
+    assert result.response_text == ""
+    merged_payload = menu_engine._deserialize_session_payload(session.collected_data)
+    assert session.status == menu_engine.COMPANY_SELECTION_STATUS
+    assert len(merged_payload["_attachments"]) == 2
+    assert merged_payload["_attachments"][0]["file_bytes"] == b"IMG1"
+    assert merged_payload["_attachments"][1]["file_bytes"] == b"IMG2"
+    assert merged_payload["_source_label"] == "WhatsApp - 2 arquivo(s)"
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=1,
+        channel="whatsapp",
+        thread_id="thread-receipt",
+        message="2",
+    )
+
+    assert result.handled is True
+    assert result.response_text == "recibos enviados para empresa 12"
+    assert captured["company_id"] == 12
+    assert len(captured["payload"]["_attachments"]) == 2
+    assert captured["payload"]["_attachments"][0]["file_name"] == "recibo_1.jpg"
+    assert captured["payload"]["_attachments"][1]["file_name"] == "recibo_2.jpg"
+
+
 def test_start_channel_workflow_rolls_back_session_when_transition_fails(monkeypatch):
     option = AgentMenuOption(
         code="361",
@@ -744,6 +846,11 @@ def test_get_or_create_session_reuses_external_thread_when_company_context_chang
             if len(self._last_filters) >= 4:
                 return self._exact_match
             return self._fallback_match
+
+        def all(self):
+            if self._fallback_match is None:
+                return []
+            return [self._fallback_match]
 
     class _AgentMenuSessionStub:
         class _Field:

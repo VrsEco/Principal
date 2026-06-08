@@ -7995,8 +7995,9 @@ class PostgreSQLDatabase(DatabaseInterface):
         rows = [dict(r) for r in cursor.fetchall()]
         conn.close()
         
-        # Natural sort in Python (PostgreSQL string sort is lexicographical)
-        rows.sort(key=lambda x: (natural_sort_key(x.get("code")), x.get("order_index") or 0, x.get("name") or ""))
+        # Ordem principal por sequenciamento funcional configurado.
+        # O código permanece como fallback para evitar drift em registros legados.
+        rows.sort(key=lambda x: (x.get("order_index") or 0, natural_sort_key(x.get("code")), x.get("name") or ""))
         return rows
 
     def create_process_area(
@@ -8130,8 +8131,15 @@ class PostgreSQLDatabase(DatabaseInterface):
         rows = [dict(r) for r in cursor.fetchall()]
         conn.close()
         
-        # Natural sort in Python
-        rows.sort(key=lambda x: (natural_sort_key(x.get("code")), x.get("order_index") or 0, x.get("name") or ""))
+        # Ordem principal por área + order_index para respeitar o mapa definido pelo usuário.
+        rows.sort(
+            key=lambda x: (
+                x.get("area_id") or 0,
+                x.get("order_index") or 0,
+                natural_sort_key(x.get("code")),
+                x.get("name") or "",
+            )
+        )
         return rows
 
     def create_macro_process(
@@ -8263,8 +8271,15 @@ class PostgreSQLDatabase(DatabaseInterface):
             rows.append(as_dict)
         conn.close()
         
-        # Natural sort in Python
-        rows.sort(key=lambda x: (natural_sort_key(x.get("code")), x.get("order_index") or 0, x.get("name") or ""))
+        # Ordem principal por macro + order_index para preservar a narrativa do mapa.
+        rows.sort(
+            key=lambda x: (
+                x.get("macro_id") or 0,
+                x.get("order_index") or 0,
+                natural_sort_key(x.get("code")),
+                x.get("name") or "",
+            )
+        )
         return rows
 
     def get_process_artifact_presence(

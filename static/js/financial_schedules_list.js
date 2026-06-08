@@ -20,13 +20,17 @@
       competenceDateFrom: document.getElementById('schedule-filter-competence-date-from'),
       competenceDateTo: document.getElementById('schedule-filter-competence-date-to'),
       titleAmount: document.getElementById('schedule-filter-title-amount'),
+      chartAccounts: document.getElementById('schedule-filter-chart-accounts'),
+      costCenters: document.getElementById('schedule-filter-cost-centers'),
     };
+    const selectSearchInputs = Array.from(document.querySelectorAll('[data-select-filter-target]'));
 
     if (!tbody || !filters.search) return;
 
     let schedules = [];
     let borderos = [];
     let scheduleItems = [];
+    let optionsCache = { chart_accounts: [], cost_centers: [] };
 
     const formatDate = (value) => {
       if (!value) return '-';
@@ -53,10 +57,96 @@
 
     const numberMatches = (filterValue, targetValue) => {
       if (filterValue === '' || filterValue == null) return true;
-      const normalizedFilter = Number(filterValue);
+      const normalizedFilter = parseCurrency(filterValue);
       const normalizedTarget = Number(targetValue || 0);
       if (!Number.isFinite(normalizedFilter)) return true;
       return Math.abs(normalizedTarget - normalizedFilter) < 0.01;
+    };
+
+    const normalizeSearchTerm = (value) => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    const parseCurrency = (value) => {
+      if (window.App32InputFormatters?.parseCurrency) {
+        return window.App32InputFormatters.parseCurrency(value);
+      }
+      const normalized = String(value ?? '').replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
+      return normalized ? Number(normalized) : 0;
+    };
+
+    const getSelectedValues = (input) => {
+      if (!input) return [];
+      if (input.tagName === 'SELECT' && input.multiple) {
+        return Array.from(input.selectedOptions || [])
+          .map((option) => String(option.value || '').trim())
+          .filter(Boolean);
+      }
+      const value = String(input.value || '').trim();
+      return value ? [value] : [];
+    };
+
+    const toUniqueIds = (values) => Array.from(new Set(
+      (values || [])
+        .map((value) => {
+          const normalized = Number(value);
+          return Number.isFinite(normalized) && normalized > 0 ? String(normalized) : '';
+        })
+        .filter(Boolean)
+    ));
+
+    const itemDimensionIds = (item, fieldName) => {
+      const allocations = Array.isArray(item.allocations) ? item.allocations : [];
+      return toUniqueIds([
+        item?.[fieldName],
+        ...allocations.map((allocation) => allocation?.[fieldName]),
+      ]);
+    };
+
+    const itemMatchesSelectedIds = (itemIds, selectedIds) => {
+      if (!selectedIds.length) return true;
+      if (!itemIds.length) return false;
+      return selectedIds.some((selectedId) => itemIds.includes(selectedId));
+    };
+
+    const filterSelectOptions = (selectId, searchValue) => {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const normalizedSearch = normalizeSearchTerm(searchValue);
+      Array.from(select.options || []).forEach((option) => {
+        if (!option.value) {
+          option.hidden = false;
+          return;
+        }
+        const optionLabel = option.dataset.filterLabel || option.textContent || option.label || '';
+        option.hidden = Boolean(normalizedSearch) && !normalizeSearchTerm(optionLabel).includes(normalizedSearch);
+      });
+    };
+
+    const fillMultiSelect = (select, items, emptyLabel) => {
+      if (!select) return;
+      const selected = new Set(getSelectedValues(select));
+      const options = (items || []).map((item) => {
+        const option = document.createElement('option');
+        option.value = String(item.id);
+        option.textContent = item.code ? `${item.code} - ${item.name}` : (item.name || `#${item.id}`);
+        option.dataset.filterLabel = option.textContent;
+        option.selected = selected.has(option.value);
+        return option;
+      });
+
+      select.innerHTML = '';
+      if (!options.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = emptyLabel;
+        option.disabled = true;
+        select.appendChild(option);
+      } else {
+        options.forEach((option) => select.appendChild(option));
+      }
     };
 
     const dateGte = (filterValue, targetValue) => {
@@ -74,6 +164,9 @@
     function updateFiltersCount() {
       const activeCount = Object.values(filters).reduce((count, input) => {
         if (!input) return count;
+        if (input.tagName === 'SELECT' && input.multiple) {
+          return getSelectedValues(input).length ? count + 1 : count;
+        }
         return String(input.value || '').trim() ? count + 1 : count;
       }, 0);
 
@@ -98,6 +191,8 @@
       const competenceDateFrom = String(filters.competenceDateFrom.value || '').trim();
       const competenceDateTo = String(filters.competenceDateTo.value || '').trim();
       const titleAmount = String(filters.titleAmount.value || '').trim();
+      const chartAccountIds = getSelectedValues(filters.chartAccounts);
+      const costCenterIds = getSelectedValues(filters.costCenters);
 
       return scheduleItems.filter((item) => {
         const summary = item.summary || {};
@@ -105,6 +200,8 @@
         const itemCounterparty = String(summary.counterparty_name || item.metadata_json?.counterparty_name || '').trim().toLowerCase();
         const itemCompetence = item.start_date || item.first_due_date || item.created_date || '';
         const itemDueDate = item.next_due_date || item.first_due_date || item.created_date || '';
+        const itemChartAccountIds = itemDimensionIds(item, 'chart_account_id');
+        const itemCostCenterIds = itemDimensionIds(item, 'cost_center_id');
         const haystack = `${item.schedule_code || ''} ${item.description || item.name || ''} ${itemCounterparty}`.toLowerCase();
         if (search && !haystack.includes(search)) return false;
         if (type && item.entry_type !== type) return false;
@@ -118,6 +215,8 @@
         if (!dateGte(competenceDateFrom, itemCompetence)) return false;
         if (!dateLte(competenceDateTo, itemCompetence)) return false;
         if (!numberMatches(titleAmount, Math.abs(Number(item.template_amount || 0)))) return false;
+        if (!itemMatchesSelectedIds(itemChartAccountIds, chartAccountIds)) return false;
+        if (!itemMatchesSelectedIds(itemCostCenterIds, costCenterIds)) return false;
         return true;
       });
     }
@@ -241,8 +340,17 @@
     }
 
     async function loadSchedules() {
-      schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}`);
-      borderos = await fetchJson(`/api/financial/borderos?company_id=${companyId}`);
+      const [loadedSchedules, loadedBorderos, loadedOptions] = await Promise.all([
+        fetchJson(`/api/financial/schedules?company_id=${companyId}`),
+        fetchJson(`/api/financial/borderos?company_id=${companyId}`),
+        fetchJson(`/api/financial/schedules/options?company_id=${companyId}`),
+      ]);
+      schedules = loadedSchedules;
+      borderos = loadedBorderos;
+      optionsCache = loadedOptions || optionsCache;
+      fillMultiSelect(filters.chartAccounts, optionsCache.chart_accounts || [], 'Nenhum plano de contas ativo');
+      fillMultiSelect(filters.costCenters, optionsCache.cost_centers || [], 'Nenhum centro de resultados ativo');
+      selectSearchInputs.forEach((input) => filterSelectOptions(input.dataset.selectFilterTarget, input.value || ''));
       rebuildScheduleItems();
       renderTable();
     }
@@ -269,7 +377,18 @@
 
     const clearAllFilters = () => {
       Object.values(filters).forEach((input) => {
-        if (input) input.value = '';
+        if (!input) return;
+        if (input.tagName === 'SELECT' && input.multiple) {
+          Array.from(input.options || []).forEach((option) => {
+            option.selected = false;
+          });
+          return;
+        }
+        input.value = '';
+      });
+      selectSearchInputs.forEach((input) => {
+        input.value = '';
+        filterSelectOptions(input.dataset.selectFilterTarget, '');
       });
       updateFiltersCount();
       renderTable();
@@ -277,6 +396,11 @@
 
     clearFiltersButton?.addEventListener('click', clearAllFilters);
     sidebarClearFiltersButton?.addEventListener('click', clearAllFilters);
+    selectSearchInputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        filterSelectOptions(input.dataset.selectFilterTarget, input.value || '');
+      });
+    });
 
     tbody.addEventListener('click', async (event) => {
       const button = event.target.closest('button[data-action]');

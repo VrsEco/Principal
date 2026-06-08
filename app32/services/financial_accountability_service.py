@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import logging
 import mimetypes
 import re
 import xml.etree.ElementTree as ET
@@ -19,6 +20,10 @@ from werkzeug.utils import secure_filename
 
 from services.financial_import_service import FinancialImportService
 from services.financial_service import FinancialService
+from utils.gcs_utils import get_gcs_config, upload_to_gcs
+
+
+logger = logging.getLogger(__name__)
 
 
 _ALLOWED_EXTENSIONS = {
@@ -175,6 +180,14 @@ class FinancialAccountabilityService:
         original_relative_path = original_path.relative_to(Path(upload_root)).as_posix()
         optimized_relative_path = optimized["optimized_relative_path"]
         preview_relative_path = optimized["preview_relative_path"]
+        FinancialAccountabilityService._mirror_generated_assets_to_gcs(
+            upload_root=upload_root,
+            relative_paths=[
+                original_relative_path,
+                optimized_relative_path,
+                preview_relative_path,
+            ],
+        )
         preview_payload = {
             "public_url": f"/uploads/{original_relative_path}",
             "original_public_url": f"/uploads/{original_relative_path}",
@@ -346,6 +359,38 @@ class FinancialAccountabilityService:
             "preview_relative_path": preview_relative_path,
             "file_size_optimized": file_size_optimized,
         }
+
+    @staticmethod
+    def _mirror_generated_assets_to_gcs(
+        *,
+        upload_root: str | Path,
+        relative_paths: Sequence[Optional[str]],
+    ) -> None:
+        if not get_gcs_config():
+            return
+
+        root_path = Path(upload_root)
+        for relative_path in relative_paths:
+            if not relative_path:
+                continue
+
+            absolute_path = root_path / relative_path
+            if not absolute_path.exists():
+                logger.warning(
+                    "Asset gerado para upload GCS não encontrado localmente: %s",
+                    absolute_path,
+                )
+                continue
+
+            path_obj = Path(relative_path)
+            subfolder = path_obj.parent.as_posix() if path_obj.parent.as_posix() != "." else ""
+            try:
+                with absolute_path.open("rb") as handle:
+                    uploaded_path = upload_to_gcs(handle, path_obj.name, subfolder=subfolder)
+                if not uploaded_path:
+                    logger.warning("Falha ao espelhar asset no GCS: %s", relative_path)
+            except Exception as exc:
+                logger.warning("Erro ao espelhar asset no GCS (%s): %s", relative_path, exc)
 
     @staticmethod
     def _detect_document_profile(

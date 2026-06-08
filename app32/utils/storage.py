@@ -1,13 +1,16 @@
+import io
+import mimetypes
 import os
 import uuid
 import logging
-from flask import current_app, session
+from pathlib import Path
+from flask import current_app, session, send_file, send_from_directory
 from flask_login import current_user
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 from models import db
-from utils.gcs_utils import upload_to_gcs, delete_from_gcs, get_gcs_config
+from utils.gcs_utils import upload_to_gcs, delete_from_gcs, download_from_gcs, get_gcs_config
 from utils.permissions import can_access_company, get_default_company_id, is_platform_admin
 from utils.security import normalize_relative_upload_path
 
@@ -78,6 +81,36 @@ def get_file_url(relative_path):
     return f"/uploads/{relative_path}"
 
 
+def build_upload_file_response(relative_path):
+    """
+    Entrega upload a partir do disco local ou, em fallback, do GCS.
+
+    Mantém a rota /uploads tenant-safe enquanto corrige mídias que foram
+    persistidas apenas no bucket.
+    """
+    normalized_path = normalize_relative_upload_path(relative_path)
+    if not normalized_path:
+        raise FileNotFoundError("Invalid upload path")
+
+    upload_base = current_app.config.get("UPLOAD_FOLDER", "uploads")
+    absolute_path = os.path.join(upload_base, normalized_path)
+
+    if os.path.exists(absolute_path):
+        return send_from_directory(upload_base, normalized_path)
+
+    gcs_payload = download_from_gcs(normalized_path) if get_gcs_config() else None
+    if not gcs_payload:
+        raise FileNotFoundError(normalized_path)
+
+    content_type = gcs_payload.get("content_type") or mimetypes.guess_type(normalized_path)[0] or "application/octet-stream"
+    return send_file(
+        io.BytesIO(gcs_payload["bytes"]),
+        mimetype=content_type,
+        download_name=Path(normalized_path).name,
+        conditional=False,
+    )
+
+
 def _as_int(value):
     try:
         return int(value)
@@ -141,6 +174,18 @@ def _query_upload_owner_company_ids(normalized_path):
              WHERE c.logo_primary IN (:path_0, :path_1, :path_2)
                 OR c.logo_secondary IN (:path_0, :path_1, :path_2)
                 OR c.logo_icon IN (:path_0, :path_1, :path_2)
+
+            UNION ALL
+
+            SELECT fad.company_id
+              FROM financial_automation_documents fad
+             WHERE fad.deleted_at IS NULL
+               AND (
+                    fad.stored_relative_path IN (:path_0, :path_1, :path_2)
+                 OR fad.original_relative_path IN (:path_0, :path_1, :path_2)
+                 OR fad.optimized_relative_path IN (:path_0, :path_1, :path_2)
+                 OR fad.preview_relative_path IN (:path_0, :path_1, :path_2)
+               )
         ) upload_owners
         WHERE company_id IS NOT NULL
         """

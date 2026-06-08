@@ -2,6 +2,7 @@ import os
 import sys
 from io import BytesIO
 
+from PIL import Image
 from werkzeug.datastructures import FileStorage
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -148,3 +149,47 @@ def test_store_document_classifies_nfe_xml_and_generates_group_key(tmp_path, mon
     assert result["document_group_key"].startswith("key:")
     assert result["structured_payload_json"]["document_number"] == "1234"
     assert result["structured_payload_json"]["issuer_name"] == "Empresa Emitente LTDA"
+
+
+def test_store_document_mirrors_generated_assets_to_gcs_when_configured(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        accountability_module.FinancialService,
+        "_ensure_company_scope",
+        lambda company_id, allowed_company_ids=None: None,
+    )
+    monkeypatch.setattr(accountability_module, "get_gcs_config", lambda: "bucket-test")
+
+    uploaded_assets = []
+
+    def _fake_upload_to_gcs(handle, final_name, subfolder=""):
+        uploaded_assets.append((subfolder, final_name, handle.read()))
+        handle.seek(0)
+        return f"{subfolder}/{final_name}" if subfolder else final_name
+
+    monkeypatch.setattr(accountability_module, "upload_to_gcs", _fake_upload_to_gcs)
+
+    image = Image.new("RGB", (64, 64), color="red")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    storage = FileStorage(
+        stream=buffer,
+        filename="comprovante.png",
+        content_type="image/png",
+    )
+
+    result, error = FinancialAccountabilityService.store_document(
+        company_id=10,
+        file_storage=storage,
+        upload_root=tmp_path,
+        allowed_company_ids=[10],
+        storage_scope="automation",
+    )
+
+    assert error is None
+    assert result is not None
+    uploaded_paths = {f"{subfolder}/{final_name}" if subfolder else final_name for subfolder, final_name, _ in uploaded_assets}
+    assert result["original_relative_path"] in uploaded_paths
+    assert result["optimized_relative_path"] in uploaded_paths
+    assert result["preview_relative_path"] in uploaded_paths

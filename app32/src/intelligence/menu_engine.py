@@ -832,6 +832,29 @@ def start_channel_workflow(
                 response_text=f"Fluxo {workflow_code} não encontrado na árvore oficial do Sapiens.",
             )
 
+        normalized_payload = dict(payload or {})
+        if (
+            str(session.channel or "").strip().lower() == "whatsapp"
+            and str(option.action_key or "").strip().lower() == "finance.receipt_ingest"
+            and str(session.status or "").strip() == COMPANY_SELECTION_STATUS
+            and getattr(session, "selected_option_id", None) == getattr(option, "id", None)
+        ):
+            existing_payload = _deserialize_session_payload(dict(session.collected_data or {}))
+            merged_payload = _merge_channel_workflow_hidden_payload(existing_payload, normalized_payload)
+            _transition_session_state(
+                session=session,
+                status=COMPANY_SELECTION_STATUS,
+                payload=merged_payload,
+                missing_fields=[],
+                push_history=False,
+            )
+            return _attach_menu_intercept_metadata(
+                MenuInterceptResult(handled=True, response_text=""),
+                session=session,
+                option=option,
+                intercept_stage="workflow_merge_pending_company_selection",
+            )
+
         session.selected_option_id = option.id
         session.last_user_message = str(user_message or "").strip() or f"workflow:{workflow_code}"
         session.status = "idle"
@@ -839,7 +862,7 @@ def start_channel_workflow(
         session.missing_fields = []
         db.session.commit()
 
-        collected = dict(payload or {})
+        collected = normalized_payload
         company_selection_flow = _prepare_company_selection_flow_if_needed(
             session=session,
             option=option,
@@ -1698,6 +1721,72 @@ def _deserialize_session_payload(value: Any) -> Any:
     if isinstance(value, list):
         return [_deserialize_session_payload(item) for item in value]
     return value
+
+
+def _merge_channel_workflow_hidden_payload(existing: Dict[str, Any], incoming: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(existing or {})
+    incoming_payload = dict(incoming or {})
+
+    existing_attachments = [
+        dict(item or {})
+        for item in list(merged.get("_attachments") or [])
+        if isinstance(item, dict)
+    ]
+    if not existing_attachments:
+        single_existing = dict(merged.get("_attachment") or {})
+        if single_existing:
+            existing_attachments = [single_existing]
+
+    incoming_attachments = [
+        dict(item or {})
+        for item in list(incoming_payload.get("_attachments") or [])
+        if isinstance(item, dict)
+    ]
+    if not incoming_attachments:
+        single_incoming = dict(incoming_payload.get("_attachment") or {})
+        if single_incoming:
+            incoming_attachments = [single_incoming]
+
+    if existing_attachments or incoming_attachments:
+        deduped_attachments: List[Dict[str, Any]] = []
+        seen_attachment_keys = set()
+        for attachment in [*existing_attachments, *incoming_attachments]:
+            normalized = dict(attachment or {})
+            dedupe_key = (
+                str(normalized.get("url") or "").strip(),
+                str(normalized.get("file_name") or normalized.get("name") or "").strip().lower(),
+                str(normalized.get("mime_type") or normalized.get("content_type") or "").strip().lower(),
+            )
+            if dedupe_key in seen_attachment_keys:
+                continue
+            seen_attachment_keys.add(dedupe_key)
+            deduped_attachments.append(normalized)
+        merged["_attachments"] = deduped_attachments
+        merged["_attachment"] = dict(deduped_attachments[0]) if deduped_attachments else {}
+        incoming_payload.pop("_attachments", None)
+        incoming_payload.pop("_attachment", None)
+
+    existing_download_errors = [str(item).strip() for item in list(merged.get("_attachment_download_errors") or []) if str(item).strip()]
+    incoming_download_errors = [str(item).strip() for item in list(incoming_payload.get("_attachment_download_errors") or []) if str(item).strip()]
+    if existing_download_errors or incoming_download_errors:
+        merged["_attachment_download_errors"] = list(dict.fromkeys([*existing_download_errors, *incoming_download_errors]))
+        incoming_payload.pop("_attachment_download_errors", None)
+
+    for key, value in incoming_payload.items():
+        merged[key] = value
+
+    source_channel = str(merged.get("_source_channel") or "").strip().lower()
+    channel_label = str(merged.get("_channel_label") or "").strip()
+    attachments_count = len(list(merged.get("_attachments") or []))
+    if attachments_count > 1 and source_channel == "whatsapp":
+        merged["_source_label"] = f"WhatsApp - {attachments_count} arquivo(s)"
+    elif attachments_count == 1 and source_channel == "whatsapp" and not str(merged.get("_source_label") or "").strip():
+        first_attachment = dict((merged.get("_attachments") or [{}])[0] or {})
+        merged["_source_label"] = f"WhatsApp - {first_attachment.get('file_name') or 'recibo'}"
+    elif attachments_count > 1 and channel_label and not str(merged.get("_source_label") or "").strip():
+        merged["_source_label"] = f"{channel_label} - {attachments_count} arquivo(s)"
+
+    return merged
 
 
 def _resolve_user_first_name(user_id: int) -> Optional[str]:
@@ -3666,7 +3755,7 @@ def _build_financial_receipt_ingest_execution_handler() -> FinancialReceiptInges
 
     return FinancialReceiptIngestExecutionHandler(
         upload_root_provider=lambda: current_app.config.get("UPLOAD_FOLDER", "uploads"),
-        stage_channel_document=FinancialAutomationChannelService.stage_channel_document,
+        stage_channel_documents=FinancialAutomationChannelService.stage_channel_documents,
     )
 
 
