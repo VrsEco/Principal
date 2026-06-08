@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
-from models import db, Company, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
+from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
 from services.process_portal_service import (
@@ -334,6 +334,19 @@ def _get_process_with_access(process_id: int, action: str = 'view') -> Process:
     return process
 
 
+def _get_macro_process_with_access(macro_id: int, action: str = 'view') -> MacroProcess:
+    macro = MacroProcess.query.get_or_404(macro_id)
+
+    if not current_user.is_authenticated:
+        abort(403, description="Usuário não autenticado.")
+
+    if not has_permission(macro.company_id, 'processes', action):
+        abort(403, description=f"Permission denied: {action} on processes")
+
+    session['active_company_id'] = macro.company_id
+    return macro
+
+
 def _build_process_details_payload(process: Process) -> dict:
     """Payload mínimo e resiliente para hidratação inicial da tela de detalhes."""
     macro = getattr(process, 'macro', None)
@@ -613,6 +626,30 @@ def process_book(process_id):
         abort(404, description=str(exc))
 
     return render_template('reports/process_book_v2.html', **context)
+
+
+@processes_bp.route('/macro-processes/<int:macro_id>/book')
+@permission_required('processes', 'view')
+def macro_process_book(macro_id):
+    """Renderiza o Book do Macroprocesso em layout print-friendly client-safe."""
+    from services.macro_process_book_service import build_macro_process_book_context
+
+    macro = _get_macro_process_with_access(macro_id, action='view')
+    if is_collaborator_in_company(macro.company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem acessar o book do macroprocesso.")
+
+    try:
+        context = build_macro_process_book_context(
+            macro_id=macro.id,
+            company_id=macro.company_id,
+            request_root=request.url_root,
+        )
+    except ValueError as exc:
+        current_app.logger.warning('Book do macroprocesso indisponível para macro_id=%s: %s', macro_id, exc)
+        abort(404, description=str(exc))
+
+    return render_template('reports/macro_process_book_v1.html', **context)
+
 
 # --- Process Routines Page and APIs ---
 
