@@ -27,10 +27,26 @@
     </header>
 
     <section class="stats-grid">
-        <article class="stat-card"><span class="stat-label">Na tela</span><strong>{{ invoice_kpis.total }}</strong></article>
-        <article class="stat-card"><span class="stat-label">Pendentes</span><strong>{{ invoice_kpis.pending }}</strong></article>
-        <article class="stat-card"><span class="stat-label">Em lote</span><strong>{{ invoice_kpis.batched }}</strong></article>
-        <article class="stat-card"><span class="stat-label">Emitidas</span><strong>{{ invoice_kpis.emitted }}</strong></article>
+        <article class="stat-card nf-stat-card nf-stat-card--primary">
+            <span class="stat-label">Na tela</span>
+            <strong>{{ invoice_kpis.total }}</strong>
+            <span class="mini-badge">Notas visíveis</span>
+        </article>
+        <article class="stat-card nf-stat-card nf-stat-card--warning">
+            <span class="stat-label">Pendentes</span>
+            <strong>{{ invoice_kpis.pending }}</strong>
+            <span class="mini-badge warning">Aguardando emissão</span>
+        </article>
+        <article class="stat-card nf-stat-card nf-stat-card--info">
+            <span class="stat-label">Em lote</span>
+            <strong>{{ invoice_kpis.batched }}</strong>
+            <span class="mini-badge info">Organizadas em lote</span>
+        </article>
+        <article class="stat-card nf-stat-card nf-stat-card--success">
+            <span class="stat-label">Emitidas</span>
+            <strong>{{ invoice_kpis.emitted }}</strong>
+            <span class="mini-badge success">Concluídas</span>
+        </article>
     </section>
 
     <form id="nf-bulk-form" method="post" action="{{ url_for('contracts.contracts_fiscal_invoices', company_id=company_id) }}" enctype="multipart/form-data" class="panel nf-actions-panel">
@@ -43,7 +59,7 @@
             <span class="mini-badge">{{ invoice_rows|length }} nota(s) filtrada(s)</span>
         </div>
         <div class="panel-body nf-actions-body">
-            <section class="nf-action-card nf-selection-card">
+            <section class="nf-action-card nf-selection-card nf-action-card--selection">
                 <div class="nf-action-card__header">
                     <span class="nf-action-kicker">Seleção</span>
                     <strong>Notas na tela</strong>
@@ -55,7 +71,7 @@
                 <small>Aplica as ações abaixo somente às notas exibidas pelo filtro atual.</small>
             </section>
 
-            <section class="nf-action-card nf-batch-card">
+            <section class="nf-action-card nf-batch-card nf-action-card--batch">
                 <div class="nf-action-card__header">
                     <span class="nf-action-kicker">Lotes</span>
                     <strong>Organização fiscal</strong>
@@ -73,7 +89,7 @@
                 </div>
             </section>
 
-            <section class="nf-action-card nf-action-card--wide">
+            <section class="nf-action-card nf-action-card--wide nf-action-card--emission">
                 <div class="nf-action-card__header">
                     <span class="nf-action-kicker">Emissão</span>
                     <strong>Integração e status da NF</strong>
@@ -101,7 +117,7 @@
                 </div>
             </section>
 
-            <section class="nf-action-card nf-action-card--wide nf-upload-card">
+            <section class="nf-action-card nf-action-card--wide nf-upload-card nf-action-card--upload">
                 <div class="nf-action-card__header">
                     <span class="nf-action-kicker">Anexos</span>
                     <strong>Upload de retorno fiscal</strong>
@@ -148,21 +164,29 @@
                             <td><input class="nf-row-check" form="nf-bulk-form" type="checkbox" name="billing_ids" value="{{ billing.id }}"></td>
                             <td>
                                 <strong>{{ billing.billing_code }}</strong>
-                                <div>{{ row.contract.code if row.contract else '-' }} · {{ row.contract.title if row.contract else '-' }}</div>
+                                <div class="nf-contract-line">{{ row.contract.code if row.contract else '-' }} · {{ row.contract.title if row.contract else '-' }}</div>
                                 <small>{{ row.party.name if row.party else data.customer_name or '-' }}</small>
                             </td>
                             <td>
-                                {% if row.batch_code %}<span class="mini-badge badge-info">{{ row.batch_code }}</span>{% else %}<span class="muted">Sem lote</span>{% endif %}
+                                {% if row.batch_code %}<span class="mini-badge info">{{ row.batch_code }}</span>{% else %}<span class="mini-badge neutral">Sem lote</span>{% endif %}
                             </td>
                             <td>
-                                <div>Bruto: <strong>{{ billing.gross_amount|format_currency_br }}</strong></div>
-                                <div>Ret.: <strong>{{ row.retention_amount|format_currency_br }}</strong></div>
-                                <div>Líquido: <strong>{{ billing.net_amount|format_currency_br }}</strong></div>
+                                <div class="nf-value-line"><span class="mini-badge neutral">Bruto</span><strong>{{ billing.gross_amount|format_currency_br }}</strong></div>
+                                <div class="nf-value-line"><span class="mini-badge warning">Ret.</span><strong>{{ row.retention_amount|format_currency_br }}</strong></div>
+                                <div class="nf-value-line"><span class="mini-badge success">Líquido</span><strong>{{ billing.net_amount|format_currency_br }}</strong></div>
                             </td>
                             <td>
-                                <div><strong>{{ data.nfs_provider or 'Manual' }}</strong></div>
+                                <div class="nf-provider-line">
+                                    <strong>{{ data.nfs_provider or 'Manual' }}</strong>
+                                    <span class="mini-badge {% if data.nfs_provider %}info{% else %}neutral{% endif %}">{{ 'Provedor' if data.nfs_provider else 'Manual' }}</span>
+                                </div>
                                 <small>{{ data.service_city or '-' }} / ISS {{ data.iss_city or '-' }}</small>
-                                {% if data.invoice_number %}<small>NF {{ data.invoice_number }} · {{ data.issued_at or '-' }}</small>{% endif %}
+                                {% if data.tipo_tributacao or data.Tipo_Tributacao %}
+                                <div class="nf-taxation-line">
+                                    <span class="mini-badge nf-taxation-badge {% if (data.tipo_tributacao or data.Tipo_Tributacao) == 'OutsideCity' %}nf-taxation-badge--outside{% elif (data.tipo_tributacao or data.Tipo_Tributacao) == 'InsideCity' %}nf-taxation-badge--inside{% else %}nf-taxation-badge--default{% endif %}">{{ data.tipo_tributacao or data.Tipo_Tributacao }}</span>
+                                </div>
+                                {% endif %}
+                                {% if data.invoice_number %}<small><span class="mini-badge success">NF {{ data.invoice_number }}</span> · {{ data.issued_at or '-' }}</small>{% endif %}
                             </td>
                             <td><span class="mini-badge nf-badge nf-badge-{{ fiscal.status }}">{{ fiscal.status }}</span></td>
                             <td>
@@ -221,6 +245,7 @@
                     <span class="field-hint">Preenche Estado/Cidade/Código da prestação na planilha quando fora de Salvador.</span>
                     <input type="checkbox" name="tax_iss_at_service_location" value="1" {% if data.tax_iss_at_service_location %}checked{% endif %}>
                 </label>
+                <label><span>Tipo tributação</span><input type="text" name="tipo_tributacao" value="{{ data.tipo_tributacao or data.Tipo_Tributacao or '' }}" placeholder="Ex.: OutsideCity"></label>
                 <label class="full-width"><span>Observação fiscal</span><textarea name="fiscal_notes" rows="4">{{ data.fiscal_notes or '' }}</textarea></label>
             </div>
             <footer class="nf-dialog-footer">
@@ -235,11 +260,19 @@
 .contracts-invoices-page .nf-actions-panel{margin-bottom:1rem}
 .contracts-invoices-page .nf-actions-header{align-items:flex-start}
 .nf-actions-body{display:grid;grid-template-columns:minmax(220px,.85fr) minmax(320px,1.45fr);gap:.85rem}
-.nf-action-card{border:1px solid var(--border);border-radius:16px;padding:1rem;background:var(--surface-secondary);display:flex;flex-direction:column;gap:.8rem;min-width:0}
+.nf-action-card{border:1px solid var(--border);border-radius:16px;padding:1rem;background:var(--surface-secondary);display:flex;flex-direction:column;gap:.8rem;min-width:0;position:relative;overflow:hidden}
+.nf-action-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--border)}
+.nf-action-card--selection::before{background:var(--primary)}
+.nf-action-card--batch::before{background:#2563eb}
+.nf-action-card--emission::before{background:#10b981}
+.nf-action-card--upload::before{background:#6d28d9}
 .nf-action-card--wide{grid-column:1/-1}
 .nf-action-card__header{display:flex;flex-direction:column;gap:.18rem}
 .nf-action-card__header strong{color:var(--text-primary)}
 .nf-action-kicker{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--primary)}
+.nf-action-card--batch .nf-action-kicker{color:#1d4ed8}
+.nf-action-card--emission .nf-action-kicker{color:#047857}
+.nf-action-card--upload .nf-action-kicker{color:#6d28d9}
 .nf-selection-card small,.nf-upload-card small{color:var(--text-secondary);line-height:1.45}
 .nf-select-all{display:flex;align-items:center;gap:.55rem;font-weight:800;color:var(--text-primary)}
 .nf-select-all input{width:1rem;height:1rem;accent-color:var(--primary)}
@@ -250,6 +283,7 @@
 .nf-fiscal-actions{display:grid;grid-template-columns:minmax(190px,.65fr) minmax(480px,1.55fr) minmax(310px,.85fr);gap:.75rem;align-items:end}
 .nf-fiscal-group{display:flex;flex-direction:column;gap:.45rem;min-width:0}
 .nf-fiscal-group .btn{width:100%}
+.nf-fiscal-group .nf-action-kicker{margin-bottom:.1rem}
 .nf-emission-fields{display:grid;grid-template-columns:minmax(135px,.75fr) minmax(150px,.85fr) minmax(170px,auto);gap:.65rem;align-items:stretch}
 .nf-danger-actions{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
 .nf-batch-select,.nf-inline-input,.nf-upload-line input[type=file]{border:1px solid var(--border);border-radius:12px;padding:.65rem .75rem;background:var(--surface);color:var(--text-primary);min-height:42px}
@@ -258,7 +292,7 @@
 .nf-upload-line{align-items:stretch;flex-wrap:wrap}
 .nf-upload-line input[type=file]{flex:1 1 320px}
 .panel-subtitle{margin:.25rem 0 0;color:var(--text-secondary);font-size:.9rem}
-.nf-table-wrap{overflow:auto}.nf-table th:first-child,.nf-table td:first-child{width:54px;text-align:center}.nf-table small{display:block;color:var(--text-secondary);margin-top:.25rem}.muted{color:var(--text-secondary)}.badge-info{background:rgba(37,99,235,.1);color:#1d4ed8}.nf-badge-pending{background:rgba(234,179,8,.15);color:#a16207}.nf-badge-emitted{background:rgba(34,197,94,.14);color:#15803d}.nf-badge-cancelled{background:rgba(239,68,68,.12);color:#b91c1c}.nf-badge-deleted{background:rgba(100,116,139,.14);color:#475569}.nf-attachment{display:block;color:#2563eb;font-size:.82rem;margin:.1rem 0}.btn-sm{padding:.5rem .65rem;font-size:.82rem}.nf-dialog{width:min(920px,94vw);border:0;border-radius:20px;padding:0;box-shadow:0 24px 70px rgba(15,23,42,.25)}.nf-dialog::backdrop{background:rgba(15,23,42,.42)}.nf-dialog form{padding:1.25rem}.nf-dialog-header,.nf-dialog-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.nf-dialog-header{border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem}.nf-dialog-header h3{margin:0}.nf-dialog-header p{margin:.25rem 0 0;color:var(--text-secondary)}.nf-dialog-grid .full-width{grid-column:1/-1}.nf-dialog-footer{justify-content:flex-end;border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem}.contracts-invoice-filter-form{display:flex;flex-direction:column;gap:1rem}.contracts-invoice-filter-form .filter-group{display:flex;flex-direction:column;gap:.35rem}.contracts-invoice-filter-form input,.contracts-invoice-filter-form select{width:100%;border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;background:var(--surface);color:var(--text-primary)}.sidebar-actions-stack{display:flex;flex-direction:column;gap:.65rem;margin-top:.4rem}
+.nf-table-wrap{overflow:auto}.nf-table th:first-child,.nf-table td:first-child{width:54px;text-align:center}.nf-table small{display:block;color:var(--text-secondary);margin-top:.25rem}.muted{color:var(--text-secondary)}.nf-stat-card{position:relative;overflow:hidden}.nf-stat-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--border)}.nf-stat-card .mini-badge{margin-top:.6rem;width:max-content}.nf-stat-card--primary::before{background:var(--primary)}.nf-stat-card--warning::before{background:#f59e0b}.nf-stat-card--info::before{background:#2563eb}.nf-stat-card--success::before{background:#10b981}.nf-contract-line{margin-top:.15rem;color:var(--text-primary)}.nf-value-line{display:flex;align-items:center;justify-content:space-between;gap:.55rem;margin:.12rem 0}.nf-value-line strong{color:var(--text-primary)}.nf-provider-line{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}.nf-badge-pending{background:#fffbeb;color:#b45309;border-color:#fde68a}.nf-badge-emitted{background:#ecfdf5;color:#047857;border-color:#a7f3d0}.nf-badge-cancelled{background:#fff1f2;color:#be123c;border-color:#fecdd3}.nf-badge-deleted{background:#f8fafc;color:#475569;border-color:#e2e8f0}.nf-taxation-line{margin-top:.35rem}.nf-taxation-badge{font-weight:700}.nf-taxation-badge--outside{background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe}.nf-taxation-badge--inside{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}.nf-taxation-badge--default{background:var(--surface-secondary);color:var(--text-secondary);border-color:var(--border)}.nf-attachment{display:block;color:#2563eb;font-size:.82rem;margin:.1rem 0}.btn-sm{padding:.5rem .65rem;font-size:.82rem}.nf-dialog{width:min(920px,94vw);border:0;border-radius:20px;padding:0;box-shadow:0 24px 70px rgba(15,23,42,.25)}.nf-dialog::backdrop{background:rgba(15,23,42,.42)}.nf-dialog form{padding:1.25rem}.nf-dialog-header,.nf-dialog-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.nf-dialog-header{border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1rem}.nf-dialog-header h3{margin:0}.nf-dialog-header p{margin:.25rem 0 0;color:var(--text-secondary)}.nf-dialog-grid .full-width{grid-column:1/-1}.nf-dialog-footer{justify-content:flex-end;border-top:1px solid var(--border);padding-top:1rem;margin-top:1rem}.contracts-invoice-filter-form{display:flex;flex-direction:column;gap:1rem}.contracts-invoice-filter-form .filter-group{display:flex;flex-direction:column;gap:.35rem}.contracts-invoice-filter-form input,.contracts-invoice-filter-form select{width:100%;border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;background:var(--surface);color:var(--text-primary)}.sidebar-actions-stack{display:flex;flex-direction:column;gap:.65rem;margin-top:.4rem}
 @media (max-width:1100px){.nf-actions-body,.nf-action-grid,.nf-fiscal-actions{grid-template-columns:1fr}.nf-action-combo{flex-wrap:wrap}.nf-action-combo .btn{white-space:normal}}
 @media (max-width:720px){.contracts-invoices-page .nf-actions-header{flex-direction:column}.nf-emission-fields,.nf-danger-actions{grid-template-columns:1fr}.nf-upload-line{align-items:stretch}.nf-fiscal-actions .btn,.nf-emission-fields .btn,.nf-danger-actions .btn,.nf-upload-line .btn,.nf-inline-input{width:100%;min-width:0}}
 </style>

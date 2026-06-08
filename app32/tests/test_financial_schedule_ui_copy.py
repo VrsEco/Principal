@@ -41,6 +41,14 @@ def test_settlement_delete_button_is_bound_to_baixas_list():
     assert "baixasListEl.addEventListener('click'" in schedule_js
 
 
+def test_baixas_table_shows_bank_account_column():
+    schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
+
+    assert "<th>Conta bancária</th>" in schedule_js
+    assert "settlementBankAccountLabel(settlement)" in schedule_js
+    assert 'colspan="9"' in schedule_js
+
+
 def test_direct_entry_schedule_uses_whole_delete_copy():
     schedule_js = Path(r"C:\GestaoVersus\app32\app32\static\js\financial_schedules.js").read_text(encoding="utf-8")
 

@@ -26,6 +26,7 @@ def test_nfse_integration_workbook_matches_save_water_template_columns():
                 "IBSCBS_Tipo_Operacao": "1401101",
                 "NBS": "120011000",
                 "CNAE": "4322302",
+                "Tipo_Tributacao": "OutsideCity",
                 "Aliquota_ISS": "5",
                 "Valor_ISS": "462,50",
                 "Retencao_OUTROS": "462,50",
@@ -43,5 +44,6 @@ def test_nfse_integration_workbook_matches_save_water_template_columns():
     assert [reference_sheet.cell(row=index, column=1).value for index in range(1, reference_sheet.max_row + 1)] == NFSE_REFERENCE_FIELDS
     assert sheet["A2"].value == "22424335000170"
     assert sheet["D2"].value == 9250
+    assert sheet["Z2"].value == "OutsideCity"
     assert sheet["AB2"].value == "462,50"
     assert sheet["AI2"].value == "462,50"
