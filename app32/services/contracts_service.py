@@ -292,6 +292,10 @@ class ContractService:
         if manager_employee_id:
             query = query.filter(Contract.manager_employee_id == manager_employee_id)
 
+        contracting_legal_entity_id = ContractService._normalize_int(filters.get("contracting_legal_entity_id"))
+        if contracting_legal_entity_id:
+            query = query.filter(Contract.contracting_legal_entity_id == contracting_legal_entity_id)
+
         search = ContractService._normalize_text(filters.get("search"))
         if search:
             ilike = f"%{search}%"

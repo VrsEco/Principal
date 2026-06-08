@@ -157,6 +157,15 @@
             </select>
         </div>
         <div class="filter-group">
+            <label class="filter-label">PJ emissora</label>
+            <select name="contracting_legal_entity_id">
+                <option value="">Todas</option>
+                {% for legal_entity in legal_entities %}
+                <option value="{{ legal_entity.id }}" {% if filters.contracting_legal_entity_id == legal_entity.id %}selected{% endif %}>{{ legal_entity.code }} · {{ legal_entity.legal_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
             <label class="filter-label">Gestor</label>
             <select name="manager_employee_id">
                 <option value="">Todos</option>

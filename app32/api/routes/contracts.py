@@ -94,6 +94,7 @@ def _contracts_billing_filters_from_request() -> dict:
         "status": request.args.get("status"),
         "party_id": request.args.get("party_id", type=int),
         "manager_employee_id": request.args.get("manager_employee_id", type=int),
+        "contracting_legal_entity_id": request.args.get("contracting_legal_entity_id", type=int),
         "search": request.args.get("search"),
         "billing_state": request.args.get("billing_state") or "eligible",
     }
@@ -1070,6 +1071,7 @@ def contracts_billing_workspace():
         company_id=company.id,
         billing_rows=billing_rows,
         parties=ContractService.list_customer_parties(company.id),
+        legal_entities=ContractService.list_contracting_legal_entities(company.id),
         managers=Employee.query.filter_by(company_id=company.id, status="active").order_by(Employee.name.asc()).all(),
         filters=filters,
         kpis=ContractService.get_contracts_kpis(company.id),
