@@ -97,12 +97,12 @@ def _pdf_doc(buffer: BytesIO, title: str, company_name: str):
         width, height = A4
         canvas.saveState()
         canvas.setFillColor(PALETTE['primary'])
-        canvas.rect(0, height - 24 * mm, width, 24 * mm, stroke=0, fill=1)
+        canvas.rect(0, height - 16 * mm, width, 16 * mm, stroke=0, fill=1)
         canvas.setFillColor(colors.white)
-        canvas.setFont('Helvetica-Bold', 12)
-        canvas.drawString(14 * mm, height - 10 * mm, title)
-        canvas.setFont('Helvetica', 8.2)
-        canvas.drawString(14 * mm, height - 16 * mm, subtitle[:120])
+        canvas.setFont('Helvetica-Bold', 10.5)
+        canvas.drawString(14 * mm, height - 8.2 * mm, title)
+        canvas.setFont('Helvetica', 7.4)
+        canvas.drawString(14 * mm, height - 12.8 * mm, subtitle[:138])
 
         canvas.setFillColor(PALETTE['muted'])
         canvas.setFont('Helvetica', 7.5)
@@ -111,7 +111,7 @@ def _pdf_doc(buffer: BytesIO, title: str, company_name: str):
         canvas.restoreState()
 
     return (
-        SimpleDocTemplate(buffer, pagesize=A4, topMargin=31 * mm, bottomMargin=16 * mm, leftMargin=14 * mm, rightMargin=14 * mm, title=title),
+        SimpleDocTemplate(buffer, pagesize=A4, topMargin=22 * mm, bottomMargin=16 * mm, leftMargin=14 * mm, rightMargin=14 * mm, title=title),
         _decorate,
     )
 
@@ -168,8 +168,8 @@ def _compact_info_table(rows: list[tuple[str, str]], *, pairs_per_row: int = 2, 
         'GVCompactCard',
         parent=styles['table_cell'],
         fontName='Helvetica',
-        fontSize=8.1,
-        leading=10.5,
+        fontSize=7.9,
+        leading=9.8,
         textColor=PALETTE['text'],
         wordWrap='CJK',
     )
@@ -209,9 +209,9 @@ def _compact_info_table(rows: list[tuple[str, str]], *, pairs_per_row: int = 2, 
         ('BACKGROUND', (0, 0), (-1, -1), PALETTE['surface']),
         ('GRID', (0, 0), (-1, -1), 0.35, PALETTE['border']),
         ('LEFTPADDING', (0, 0), (-1, -1), left_padding),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]
 
@@ -238,57 +238,20 @@ def _build_project_task_row(task: ProjectTask) -> list[Any]:
 
 
 def _task_header_table(task: ProjectTask, occurrence_summary: dict[str, Any]) -> Table:
-    styles = _get_styles()
-    card_style = ParagraphStyle(
-        'GVTaskCard',
-        parent=styles['table_cell'],
-        fontName='Helvetica',
-        fontSize=8.2,
-        leading=11,
-        textColor=PALETTE['text'],
-        wordWrap='CJK',
-    )
-
-    def card(label: str, value: str) -> Paragraph:
-        markup = (
-            f'<font color="#0f766e"><b>{escape(label)}</b></font><br/>'
-            f'<font color="#0f172a">{escape(value or "-")}</font>'
-        )
-        return Paragraph(markup, card_style)
-
     rows = [
-        [
-            card('Quem', normalize_text(task.employee_name)),
-            card('Quando', format_date_br(task.due_date)),
-            card('Onde', f'{task.project.code} - {task.project.name}' if task.project else 'Projeto não identificado'),
-        ],
-        [
-            card('Horas previstas', f'{to_float(task.estimated_hours):.1f}h'),
-            card('Peso', f'{to_float(task.score_weight, 1.0):.2f}'),
-            card('Pontuação', f'{calculate_task_score(task):.1f} pts'),
-        ],
-        [
-            card('Ocorrências positivas', f"{occurrence_summary['positive']['count']} | {format_incident_score(int(occurrence_summary['positive']['score']))}"),
-            card('Ocorrências negativas', f"{occurrence_summary['negative']['count']} | {format_incident_score(int(occurrence_summary['negative']['score']))}"),
-            card('Resultado ocorrências', format_incident_score(int(occurrence_summary['total_score']))),
-        ],
-        [card('Como', normalize_text(task.how)), '', ''],
-        [card('Observações', normalize_text(task.notes)), '', ''],
+        ('Quem', normalize_text(task.employee_name)),
+        ('Quando', format_date_br(task.due_date)),
+        ('Onde', f'{task.project.code} - {task.project.name}' if task.project else 'Projeto não identificado'),
+        ('Horas previstas', f'{to_float(task.estimated_hours):.1f}h'),
+        ('Peso', f'{to_float(task.score_weight, 1.0):.2f}'),
+        ('Pontuação', f'{calculate_task_score(task):.1f} pts'),
+        ('Ocorrências positivas', f"{occurrence_summary['positive']['count']} | {format_incident_score(int(occurrence_summary['positive']['score']))}"),
+        ('Ocorrências negativas', f"{occurrence_summary['negative']['count']} | {format_incident_score(int(occurrence_summary['negative']['score']))}"),
+        ('Resultado ocorrências', format_incident_score(int(occurrence_summary['total_score']))),
+        ('Como', normalize_text(task.how)),
+        ('Observações', normalize_text(task.notes)),
     ]
-
-    table = Table(rows, colWidths=[58 * mm, 58 * mm, 58 * mm])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), PALETTE['surface']),
-        ('GRID', (0, 0), (-1, -1), 0.35, PALETTE['border']),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('SPAN', (0, 3), (2, 3)),
-        ('SPAN', (0, 4), (2, 4)),
-    ]))
-    return table
+    return _compact_info_table(rows, pairs_per_row=3, wide_fields={'Como', 'Observações'})
 
 
 def generate_task_summary_pdf_bytes(task: ProjectTask) -> bytes:
@@ -362,7 +325,7 @@ def generate_project_summary_pdf_bytes(project: Project) -> bytes:
     story.append(Paragraph(f'{escape(company_name)} | Gerado em {format_date_br(datetime.now())}', styles['muted']))
     story.append(Spacer(1, 4))
     story.append(Paragraph('Cabeçalho geral', styles['subtitle']))
-    story.append(_compact_info_table(build_header_rows_project(project, estimated_total, worked_total), pairs_per_row=2, wide_fields={'Observações'}))
+    story.append(_compact_info_table(build_header_rows_project(project, estimated_total, worked_total), pairs_per_row=3, wide_fields={'Observações'}))
     story.append(Spacer(1, 8))
 
     story.append(Paragraph('Horas por colaborador', styles['subtitle']))
@@ -412,7 +375,7 @@ def generate_portfolio_summary_pdf_bytes(portfolio: Portfolio) -> bytes:
     story.append(Paragraph(f'{escape(company_name)} | Gerado em {format_date_br(datetime.now())}', styles['muted']))
     story.append(Spacer(1, 4))
     story.append(Paragraph('Cabeçalho geral', styles['subtitle']))
-    story.append(_compact_info_table(build_header_rows_portfolio(portfolio, estimated_total, worked_total, avg_progress), pairs_per_row=2, wide_fields={'Observações'}))
+    story.append(_compact_info_table(build_header_rows_portfolio(portfolio, estimated_total, worked_total, avg_progress), pairs_per_row=3, wide_fields={'Observações'}))
     story.append(Spacer(1, 8))
 
     story.append(Paragraph('Horas por colaborador', styles['subtitle']))
