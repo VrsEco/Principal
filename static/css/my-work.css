@@ -2164,6 +2164,12 @@ body {
   color: var(--color-text-primary);
 }
 
+.process-name--secondary {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
 .activity-item__instance {
   display: flex;
   flex-wrap: wrap;
@@ -2183,6 +2189,17 @@ body {
 .instance-name {
   font-weight: 500;
   color: var(--color-text-primary);
+}
+
+.instance-name--primary {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.activity-item__instance--project {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
 }
 
 .activity-progress {

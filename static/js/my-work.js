@@ -2172,21 +2172,21 @@ function createActivityElement(activity) {
     const needsSeparator = projectCode && projectName;
 
     titleContent = `
-      <span class="activity-label">Projeto:</span>
-      ${projectCode
-        ? `<span class="activity-code">${projectCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
-        : ''
-      }
-      <span class="process-name">${projectName}</span>
+      <span class="activity-label">Atividade:</span>
+      <span class="instance-name instance-name--primary">
+        ${hasActivityCode ? activityCodeMarkup : ''}
+        ${activityTitle}
+      </span>
     `.trim();
 
     instanceContent = `
-      <div class="activity-item__instance">
-        <span class="activity-label">Atividade:</span>
-        <span class="instance-name">
-          ${hasActivityCode ? activityCodeMarkup : ''}
-          ${activityTitle}
-        </span>
+      <div class="activity-item__instance activity-item__instance--project">
+        <span class="activity-label">Projeto:</span>
+        ${projectCode
+          ? `<span class="activity-code">${projectCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
+          : ''
+        }
+        <span class="process-name process-name--secondary">${projectName}</span>
       </div>
     `.trim();
   }
