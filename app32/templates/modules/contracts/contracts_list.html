@@ -18,7 +18,7 @@
         <div>
             <p class="eyebrow">Gestão de Contratos</p>
             <h1>Cadastro de Contratos</h1>
-            <p class="subtitle">Workspace simplificado para controlar cliente, itens, faturamento, financeiro, fiscal e observações do contrato selecionado.</p>
+            <p class="subtitle">Workspace simplificado para controlar cliente, itens, faturamento, fiscal e observações do contrato selecionado.</p>
         </div>
         <div class="page-actions">
             <a class="btn btn-secondary" href="/contracts?company_id={{ company_id }}">Workspace completo</a>
@@ -457,35 +457,6 @@
                         </p>
                     </div>
                 </div>
-
-                {% elif active_list_tab == 'financeiro' %}
-                <form method="post" class="panel form-panel">
-                    <input type="hidden" name="section" value="financeiro">
-                    <input type="hidden" name="return_tab" value="financeiro">
-                    <div class="panel-header"><h2>Dados para Financeiro</h2></div>
-                    <div class="panel-body form-grid">
-                        <label><span>Conta bancária padrão</span>
-                            <select name="default_bank_account_id"><option value="">Selecione</option>{% for item in references.bank_accounts %}<option value="{{ item.id }}" {% if financial_terms and financial_terms.default_bank_account_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select>
-                        </label>
-                        <label><span>Forma de pagamento</span>
-                            <select name="default_payment_method_id"><option value="">Selecione</option>{% for item in references.payment_methods %}<option value="{{ item.id }}" {% if financial_terms and financial_terms.default_payment_method_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select>
-                        </label>
-                        <label><span>Conta gerencial</span>
-                            <select name="default_chart_account_id"><option value="">Selecione</option>{% for item in references.chart_accounts %}<option value="{{ item.id }}" {% if financial_terms and financial_terms.default_chart_account_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select>
-                        </label>
-                        <label><span>Centro de resultado</span>
-                            <select name="default_cost_center_id"><option value="">Selecione</option>{% for item in references.cost_centers %}<option value="{{ item.id }}" {% if financial_terms and financial_terms.default_cost_center_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select>
-                        </label>
-                        <label><span>Índice de correção</span>
-                            <select name="correction_index_id"><option value="">Selecione</option>{% for item in references.correction_indexes %}<option value="{{ item.id }}" {% if financial_terms and financial_terms.correction_index_id == item.id %}selected{% endif %}>{{ item.code }} · {{ item.name }}</option>{% endfor %}</select>
-                        </label>
-                        <label><span>Prazo em dias</span><input type="number" name="payment_term_days" value="{{ financial_terms.payment_term_days if financial_terms and financial_terms.payment_term_days else '' }}"></label>
-                        <label><span>Método de cobrança</span><input type="text" name="billing_method" value="{{ financial_terms.billing_method if financial_terms else '' }}"></label>
-                        <label><span>Modelo de precificação</span><input type="text" name="pricing_model" value="{{ financial_terms.pricing_model if financial_terms else '' }}"></label>
-                        <label class="full-width"><span>Observações financeiras</span><textarea name="notes" rows="3">{{ financial_terms.notes if financial_terms else '' }}</textarea></label>
-                    </div>
-                    <div class="panel-footer"><button class="btn btn-primary" type="submit">Salvar financeiro</button></div>
-                </form>
 
                 {% elif active_list_tab == 'fiscal' %}
                 {% set fiscal_metadata = fiscal_terms.metadata_json if fiscal_terms and fiscal_terms.metadata_json else {} %}

@@ -23,7 +23,6 @@ CONTRACTS_LIST_TABS = (
     {"key": "geral", "label": "Geral"},
     {"key": "itens_valores", "label": "Itens e Valores do Contrato"},
     {"key": "faturamento", "label": "Dados para Faturamento"},
-    {"key": "financeiro", "label": "Dados para Financeiro"},
     {"key": "fiscal", "label": "Dados Fiscal / Emissão de NF"},
     {"key": "observacoes", "label": "Observações"},
 )
@@ -33,8 +32,9 @@ CONTRACTS_LIST_TAB_ALIASES = {
     "itens": "itens_valores",
     "itens_valores": "itens_valores",
     "dados_faturamento": "faturamento",
-    "cobranca": "financeiro",
-    "dados_financeiro": "financeiro",
+    "cobranca": "faturamento",
+    "financeiro": "faturamento",
+    "dados_financeiro": "faturamento",
     "dados_fiscal": "fiscal",
     "nf": "fiscal",
 }
@@ -222,17 +222,6 @@ def _process_contracts_list_submission(company: Company, contract, active_tab: s
                 payload=_normalize_contracts_list_form_payload(request.form),
             )
             flash("Item de faturamento incluído.", "success")
-    elif tab == "financeiro":
-        if (
-            request.form.get("delete_satellite_policy_id")
-            or request.form.get("generate_financial_titles_for_billing_id")
-            or request.form.get("satellite_policy_template_key")
-            or request.form.get("satellite_nature")
-        ):
-            _process_contract_section_submission(company, contract, "financeiro")
-        else:
-            ContractService.upsert_financial_terms(contract=contract, payload=request.form.to_dict(), user_id=user_id)
-            flash("Dados financeiros do contrato atualizados.", "success")
     elif tab == "fiscal":
         if request.form.get("delete_retention_id") or request.form.get("retention_id") or request.form.get("retention_type"):
             _process_contract_section_submission(company, contract, "fiscal")
