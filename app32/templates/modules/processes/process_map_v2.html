@@ -32,6 +32,7 @@
         {% if not is_collaborator %}
         <button class="arch-tab" onclick="switchTab('areas')">🏢 Áreas</button>
         <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
+        <button class="arch-tab" onclick="switchTab('macro-books')">📚 Books dos Macroprocessos</button>
         <button class="arch-tab" onclick="switchTab('macro-sipoc')">🧩 SIPOC de Macroprocesso</button>
         <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
         {% endif %}
@@ -211,6 +212,52 @@
                         </tr>
                     </thead>
                     <tbody id="listMacros"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel: Books dos Macroprocessos -->
+    <div id="panel-macro-books" class="arch-panel">
+        <div class="card p-5" style="padding: 2.5rem !important;">
+            <div class="process-section__header" style="margin-bottom: 1rem;">
+                <div>
+                    <span class="process-section__eyebrow">Artefato executivo</span>
+                    <h2 class="text-h2">Books dos Macroprocessos</h2>
+                    <p class="process-section__description">
+                        Acesse os books client-safe de cada macroprocesso em um ponto único,
+                        sem poluir o mapa visual com botões distribuídos por card.
+                    </p>
+                </div>
+            </div>
+
+            <div class="arch-info-block" style="margin-bottom: 1rem;">
+                <div class="arch-info-card">
+                    <h3>Objetivo</h3>
+                    <p>Centralizar a navegação dos books executivos por macroprocesso.</p>
+                </div>
+                <div class="arch-info-card">
+                    <h3>Escopo</h3>
+                    <p>Lista área, dono, volume de processos filhos e ação de abertura do book.</p>
+                </div>
+                <div class="arch-info-card">
+                    <h3>Segurança editorial</h3>
+                    <p>Os books permanecem client-safe, sem matriz analítica, contratos de execução ou anexo AI-readable.</p>
+                </div>
+            </div>
+
+            <div class="card p-0 overflow-hidden">
+                <table class="arch-table">
+                    <thead>
+                        <tr>
+                            <th>Área</th>
+                            <th>Macroprocesso</th>
+                            <th>Dono</th>
+                            <th>Processos filhos</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listMacroBooks"></tbody>
                 </table>
             </div>
         </div>
@@ -1070,5 +1117,5 @@
     }
 </style>
 
-<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260606-3') }}"></script>
+<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260608-1') }}"></script>
 {% endblock %}
