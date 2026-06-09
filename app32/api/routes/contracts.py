@@ -319,6 +319,23 @@ def _build_contract_detail_context(company: Company, contract, active_tab: str) 
     }
 
 
+def _build_contracts_list_detail_context(company: Company, contract) -> dict:
+    fiscal_terms = ContractFiscalTerm.query.filter_by(contract_id=contract.id, company_id=company.id).first()
+    references = ContractService.list_financial_references(company.id)
+    parties = ContractService.list_customer_parties(company.id)
+    if contract.party and not any(item.id == contract.party.id for item in parties):
+        parties = [contract.party, *parties]
+    return {
+        "parties": parties,
+        "contract_catalog_items": ContractsCatalogService.list_selectable_items(company.id),
+        "references": references,
+        "fiscal_terms": fiscal_terms,
+        "selected_operational_profile": ContractService.get_contract_operational_profile(contract),
+        "due_rule_state": ContractService.parse_due_rule(contract.due_rule if contract else None),
+        "contracting_legal_entities": ContractService.list_contracting_legal_entities(company.id),
+    }
+
+
 def _process_contract_section_submission(company: Company, contract, active_tab: str) -> str:
     section = _normalize_contract_tab(request.form.get("section") or active_tab)
     if section == "resumo":
@@ -775,17 +792,14 @@ def contracts_list():
         "item_retention_value_mode_options": ContractService.get_item_retention_value_mode_options(),
         "operational_profile_options": ContractService.get_operational_profile_options(),
         "selected_operational_profile": ContractService.OPERATIONAL_PROFILE_FULL,
-        "contract_catalog_items": ContractsCatalogService.list_selectable_items(company.id),
-        "references": ContractService.list_financial_references(company.id),
-        "financial_terms": None,
+        "contract_catalog_items": [],
+        "references": {},
         "fiscal_terms": None,
-        "native_billings": [],
-        "native_billing_preview": None,
-        "contracting_legal_entities": ContractService.list_contracting_legal_entities(company.id),
+        "contracting_legal_entities": [],
         "due_rule_state": {"reference": None, "day": None, "label": "-", "is_structured": False},
     }
     if selected_contract:
-        detail_context = _build_contract_detail_context(company, selected_contract, "resumo")
+        detail_context = _build_contracts_list_detail_context(company, selected_contract)
         context.update(detail_context)
         context["active_list_tab"] = active_list_tab
         context["contracts_list_tabs"] = CONTRACTS_LIST_TABS
