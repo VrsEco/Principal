@@ -1908,6 +1908,38 @@ class ContractService:
         return contract
 
     @staticmethod
+    def activate_contract(*, contract: Contract, user_id: Optional[int], reason: Optional[str] = None):
+        previous_status = ContractService._normalize_text(contract.status).lower() or "draft"
+        if previous_status == "active":
+            return contract
+        if previous_status == "closed":
+            raise ValueError("Contrato encerrado não pode voltar para produção por esta ação.")
+        normalized_reason = ContractService._normalize_text(reason) or "manual_go_live"
+        contract.status = "active"
+        contract.updated_by_user_id = user_id
+        metadata = dict(contract.metadata_json or {})
+        lifecycle = dict(metadata.get("lifecycle") or {})
+        lifecycle["activated_at"] = datetime.utcnow().isoformat()
+        lifecycle["activated_by_user_id"] = user_id
+        lifecycle["activation_reason"] = normalized_reason
+        metadata["lifecycle"] = lifecycle
+        contract.metadata_json = metadata
+        ContractService.record_event(
+            contract=contract,
+            event_type="contract.activated",
+            description="Contrato colocado em produção.",
+            payload={
+                "previous_status": previous_status,
+                "current_status": contract.status,
+                "reason": normalized_reason,
+            },
+            user_id=user_id,
+            auto_commit=False,
+        )
+        db.session.commit()
+        return contract
+
+    @staticmethod
     def close_contract(*, contract: Contract, user_id: Optional[int], reason: Optional[str] = None, termination_date: Optional[date] = None):
         previous_status = ContractService._normalize_text(contract.status).lower() or "draft"
         if previous_status == "closed":

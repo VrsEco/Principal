@@ -32,6 +32,19 @@ def test_contracts_list_template_no_longer_renders_financeiro_panel():
     assert "<h2>Dados para Financeiro</h2>" not in template
 
 
+def test_contracts_list_template_exposes_activate_contract_action_in_general_footer():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "contracts"
+        / "contracts_list.html"
+    ).read_text(encoding="utf-8")
+
+    assert 'value="activate_contract"' in template
+    assert "Colocar em produção" in template
+
+
 def test_contracts_list_detail_context_does_not_load_contract_financial_terms(monkeypatch):
     company = SimpleNamespace(id=9)
     contract = SimpleNamespace(

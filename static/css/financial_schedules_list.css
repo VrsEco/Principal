@@ -130,17 +130,6 @@
   background: var(--surface);
 }
 
-.sched-sidebar-filters .filter-select-multiple {
-  min-height: 10.5rem;
-  padding: 0.35rem;
-}
-
-.sched-sidebar-filters .filter-select-multiple option {
-  padding: 0.45rem 0.55rem;
-  border-radius: 8px;
-  white-space: normal;
-}
-
 .sched-sidebar-actions {
   margin-top: 2rem;
   border-top: 1px solid var(--border);

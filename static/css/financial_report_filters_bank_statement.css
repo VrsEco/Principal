@@ -7,7 +7,7 @@
 }
 
 .bank-table {
-  min-width: 1220px;
+  min-width: 1120px;
 }
 
 .bank-table .col-data,
@@ -95,15 +95,18 @@
 }
 
 .bank-value--positive {
-  color: #15803d !important;
+  color: #2563eb !important;
 }
 
 .bank-value--negative {
-  color: #b91c1c !important;
+  color: #dc2626 !important;
 }
 
-.bank-value--neutral,
 .bank-value--primary {
+  color: #2563eb !important;
+}
+
+.bank-value--neutral {
   color: var(--text-primary) !important;
 }
 

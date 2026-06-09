@@ -747,6 +747,14 @@ def contracts_list():
                     )
                     flash("Contrato suspenso com sucesso.", "success")
                     return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=selected_contract.id, tab=active_list_tab))
+                if form_action == "activate_contract":
+                    ContractService.activate_contract(
+                        contract=selected_contract,
+                        user_id=current_user.id if current_user.is_authenticated else None,
+                        reason=request.form.get("action_reason") or "manual_go_live",
+                    )
+                    flash("Contrato colocado em produção com sucesso.", "success")
+                    return redirect(url_for("contracts.contracts_list", company_id=company.id, contract_id=selected_contract.id, tab=active_list_tab))
                 if form_action == "close_contract":
                     ContractService.close_contract(
                         contract=selected_contract,

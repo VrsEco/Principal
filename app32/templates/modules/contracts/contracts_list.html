@@ -220,6 +220,9 @@
                 <div class="panel-footer contract-general-footer">
                     <div class="contract-general-footer__main">
                         <button class="btn btn-primary" type="submit">Salvar geral</button>
+                        {% if selected_contract.status == 'draft' %}
+                        <button class="btn btn-secondary" type="submit" name="form_action" value="activate_contract" onclick="return confirm('Deseja colocar este contrato em produção?');">Colocar em produção</button>
+                        {% endif %}
                     </div>
                     <div class="contract-general-footer__danger">
                         {% if selected_contract.status != 'suspended' %}

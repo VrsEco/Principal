@@ -187,6 +187,60 @@ def test_contract_tab_registry_includes_clause_and_history_views():
     assert "financeiro" in keys
 
 
+def test_activate_contract_promotes_draft_to_active_and_records_lifecycle(monkeypatch):
+    contract = Contract(
+        id=10,
+        company_id=9,
+        party_id=11,
+        code="AA.N.010",
+        title="Contrato em rascunho",
+        status="draft",
+        metadata_json={},
+    )
+    captured = {}
+
+    monkeypatch.setattr(
+        contracts_service_module,
+        "db",
+        SimpleNamespace(session=SimpleNamespace(commit=lambda: captured.setdefault("committed", True))),
+    )
+
+    def _fake_record_event(**kwargs):
+        captured["event"] = kwargs
+
+    monkeypatch.setattr(ContractService, "record_event", staticmethod(_fake_record_event))
+
+    result = ContractService.activate_contract(contract=contract, user_id=77, reason="manual_go_live")
+
+    assert result.status == "active"
+    assert result.metadata_json["lifecycle"]["activated_by_user_id"] == 77
+    assert result.metadata_json["lifecycle"]["activation_reason"] == "manual_go_live"
+    assert captured["event"]["event_type"] == "contract.activated"
+    assert captured["event"]["payload"]["previous_status"] == "draft"
+    assert captured["committed"] is True
+
+
+def test_activate_contract_rejects_closed_contract(monkeypatch):
+    contract = Contract(
+        id=11,
+        company_id=9,
+        party_id=11,
+        code="AA.N.011",
+        title="Contrato encerrado",
+        status="closed",
+        metadata_json={},
+    )
+
+    monkeypatch.setattr(ContractService, "record_event", staticmethod(lambda **kwargs: None))
+
+    try:
+        ContractService.activate_contract(contract=contract, user_id=77)
+    except ValueError as exc:
+        assert "encerrado" in str(exc).lower()
+    else:
+        raise AssertionError("Era esperado bloquear ativação de contrato encerrado.")
+
+
 def test_contract_next_action_prioritizes_renewal_and_adjustment_dates():
     class _FakeQuery:
         def filter(self, *args, **kwargs):
