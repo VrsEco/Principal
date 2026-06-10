@@ -29,6 +29,10 @@ def test_bank_reconciliation_template_contains_three_column_workspace():
     assert "window.companyId" in template
     assert "function companyQuery" in template
     assert "renderAccountsError" in template
+    assert "function handleSystemRowCardClick(entryId, event)" in template
+    assert 'onclick="handleSystemRowCardClick(${item.id}, event)"' in template
+    assert 'onclick="event.stopPropagation(); toggleEntrySelection(${item.id})"' in template
+    assert "? 'Remover' : 'Selecionar'" in template
     assert "company_id=${companyId}" not in template
     assert "?? remaining ||" not in template
 
