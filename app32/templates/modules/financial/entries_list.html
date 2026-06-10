@@ -165,22 +165,144 @@
     function initFinancialEntriesPage() {
         const companyId = document.querySelector('.finance-page')?.dataset.companyId;
         const tableBody = document.getElementById('entries-table-body');
-        const entryFilterIds = ['filter-status', 'filter-entry-type', 'filter-origin-type'];
+        const entryFilterConfig = [
+            ['status', 'filter-status'],
+            ['entry_type', 'filter-entry-type'],
+            ['movement_nature', 'filter-movement-nature'],
+            ['origin_type', 'filter-origin-type'],
+            ['counterparty_id', 'filter-counterparty-id'],
+            ['counterparty_query', 'filter-counterparty-query'],
+            ['bank_query', 'filter-bank-query'],
+            ['bank_account_id', 'filter-bank-account-id'],
+            ['bank_account_query', 'filter-bank-account-query'],
+            ['document_number', 'filter-document-number'],
+            ['settlement_code', 'filter-settlement-code'],
+            ['description_query', 'filter-description-query'],
+            ['competence_date_from', 'filter-competence-date-from'],
+            ['competence_date_to', 'filter-competence-date-to'],
+            ['due_date_from', 'filter-due-date-from'],
+            ['due_date_to', 'filter-due-date-to'],
+            ['settlement_date_from', 'filter-settlement-date-from'],
+            ['settlement_date_to', 'filter-settlement-date-to'],
+        ];
+        const entryFilterIds = entryFilterConfig.map(([, elementId]) => elementId);
         const entryFilterCount = document.getElementById('entries-filters-count');
         const clearEntriesFiltersButton = document.getElementById('entries-clear-filters');
+        const applyEntriesFiltersButton = document.getElementById('entries-apply-filters');
+        const autocompleteState = {
+            counterparties: [],
+            bankAccounts: [],
+            banks: [],
+            counterpartyByLabel: new Map(),
+            bankAccountByLabel: new Map(),
+            bankByLabel: new Map(),
+        };
 
         if (!companyId || !tableBody) return;
 
         function updateEntriesFilterCount() {
-            const count = entryFilterIds.reduce((total, id) => {
-                const value = document.getElementById(id)?.value;
-                return value ? total + 1 : total;
+            const count = [
+                ['filter-status'],
+                ['filter-entry-type'],
+                ['filter-movement-nature'],
+                ['filter-origin-type'],
+                ['filter-counterparty-id', 'filter-counterparty-query'],
+                ['filter-bank-query'],
+                ['filter-bank-account-id', 'filter-bank-account-query'],
+                ['filter-document-number'],
+                ['filter-settlement-code'],
+                ['filter-description-query'],
+                ['filter-competence-date-from', 'filter-competence-date-to'],
+                ['filter-due-date-from', 'filter-due-date-to'],
+                ['filter-settlement-date-from', 'filter-settlement-date-to'],
+            ].reduce((total, group) => {
+                const hasValue = group.some((id) => {
+                    const value = document.getElementById(id)?.value;
+                    return String(value || '').trim() !== '';
+                });
+                return total + (hasValue ? 1 : 0);
             }, 0);
             if (entryFilterCount) entryFilterCount.textContent = String(count);
         }
 
         function formatCurrency(value) {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
+        }
+
+        function normalizeSearchLabel(value) {
+            return String(value || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .trim()
+                .toLowerCase();
+        }
+
+        function buildCounterpartyLabel(item) {
+            const code = item.code ? `${item.code} · ` : '';
+            const document = item.document_number ? ` · ${item.document_number}` : '';
+            return `${code}${item.name || item.display_label || 'Favorecido'}${document}`;
+        }
+
+        function buildBankAccountLabel(item) {
+            const name = item.name || item.display_label || 'Conta bancária';
+            const bank = item.bank_name ? ` · ${item.bank_name}` : '';
+            const account = item.account_number ? ` · ${item.account_number}` : '';
+            return `${name}${bank}${account}`;
+        }
+
+        function setDatalistOptions(datalistId, options) {
+            const datalist = document.getElementById(datalistId);
+            if (!datalist) return;
+            datalist.innerHTML = options.map((value) => `<option value="${value}"></option>`).join('');
+        }
+
+        async function loadAutocompleteCatalogs() {
+            const [counterpartiesResponse, bankAccountsResponse] = await Promise.all([
+                fetch(`/api/financial/catalogs/counterparties?company_id=${companyId}`),
+                fetch(`/api/financial/catalogs/bank_accounts?company_id=${companyId}`),
+            ]);
+            const [counterpartiesResult, bankAccountsResult] = await Promise.all([
+                counterpartiesResponse.json(),
+                bankAccountsResponse.json(),
+            ]);
+            autocompleteState.counterparties = Array.isArray(counterpartiesResult) ? counterpartiesResult : [];
+            autocompleteState.bankAccounts = Array.isArray(bankAccountsResult) ? bankAccountsResult : [];
+            autocompleteState.banks = Array.from(
+                new Set(
+                    autocompleteState.bankAccounts
+                        .map((item) => String(item.bank_name || '').trim())
+                        .filter(Boolean)
+                )
+            ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+            autocompleteState.counterpartyByLabel = new Map(
+                autocompleteState.counterparties.map((item) => [normalizeSearchLabel(buildCounterpartyLabel(item)), item])
+            );
+            autocompleteState.bankAccountByLabel = new Map(
+                autocompleteState.bankAccounts.map((item) => [normalizeSearchLabel(buildBankAccountLabel(item)), item])
+            );
+            autocompleteState.bankByLabel = new Map(
+                autocompleteState.banks.map((label) => [normalizeSearchLabel(label), label])
+            );
+            setDatalistOptions('entries-counterparty-options', autocompleteState.counterparties.map(buildCounterpartyLabel));
+            setDatalistOptions('entries-bank-account-options', autocompleteState.bankAccounts.map(buildBankAccountLabel));
+            setDatalistOptions('entries-bank-options', autocompleteState.banks);
+        }
+
+        function bindAutocompleteInput({ inputId, hiddenId, lookup, transform = (item) => item }) {
+            const input = document.getElementById(inputId);
+            const hidden = document.getElementById(hiddenId);
+            if (!input || !hidden) return;
+            const syncHidden = () => {
+                const match = lookup.get(normalizeSearchLabel(input.value));
+                hidden.value = match ? String(transform(match)) : '';
+                updateEntriesFilterCount();
+            };
+            input.addEventListener('change', syncHidden);
+            input.addEventListener('blur', syncHidden);
+            input.addEventListener('input', () => {
+                if (!input.value.trim()) hidden.value = '';
+                updateEntriesFilterCount();
+            });
         }
 
         function amountClass(item) {
@@ -192,7 +314,7 @@
         async function loadEntries() {
             tableBody.innerHTML = '<tr><td colspan="8" class="empty-cell">Carregando lançamentos...</td></tr>';
             const params = new URLSearchParams({ company_id: companyId });
-            for (const [field, elementId] of [['status', 'filter-status'], ['entry_type', 'filter-entry-type'], ['origin_type', 'filter-origin-type']]) {
+            for (const [field, elementId] of entryFilterConfig) {
                 const value = document.getElementById(elementId)?.value;
                 if (value) params.set(field, value);
             }
@@ -231,11 +353,16 @@
                     <td><span class="entry-code-pill">${item.display_code || item.id || '-'}</span></td>
                     <td>
                         <strong>${item.description || '-'}</strong><br>
-                        <small style="color:var(--text-tertiary)">atividade ${item.activity_id || '-'} · instância ${item.process_instance_id || '-'}</small>
+                        <small style="color:var(--text-tertiary)">
+                            título ${item.document_number || item.entry_code || '-'} · competência ${item.competence_date || '-'} · vencimento ${item.due_date || '-'}
+                        </small>
                     </td>
                     <td>${item.counterparty_name || '<span class="cell-muted">Não informado</span>'}</td>
                     <td>${item.bank_account_name || '<span class="cell-muted">Não informada</span>'}</td>
-                    <td>${item.latest_settlement_date || '<span class="cell-muted">Pendente</span>'}</td>
+                    <td>
+                        ${item.latest_settlement_date || '<span class="cell-muted">Pendente</span>'}
+                        ${item.latest_settlement_code ? `<br><small style="color:var(--text-tertiary)">#${item.latest_settlement_code}</small>` : ''}
+                    </td>
                     <td><span class="${amountClass({ signed_amount: item.signed_amount ?? item.original_amount, display_variant: item.display_variant })}">${formatCurrency(item.original_amount)}</span></td>
                     <td>${Number(item.settled_amount || 0) > 0
                         ? `<span class="${amountClass({ signed_amount: item.settled_signed_amount ?? item.settled_amount, display_variant: item.display_variant })}">${formatCurrency(item.settled_signed_amount ?? item.settled_amount)}</span>`
@@ -254,9 +381,21 @@
 
         entryFilterIds.forEach((id) => {
             const element = document.getElementById(id);
-            element?.addEventListener('change', () => {
-                updateEntriesFilterCount();
-                loadEntries();
+            if (!element) return;
+            if (element.tagName === 'SELECT' || element.type === 'date') {
+                element.addEventListener('change', () => {
+                    updateEntriesFilterCount();
+                    loadEntries();
+                });
+                return;
+            }
+            element.addEventListener('input', updateEntriesFilterCount);
+            element.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    updateEntriesFilterCount();
+                    loadEntries();
+                }
             });
         });
 
@@ -269,8 +408,37 @@
             loadEntries();
         });
 
+        applyEntriesFiltersButton?.addEventListener('click', () => {
+            updateEntriesFilterCount();
+            loadEntries();
+            if (typeof closeAllSidebars === 'function') closeAllSidebars();
+        });
+
         updateEntriesFilterCount();
-        loadEntries();
+        Promise.resolve()
+            .then(loadAutocompleteCatalogs)
+            .catch(() => null)
+            .finally(() => {
+                bindAutocompleteInput({
+                    inputId: 'filter-counterparty-query',
+                    hiddenId: 'filter-counterparty-id',
+                    lookup: autocompleteState.counterpartyByLabel,
+                    transform: (item) => item.id,
+                });
+                bindAutocompleteInput({
+                    inputId: 'filter-bank-account-query',
+                    hiddenId: 'filter-bank-account-id',
+                    lookup: autocompleteState.bankAccountByLabel,
+                    transform: (item) => item.id,
+                });
+                bindAutocompleteInput({
+                    inputId: 'filter-bank-query',
+                    hiddenId: 'filter-bank-query-hidden',
+                    lookup: autocompleteState.bankByLabel,
+                    transform: (item) => item,
+                });
+                loadEntries();
+            });
     }
 
     if (document.readyState === 'loading') {
@@ -314,6 +482,15 @@
     </div>
 
     <div class="filter-group">
+        <label class="filter-label">Natureza</label>
+        <select id="filter-movement-nature" class="filter-select">
+            <option value="">Todas</option>
+            <option value="debit">Saída</option>
+            <option value="credit">Entrada</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
         <label class="filter-label">Origem</label>
         <select id="filter-origin-type" class="filter-select">
             <option value="">Todas</option>
@@ -327,8 +504,74 @@
         </select>
     </div>
 
+    <div class="filter-group">
+        <label class="filter-label">Favorecido</label>
+        <input id="filter-counterparty-id" type="hidden">
+        <input id="filter-counterparty-query" class="filter-select" type="text" placeholder="Selecione ou digite o favorecido" list="entries-counterparty-options" autocomplete="off">
+        <datalist id="entries-counterparty-options"></datalist>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Banco</label>
+        <input id="filter-bank-query-hidden" type="hidden">
+        <input id="filter-bank-query" class="filter-select" type="text" placeholder="Selecione ou digite o banco" list="entries-bank-options" autocomplete="off">
+        <datalist id="entries-bank-options"></datalist>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Conta bancária</label>
+        <input id="filter-bank-account-id" type="hidden">
+        <input id="filter-bank-account-query" class="filter-select" type="text" placeholder="Selecione ou digite a conta bancária" list="entries-bank-account-options" autocomplete="off">
+        <datalist id="entries-bank-account-options"></datalist>
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Número do título</label>
+        <input id="filter-document-number" class="filter-select" type="text" placeholder="Título, documento ou código">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Número da baixa</label>
+        <input id="filter-settlement-code" class="filter-select" type="text" placeholder="Código da baixa">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Histórico</label>
+        <input id="filter-description-query" class="filter-select" type="text" placeholder="Descrição ou observação">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Competência de</label>
+        <input id="filter-competence-date-from" class="filter-select" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Competência até</label>
+        <input id="filter-competence-date-to" class="filter-select" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Vencimento de</label>
+        <input id="filter-due-date-from" class="filter-select" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Vencimento até</label>
+        <input id="filter-due-date-to" class="filter-select" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Baixa de</label>
+        <input id="filter-settlement-date-from" class="filter-select" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Baixa até</label>
+        <input id="filter-settlement-date-to" class="filter-select" type="date">
+    </div>
+
     <div class="entries-sidebar-actions">
-        <button class="btn btn-primary w-100" type="button" onclick="closeAllSidebars()">Aplicar Filtros</button>
+        <button class="btn btn-primary w-100" type="button" id="entries-apply-filters">Aplicar filtros</button>
         <button class="btn btn-secondary w-100 mt-2" type="button" id="entries-clear-filters">Limpar filtros</button>
     </div>
 </div>

@@ -160,43 +160,33 @@ class FinancialEntryListResource(Resource):
         company_id = get_request_company_id()
         if not company_id:
             return [], 200
-
-        query = FinancialEntry.query.filter(
-            FinancialEntry.company_id == company_id,
-            FinancialEntry.deleted_at.is_(None),
+        entries, error = FinancialService.list_entries(
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+            status=(request.args.get("status") or "").strip() or None,
+            entry_type=(request.args.get("entry_type") or "").strip() or None,
+            movement_nature=_get_optional_movement_nature_arg(),
+            origin_type=(request.args.get("origin_type") or "").strip() or None,
+            activity_id=request.args.get("activity_id", type=int),
+            process_instance_id=request.args.get("process_instance_id", type=int),
+            due_date_from=_get_optional_iso_date_arg("due_date_from"),
+            due_date_to=_get_optional_iso_date_arg("due_date_to"),
+            competence_date_from=_get_optional_iso_date_arg("competence_date_from"),
+            competence_date_to=_get_optional_iso_date_arg("competence_date_to"),
+            settlement_date_from=_get_optional_iso_date_arg("settlement_date_from"),
+            settlement_date_to=_get_optional_iso_date_arg("settlement_date_to"),
+            counterparty_id=request.args.get("counterparty_id", type=int),
+            counterparty_query=(request.args.get("counterparty_query") or "").strip() or None,
+            bank_query=(request.args.get("bank_query") or "").strip() or None,
+            bank_account_id=request.args.get("bank_account_id", type=int),
+            bank_account_query=(request.args.get("bank_account_query") or "").strip() or None,
+            document_number=(request.args.get("document_number") or "").strip() or None,
+            settlement_code=(request.args.get("settlement_code") or "").strip() or None,
+            description_query=(request.args.get("description_query") or "").strip() or None,
         )
-
-        status = request.args.get("status")
-        entry_type = request.args.get("entry_type")
-        origin_type = request.args.get("origin_type")
-        activity_id = request.args.get("activity_id", type=int)
-        process_instance_id = request.args.get("process_instance_id", type=int)
-        due_date_from = request.args.get("due_date_from")
-        due_date_to = request.args.get("due_date_to")
-        competence_date_from = request.args.get("competence_date_from")
-        competence_date_to = request.args.get("competence_date_to")
-
-        if status:
-            query = query.filter(FinancialEntry.status == status)
-        if entry_type:
-            query = query.filter(FinancialEntry.entry_type == entry_type)
-        if origin_type:
-            query = query.filter(FinancialEntry.origin_type == origin_type)
-        if activity_id:
-            query = query.filter(FinancialEntry.activity_id == activity_id)
-        if process_instance_id:
-            query = query.filter(FinancialEntry.process_instance_id == process_instance_id)
-        if due_date_from:
-            query = query.filter(FinancialEntry.due_date >= due_date_from)
-        if due_date_to:
-            query = query.filter(FinancialEntry.due_date <= due_date_to)
-        if competence_date_from:
-            query = query.filter(FinancialEntry.competence_date >= competence_date_from)
-        if competence_date_to:
-            query = query.filter(FinancialEntry.competence_date <= competence_date_to)
-
-        entries = query.order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc()).all()
-        return FinancialService.serialize_entry_list(entries), 200
+        if error:
+            return {"error": error}, 400
+        return entries or [], 200
 
     @permission_required("financial", "create")
     def post(self):

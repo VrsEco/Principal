@@ -31,6 +31,7 @@ from models.financial import (
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine
 from models.process import ProcessInstance, ProcessRoutine
 from models.routine import Routine
+from sqlalchemy import or_
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 from schemas.financial import (
@@ -828,6 +829,7 @@ class FinancialService:
                     "settled_net_amount": 0.0,
                     "settlement_count": 0,
                     "latest_settlement_date": settlement.settlement_date.isoformat() if settlement.settlement_date else None,
+                    "latest_settlement_code": settlement.settlement_code,
                     "latest_settlement_bank_account_id": settlement.bank_account_id,
                 },
             )
@@ -886,6 +888,7 @@ class FinancialService:
                 item.get("movement_nature"),
             )
             item["latest_settlement_date"] = settlement_summary.get("latest_settlement_date")
+            item["latest_settlement_code"] = settlement_summary.get("latest_settlement_code")
             item["settlement_count"] = int(settlement_summary.get("settlement_count", 0) or 0)
             item["is_reconciled"] = bool(
                 settlement_summary.get("has_reconciled_settlement")
@@ -904,9 +907,24 @@ class FinancialService:
         allowed_company_ids: Optional[Sequence[int]] = None,
         status: Optional[str] = None,
         entry_type: Optional[str] = None,
+        movement_nature: Optional[str] = None,
         origin_type: Optional[str] = None,
         activity_id: Optional[int] = None,
         process_instance_id: Optional[int] = None,
+        due_date_from: Optional[date] = None,
+        due_date_to: Optional[date] = None,
+        competence_date_from: Optional[date] = None,
+        competence_date_to: Optional[date] = None,
+        settlement_date_from: Optional[date] = None,
+        settlement_date_to: Optional[date] = None,
+        counterparty_id: Optional[int] = None,
+        counterparty_query: Optional[str] = None,
+        bank_query: Optional[str] = None,
+        bank_account_id: Optional[int] = None,
+        bank_account_query: Optional[str] = None,
+        document_number: Optional[str] = None,
+        settlement_code: Optional[str] = None,
+        description_query: Optional[str] = None,
     ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -921,15 +939,130 @@ class FinancialService:
             query = query.filter(FinancialEntry.status == status)
         if entry_type:
             query = query.filter(FinancialEntry.entry_type == entry_type)
+        if movement_nature:
+            query = query.filter(FinancialEntry.movement_nature == movement_nature)
         if origin_type:
             query = query.filter(FinancialEntry.origin_type == origin_type)
         if activity_id:
             query = query.filter(FinancialEntry.activity_id == activity_id)
         if process_instance_id:
             query = query.filter(FinancialEntry.process_instance_id == process_instance_id)
+        if due_date_from:
+            query = query.filter(FinancialEntry.due_date >= due_date_from)
+        if due_date_to:
+            query = query.filter(FinancialEntry.due_date <= due_date_to)
+        if competence_date_from:
+            query = query.filter(FinancialEntry.competence_date >= competence_date_from)
+        if competence_date_to:
+            query = query.filter(FinancialEntry.competence_date <= competence_date_to)
+        if counterparty_id:
+            query = query.filter(FinancialEntry.counterparty_id == counterparty_id)
+        if document_number:
+            document_pattern = f"%{document_number.strip()}%"
+            query = query.filter(
+                or_(
+                    FinancialEntry.document_number.ilike(document_pattern),
+                    FinancialEntry.entry_code.ilike(document_pattern),
+                )
+            )
+        if description_query:
+            description_pattern = f"%{description_query.strip()}%"
+            query = query.filter(
+                or_(
+                    FinancialEntry.description.ilike(description_pattern),
+                    FinancialEntry.memo.ilike(description_pattern),
+                )
+            )
+        if counterparty_query:
+            counterparty_pattern = f"%{counterparty_query.strip()}%"
+            counterparty_match = (
+                db.session.query(FinancialCounterparty.id)
+                .filter(
+                    FinancialCounterparty.company_id == company_id,
+                    FinancialCounterparty.id == FinancialEntry.counterparty_id,
+                    FinancialCounterparty.deleted_at.is_(None),
+                    or_(
+                        FinancialCounterparty.name.ilike(counterparty_pattern),
+                        FinancialCounterparty.legal_name.ilike(counterparty_pattern),
+                        FinancialCounterparty.document_number.ilike(counterparty_pattern),
+                    ),
+                )
+                .exists()
+            )
+            query = query.filter(counterparty_match)
+        if bank_account_id:
+            entry_bank_exact_match = FinancialEntry.bank_account_id == bank_account_id
+            settlement_bank_exact_match = (
+                db.session.query(FinancialSettlement.id)
+                .filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id == FinancialEntry.id,
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                    FinancialSettlement.bank_account_id == bank_account_id,
+                )
+                .exists()
+            )
+            query = query.filter(or_(entry_bank_exact_match, settlement_bank_exact_match))
+        if bank_query or bank_account_query:
+            bank_terms = [term.strip() for term in (bank_query, bank_account_query) if str(term or "").strip()]
+            bank_filters = []
+            for term in bank_terms:
+                pattern = f"%{term}%"
+                bank_filters.extend(
+                    [
+                        FinancialBankAccount.name.ilike(pattern),
+                        FinancialBankAccount.bank_name.ilike(pattern),
+                        FinancialBankAccount.account_number.ilike(pattern),
+                        FinancialBankAccount.branch_number.ilike(pattern),
+                    ]
+                )
+            entry_bank_match = (
+                db.session.query(FinancialBankAccount.id)
+                .filter(
+                    FinancialBankAccount.company_id == company_id,
+                    FinancialBankAccount.id == FinancialEntry.bank_account_id,
+                    FinancialBankAccount.deleted_at.is_(None),
+                    or_(*bank_filters),
+                )
+                .exists()
+            )
+            settlement_bank_match = (
+                db.session.query(FinancialSettlement.id)
+                .join(
+                    FinancialBankAccount,
+                    FinancialBankAccount.id == FinancialSettlement.bank_account_id,
+                )
+                .filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id == FinancialEntry.id,
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                    FinancialBankAccount.company_id == company_id,
+                    FinancialBankAccount.deleted_at.is_(None),
+                    or_(*bank_filters),
+                )
+                .exists()
+            )
+            query = query.filter(or_(entry_bank_match, settlement_bank_match))
+        if settlement_date_from or settlement_date_to or settlement_code:
+            settlement_filters = [
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.financial_entry_id == FinancialEntry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            ]
+            if settlement_date_from:
+                settlement_filters.append(FinancialSettlement.settlement_date >= settlement_date_from)
+            if settlement_date_to:
+                settlement_filters.append(FinancialSettlement.settlement_date <= settlement_date_to)
+            if settlement_code:
+                settlement_filters.append(FinancialSettlement.settlement_code.ilike(f"%{settlement_code.strip()}%"))
+            settlement_match = db.session.query(FinancialSettlement.id).filter(*settlement_filters).exists()
+            query = query.filter(settlement_match)
 
         entries = query.order_by(FinancialEntry.competence_date.desc(), FinancialEntry.id.desc()).all()
-        return [FinancialService.serialize_entry(entry, include_children=False) for entry in entries], None
+        return FinancialService.serialize_entry_list(entries), None
 
     @staticmethod
     def get_entry(
