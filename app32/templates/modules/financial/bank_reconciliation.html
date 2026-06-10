@@ -87,92 +87,90 @@
 
 {% block workspace_content %}
 <div class="recon-page fade-in" data-company-id="{{ company_id or (active_company.id if active_company else '') }}">
-    <header class="recon-hero">
-        <div class="recon-hero__main">
-            <p class="recon-eyebrow">Gestão Financeira · Conciliação operacional</p>
-            <h1>Conciliação Bancária</h1>
-            <p class="recon-subtitle">
-                Importe OFX, XLS, XLSX ou CSV, revise as vinculações automáticas e concilie com visão clara
-                do extrato bancário, do sistema e do painel de decisão.
-            </p>
-            <div class="recon-hero__actions">
-                <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
-            </div>
-        </div>
-        <aside class="recon-hero__aside">
-            <article class="recon-hero-card">
-                <span>Conta em foco</span>
-                <strong id="hero-account-name">Aguardando carregamento</strong>
-                <small id="hero-account-status">Assim que a conta for carregada, a operação principal aparece aqui.</small>
-            </article>
-            <article class="recon-hero-card">
-                <span>Lote ativo</span>
-                <strong id="hero-batch-code">Sem lote vinculado</strong>
-                <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
-            </article>
-        </aside>
-    </header>
-
-    <section id="recon-overview-stats" class="recon-overview-grid" aria-live="polite"></section>
-
-    <section class="panel panel--collapsible panel--collapsed" id="upload-panel">
-        <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="upload-panel-body" onclick="handlePanelToggleClick(event, 'upload-panel')" onkeydown="handlePanelToggleKeydown(event, 'upload-panel')">
-            <div class="panel-header__copy">
-                <span class="panel-kicker">Fluxo de entrada</span>
-                <h2>Upload prático do extrato</h2>
-                <p>O fluxo aceita arquivos OFX, XLS, XLSX e CSV e já tenta sugerir vínculos automáticos após o envio.</p>
-            </div>
-            <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
-        </div>
-        <div id="upload-panel-body" class="panel-body">
-            <form id="upload-form" class="upload-grid" novalidate>
-                <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
-                <label><span>Fonte</span>
-                    <select name="source_type" id="upload-source-type">
-                        <option value="ofx">OFX</option>
-                        <option value="xlsx">XLSX</option>
-                        <option value="xls">XLS</option>
-                        <option value="csv">CSV</option>
-                    </select>
-                </label>
-                <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
-                <label class="upload-dropzone">
-                    <span>Arquivo do extrato</span>
-                    <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
-                    <small>Arraste ou selecione o arquivo.</small>
-                </label>
-                <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
-                <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
-                <div class="col-span-2 actions-right">
-                    <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
+    <section class="recon-top-grid" aria-label="Atalhos principais da conciliação">
+        <section class="panel panel--collapsible panel--collapsed recon-hero recon-top-card" id="recon-hero-panel">
+            <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="recon-hero-panel-body" onclick="handlePanelToggleClick(event, 'recon-hero-panel')" onkeydown="handlePanelToggleKeydown(event, 'recon-hero-panel')">
+                <div class="panel-header__copy">
+                    <h1>Gestão Financeira · Conciliação Bancária</h1>
                 </div>
-            </form>
-        </div>
+                <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+            </div>
+            <div id="recon-hero-panel-body" class="panel-body">
+                <div class="recon-hero__body">
+                    <div class="recon-hero__main">
+                        <p class="recon-subtitle">
+                            Importe OFX, XLS, XLSX ou CSV, revise as vinculações automáticas e concilie com visão clara
+                            do extrato bancário, do sistema e do painel de decisão.
+                        </p>
+                        <div class="recon-hero__actions">
+                            <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
+                        </div>
+                    </div>
+                    <aside class="recon-hero__aside">
+                        <article class="recon-hero-card">
+                            <span>Conta em foco</span>
+                            <strong id="hero-account-name">Aguardando carregamento</strong>
+                            <small id="hero-account-status">Assim que a conta for carregada, a operação principal aparece aqui.</small>
+                        </article>
+                        <article class="recon-hero-card">
+                            <span>Lote ativo</span>
+                            <strong id="hero-batch-code">Sem lote vinculado</strong>
+                            <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
+                        </article>
+                    </aside>
+                </div>
+                <section id="recon-overview-stats" class="recon-overview-grid recon-overview-grid--hero" aria-live="polite"></section>
+            </div>
+        </section>
+
+        <section class="panel panel--collapsible panel--collapsed recon-top-card" id="upload-panel">
+            <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="upload-panel-body" onclick="handlePanelToggleClick(event, 'upload-panel')" onkeydown="handlePanelToggleKeydown(event, 'upload-panel')">
+                <div class="panel-header__copy">
+                    <h2>Upload de Arquivos - OFX, CSV, etc</h2>
+                </div>
+                <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+            </div>
+            <div id="upload-panel-body" class="panel-body">
+                <form id="upload-form" class="upload-grid" novalidate>
+                    <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
+                    <label><span>Fonte</span>
+                        <select name="source_type" id="upload-source-type">
+                            <option value="ofx">OFX</option>
+                            <option value="xlsx">XLSX</option>
+                            <option value="xls">XLS</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </label>
+                    <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
+                    <label class="upload-dropzone">
+                        <span>Arquivo do extrato</span>
+                        <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
+                        <small>Arraste ou selecione o arquivo.</small>
+                    </label>
+                    <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
+                    <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
+                    <div class="col-span-2 actions-right">
+                        <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="panel panel--collapsible panel--collapsed recon-top-card hidden" id="workspace-overview-panel">
+            <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="workspace-overview-panel-body" onclick="handlePanelToggleClick(event, 'workspace-overview-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-overview-panel')">
+                <div class="panel-header__copy">
+                    <h2 id="workspace-title">Workspace da conciliação</h2>
+                </div>
+                <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+            </div>
+            <div id="workspace-overview-panel-body" class="panel-body">
+                <div id="workspace-summary" class="summary-grid summary-grid--compact"></div>
+            </div>
+        </section>
     </section>
 
-    <section id="workspace-panel" class="panel panel--collapsible hidden">
-        <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="workspace-panel-body" onclick="handlePanelToggleClick(event, 'workspace-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-panel')">
-            <div class="panel-header__copy">
-                <span class="panel-kicker">Operação assistida</span>
-                <h2 id="workspace-title">Workspace da conciliação</h2>
-                <p id="workspace-subtitle">Selecione uma conta bancária.</p>
-            </div>
-            <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
-        </div>
-        <div id="workspace-panel-body" class="panel-body">
-            <section class="panel panel--collapsible panel--collapsed recon-summary-panel" id="workspace-summary-panel">
-                <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="workspace-summary-panel-body" onclick="handlePanelToggleClick(event, 'workspace-summary-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-summary-panel')">
-                    <div class="panel-header__copy">
-                        <span class="panel-kicker">Indicadores operacionais</span>
-                        <h3>Resumo do lote e da conciliação</h3>
-                    </div>
-                    <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
-                </div>
-                <div id="workspace-summary-panel-body" class="panel-body">
-                    <div id="workspace-summary" class="summary-grid summary-grid--compact"></div>
-                </div>
-            </section>
-
+    <section id="workspace-panel" class="workspace-shell hidden">
+        <section class="panel workspace-board-panel">
             <div class="board-toolbar">
                 <div class="filter-group filter-group--toolbar" id="bank-filter-group"></div>
             </div>
@@ -219,7 +217,7 @@
                     <div id="workbench-panel" class="rows-stack rows-stack--dense"></div>
                 </aside>
             </div>
-        </div>
+        </section>
     </section>
 </div>
 
@@ -237,44 +235,52 @@
 </div>
 
 <style>
-    .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:1rem}
-    .recon-hero{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:1rem;border:1px solid var(--border);border-radius:24px;padding:1.35rem;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05));box-shadow:var(--shadow-sm)}
+    .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:.85rem}
+    .recon-top-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem;align-items:start}
+    .recon-top-card{min-width:0}
+    .recon-top-card.panel--collapsed .panel-header{min-height:62px}
+    .recon-top-card .panel-header{align-items:center}
+    .recon-top-card h1,.recon-top-card h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.98rem;line-height:1.2}
+    .recon-hero{background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05))}
+    .recon-hero .panel-header{padding:.85rem 1.1rem}
+    .recon-hero h1{margin:0}
+    .recon-hero__body{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:.85rem;padding:0 1rem 1rem}
     .recon-hero__main,.recon-hero__aside{display:flex;flex-direction:column}
     .recon-hero__main{gap:1rem}
     .recon-hero__aside{gap:.85rem}
     .recon-hero__actions{display:flex;gap:.75rem;flex-wrap:wrap}
-    .recon-hero-card{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.52);border-radius:18px;padding:1rem;backdrop-filter:blur(10px)}
-    .recon-hero-card span,.recon-overview-card span,.summary-card span{display:block;color:var(--text-secondary);font-size:.82rem}
-    .recon-hero-card strong,.recon-overview-card strong,.summary-card strong{display:block;margin:.3rem 0;font-size:1.08rem;color:var(--text-primary)}
-    .recon-hero-card small,.recon-overview-card small,.summary-card small{display:block;color:var(--text-secondary);line-height:1.45}
-    .recon-eyebrow{margin:0 0 .35rem;color:var(--primary);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+    .recon-hero-card{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.52);border-radius:16px;padding:.85rem;backdrop-filter:blur(10px)}
+    .recon-hero-card span,.recon-overview-card span,.summary-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;line-height:1.2}
+    .recon-hero-card strong,.recon-overview-card strong,.summary-card strong{display:block;margin:.22rem 0;font-size:1.05rem;color:var(--text-primary);line-height:1.15}
+    .recon-hero-card small,.recon-overview-card small,.summary-card small{display:block;color:var(--text-secondary);font-size:.76rem;line-height:1.3}
     .recon-subtitle{color:var(--text-secondary);max-width:72rem}
-    .recon-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
-    .recon-overview-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-sm);padding:1rem}
-    .panel{background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-sm)}
-    .panel-header{padding:1.25rem 1.25rem 0}
+    .recon-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}
+    .recon-overview-grid--hero{padding:0 1rem 1rem}
+    .recon-overview-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);padding:.85rem}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-sm)}
+    .panel-header{padding:1rem 1rem .9rem}
     .panel-body{display:block}
     .panel--collapsed .panel-body{display:none}
     .panel-toggle{cursor:pointer}
     .panel-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
-    .panel-toggle-icon{font-size:1.2rem;color:var(--text-secondary);transition:transform .2s ease}
+    .panel-toggle-icon{font-size:1rem;color:var(--text-secondary);transition:transform .2s ease}
     .panel--collapsed .panel-toggle-icon{transform:rotate(-90deg)}
     .panel-header__copy{display:flex;flex-direction:column}
-    .panel-kicker{display:inline-flex;width:max-content;margin-bottom:.4rem;padding:.32rem .6rem;border-radius:999px;background:rgba(37,99,235,.08);color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .panel-kicker{display:inline-flex;width:max-content;margin-bottom:.35rem;padding:.26rem .52rem;border-radius:999px;background:rgba(37,99,235,.08);color:var(--primary);font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
     .panel-header h2,.column-header h3{margin:0}
     .panel-header p,.column-header p,.row-meta,.muted{margin:.25rem 0 0;color:var(--text-secondary)}
     .row-between,.actions-right,.inline-actions,.filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
     .row-between,.actions-right{justify-content:space-between}
     .panel-toggle.row-between{justify-content:flex-start}
-    .summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}
+    .summary-grid,.upload-grid{display:grid;gap:.8rem;padding:1rem}
     .summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
-    .summary-grid--compact{padding:1rem}
+    .summary-grid--compact{padding:.9rem 1rem 1rem}
     .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .upload-grid label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
     .upload-grid input,.upload-grid select,.compact-field input,.allocation-grid input,.entry-form-grid input,.entry-form-grid select,.entry-form-grid textarea{
-        background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.85rem .95rem;color:var(--text-primary)
+        background:var(--surface-secondary);border:1px solid var(--border);border-radius:12px;padding:.72rem .85rem;color:var(--text-primary)
     }
-    .upload-dropzone{background:linear-gradient(180deg,rgba(59,130,246,.08),rgba(59,130,246,.03));border:1px dashed rgba(59,130,246,.32);border-radius:18px;padding:1rem}
+    .upload-dropzone{background:linear-gradient(180deg,rgba(59,130,246,.08),rgba(59,130,246,.03));border:1px dashed rgba(59,130,246,.32);border-radius:14px;padding:.85rem}
     .upload-dropzone small{color:var(--text-secondary);font-weight:500}
     .upload-status{display:none;border-radius:14px;padding:.85rem 1rem;font-weight:700}
     .upload-status.is-visible{display:block}
@@ -291,14 +297,11 @@
     .recon-sidebar-actions{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem}
     .w-100{width:100%;justify-content:center}
     .mt-2{margin-top:.5rem}
-    .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:18px;background:var(--surface-secondary);padding:1rem}
-    .summary-card{display:flex;flex-direction:column;justify-content:center;gap:.2rem;min-height:88px;padding:.8rem .9rem;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(241,245,249,.8))}
+    .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:16px;background:var(--surface-secondary);padding:1rem}
+    .summary-card{display:flex;flex-direction:column;justify-content:center;gap:.18rem;min-height:68px;padding:.65rem .75rem;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(241,245,249,.8))}
     .summary-card span{font-size:.75rem;font-weight:700;line-height:1.2}
-    .summary-card strong{margin:0;font-size:1.35rem;line-height:1.05}
+    .summary-card strong{margin:0;font-size:1.24rem;line-height:1.05}
     .summary-card small{display:none}
-    .recon-summary-panel{margin:1rem 1.25rem 0}
-    .recon-summary-panel .panel-header{padding:1rem 1rem 0}
-    .recon-summary-panel .panel-header h3{margin:0}
     .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected,.workbench-card.is-selected{border-color:rgba(37,99,235,.68);background:linear-gradient(180deg,rgba(219,234,254,.92),rgba(239,246,255,.98));box-shadow:0 0 0 2px rgba(59,130,246,.18),0 12px 30px rgba(37,99,235,.12)}
     .row-card.is-actionable,.slot-card.is-actionable{border-color:rgba(14,165,233,.26);background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(239,246,255,.84));box-shadow:0 8px 24px rgba(15,23,42,.05)}
     .row-card.is-disabled,.slot-card.is-disabled{border-color:rgba(148,163,184,.42);border-style:dashed;background:linear-gradient(180deg,rgba(248,250,252,.92),rgba(241,245,249,.92));opacity:.72}
@@ -310,44 +313,48 @@
     .badge--info{background:#dbeafe;color:#1d4ed8}
     .badge--mute{background:#e2e8f0;color:#475569}
     .badge--danger{background:#fee2e2;color:#b91c1c}
-    .btn{border:none;border-radius:12px;padding:.82rem 1rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.45rem}
+    .btn{border:none;border-radius:11px;padding:.68rem .9rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.45rem}
     .btn-primary{background:var(--primary);color:#fff}
     .btn-secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}
     .btn-danger{background:#b91c1c;color:#fff}
     .btn.is-active,.filter-chip.is-active{background:var(--primary);color:#fff;border-color:var(--primary)}
     .hidden{display:none}
     .col-span-2{grid-column:span 2}
-    .rows-stack{display:flex;flex-direction:column;gap:.85rem;padding:1.25rem}
-    .rows-stack--dense{padding:1rem}
-    .recon-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(340px,.88fr);gap:1rem;padding:0 1.25rem 1.25rem;align-items:start}
-    .board-column{border:1px solid var(--border);border-radius:20px;background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+    .workspace-shell{display:flex;flex-direction:column;gap:1rem}
+    .rows-stack{display:flex;flex-direction:column;gap:.75rem;padding:1rem}
+    .rows-stack--dense{gap:.65rem;padding:.85rem}
+    .recon-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(340px,.88fr);gap:.85rem;padding:0 1rem 1rem;align-items:start}
+    .board-column{border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
     .board-column--actions{position:sticky;top:1rem}
-    .column-header{padding:1rem 1rem 0}
-    .column-header h3{font-size:1.05rem}
+    .column-header{padding:.85rem .85rem 0}
+    .column-header h3{font-size:.98rem;line-height:1.2}
+    .column-header p{font-size:.78rem;line-height:1.3}
     .panel-toggle-icon{margin-left:auto}
-    .board-toolbar{display:flex;align-items:center;justify-content:flex-start;padding:.85rem 1.25rem 0;border-top:1px solid var(--border);margin-top:.35rem}
+    .workspace-board-panel{overflow:hidden}
+    .board-toolbar{display:flex;align-items:center;justify-content:flex-start;min-height:56px;padding:.75rem 1rem;margin:.85rem 1rem;border:1px solid var(--border);border-radius:14px;background:var(--surface-secondary)}
     .filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
     .filter-group--toolbar{gap:.5rem}
     .compact-field{min-width:0;width:100%}
     .compact-field span{text-align:left}
     .compact-field--hint{padding:.95rem 1rem;border:1px dashed rgba(148,163,184,.5);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.75))}
-    .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.7rem .95rem;border-radius:999px;font-weight:700;cursor:pointer;transition:all .18s ease}
+    .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.55rem .75rem;border-radius:999px;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .18s ease}
     .filter-chip:hover{transform:translateY(-1px);border-color:rgba(37,99,235,.28)}
-    .row-card h4,.slot-card h4,.workbench-card h4{margin:0 0 .25rem}
+    .row-card,.slot-card,.workbench-card{padding:.85rem}
+    .row-card h4,.slot-card h4,.workbench-card h4{margin:0 0 .22rem;font-size:.95rem;line-height:1.25}
     .row-card p,.slot-card p,.workbench-card p{margin:.2rem 0}
     .row-card,.slot-card,.workbench-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease,opacity .18s ease}
     .row-card:hover,.slot-card:hover,.workbench-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
     .row-card.is-selected:hover,.slot-card.is-selected:hover,.workbench-card.is-selected:hover{transform:translateY(-2px)}
-    .row-card.is-actionable::before,.slot-card.is-actionable::before,.row-card.is-selected::before,.slot-card.is-selected::before,.workbench-card.is-selected::before{content:'';display:block;height:4px;margin:-1rem -1rem .85rem;border-radius:18px 18px 999px 999px}
+    .row-card.is-actionable::before,.slot-card.is-actionable::before,.row-card.is-selected::before,.slot-card.is-selected::before,.workbench-card.is-selected::before{content:'';display:block;height:4px;margin:-.85rem -.85rem .75rem;border-radius:16px 16px 999px 999px}
     .row-card.is-actionable::before,.slot-card.is-actionable::before{background:linear-gradient(90deg,#38bdf8,#2563eb)}
     .row-card.is-selected::before,.slot-card.is-selected::before,.workbench-card.is-selected::before{background:linear-gradient(90deg,#1d4ed8,#2563eb,#38bdf8)}
-    .row-card.is-disabled::before,.slot-card.is-disabled::before{content:'';display:block;height:4px;margin:-1rem -1rem .85rem;border-radius:18px 18px 999px 999px;background:linear-gradient(90deg,#cbd5e1,#94a3b8)}
+    .row-card.is-disabled::before,.slot-card.is-disabled::before{content:'';display:block;height:4px;margin:-.85rem -.85rem .75rem;border-radius:16px 16px 999px 999px;background:linear-gradient(90deg,#cbd5e1,#94a3b8)}
     .selection-line{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
     .selection-line input[type="checkbox"]{margin-top:.25rem}
     .allocation-grid,.entry-form-grid{display:grid;gap:.75rem}
     .entry-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .entry-form-grid textarea{min-height:88px;resize:vertical}
-    .workbench-empty{padding:2rem 1rem;color:var(--text-secondary);text-align:center}
+    .workbench-empty{padding:1.4rem .85rem;color:var(--text-secondary);text-align:center}
     .recon-modal-backdrop{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.46);padding:1rem}
     .recon-modal-backdrop.is-visible{display:flex}
     .recon-modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.28);padding:1.25rem}
@@ -359,7 +366,7 @@
     .group-total-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.78));padding:.85rem}
     .group-total-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
     .group-total-card strong{display:block;margin-top:.25rem;font-size:1.05rem}
-    .recon-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.4rem;min-height:180px;padding:1.4rem;border:1px dashed rgba(148,163,184,.4);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.85),rgba(241,245,249,.65))}
+    .recon-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:.35rem;min-height:132px;padding:1rem;border:1px dashed rgba(148,163,184,.4);border-radius:14px;background:linear-gradient(180deg,rgba(248,250,252,.85),rgba(241,245,249,.65))}
     .recon-empty-state strong{color:var(--text-primary);font-size:1rem}
     .recon-empty-state span{color:var(--text-secondary);max-width:36ch}
     .helper-list{display:flex;flex-direction:column;gap:.55rem}
@@ -369,8 +376,8 @@
     .workbench-card--entry-actions{background:linear-gradient(180deg,rgba(254,249,195,.95),rgba(254,240,138,.78));border-color:rgba(202,138,4,.28)}
     .workbench-card--group{background:linear-gradient(180deg,rgba(243,232,255,.96),rgba(233,213,255,.82));border-color:rgba(147,51,234,.24)}
     .workbench-card--suggestions{background:linear-gradient(180deg,rgba(240,249,255,.96),rgba(224,242,254,.92));border-color:rgba(14,165,233,.28)}
-    @media (max-width:1200px){.recon-hero,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}}
-    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.recon-hero__actions{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{padding:.85rem 1rem 0}.recon-summary-panel{margin:1rem 1rem 0}}
+    @media (max-width:1200px){.recon-top-grid{grid-template-columns:1fr}.recon-hero__body,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}}
+    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.recon-hero__actions{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{margin:.75rem;padding:.75rem}}
 </style>
 
 <script>
@@ -981,17 +988,16 @@ function renderWorkbench(){
 
 function renderWorkspace(){
     const panel = document.getElementById('workspace-panel');
+    const workspaceOverviewPanel = document.getElementById('workspace-overview-panel');
     if(!state.workspace){
         panel.classList.add('hidden');
+        workspaceOverviewPanel?.classList.add('hidden');
         renderHero();
         return;
     }
     panel.classList.remove('hidden');
-    togglePanelCollapse('workspace-panel', true);
+    workspaceOverviewPanel?.classList.remove('hidden');
     document.getElementById('workspace-title').textContent = `Workspace · ${state.workspace.bank_account.name}`;
-    document.getElementById('workspace-subtitle').textContent = state.workspace.selected_batch
-        ? `Lote ${state.workspace.selected_batch.batch_code} · fonte ${state.workspace.selected_batch.source_type}`
-        : 'Nenhum lote vinculado a esta conta.';
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const bankDateFromInput = document.getElementById('bank-date-from');

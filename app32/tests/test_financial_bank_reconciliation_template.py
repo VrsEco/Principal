@@ -14,7 +14,10 @@ TEMPLATE_PATH = Path(
 def test_bank_reconciliation_template_contains_three_column_workspace():
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
 
-    assert "Upload prático do extrato" in template
+    assert "Upload de Arquivos - OFX, CSV, etc" in template
+    assert "Upload de Arquivos - OFX, XLS, XLSX e CSV" not in template
+    assert "Upload prático do extrato" not in template
+    assert "O fluxo aceita arquivos OFX, XLS, XLSX e CSV" not in template
     assert 'accept=".ofx,.xlsx,.xls,.csv"' in template
     assert 'id="bank-rows-list"' in template
     assert 'id="system-rows-list"' in template
@@ -29,8 +32,27 @@ def test_bank_reconciliation_template_contains_three_column_workspace():
     assert "window.companyId" in template
     assert "function companyQuery" in template
     assert "renderAccountsError" in template
-    assert 'id="workspace-summary-panel"' in template
-    assert "Resumo do lote e da conciliação" in template
+    assert 'id="recon-hero-panel"' in template
+    assert 'aria-controls="recon-hero-panel-body"' in template
+    assert 'class="recon-top-grid"' in template
+    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in template
+    assert ".recon-top-card.panel--collapsed .panel-header{min-height:62px}" in template
+    assert ".recon-top-card h1,.recon-top-card h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.98rem" in template
+    assert "Gestão Financeira · Conciliação Bancária" in template
+    assert "Gestão Financeira · Conciliação operacional" not in template
+    assert 'class="recon-overview-grid recon-overview-grid--hero"' in template
+    assert "handlePanelToggleClick(event, 'recon-hero-panel')" in template
+    assert 'id="workspace-overview-panel"' in template
+    assert 'aria-controls="workspace-overview-panel-body"' in template
+    assert "workspaceOverviewPanel?.classList.remove('hidden')" in template
+    assert 'class="panel workspace-board-panel"' in template
+    assert "margin:.85rem 1rem;border:1px solid var(--border);border-radius:14px;background:var(--surface-secondary)" in template
+    assert "Operação assistida" not in template
+    assert 'id="workspace-subtitle"' not in template
+    assert "Nenhum lote vinculado a esta conta." not in template
+    assert "handlePanelToggleClick(event, 'workspace-panel')" not in template
+    assert "Indicadores operacionais" not in template
+    assert "Resumo do lote e da conciliação" not in template
     assert 'class="summary-grid summary-grid--compact"' in template
     assert "function handleSystemRowCardClick(entryId, event)" in template
     assert 'onclick="handleSystemRowCardClick(${item.id}, event)"' in template
