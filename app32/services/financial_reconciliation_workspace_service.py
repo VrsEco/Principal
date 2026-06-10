@@ -261,6 +261,16 @@ class FinancialReconciliationWorkspaceService:
         return remaining if remaining > 0 else Decimal("0")
 
     @staticmethod
+    def _settlement_reconciliation_amount(settlement: FinancialSettlement) -> Decimal:
+        amount = Decimal(settlement.net_amount or 0)
+        if amount > 0:
+            return amount
+        amount = Decimal(settlement.gross_amount or 0)
+        if amount > 0:
+            return amount
+        return Decimal(settlement.principal_amount or 0)
+
+    @staticmethod
     def _serialize_system_entry(
         entry: FinancialEntry,
         *,
@@ -275,6 +285,45 @@ class FinancialReconciliationWorkspaceService:
         payload["linked_row_ids"] = linked_row_ids
         payload["linked_rows_count"] = len(linked_row_ids)
         payload["match_mode"] = "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched")
+        return payload
+
+    @staticmethod
+    def _serialize_system_settlement(
+        settlement: FinancialSettlement,
+        entry: FinancialEntry,
+        *,
+        linked_row_ids: Optional[Sequence[int]] = None,
+    ) -> Dict:
+        payload = FinancialService.serialize_entry(entry, include_children=False)
+        linked_row_ids = [int(item) for item in (linked_row_ids or [])]
+        reconciliation_amount = FinancialReconciliationWorkspaceService._settlement_reconciliation_amount(settlement)
+        is_reconciled = str(settlement.reconciliation_status or "").lower() in {"matched", "reconciled"}
+        payload.update(
+            {
+                "id": -int(settlement.id),
+                "financial_entry_id": entry.id,
+                "financial_settlement_id": settlement.id,
+                "source_type": "settlement",
+                "entry_code": settlement.settlement_code or payload.get("entry_code"),
+                "description": payload.get("description") or settlement.notes or "-",
+                "occurred_on": settlement.settlement_date.isoformat() if settlement.settlement_date else None,
+                "due_date": settlement.settlement_date.isoformat() if settlement.settlement_date else None,
+                "competence_date": settlement.settlement_date.isoformat() if settlement.settlement_date else None,
+                "original_amount": float(reconciliation_amount),
+                "remaining_amount": float(reconciliation_amount),
+                "amount": float(reconciliation_amount),
+                "settlement_amount": float(reconciliation_amount),
+                "settlement_code": settlement.settlement_code,
+                "settlement_status": settlement.settlement_status,
+                "reconciliation_status": settlement.reconciliation_status,
+                "is_reconciled": is_reconciled,
+                "latest_settlement_date": settlement.settlement_date.isoformat() if settlement.settlement_date else None,
+                "linked_row_ids": linked_row_ids,
+                "linked_rows_count": len(linked_row_ids),
+                "match_mode": "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched"),
+                "navigation_url": f"/financial/entries/{entry.id}?company_id={entry.company_id}",
+            }
+        )
         return payload
 
     @staticmethod
@@ -405,6 +454,44 @@ class FinancialReconciliationWorkspaceService:
         payload["is_fully_reconciled"] = bool(match_snapshot["confirmed_count"] or row.created_entry_id)
         payload["needs_manual_action"] = not payload["is_fully_reconciled"]
         return payload
+
+    @staticmethod
+    def _load_workspace_settlements(
+        *,
+        company_id: int,
+        bank_account_id: int,
+        rows: Sequence[FinancialImportRow],
+        movement_nature: Optional[str] = None,
+    ) -> List[Tuple[FinancialSettlement, FinancialEntry]]:
+        query = (
+            db.session.query(FinancialSettlement, FinancialEntry)
+            .join(FinancialEntry, FinancialEntry.id == FinancialSettlement.financial_entry_id)
+            .filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.bank_account_id == bank_account_id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            )
+        )
+        if movement_nature:
+            query = query.filter(FinancialEntry.movement_nature == movement_nature)
+
+        reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
+        if reference_dates:
+            start_date = min(reference_dates)
+            end_date = max(reference_dates)
+            query = query.filter(FinancialSettlement.settlement_date.between(start_date, end_date))
+
+        return (
+            query.order_by(
+                FinancialSettlement.settlement_date.desc(),
+                FinancialSettlement.id.desc(),
+            )
+            .limit(300)
+            .all()
+        )
 
     @staticmethod
     def _load_workspace_entries(
@@ -701,25 +788,32 @@ class FinancialReconciliationWorkspaceService:
         confirmed_rows = [row for row in filtered_rows_payload if (row.get("matches") or {}).get("confirmed_count") or row.get("created_entry_id")]
 
         linked_entry_ids: Dict[int, List[int]] = {}
+        linked_settlement_ids: Dict[int, List[int]] = {}
         for row in rows_payload:
             row_id = int(row["id"])
             if row.get("created_entry_id"):
                 linked_entry_ids.setdefault(int(row["created_entry_id"]), []).append(row_id)
+            for match in (row.get("matches") or {}).get("all_matches", []):
+                metadata = match.get("metadata_json") or {}
+                settlement_id = metadata.get("financial_settlement_id")
+                if settlement_id and str(match.get("match_status") or "").lower() != "rejected":
+                    linked_settlement_ids.setdefault(int(settlement_id), []).append(row_id)
             for entry_id in (row.get("matches") or {}).get("linked_entry_ids", []):
                 linked_entry_ids.setdefault(int(entry_id), []).append(row_id)
 
-        system_entries = FinancialReconciliationWorkspaceService._load_workspace_entries(
+        system_settlements = FinancialReconciliationWorkspaceService._load_workspace_settlements(
             company_id=company_id,
             bank_account_id=bank_account_id,
             rows=rows,
             movement_nature=movement_filter,
         )
         system_rows = [
-            FinancialReconciliationWorkspaceService._serialize_system_entry(
+            FinancialReconciliationWorkspaceService._serialize_system_settlement(
+                settlement,
                 entry,
-                linked_row_ids=linked_entry_ids.get(int(entry.id), []),
+                linked_row_ids=linked_settlement_ids.get(int(settlement.id), []),
             )
-            for entry in system_entries
+            for settlement, entry in system_settlements
         ]
         system_rows = [
             item
