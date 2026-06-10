@@ -749,14 +749,14 @@ function renderSystemRows(){
         return;
     }
     container.innerHTML = rows.map(item => `
-        <article class="slot-card ${systemRowStateClass(item, activeRow)}">
+        <article class="slot-card ${systemRowStateClass(item, activeRow)}" onclick="handleSystemRowCardClick(${item.id}, event)">
             <div class="selection-line">
                 <div>
                     <h4>${escapeHtml(item.entry_code || `Lançamento ${item.id}`)}</h4>
                     <p class="row-meta">${escapeHtml(item.description || '-')}</p>
                     <p class="row-meta">Valor ${brl(item.remaining_amount ?? item.original_amount)} · Data ${escapeHtml(item.occurred_on || item.due_date || item.competence_date || '-')}</p>
                 </div>
-                <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onchange="toggleEntrySelection(${item.id})">
+                <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleEntrySelection(${item.id})">
             </div>
             <div class="badges">
                 ${movementNatureBadge(item.movement_nature)}
@@ -767,8 +767,8 @@ function renderSystemRows(){
                 ${badge(item.match_mode || 'unmatched', 'mute')}
             </div>
             <div class="inline-actions">
-                <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;">Abrir lançamento</a>
-                ${!selectedIds.has(Number(item.id)) && !isSystemEntryDisabled(item, activeRow) ? `<button type="button" class="btn btn-secondary" onclick="toggleEntrySelection(${item.id})">Selecionar</button>` : ''}
+                <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;" onclick="event.stopPropagation()">Abrir lançamento</a>
+                <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); toggleEntrySelection(${item.id})" ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''}>${selectedIds.has(Number(item.id)) ? 'Remover' : 'Selecionar'}</button>
             </div>
         </article>
     `).join('');
@@ -1161,6 +1161,12 @@ function toggleEntrySelection(entryId){
     state.selectedEntryIds = Array.from(current);
     renderSystemRows();
     renderWorkbench();
+}
+
+function handleSystemRowCardClick(entryId, event){
+    const interactiveTarget = event?.target?.closest?.('a,button,input,label');
+    if(interactiveTarget) return;
+    toggleEntrySelection(entryId);
 }
 
 function updateAllocation(entryId, value){
