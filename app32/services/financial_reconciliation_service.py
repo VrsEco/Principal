@@ -47,6 +47,16 @@ class FinancialReconciliationService:
         return normalized
 
     @staticmethod
+    def _settlement_reconciliation_amount(settlement: FinancialSettlement) -> Decimal:
+        amount = FinancialReconciliationService._decimal(settlement.net_amount)
+        if amount > 0:
+            return amount
+        amount = FinancialReconciliationService._decimal(settlement.gross_amount)
+        if amount > 0:
+            return amount
+        return FinancialReconciliationService._decimal(settlement.principal_amount)
+
+    @staticmethod
     def _get_remaining_principal(entry: FinancialEntry) -> Decimal:
         total_liquidated = (
             db.session.query(db.func.coalesce(db.func.sum(FinancialSettlement.principal_amount), 0))
@@ -924,11 +934,216 @@ class FinancialReconciliationService:
             return None, f"Erro ao baixar título em aberto: {str(exc)}"
 
     @staticmethod
+    def _reconcile_group_with_existing_settlements(
+        *,
+        company_id: int,
+        bank_row_ids: Sequence[int],
+        financial_settlement_ids: Sequence[int],
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        selected_row_ids = FinancialReconciliationService._normalize_ids(bank_row_ids)
+        selected_settlement_ids = FinancialReconciliationService._normalize_ids(financial_settlement_ids)
+        if not selected_row_ids:
+            return None, "Selecione ao menos uma linha do extrato bancário."
+        if not selected_settlement_ids:
+            return None, "Selecione ao menos uma baixa do sistema."
+
+        rows = FinancialImportRow.query.filter(
+            FinancialImportRow.company_id == company_id,
+            FinancialImportRow.id.in_(selected_row_ids),
+            FinancialImportRow.deleted_at.is_(None),
+        ).order_by(FinancialImportRow.row_number.asc(), FinancialImportRow.id.asc()).all()
+        if len(rows) != len(selected_row_ids):
+            return None, "Uma ou mais linhas do extrato não foram encontradas no escopo da empresa."
+
+        settlement_pairs = (
+            db.session.query(FinancialSettlement, FinancialEntry)
+            .join(FinancialEntry, FinancialEntry.id == FinancialSettlement.financial_entry_id)
+            .filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.id.in_(selected_settlement_ids),
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+                FinancialEntry.company_id == company_id,
+                FinancialEntry.deleted_at.is_(None),
+            )
+            .order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc())
+            .all()
+        )
+        if len(settlement_pairs) != len(selected_settlement_ids):
+            return None, "Uma ou mais baixas do sistema não foram encontradas no escopo da empresa."
+
+        existing_confirmed = FinancialReconciliationMatch.query.filter(
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.import_row_id.in_(selected_row_ids),
+            FinancialReconciliationMatch.match_status == "confirmed",
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ).first()
+        if existing_confirmed or any(row.created_entry_id for row in rows):
+            return None, "Há linha bancária selecionada que já está conciliada. Cancele a conciliação antes de refazer o grupo."
+
+        row_natures = {str(row.movement_nature or "").strip().lower() for row in rows}
+        entry_natures = {str(entry.movement_nature or "").strip().lower() for _, entry in settlement_pairs}
+        row_natures.discard("")
+        entry_natures.discard("")
+        if len(row_natures) != 1 or len(entry_natures) > 1:
+            return None, "A conciliação por conjunto nesta versão exige registros da mesma natureza operacional."
+        movement_nature = next(iter(row_natures))
+        if entry_natures and next(iter(entry_natures)) != movement_nature:
+            return None, "A natureza das baixas do sistema precisa ser a mesma das linhas bancárias selecionadas."
+
+        tolerance = Decimal("0.01")
+        bank_total = sum((FinancialReconciliationService._decimal(row.amount) for row in rows), Decimal("0"))
+        settlement_remaining: Dict[int, Decimal] = {
+            int(settlement.id): FinancialReconciliationService._settlement_reconciliation_amount(settlement)
+            for settlement, _ in settlement_pairs
+        }
+        system_total = sum(settlement_remaining.values(), Decimal("0"))
+        difference = bank_total - system_total
+        if abs(difference) > tolerance:
+            return {
+                "requires_resolution": True,
+                "bank_row_ids": selected_row_ids,
+                "financial_settlement_ids": selected_settlement_ids,
+                "bank_total": float(bank_total),
+                "system_total": float(system_total),
+                "difference": float(difference),
+                "can_create_complement": False,
+                "can_edit_entries": True,
+                "message": "O total bancário precisa ser igual ao total das baixas selecionadas para confirmar a conciliação.",
+            }, None
+
+        rows_remaining = {int(row.id): FinancialReconciliationService._decimal(row.amount) for row in rows}
+        settlement_by_id = {int(settlement.id): settlement for settlement, _ in settlement_pairs}
+        entry_by_settlement_id = {int(settlement.id): entry for settlement, entry in settlement_pairs}
+        allocations_by_row: Dict[int, List[Dict]] = {int(row.id): [] for row in rows}
+
+        for row in rows:
+            row_id = int(row.id)
+            for settlement_id in list(selected_settlement_ids):
+                if rows_remaining[row_id] <= 0:
+                    break
+                available = settlement_remaining.get(int(settlement_id), Decimal("0"))
+                if available <= 0:
+                    continue
+                amount = min(rows_remaining[row_id], available)
+                if amount <= 0:
+                    continue
+                settlement = settlement_by_id[int(settlement_id)]
+                entry = entry_by_settlement_id[int(settlement_id)]
+                allocations_by_row[row_id].append(
+                    {
+                        "financial_settlement_id": int(settlement.id),
+                        "financial_entry_id": int(entry.id),
+                        "principal_amount": amount,
+                    }
+                )
+                rows_remaining[row_id] -= amount
+                settlement_remaining[int(settlement_id)] = available - amount
+
+        if any(amount > tolerance for amount in rows_remaining.values()) or any(amount > tolerance for amount in settlement_remaining.values()):
+            return None, "Não foi possível distribuir automaticamente os valores entre linhas bancárias e baixas selecionadas."
+
+        confirmations: List[Dict] = []
+        group_key = f"reconciliation-settlement-group:{company_id}:{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}"
+        try:
+            for row in rows:
+                row_allocations = allocations_by_row[int(row.id)]
+                if not row_allocations:
+                    continue
+                batch = FinancialImportBatch.query.filter(
+                    FinancialImportBatch.id == row.import_batch_id,
+                    FinancialImportBatch.company_id == company_id,
+                    FinancialImportBatch.deleted_at.is_(None),
+                ).first()
+                if not batch:
+                    return None, "Lote da linha de extrato não encontrado para preparar a conciliação."
+                row.matched_entry_id = int(row_allocations[0]["financial_entry_id"])
+                row.processing_status = "validated" if row.processing_status != "imported" else row.processing_status
+                row.error_message = None
+
+                for allocation in row_allocations:
+                    entry = entry_by_settlement_id[int(allocation["financial_settlement_id"])]
+                    settlement = settlement_by_id[int(allocation["financial_settlement_id"])]
+                    match = FinancialReconciliationMatch.query.filter(
+                        FinancialReconciliationMatch.company_id == company_id,
+                        FinancialReconciliationMatch.import_row_id == row.id,
+                        FinancialReconciliationMatch.financial_entry_id == entry.id,
+                        FinancialReconciliationMatch.deleted_at.is_(None),
+                    ).first()
+                    if not match:
+                        match = FinancialReconciliationMatch(
+                            company_id=company_id,
+                            import_batch_id=batch.id,
+                            import_row_id=row.id,
+                            financial_entry_id=entry.id,
+                            match_status="confirmed",
+                            confidence_score=Decimal("1"),
+                            match_reason="match manual por baixa existente",
+                            matched_amount=allocation["principal_amount"],
+                            matched_date=row.occurred_on or row.due_date or settlement.settlement_date,
+                            metadata_json={},
+                        )
+                        db.session.add(match)
+                        db.session.flush()
+                    else:
+                        match.match_status = "confirmed"
+                        match.matched_amount = allocation["principal_amount"]
+                        match.matched_date = row.occurred_on or row.due_date or settlement.settlement_date
+
+                    match.metadata_json = {
+                        **(match.metadata_json or {}),
+                        "manual_selection": True,
+                        "mode": "existing_settlement_reconciliation",
+                        "financial_settlement_id": int(settlement.id),
+                        "reconciliation_group_key": group_key,
+                    }
+                    settlement.reconciliation_status = "reconciled"
+                    settlement.metadata_json = {
+                        **(settlement.metadata_json or {}),
+                        "import_batch_id": batch.id,
+                        "import_row_id": row.id,
+                        "reconciliation_match_id": match.id,
+                        "reconciliation_group_key": group_key,
+                        "mode": "existing_settlement_reconciliation",
+                    }
+                    FinancialService.set_entry_reconciliation_state(
+                        entry=entry,
+                        reconciled=True,
+                        actor_reason=f"Baixa {settlement.id} conciliada via match {match.id}.",
+                    )
+                    confirmations.append(match.to_dict())
+
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao conciliar grupo por baixas existentes")
+            return None, f"Erro ao conciliar grupo por baixas existentes: {str(exc)}"
+
+        return {
+            "requires_resolution": False,
+            "group_key": group_key,
+            "match_mode": "N:N" if len(selected_row_ids) > 1 and len(selected_settlement_ids) > 1 else ("N:1" if len(selected_row_ids) > 1 else "1:N"),
+            "bank_row_ids": selected_row_ids,
+            "financial_settlement_ids": selected_settlement_ids,
+            "financial_entry_ids": sorted({int(entry.id) for _, entry in settlement_pairs}),
+            "bank_total": float(bank_total),
+            "system_total": float(system_total),
+            "difference": float(bank_total - system_total),
+            "confirmed_groups": confirmations,
+        }, None
+
+    @staticmethod
     def reconcile_group(
         *,
         company_id: int,
         bank_row_ids: Sequence[int],
         financial_entry_ids: Sequence[int],
+        financial_settlement_ids: Optional[Sequence[int]] = None,
         resolution_strategy: Optional[str] = None,
         complementary_entry: Optional[Dict] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
@@ -938,6 +1153,15 @@ class FinancialReconciliationService:
             return None, scope_error
 
         selected_row_ids = FinancialReconciliationService._normalize_ids(bank_row_ids)
+        selected_settlement_ids = FinancialReconciliationService._normalize_ids(financial_settlement_ids)
+        if selected_settlement_ids:
+            return FinancialReconciliationService._reconcile_group_with_existing_settlements(
+                company_id=company_id,
+                bank_row_ids=selected_row_ids,
+                financial_settlement_ids=selected_settlement_ids,
+                allowed_company_ids=allowed_company_ids,
+            )
+
         selected_entry_ids = FinancialReconciliationService._normalize_ids(financial_entry_ids)
         if not selected_row_ids:
             return None, "Selecione ao menos uma linha do extrato bancário."

@@ -1565,6 +1565,7 @@ class FinancialBankReconciliationGroupMatchResource(Resource):
             company_id=company_id,
             bank_row_ids=payload.get("bank_row_ids") or [],
             financial_entry_ids=payload.get("financial_entry_ids") or [],
+            financial_settlement_ids=payload.get("financial_settlement_ids") or [],
             resolution_strategy=payload.get("resolution_strategy"),
             complementary_entry=payload.get("complementary_entry") or {},
             allowed_company_ids=get_accessible_company_ids(),

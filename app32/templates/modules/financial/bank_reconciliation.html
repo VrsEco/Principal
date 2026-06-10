@@ -165,7 +165,7 @@
                     <div class="column-header">
                         <div>
                             <h3>2. Extrato do sistema</h3>
-                            <p>Itens sem vínculo e lançamentos elegíveis para associação.</p>
+                            <p>Baixas efetivadas no sistema, com valor da baixa para conciliação.</p>
                         </div>
                     </div>
                     <div id="system-rows-list" class="rows-stack rows-stack--dense"></div>
@@ -552,7 +552,7 @@ function isSystemEntryDisabled(item, activeRow=getActiveRow()){
     if(!state.selectedBankRowIds.length && !activeRow) return true;
     if(item?.is_reconciled) return true;
     const linkedIds = new Set((activeRow?.matches?.linked_entry_ids || []).map(Number));
-    return linkedIds.has(Number(item?.id));
+    return linkedIds.has(Number(item?.financial_entry_id || item?.id));
 }
 
 function canUseOpenTitleFlow(activeRow=getActiveRow()){
@@ -598,7 +598,7 @@ function getGroupSummary(){
     const bankRows = getSelectedBankRows();
     const systemRows = getSelectedSystemRows();
     const bankTotal = bankRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const systemTotal = systemRows.reduce((sum, item) => sum + Number(item.remaining_amount ?? item.original_amount ?? 0), 0);
+    const systemTotal = systemRows.reduce((sum, item) => sum + Number(item.settlement_amount ?? item.remaining_amount ?? item.original_amount ?? 0), 0);
     return {
         bankRows,
         systemRows,
@@ -779,21 +779,21 @@ function renderSystemRows(){
                 <div>
                     <h4>${escapeHtml(item.entry_code || `Lançamento ${item.id}`)}</h4>
                     <p class="row-meta">${escapeHtml(item.description || '-')}</p>
-                    <p class="row-meta">Valor ${brl(item.remaining_amount ?? item.original_amount)} · Data ${escapeHtml(item.occurred_on || item.due_date || item.competence_date || '-')}</p>
-                    <p class="row-meta">Última baixa ${escapeHtml(item.latest_settlement_date || '-')}</p>
+                    <p class="row-meta">Valor da baixa ${brl(item.settlement_amount ?? item.remaining_amount ?? item.original_amount)} · Data ${escapeHtml(item.latest_settlement_date || item.occurred_on || item.due_date || item.competence_date || '-')}</p>
+                    <p class="row-meta">Título ${escapeHtml(item.origin_reference || item.document_number || item.financial_entry_id || '-')}</p>
                 </div>
                 <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleEntrySelection(${item.id})">
             </div>
             <div class="badges">
                 ${movementNatureBadge(item.movement_nature)}
-                ${linkedIds.has(Number(item.id)) ? badge('Já vinculado à linha', 'ok') : ''}
-                ${suggestedIds.has(Number(item.id)) ? badge('Candidato sugerido', 'info') : ''}
+                ${linkedIds.has(Number(item.financial_entry_id || item.id)) ? badge('Já vinculado à linha', 'ok') : ''}
+                ${suggestedIds.has(Number(item.financial_entry_id || item.id)) ? badge('Candidato sugerido', 'info') : ''}
                 ${item.linked_rows_count ? badge(`${item.linked_rows_count} linha(s) banco`, 'mute') : badge('Sem vínculo no lote', 'warn')}
                 ${item.is_reconciled ? badge('Conciliado', 'ok') : badge('Disponível', 'warn')}
                 ${badge(item.match_mode || 'unmatched', 'mute')}
             </div>
             <div class="inline-actions">
-                <a class="btn btn-secondary" href="/financial/entries/${item.id}${companyQuery()}" style="text-decoration:none;" onclick="event.stopPropagation()">Abrir lançamento</a>
+                <a class="btn btn-secondary" href="${escapeHtml(item.navigation_url || (`/financial/entries/${item.financial_entry_id || item.id}${companyQuery()}`))}" style="text-decoration:none;" onclick="event.stopPropagation()">Abrir lançamento</a>
                 <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); toggleEntrySelection(${item.id})" ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''}>${selectedIds.has(Number(item.id)) ? 'Remover' : 'Selecionar'}</button>
             </div>
         </article>
@@ -846,12 +846,12 @@ function buildAllocationDraft(){
     return state.selectedEntryIds.map((entryId) => {
         const systemEntry = (state.workspace?.system_rows || []).find(item => String(item.id) === String(entryId)) || {};
         const current = state.entryAllocations[entryId];
-        const fallbackAmount = systemEntry.remaining_amount ?? systemEntry.original_amount ?? remaining ?? 0;
+        const fallbackAmount = systemEntry.settlement_amount ?? systemEntry.remaining_amount ?? systemEntry.original_amount ?? remaining ?? 0;
         const suggested = Math.max(0, Math.min(Number(fallbackAmount), remaining));
         const principal = current != null ? Number(current) : suggested;
         remaining = Math.max(0, remaining - principal);
         return {
-            financial_entry_id: Number(entryId),
+            financial_entry_id: Number(systemEntry.financial_entry_id || entryId),
             principal_amount: principal,
             entry: systemEntry,
         };
@@ -1283,7 +1283,8 @@ async function confirmSelectedMatches(resolutionStrategy=null){
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
                 bank_row_ids: bankRowIds,
-                financial_entry_ids: state.selectedEntryIds.map(Number),
+                financial_entry_ids: Array.from(new Set(getSelectedSystemRows().map(item => Number(item.financial_entry_id || item.id)).filter(Boolean))),
+                financial_settlement_ids: getSelectedSystemRows().map(item => Number(item.financial_settlement_id || 0)).filter(Boolean),
                 resolution_strategy: resolutionStrategy,
                 complementary_entry: resolutionStrategy === 'create_complement' ? {
                     description: 'Complemento criado pela conciliação bancária por conjunto',
@@ -1385,7 +1386,7 @@ function openResolutionModal(payload){
             </div>
             <div class="inline-actions">
                 ${payload.can_create_complement ? '<button type="button" class="btn btn-primary" onclick="confirmSelectedMatches(\'create_complement\')">Criar complemento e conciliar</button>' : ''}
-                ${selectedEntries.length ? `<button type="button" class="btn btn-secondary" onclick="openEntryForCorrection(${selectedEntries[0].id})">Alterar lançamento do sistema</button>` : ''}
+                ${selectedEntries.length ? `<button type="button" class="btn btn-secondary" onclick="openEntryForCorrection(${selectedEntries[0].financial_entry_id || selectedEntries[0].id})">Alterar lançamento do sistema</button>` : ''}
                 <button type="button" class="btn btn-secondary" onclick="closeReconModal()">Voltar para seleção</button>
             </div>
         `,
