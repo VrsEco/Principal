@@ -35,16 +35,18 @@ def test_bank_reconciliation_template_contains_three_column_workspace():
     assert 'id="recon-hero-panel"' in template
     assert 'aria-controls="recon-hero-panel-body"' in template
     assert 'class="recon-top-grid"' in template
-    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in template
+    assert "grid-template-columns:repeat(2,minmax(0,1fr))" in template
     assert ".recon-top-card.panel--collapsed .panel-header{min-height:62px}" in template
     assert ".recon-top-card h1,.recon-top-card h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.98rem" in template
-    assert "Gestão Financeira · Conciliação Bancária" in template
+    assert 'id="recon-page-title"' in template
+    assert "`Conciliação Bancária — ${selected.bank_account.name}`" in template
     assert "Gestão Financeira · Conciliação operacional" not in template
+    assert "Importe OFX, XLS, XLSX ou CSV" not in template
+    assert "Importar novo extrato" not in template
     assert 'class="recon-overview-grid recon-overview-grid--hero"' in template
     assert "handlePanelToggleClick(event, 'recon-hero-panel')" in template
-    assert 'id="workspace-overview-panel"' in template
-    assert 'aria-controls="workspace-overview-panel-body"' in template
-    assert "workspaceOverviewPanel?.classList.remove('hidden')" in template
+    assert 'id="workspace-overview-panel"' not in template
+    assert 'id="workspace-title"' not in template
     assert 'class="panel workspace-board-panel"' in template
     assert "margin:.85rem 1rem;border:1px solid var(--border);border-radius:14px;background:var(--surface-secondary)" in template
     assert "Operação assistida" not in template
