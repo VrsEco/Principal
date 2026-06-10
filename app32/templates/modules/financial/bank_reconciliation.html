@@ -91,35 +91,20 @@
         <section class="panel panel--collapsible panel--collapsed recon-hero recon-top-card" id="recon-hero-panel">
             <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="recon-hero-panel-body" onclick="handlePanelToggleClick(event, 'recon-hero-panel')" onkeydown="handlePanelToggleKeydown(event, 'recon-hero-panel')">
                 <div class="panel-header__copy">
-                    <h1>Gestão Financeira · Conciliação Bancária</h1>
+                    <h1 id="recon-page-title">Conciliação Bancária</h1>
                 </div>
                 <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
             </div>
             <div id="recon-hero-panel-body" class="panel-body">
                 <div class="recon-hero__body">
-                    <div class="recon-hero__main">
-                        <p class="recon-subtitle">
-                            Importe OFX, XLS, XLSX ou CSV, revise as vinculações automáticas e concilie com visão clara
-                            do extrato bancário, do sistema e do painel de decisão.
-                        </p>
-                        <div class="recon-hero__actions">
-                            <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
-                        </div>
-                    </div>
-                    <aside class="recon-hero__aside">
-                        <article class="recon-hero-card">
-                            <span>Conta em foco</span>
-                            <strong id="hero-account-name">Aguardando carregamento</strong>
-                            <small id="hero-account-status">Assim que a conta for carregada, a operação principal aparece aqui.</small>
-                        </article>
-                        <article class="recon-hero-card">
-                            <span>Lote ativo</span>
-                            <strong id="hero-batch-code">Sem lote vinculado</strong>
-                            <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
-                        </article>
-                    </aside>
+                    <article class="recon-hero-card recon-hero-card--batch">
+                        <span>Lote ativo</span>
+                        <strong id="hero-batch-code">Sem lote vinculado</strong>
+                        <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
+                    </article>
                 </div>
                 <section id="recon-overview-stats" class="recon-overview-grid recon-overview-grid--hero" aria-live="polite"></section>
+                <div id="workspace-summary" class="summary-grid summary-grid--compact"></div>
             </div>
         </section>
 
@@ -156,17 +141,6 @@
             </div>
         </section>
 
-        <section class="panel panel--collapsible panel--collapsed recon-top-card hidden" id="workspace-overview-panel">
-            <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="workspace-overview-panel-body" onclick="handlePanelToggleClick(event, 'workspace-overview-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-overview-panel')">
-                <div class="panel-header__copy">
-                    <h2 id="workspace-title">Workspace da conciliação</h2>
-                </div>
-                <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
-            </div>
-            <div id="workspace-overview-panel-body" class="panel-body">
-                <div id="workspace-summary" class="summary-grid summary-grid--compact"></div>
-            </div>
-        </section>
     </section>
 
     <section id="workspace-panel" class="workspace-shell hidden">
@@ -236,19 +210,17 @@
 
 <style>
     .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:.85rem}
-    .recon-top-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem;align-items:start}
+    .recon-top-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem;align-items:start}
     .recon-top-card{min-width:0}
+    .recon-top-card:not(.panel--collapsed){grid-column:1/-1}
     .recon-top-card.panel--collapsed .panel-header{min-height:62px}
     .recon-top-card .panel-header{align-items:center}
     .recon-top-card h1,.recon-top-card h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.98rem;line-height:1.2}
     .recon-hero{background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05))}
     .recon-hero .panel-header{padding:.85rem 1.1rem}
     .recon-hero h1{margin:0}
-    .recon-hero__body{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:.85rem;padding:0 1rem 1rem}
-    .recon-hero__main,.recon-hero__aside{display:flex;flex-direction:column}
-    .recon-hero__main{gap:1rem}
-    .recon-hero__aside{gap:.85rem}
-    .recon-hero__actions{display:flex;gap:.75rem;flex-wrap:wrap}
+    .recon-hero__body{padding:0 1rem .75rem}
+    .recon-hero-card--batch{max-width:520px}
     .recon-hero-card{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.52);border-radius:16px;padding:.85rem;backdrop-filter:blur(10px)}
     .recon-hero-card span,.recon-overview-card span,.summary-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;line-height:1.2}
     .recon-hero-card strong,.recon-overview-card strong,.summary-card strong{display:block;margin:.22rem 0;font-size:1.05rem;color:var(--text-primary);line-height:1.15}
@@ -376,8 +348,8 @@
     .workbench-card--entry-actions{background:linear-gradient(180deg,rgba(254,249,195,.95),rgba(254,240,138,.78));border-color:rgba(202,138,4,.28)}
     .workbench-card--group{background:linear-gradient(180deg,rgba(243,232,255,.96),rgba(233,213,255,.82));border-color:rgba(147,51,234,.24)}
     .workbench-card--suggestions{background:linear-gradient(180deg,rgba(240,249,255,.96),rgba(224,242,254,.92));border-color:rgba(14,165,233,.28)}
-    @media (max-width:1200px){.recon-top-grid{grid-template-columns:1fr}.recon-hero__body,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}}
-    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.recon-hero__actions{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{margin:.75rem;padding:.75rem}}
+    @media (max-width:1200px){.recon-top-grid{grid-template-columns:1fr}.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}}
+    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{margin:.75rem;padding:.75rem}}
 </style>
 
 <script>
@@ -490,14 +462,14 @@ function renderHero(){
     const latestStatementDate = latestStatementDates[0] || null;
     const latestBatch = state.workspace?.selected_batch || selected?.latest_batch || null;
 
-    const heroAccountName = document.getElementById('hero-account-name');
-    const heroAccountStatus = document.getElementById('hero-account-status');
+    const pageTitle = document.getElementById('recon-page-title');
     const heroBatchCode = document.getElementById('hero-batch-code');
     const heroBatchStatus = document.getElementById('hero-batch-status');
     const stats = document.getElementById('recon-overview-stats');
 
-    if(heroAccountName) heroAccountName.textContent = selected?.bank_account?.name || 'Selecione uma conta bancária';
-    if(heroAccountStatus) heroAccountStatus.textContent = selected?.status_message || 'Escolha uma conta para abrir a operação principal da conciliação.';
+    if(pageTitle) pageTitle.textContent = selected?.bank_account?.name
+        ? `Conciliação Bancária — ${selected.bank_account.name}`
+        : 'Conciliação Bancária';
     if(heroBatchCode) heroBatchCode.textContent = latestBatch?.batch_code || 'Sem lote vinculado';
     if(heroBatchStatus){
         heroBatchStatus.textContent = latestBatch
@@ -988,16 +960,12 @@ function renderWorkbench(){
 
 function renderWorkspace(){
     const panel = document.getElementById('workspace-panel');
-    const workspaceOverviewPanel = document.getElementById('workspace-overview-panel');
     if(!state.workspace){
         panel.classList.add('hidden');
-        workspaceOverviewPanel?.classList.add('hidden');
         renderHero();
         return;
     }
     panel.classList.remove('hidden');
-    workspaceOverviewPanel?.classList.remove('hidden');
-    document.getElementById('workspace-title').textContent = `Workspace · ${state.workspace.bank_account.name}`;
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const bankDateFromInput = document.getElementById('bank-date-from');
