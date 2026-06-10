@@ -49,26 +49,80 @@ def test_get_workspace_requires_bank_account():
     assert error == "Conta bancária é obrigatória para abrir a conciliação."
 
 
-def test_workspace_filters_match_absolute_amount_and_movement_nature():
-    assert FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+def test_bank_workspace_filters_match_absolute_amount_movement_text_and_bank_date():
+    assert FinancialReconciliationWorkspaceService._bank_row_matches_filters(
         {"amount": -150.0, "movement_nature": "debit"},
         amount_filter=Decimal("150.00"),
         movement_nature="debit",
     )
-    assert FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+    assert FinancialReconciliationWorkspaceService._bank_row_matches_filters(
         {"remaining_amount": "150.00", "movement_nature": "credit"},
         amount_filter=Decimal("150.00"),
         movement_nature="credit",
     )
-    assert not FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+    assert FinancialReconciliationWorkspaceService._bank_row_matches_filters(
+        {
+            "amount": -150.0,
+            "movement_nature": "debit",
+            "description": "TED fornecedor",
+            "occurred_on": "2026-06-10",
+        },
+        amount_filter=Decimal("150.00"),
+        movement_nature="debit",
+        search_query="fornecedor",
+        bank_date_from=datetime(2026, 6, 1).date(),
+        bank_date_to=datetime(2026, 6, 30).date(),
+    )
+    assert not FinancialReconciliationWorkspaceService._bank_row_matches_filters(
         {"amount": -150.01, "movement_nature": "debit"},
         amount_filter=Decimal("150.00"),
         movement_nature="debit",
     )
-    assert not FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+    assert not FinancialReconciliationWorkspaceService._bank_row_matches_filters(
         {"amount": -150.0, "movement_nature": "credit"},
         amount_filter=Decimal("150.00"),
         movement_nature="debit",
+    )
+    assert not FinancialReconciliationWorkspaceService._bank_row_matches_filters(
+        {
+            "amount": -150.0,
+            "movement_nature": "debit",
+            "description": "TED fornecedor",
+            "occurred_on": "2026-07-01",
+        },
+        amount_filter=Decimal("150.00"),
+        movement_nature="debit",
+        search_query="fornecedor",
+        bank_date_from=datetime(2026, 6, 1).date(),
+        bank_date_to=datetime(2026, 6, 30).date(),
+    )
+
+
+def test_system_workspace_filters_match_settlement_date_and_search():
+    assert FinancialReconciliationWorkspaceService._system_row_matches_filters(
+        {
+            "remaining_amount": "90.00",
+            "movement_nature": "credit",
+            "entry_code": "REC-10",
+            "latest_settlement_date": "2026-06-09",
+        },
+        amount_filter=Decimal("90.00"),
+        movement_nature="credit",
+        search_query="rec-10",
+        settlement_date_from=datetime(2026, 6, 1).date(),
+        settlement_date_to=datetime(2026, 6, 30).date(),
+    )
+    assert not FinancialReconciliationWorkspaceService._system_row_matches_filters(
+        {
+            "remaining_amount": "90.00",
+            "movement_nature": "credit",
+            "entry_code": "REC-10",
+            "latest_settlement_date": None,
+        },
+        amount_filter=Decimal("90.00"),
+        movement_nature="credit",
+        settlement_date_from=datetime(2026, 6, 1).date(),
+        settlement_date_to=datetime(2026, 6, 30).date(),
     )
 
 
