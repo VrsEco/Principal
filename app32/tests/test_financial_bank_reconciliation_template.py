@@ -28,13 +28,10 @@ def test_bank_reconciliation_template_contains_three_column_workspace():
     assert "function resolveCompanyId()" in template
     assert "window.companyId" in template
     assert "function companyQuery" in template
-    assert 'class="recon-controlbar"' in template
-    assert 'id="upload-drawer-backdrop"' in template
-    assert 'id="hero-panel"' in template
-    assert 'id="hero-collapsed-summary"' in template
-    assert 'id="workspace-header-panel"' in template
-    assert 'id="workspace-collapsed-summary"' in template
     assert "renderAccountsError" in template
+    assert 'id="workspace-summary-panel"' in template
+    assert "Resumo do lote e da conciliação" in template
+    assert 'class="summary-grid summary-grid--compact"' in template
     assert "function handleSystemRowCardClick(entryId, event)" in template
     assert 'onclick="handleSystemRowCardClick(${item.id}, event)"' in template
     assert 'onclick="event.stopPropagation(); toggleEntrySelection(${item.id})"' in template
@@ -53,15 +50,14 @@ def test_bank_reconciliation_upload_has_guided_submit_flow():
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
 
     assert '<form id="upload-form" class="upload-grid" novalidate>' in template
-    assert 'Gestão Financeira - Conciliação Bancária' in template
     assert 'id="upload-batch-code"' in template
     assert 'id="upload-file"' in template
     assert 'id="upload-status"' in template
     assert 'id="upload-submit-button"' in template
     assert "function generateBatchCode()" in template
     assert "function detectSourceFromFileName" in template
-    assert "function openUploadDrawer()" in template
-    assert "function closeUploadDrawer()" in template
+    assert "<small>Linhas vindas do extrato selecionado.</small>" not in template
+    assert "<small>Itens ainda sem vínculo confirmado.</small>" not in template
     assert "function showUploadStatus" in template
     assert "setUploadBusy(true)" in template
     assert "catch(error)" in template
