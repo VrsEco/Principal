@@ -87,87 +87,94 @@
 
 {% block workspace_content %}
 <div class="recon-page fade-in" data-company-id="{{ company_id or (active_company.id if active_company else '') }}">
-    <section class="recon-controlbar" aria-label="Controles compactos da conciliação">
-        <section class="panel panel--collapsible panel--collapsed recon-control-card recon-control-card--hero" id="hero-panel">
-            <div class="panel-header row-between panel-toggle recon-control-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="hero-panel-body" onclick="handlePanelToggleClick(event, 'hero-panel')" onkeydown="handlePanelToggleKeydown(event, 'hero-panel')">
-                <div class="panel-header__copy">
-                    <div class="recon-control-summary" id="hero-collapsed-summary">Gestão Financeira - Conciliação Bancária - Conta em foco: [Aguardando carregamento] - Período: [Sem período]</div>
-                    <div class="recon-control-expanded">
-                        <p class="recon-eyebrow">Gestão Financeira - Conciliação Bancária</p>
-                        <h1>Conciliação Bancária</h1>
-                        <p class="recon-subtitle">
-                            Importe OFX, XLS, XLSX ou CSV, revise as vinculações automáticas e concilie com visão clara
-                            do extrato bancário, do sistema e do painel de decisão.
-                        </p>
-                    </div>
-                </div>
-                <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+    <header class="recon-hero">
+        <div class="recon-hero__main">
+            <p class="recon-eyebrow">Gestão Financeira · Conciliação operacional</p>
+            <h1>Conciliação Bancária</h1>
+            <p class="recon-subtitle">
+                Importe OFX, XLS, XLSX ou CSV, revise as vinculações automáticas e concilie com visão clara
+                do extrato bancário, do sistema e do painel de decisão.
+            </p>
+            <div class="recon-hero__actions">
+                <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
             </div>
-            <div id="hero-panel-body" class="panel-body recon-floating-panel">
-                <div class="recon-hero">
-                    <div class="recon-hero__main">
-                        <div class="recon-hero__actions">
-                            <button type="button" class="btn btn-primary" onclick="openUploadPanel()">Importar novo extrato</button>
-                        </div>
-                    </div>
-                    <aside class="recon-hero__aside">
-                        <article class="recon-hero-card">
-                            <span>Conta em foco</span>
-                            <strong id="hero-account-name">Aguardando carregamento</strong>
-                            <small id="hero-account-status">Assim que a conta for carregada, a operação principal aparece aqui.</small>
-                        </article>
-                        <article class="recon-hero-card">
-                            <span>Lote ativo</span>
-                            <strong id="hero-batch-code">Sem lote vinculado</strong>
-                            <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
-                        </article>
-                    </aside>
-                </div>
-                <section id="recon-overview-stats" class="recon-overview-grid" aria-live="polite"></section>
-            </div>
-        </section>
+        </div>
+        <aside class="recon-hero__aside">
+            <article class="recon-hero-card">
+                <span>Conta em foco</span>
+                <strong id="hero-account-name">Aguardando carregamento</strong>
+                <small id="hero-account-status">Assim que a conta for carregada, a operação principal aparece aqui.</small>
+            </article>
+            <article class="recon-hero-card">
+                <span>Lote ativo</span>
+                <strong id="hero-batch-code">Sem lote vinculado</strong>
+                <small id="hero-batch-status">Use o upload para iniciar uma nova rodada de conciliação.</small>
+            </article>
+        </aside>
+    </header>
 
-        <section class="panel recon-control-card recon-control-card--upload" id="upload-panel">
-            <button type="button" class="panel-header row-between recon-control-toggle recon-control-toggle--action" onclick="openUploadDrawer()" aria-haspopup="dialog" aria-controls="upload-drawer-backdrop">
-                <div class="panel-header__copy">
-                    <div class="recon-control-summary">↑ Upload prático do extrato</div>
-                    <small class="recon-control-microcopy">Abrir envio do extrato</small>
-                </div>
-                <span class="panel-toggle-icon" aria-hidden="true">↗</span>
-            </button>
-        </section>
+    <section id="recon-overview-stats" class="recon-overview-grid" aria-live="polite"></section>
 
-        <section id="workspace-header-panel" class="panel panel--collapsible panel--collapsed recon-control-card recon-control-card--workspace hidden">
-            <div class="panel-header row-between panel-toggle recon-control-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="workspace-header-panel-body" onclick="handlePanelToggleClick(event, 'workspace-header-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-header-panel')">
-                <div class="panel-header__copy">
-                    <div id="workspace-collapsed-summary" class="recon-control-summary">◫ Conciliação [Conta bancária] - [Sem lote vinculado]</div>
-                    <div class="recon-control-expanded">
-                        <span class="panel-kicker">Operação assistida</span>
-                        <h2 id="workspace-title">Workspace da conciliação</h2>
-                        <p id="workspace-subtitle">Selecione uma conta bancária.</p>
-                    </div>
-                </div>
-                <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+    <section class="panel panel--collapsible panel--collapsed" id="upload-panel">
+        <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="upload-panel-body" onclick="handlePanelToggleClick(event, 'upload-panel')" onkeydown="handlePanelToggleKeydown(event, 'upload-panel')">
+            <div class="panel-header__copy">
+                <span class="panel-kicker">Fluxo de entrada</span>
+                <h2>Upload prático do extrato</h2>
+                <p>O fluxo aceita arquivos OFX, XLS, XLSX e CSV e já tenta sugerir vínculos automáticos após o envio.</p>
             </div>
-            <div id="workspace-header-panel-body" class="panel-body recon-floating-panel recon-floating-panel--compact">
-                <div class="workspace-header-preview">
-                    <strong id="workspace-preview-title">Workspace da conciliação</strong>
-                    <small id="workspace-preview-subtitle">Selecione uma conta bancária.</small>
+            <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+        </div>
+        <div id="upload-panel-body" class="panel-body">
+            <form id="upload-form" class="upload-grid" novalidate>
+                <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
+                <label><span>Fonte</span>
+                    <select name="source_type" id="upload-source-type">
+                        <option value="ofx">OFX</option>
+                        <option value="xlsx">XLSX</option>
+                        <option value="xls">XLS</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </label>
+                <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
+                <label class="upload-dropzone">
+                    <span>Arquivo do extrato</span>
+                    <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
+                    <small>Arraste ou selecione o arquivo.</small>
+                </label>
+                <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
+                <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
+                <div class="col-span-2 actions-right">
+                    <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
                 </div>
-            </div>
-        </section>
+            </form>
+        </div>
     </section>
 
-    <section id="workspace-panel" class="hidden">
-        <div class="workspace-content-shell">
-            <div id="workspace-summary" class="summary-grid"></div>
+    <section id="workspace-panel" class="panel panel--collapsible hidden">
+        <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="workspace-panel-body" onclick="handlePanelToggleClick(event, 'workspace-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-panel')">
+            <div class="panel-header__copy">
+                <span class="panel-kicker">Operação assistida</span>
+                <h2 id="workspace-title">Workspace da conciliação</h2>
+                <p id="workspace-subtitle">Selecione uma conta bancária.</p>
+            </div>
+            <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+        </div>
+        <div id="workspace-panel-body" class="panel-body">
+            <section class="panel panel--collapsible panel--collapsed recon-summary-panel" id="workspace-summary-panel">
+                <div class="panel-header row-between panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="workspace-summary-panel-body" onclick="handlePanelToggleClick(event, 'workspace-summary-panel')" onkeydown="handlePanelToggleKeydown(event, 'workspace-summary-panel')">
+                    <div class="panel-header__copy">
+                        <span class="panel-kicker">Indicadores operacionais</span>
+                        <h3>Resumo do lote e da conciliação</h3>
+                    </div>
+                    <span class="panel-toggle-icon" aria-hidden="true">⌄</span>
+                </div>
+                <div id="workspace-summary-panel-body" class="panel-body">
+                    <div id="workspace-summary" class="summary-grid summary-grid--compact"></div>
+                </div>
+            </section>
 
             <div class="board-toolbar">
-                <div class="filter-group" id="bank-filter-group"></div>
-                <div class="compact-field compact-field--hint">
-                    <span>Filtros operacionais</span>
-                    <small class="muted">Conta bancária do workspace e filtros dos títulos em aberto agora ficam no painel lateral.</small>
-                </div>
+                <div class="filter-group filter-group--toolbar" id="bank-filter-group"></div>
             </div>
 
             <div class="recon-board" id="recon-board">
@@ -216,43 +223,6 @@
     </section>
 </div>
 
-<div id="upload-drawer-backdrop" class="recon-drawer-backdrop" aria-hidden="true" onclick="handleUploadDrawerBackdropClick(event)">
-    <aside class="recon-drawer" role="dialog" aria-modal="true" aria-labelledby="upload-drawer-title">
-        <div class="recon-drawer__header">
-            <div>
-                <span class="panel-kicker">Fluxo de entrada</span>
-                <h3 id="upload-drawer-title">Upload prático do extrato</h3>
-                <p class="muted">O fluxo aceita arquivos OFX, XLS, XLSX e CSV e já tenta sugerir vínculos automáticos após o envio.</p>
-            </div>
-            <button type="button" class="recon-drawer__close" onclick="closeUploadDrawer()" aria-label="Fechar upload">×</button>
-        </div>
-        <div class="recon-drawer__body">
-            <form id="upload-form" class="upload-grid" novalidate>
-                <label><span>Conta bancária</span><select name="bank_account_id" id="upload-bank-account" required></select></label>
-                <label><span>Fonte</span>
-                    <select name="source_type" id="upload-source-type">
-                        <option value="ofx">OFX</option>
-                        <option value="xlsx">XLSX</option>
-                        <option value="xls">XLS</option>
-                        <option value="csv">CSV</option>
-                    </select>
-                </label>
-                <label><span>Código do lote</span><input name="batch_code" id="upload-batch-code" placeholder="REC-20260428-001" required></label>
-                <label class="upload-dropzone">
-                    <span>Arquivo do extrato</span>
-                    <input type="file" name="file" id="upload-file" accept=".ofx,.xlsx,.xls,.csv" required>
-                    <small>Arraste ou selecione o arquivo.</small>
-                </label>
-                <label class="col-span-2"><span>Observações</span><input name="notes" placeholder="Ex.: Extrato Itaú abril/2026"></label>
-                <div id="upload-status" class="upload-status col-span-2" aria-live="polite"></div>
-                <div class="col-span-2 actions-right">
-                    <button type="submit" id="upload-submit-button" class="btn btn-primary">Enviar extrato</button>
-                </div>
-            </form>
-        </div>
-    </aside>
-</div>
-
 <div id="recon-modal-backdrop" class="recon-modal-backdrop" aria-hidden="true">
     <section class="recon-modal" role="dialog" aria-modal="true" aria-labelledby="recon-modal-title">
         <div class="recon-modal__header">
@@ -268,19 +238,7 @@
 
 <style>
     .recon-page{padding:0 2rem 2rem;display:flex;flex-direction:column;gap:1rem}
-    .recon-controlbar{position:sticky;top:.2rem;z-index:35;display:grid;grid-template-columns:minmax(420px,2.6fr) minmax(210px,.8fr) minmax(320px,1.35fr);gap:.4rem;align-items:start}
-    .recon-control-card{position:relative;overflow:visible;min-width:0}
-    .recon-control-toggle{padding:.42rem .7rem;min-height:38px;align-items:center;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);border-radius:12px}
-    .recon-control-summary{display:block;font-size:.8rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
-    .recon-control-expanded{display:none}
-    .recon-control-card:not(.panel--collapsed) .recon-control-expanded{display:flex;flex-direction:column}
-    .recon-control-card:not(.panel--collapsed) .recon-control-summary{display:none}
-    .recon-floating-panel{position:absolute;top:calc(100% + .55rem);left:0;z-index:50;width:min(880px,calc(100vw - 5rem));padding:1rem;border:1px solid var(--border);border-radius:22px;background:rgba(255,255,255,.98);box-shadow:0 24px 60px rgba(15,23,42,.18)}
-    .recon-floating-panel--compact{width:min(560px,calc(100vw - 5rem))}
-    .workspace-header-preview{display:flex;flex-direction:column;gap:.35rem}
-    .workspace-header-preview strong{font-size:1rem;color:var(--text-primary)}
-    .workspace-header-preview small{color:var(--text-secondary)}
-    .recon-hero{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:1rem;padding:.25rem;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05));border-radius:18px}
+    .recon-hero{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(300px,.72fr);gap:1rem;border:1px solid var(--border);border-radius:24px;padding:1.35rem;background:linear-gradient(135deg,rgba(37,99,235,.10),rgba(14,116,144,.05));box-shadow:var(--shadow-sm)}
     .recon-hero__main,.recon-hero__aside{display:flex;flex-direction:column}
     .recon-hero__main{gap:1rem}
     .recon-hero__aside{gap:.85rem}
@@ -293,30 +251,25 @@
     .recon-subtitle{color:var(--text-secondary);max-width:72rem}
     .recon-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}
     .recon-overview-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow-sm);padding:1rem}
-    .panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm)}
-    .panel-header{padding:1rem 1rem 0}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-sm)}
+    .panel-header{padding:1.25rem 1.25rem 0}
     .panel-body{display:block}
     .panel--collapsed .panel-body{display:none}
     .panel-toggle{cursor:pointer}
     .panel-toggle:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:12px}
-    .panel-toggle-icon{font-size:.92rem;color:var(--text-secondary);transition:transform .2s ease}
+    .panel-toggle-icon{font-size:1.2rem;color:var(--text-secondary);transition:transform .2s ease}
     .panel--collapsed .panel-toggle-icon{transform:rotate(-90deg)}
     .panel-header__copy{display:flex;flex-direction:column}
-    .panel-kicker{display:inline-flex;width:max-content;margin-bottom:.3rem;padding:.2rem .45rem;border-radius:999px;background:rgba(37,99,235,.08);color:var(--primary);font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+    .panel-kicker{display:inline-flex;width:max-content;margin-bottom:.4rem;padding:.32rem .6rem;border-radius:999px;background:rgba(37,99,235,.08);color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
     .panel-header h2,.column-header h3{margin:0}
-    .panel-header p,.column-header p,.row-meta,.muted{margin:.2rem 0 0;color:var(--text-secondary)}
-    .recon-control-card--upload .recon-control-toggle{background:linear-gradient(180deg,rgba(239,246,255,.98),rgba(219,234,254,.96));border:1px solid rgba(59,130,246,.18)}
-    .recon-control-card--workspace .recon-control-toggle{background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(241,245,249,.96))}
-    .recon-control-card--hero .recon-control-toggle{background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.96))}
-    .recon-control-microcopy{color:var(--text-secondary);font-size:.72rem;margin-top:.15rem}
-    .recon-control-toggle--action{width:100%;border:none;cursor:pointer;text-align:left}
+    .panel-header p,.column-header p,.row-meta,.muted{margin:.25rem 0 0;color:var(--text-secondary)}
     .row-between,.actions-right,.inline-actions,.filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
     .row-between,.actions-right{justify-content:space-between}
     .panel-toggle.row-between{justify-content:flex-start}
     .summary-grid,.upload-grid{display:grid;gap:1rem;padding:1.25rem}
     .summary-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+    .summary-grid--compact{padding:1rem}
     .upload-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .workspace-content-shell{display:flex;flex-direction:column;gap:1rem}
     .upload-grid label,.compact-field,.allocation-grid label,.entry-form-grid label{display:flex;flex-direction:column;gap:.45rem;font-weight:600;color:var(--text-secondary)}
     .upload-grid input,.upload-grid select,.compact-field input,.allocation-grid input,.entry-form-grid input,.entry-form-grid select,.entry-form-grid textarea{
         background:var(--surface-secondary);border:1px solid var(--border);border-radius:14px;padding:.85rem .95rem;color:var(--text-primary)
@@ -339,6 +292,13 @@
     .w-100{width:100%;justify-content:center}
     .mt-2{margin-top:.5rem}
     .account-card,.summary-card,.row-card,.slot-card,.workbench-card{border:1px solid var(--border);border-radius:18px;background:var(--surface-secondary);padding:1rem}
+    .summary-card{display:flex;flex-direction:column;justify-content:center;gap:.2rem;min-height:88px;padding:.8rem .9rem;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(241,245,249,.8))}
+    .summary-card span{font-size:.75rem;font-weight:700;line-height:1.2}
+    .summary-card strong{margin:0;font-size:1.35rem;line-height:1.05}
+    .summary-card small{display:none}
+    .recon-summary-panel{margin:1rem 1.25rem 0}
+    .recon-summary-panel .panel-header{padding:1rem 1rem 0}
+    .recon-summary-panel .panel-header h3{margin:0}
     .account-card.is-selected,.row-card.is-selected,.slot-card.is-selected,.workbench-card.is-selected{border-color:rgba(37,99,235,.68);background:linear-gradient(180deg,rgba(219,234,254,.92),rgba(239,246,255,.98));box-shadow:0 0 0 2px rgba(59,130,246,.18),0 12px 30px rgba(37,99,235,.12)}
     .row-card.is-actionable,.slot-card.is-actionable{border-color:rgba(14,165,233,.26);background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(239,246,255,.84));box-shadow:0 8px 24px rgba(15,23,42,.05)}
     .row-card.is-disabled,.slot-card.is-disabled{border-color:rgba(148,163,184,.42);border-style:dashed;background:linear-gradient(180deg,rgba(248,250,252,.92),rgba(241,245,249,.92));opacity:.72}
@@ -365,14 +325,14 @@
     .column-header{padding:1rem 1rem 0}
     .column-header h3{font-size:1.05rem}
     .panel-toggle-icon{margin-left:auto}
-    .board-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;align-items:end;padding:0 1.25rem 1.25rem}
+    .board-toolbar{display:flex;align-items:center;justify-content:flex-start;padding:.85rem 1.25rem 0;border-top:1px solid var(--border);margin-top:.35rem}
     .filter-group{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+    .filter-group--toolbar{gap:.5rem}
     .compact-field{min-width:0;width:100%}
     .compact-field span{text-align:left}
     .compact-field--hint{padding:.95rem 1rem;border:1px dashed rgba(148,163,184,.5);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.75))}
     .filter-chip{border:1px solid var(--border);background:var(--surface-secondary);padding:.7rem .95rem;border-radius:999px;font-weight:700;cursor:pointer;transition:all .18s ease}
     .filter-chip:hover{transform:translateY(-1px);border-color:rgba(37,99,235,.28)}
-    .summary-card{background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(241,245,249,.78))}
     .row-card h4,.slot-card h4,.workbench-card h4{margin:0 0 .25rem}
     .row-card p,.slot-card p,.workbench-card p{margin:.2rem 0}
     .row-card,.slot-card,.workbench-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease,opacity .18s ease}
@@ -388,13 +348,6 @@
     .entry-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .entry-form-grid textarea{min-height:88px;resize:vertical}
     .workbench-empty{padding:2rem 1rem;color:var(--text-secondary);text-align:center}
-    .recon-drawer-backdrop{position:fixed;inset:0;z-index:78;display:none;justify-content:flex-end;background:rgba(15,23,42,.42)}
-    .recon-drawer-backdrop.is-visible{display:flex}
-    .recon-drawer{width:min(560px,100vw);height:100vh;background:var(--surface);border-left:1px solid var(--border);box-shadow:-24px 0 60px rgba(15,23,42,.18);display:flex;flex-direction:column}
-    .recon-drawer__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;padding:1rem 1rem .75rem;border-bottom:1px solid var(--border)}
-    .recon-drawer__header h3{margin:0}
-    .recon-drawer__body{padding:1rem;overflow:auto}
-    .recon-drawer__close{border:none;background:var(--surface-secondary);border-radius:999px;width:36px;height:36px;cursor:pointer;color:var(--text-primary);font-size:1rem;flex:0 0 auto}
     .recon-modal-backdrop{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.46);padding:1rem}
     .recon-modal-backdrop.is-visible{display:flex}
     .recon-modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.28);padding:1.25rem}
@@ -416,9 +369,8 @@
     .workbench-card--entry-actions{background:linear-gradient(180deg,rgba(254,249,195,.95),rgba(254,240,138,.78));border-color:rgba(202,138,4,.28)}
     .workbench-card--group{background:linear-gradient(180deg,rgba(243,232,255,.96),rgba(233,213,255,.82));border-color:rgba(147,51,234,.24)}
     .workbench-card--suggestions{background:linear-gradient(180deg,rgba(240,249,255,.96),rgba(224,242,254,.92));border-color:rgba(14,165,233,.28)}
-    @media (max-width:1400px){.recon-controlbar{grid-template-columns:1fr 1fr}.recon-control-card--hero{grid-column:1 / -1}}
-    @media (max-width:1200px){.recon-hero,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}.board-toolbar{grid-template-columns:1fr}.recon-controlbar{grid-template-columns:1fr}.recon-floating-panel{width:min(100%,calc(100vw - 3rem))}}
-    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.recon-hero__actions,.recon-control-toggle{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{grid-template-columns:1fr;padding:0 1rem 1rem}.recon-controlbar{top:.25rem}.recon-control-summary{white-space:normal}.recon-drawer{width:100vw}}
+    @media (max-width:1200px){.recon-hero,.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}}
+    @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right,.recon-hero__actions{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{padding:.85rem 1rem 0}.recon-summary-panel{margin:1rem 1rem 0}}
 </style>
 
 <script>
@@ -485,33 +437,6 @@ function formatDateTimeDisplay(value){
     if(Number.isNaN(date.getTime())) return String(value);
     return new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(date);
 }
-function inferMonthDateRange(value){
-    if(!value) return { from:null, to:null };
-    const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? `${value}T12:00:00` : value);
-    if(Number.isNaN(date.getTime())) return { from:null, to:null };
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const from = new Date(year, month, 1);
-    const to = new Date(year, month + 1, 0);
-    const toIso = (item) => `${item.getFullYear()}-${String(item.getMonth() + 1).padStart(2, '0')}-${String(item.getDate()).padStart(2, '0')}`;
-    return { from:toIso(from), to:toIso(to) };
-}
-function getOverviewPeriod(){
-    const explicitFrom = state.bankDateFrom || state.workspace?.filters?.bank_date_from || '';
-    const explicitTo = state.bankDateTo || state.workspace?.filters?.bank_date_to || '';
-    if(explicitFrom || explicitTo) return { from: explicitFrom || explicitTo || null, to: explicitTo || explicitFrom || null };
-    const bankRows = state.workspace?.bank_rows || [];
-    const rowDates = bankRows.map((row) => row.occurred_on || row.due_date || '').filter(Boolean).sort();
-    if(rowDates.length) return { from: rowDates[0], to: rowDates[rowDates.length - 1] };
-    const selected = getSelectedAccountOverview();
-    return inferMonthDateRange(selected?.statement_end || null);
-}
-function formatPeriodDisplay(period){
-    if(!period?.from && !period?.to) return 'Sem período';
-    const fromText = formatDateDisplay(period?.from || period?.to || '');
-    const toText = formatDateDisplay(period?.to || period?.from || '');
-    return `${fromText} a ${toText}`;
-}
 function emptyState(title, description){
     return `<div class="recon-empty-state"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span></div>`;
 }
@@ -557,13 +482,11 @@ function renderHero(){
     const latestStatementDates = items.map((item) => item.statement_end).filter(Boolean).sort().reverse();
     const latestStatementDate = latestStatementDates[0] || null;
     const latestBatch = state.workspace?.selected_batch || selected?.latest_batch || null;
-    const period = getOverviewPeriod();
 
     const heroAccountName = document.getElementById('hero-account-name');
     const heroAccountStatus = document.getElementById('hero-account-status');
     const heroBatchCode = document.getElementById('hero-batch-code');
     const heroBatchStatus = document.getElementById('hero-batch-status');
-    const heroCollapsedSummary = document.getElementById('hero-collapsed-summary');
     const stats = document.getElementById('recon-overview-stats');
 
     if(heroAccountName) heroAccountName.textContent = selected?.bank_account?.name || 'Selecione uma conta bancária';
@@ -573,9 +496,6 @@ function renderHero(){
         heroBatchStatus.textContent = latestBatch
             ? `Fonte ${String(latestBatch.source_type || '').toUpperCase()} · importado em ${formatDateTimeDisplay(latestBatch.imported_at || latestBatch.created_at)}`
             : 'Use o upload para iniciar uma nova rodada de conciliação.';
-    }
-    if(heroCollapsedSummary){
-        heroCollapsedSummary.textContent = `Gestão Financeira - Conciliação Bancária - Conta em foco: [${selected?.bank_account?.name || 'Selecione uma conta bancária'}] - Período: [${formatPeriodDisplay(period)}]`;
     }
     if(stats){
         stats.innerHTML = `
@@ -607,17 +527,6 @@ function togglePanelCollapse(panelId, forceExpanded=null){
     const panel = document.getElementById(panelId);
     if(!panel) return;
     const shouldExpand = forceExpanded == null ? panel.classList.contains('panel--collapsed') : Boolean(forceExpanded);
-    if(shouldExpand){
-        ['hero-panel','workspace-header-panel'].forEach((id) => {
-            if(id !== panelId){
-                const otherPanel = document.getElementById(id);
-                if(!otherPanel) return;
-                otherPanel.classList.add('panel--collapsed');
-                const otherToggle = otherPanel.querySelector('.panel-toggle');
-                if(otherToggle) otherToggle.setAttribute('aria-expanded', 'false');
-            }
-        });
-    }
     panel.classList.toggle('panel--collapsed', !shouldExpand);
     const toggle = panel.querySelector('.panel-toggle');
     if(toggle) toggle.setAttribute('aria-expanded', String(shouldExpand));
@@ -634,39 +543,11 @@ function handlePanelToggleKeydown(event, panelId){
     event.preventDefault();
     togglePanelCollapse(panelId);
 }
-document.addEventListener('click', (event) => {
-    const insideControl = event.target.closest('#hero-panel, #workspace-header-panel');
-    if(insideControl) return;
-    ['hero-panel','workspace-header-panel'].forEach((id) => {
-        const panel = document.getElementById(id);
-        if(!panel || panel.classList.contains('hidden')) return;
-        panel.classList.add('panel--collapsed');
-        const toggle = panel.querySelector('.panel-toggle');
-        if(toggle) toggle.setAttribute('aria-expanded', 'false');
-    });
-});
 
-function openUploadDrawer(){
-    const drawer = document.getElementById('upload-drawer-backdrop');
-    if(!drawer) return;
-    drawer.classList.add('is-visible');
-    drawer.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    const fileInput = document.getElementById('upload-file');
-    setTimeout(() => fileInput?.focus(), 30);
-}
-function closeUploadDrawer(){
-    const drawer = document.getElementById('upload-drawer-backdrop');
-    if(!drawer) return;
-    drawer.classList.remove('is-visible');
-    drawer.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-}
-function handleUploadDrawerBackdropClick(event){
-    if(event.target?.id === 'upload-drawer-backdrop') closeUploadDrawer();
-}
 function openUploadPanel(){
-    openUploadDrawer();
+    togglePanelCollapse('upload-panel', true);
+    const fileInput = document.getElementById('upload-file');
+    fileInput?.focus();
 }
 
 function rowStatusKind(row){
@@ -802,12 +683,12 @@ async function selectBankAccountCard(bankAccountId){
 function renderSummary(){
     const summary = state.workspace?.summary || {};
     document.getElementById('workspace-summary').innerHTML = `
-        <div class="summary-card"><span>Total no banco</span><strong>${summary.total_rows || 0}</strong><small>Linhas vindas do extrato selecionado.</small></div>
-        <div class="summary-card"><span>Pendentes no banco</span><strong>${summary.unmatched_bank_rows || 0}</strong><small>Itens ainda sem vínculo confirmado.</small></div>
-        <div class="summary-card"><span>Sugestões automáticas</span><strong>${summary.suggested_matches || 0}</strong><small>Candidatos já identificados pelo motor.</small></div>
-        <div class="summary-card"><span>Conciliados</span><strong>${summary.confirmed_matches || 0}</strong><small>Linhas já resolvidas nesta conta.</small></div>
-        <div class="summary-card"><span>Sem vínculo no sistema</span><strong>${summary.unmatched_system_rows || 0}</strong><small>Lançamentos que seguem sem associação no lote.</small></div>
-        <div class="summary-card"><span>Títulos em aberto</span><strong>${summary.open_titles || 0}</strong><small>Títulos elegíveis para baixa 1x1 via extrato bancário.</small></div>
+        <div class="summary-card"><span>Total no banco</span><strong>${summary.total_rows || 0}</strong></div>
+        <div class="summary-card"><span>Pendentes no banco</span><strong>${summary.unmatched_bank_rows || 0}</strong></div>
+        <div class="summary-card"><span>Sugestões automáticas</span><strong>${summary.suggested_matches || 0}</strong></div>
+        <div class="summary-card"><span>Conciliados</span><strong>${summary.confirmed_matches || 0}</strong></div>
+        <div class="summary-card"><span>Sem vínculo no sistema</span><strong>${summary.unmatched_system_rows || 0}</strong></div>
+        <div class="summary-card"><span>Títulos em aberto</span><strong>${summary.open_titles || 0}</strong></div>
     `;
 }
 
@@ -1100,23 +981,17 @@ function renderWorkbench(){
 
 function renderWorkspace(){
     const panel = document.getElementById('workspace-panel');
-    const workspaceHeaderPanel = document.getElementById('workspace-header-panel');
     if(!state.workspace){
         panel.classList.add('hidden');
-        workspaceHeaderPanel?.classList.add('hidden');
         renderHero();
         return;
     }
     panel.classList.remove('hidden');
-    workspaceHeaderPanel?.classList.remove('hidden');
+    togglePanelCollapse('workspace-panel', true);
     document.getElementById('workspace-title').textContent = `Workspace · ${state.workspace.bank_account.name}`;
-    const workspaceSubtitle = state.workspace.selected_batch
+    document.getElementById('workspace-subtitle').textContent = state.workspace.selected_batch
         ? `Lote ${state.workspace.selected_batch.batch_code} · fonte ${state.workspace.selected_batch.source_type}`
         : 'Nenhum lote vinculado a esta conta.';
-    document.getElementById('workspace-subtitle').textContent = workspaceSubtitle;
-    document.getElementById('workspace-collapsed-summary').textContent = `Conciliação [${state.workspace.bank_account.name}] - [${workspaceSubtitle}]`;
-    document.getElementById('workspace-preview-title').textContent = `Workspace · ${state.workspace.bank_account.name}`;
-    document.getElementById('workspace-preview-subtitle').textContent = workspaceSubtitle;
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
     const bankDateFromInput = document.getElementById('bank-date-from');
@@ -1795,7 +1670,6 @@ document.getElementById('upload-form').addEventListener('submit', async (event) 
         const uploadSelect = document.getElementById('upload-bank-account');
         if(uploadSelect) uploadSelect.value = String(bankAccountId);
         if(payload.batch?.id) await openWorkspace(bankAccountId, payload.batch.id);
-        closeUploadDrawer();
     } catch(error){
         console.error('Falha ao enviar extrato bancário para conciliação:', error);
         showUploadStatus(error.message || 'Falha ao enviar extrato. Confira o arquivo e tente novamente.', 'error');
@@ -1813,10 +1687,6 @@ document.getElementById('upload-bank-account').addEventListener('change', async 
 document.getElementById('upload-file').addEventListener('change', () => {
     syncUploadSourceFromFile();
     ensureUploadBatchCode();
-});
-
-document.addEventListener('keydown', (event) => {
-    if(event.key === 'Escape') closeUploadDrawer();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
