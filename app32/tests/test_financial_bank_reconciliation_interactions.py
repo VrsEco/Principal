@@ -47,8 +47,12 @@ def _build_probe_html() -> str:
     <div id="recon-modal-body"></div>
     <select id="workspace-bank-account"></select>
     <select id="batch-select"></select>
+    <input id="bank-date-from">
+    <input id="bank-date-to">
     <input id="open-title-due-date-from">
     <input id="open-title-due-date-to">
+    <input id="settlement-date-from">
+    <input id="settlement-date-to">
     <input id="system-search">
     <input id="reconciliation-amount-filter">
     <select id="reconciliation-movement-filter"></select>

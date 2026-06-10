@@ -1489,6 +1489,11 @@ class FinancialBankReconciliationWorkspaceResource(Resource):
             due_date_to=_get_optional_iso_date_arg("due_date_to"),
             amount=_get_optional_decimal_arg("amount"),
             movement_nature=_get_optional_movement_nature_arg(),
+            search_query=request.args.get("search_query"),
+            bank_date_from=_get_optional_iso_date_arg("bank_date_from"),
+            bank_date_to=_get_optional_iso_date_arg("bank_date_to"),
+            settlement_date_from=_get_optional_iso_date_arg("settlement_date_from"),
+            settlement_date_to=_get_optional_iso_date_arg("settlement_date_to"),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

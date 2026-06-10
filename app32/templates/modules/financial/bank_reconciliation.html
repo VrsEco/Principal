@@ -28,6 +28,16 @@
     </div>
 
     <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="bank-date-from">Data inicial do extrato</label>
+        <input id="bank-date-from" type="date">
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="bank-date-to">Data final do extrato</label>
+        <input id="bank-date-to" type="date">
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
         <label class="filter-label" for="open-title-due-date-from">Vencimento inicial dos títulos</label>
         <input id="open-title-due-date-from" type="date">
     </div>
@@ -38,8 +48,19 @@
     </div>
 
     <div class="filter-group recon-sidebar-field">
-        <label class="filter-label" for="system-search">Buscar no sistema / títulos</label>
-        <input id="system-search" type="search" placeholder="Histórico, documento ou código">
+        <label class="filter-label" for="settlement-date-from">Data inicial da baixa</label>
+        <input id="settlement-date-from" type="date">
+        <small>Aplica-se ao extrato do sistema já baixado/parcialmente baixado.</small>
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="settlement-date-to">Data final da baixa</label>
+        <input id="settlement-date-to" type="date">
+    </div>
+
+    <div class="filter-group recon-sidebar-field">
+        <label class="filter-label" for="system-search">Busca textual</label>
+        <input id="system-search" type="search" placeholder="Histórico, documento, referência ou código">
     </div>
 
     <div class="filter-group recon-sidebar-field">
@@ -363,8 +384,12 @@ const state = {
     entryAllocations: {},
     rowCandidates: {},
     systemSearch: '',
+    bankDateFrom: '',
+    bankDateTo: '',
     openTitleDueDateFrom: '',
     openTitleDueDateTo: '',
+    settlementDateFrom: '',
+    settlementDateTo: '',
     amountFilter: '',
     movementNatureFilter: '',
     resolutionPreview: null,
@@ -741,7 +766,13 @@ function renderSystemRows(){
     const selectedIds = new Set(state.selectedEntryIds.map(Number));
     const rows = (state.workspace?.system_rows || []).filter((item) => {
         if(!query) return true;
-        const haystack = [item.entry_code, item.description, item.document_number].join(' ').toLowerCase();
+        const haystack = [
+            item.entry_code,
+            item.description,
+            item.document_number,
+            item.external_reference,
+            item.origin_reference,
+        ].join(' ').toLowerCase();
         return haystack.includes(query);
     });
     if(!rows.length){
@@ -755,6 +786,7 @@ function renderSystemRows(){
                     <h4>${escapeHtml(item.entry_code || `Lançamento ${item.id}`)}</h4>
                     <p class="row-meta">${escapeHtml(item.description || '-')}</p>
                     <p class="row-meta">Valor ${brl(item.remaining_amount ?? item.original_amount)} · Data ${escapeHtml(item.occurred_on || item.due_date || item.competence_date || '-')}</p>
+                    <p class="row-meta">Última baixa ${escapeHtml(item.latest_settlement_date || '-')}</p>
                 </div>
                 <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleEntrySelection(${item.id})">
             </div>
@@ -947,13 +979,21 @@ function renderWorkspace(){
         : 'Nenhum lote vinculado a esta conta.';
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
+    const bankDateFromInput = document.getElementById('bank-date-from');
+    const bankDateToInput = document.getElementById('bank-date-to');
+    const settlementDateFromInput = document.getElementById('settlement-date-from');
+    const settlementDateToInput = document.getElementById('settlement-date-to');
     const systemSearchInput = document.getElementById('system-search');
     const amountInput = document.getElementById('reconciliation-amount-filter');
     const movementSelect = document.getElementById('reconciliation-movement-filter');
     const workspaceSelect = document.getElementById('workspace-bank-account');
     const batchSelect = document.getElementById('batch-select');
+    if(bankDateFromInput) bankDateFromInput.value = state.bankDateFrom || '';
+    if(bankDateToInput) bankDateToInput.value = state.bankDateTo || '';
     if(dueDateFromInput) dueDateFromInput.value = state.openTitleDueDateFrom || '';
     if(dueDateToInput) dueDateToInput.value = state.openTitleDueDateTo || '';
+    if(settlementDateFromInput) settlementDateFromInput.value = state.settlementDateFrom || '';
+    if(settlementDateToInput) settlementDateToInput.value = state.settlementDateTo || '';
     if(systemSearchInput) systemSearchInput.value = state.systemSearch || '';
     if(amountInput) amountInput.value = formatCurrencyInputValue(state.amountFilter || '');
     if(movementSelect) movementSelect.value = state.movementNatureFilter || '';
@@ -1006,14 +1046,24 @@ async function openWorkspace(bankAccountId, batchId=null){
     state.workspace = await api(`/api/financial/reconciliation/workspace${companyQuery({
         bank_account_id: bankAccountId,
         batch_id: batchId,
+        search_query: state.systemSearch || null,
+        bank_date_from: state.bankDateFrom || null,
+        bank_date_to: state.bankDateTo || null,
         due_date_from: state.openTitleDueDateFrom || null,
         due_date_to: state.openTitleDueDateTo || null,
+        settlement_date_from: state.settlementDateFrom || null,
+        settlement_date_to: state.settlementDateTo || null,
         amount: state.amountFilter || null,
         movement_nature: state.movementNatureFilter || null,
     })}`);
     state.selectedBatchId = state.workspace?.selected_batch?.id || batchId || null;
+    state.systemSearch = state.workspace?.filters?.search_query || state.systemSearch || '';
+    state.bankDateFrom = state.workspace?.filters?.bank_date_from || state.bankDateFrom || '';
+    state.bankDateTo = state.workspace?.filters?.bank_date_to || state.bankDateTo || '';
     state.openTitleDueDateFrom = state.workspace?.filters?.due_date_from || state.openTitleDueDateFrom || '';
     state.openTitleDueDateTo = state.workspace?.filters?.due_date_to || state.openTitleDueDateTo || '';
+    state.settlementDateFrom = state.workspace?.filters?.settlement_date_from || state.settlementDateFrom || '';
+    state.settlementDateTo = state.workspace?.filters?.settlement_date_to || state.settlementDateTo || '';
     state.amountFilter = state.workspace?.filters?.amount ? formatCurrencyInputValue(state.workspace.filters.amount) : (state.amountFilter || '');
     state.movementNatureFilter = state.workspace?.filters?.movement_nature || state.movementNatureFilter || '';
     const preferredRow = (state.workspace.bank_rows_without_link || [])[0] || (state.workspace.bank_rows_with_suggestion || [])[0] || (state.workspace.bank_rows || [])[0] || null;
@@ -1031,8 +1081,12 @@ async function refreshWorkspace(){
 async function applyWorkspaceFilters(){
     const nextBankAccountId = Number(document.getElementById('workspace-bank-account')?.value || 0) || null;
     const nextBatchId = Number(document.getElementById('batch-select')?.value || 0) || null;
+    state.bankDateFrom = document.getElementById('bank-date-from')?.value || '';
+    state.bankDateTo = document.getElementById('bank-date-to')?.value || '';
     state.openTitleDueDateFrom = document.getElementById('open-title-due-date-from')?.value || '';
     state.openTitleDueDateTo = document.getElementById('open-title-due-date-to')?.value || '';
+    state.settlementDateFrom = document.getElementById('settlement-date-from')?.value || '';
+    state.settlementDateTo = document.getElementById('settlement-date-to')?.value || '';
     state.systemSearch = document.getElementById('system-search')?.value || '';
     state.amountFilter = document.getElementById('reconciliation-amount-filter')?.value || '';
     state.movementNatureFilter = document.getElementById('reconciliation-movement-filter')?.value || '';
@@ -1055,18 +1109,30 @@ async function clearWorkspaceFilters(){
     const batchSelect = document.getElementById('batch-select');
     if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
     if(batchSelect) batchSelect.value = String(state.selectedBatchId || '');
+    const bankDateFromInput = document.getElementById('bank-date-from');
+    const bankDateToInput = document.getElementById('bank-date-to');
     const dueDateFromInput = document.getElementById('open-title-due-date-from');
     const dueDateToInput = document.getElementById('open-title-due-date-to');
+    const settlementDateFromInput = document.getElementById('settlement-date-from');
+    const settlementDateToInput = document.getElementById('settlement-date-to');
     const searchInput = document.getElementById('system-search');
     const amountInput = document.getElementById('reconciliation-amount-filter');
     const movementSelect = document.getElementById('reconciliation-movement-filter');
+    if(bankDateFromInput) bankDateFromInput.value = '';
+    if(bankDateToInput) bankDateToInput.value = '';
     if(dueDateFromInput) dueDateFromInput.value = '';
     if(dueDateToInput) dueDateToInput.value = '';
+    if(settlementDateFromInput) settlementDateFromInput.value = '';
+    if(settlementDateToInput) settlementDateToInput.value = '';
     if(searchInput) searchInput.value = '';
     if(amountInput) amountInput.value = '';
     if(movementSelect) movementSelect.value = '';
+    state.bankDateFrom = '';
+    state.bankDateTo = '';
     state.openTitleDueDateFrom = '';
     state.openTitleDueDateTo = '';
+    state.settlementDateFrom = '';
+    state.settlementDateTo = '';
     state.systemSearch = '';
     state.amountFilter = '';
     state.movementNatureFilter = '';
@@ -1373,6 +1439,8 @@ function getVisibleOpenTitleRows(){
             item.entry_code,
             item.description,
             item.document_number,
+            item.external_reference,
+            item.origin_reference,
             title.schedule_code,
             title.name,
         ].join(' ').toLowerCase();

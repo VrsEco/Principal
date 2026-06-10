@@ -22,6 +22,10 @@ from services.financial_title_balance_service import FinancialTitleBalanceServic
 
 class FinancialReconciliationWorkspaceService:
     @staticmethod
+    def _normalize_search_term(search_query: Optional[str]) -> str:
+        return str(search_query or "").strip().lower()
+
+    @staticmethod
     def _normalize_amount_filter(amount: Optional[Decimal]) -> Optional[Decimal]:
         if amount is None:
             return None
@@ -47,11 +51,91 @@ class FinancialReconciliationWorkspaceService:
         return str(value or "").strip().lower() == movement_nature
 
     @staticmethod
-    def _workspace_row_matches_filters(
+    def _text_matches_filter(values: Sequence[object], search_query: str) -> bool:
+        if not search_query:
+            return True
+        haystack = " ".join(str(value or "").strip().lower() for value in values if value is not None)
+        return search_query in haystack
+
+    @staticmethod
+    def _date_matches_range(value, start: Optional[date] = None, end: Optional[date] = None) -> bool:
+        if not start and not end:
+            return True
+        if not value:
+            return False
+        if isinstance(value, str):
+            try:
+                current_value = date.fromisoformat(value[:10])
+            except ValueError:
+                return False
+        else:
+            current_value = value
+        if start and current_value < start:
+            return False
+        if end and current_value > end:
+            return False
+        return True
+
+    @staticmethod
+    def _entry_latest_settlement_date(entry: FinancialEntry) -> Optional[date]:
+        latest_settlement = (
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == entry.company_id,
+                FinancialSettlement.financial_entry_id == entry.id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+            )
+            .order_by(FinancialSettlement.settlement_date.desc(), FinancialSettlement.id.desc())
+            .first()
+        )
+        return getattr(latest_settlement, "settlement_date", None)
+
+    @staticmethod
+    def _bank_row_matches_filters(
         row: Dict,
         *,
         amount_filter: Optional[Decimal] = None,
         movement_nature: Optional[str] = None,
+        search_query: str = "",
+        bank_date_from: Optional[date] = None,
+        bank_date_to: Optional[date] = None,
+    ) -> bool:
+        bank_date = row.get("occurred_on") or row.get("due_date")
+        return (
+            FinancialReconciliationWorkspaceService._amount_matches_filter(
+                row.get("remaining_amount", row.get("original_amount", row.get("amount"))),
+                amount_filter,
+            )
+            and FinancialReconciliationWorkspaceService._movement_matches_filter(
+                row.get("movement_nature"),
+                movement_nature,
+            )
+            and FinancialReconciliationWorkspaceService._date_matches_range(
+                bank_date,
+                bank_date_from,
+                bank_date_to,
+            )
+            and FinancialReconciliationWorkspaceService._text_matches_filter(
+                [
+                    row.get("description"),
+                    row.get("document_number"),
+                    row.get("bank_reference"),
+                    row.get("counterparty_name"),
+                    row.get("row_number"),
+                ],
+                search_query,
+            )
+        )
+
+    @staticmethod
+    def _system_row_matches_filters(
+        row: Dict,
+        *,
+        amount_filter: Optional[Decimal] = None,
+        movement_nature: Optional[str] = None,
+        search_query: str = "",
+        settlement_date_from: Optional[date] = None,
+        settlement_date_to: Optional[date] = None,
     ) -> bool:
         return (
             FinancialReconciliationWorkspaceService._amount_matches_filter(
@@ -61,6 +145,51 @@ class FinancialReconciliationWorkspaceService:
             and FinancialReconciliationWorkspaceService._movement_matches_filter(
                 row.get("movement_nature"),
                 movement_nature,
+            )
+            and FinancialReconciliationWorkspaceService._date_matches_range(
+                row.get("latest_settlement_date"),
+                settlement_date_from,
+                settlement_date_to,
+            )
+            and FinancialReconciliationWorkspaceService._text_matches_filter(
+                [
+                    row.get("entry_code"),
+                    row.get("description"),
+                    row.get("document_number"),
+                    row.get("external_reference"),
+                    row.get("origin_reference"),
+                ],
+                search_query,
+            )
+        )
+
+    @staticmethod
+    def _open_title_matches_filters(
+        row: Dict,
+        *,
+        amount_filter: Optional[Decimal] = None,
+        movement_nature: Optional[str] = None,
+        search_query: str = "",
+    ) -> bool:
+        title = row.get("title") or {}
+        return (
+            FinancialReconciliationWorkspaceService._amount_matches_filter(
+                row.get("remaining_amount", row.get("original_amount", row.get("amount"))),
+                amount_filter,
+            )
+            and FinancialReconciliationWorkspaceService._movement_matches_filter(
+                row.get("movement_nature"),
+                movement_nature,
+            )
+            and FinancialReconciliationWorkspaceService._text_matches_filter(
+                [
+                    row.get("entry_code"),
+                    row.get("description"),
+                    row.get("document_number"),
+                    title.get("schedule_code"),
+                    title.get("name"),
+                ],
+                search_query,
             )
         )
 
@@ -139,8 +268,10 @@ class FinancialReconciliationWorkspaceService:
     ) -> Dict:
         payload = FinancialService.serialize_entry(entry, include_children=False)
         linked_row_ids = [int(item) for item in (linked_row_ids or [])]
+        latest_settlement_date = FinancialReconciliationWorkspaceService._entry_latest_settlement_date(entry)
         payload["remaining_amount"] = float(FinancialReconciliationWorkspaceService._entry_remaining_amount(entry))
         payload["is_reconciled"] = FinancialService.is_entry_reconciled(entry)
+        payload["latest_settlement_date"] = latest_settlement_date.isoformat() if latest_settlement_date else None
         payload["linked_row_ids"] = linked_row_ids
         payload["linked_rows_count"] = len(linked_row_ids)
         payload["match_mode"] = "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched")
@@ -217,6 +348,7 @@ class FinancialReconciliationWorkspaceService:
             payload["navigation_url"] = f"/financial/schedules/{payload['financial_schedule_id']}?company_id={entry.company_id}"
         else:
             payload["navigation_url"] = f"/financial/entries/{entry.id}?company_id={entry.company_id}"
+        payload["latest_settlement_date"] = payload.get("latest_settlement_date")
         payload["can_title_settle"] = payload["remaining_amount"] > 0
         return payload
 
@@ -506,6 +638,11 @@ class FinancialReconciliationWorkspaceService:
         due_date_to: Optional[date] = None,
         amount: Optional[Decimal] = None,
         movement_nature: Optional[str] = None,
+        search_query: Optional[str] = None,
+        bank_date_from: Optional[date] = None,
+        bank_date_to: Optional[date] = None,
+        settlement_date_from: Optional[date] = None,
+        settlement_date_to: Optional[date] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
@@ -515,6 +652,7 @@ class FinancialReconciliationWorkspaceService:
             return None, "Conta bancária é obrigatória para abrir a conciliação."
         amount_filter = FinancialReconciliationWorkspaceService._normalize_amount_filter(amount)
         movement_filter = movement_nature if movement_nature in {"credit", "debit"} else None
+        normalized_search_query = FinancialReconciliationWorkspaceService._normalize_search_term(search_query)
 
         account = FinancialBankAccount.query.filter(
             FinancialBankAccount.id == bank_account_id,
@@ -549,10 +687,13 @@ class FinancialReconciliationWorkspaceService:
         filtered_rows_payload = [
             row
             for row in rows_payload
-            if FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+            if FinancialReconciliationWorkspaceService._bank_row_matches_filters(
                 row,
                 amount_filter=amount_filter,
                 movement_nature=movement_filter,
+                search_query=normalized_search_query,
+                bank_date_from=bank_date_from,
+                bank_date_to=bank_date_to,
             )
         ]
         pending_rows = [row for row in filtered_rows_payload if row.get("needs_manual_action")]
@@ -583,10 +724,13 @@ class FinancialReconciliationWorkspaceService:
         system_rows = [
             item
             for item in system_rows
-            if FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+            if FinancialReconciliationWorkspaceService._system_row_matches_filters(
                 item,
                 amount_filter=amount_filter,
                 movement_nature=movement_filter,
+                search_query=normalized_search_query,
+                settlement_date_from=settlement_date_from,
+                settlement_date_to=settlement_date_to,
             )
         ]
         system_unmatched_rows = [
@@ -611,10 +755,11 @@ class FinancialReconciliationWorkspaceService:
         open_title_rows = [
             item
             for item in open_title_rows
-            if FinancialReconciliationWorkspaceService._workspace_row_matches_filters(
+            if FinancialReconciliationWorkspaceService._open_title_matches_filters(
                 item,
                 amount_filter=amount_filter,
                 movement_nature=movement_filter,
+                search_query=normalized_search_query,
             )
         ]
         open_title_unmatched_rows = [
@@ -650,6 +795,11 @@ class FinancialReconciliationWorkspaceService:
                 "due_date_to": due_date_to.isoformat() if due_date_to else None,
                 "amount": str(amount_filter) if amount_filter is not None else None,
                 "movement_nature": movement_filter,
+                "search_query": normalized_search_query or None,
+                "bank_date_from": bank_date_from.isoformat() if bank_date_from else None,
+                "bank_date_to": bank_date_to.isoformat() if bank_date_to else None,
+                "settlement_date_from": settlement_date_from.isoformat() if settlement_date_from else None,
+                "settlement_date_to": settlement_date_to.isoformat() if settlement_date_to else None,
             },
         }, None
 

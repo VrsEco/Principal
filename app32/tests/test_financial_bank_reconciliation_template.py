@@ -33,6 +33,12 @@ def test_bank_reconciliation_template_contains_three_column_workspace():
     assert 'onclick="handleSystemRowCardClick(${item.id}, event)"' in template
     assert 'onclick="event.stopPropagation(); toggleEntrySelection(${item.id})"' in template
     assert "? 'Remover' : 'Selecionar'" in template
+    assert 'id="bank-date-from"' in template
+    assert 'id="bank-date-to"' in template
+    assert 'id="settlement-date-from"' in template
+    assert 'id="settlement-date-to"' in template
+    assert "Data inicial do extrato" in template
+    assert "Data inicial da baixa" in template
     assert "company_id=${companyId}" not in template
     assert "?? remaining ||" not in template
 
