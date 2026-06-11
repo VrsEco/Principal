@@ -427,6 +427,8 @@ class FinancialReconciliationWorkspaceService:
                 FinancialSchedule.company_id == entry.company_id,
                 FinancialSchedule.deleted_at.is_(None),
             ).first()
+        counterparty_id = getattr(entry, "counterparty_id", None) or getattr(schedule, "counterparty_id", None)
+        chart_account_id = getattr(entry, "chart_account_id", None) or getattr(schedule, "chart_account_id", None)
         payload["title"] = {
             "schedule_id": getattr(schedule, "id", None),
             "schedule_code": getattr(schedule, "schedule_code", None),
@@ -447,9 +449,15 @@ class FinancialReconciliationWorkspaceService:
             payload["navigation_url"] = f"/financial/entries/{entry.id}?company_id={entry.company_id}"
         payload["latest_settlement_date"] = payload.get("latest_settlement_date")
         payload["can_title_settle"] = payload["remaining_amount"] > 0
+        payload["counterparty_id"] = counterparty_id
+        payload["counterparty_name"] = payload.get("counterparty_name") or FinancialReconciliationWorkspaceService._counterparty_name(
+            entry.company_id,
+            counterparty_id,
+        )
+        payload["chart_account_id"] = chart_account_id
         payload["chart_account_label"] = payload.get("chart_account_label") or FinancialReconciliationWorkspaceService._chart_account_label(
             entry.company_id,
-            entry.chart_account_id,
+            chart_account_id,
         )
         return payload
 
