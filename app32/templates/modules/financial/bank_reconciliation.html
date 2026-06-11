@@ -280,6 +280,8 @@
     .row-card.is-disabled .btn,.slot-card.is-disabled .btn,.slot-card.is-disabled input[type="checkbox"]{opacity:.6}
     .badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.5rem}
     .badge{display:inline-flex;border-radius:999px;padding:.25rem .65rem;font-size:.74rem;font-weight:700}
+    .badges--compact{flex-wrap:nowrap;overflow:hidden;gap:.32rem;margin-top:.55rem}
+    .badges--compact .badge{max-width:100%;white-space:nowrap;padding:.2rem .48rem;font-size:.68rem;line-height:1.15}
     .badge--ok{background:#dcfce7;color:#166534}
     .badge--warn{background:#fef3c7;color:#92400e}
     .badge--info{background:#dbeafe;color:#1d4ed8}
@@ -322,6 +324,10 @@
     .row-card.is-selected::before,.slot-card.is-selected::before,.workbench-card.is-selected::before{background:linear-gradient(90deg,#1d4ed8,#2563eb,#38bdf8)}
     .row-card.is-disabled::before,.slot-card.is-disabled::before{content:'';display:block;height:4px;margin:-.85rem -.85rem .75rem;border-radius:16px 16px 999px 999px;background:linear-gradient(90deg,#cbd5e1,#94a3b8)}
     .selection-line{display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start}
+    .recon-card-copy{min-width:0;display:flex;flex-direction:column;gap:.16rem}
+    .recon-card-title{font-size:.9rem!important;line-height:1.18!important;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .recon-card-line{font-size:.76rem;line-height:1.22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .recon-card-plan{font-weight:700;color:var(--text-primary)}
     .selection-line input[type="checkbox"]{margin-top:.25rem}
     .allocation-grid,.entry-form-grid{display:grid;gap:.75rem}
     .entry-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -330,10 +336,30 @@
     .recon-modal-backdrop{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.46);padding:1rem}
     .recon-modal-backdrop.is-visible{display:flex}
     .recon-modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:0 24px 80px rgba(15,23,42,.28);padding:1.25rem}
+    .recon-modal:has(.recon-direct-form){width:min(1120px,100%)}
     .recon-modal__header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem}
     .recon-modal__header h3{margin:0}
     .recon-modal__body{display:flex;flex-direction:column;gap:1rem}
     .recon-modal__close{border:none;background:var(--surface-secondary);border-radius:999px;width:36px;height:36px;cursor:pointer;color:var(--text-primary);font-size:1rem}
+    .recon-direct-form{display:flex;flex-direction:column;gap:1rem}
+    .recon-direct-main{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1rem;align-items:end;padding:1rem;border:1px solid var(--border);border-radius:18px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.75))}
+    .field{display:flex;flex-direction:column;gap:.42rem;color:var(--text-secondary);font-weight:700}
+    .field input,.field select,.field textarea{width:100%;border:1px solid var(--border);border-radius:12px;padding:.75rem .85rem;font:inherit;color:var(--text-primary);background:var(--surface)}
+    .field input[readonly],.field select:disabled{background:#e2e8f0;color:#0f172a;cursor:not-allowed}
+    .field textarea{resize:vertical}
+    .field-span-2{grid-column:span 2}.field-span-3{grid-column:span 3}.field-span-4{grid-column:span 4}.field-span-6{grid-column:span 6}
+    .form-block{padding:1rem;border:1px solid var(--border);border-radius:18px;background:var(--surface)}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin:0 0 .8rem}
+    .section-head h2{margin:0;font-size:1rem}.section-head p{margin:.2rem 0 0;color:var(--text-secondary)}
+    .rateio-table-wrap{overflow:auto}.rateio-table{width:100%;border-collapse:collapse;min-width:900px;table-layout:fixed}
+    .rateio-col--chart-account{width:240px}.rateio-col--cost-center{width:240px}.rateio-col--budget-document{width:260px}.rateio-col--percentage{width:110px}.rateio-col--amount{width:140px}.rateio-col--actions{width:110px}
+    .rateio-table th,.rateio-table td{padding:.6rem;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}
+    .rateio-table th{font-size:.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .rateio-table td input,.rateio-table td select{width:100%;border:1px solid var(--border);border-radius:10px;padding:.55rem .65rem;font:inherit;background:var(--surface-secondary);color:var(--text-primary)}
+    .rateio-table td .btn{padding:.48rem .65rem}
+    .rateio-summary{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:.85rem}
+    .rateio-pill{padding:.55rem .75rem;border-radius:999px;font-size:.82rem;font-weight:800;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border)}
+    .rateio-pill.is-ok{background:#dcfce7;color:#166534;border-color:#bbf7d0}.rateio-pill.is-error{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
     .group-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
     .group-total-card{border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.78));padding:.85rem}
     .group-total-card span{display:block;color:var(--text-secondary);font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -377,6 +403,8 @@ const state = {
     selectedOpenTitleId: null,
     entryAllocations: {},
     rowCandidates: {},
+    directEntryOptions: null,
+    directEntryAllocations: [],
     systemSearch: '',
     bankDateFrom: '',
     bankDateTo: '',
@@ -395,6 +423,12 @@ function movementNatureBadge(movementNature){
     const normalized = String(movementNature || '').trim().toLowerCase();
     if(normalized === 'credit') return badge('Entrada', 'info');
     if(normalized === 'debit') return badge('Saída', 'danger');
+    return '';
+}
+function compactMovementNatureBadge(movementNature){
+    const normalized = String(movementNature || '').trim().toLowerCase();
+    if(normalized === 'credit') return compactBadge('Ent.', 'info');
+    if(normalized === 'debit') return compactBadge('Saí.', 'danger');
     return '';
 }
 function formatCurrencyInputValue(value){
@@ -443,6 +477,28 @@ async function api(url, options={}){
     return payload;
 }
 function escapeHtml(value){ return String(value || '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+function compactText(value, fallback='-'){
+    const text = String(value || '').trim();
+    return escapeHtml(text || fallback);
+}
+function financialTitleLabel(item){
+    const title = item?.title || {};
+    return title.schedule_code || item?.origin_reference || item?.document_number || item?.entry_code || item?.financial_entry_id || item?.id || '-';
+}
+function bankLaunchLabel(item){
+    return item?.settlement_code || item?.entry_code || item?.bank_reference || `Lanç. ${Math.abs(Number(item?.id || 0)) || '-'}`;
+}
+function cardAmountLine(item){
+    const titleValue = item?.title_original_amount ?? item?.title?.template_amount ?? item?.original_amount ?? 0;
+    const balance = item?.title_remaining_amount ?? item?.remaining_amount ?? 0;
+    return `Valor ${brl(titleValue)} - Saldo ${brl(balance)}`;
+}
+function chartAccountLine(item){
+    return item?.chart_account_label || (item?.chart_account_id ? `Plano ${item.chart_account_id}` : 'Plano de contas não informado');
+}
+function compactBadge(label, kind='mute'){
+    return `<span class="badge badge--${kind}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+}
 function renderAccountsError(message){
     const uploadSelect = document.getElementById('upload-bank-account');
     if(uploadSelect) uploadSelect.innerHTML = '<option value="">Erro ao carregar contas</option>';
@@ -776,22 +832,24 @@ function renderSystemRows(){
     container.innerHTML = rows.map(item => `
         <article class="slot-card ${systemRowStateClass(item, activeRow)}" onclick="handleSystemRowCardClick(${item.id}, event)">
             <div class="selection-line">
-                <div>
-                    <h4>${escapeHtml(item.entry_code || `Lançamento ${item.id}`)}</h4>
-                    <p class="row-meta">${escapeHtml(item.description || '-')}</p>
-                    <p class="row-meta">Valor da baixa ${brl(item.settlement_amount ?? item.remaining_amount ?? item.original_amount)} · Data ${escapeHtml(item.latest_settlement_date || item.occurred_on || item.due_date || item.competence_date || '-')}</p>
-                    <p class="row-meta">Título ${escapeHtml(item.origin_reference || item.document_number || item.financial_entry_id || '-')}</p>
+                <div class="recon-card-copy">
+                    <h4 class="recon-card-title">${compactText(bankLaunchLabel(item))} - ${compactText(financialTitleLabel(item))}</h4>
+                    <p class="row-meta recon-card-line">${compactText(item.counterparty_name, 'Sem favorecido')}</p>
+                    <p class="row-meta recon-card-line">${escapeHtml(cardAmountLine(item))}</p>
+                    <p class="row-meta recon-card-line">${compactText(item.description || item.notes || '-')}</p>
+                    <p class="row-meta recon-card-line recon-card-plan">${compactText(chartAccountLine(item))}</p>
                 </div>
                 <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleEntrySelection(${item.id})">
             </div>
-            <div class="badges">
-                ${movementNatureBadge(item.movement_nature)}
-                ${linkedIds.has(Number(item.financial_entry_id || item.id)) ? badge('Já vinculado à linha', 'ok') : ''}
-                ${suggestedIds.has(Number(item.financial_entry_id || item.id)) ? badge('Candidato sugerido', 'info') : ''}
-                ${item.linked_rows_count ? badge(`${item.linked_rows_count} linha(s) banco`, 'mute') : badge('Sem vínculo no lote', 'warn')}
-                ${item.is_reconciled ? badge('Conciliado', 'ok') : badge('Disponível', 'warn')}
-                ${badge(item.match_mode || 'unmatched', 'mute')}
+            <div class="badges badges--compact">
+                ${compactMovementNatureBadge(item.movement_nature) || movementNatureBadge(item.movement_nature)}
+                ${linkedIds.has(Number(item.financial_entry_id || item.id)) ? compactBadge('Vinc.', 'ok') : ''}
+                ${suggestedIds.has(Number(item.financial_entry_id || item.id)) ? compactBadge('Sug.', 'info') : ''}
+                ${item.linked_rows_count ? compactBadge(`${item.linked_rows_count} banco`, 'mute') : compactBadge('S/vínc.', 'warn')}
+                ${item.is_reconciled ? compactBadge('Conc.', 'ok') : compactBadge('Disp.', 'warn')}
+                ${compactBadge(item.match_mode || 'unmatched', 'mute')}
             </div>
+            <!-- compat: ${movementNatureBadge(item.movement_nature)} -->
             <div class="inline-actions">
                 <a class="btn btn-secondary" href="${escapeHtml(item.navigation_url || (`/financial/entries/${item.financial_entry_id || item.id}${companyQuery()}`))}" style="text-decoration:none;" onclick="event.stopPropagation()">Abrir lançamento</a>
                 <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); toggleEntrySelection(${item.id})" ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''}>${selectedIds.has(Number(item.id)) ? 'Remover' : 'Selecionar'}</button>
@@ -817,19 +875,22 @@ function renderOpenTitleRows(){
         return `
             <article class="slot-card ${selected ? 'is-selected' : (disabled ? 'is-disabled' : 'is-actionable')}" onclick="selectOpenTitle(${item.id})">
                 <div class="selection-line">
-                    <div>
-                        <h4>${escapeHtml(title.schedule_code || item.entry_code || `Título ${item.id}`)}</h4>
-                        <p class="row-meta">${escapeHtml(title.name || item.description || '-')}</p>
-                        <p class="row-meta">Saldo ${brl(item.remaining_amount)} · Original ${brl(title.template_amount ?? item.original_amount)} · Venc. ${escapeHtml(title.next_due_date || item.due_date || '-')}</p>
+                    <div class="recon-card-copy">
+                        <h4 class="recon-card-title">${compactText(bankLaunchLabel(activeRow || item))} - ${compactText(financialTitleLabel(item))}</h4>
+                        <p class="row-meta recon-card-line">${compactText(item.counterparty_name, 'Sem favorecido')}</p>
+                        <p class="row-meta recon-card-line">${escapeHtml(cardAmountLine(item))}</p>
+                        <p class="row-meta recon-card-line">${compactText(title.name || item.description || '-')}</p>
+                        <p class="row-meta recon-card-line recon-card-plan">${compactText(chartAccountLine(item))}</p>
                     </div>
                     <input type="radio" name="open-title-selection" ${selected ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="selectOpenTitle(${item.id})">
                 </div>
-                <div class="badges">
-                    ${movementNatureBadge(item.movement_nature)}
-                    ${badge(item.entry_type === 'payable' ? 'Conta a pagar' : 'Conta a receber', 'mute')}
-                    ${badge(item.status || 'posted', 'info')}
-                    ${canPreviewDiff ? badge(`Diferença ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn') : badge('Selecione 1 linha bancária', 'warn')}
+                <div class="badges badges--compact">
+                    ${compactMovementNatureBadge(item.movement_nature) || movementNatureBadge(item.movement_nature)}
+                    ${compactBadge(item.entry_type === 'payable' ? 'Pagar' : 'Receber', 'mute')}
+                    ${compactBadge(item.status || 'posted', 'info')}
+                    ${canPreviewDiff ? compactBadge(`Dif. ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn') : compactBadge('Selec. banco', 'warn')}
                 </div>
+                <!-- compat: ${movementNatureBadge(item.movement_nature)} -->
                 <div class="inline-actions">
                     <a class="btn btn-secondary" href="${escapeHtml(item.navigation_url || (`/financial/entries/${item.id}${companyQuery()}`))}" style="text-decoration:none;">Abrir título</a>
                     ${!selected && !disabled ? `<button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); selectOpenTitle(${item.id})">Selecionar</button>` : ''}
@@ -1443,6 +1504,134 @@ function openEntryForCorrection(entryId){
     window.location.href = `/financial/entries/${entryId}${companyQuery({return_to: returnTo})}`;
 }
 
+function rowEntryType(row){
+    return String(row?.movement_nature || '').toLowerCase() === 'credit' ? 'receivable' : 'payable';
+}
+
+function isoToInputDate(value){
+    return String(value || '').slice(0, 10);
+}
+
+function rowLockedDate(row){
+    return isoToInputDate(row?.occurred_on || row?.due_date || new Date().toISOString().slice(0, 10));
+}
+
+function rowDocumentNumber(row){
+    return row?.document_number || row?.bank_reference || `${rowLockedDate(row).replaceAll('-', '')}${String(row?.row_number || row?.id || '').padStart(3, '0')}`;
+}
+
+function createEntryOptionsLabel(item){
+    return escapeHtml(item?.display_label || [item?.code, item?.name].filter(Boolean).join(' - ') || item?.name || item?.code || item?.id || '-');
+}
+
+function createEntrySelectOptions(items, placeholder='Selecione...', selectedValue=''){
+    return [`<option value="">${escapeHtml(placeholder)}</option>`]
+        .concat((items || []).map((item) => `<option value="${item.id}" ${String(item.id) === String(selectedValue || '') ? 'selected' : ''}>${createEntryOptionsLabel(item)}</option>`))
+        .join('');
+}
+
+async function ensureDirectEntryOptions(){
+    if(state.directEntryOptions) return state.directEntryOptions;
+    state.directEntryOptions = await api(`/api/financial/entries/direct/options${companyQuery()}`);
+    return state.directEntryOptions;
+}
+
+function directEntryDefaultSuggestions(){
+    return state.directEntryOptions?.default_suggestions || {};
+}
+
+function createDefaultAllocation(row){
+    const suggestions = directEntryDefaultSuggestions();
+    return {
+        chart_account_id: suggestions.chart_account_id || '',
+        cost_center_id: suggestions.cost_center_id || '',
+        budget_version_id: suggestions.budget_version_id || '',
+        budget_line_id: suggestions.budget_line_id || '',
+        budget_contract_id: suggestions.budget_contract_id || '',
+        budget_document_id: suggestions.budget_document_id || '',
+        domain_source_kind: suggestions.domain_source_kind || 'routine',
+        domain_type: suggestions.domain_type || null,
+        domain_source_id: suggestions.domain_source_id || null,
+        domain_label: suggestions.domain_label || null,
+        percentage: '100',
+        allocated_amount: Number(row?.amount || 0),
+    };
+}
+
+function allocationTotal(){
+    return state.directEntryAllocations.reduce((sum, item) => sum + Number(item.allocated_amount || 0), 0);
+}
+
+function allocationPercentTotal(){
+    return state.directEntryAllocations.reduce((sum, item) => sum + Number(String(item.percentage || 0).replace(',', '.') || 0), 0);
+}
+
+function renderCreateEntryAllocations(){
+    const body = document.getElementById('create-entry-allocations-body');
+    if(!body) return;
+    const options = state.directEntryOptions || {};
+    body.innerHTML = state.directEntryAllocations.map((row, index) => `
+        <tr>
+            <td><select data-create-allocation-field="chart_account_id" data-index="${index}">${createEntrySelectOptions((options.chart_accounts || []).filter(item => item.accepts_posting), 'Plano de conta...', row.chart_account_id)}</select></td>
+            <td><select data-create-allocation-field="cost_center_id" data-index="${index}">${createEntrySelectOptions(options.cost_centers || [], 'Centro de resultado...', row.cost_center_id)}</select></td>
+            <td><select data-create-allocation-field="budget_document_id" data-index="${index}">${createEntrySelectOptions(options.budget_documents || [], 'NF / Assemelhado...', row.budget_document_id)}</select></td>
+            <td><input data-create-allocation-field="percentage" data-index="${index}" inputmode="decimal" value="${escapeHtml(row.percentage ?? '')}"></td>
+            <td><input data-create-allocation-field="allocated_amount" data-index="${index}" type="number" min="0" step="0.01" value="${Number(row.allocated_amount || 0).toFixed(2)}"></td>
+            <td><button type="button" class="btn btn-secondary" onclick="duplicateCreateEntryAllocation(${index})">+</button><button type="button" class="btn btn-secondary" onclick="removeCreateEntryAllocation(${index})">×</button></td>
+        </tr>
+    `).join('');
+    updateCreateEntryAllocationSummary();
+}
+
+function updateCreateEntryAllocationSummary(){
+    const summary = document.getElementById('create-entry-rateio-summary');
+    if(!summary) return;
+    const row = getActiveRow() || getSelectedBankRows()[0] || {};
+    const expected = Number(row.amount || 0);
+    const amountOk = Math.abs(allocationTotal() - expected) <= 0.01;
+    const percentOk = Math.abs(allocationPercentTotal() - 100) <= 0.01;
+    summary.innerHTML = `
+        <span class="rateio-pill ${percentOk ? 'is-ok' : 'is-error'}">Percentual total: ${allocationPercentTotal().toLocaleString('pt-BR')}%</span>
+        <span class="rateio-pill ${amountOk ? 'is-ok' : 'is-error'}">Valor rateado: ${brl(allocationTotal())}</span>
+        <span class="rateio-pill">Valor do extrato: ${brl(expected)}</span>
+    `;
+}
+
+window.duplicateCreateEntryAllocation = function(index){
+    const base = state.directEntryAllocations[index] || createDefaultAllocation(getActiveRow());
+    state.directEntryAllocations.splice(index + 1, 0, {...base, percentage: '', allocated_amount: 0});
+    renderCreateEntryAllocations();
+};
+
+window.removeCreateEntryAllocation = function(index){
+    state.directEntryAllocations.splice(index, 1);
+    if(!state.directEntryAllocations.length) state.directEntryAllocations = [createDefaultAllocation(getActiveRow())];
+    renderCreateEntryAllocations();
+};
+
+function handleCreateEntryAllocationChange(event){
+    const field = event.target.dataset.createAllocationField;
+    const index = Number(event.target.dataset.index || -1);
+    if(!field || index < 0 || !state.directEntryAllocations[index]) return;
+    state.directEntryAllocations[index][field] = field === 'allocated_amount' ? Number(event.target.value || 0) : event.target.value;
+    if(field === 'budget_document_id'){
+        const doc = (state.directEntryOptions?.budget_documents || []).find(item => String(item.id) === String(event.target.value || ''));
+        const contract = (state.directEntryOptions?.budget_contracts || []).find(item => String(item.id) === String(doc?.budget_contract_id || ''));
+        const line = (state.directEntryOptions?.budget_lines || []).find(item => String(item.id) === String(contract?.budget_line_id || ''));
+        const version = (state.directEntryOptions?.budget_versions || []).find(item => String(item.id) === String(line?.budget_version_id || ''));
+        Object.assign(state.directEntryAllocations[index], {
+            budget_contract_id: contract?.id || null,
+            budget_line_id: line?.id || null,
+            budget_version_id: version?.id || null,
+        });
+    }
+    if(field === 'percentage' || field === 'allocated_amount'){
+        updateCreateEntryAllocationSummary();
+        return;
+    }
+    renderCreateEntryAllocations();
+}
+
 async function settleSelectedOpenTitle(resolutionStrategy=null){
     const row = getActiveRow();
     const title = getSelectedOpenTitle();
@@ -1473,42 +1662,70 @@ async function settleSelectedOpenTitle(resolutionStrategy=null){
     }
 }
 
-function openCreateEntryModal(){
+async function openCreateEntryModal(){
     const row = getActiveRow() || getSelectedBankRows()[0];
     if(!row){
         alert('Selecione uma linha bancária para criar o lançamento rápido.');
         return;
     }
+    try{
+        await ensureDirectEntryOptions();
+    } catch(error){
+        alert(error.message || 'Não foi possível carregar as opções do lançamento rápido.');
+        return;
+    }
+    const entryType = rowEntryType(row);
+    const lockedDate = rowLockedDate(row);
+    const docNumber = rowDocumentNumber(row);
+    const bankAccountId = Number(state.selectedBankAccountId || (row.normalized_payload || {}).bank_account_id || 0);
+    state.directEntryAllocations = [createDefaultAllocation(row)];
     openReconModal({
-        kicker: 'Lançamento rápido',
-        title: `Criar a partir da linha ${row.row_number}`,
+        kicker: entryType === 'receivable' ? 'Lançamento rápido · recebimento' : 'Lançamento rápido · pagamento',
+        title: `Criar e conciliar · linha ${row.row_number}`,
         body: `
-            <form id="create-entry-form" class="entry-form-grid" onsubmit="submitCreateEntry(event)">
-                <label><span>Histórico</span><input name="description" value="${escapeHtml(row.description || '')}" required></label>
-                <label><span>Tipo</span>
-                    <select name="entry_type">
-                        <option value="bank_movement">Movimento bancário</option>
-                        <option value="payable">Conta a pagar</option>
-                        <option value="receivable">Conta a receber</option>
-                    </select>
-                </label>
-                <label><span>Data do pagamento/recebimento</span><input type="date" name="occurred_on" value="${escapeHtml(row.occurred_on || row.due_date || '')}" required></label>
-                <label><span>Vencimento</span><input type="date" name="due_date" value="${escapeHtml(row.due_date || row.occurred_on || '')}" required></label>
-                <label><span>Competência</span><input type="date" name="competence_date" value="${escapeHtml(row.occurred_on || row.due_date || '')}" required></label>
-                <label><span>Valor</span><input type="number" min="0" step="0.01" name="original_amount" value="${Number(row.amount || 0).toFixed(2)}" required></label>
-                <label><span>Conta bancária</span><input type="number" name="bank_account_id" value="${Number(state.selectedBankAccountId || 0)}" required></label>
-                <label><span>Nº documento</span><input name="document_number" value="${escapeHtml(row.document_number || '')}"></label>
-                <label><span>Favorecido ID</span><input type="number" min="1" name="counterparty_id"></label>
-                <label><span>Conta gerencial ID</span><input type="number" min="1" name="chart_account_id"></label>
-                <label><span>Centro de resultado ID</span><input type="number" min="1" name="cost_center_id"></label>
-                <label class="col-span-2"><span>Observações</span><textarea name="notes">Criado a partir da conciliação da linha ${row.row_number}.</textarea></label>
-                <div class="col-span-2 actions-right">
+            <form id="create-entry-form" class="recon-direct-form" onsubmit="submitCreateEntry(event)">
+                <input type="hidden" name="entry_type" value="${entryType}">
+                <input type="hidden" name="movement_nature" value="${escapeHtml(row.movement_nature || (entryType === 'receivable' ? 'credit' : 'debit'))}">
+                <section class="recon-direct-main">
+                    <label class="field field-span-4"><span>Histórico</span><input name="description" value="${escapeHtml(row.description || '')}" required readonly></label>
+                    <label class="field field-span-2"><span>Nº documento</span><input name="document_number" value="${escapeHtml(docNumber)}" readonly></label>
+                    <label class="field field-span-2"><span>Tipo</span><input value="${entryType === 'receivable' ? 'Recebimento' : 'Pagamento'}" readonly></label>
+                    <label class="field field-span-2"><span>Valor</span><input name="original_amount" type="number" step="0.01" value="${Number(row.amount || 0).toFixed(2)}" readonly></label>
+                    <label class="field field-span-2"><span>Conta bancária</span><select name="bank_account_id" disabled>${createEntrySelectOptions(state.directEntryOptions?.bank_accounts || [], 'Conta...', bankAccountId)}</select><input type="hidden" name="bank_account_id" value="${bankAccountId}"></label>
+                    <label class="field field-span-2"><span>Competência</span><input type="date" name="competence_date" value="${escapeHtml(lockedDate)}" readonly></label>
+                    <label class="field field-span-2"><span>Vencimento</span><input type="date" name="due_date" value="${escapeHtml(lockedDate)}" readonly></label>
+                    <label class="field field-span-2"><span>Data do lançamento</span><input type="date" name="occurred_on" value="${escapeHtml(lockedDate)}" readonly></label>
+                    <label class="field field-span-3"><span>Favorecido</span><select name="counterparty_id">${createEntrySelectOptions(state.directEntryOptions?.counterparties || [], 'Selecione...')}</select></label>
+                    <label class="field field-span-3"><span>Observações</span><textarea name="notes" rows="3">Criado a partir da conciliação da linha ${row.row_number}. ${row.description || ''}</textarea></label>
+                </section>
+                <section class="form-block recon-direct-rateio">
+                    <div class="section-head"><div><h2>Rateio</h2><p>Confirme plano de conta e centro de resultado antes de salvar.</p></div></div>
+                    <div class="rateio-table-wrap">
+                        <table class="rateio-table">
+                            <colgroup>
+                                <col class="rateio-col--chart-account">
+                                <col class="rateio-col--cost-center">
+                                <col class="rateio-col--budget-document">
+                                <col class="rateio-col--percentage">
+                                <col class="rateio-col--amount">
+                                <col class="rateio-col--actions">
+                            </colgroup>
+                            <thead><tr><th>Plano de Conta</th><th>Centro de Resultado</th><th>NF / Assemelhado</th><th>%</th><th>Valor</th><th>Ações</th></tr></thead>
+                            <tbody id="create-entry-allocations-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="create-entry-rateio-summary" class="rateio-summary"></div>
+                </section>
+                <div class="actions-right">
                     <button type="button" class="btn btn-secondary" onclick="closeReconModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Criar e conciliar</button>
+                    <button type="submit" class="btn btn-primary">Salvar / voltar</button>
                 </div>
             </form>
         `,
     });
+    document.getElementById('create-entry-allocations-body')?.addEventListener('input', handleCreateEntryAllocationChange);
+    document.getElementById('create-entry-allocations-body')?.addEventListener('change', handleCreateEntryAllocationChange);
+    renderCreateEntryAllocations();
 }
 
 async function submitCreateEntry(event){
@@ -1519,15 +1736,44 @@ async function submitCreateEntry(event){
     ['counterparty_id','chart_account_id','cost_center_id','bank_account_id'].forEach((field) => {
         payload[field] = payload[field] ? Number(payload[field]) : null;
     });
-    await api(`/api/financial/reconciliation/rows/${row.id}/create-entry${companyQuery()}`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload),
-    });
-    state.showCreateEntry = false;
-    closeReconModal();
-    await loadOverview();
-    await refreshWorkspace();
+    const expected = Number(row.amount || 0);
+    if(!payload.bank_account_id){
+        alert('Conta bancária não identificada para esta linha.');
+        return;
+    }
+    if(Math.abs(allocationPercentTotal() - 100) > 0.01 || Math.abs(allocationTotal() - expected) > 0.01){
+        alert('Ajuste o rateio para fechar 100% e o mesmo valor da linha bancária.');
+        return;
+    }
+    payload.allocations = state.directEntryAllocations.map((item) => ({
+        chart_account_id: Number(item.chart_account_id || 0) || null,
+        cost_center_id: Number(item.cost_center_id || 0) || null,
+        budget_version_id: Number(item.budget_version_id || 0) || null,
+        budget_line_id: Number(item.budget_line_id || 0) || null,
+        budget_contract_id: Number(item.budget_contract_id || 0) || null,
+        budget_document_id: Number(item.budget_document_id || 0) || null,
+        domain_source_kind: item.domain_source_kind || 'routine',
+        domain_type: item.domain_type || null,
+        domain_source_id: Number(item.domain_source_id || 0) || null,
+        domain_label: item.domain_label || null,
+        allocation_type: 'amount',
+        allocated_amount: Number(item.allocated_amount || 0),
+        percentage: null,
+        metadata_json: {},
+    }));
+    try{
+        await api(`/api/financial/reconciliation/rows/${row.id}/create-entry${companyQuery()}`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload),
+        });
+        state.showCreateEntry = false;
+        closeReconModal();
+        await loadOverview();
+        await refreshWorkspace();
+    } catch(error){
+        alert(error.message || 'Não foi possível salvar e conciliar o lançamento.');
+    }
 }
 
 function generateBatchCode(){
