@@ -50,6 +50,14 @@ def test_reconciliation_template_uses_requested_workbench_card_order():
     assert positions == sorted(positions)
 
 
+def test_reconciliation_template_uses_compact_money_without_currency_symbol():
+    content = TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    assert "style:'currency'" not in content
+    assert "currency:'BRL'" not in content
+    assert "R$" not in content
+
+
 def test_reconciliation_template_exposes_entry_and_exit_tags_for_bank_and_system_rows():
     content = TEMPLATE_PATH.read_text(encoding="utf-8")
 
