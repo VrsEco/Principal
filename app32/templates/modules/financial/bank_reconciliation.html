@@ -152,6 +152,10 @@
 
             <div class="recon-board" id="recon-board">
                 <section class="board-column board-column--bank">
+                    <label class="column-search" for="bank-column-search">
+                        <span>Filtro da coluna</span>
+                        <input id="bank-column-search" type="search" placeholder="Buscar no extrato do banco..." autocomplete="off" oninput="setColumnSearch('bank', this.value)">
+                    </label>
                     <div class="column-header">
                         <div>
                             <h3>1. Extrato do banco</h3>
@@ -163,6 +167,10 @@
                 </section>
 
                 <section class="board-column board-column--system">
+                    <label class="column-search" for="system-column-search">
+                        <span>Filtro da coluna</span>
+                        <input id="system-column-search" type="search" placeholder="Buscar no extrato do sistema..." autocomplete="off" oninput="setColumnSearch('system', this.value)">
+                    </label>
                     <div class="column-header">
                         <div>
                             <h3>2. Extrato do sistema</h3>
@@ -173,6 +181,10 @@
                 </section>
 
                 <section class="board-column board-column--titles">
+                    <label class="column-search" for="titles-column-search">
+                        <span>Filtro da coluna</span>
+                        <input id="titles-column-search" type="search" placeholder="Buscar em títulos em aberto..." autocomplete="off" oninput="setColumnSearch('titles', this.value)">
+                    </label>
                     <div class="column-header">
                         <div>
                             <h3>3. Títulos em aberto</h3>
@@ -183,6 +195,10 @@
                 </section>
 
                 <aside class="board-column board-column--actions">
+                    <label class="column-search" for="workbench-column-search">
+                        <span>Filtro da coluna</span>
+                        <input id="workbench-column-search" type="search" placeholder="Buscar no painel de decisão..." autocomplete="off" oninput="setColumnSearch('workbench', this.value)">
+                    </label>
                     <div class="column-header">
                         <div>
                             <h3>4. Painel de decisão</h3>
@@ -301,6 +317,11 @@
     .recon-board{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(340px,.88fr);gap:.85rem;padding:0 1rem 1rem;align-items:start}
     .board-column{border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
     .board-column--actions{position:sticky;top:1rem}
+    .column-search{display:flex;flex-direction:column;gap:.34rem;margin:.75rem .85rem 0}
+    .column-search span{font-size:.65rem;font-weight:900;letter-spacing:.055em;text-transform:uppercase;color:var(--text-tertiary)}
+    .column-search input{width:100%;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,rgba(248,250,252,.98),rgba(241,245,249,.86));color:var(--text-primary);font-size:.78rem;font-weight:700;padding:.58rem .72rem;outline:none;transition:border-color .18s ease,box-shadow .18s ease,background .18s ease}
+    .column-search input:focus{border-color:rgba(37,99,235,.55);background:var(--surface);box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+    .column-search input::placeholder{color:var(--text-tertiary);font-weight:600}
     .column-header{padding:.85rem .85rem 0}
     .column-header h3{font-size:.98rem;line-height:1.2}
     .column-header p{font-size:.78rem;line-height:1.3}
@@ -337,6 +358,7 @@
     .recon-card-copy{min-width:0;display:flex;flex-direction:column;gap:.16rem}
     .recon-card-title{font-size:.9rem!important;line-height:1.18!important;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
     .recon-card-line{font-size:.76rem;line-height:1.22;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .recon-card-dates{color:var(--text-tertiary);font-size:.72rem}
     .recon-card-plan{font-weight:700;color:var(--text-primary)}
     .selection-line input[type="checkbox"]{margin-top:.25rem}
     .allocation-grid,.entry-form-grid{display:grid;gap:.75rem}
@@ -387,6 +409,7 @@
     .workbench-card--entry-actions{background:linear-gradient(180deg,rgba(254,249,195,.95),rgba(254,240,138,.78));border-color:rgba(202,138,4,.28)}
     .workbench-card--group{background:linear-gradient(180deg,rgba(243,232,255,.96),rgba(233,213,255,.82));border-color:rgba(147,51,234,.24)}
     .workbench-card--suggestions{background:linear-gradient(180deg,rgba(240,249,255,.96),rgba(224,242,254,.92));border-color:rgba(14,165,233,.28)}
+    .is-filter-hidden{display:none!important}
     @media (max-width:1200px){.recon-top-grid{grid-template-columns:1fr}.recon-board{grid-template-columns:1fr}.recon-overview-grid,.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.board-column--actions{position:static}.board-toolbar{grid-template-columns:1fr}.selected-bank-strip{align-items:flex-start}}
     @media (max-width:768px){.recon-page{padding:0 1rem 1.5rem}.recon-overview-grid,.upload-grid,.entry-form-grid,.summary-grid{grid-template-columns:1fr}.col-span-2{grid-column:auto}.btn{width:100%}.row-between,.actions-right{flex-direction:column;align-items:stretch}.compact-field{width:100%}.compact-field span{text-align:left}.board-toolbar{margin:.75rem;padding:.75rem}.selected-bank-strip{flex-direction:column;align-items:stretch}.selected-bank-strip__metrics,.selected-bank-strip__actions{flex-wrap:wrap}}
 </style>
@@ -427,6 +450,12 @@ const state = {
     settlementDateTo: '',
     amountFilter: '',
     movementNatureFilter: '',
+    columnSearch: {
+        bank: '',
+        system: '',
+        titles: '',
+        workbench: '',
+    },
     resolutionPreview: null,
 };
 
@@ -456,6 +485,9 @@ function formatDateDisplay(value){
     const date = new Date(normalized);
     if(Number.isNaN(date.getTime())) return String(value);
     return new Intl.DateTimeFormat('pt-BR').format(date);
+}
+function compactDateDisplay(value){
+    return value ? formatDateDisplay(value) : '-';
 }
 function formatDateTimeDisplay(value){
     if(!value) return 'processamento recente';
@@ -494,6 +526,29 @@ function compactText(value, fallback='-'){
     const text = String(value || '').trim();
     return escapeHtml(text || fallback);
 }
+function normalizeSearchText(value){
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+function columnMatches(item, query, fields=[]){
+    const normalizedQuery = normalizeSearchText(query);
+    if(!normalizedQuery) return true;
+    const haystack = normalizeSearchText(fields.map((field) => {
+        if(typeof field === 'function') return field(item);
+        return field;
+    }).join(' '));
+    return haystack.includes(normalizedQuery);
+}
+function setColumnSearch(columnKey, value){
+    state.columnSearch = { ...(state.columnSearch || {}), [columnKey]: value || '' };
+    if(columnKey === 'bank') renderBankRows();
+    if(columnKey === 'system') renderSystemRows();
+    if(columnKey === 'titles') renderOpenTitleRows();
+    if(columnKey === 'workbench') applyWorkbenchColumnSearch();
+}
 function financialTitleLabel(item){
     const title = item?.title || {};
     return title.schedule_code || item?.origin_reference || item?.document_number || item?.entry_code || item?.financial_entry_id || item?.id || '-';
@@ -505,6 +560,15 @@ function cardAmountLine(item){
     const titleValue = item?.title_original_amount ?? item?.title?.template_amount ?? item?.original_amount ?? 0;
     const balance = item?.title_remaining_amount ?? item?.remaining_amount ?? 0;
     return `Valor ${brl(titleValue)} - Saldo ${brl(balance)}`;
+}
+function cardDateLine(item, options={}){
+    const title = item?.title || {};
+    const dueDate = options.dueDate ?? item?.due_date ?? title.next_due_date;
+    const liquidationDate = options.liquidationDate ?? item?.latest_settlement_date ?? item?.settlement_date ?? item?.occurred_on;
+    const dueText = compactDateDisplay(dueDate);
+    const liquidationText = compactDateDisplay(liquidationDate);
+    const tooltip = `Vencimento: ${dueText} · Liquidação: ${liquidationText}`;
+    return `<p class="row-meta recon-card-line recon-card-dates" title="${escapeHtml(tooltip)}">Vcto ${escapeHtml(dueText)} · Liq ${escapeHtml(liquidationText)}</p>`;
 }
 function chartAccountLine(item){
     return item?.chart_account_label || (item?.chart_account_id ? `Plano ${item.chart_account_id}` : 'Plano de contas não informado');
@@ -663,6 +727,14 @@ function getSelectedOpenTitle(){
     return (state.workspace?.open_title_rows || []).find(item => String(item.id) === String(state.selectedOpenTitleId || '')) || null;
 }
 
+function resetOpenTitleSettlementFlow({keepSelection=false}={}){
+    if(!keepSelection){
+        state.selectedOpenTitleId = null;
+    }
+    state.resolutionPreview = null;
+    closeReconModal();
+}
+
 function getGroupSummary(){
     const bankRows = getSelectedBankRows();
     const systemRows = getSelectedSystemRows();
@@ -680,11 +752,26 @@ function getGroupSummary(){
 function getVisibleBankRows(){
     const rows = state.workspace?.bank_rows || [];
     return rows.filter((row) => {
-        if(state.bankFilter === 'all') return true;
-        if(state.bankFilter === 'pending') return row.needs_manual_action && !(row.matches?.suggested_count);
-        if(state.bankFilter === 'suggested') return Boolean(row.matches?.suggested_count) && !row.matches?.confirmed_count && !row.created_entry_id;
-        if(state.bankFilter === 'reconciled') return Boolean(row.matches?.confirmed_count || row.created_entry_id);
-        return true;
+        let matchesStatus = true;
+        if(state.bankFilter === 'pending') matchesStatus = row.needs_manual_action && !(row.matches?.suggested_count);
+        if(state.bankFilter === 'suggested') matchesStatus = Boolean(row.matches?.suggested_count) && !row.matches?.confirmed_count && !row.created_entry_id;
+        if(state.bankFilter === 'reconciled') matchesStatus = Boolean(row.matches?.confirmed_count || row.created_entry_id);
+        return matchesStatus && columnMatches(row, state.columnSearch?.bank, [
+            row.row_number,
+            row.description,
+            row.document_number,
+            row.bank_reference,
+            row.counterparty_name,
+            row.occurred_on,
+            row.due_date,
+            formatDateDisplay(row.occurred_on),
+            formatDateDisplay(row.due_date),
+            row.amount,
+            brl(row.amount),
+            row.movement_nature,
+            rowStatusLabel(row),
+            row.matches?.match_mode,
+        ]);
     });
 }
 
@@ -846,6 +933,7 @@ function renderBankRows(){
                     ${String(row.id) === String(state.activeRowId) ? badge('Em foco', 'info') : ''}
                 </div>
             </div>
+            ${cardDateLine(row, {dueDate: row.due_date, liquidationDate: row.occurred_on})}
             <p class="row-meta">${escapeHtml(row.counterparty_name || 'Sem favorecido identificado')}</p>
             <div class="badges">
                 ${row.matches?.match_mode ? badge(`Modo ${row.matches.match_mode}`, 'mute') : ''}
@@ -858,21 +946,40 @@ function renderBankRows(){
 
 function renderSystemRows(){
     const container = document.getElementById('system-rows-list');
-    const query = String(state.systemSearch || '').trim().toLowerCase();
+    const query = state.columnSearch?.system || '';
     const activeRow = getActiveRow();
     const suggestedIds = new Set((state.rowCandidates[activeRow?.id]?.items || []).map(item => Number(item.entry.id)));
     const linkedIds = new Set((activeRow?.matches?.linked_entry_ids || []).map(Number));
     const selectedIds = new Set(state.selectedEntryIds.map(Number));
     const rows = (state.workspace?.system_rows || []).filter((item) => {
-        if(!query) return true;
-        const haystack = [
+        return columnMatches(item, query, [
             item.entry_code,
             item.description,
+            item.notes,
             item.document_number,
             item.external_reference,
             item.origin_reference,
-        ].join(' ').toLowerCase();
-        return haystack.includes(query);
+            item.settlement_code,
+            item.counterparty_name,
+            item.chart_account_label,
+            item.due_date,
+            item.occurred_on,
+            item.latest_settlement_date,
+            item.settlement_date,
+            formatDateDisplay(item.due_date),
+            formatDateDisplay(item.occurred_on),
+            formatDateDisplay(item.latest_settlement_date),
+            formatDateDisplay(item.settlement_date),
+            item.original_amount,
+            item.remaining_amount,
+            item.settlement_amount,
+            brl(item.original_amount),
+            brl(item.remaining_amount),
+            brl(item.settlement_amount),
+            item.movement_nature,
+            item.status,
+            item.entry_type,
+        ]);
     });
     if(!rows.length){
         container.innerHTML = emptyState('Nenhum lançamento elegível', 'Revise a busca aplicada ou aguarde novos lançamentos do sistema para associação.');
@@ -885,6 +992,7 @@ function renderSystemRows(){
                     <h4 class="recon-card-title">${compactText(bankLaunchLabel(item))} - ${compactText(financialTitleLabel(item))}</h4>
                     <p class="row-meta recon-card-line">${compactText(item.counterparty_name, 'Sem favorecido')}</p>
                     <p class="row-meta recon-card-line">${escapeHtml(cardAmountLine(item))}</p>
+                    ${cardDateLine(item)}
                     <p class="row-meta recon-card-line">${compactText(item.description || item.notes || '-')}</p>
                     <p class="row-meta recon-card-line recon-card-plan">${compactText(chartAccountLine(item))}</p>
                 </div>
@@ -928,6 +1036,7 @@ function renderOpenTitleRows(){
                         <h4 class="recon-card-title">${compactText(bankLaunchLabel(activeRow || item))} - ${compactText(financialTitleLabel(item))}</h4>
                         <p class="row-meta recon-card-line">${compactText(item.counterparty_name, 'Sem favorecido')}</p>
                         <p class="row-meta recon-card-line">${escapeHtml(cardAmountLine(item))}</p>
+                        ${cardDateLine(item)}
                         <p class="row-meta recon-card-line">${compactText(title.name || item.description || '-')}</p>
                         <p class="row-meta recon-card-line recon-card-plan">${compactText(chartAccountLine(item))}</p>
                     </div>
@@ -982,7 +1091,7 @@ function renderWorkbench(){
     const candidatePayload = row ? (state.rowCandidates[row.id] || { items: [] }) : { items: [] };
     const groupSummary = getGroupSummary();
     container.innerHTML = `
-        <section class="workbench-card workbench-card--group">
+        <section class="workbench-card workbench-card--group" data-search="conciliação conjunto vinculos grupo banco sistema diferença confirmar limpar">
             <h4>Conciliação em conjunto</h4>
             <p class="row-meta">Selecione uma ou mais linhas bancárias e um ou mais lançamentos do sistema. O backend valida o total antes de confirmar.</p>
             <div class="group-totals">
@@ -997,7 +1106,7 @@ function renderWorkbench(){
             </div>
         </section>
 
-        <section class="workbench-card workbench-card--title-settlement">
+        <section class="workbench-card workbench-card--title-settlement" data-search="baixa título aberto 1x1 linha bancária saldo diferença selecionar baixar limpar">
             <h4>Baixa de título em aberto</h4>
             <p class="row-meta">Fluxo exclusivo 1x1: selecione exatamente uma linha bancária e um título em aberto para efetuar a baixa usando a data e o valor do extrato.</p>
             <div class="group-totals">
@@ -1017,7 +1126,7 @@ function renderWorkbench(){
             </div>
         </section>
 
-        <section class="workbench-card workbench-card--entry-actions">
+        <section class="workbench-card workbench-card--entry-actions" data-search="criar título baixar lançamento sistema cancelar conciliação corrigir lançamento">
             <h4>Criar título e baixar</h4>
             <div class="inline-actions">
                 <button type="button" class="btn btn-secondary" onclick="openCreateEntryModal()">Criar lançamento no sistema</button>
@@ -1026,7 +1135,7 @@ function renderWorkbench(){
             <p class="row-meta">Para corrigir lançamento do sistema, abra o título, salve a alteração e retorne para esta conciliação com o mesmo lote selecionado.</p>
         </section>
 
-        <section class="workbench-card workbench-card--suggestions">
+        <section class="workbench-card workbench-card--suggestions" data-search="sugestões automáticas candidatos linha foco score confirmar sugestão principal lançamento">
             <h4>Sugestões automáticas da linha em foco</h4>
             ${row ? `<p class="row-meta">Linha ${row.row_number}: ${escapeHtml(row.description || '-')}</p>` : ''}
             ${candidatePayload.items?.length ? `
@@ -1045,7 +1154,25 @@ function renderWorkbench(){
                 </div>
             ` : '<p class="muted">Sem candidatos carregados para esta linha.</p>'}
         </section>
+        <div id="workbench-filter-empty" class="recon-empty-state is-filter-hidden"><strong>Nenhum card encontrado</strong><span>Revise o filtro desta coluna para exibir as ações disponíveis.</span></div>
     `;
+    applyWorkbenchColumnSearch();
+}
+
+function applyWorkbenchColumnSearch(){
+    const container = document.getElementById('workbench-panel');
+    if(!container) return;
+    const query = normalizeSearchText(state.columnSearch?.workbench || '');
+    const cards = Array.from(container.querySelectorAll('.workbench-card'));
+    let visibleCount = 0;
+    cards.forEach((card) => {
+        const text = normalizeSearchText(`${card.dataset.search || ''} ${card.textContent || ''}`);
+        const isVisible = !query || text.includes(query);
+        card.classList.toggle('is-filter-hidden', !isVisible);
+        if(isVisible) visibleCount += 1;
+    });
+    const empty = document.getElementById('workbench-filter-empty');
+    if(empty) empty.classList.toggle('is-filter-hidden', !query || visibleCount > 0);
 }
 
 function renderWorkspace(){
@@ -1067,6 +1194,10 @@ function renderWorkspace(){
     const movementSelect = document.getElementById('reconciliation-movement-filter');
     const workspaceSelect = document.getElementById('workspace-bank-account');
     const batchSelect = document.getElementById('batch-select');
+    const bankColumnSearchInput = document.getElementById('bank-column-search');
+    const systemColumnSearchInput = document.getElementById('system-column-search');
+    const titlesColumnSearchInput = document.getElementById('titles-column-search');
+    const workbenchColumnSearchInput = document.getElementById('workbench-column-search');
     if(bankDateFromInput) bankDateFromInput.value = state.bankDateFrom || '';
     if(bankDateToInput) bankDateToInput.value = state.bankDateTo || '';
     if(dueDateFromInput) dueDateFromInput.value = state.openTitleDueDateFrom || '';
@@ -1076,6 +1207,10 @@ function renderWorkspace(){
     if(systemSearchInput) systemSearchInput.value = state.systemSearch || '';
     if(amountInput) amountInput.value = formatCurrencyInputValue(state.amountFilter || '');
     if(movementSelect) movementSelect.value = state.movementNatureFilter || '';
+    if(bankColumnSearchInput) bankColumnSearchInput.value = state.columnSearch?.bank || '';
+    if(systemColumnSearchInput) systemColumnSearchInput.value = state.columnSearch?.system || '';
+    if(titlesColumnSearchInput) titlesColumnSearchInput.value = state.columnSearch?.titles || '';
+    if(workbenchColumnSearchInput) workbenchColumnSearchInput.value = state.columnSearch?.workbench || '';
     if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
     if(batchSelect){
         batchSelect.innerHTML = (state.workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id) === String(state.workspace.selected_batch?.id) ? 'selected' : ''}>${escapeHtml(item.batch_code)} · ${escapeHtml(item.source_type)}</option>`).join('');
@@ -1197,6 +1332,10 @@ async function clearWorkspaceFilters(){
     const searchInput = document.getElementById('system-search');
     const amountInput = document.getElementById('reconciliation-amount-filter');
     const movementSelect = document.getElementById('reconciliation-movement-filter');
+    const bankColumnSearchInput = document.getElementById('bank-column-search');
+    const systemColumnSearchInput = document.getElementById('system-column-search');
+    const titlesColumnSearchInput = document.getElementById('titles-column-search');
+    const workbenchColumnSearchInput = document.getElementById('workbench-column-search');
     if(bankDateFromInput) bankDateFromInput.value = '';
     if(bankDateToInput) bankDateToInput.value = '';
     if(dueDateFromInput) dueDateFromInput.value = '';
@@ -1206,6 +1345,10 @@ async function clearWorkspaceFilters(){
     if(searchInput) searchInput.value = '';
     if(amountInput) amountInput.value = '';
     if(movementSelect) movementSelect.value = '';
+    if(bankColumnSearchInput) bankColumnSearchInput.value = '';
+    if(systemColumnSearchInput) systemColumnSearchInput.value = '';
+    if(titlesColumnSearchInput) titlesColumnSearchInput.value = '';
+    if(workbenchColumnSearchInput) workbenchColumnSearchInput.value = '';
     state.bankDateFrom = '';
     state.bankDateTo = '';
     state.openTitleDueDateFrom = '';
@@ -1215,6 +1358,7 @@ async function clearWorkspaceFilters(){
     state.systemSearch = '';
     state.amountFilter = '';
     state.movementNatureFilter = '';
+    state.columnSearch = { bank: '', system: '', titles: '', workbench: '' };
     closeAllSidebars();
     await refreshWorkspace();
 }
@@ -1230,7 +1374,11 @@ async function loadCandidates(rowId){
 }
 
 async function focusBankRow(rowId){
+    const previousRowId = Number(state.activeRowId || 0) || null;
     state.activeRowId = rowId;
+    if(previousRowId !== Number(rowId || 0)){
+        resetOpenTitleSettlementFlow();
+    }
     if(!state.rowCandidates[rowId]) await loadCandidates(rowId);
     renderBankRows();
     renderSystemRows();
@@ -1248,6 +1396,7 @@ async function toggleBankRowSelection(rowId){
         return;
     }
     const current = new Set((state.selectedBankRowIds || []).map(Number));
+    const previousActiveRowId = Number(state.activeRowId || 0) || null;
     if(current.has(Number(rowId))){
         current.delete(Number(rowId));
     } else {
@@ -1258,9 +1407,13 @@ async function toggleBankRowSelection(rowId){
     state.selectedBankRowIds = Array.from(current);
     if(!state.selectedBankRowIds.length){
         state.activeRowId = null;
-        state.selectedOpenTitleId = null;
     } else if(!state.selectedBankRowIds.map(Number).includes(Number(state.activeRowId))){
         state.activeRowId = state.selectedBankRowIds[0];
+    }
+    if(previousActiveRowId !== (Number(state.activeRowId || 0) || null)){
+        resetOpenTitleSettlementFlow();
+    } else if(!state.selectedBankRowIds.length){
+        resetOpenTitleSettlementFlow();
     }
     renderBankRows();
     renderSystemRows();
@@ -1273,6 +1426,7 @@ function toggleSelectAllVisibleReconciledRows(){
     const current = new Set((state.selectedBankRowIds || []).map(Number));
     const visibleIds = rows.map(item => Number(item.id));
     const allSelected = visibleIds.length > 0 && visibleIds.every(id => current.has(id));
+    const previousActiveRowId = Number(state.activeRowId || 0) || null;
     if(allSelected){
         visibleIds.forEach(id => current.delete(id));
     } else {
@@ -1281,8 +1435,8 @@ function toggleSelectAllVisibleReconciledRows(){
     state.selectedBankRowIds = Array.from(current);
     const nextActive = (state.workspace?.bank_rows || []).find(item => current.has(Number(item.id))) || null;
     state.activeRowId = nextActive?.id || null;
-    if(!state.activeRowId){
-        state.selectedOpenTitleId = null;
+    if(previousActiveRowId !== (Number(state.activeRowId || 0) || null) || !state.activeRowId){
+        resetOpenTitleSettlementFlow();
     }
     renderBankRows();
     renderSystemRows();
@@ -1336,7 +1490,7 @@ function selectOpenTitle(entryId){
 }
 
 function clearSelectedOpenTitle(){
-    state.selectedOpenTitleId = null;
+    resetOpenTitleSettlementFlow();
     renderOpenTitleRows();
     renderWorkbench();
 }
@@ -1344,7 +1498,7 @@ function clearSelectedOpenTitle(){
 function clearSelectedBankRows(){
     state.selectedBankRowIds = [];
     state.activeRowId = null;
-    state.selectedOpenTitleId = null;
+    resetOpenTitleSettlementFlow();
     renderBankRows();
     renderSystemRows();
     renderOpenTitleRows();
@@ -1511,20 +1665,41 @@ function openOpenTitleResolutionModal(payload){
 
 function getVisibleOpenTitleRows(){
     const rows = state.workspace?.open_title_rows || [];
-    const query = String(state.systemSearch || '').trim().toLowerCase();
+    const query = state.columnSearch?.titles || '';
     return rows.filter((item) => {
-        if(!query) return true;
         const title = item.title || {};
-        const haystack = [
+        return columnMatches(item, query, [
             item.entry_code,
             item.description,
+            item.notes,
             item.document_number,
             item.external_reference,
             item.origin_reference,
+            item.counterparty_name,
+            item.chart_account_label,
+            item.due_date,
+            item.occurred_on,
+            item.latest_settlement_date,
+            item.settlement_date,
+            formatDateDisplay(item.due_date),
+            formatDateDisplay(item.occurred_on),
+            formatDateDisplay(item.latest_settlement_date),
+            formatDateDisplay(item.settlement_date),
+            item.original_amount,
+            item.remaining_amount,
+            item.title_original_amount,
+            item.title_remaining_amount,
+            brl(item.original_amount),
+            brl(item.remaining_amount),
             title.schedule_code,
             title.name,
-        ].join(' ').toLowerCase();
-        return haystack.includes(query);
+            title.template_amount,
+            title.next_due_date,
+            formatDateDisplay(title.next_due_date),
+            item.movement_nature,
+            item.status,
+            item.entry_type,
+        ]);
     });
 }
 
