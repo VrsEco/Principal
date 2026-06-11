@@ -402,6 +402,112 @@ def test_create_schedule_uses_flush_when_auto_commit_is_disabled(monkeypatch):
     assert "committed" not in captured
 
 
+def test_create_schedule_materializes_recurrence_as_one_time_titles(monkeypatch):
+    captured = {"schedules": [], "links": [], "next_id": 100}
+
+    class _FakeSchedule:
+        company_id = _Column()
+        schedule_code = _Column()
+        deleted_at = _Column()
+        id = None
+        query = _QueryStub(None)
+
+        def __init__(self, **kwargs):
+            self.id = None
+            self.__dict__.update(kwargs)
+
+    class _FakeLink:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+
+    def _add(obj):
+        if isinstance(obj, _FakeSchedule):
+            captured["schedules"].append(obj)
+        else:
+            captured["links"].append(obj)
+
+    def _flush():
+        for item in captured["schedules"]:
+            if getattr(item, "id", None) is None:
+                item.id = captured["next_id"]
+                captured["next_id"] += 1
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FakeSchedule)
+    monkeypatch.setattr(schedule_module, "FinancialScheduleLink", _FakeLink)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        schedule_module.FinancialService,
+        "_resolve_budget_links",
+        lambda **kwargs: ({"budget_line_id": None, "budget_contract_id": None, "budget_document_id": None}, None),
+    )
+    monkeypatch.setattr(
+        schedule_module.FinancialBudgetSchedulePolicy,
+        "validate_document_schedule_amount",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_links", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_validate_schedule_allocations", lambda **kwargs: None)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_serialize_schedule", lambda schedule, **kwargs: schedule.__dict__)
+    monkeypatch.setattr(schedule_module.FinancialScheduleService, "_generate_schedule_code", lambda company_id: f"AG-{len(captured['schedules']) + 1:06d}")
+    monkeypatch.setattr(schedule_module.db.session, "add", _add)
+    monkeypatch.setattr(schedule_module.db.session, "flush", _flush)
+    monkeypatch.setattr(schedule_module.db.session, "commit", lambda: captured.setdefault("committed", True))
+    monkeypatch.setattr(schedule_module.db.session, "rollback", lambda: captured.setdefault("rollback", True))
+
+    result, error = FinancialScheduleService.create_schedule(
+        payload={
+            "company_id": 9,
+            "schedule_code": "SCH-REC-001",
+            "name": "Aluguel",
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "status": "active",
+            "frequency": "monthly",
+            "interval_value": 1,
+            "start_date": date(2026, 3, 22),
+            "competence_date": date(2026, 3, 22),
+            "first_due_date": date(2026, 3, 25),
+            "description": "Aluguel matriz",
+            "template_amount": Decimal("1000.00"),
+            "currency_code": "BRL",
+            "metadata_json": {
+                "competence_mode": "due_date",
+                "repeat_count": 3,
+                "attachments": [{"id": "keep-only-root"}],
+                "allocations": [
+                    {
+                        "allocation_type": "amount",
+                        "allocated_amount": Decimal("1000.00"),
+                        "chart_account_id": 1,
+                        "cost_center_id": 2,
+                    }
+                ],
+            },
+        },
+        allowed_company_ids=[9],
+    )
+
+    assert error is None
+    assert result is not None
+    assert captured["committed"] is True
+    assert len(captured["schedules"]) == 3
+    assert len(captured["links"]) == 2
+
+    root, child_2, child_3 = captured["schedules"]
+    assert root.frequency == "one_time"
+    assert root.first_due_date == date(2026, 3, 25)
+    assert root.metadata_json["recurrence_series_index"] == 1
+    assert child_2.frequency == "one_time"
+    assert child_2.first_due_date == date(2026, 4, 25)
+    assert child_2.competence_date == date(2026, 4, 25)
+    assert child_2.metadata_json["attachments"] == []
+    assert child_2.metadata_json["recurrence_parent_schedule_id"] == root.id
+    assert child_3.first_due_date == date(2026, 5, 25)
+    assert child_3.competence_date == date(2026, 5, 25)
+    assert {link.child_schedule_id for link in captured["links"]} == {child_2.id, child_3.id}
+
+
 def test_create_schedule_accepts_top_level_allocations_in_payload(monkeypatch):
     captured = {}
 

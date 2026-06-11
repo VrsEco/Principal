@@ -54,6 +54,18 @@ class FinancialScheduleService:
     COMPETENCE_MODE_DUE_DATE = "due_date"
 
     @staticmethod
+    def _normalize_repeat_count(metadata_json: Optional[Dict[str, Any]]) -> int:
+        metadata = dict(metadata_json or {})
+        try:
+            return max(1, int(metadata.get("repeat_count") or 1))
+        except (TypeError, ValueError):
+            return 1
+
+    @staticmethod
+    def _should_materialize_recurrence(*, frequency: Optional[str], metadata_json: Optional[Dict[str, Any]]) -> bool:
+        return str(frequency or "").strip().lower() != "one_time" and FinancialScheduleService._normalize_repeat_count(metadata_json) > 1
+
+    @staticmethod
     def _normalize_domain_source_kind(value: Any) -> str:
         return "manual" if str(value or "").strip().lower() == "manual" else "routine"
 
@@ -576,10 +588,109 @@ class FinancialScheduleService:
             )
         )
         normalized["next_due_date"] = normalized.get("next_due_date") or normalized["first_due_date"]
+        repeat_count = FinancialScheduleService._normalize_repeat_count(normalized["metadata_json"])
+        should_materialize_recurrence = FinancialScheduleService._should_materialize_recurrence(
+            frequency=normalized.get("frequency"),
+            metadata_json=normalized.get("metadata_json"),
+        )
         max_attempts = FinancialScheduleService.AUTO_GENERATED_SCHEDULE_CODE_MAX_ATTEMPTS if auto_generated_code else 1
         current_schedule_code = normalized["schedule_code"]
 
         try:
+            if should_materialize_recurrence:
+                recurrence_frequency = str(normalized.get("frequency") or "one_time").strip().lower()
+                recurrence_interval = max(1, int(normalized.get("interval_value") or 1))
+                recurrence_day_of_month = normalized.get("day_of_month")
+                recurrence_competence_mode = FinancialScheduleService._normalize_competence_mode(
+                    dict(normalized.get("metadata_json") or {}).get("competence_mode")
+                )
+
+                base_payload = dict(normalized)
+                base_metadata = dict(base_payload.get("metadata_json") or {})
+                base_metadata.update(
+                    {
+                        "repeat_count": repeat_count,
+                        "recurrence_materialized": True,
+                        "recurrence_frequency": recurrence_frequency,
+                        "recurrence_interval_value": recurrence_interval,
+                        "recurrence_series_index": 1,
+                        "recurrence_series_total": repeat_count,
+                    }
+                )
+                base_payload["metadata_json"] = FinancialScheduleService._normalize_schedule_metadata(base_metadata)
+                base_payload["frequency"] = "one_time"
+                base_payload["interval_value"] = 1
+                base_payload["day_of_month"] = None
+                base_payload["weekday"] = None
+
+                root_schedule = FinancialSchedule(**base_payload)
+                db.session.add(root_schedule)
+                db.session.flush()
+
+                current_due_date = base_payload["first_due_date"]
+                base_competence_date = base_payload.get("competence_date") or base_payload.get("start_date")
+
+                for series_index in range(2, repeat_count + 1):
+                    next_due_date = FinancialScheduleService._calculate_next_due_date_by_rule(
+                        frequency=recurrence_frequency,
+                        interval_value=recurrence_interval,
+                        current_due_date=current_due_date,
+                        preferred_day_of_month=recurrence_day_of_month,
+                    )
+                    if not next_due_date:
+                        break
+                    current_due_date = next_due_date
+                    child_competence_date = (
+                        next_due_date
+                        if recurrence_competence_mode == FinancialScheduleService.COMPETENCE_MODE_DUE_DATE
+                        else base_competence_date
+                    )
+                    child_payload = dict(base_payload)
+                    child_metadata = dict(base_metadata)
+                    child_metadata.update(
+                        {
+                            "attachments": [],
+                            "recurrence_parent_schedule_id": root_schedule.id,
+                            "recurrence_parent_schedule_code": root_schedule.schedule_code,
+                            "recurrence_series_index": series_index,
+                            "recurrence_series_total": repeat_count,
+                        }
+                    )
+                    child_payload.update(
+                        {
+                            "schedule_code": FinancialScheduleService._generate_schedule_code(data.company_id),
+                            "start_date": child_competence_date,
+                            "competence_date": child_competence_date,
+                            "first_due_date": next_due_date,
+                            "next_due_date": next_due_date,
+                            "metadata_json": FinancialScheduleService._normalize_schedule_metadata(child_metadata),
+                        }
+                    )
+                    child_schedule = FinancialSchedule(**child_payload)
+                    db.session.add(child_schedule)
+                    db.session.flush()
+                    db.session.add(
+                        FinancialScheduleLink(
+                            company_id=data.company_id,
+                            parent_schedule_id=root_schedule.id,
+                            child_schedule_id=child_schedule.id,
+                            link_type="recurrence",
+                            title_nature=data.entry_type,
+                            metadata_json={
+                                "series_index": series_index,
+                                "series_total": repeat_count,
+                                "frequency": recurrence_frequency,
+                                "interval_value": recurrence_interval,
+                            },
+                        )
+                    )
+
+                if auto_commit:
+                    db.session.commit()
+                else:
+                    db.session.flush()
+                return FinancialScheduleService._serialize_schedule(root_schedule), None
+
             for attempt in range(max_attempts):
                 payload_to_persist = dict(normalized)
                 if auto_generated_code:
@@ -2311,6 +2422,29 @@ class FinancialScheduleService:
             )
         if schedule.frequency == "yearly":
             return FinancialScheduleService._add_years(current_due_date, int(schedule.interval_value or 1))
+        return None
+
+    @staticmethod
+    def _calculate_next_due_date_by_rule(
+        *,
+        frequency: str,
+        interval_value: int,
+        current_due_date: date,
+        preferred_day_of_month: Optional[int] = None,
+    ) -> Optional[date]:
+        normalized_frequency = str(frequency or "").strip().lower() or "one_time"
+        if normalized_frequency == "one_time":
+            return None
+        if normalized_frequency == "weekly":
+            return current_due_date + timedelta(days=7 * max(1, int(interval_value or 1)))
+        if normalized_frequency == "monthly":
+            return FinancialScheduleService._add_months(
+                current_due_date,
+                max(1, int(interval_value or 1)),
+                preferred_day_of_month,
+            )
+        if normalized_frequency == "yearly":
+            return FinancialScheduleService._add_years(current_due_date, max(1, int(interval_value or 1)))
         return None
 
     @staticmethod
