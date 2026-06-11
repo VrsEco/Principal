@@ -352,6 +352,10 @@ class FinancialReconciliationWorkspaceService:
                 "linked_rows_count": len(linked_row_ids),
                 "match_mode": "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched"),
                 "navigation_url": f"/financial/entries/{entry.id}?company_id={entry.company_id}",
+                "counterparty_name": FinancialReconciliationWorkspaceService._counterparty_name(
+                    entry.company_id,
+                    entry.counterparty_id,
+                ),
                 "chart_account_label": FinancialReconciliationWorkspaceService._chart_account_label(
                     entry.company_id,
                     entry.chart_account_id,
