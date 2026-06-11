@@ -35,11 +35,14 @@ def test_reconciliation_template_exposes_bulk_cancel_controls_for_reconciled_tab
 def test_reconciliation_template_uses_requested_workbench_card_order():
     content = TEMPLATE_PATH.read_text(encoding="utf-8")
 
+    assert 'id="selected-bank-strip"' in content
+    assert "function renderSelectedBankStrip()" in content
+    assert "Registros bancários selecionados" not in content
+
     order = [
-        "Registros bancários selecionados",
+        "Conciliação em conjunto",
         "Baixa de título em aberto",
         "Criar título e baixar",
-        "Conciliação em conjunto",
         "Sugestões automáticas da linha em foco",
     ]
 
