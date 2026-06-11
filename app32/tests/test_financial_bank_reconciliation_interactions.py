@@ -120,3 +120,49 @@ def test_system_rows_allow_multiple_selection_via_checkbox_and_card(tmp_path):
 
     assert payload["selectedEntryIds"] == [101, 102]
     assert payload["selectedBankRowIds"] == [1, 2]
+
+
+def test_bank_rows_render_all_items_by_default(tmp_path):
+    html_path = tmp_path / "bank_reconciliation_probe.html"
+    html_path.write_text(_build_probe_html(), encoding="utf-8")
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.route(
+            "**/*",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body='{"items": []}',
+            )
+            if route.request.resource_type == "fetch"
+            else route.continue_(),
+        )
+        page.goto(html_path.as_uri())
+        page.evaluate(
+            """
+            state.workspace = {
+              bank_account: { id: 10, name: 'Conta Teste' },
+              selected_batch: { id: 20, batch_code: 'B1', source_type: 'ofx' },
+              available_batches: [{ id: 20, batch_code: 'B1', source_type: 'ofx' }],
+              bank_rows: [
+                { id: 1, row_number: 1, description: 'Linha pendente', amount: 60, movement_nature: 'credit', matches: { linked_entry_ids: [], confirmed_count: 0, suggested_count: 0 }, needs_manual_action: true },
+                { id: 2, row_number: 2, description: 'Linha conciliada', amount: 40, movement_nature: 'credit', created_entry_id: 999, matches: { linked_entry_ids: [999], confirmed_count: 1, suggested_count: 0 }, needs_manual_action: false }
+              ],
+              bank_rows_without_link: [
+                { id: 1, row_number: 1, description: 'Linha pendente', amount: 60, movement_nature: 'credit', matches: { linked_entry_ids: [], confirmed_count: 0, suggested_count: 0 }, needs_manual_action: true }
+              ],
+              bank_rows_with_suggestion: [],
+              system_rows: [],
+              open_title_rows: [],
+              summary: { total_rows: 2, unmatched_bank_rows: 1, confirmed_matches: 1, suggested_matches: 0 },
+            };
+            renderBankRows();
+            """
+        )
+
+        rendered = page.locator("#bank-rows-list article").count()
+        browser.close()
+
+    assert rendered == 2

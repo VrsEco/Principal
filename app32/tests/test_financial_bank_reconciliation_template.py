@@ -89,6 +89,13 @@ def test_bank_reconciliation_upload_has_guided_submit_flow():
     assert "Selecione um arquivo OFX, XLS, XLSX ou CSV" in template
 
 
+def test_bank_reconciliation_starts_with_all_bank_rows_visible():
+    template = TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    assert "bankFilter: 'all'" in template
+    assert "bankFilter: 'pending'" not in template
+
+
 def test_bank_reconciliation_inline_script_has_valid_javascript_syntax(tmp_path):
     if not shutil.which("node"):
         pytest.skip("Node.js indisponível para validar sintaxe do script inline")
