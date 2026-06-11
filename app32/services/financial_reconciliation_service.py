@@ -183,6 +183,133 @@ class FinancialReconciliationService:
         entry.metadata_json = metadata
 
     @staticmethod
+    def _has_active_entry_reconciliation(*, company_id: int, entry_id: int, ignored_match_id: Optional[int] = None) -> bool:
+        match_filters = [
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.financial_entry_id == entry_id,
+            FinancialReconciliationMatch.match_status == "confirmed",
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ]
+        if ignored_match_id:
+            match_filters.append(FinancialReconciliationMatch.id != ignored_match_id)
+        if FinancialReconciliationMatch.query.filter(*match_filters).first():
+            return True
+        return bool(
+            FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.financial_entry_id == entry_id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+                FinancialSettlement.reconciliation_status.in_(["matched", "reconciled"]),
+            ).first()
+        )
+
+    @staticmethod
+    def _mark_settlement_cancelled(settlement: FinancialSettlement, reason_text: str) -> None:
+        metadata = dict(settlement.metadata_json or {})
+        reversal_history = list(metadata.get("reconciliation_reversal_history") or [])
+        reversal_history.append(
+            {
+                "event": "settlement_cancelled_by_reconciliation_reversal",
+                "reason": reason_text,
+                "at": datetime.utcnow().isoformat(),
+            }
+        )
+        metadata["reconciliation_reversal_history"] = reversal_history[-20:]
+        settlement.metadata_json = metadata
+        settlement.reconciliation_status = "pending"
+        settlement.settlement_status = "cancelled"
+        settlement.notes = f"{(settlement.notes or '').strip()}\nCancelamento da conciliação: {reason_text}".strip()
+
+    @staticmethod
+    def _unlink_existing_settlement(settlement: FinancialSettlement, reason_text: str) -> None:
+        metadata = dict(settlement.metadata_json or {})
+        reversal_history = list(metadata.get("reconciliation_reversal_history") or [])
+        reversal_history.append(
+            {
+                "event": "existing_settlement_unlinked_from_reconciliation",
+                "reason": reason_text,
+                "at": datetime.utcnow().isoformat(),
+                "previous_reconciliation_status": settlement.reconciliation_status,
+            }
+        )
+        metadata["reconciliation_reversal_history"] = reversal_history[-20:]
+        for key in (
+            "import_batch_id",
+            "import_row_id",
+            "reconciliation_match_id",
+            "reconciliation_group_key",
+            "mode",
+        ):
+            metadata.pop(key, None)
+        settlement.metadata_json = metadata
+        settlement.reconciliation_status = "pending"
+
+    @staticmethod
+    def _restore_title_amount_adjustment(
+        *,
+        company_id: int,
+        row: FinancialImportRow,
+        entry: FinancialEntry,
+        match: FinancialReconciliationMatch,
+        reason_text: str,
+    ) -> bool:
+        metadata = dict(match.metadata_json or {})
+        snapshot = metadata.get("title_amount_adjustment") or {}
+        if not snapshot:
+            history = list((entry.metadata_json or {}).get("reconciliation_audit_history") or [])
+            for event in reversed(history):
+                if (
+                    event.get("event") == "title_original_amount_adjusted_via_reconciliation"
+                    and int(event.get("row_id") or 0) == int(row.id)
+                ):
+                    snapshot = event
+                    break
+        previous_amount = snapshot.get("previous_amount")
+        if previous_amount is None:
+            return False
+        restored_amount = FinancialReconciliationService._decimal(previous_amount).quantize(Decimal("0.01"))
+        entry.original_amount = restored_amount
+        if entry.financial_schedule_id:
+            schedule = FinancialSchedule.query.filter(
+                FinancialSchedule.id == entry.financial_schedule_id,
+                FinancialSchedule.company_id == company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            ).first()
+            if schedule:
+                schedule.template_amount = restored_amount
+                schedule_metadata = dict(schedule.metadata_json or {})
+                current_adjustment = schedule_metadata.get("reconciliation_title_amount_adjustment") or {}
+                if int(current_adjustment.get("row_id") or 0) == int(row.id):
+                    schedule_metadata.pop("reconciliation_title_amount_adjustment", None)
+                schedule.metadata_json = schedule_metadata
+        FinancialReconciliationService._append_reconciliation_audit_event(
+            entry,
+            {
+                "event": "title_original_amount_restored_by_reconciliation_reversal",
+                "row_id": row.id,
+                "match_id": match.id,
+                "restored_amount": float(restored_amount),
+                "reason": reason_text,
+            },
+        )
+        return True
+
+    @staticmethod
+    def _cancel_created_entry(entry: FinancialEntry, reason_text: str) -> None:
+        entry.status = "cancelled"
+        entry.review_status = "pending_review"
+        entry.deleted_at = datetime.utcnow()
+        metadata = dict(entry.metadata_json or {})
+        metadata["reconciliation_reversal"] = {
+            "event": "entry_cancelled_by_reconciliation_reversal",
+            "reason": reason_text,
+            "at": datetime.utcnow().isoformat(),
+        }
+        metadata.pop("reconciled", None)
+        entry.metadata_json = metadata
+
+    @staticmethod
     def _adjust_open_title_original_amount(
         *,
         entry: FinancialEntry,
@@ -516,6 +643,7 @@ class FinancialReconciliationService:
 
         try:
             match.match_status = decision
+            adjustment_metadata = dict((adjustments or {}).get("metadata_json") or {})
             row = FinancialImportRow.query.filter(
                 FinancialImportRow.id == match.import_row_id,
                 FinancialImportRow.company_id == company_id,
@@ -539,6 +667,11 @@ class FinancialReconciliationService:
 
             if row and entry:
                 if decision == "confirmed":
+                    if adjustment_metadata:
+                        match.metadata_json = {
+                            **dict(match.metadata_json or {}),
+                            **adjustment_metadata,
+                        }
                     row.normalized_payload = FinancialCatalogService.enrich_reference_payload(
                         company_id=company_id,
                         payload=row.normalized_payload or {},
@@ -752,6 +885,8 @@ class FinancialReconciliationService:
             return None, "Linha do extrato não encontrada no escopo da empresa."
 
         resolved_entry_id = int(financial_entry_id or 0)
+        generated_entry_id = None
+        generated_from_schedule = False
         if not resolved_entry_id and financial_schedule_id:
             generated_entry_result, generated_entry_error = FinancialScheduleService.create_entry_from_schedule(
                 schedule_id=int(financial_schedule_id),
@@ -763,6 +898,8 @@ class FinancialReconciliationService:
                 return None, generated_entry_error
             generated_entry_payload = (generated_entry_result or {}).get("entry") if isinstance(generated_entry_result, dict) else None
             resolved_entry_id = int((generated_entry_payload or {}).get("id") or 0)
+            generated_entry_id = resolved_entry_id or None
+            generated_from_schedule = bool(generated_entry_id)
 
         entry = FinancialEntry.query.filter(
             FinancialEntry.id == resolved_entry_id,
@@ -892,6 +1029,10 @@ class FinancialReconciliationService:
                 "open_title_reconciliation": True,
                 "resolution_strategy": normalized_strategy,
                 "difference": float(difference),
+                "title_amount_adjustment": amount_adjustment_snapshot,
+                "generated_entry_id": generated_entry_id,
+                "generated_from_schedule": generated_from_schedule,
+                "source_schedule_id": int(financial_schedule_id or 0) or None,
             }
 
             row.normalized_payload = row_context
@@ -1329,6 +1470,7 @@ class FinancialReconciliationService:
                             "reconciliation_group_key": group_key,
                             "reconciliation_group_bank_row_ids": selected_row_ids,
                             "reconciliation_group_entry_ids": selected_entry_ids,
+                            "created_complement_entry_id": int(created_complement.get("id")) if created_complement else None,
                         },
                     },
                     allowed_company_ids=allowed_company_ids,
@@ -1391,22 +1533,33 @@ class FinancialReconciliationService:
         reason_text = (reason or "").strip() or "Cancelamento manual da conciliação bancária."
         reverted_settlements = 0
         reverted_matches = 0
+        restored_amount_adjustments = 0
+        cancelled_created_entries = 0
         released_entries: List[int] = []
 
         try:
             for match in active_matches:
+                match_metadata = dict(match.metadata_json or {})
                 linked_settlements = FinancialSettlement.query.filter(
                     FinancialSettlement.company_id == company_id,
                     FinancialSettlement.external_reference == f"reconciliation-match:{match.id}",
                     FinancialSettlement.deleted_at.is_(None),
                 ).all()
                 for settlement in linked_settlements:
-                    settlement.reconciliation_status = "pending"
-                    settlement.settlement_status = "cancelled"
-                    settlement.notes = (
-                        f"{(settlement.notes or '').strip()}\nCancelamento da conciliação: {reason_text}".strip()
-                    )
+                    FinancialReconciliationService._mark_settlement_cancelled(settlement, reason_text)
                     reverted_settlements += 1
+
+                existing_settlement_id = int(match_metadata.get("financial_settlement_id") or 0)
+                if existing_settlement_id:
+                    existing_settlement = FinancialSettlement.query.filter(
+                        FinancialSettlement.id == existing_settlement_id,
+                        FinancialSettlement.company_id == company_id,
+                        FinancialSettlement.deleted_at.is_(None),
+                    ).first()
+                    if existing_settlement:
+                        FinancialReconciliationService._unlink_existing_settlement(existing_settlement, reason_text)
+                        released_entries.append(existing_settlement.financial_entry_id)
+
                 if match.financial_entry_id:
                     entry = FinancialEntry.query.filter(
                         FinancialEntry.id == match.financial_entry_id,
@@ -1414,25 +1567,45 @@ class FinancialReconciliationService:
                         FinancialEntry.deleted_at.is_(None),
                     ).first()
                     if entry:
-                        has_other_active_settlements = FinancialSettlement.query.filter(
-                            FinancialSettlement.company_id == company_id,
-                            FinancialSettlement.financial_entry_id == entry.id,
-                            FinancialSettlement.deleted_at.is_(None),
-                            FinancialSettlement.settlement_status != "cancelled",
-                            FinancialSettlement.reconciliation_status.in_(["matched", "reconciled"]),
-                        ).first()
+                        if FinancialReconciliationService._restore_title_amount_adjustment(
+                            company_id=company_id,
+                            row=row,
+                            entry=entry,
+                            match=match,
+                            reason_text=reason_text,
+                        ):
+                            restored_amount_adjustments += 1
+
+                        created_by_reconciliation = (
+                            int(match_metadata.get("generated_entry_id") or 0) == int(entry.id)
+                            or int(match_metadata.get("created_complement_entry_id") or 0) == int(entry.id)
+                            or (
+                                bool(match_metadata.get("generated_from_schedule"))
+                                and int(match_metadata.get("generated_entry_id") or 0) == int(entry.id)
+                            )
+                        )
+                        if created_by_reconciliation:
+                            FinancialReconciliationService._cancel_created_entry(entry, reason_text)
+                            cancelled_created_entries += 1
+
+                        has_other_active_reconciliation = FinancialReconciliationService._has_active_entry_reconciliation(
+                            company_id=company_id,
+                            entry_id=entry.id,
+                            ignored_match_id=match.id,
+                        )
                         FinancialReconciliationService._update_entry_reconciliation_metadata(
                             entry=entry,
-                            reconciled=bool(has_other_active_settlements),
+                            reconciled=has_other_active_reconciliation,
                             actor_reason=reason_text,
                         )
                         released_entries.append(entry.id)
                 match.match_status = "rejected"
                 match.match_reason = f"{(match.match_reason or '').strip()} · cancelado: {reason_text}".strip()[:255]
                 match.metadata_json = {
-                    **(match.metadata_json or {}),
+                    **match_metadata,
                     "reconciliation_cancelled": True,
                     "reconciliation_cancel_reason": reason_text,
+                    "reconciliation_cancelled_at": datetime.utcnow().isoformat(),
                 }
                 reverted_matches += 1
 
@@ -1444,23 +1617,24 @@ class FinancialReconciliationService:
                 ).first()
                 created_settlements = FinancialSettlement.query.filter(
                     FinancialSettlement.company_id == company_id,
-                    FinancialSettlement.external_reference == f"reconciliation-row:{row.id}",
+                    db.or_(
+                        FinancialSettlement.external_reference == f"reconciliation-row:{row.id}",
+                        FinancialSettlement.financial_entry_id == row.created_entry_id,
+                    ),
                     FinancialSettlement.deleted_at.is_(None),
                 ).all()
                 for settlement in created_settlements:
-                    settlement.reconciliation_status = "pending"
-                    settlement.settlement_status = "cancelled"
-                    settlement.notes = (
-                        f"{(settlement.notes or '').strip()}\nCancelamento da conciliação: {reason_text}".strip()
-                    )
+                    FinancialReconciliationService._mark_settlement_cancelled(settlement, reason_text)
                     reverted_settlements += 1
                 if created_entry:
+                    FinancialReconciliationService._cancel_created_entry(created_entry, reason_text)
                     FinancialReconciliationService._update_entry_reconciliation_metadata(
                         entry=created_entry,
                         reconciled=False,
                         actor_reason=reason_text,
                     )
                     released_entries.append(created_entry.id)
+                    cancelled_created_entries += 1
                 row.created_entry_id = None
 
             row.matched_entry_id = None
@@ -1476,6 +1650,8 @@ class FinancialReconciliationService:
             "row_id": row.id,
             "reverted_matches": reverted_matches,
             "reverted_settlements": reverted_settlements,
+            "restored_amount_adjustments": restored_amount_adjustments,
+            "cancelled_created_entries": cancelled_created_entries,
             "released_entry_ids": sorted(set(released_entries)),
             "reason": reason_text,
         }, None
@@ -1500,6 +1676,8 @@ class FinancialReconciliationService:
         failed: List[Dict] = []
         total_matches = 0
         total_settlements = 0
+        total_restored_amount_adjustments = 0
+        total_cancelled_created_entries = 0
         released_entry_ids: set[int] = set()
 
         for row_id in normalized_row_ids:
@@ -1515,6 +1693,8 @@ class FinancialReconciliationService:
             succeeded.append(result or {"row_id": row_id})
             total_matches += int((result or {}).get("reverted_matches") or 0)
             total_settlements += int((result or {}).get("reverted_settlements") or 0)
+            total_restored_amount_adjustments += int((result or {}).get("restored_amount_adjustments") or 0)
+            total_cancelled_created_entries += int((result or {}).get("cancelled_created_entries") or 0)
             released_entry_ids.update(int(item) for item in ((result or {}).get("released_entry_ids") or []) if item is not None)
 
         if not succeeded:
@@ -1527,6 +1707,8 @@ class FinancialReconciliationService:
             "failed_rows": len(failed),
             "reverted_matches": total_matches,
             "reverted_settlements": total_settlements,
+            "restored_amount_adjustments": total_restored_amount_adjustments,
+            "cancelled_created_entries": total_cancelled_created_entries,
             "released_entry_ids": sorted(released_entry_ids),
             "items": succeeded,
             "errors": failed,

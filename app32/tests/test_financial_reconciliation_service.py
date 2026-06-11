@@ -198,6 +198,52 @@ def test_row_match_resource_delete_cancels_reconciliation(monkeypatch):
     assert captured["kwargs"]["reason"] == "Ajuste operacional"
 
 
+def test_restore_title_amount_adjustment_reverts_original_amount_from_match_metadata():
+    row = SimpleNamespace(id=61, import_batch_id=301)
+    entry = SimpleNamespace(
+        id=11,
+        company_id=9,
+        financial_schedule_id=None,
+        original_amount=150,
+        metadata_json={},
+    )
+    match = SimpleNamespace(
+        id=701,
+        metadata_json={"title_amount_adjustment": {"previous_amount": 100, "new_amount": 150}},
+    )
+
+    restored = FinancialReconciliationService._restore_title_amount_adjustment(
+        company_id=9,
+        row=row,
+        entry=entry,
+        match=match,
+        reason_text="teste",
+    )
+
+    assert restored is True
+    assert str(entry.original_amount) == "100.00"
+    assert entry.metadata_json["reconciliation_audit_history"][-1]["event"] == (
+        "title_original_amount_restored_by_reconciliation_reversal"
+    )
+
+
+def test_cancel_created_entry_marks_entry_cancelled_and_deleted():
+    entry = SimpleNamespace(
+        status="posted",
+        review_status="reviewed",
+        deleted_at=None,
+        metadata_json={"reconciled": True},
+    )
+
+    FinancialReconciliationService._cancel_created_entry(entry, "desfazer conciliação")
+
+    assert entry.status == "cancelled"
+    assert entry.review_status == "pending_review"
+    assert entry.deleted_at is not None
+    assert entry.metadata_json["reconciliation_reversal"]["event"] == "entry_cancelled_by_reconciliation_reversal"
+    assert "reconciled" not in entry.metadata_json
+
+
 def test_reconcile_group_balanced_multiple_rows_and_entries(monkeypatch):
     rows = [
         SimpleNamespace(id=61, company_id=9, import_batch_id=301, amount=50, row_number=1, movement_nature="credit", created_entry_id=None),
