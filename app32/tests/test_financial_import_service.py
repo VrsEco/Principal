@@ -1,6 +1,7 @@
 import hashlib
 import os
 import sys
+from decimal import Decimal
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -73,3 +74,31 @@ def test_create_import_batch_computes_file_hash_without_duplicate_keyword(monkey
     assert captured["batch_kwargs"]["status"] == "parsed"
     assert captured["committed"] is True
     assert "rolled_back" not in captured
+
+
+def test_normalize_row_sanitizes_none_key_in_raw_payload():
+    row = FinancialImportService._normalize_row(
+        1,
+        {
+            "historico": "Fornecedor XPTO",
+            "valor": "1500,75",
+            None: ["coluna-extra", "coluna-extra-2"],
+        },
+    )
+
+    assert row.raw_payload["__extra_columns__"] == ["coluna-extra", "coluna-extra-2"]
+    assert None not in row.raw_payload
+    assert row.description == "Fornecedor XPTO"
+    assert row.amount == Decimal("1500.75")
+
+
+def test_parse_csv_bytes_maps_extra_columns_to_string_key():
+    rows = FinancialImportService._parse_csv_bytes(b"historico,valor\nFornecedor XPTO,1500,EXTRA\n")
+
+    assert rows == [
+        {
+            "historico": "Fornecedor XPTO",
+            "valor": "1500",
+            "__extra_columns__": ["EXTRA"],
+        }
+    ]

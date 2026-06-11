@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 class FinancialImportService:
     """Hub determinístico de staging para importações financeiras."""
 
+    EXTRA_COLUMNS_KEY = "__extra_columns__"
+
     IMPORT_TEMPLATE_COLUMNS = [
         {"key": "tipo_registro", "label": "Tipo de Registro *", "required": True, "example": "agendamento"},
         {"key": "tipo_titulo", "label": "Tipo do Título *", "required": True, "example": "Pagar ou Receber"},
@@ -92,8 +94,20 @@ class FinancialImportService:
         return "credit" if amount >= 0 else "debit"
 
     @staticmethod
+    def _sanitize_raw_payload(raw_payload: Dict[str, Any] | None) -> Dict[str, Any]:
+        sanitized: Dict[str, Any] = {}
+        for index, (key, value) in enumerate((raw_payload or {}).items(), start=1):
+            if key is None:
+                target_key = FinancialImportService.EXTRA_COLUMNS_KEY
+            else:
+                target_key = str(key).strip() or f"column_{index}"
+            sanitized[target_key] = value
+        return sanitized
+
+    @staticmethod
     def _normalize_row(row_number: int, raw_payload: Dict[str, Any]) -> FinancialImportRowInput:
-        normalized = {str(key).strip().lower(): value for key, value in (raw_payload or {}).items()}
+        sanitized_raw_payload = FinancialImportService._sanitize_raw_payload(raw_payload)
+        normalized = {str(key).strip().lower(): value for key, value in sanitized_raw_payload.items()}
         amount = (
             FinancialImportService._parse_decimal(normalized.get("amount"))
             or FinancialImportService._parse_decimal(normalized.get("valor"))
@@ -160,7 +174,7 @@ class FinancialImportService:
             movement_nature=movement_nature,
             bank_reference=bank_reference,
             counterparty_name=counterparty_name,
-            raw_payload=raw_payload,
+            raw_payload=sanitized_raw_payload,
             normalized_payload={
                 "description": description,
                 "occurred_on": occurred_on.isoformat() if occurred_on else None,
@@ -197,7 +211,7 @@ class FinancialImportService:
     def _parse_csv_bytes(file_bytes: bytes, delimiter: str = ",") -> List[Dict[str, Any]]:
         text = file_bytes.decode("utf-8-sig", errors="ignore")
         reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
-        return [dict(row) for row in reader]
+        return [FinancialImportService._sanitize_raw_payload(dict(row)) for row in reader]
 
     @staticmethod
     def _parse_xlsx_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
