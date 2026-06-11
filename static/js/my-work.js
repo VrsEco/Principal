@@ -2145,22 +2145,22 @@ function createActivityElement(activity) {
     const instanceHasInfo = hasActivityCode || instanceTitle;
 
     titleContent = `
-      <span class="activity-label">Instância:</span>
-      <span class="instance-name instance-name--primary">
-        ${hasActivityCode ? activityCodeMarkup : ''}
-        ${instanceDisplayName}
-      </span>
+      <span class="activity-label">Processo:</span>
+      ${processCode
+        ? `<span class="activity-code">${processCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
+        : ''
+      }
+      <span class="process-name">${processDisplayName || ''}</span>
     `.trim();
 
     instanceContent = instanceHasInfo
       ? `
-        <div class="activity-item__instance activity-item__instance--process">
-          <span class="activity-label">Processo:</span>
-          ${processCode
-            ? `<span class="activity-code">${processCode}</span>${needsSeparator ? '<span class="process-separator">-</span>' : ''}`
-            : ''
-          }
-          <span class="process-name process-name--secondary">${processDisplayName || ''}</span>
+        <div class="activity-item__instance">
+          <span class="activity-label">Instância:</span>
+          <span class="instance-name">
+            ${hasActivityCode ? activityCodeMarkup : ''}
+            ${instanceDisplayName}
+          </span>
         </div>
       `.trim()
       : '';
