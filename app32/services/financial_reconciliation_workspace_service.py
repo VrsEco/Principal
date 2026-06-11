@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from models import db
 from models.financial import (
     FinancialBankAccount,
+    FinancialChartAccount,
+    FinancialCounterparty,
     FinancialEntry,
     FinancialImportBatch,
     FinancialImportRow,
@@ -21,6 +23,30 @@ from services.financial_title_balance_service import FinancialTitleBalanceServic
 
 
 class FinancialReconciliationWorkspaceService:
+    @staticmethod
+    def _chart_account_label(company_id: int, chart_account_id: Optional[int]) -> Optional[str]:
+        if not chart_account_id:
+            return None
+        account = FinancialChartAccount.query.filter(
+            FinancialChartAccount.company_id == company_id,
+            FinancialChartAccount.id == chart_account_id,
+            FinancialChartAccount.deleted_at.is_(None),
+        ).first()
+        if not account:
+            return str(chart_account_id)
+        return f"{account.code} - {account.name}" if account.code else account.name
+
+    @staticmethod
+    def _counterparty_name(company_id: int, counterparty_id: Optional[int]) -> Optional[str]:
+        if not counterparty_id:
+            return None
+        counterparty = FinancialCounterparty.query.filter(
+            FinancialCounterparty.company_id == company_id,
+            FinancialCounterparty.id == counterparty_id,
+            FinancialCounterparty.deleted_at.is_(None),
+        ).first()
+        return counterparty.name if counterparty else None
+
     @staticmethod
     def _normalize_search_term(search_query: Optional[str]) -> str:
         return str(search_query or "").strip().lower()
@@ -297,6 +323,8 @@ class FinancialReconciliationWorkspaceService:
         payload = FinancialService.serialize_entry(entry, include_children=False)
         linked_row_ids = [int(item) for item in (linked_row_ids or [])]
         reconciliation_amount = FinancialReconciliationWorkspaceService._settlement_reconciliation_amount(settlement)
+        title_original_amount = Decimal(entry.original_amount or 0)
+        title_remaining_amount = FinancialReconciliationWorkspaceService._entry_remaining_amount(entry)
         is_reconciled = str(settlement.reconciliation_status or "").lower() in {"matched", "reconciled"}
         payload.update(
             {
@@ -313,6 +341,8 @@ class FinancialReconciliationWorkspaceService:
                 "remaining_amount": float(reconciliation_amount),
                 "amount": float(reconciliation_amount),
                 "settlement_amount": float(reconciliation_amount),
+                "title_original_amount": float(title_original_amount),
+                "title_remaining_amount": float(title_remaining_amount),
                 "settlement_code": settlement.settlement_code,
                 "settlement_status": settlement.settlement_status,
                 "reconciliation_status": settlement.reconciliation_status,
@@ -322,6 +352,10 @@ class FinancialReconciliationWorkspaceService:
                 "linked_rows_count": len(linked_row_ids),
                 "match_mode": "N:1" if len(linked_row_ids) > 1 else ("1:1" if len(linked_row_ids) == 1 else "unmatched"),
                 "navigation_url": f"/financial/entries/{entry.id}?company_id={entry.company_id}",
+                "chart_account_label": FinancialReconciliationWorkspaceService._chart_account_label(
+                    entry.company_id,
+                    entry.chart_account_id,
+                ),
             }
         )
         return payload
@@ -355,6 +389,16 @@ class FinancialReconciliationWorkspaceService:
                 "linked_rows_count": 0,
                 "match_mode": "schedule_open",
                 "navigation_url": f"/financial/schedules/{entry.id}?company_id={entry.company_id}",
+                "chart_account_id": getattr(entry, "chart_account_id", None),
+                "counterparty_id": getattr(entry, "counterparty_id", None),
+                "counterparty_name": FinancialReconciliationWorkspaceService._counterparty_name(
+                    entry.company_id,
+                    getattr(entry, "counterparty_id", None),
+                ),
+                "chart_account_label": FinancialReconciliationWorkspaceService._chart_account_label(
+                    entry.company_id,
+                    getattr(entry, "chart_account_id", None),
+                ),
             }
             payload["title"] = {
                 "schedule_id": entry.id,
@@ -399,6 +443,10 @@ class FinancialReconciliationWorkspaceService:
             payload["navigation_url"] = f"/financial/entries/{entry.id}?company_id={entry.company_id}"
         payload["latest_settlement_date"] = payload.get("latest_settlement_date")
         payload["can_title_settle"] = payload["remaining_amount"] > 0
+        payload["chart_account_label"] = payload.get("chart_account_label") or FinancialReconciliationWorkspaceService._chart_account_label(
+            entry.company_id,
+            entry.chart_account_id,
+        )
         return payload
 
     @staticmethod
@@ -998,6 +1046,48 @@ class FinancialReconciliationWorkspaceService:
         entry, error = FinancialService.create_entry(payload=entry_payload, allowed_company_ids=allowed_company_ids)
         if error:
             return None, error
+
+        allocation_items = []
+        for item in payload.get("allocations") or []:
+            item_payload = dict(item or {})
+            allocation_items.append(
+                {
+                    "company_id": company_id,
+                    "financial_entry_id": entry.id,
+                    "chart_account_id": item_payload.get("chart_account_id"),
+                    "cost_center_id": item_payload.get("cost_center_id"),
+                    "allocation_type": item_payload.get("allocation_type") or "percentage",
+                    "percentage": item_payload.get("percentage"),
+                    "allocated_amount": item_payload.get("allocated_amount"),
+                    "notes": item_payload.get("notes"),
+                    "metadata_json": {
+                        **(item_payload.get("metadata_json") or {}),
+                        "domain_source_kind": item_payload.get("domain_source_kind") or "routine",
+                        "domain_type": item_payload.get("domain_type"),
+                        "domain_source_id": item_payload.get("domain_source_id"),
+                        "domain_label": item_payload.get("domain_label"),
+                        "budget_version_id": item_payload.get("budget_version_id"),
+                        "budget_line_id": item_payload.get("budget_line_id"),
+                        "budget_contract_id": item_payload.get("budget_contract_id"),
+                        "budget_document_id": item_payload.get("budget_document_id"),
+                        "reconciliation_created_from_row_id": row.id,
+                    },
+                }
+            )
+        if allocation_items:
+            _, allocation_error = FinancialService.replace_allocations(
+                payload={
+                    "company_id": company_id,
+                    "financial_entry_id": entry.id,
+                    "allocations": allocation_items,
+                },
+                allowed_company_ids=allowed_company_ids,
+            )
+            if allocation_error:
+                entry.deleted_at = db.func.now()
+                row.error_message = allocation_error
+                db.session.commit()
+                return None, allocation_error
 
         settlement_payload = {
             "company_id": company_id,
