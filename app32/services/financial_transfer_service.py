@@ -139,10 +139,49 @@ class FinancialTransferService:
             FinancialTransferService._cleanup_entry(company_id=data.company_id, entry_id=getattr(source_entry, "id", None))
             return None, error
 
+        source_settlement, error = FinancialTransferService._create_transfer_settlement(
+            company_id=data.company_id,
+            entry=source_entry,
+            bank_account_id=source_account.id,
+            occurred_on=occurred_on,
+            transfer_group_id=transfer_group_id,
+            direction="out",
+            counterparty_bank_account_id=destination_account.id,
+            counterparty_bank_account_name=destination_account.name,
+            actor_user_id=actor_user_id,
+            actor_employee_id=actor_employee_id,
+            created_by_agent=data.created_by_agent or "app32",
+        )
+        if error:
+            FinancialTransferService._cleanup_entry(company_id=data.company_id, entry_id=getattr(destination_entry, "id", None))
+            FinancialTransferService._cleanup_entry(company_id=data.company_id, entry_id=getattr(source_entry, "id", None))
+            return None, error
+
+        destination_settlement, error = FinancialTransferService._create_transfer_settlement(
+            company_id=data.company_id,
+            entry=destination_entry,
+            bank_account_id=destination_account.id,
+            occurred_on=occurred_on,
+            transfer_group_id=transfer_group_id,
+            direction="in",
+            counterparty_bank_account_id=source_account.id,
+            counterparty_bank_account_name=source_account.name,
+            actor_user_id=actor_user_id,
+            actor_employee_id=actor_employee_id,
+            created_by_agent=data.created_by_agent or "app32",
+        )
+        if error:
+            FinancialTransferService._cleanup_settlement(company_id=data.company_id, settlement_id=getattr(source_settlement, "id", None))
+            FinancialTransferService._cleanup_entry(company_id=data.company_id, entry_id=getattr(destination_entry, "id", None))
+            FinancialTransferService._cleanup_entry(company_id=data.company_id, entry_id=getattr(source_entry, "id", None))
+            return None, error
+
         return {
             "transfer_group_id": transfer_group_id,
             "source_entry": FinancialService.serialize_entry(source_entry, include_children=False),
             "destination_entry": FinancialService.serialize_entry(destination_entry, include_children=False),
+            "source_settlement": source_settlement.to_dict() if hasattr(source_settlement, "to_dict") else source_settlement,
+            "destination_settlement": destination_settlement.to_dict() if hasattr(destination_settlement, "to_dict") else destination_settlement,
             "summary": {
                 "company_id": data.company_id,
                 "source_bank_account_id": source_account.id,
@@ -155,8 +194,52 @@ class FinancialTransferService:
                 "original_amount": float(Decimal(data.original_amount)),
                 "source_entry_url": f"/financial/entries/{source_entry.id}?company_id={data.company_id}",
                 "destination_entry_url": f"/financial/entries/{destination_entry.id}?company_id={data.company_id}",
+                "source_settlement_code": getattr(source_settlement, "settlement_code", None),
+                "destination_settlement_code": getattr(destination_settlement, "settlement_code", None),
             },
         }, None
+
+    @staticmethod
+    def _create_transfer_settlement(
+        *,
+        company_id: int,
+        entry: Any,
+        bank_account_id: int,
+        occurred_on: date,
+        transfer_group_id: str,
+        direction: str,
+        counterparty_bank_account_id: int,
+        counterparty_bank_account_name: str,
+        actor_user_id: Optional[int],
+        actor_employee_id: Optional[int],
+        created_by_agent: str,
+    ) -> Tuple[Optional[Any], Optional[str]]:
+        settlement_payload = {
+            "company_id": company_id,
+            "financial_entry_id": getattr(entry, "id", None),
+            "settlement_code": f"{transfer_group_id}-{direction}-stl",
+            "settlement_type": "automatic_process",
+            "settlement_status": "posted",
+            "settlement_date": occurred_on,
+            "bank_account_id": bank_account_id,
+            "principal_amount": getattr(entry, "original_amount", None),
+            "external_reference": f"transfer:{transfer_group_id}:{direction}",
+            "reconciliation_status": "pending",
+            "created_by_user_id": actor_user_id,
+            "created_by_employee_id": actor_employee_id,
+            "created_by_agent": created_by_agent,
+            "notes": "Baixa automática gerada para transferência bancária.",
+            "metadata_json": {
+                "is_transfer": True,
+                "include_in_bank_statement": True,
+                "transfer_group_id": transfer_group_id,
+                "transfer_direction": direction,
+                "counterpart_bank_account_id": counterparty_bank_account_id,
+                "counterpart_bank_account_name": counterparty_bank_account_name,
+                "generated_by": "financial_transfer_service",
+            },
+        }
+        return FinancialService.create_settlement(payload=settlement_payload)
 
     @staticmethod
     def _load_account(*, company_id: int, bank_account_id: int) -> Optional[FinancialBankAccount]:
@@ -178,6 +261,23 @@ class FinancialTransferService:
             ).first()
             if entry:
                 db.session.delete(entry)
+                db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    @staticmethod
+    def _cleanup_settlement(*, company_id: int, settlement_id: Optional[int]) -> None:
+        if not settlement_id:
+            return
+        try:
+            from models.financial import FinancialSettlement
+
+            settlement = FinancialSettlement.query.filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialSettlement.id == settlement_id,
+            ).first()
+            if settlement:
+                db.session.delete(settlement)
                 db.session.commit()
         except Exception:
             db.session.rollback()

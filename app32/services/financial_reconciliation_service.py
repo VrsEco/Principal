@@ -135,6 +135,7 @@ class FinancialReconciliationService:
             "settlement_type": "automatic_rule",
             "settlement_status": "posted",
             "settlement_date": row.occurred_on or row.due_date or entry.due_date or entry.competence_date,
+            "bank_account_id": (row.normalized_payload or {}).get("bank_account_id") or getattr(entry, "bank_account_id", None),
             "principal_amount": principal_amount,
             "interest_amount": interest_amount,
             "penalty_amount": penalty_amount,
