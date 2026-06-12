@@ -5,7 +5,13 @@ from decimal import Decimal
 from typing import Any, Dict, Optional, Sequence, Tuple
 
 from models import db
-from models.financial import FinancialCounterparty, FinancialDomainEnablement, FinancialEntry, FinancialSchedule
+from models.financial import (
+    FinancialCounterparty,
+    FinancialDomainEnablement,
+    FinancialEntry,
+    FinancialSchedule,
+    FinancialSettlement,
+)
 from models.financial_budget import (
     FinancialBudgetContract,
     FinancialBudgetDocument,
@@ -307,6 +313,19 @@ class FinancialDirectEntryService:
                 )
                 return None, error
 
+        settlement_payload = FinancialDirectEntryService._build_settlement_payload(data, schedule, entry)
+        settlement, error = FinancialService.create_settlement(
+            payload=settlement_payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if error:
+            FinancialDirectEntryService._cleanup_partial_direct_entry(
+                company_id=data.company_id,
+                schedule_id=schedule.id,
+                entry_id=entry.id,
+            )
+            return None, error
+
         schedule.status = "completed"
         schedule.last_generated_entry_id = entry.id
         schedule.last_generated_at = datetime.utcnow()
@@ -314,12 +333,14 @@ class FinancialDirectEntryService:
             **(schedule.metadata_json or {}),
             "direct_entry": True,
             "direct_entry_id": entry.id,
+            "direct_settlement_id": getattr(settlement, "id", None),
         }
         db.session.commit()
 
         return {
             "schedule": FinancialScheduleService._serialize_schedule(schedule, include_related_entries=True),
             "entry": FinancialService.serialize_entry(entry),
+            "settlement": FinancialService.serialize_settlement(settlement, include_components=True),
         }, None
 
     @staticmethod
@@ -390,8 +411,17 @@ class FinancialDirectEntryService:
         company_id: int,
         schedule_id: Optional[int] = None,
         entry_id: Optional[int] = None,
+        settlement_id: Optional[int] = None,
     ) -> None:
         try:
+            if settlement_id:
+                settlement = FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.id == settlement_id,
+                ).first()
+                if settlement:
+                    db.session.delete(settlement)
+
             if entry_id:
                 entry = FinancialEntry.query.filter(
                     FinancialEntry.company_id == company_id,
@@ -492,7 +522,7 @@ class FinancialDirectEntryService:
         return {
             "company_id": data.company_id,
             "entry_code": entry_code,
-            "entry_type": "bank_movement",
+            "entry_type": data.entry_type,
             "movement_nature": "credit" if data.entry_type == "receivable" else "debit",
             "origin_type": "manual",
             "status": "posted",
@@ -517,4 +547,52 @@ class FinancialDirectEntryService:
             "created_by_agent": data.created_by_agent,
             "notes": data.notes,
             "metadata_json": metadata_json,
+        }
+
+    @staticmethod
+    def _build_settlement_payload(
+        data: FinancialDirectEntryCreateInput,
+        schedule: FinancialSchedule,
+        entry: FinancialEntry,
+    ) -> Dict[str, Any]:
+        metadata = dict(data.metadata_json or {})
+        reconciliation_row_id = metadata.get("reconciliation_created_from_row_id")
+        reconciliation_batch_id = metadata.get("reconciliation_batch_id")
+        is_reconciled = bool(metadata.get("reconciled") or reconciliation_row_id)
+        settlement_metadata = {
+            **metadata,
+            "direct_entry": True,
+            "direct_entry_id": entry.id,
+            "financial_schedule_id": schedule.id,
+        }
+        if reconciliation_row_id:
+            settlement_metadata.update(
+                {
+                    "import_batch_id": reconciliation_batch_id,
+                    "import_row_id": reconciliation_row_id,
+                    "mode": "created_from_bank_reconciliation",
+                }
+            )
+        return {
+            "company_id": data.company_id,
+            "financial_entry_id": entry.id,
+            "settlement_code": f"RECROW-{reconciliation_row_id}" if reconciliation_row_id else None,
+            "settlement_type": "bank_import" if reconciliation_row_id else "manual",
+            "settlement_status": "posted",
+            "settlement_date": data.occurred_on,
+            "bank_account_id": data.bank_account_id,
+            "principal_amount": data.original_amount,
+            "gross_amount": data.original_amount,
+            "net_amount": data.original_amount,
+            "external_reference": (
+                f"reconciliation-row:{reconciliation_row_id}"
+                if reconciliation_row_id
+                else f"financial_direct_entry:{entry.id}"
+            ),
+            "reconciliation_status": "reconciled" if is_reconciled else "pending",
+            "notes": data.notes,
+            "metadata_json": settlement_metadata,
+            "created_by_user_id": data.created_by_user_id,
+            "created_by_employee_id": data.created_by_employee_id,
+            "created_by_agent": data.created_by_agent,
         }

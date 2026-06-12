@@ -17,6 +17,7 @@ from models.financial import (
     FinancialSettlement,
 )
 from services.financial_reconciliation_service import FinancialReconciliationService
+from services.financial_direct_entry_service import FinancialDirectEntryService
 from services.financial_import_service import FinancialImportService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
@@ -1027,104 +1028,63 @@ class FinancialReconciliationWorkspaceService:
         if not batch:
             return None, "Lote de conciliação não encontrado no escopo da empresa."
 
-        entry_payload = {
+        direct_payload = {
             "company_id": company_id,
-            "entry_code": f"REC-ROW-{row.id}",
-            "entry_type": payload.get("entry_type") or "bank_movement",
-            "movement_nature": payload.get("movement_nature") or row.movement_nature or "debit",
-            "origin_type": batch.source_type,
-            "status": "posted",
-            "review_status": "approved",
+            "entry_type": payload.get("entry_type")
+            or ("receivable" if (payload.get("movement_nature") or row.movement_nature) == "credit" else "payable"),
             "description": payload.get("description") or row.description or f"Conciliação linha {row.row_number}",
             "document_number": payload.get("document_number") or row.document_number,
-            "external_reference": payload.get("external_reference") or row.bank_reference,
-            "origin_reference": batch.batch_code,
             "competence_date": payload.get("competence_date") or row.occurred_on or row.due_date or batch.imported_at.date(),
             "due_date": payload.get("due_date") or row.due_date or row.occurred_on or batch.imported_at.date(),
             "occurred_on": payload.get("occurred_on") or row.occurred_on or row.due_date or batch.imported_at.date(),
-            "original_amount": payload.get("original_amount") or row.amount or Decimal("0"),
+            "original_amount": abs(Decimal(str(payload.get("original_amount") or row.amount or Decimal("0")))),
             "bank_account_id": payload.get("bank_account_id") or (row.normalized_payload or {}).get("bank_account_id"),
             "counterparty_id": payload.get("counterparty_id"),
             "chart_account_id": payload.get("chart_account_id"),
             "cost_center_id": payload.get("cost_center_id"),
             "notes": payload.get("notes"),
+            "allocations": payload.get("allocations") or [],
             "metadata_json": {
+                **dict(payload.get("metadata_json") or {}),
                 "reconciliation_created_from_row_id": row.id,
                 "reconciliation_batch_id": batch.id,
+                "reconciliation_batch_code": batch.batch_code,
+                "reconciliation_bank_reference": row.bank_reference,
+                "origin_type": batch.source_type,
+                "origin_reference": batch.batch_code,
                 "reconciled": True,
             },
         }
-        if not entry_payload["bank_account_id"]:
+        if not direct_payload["bank_account_id"]:
             return None, "A linha do extrato precisa estar vinculada a uma conta bancária para criar o lançamento."
-        entry, error = FinancialService.create_entry(payload=entry_payload, allowed_company_ids=allowed_company_ids)
-        if error:
-            return None, error
 
-        allocation_items = []
-        for item in payload.get("allocations") or []:
-            item_payload = dict(item or {})
-            allocation_items.append(
-                {
-                    "company_id": company_id,
-                    "financial_entry_id": entry.id,
-                    "chart_account_id": item_payload.get("chart_account_id"),
-                    "cost_center_id": item_payload.get("cost_center_id"),
-                    "allocation_type": item_payload.get("allocation_type") or "percentage",
-                    "percentage": item_payload.get("percentage"),
-                    "allocated_amount": item_payload.get("allocated_amount"),
-                    "notes": item_payload.get("notes"),
-                    "metadata_json": {
-                        **(item_payload.get("metadata_json") or {}),
-                        "domain_source_kind": item_payload.get("domain_source_kind") or "routine",
-                        "domain_type": item_payload.get("domain_type"),
-                        "domain_source_id": item_payload.get("domain_source_id"),
-                        "domain_label": item_payload.get("domain_label"),
-                        "budget_version_id": item_payload.get("budget_version_id"),
-                        "budget_line_id": item_payload.get("budget_line_id"),
-                        "budget_contract_id": item_payload.get("budget_contract_id"),
-                        "budget_document_id": item_payload.get("budget_document_id"),
-                        "reconciliation_created_from_row_id": row.id,
-                    },
-                }
-            )
-        if allocation_items:
-            _, allocation_error = FinancialService.replace_allocations(
-                payload={
-                    "company_id": company_id,
-                    "financial_entry_id": entry.id,
-                    "allocations": allocation_items,
-                },
-                allowed_company_ids=allowed_company_ids,
-            )
-            if allocation_error:
-                entry.deleted_at = db.func.now()
-                row.error_message = allocation_error
-                db.session.commit()
-                return None, allocation_error
-
-        settlement_payload = {
-            "company_id": company_id,
-            "financial_entry_id": entry.id,
-            "settlement_code": f"RECROW-{row.id}",
-            "settlement_type": "bank_import",
-            "settlement_status": "posted",
-            "settlement_date": row.occurred_on or row.due_date or batch.imported_at.date(),
-            "bank_account_id": entry.bank_account_id,
-            "principal_amount": entry.original_amount,
-            "external_reference": f"reconciliation-row:{row.id}",
-            "reconciliation_status": "reconciled",
-            "metadata_json": {
-                "import_batch_id": batch.id,
-                "import_row_id": row.id,
-                "mode": "created_from_bank_reconciliation",
-            },
-        }
-        settlement, error = FinancialService.create_settlement(payload=settlement_payload, allowed_company_ids=allowed_company_ids)
+        result, error = FinancialDirectEntryService.create_direct_entry(
+            payload=direct_payload,
+            allowed_company_ids=allowed_company_ids,
+        )
         if error:
-            entry.deleted_at = db.func.now()
             row.error_message = error
             db.session.commit()
             return None, error
+
+        entry_payload = dict((result or {}).get("entry") or {})
+        settlement_payload = dict((result or {}).get("settlement") or {})
+        entry_id = entry_payload.get("id")
+        settlement_id = settlement_payload.get("id")
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first()
+        settlement = FinancialSettlement.query.filter(
+            FinancialSettlement.id == settlement_id,
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+        ).first()
+        if not entry or not settlement:
+            row.error_message = "Falha ao localizar título/baixa criados para a conciliação."
+            db.session.commit()
+            return None, row.error_message
 
         row.created_entry_id = entry.id
         row.matched_entry_id = entry.id
