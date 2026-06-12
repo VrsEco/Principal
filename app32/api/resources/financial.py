@@ -1723,6 +1723,7 @@ class FinancialBankReconciliationTitleSettlementResource(Resource):
             financial_entry_id=int(payload.get("financial_entry_id") or 0),
             financial_schedule_id=int(payload.get("financial_schedule_id") or 0) or None,
             resolution_strategy=payload.get("resolution_strategy"),
+            correction_index_id=payload.get("correction_index_id"),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

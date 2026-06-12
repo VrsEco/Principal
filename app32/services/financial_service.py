@@ -1609,10 +1609,23 @@ class FinancialService:
                 total_allocated = round(total_allocated + amount, 2)
                 continue
 
-            fallback_chart_account_id = FinancialService._resolve_schedule_adjustment_chart_account_id(
-                schedule=schedule,
-                component_kind=normalized_kind,
-            )
+            payload_metadata = dict(payload.get("metadata_json") or {})
+            fallback_chart_account_id = None
+            if normalized_kind == "financial_correction" and payload_metadata.get("correction_index_id") and schedule is not None:
+                try:
+                    correction_rule = FinancialCorrectionIndex.query.filter(
+                        FinancialCorrectionIndex.company_id == schedule.company_id,
+                        FinancialCorrectionIndex.id == int(payload_metadata.get("correction_index_id")),
+                        FinancialCorrectionIndex.deleted_at.is_(None),
+                    ).first()
+                except Exception:
+                    correction_rule = None
+                fallback_chart_account_id = (correction_rule.metadata_json or {}).get("chart_account_id") if correction_rule else None
+            if not fallback_chart_account_id:
+                fallback_chart_account_id = FinancialService._resolve_schedule_adjustment_chart_account_id(
+                    schedule=schedule,
+                    component_kind=normalized_kind,
+                )
             items.append(
                 {
                     "chart_account_id": fallback_chart_account_id,
@@ -1625,7 +1638,7 @@ class FinancialService:
                     "competence_date": competence_date_iso,
                     "due_date": due_date_iso,
                     "metadata_json": {
-                        **dict(payload.get("metadata_json") or {}),
+                        **payload_metadata,
                         "component_kind": normalized_kind,
                         "source": "adjustment_rule_fallback",
                         "origin_adjustment_id": origin_adjustment_id,

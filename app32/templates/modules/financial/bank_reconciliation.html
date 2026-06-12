@@ -1688,7 +1688,27 @@ function openResolutionModal(payload){
     });
 }
 
-function openOpenTitleResolutionModal(payload){
+async function openOpenTitleResolutionModal(payload){
+    let correctionIndexes = [];
+    if(payload.can_financial_correction && Number(payload.difference || 0) > 0){
+        try{
+            const options = await ensureDirectEntryOptions();
+            correctionIndexes = (options?.correction_indexes || []).filter(item => item.is_active !== false);
+        } catch(error){
+            correctionIndexes = [];
+        }
+    }
+    const correctionSelect = Number(payload.difference || 0) > 0 && payload.can_financial_correction
+        ? `
+            <label class="field field-span-4" style="display:block;margin:.75rem 0;">
+                <span>Correção financeira cadastrada</span>
+                <select id="open-title-correction-index">
+                    ${createEntrySelectOptions(correctionIndexes, 'Selecione a correção...')}
+                </select>
+                <small class="row-meta">Obrigatório para registrar a diferença como correção financeira.</small>
+            </label>
+        `
+        : '';
     openReconModal({
         kicker: 'Divergência no título',
         title: 'Escolha como tratar a diferença',
@@ -1704,6 +1724,7 @@ function openOpenTitleResolutionModal(payload){
                 ${payload.can_change_original_amount ? '<p class="row-meta">b) Alterar valor original: ajusta o valor-base do título para casar com o extrato e registra auditoria.</p>' : ''}
                 ${payload.can_financial_correction ? '<p class="row-meta">c) Correção financeira: preserva o valor original e registra a diferença na própria baixa.</p>' : ''}
             </div>
+            ${correctionSelect}
             <div class="inline-actions">
                 ${payload.can_partial_settlement ? '<button type="button" class="btn btn-secondary" onclick="settleSelectedOpenTitle(\'partial_settlement\')">Baixa parcial</button>' : ''}
                 ${payload.can_change_original_amount ? '<button type="button" class="btn btn-secondary" onclick="settleSelectedOpenTitle(\'change_original_amount\')">Alterar valor original</button>' : ''}
@@ -1894,6 +1915,15 @@ async function settleSelectedOpenTitle(resolutionStrategy=null){
         alert('Selecione exatamente 1 linha bancária e 1 título em aberto.');
         return;
     }
+    let correctionIndexId = null;
+    if(resolutionStrategy === 'financial_correction'){
+        const correctionSelect = document.getElementById('open-title-correction-index');
+        correctionIndexId = Number(correctionSelect?.value || 0) || null;
+        if(correctionSelect && !correctionIndexId){
+            alert('Selecione a correção financeira cadastrada antes de concluir a baixa.');
+            return;
+        }
+    }
     try{
         await api(`/api/financial/reconciliation/rows/${row.id}/settle-title${companyQuery()}`, {
             method:'POST',
@@ -1902,6 +1932,7 @@ async function settleSelectedOpenTitle(resolutionStrategy=null){
                 financial_entry_id: Number(title.financial_entry_id || 0),
                 financial_schedule_id: Number(title.financial_schedule_id || title.title?.schedule_id || 0) || null,
                 resolution_strategy: resolutionStrategy,
+                correction_index_id: correctionIndexId,
             }),
         });
         closeReconModal();
@@ -1910,7 +1941,7 @@ async function settleSelectedOpenTitle(resolutionStrategy=null){
         await refreshWorkspace();
     } catch(error){
         if(error.status === 409 && error.payload?.requires_resolution){
-            openOpenTitleResolutionModal(error.payload);
+            await openOpenTitleResolutionModal(error.payload);
             return;
         }
         alert(error.message || 'Não foi possível baixar o título selecionado.');

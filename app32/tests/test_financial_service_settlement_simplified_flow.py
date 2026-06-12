@@ -1372,6 +1372,46 @@ def test_build_schedule_component_allocation_breakdown_for_financial_correction(
     assert result["items"][0]["metadata_json"]["component_kind"] == "financial_correction"
 
 
+def test_build_schedule_component_allocation_breakdown_uses_selected_correction_index(monkeypatch):
+    schedule = type(
+        "Schedule",
+        (),
+        {
+            "id": 77,
+            "company_id": 9,
+            "cost_center_id": 801,
+            "metadata_json": {},
+        },
+    )()
+    settlement = type("Settlement", (), {"settlement_date": date(2026, 4, 20)})()
+    correction = type("Correction", (), {"metadata_json": {"chart_account_id": 701}})()
+
+    class _CorrectionIndexModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueryStub(correction)
+
+    monkeypatch.setattr(financial_module, "FinancialCorrectionIndex", _CorrectionIndexModel)
+
+    result = FinancialService._build_schedule_component_allocation_breakdown(
+        schedule=schedule,
+        settlement=settlement,
+        component_kind="financial_correction",
+        component_payloads=[
+            {
+                "component_type": "manual_adjustment",
+                "amount": 35.0,
+                "metadata_json": {"correction_index_id": 44},
+            }
+        ],
+    )
+
+    assert result["items"][0]["chart_account_id"] == 701
+    assert result["items"][0]["cost_center_id"] == 801
+    assert result["items"][0]["metadata_json"]["correction_index_id"] == 44
+
+
 def test_build_schedule_component_allocation_breakdown_for_discount():
     schedule = type(
         "Schedule",
