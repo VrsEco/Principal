@@ -1294,6 +1294,40 @@ class FinancialEntrySettlementListResource(Resource):
         return FinancialService.serialize_settlement(settlement, include_components=True), 201
 
 
+class FinancialEntryAttachmentListResource(Resource):
+    @permission_required("financial", "create")
+    def post(self, entry_id: int):
+        company_id = get_request_company_id()
+        upload = request.files.get("file")
+        if not upload:
+            return {"error": "Arquivo não informado."}, 400
+
+        attachment, error = FinancialService.upload_entry_attachment(
+            entry_id=entry_id,
+            company_id=company_id,
+            file=upload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return attachment, 201
+
+
+class FinancialEntryAttachmentResource(Resource):
+    @permission_required("financial", "delete")
+    def delete(self, entry_id: int, attachment_id: str):
+        company_id = get_request_company_id()
+        removed, error = FinancialService.delete_entry_attachment(
+            entry_id=entry_id,
+            company_id=company_id,
+            attachment_id=attachment_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return removed, 200
+
+
 class FinancialSettlementResource(Resource):
     @permission_required("financial", "view")
     def get(self, settlement_id: int):

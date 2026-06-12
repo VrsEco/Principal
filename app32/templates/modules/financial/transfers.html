@@ -70,11 +70,9 @@
                     </label>
                     <label class="field">
                         <span>Documento (opcional)</span>
-                        <input id="document-number" type="text" maxlength="80" placeholder="Nº do comprovante, TED, PIX ou referência">
-                    </label>
-                    <label class="field">
-                        <span>Competência (opcional)</span>
-                        <input id="competence-date" type="date">
+                        <input id="transfer-files" type="file" multiple>
+                        <small id="transfer-files-help" class="field-help">Anexe comprovantes da transferência. Os arquivos serão vinculados aos dois lançamentos gerados.</small>
+                        <div id="transfer-files-list" class="selected-files" hidden></div>
                     </label>
                     <label class="field field-span-2">
                         <span>Observações</span>
@@ -121,6 +119,7 @@
     .field { display:flex; flex-direction:column; gap:.45rem; }
     .field-span-2 { grid-column:span 2; }
     .field span { font-size:.78rem; font-weight:700; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
+    .field-help { color:var(--text-secondary); font-size:.78rem; line-height:1.4; }
     .field input, .field select, .field textarea {
         width:100%; padding:0.85rem 0.95rem; border-radius:12px; border:1.5px solid var(--border);
         background:var(--surface-secondary); color:var(--text-primary); font-size:0.92rem;
@@ -128,6 +127,7 @@
     .field input:focus, .field select:focus, .field textarea:focus {
         outline:none; border-color:var(--primary); background:var(--surface);
     }
+    .transfer-actions { display:flex; justify-content:flex-end; }
     .btn { border:none; border-radius:12px; padding:.85rem 1.1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
     .btn-primary { background:var(--primary); color:#fff; }
     .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
@@ -145,6 +145,11 @@
     .result-card p { margin:.2rem 0; color:var(--text-secondary); }
     .result-card a { display:inline-flex; margin-top:.6rem; color:var(--primary); font-weight:700; text-decoration:none; }
     .transfer-actions { display:flex; justify-content:flex-end; gap:.75rem; }
+    .selected-files { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.15rem; }
+    .selected-file {
+        background:var(--surface-secondary); border:1px solid var(--border); border-radius:999px;
+        padding:.35rem .65rem; font-size:.78rem; color:var(--text-secondary);
+    }
     @media (max-width: 960px) {
         .stat-grid, .form-grid, .result-grid { grid-template-columns:1fr; }
         .field-span-2 { grid-column:auto; }
@@ -162,6 +167,8 @@
         const sourceSelect = document.getElementById('source-bank-account-id');
         const destinationSelect = document.getElementById('destination-bank-account-id');
         const occurredOn = document.getElementById('occurred-on');
+        const filesInput = document.getElementById('transfer-files');
+        const filesList = document.getElementById('transfer-files-list');
         const resultPanel = document.getElementById('transfer-result-panel');
         const resultNode = document.getElementById('transfer-result');
         const submitButton = document.getElementById('transfer-submit');
@@ -172,6 +179,7 @@
         function resetFormState() {
             form.reset();
             occurredOn.value = new Date().toISOString().slice(0, 10);
+            renderSelectedFiles();
             resultPanel.hidden = true;
             resultNode.innerHTML = '';
         }
@@ -194,6 +202,50 @@
         function showMessage(kind, text) {
             resultPanel.hidden = false;
             resultNode.innerHTML = `<div class="alert alert-${kind}">${escapeHtml(text)}</div>`;
+        }
+
+        function renderSelectedFiles() {
+            const files = Array.from(filesInput?.files || []);
+            if (!files.length) {
+                filesList.hidden = true;
+                filesList.innerHTML = '';
+                return;
+            }
+            filesList.hidden = false;
+            filesList.innerHTML = files.map((file) => (
+                `<span class="selected-file">${escapeHtml(file.name)}</span>`
+            )).join('');
+        }
+
+        async function uploadFileToEntry(entryId, file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await fetch(`/api/financial/entries/${entryId}/attachments?company_id=${companyId}`, {
+                method: 'POST',
+                body: formData,
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || `Falha ao enviar o arquivo ${file.name}.`);
+            }
+            return payload;
+        }
+
+        async function uploadTransferFiles(result) {
+            const files = Array.from(filesInput?.files || []);
+            if (!files.length) {
+                return { uploadedCount: 0 };
+            }
+            const entryIds = [
+                result?.source_entry?.id,
+                result?.destination_entry?.id,
+            ].filter(Boolean);
+            for (const file of files) {
+                for (const entryId of entryIds) {
+                    await uploadFileToEntry(entryId, file);
+                }
+            }
+            return { uploadedCount: files.length * entryIds.length };
         }
 
         async function loadBankAccounts() {
@@ -226,9 +278,7 @@
                 destination_bank_account_id: Number(destinationSelect.value || 0),
                 original_amount: Number(document.getElementById('original-amount').value || 0),
                 occurred_on: occurredOn.value,
-                competence_date: document.getElementById('competence-date').value || null,
                 description: document.getElementById('description').value.trim(),
-                document_number: document.getElementById('document-number').value.trim() || null,
                 notes: document.getElementById('notes').value.trim() || null,
             };
 
@@ -243,9 +293,20 @@
                     throw new Error(result.error || 'Falha ao registrar transferência.');
                 }
 
+                let attachmentMessage = '';
+                try {
+                    const uploadSummary = await uploadTransferFiles(result);
+                    if (uploadSummary.uploadedCount > 0) {
+                        attachmentMessage = `<div class="alert alert-success">${uploadSummary.uploadedCount} anexo(s) vinculado(s) aos lançamentos da transferência.</div>`;
+                    }
+                } catch (uploadError) {
+                    attachmentMessage = `<div class="alert alert-error">${escapeHtml(uploadError.message || 'A transferência foi criada, mas houve falha no upload dos anexos.')}</div>`;
+                }
+
                 resultPanel.hidden = false;
                 resultNode.innerHTML = `
                     <div class="alert alert-success">Transferência registrada com sucesso.</div>
+                    ${attachmentMessage}
                     <div class="result-grid">
                         <div class="result-card">
                             <h3>Saída</h3>
@@ -277,6 +338,8 @@
         clearButton?.addEventListener('click', () => {
             resetFormState();
         });
+
+        filesInput?.addEventListener('change', renderSelectedFiles);
 
         loadBankAccounts().catch(() => {
             showMessage('error', 'Não foi possível carregar as contas bancárias da empresa.');

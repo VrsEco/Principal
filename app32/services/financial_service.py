@@ -2927,6 +2927,106 @@ class FinancialService:
         return attachment, None
 
     @staticmethod
+    def upload_entry_attachment(
+        *,
+        entry_id: int,
+        company_id: int,
+        file: FileStorage,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first()
+        if not entry:
+            return None, "Lançamento financeiro não encontrado no escopo da empresa."
+
+        if not file or not file.filename:
+            return None, "Nenhum arquivo informado."
+
+        original_name = secure_filename(file.filename) or "anexo"
+        attachment_id = uuid.uuid4().hex
+        stored_name = f"{attachment_id}_{original_name}"
+        relative_dir = os.path.join("financial_entries", str(company_id), str(entry.id))
+        absolute_dir = os.path.join(current_app.config["UPLOAD_FOLDER"], relative_dir)
+        os.makedirs(absolute_dir, exist_ok=True)
+        absolute_path = os.path.join(absolute_dir, stored_name)
+        file.save(absolute_path)
+
+        metadata = dict(entry.metadata_json or {})
+        attachments = list(metadata.get("attachments") or [])
+        attachment = {
+            "id": attachment_id,
+            "name": original_name,
+            "stored_name": stored_name,
+            "content_type": file.mimetype,
+            "size": os.path.getsize(absolute_path),
+            "uploaded_at": datetime.utcnow().isoformat(),
+            "url": f"/uploads/{relative_dir.replace(os.sep, '/')}/{stored_name}",
+        }
+        attachments.append(attachment)
+        metadata["attachments"] = attachments
+        entry.metadata_json = metadata
+        db.session.commit()
+        return attachment, None
+
+    @staticmethod
+    def delete_entry_attachment(
+        *,
+        entry_id: int,
+        company_id: int,
+        attachment_id: str,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        entry = FinancialEntry.query.filter(
+            FinancialEntry.id == entry_id,
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+        ).first()
+        if not entry:
+            return None, "Lançamento financeiro não encontrado no escopo da empresa."
+
+        metadata = dict(entry.metadata_json or {})
+        attachments = list(metadata.get("attachments") or [])
+        remaining: List[Dict[str, Any]] = []
+        removed: Optional[Dict[str, Any]] = None
+        for item in attachments:
+            if str(item.get("id")) == str(attachment_id):
+                removed = item
+            else:
+                remaining.append(item)
+
+        if not removed:
+            return None, "Anexo não encontrado para o lançamento."
+
+        metadata["attachments"] = remaining
+        entry.metadata_json = metadata
+        db.session.commit()
+
+        stored_name = removed.get("stored_name")
+        if stored_name:
+            absolute_path = os.path.join(
+                current_app.config["UPLOAD_FOLDER"],
+                "financial_entries",
+                str(company_id),
+                str(entry.id),
+                stored_name,
+            )
+            if os.path.exists(absolute_path):
+                os.remove(absolute_path)
+
+        return removed, None
+
+    @staticmethod
     def delete_settlement_attachment(
         *,
         settlement_id: int,

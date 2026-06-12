@@ -48,7 +48,7 @@ class FinancialTransferService:
 
         transfer_group_id = f"trf-{uuid4().hex[:12]}"
         occurred_on = data.occurred_on
-        entry_date = data.competence_date or occurred_on
+        entry_date = occurred_on
         actor_user_id = data.created_by_user_id or getattr(current_user, "id", None)
         actor_employee_id = data.created_by_employee_id or getattr(current_user, "employee_id", None)
         actor_name = str(getattr(current_user, "name", "") or getattr(current_user, "email", "") or "").strip() or None
@@ -56,6 +56,8 @@ class FinancialTransferService:
         base_metadata = {
             **(data.metadata_json or {}),
             "is_transfer": True,
+            "exclude_from_dre": True,
+            "include_in_bank_statement": True,
             "transfer_group_id": transfer_group_id,
             "transfer_scope": "bank_account_to_bank_account",
             "transfer_document_number": data.document_number,
@@ -148,7 +150,6 @@ class FinancialTransferService:
                 "destination_bank_account_id": destination_account.id,
                 "destination_bank_account_name": destination_account.name,
                 "occurred_on": occurred_on.isoformat() if isinstance(occurred_on, date) else occurred_on,
-                "competence_date": entry_date.isoformat() if isinstance(entry_date, date) else entry_date,
                 "description": data.description,
                 "document_number": data.document_number or transfer_group_id.upper(),
                 "original_amount": float(Decimal(data.original_amount)),
