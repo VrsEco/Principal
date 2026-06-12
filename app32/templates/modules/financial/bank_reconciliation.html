@@ -25,6 +25,8 @@
     <div class="filter-group recon-sidebar-field">
         <label class="filter-label" for="batch-select">Lote do workspace</label>
         <select id="batch-select"></select>
+        <button type="button" id="delete-batch-button" class="btn btn-danger btn-sm" onclick="deleteSelectedBatch()" disabled>Excluir upload</button>
+        <small id="delete-batch-hint">A exclusão só é liberada para lotes sem conciliação efetiva.</small>
     </div>
 
     <div class="filter-group recon-sidebar-field">
@@ -1194,6 +1196,8 @@ function renderWorkspace(){
     const movementSelect = document.getElementById('reconciliation-movement-filter');
     const workspaceSelect = document.getElementById('workspace-bank-account');
     const batchSelect = document.getElementById('batch-select');
+    const deleteBatchButton = document.getElementById('delete-batch-button');
+    const deleteBatchHint = document.getElementById('delete-batch-hint');
     const bankColumnSearchInput = document.getElementById('bank-column-search');
     const systemColumnSearchInput = document.getElementById('system-column-search');
     const titlesColumnSearchInput = document.getElementById('titles-column-search');
@@ -1214,6 +1218,22 @@ function renderWorkspace(){
     if(workspaceSelect) workspaceSelect.value = String(state.selectedBankAccountId || '');
     if(batchSelect){
         batchSelect.innerHTML = (state.workspace.available_batches || []).map(item => `<option value="${item.id}" ${String(item.id) === String(state.workspace.selected_batch?.id) ? 'selected' : ''}>${escapeHtml(item.batch_code)} · ${escapeHtml(item.source_type)}</option>`).join('');
+    }
+    const selectedBatchDeletion = state.workspace?.selected_batch?.deletion || null;
+    if(deleteBatchButton){
+        deleteBatchButton.disabled = !state.workspace?.selected_batch?.id || !selectedBatchDeletion?.can_delete;
+    }
+    if(deleteBatchHint){
+        if(!state.workspace?.selected_batch?.id){
+            deleteBatchHint.textContent = 'Selecione um lote para avaliar a exclusão.';
+        }else if(selectedBatchDeletion?.can_delete){
+            deleteBatchHint.textContent = 'Este lote pode ser excluído porque ainda não possui conciliação efetiva.';
+        }else{
+            const reasons = (selectedBatchDeletion?.blocked_reasons || []).join(', ');
+            deleteBatchHint.textContent = reasons
+                ? `Exclusão bloqueada: ${reasons}.`
+                : 'A exclusão só é liberada para lotes sem conciliação efetiva.';
+        }
     }
     renderSummary();
     renderBankFilters();
@@ -1290,6 +1310,37 @@ async function openWorkspace(bankAccountId, batchId=null){
 async function refreshWorkspace(){
     if(!state.selectedBankAccountId) return;
     await openWorkspace(state.selectedBankAccountId, state.selectedBatchId || null);
+}
+
+async function deleteSelectedBatch(){
+    const batch = state.workspace?.selected_batch;
+    if(!batch?.id){
+        alert('Selecione um lote para excluir.');
+        return;
+    }
+    if(!batch?.deletion?.can_delete){
+        const reasons = (batch?.deletion?.blocked_reasons || []).join(', ');
+        alert(reasons ? `Este upload não pode ser excluído: ${reasons}.` : 'Este upload não pode ser excluído porque já possui conciliação efetiva.');
+        return;
+    }
+    const confirmed = window.confirm(`Confirma a exclusão do upload ${batch.batch_code}? Esta ação removerá as linhas importadas deste lote.`);
+    if(!confirmed) return;
+    try{
+        showUploadStatus(`Excluindo o lote ${batch.batch_code}...`, 'info');
+        await api(`/api/financial/imports/${batch.id}${companyQuery()}`, {
+            method: 'DELETE',
+        });
+        const sameAccountId = state.selectedBankAccountId;
+        clearUploadStatus();
+        await loadOverview();
+        if(sameAccountId){
+            await openWorkspace(sameAccountId);
+        }
+        showUploadStatus(`Upload ${batch.batch_code} excluído com sucesso.`, 'success');
+    }catch(error){
+        console.error('Falha ao excluir lote da conciliação:', error);
+        showUploadStatus(error.message || 'Não foi possível excluir o upload selecionado.', 'error');
+    }
 }
 
 async function applyWorkspaceFilters(){

@@ -231,6 +231,29 @@ def test_import_batch_resource_runs_auto_match_when_reconciliation_mode_enabled(
     assert calls["kwargs"]["company_id"] == 7
 
 
+def test_import_batch_resource_deletes_batch(monkeypatch):
+    app = Flask(__name__)
+
+    monkeypatch.setattr(financial_resource_module, "get_request_company_id", lambda: 7)
+    monkeypatch.setattr(financial_resource_module, "get_accessible_company_ids", lambda: [7])
+    monkeypatch.setattr(
+        financial_resource_module.FinancialImportService,
+        "delete_import_batch",
+        lambda **kwargs: ({"batch_id": 55, "deleted_rows": 3}, None),
+    )
+
+    with app.test_request_context(
+        "/api/financial/imports/55?company_id=7",
+        method="DELETE",
+    ):
+        resource = financial_resource_module.FinancialImportBatchResource()
+        response, status_code = resource.delete.__wrapped__(resource, 55)
+
+    assert status_code == 200
+    assert response["batch_id"] == 55
+    assert response["deleted_rows"] == 3
+
+
 def test_get_workspace_returns_bank_and_system_buckets(monkeypatch):
     account = SimpleNamespace(id=21, company_id=1, to_dict=lambda: {"id": 21, "name": "Banco Principal"})
     batch = SimpleNamespace(id=77, to_dict=lambda: {"id": 77, "batch_code": "REC-077", "source_type": "ofx"})
@@ -337,12 +360,19 @@ def test_get_workspace_returns_bank_and_system_buckets(monkeypatch):
             "is_fully_reconciled": bool(row.created_entry_id),
         },
     )
-    monkeypatch.setattr(workspace_module.FinancialReconciliationWorkspaceService, "_load_workspace_entries", lambda **kwargs: [SimpleNamespace(id=901), SimpleNamespace(id=902)])
     monkeypatch.setattr(
         workspace_module.FinancialReconciliationWorkspaceService,
-        "_serialize_system_entry",
-        lambda entry, linked_row_ids=None: {
-            "id": entry.id,
+        "_load_workspace_settlements",
+        lambda **kwargs: [
+            (SimpleNamespace(id=901), SimpleNamespace(id=401)),
+            (SimpleNamespace(id=902), SimpleNamespace(id=402)),
+        ],
+    )
+    monkeypatch.setattr(
+        workspace_module.FinancialReconciliationWorkspaceService,
+        "_serialize_system_settlement",
+        lambda settlement, entry, linked_row_ids=None: {
+            "id": settlement.id,
             "linked_rows_count": len(linked_row_ids or []),
             "is_reconciled": False,
         },

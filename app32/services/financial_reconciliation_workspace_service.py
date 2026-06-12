@@ -17,6 +17,7 @@ from models.financial import (
     FinancialSettlement,
 )
 from services.financial_reconciliation_service import FinancialReconciliationService
+from services.financial_import_service import FinancialImportService
 from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
 from services.financial_title_balance_service import FinancialTitleBalanceService
@@ -923,8 +924,8 @@ class FinancialReconciliationWorkspaceService:
 
         return {
             "bank_account": account.to_dict(),
-            "selected_batch": selected_batch.to_dict() if selected_batch else None,
-            "available_batches": [batch.to_dict() for batch in batches],
+            "selected_batch": FinancialImportService.serialize_import_batch(selected_batch) if selected_batch else None,
+            "available_batches": [FinancialImportService.serialize_import_batch(batch) for batch in batches],
             "rows": filtered_rows_payload,
             "bank_rows": filtered_rows_payload,
             "bank_rows_without_link": pending_rows,

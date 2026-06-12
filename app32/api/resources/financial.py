@@ -1407,6 +1407,18 @@ class FinancialImportBatchResource(Resource):
             return {"error": error}, 400
         return result, 200
 
+    @permission_required("financial", "delete")
+    def delete(self, batch_id: int):
+        company_id = get_request_company_id()
+        result, error = FinancialImportService.delete_import_batch(
+            batch_id=batch_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
 
 class FinancialImportBatchProcessResource(Resource):
     @permission_required("financial", "edit")
