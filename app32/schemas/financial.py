@@ -1487,3 +1487,18 @@ class FinancialTransferCreateInput(BaseModel):
     created_by_employee_id: Optional[int] = None
     created_by_agent: Optional[str] = Field(default="app32", max_length=80)
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FinancialTransferUpdateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    source_bank_account_id: int
+    destination_bank_account_id: int
+    description: str = Field(..., min_length=3, max_length=255)
+    occurred_on: date
+    original_amount: Decimal = Field(..., gt=0)
+    notes: Optional[str] = None
+    updated_by_user_id: Optional[int] = None
+    updated_by_employee_id: Optional[int] = None
+    updated_by_agent: Optional[str] = Field(default="app32", max_length=80)

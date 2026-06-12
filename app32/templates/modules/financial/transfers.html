@@ -15,9 +15,58 @@
     <header class="finance-header">
         <div>
             <h1>Transferência Bancária</h1>
-            <p class="subtitle">Workspace dedicada para movimentações entre contas bancárias da mesma empresa, com rastreabilidade operacional e escopo por empresa.</p>
+            <p class="subtitle">Workspace dedicada para registrar e gerir movimentações entre contas bancárias da mesma empresa, com rastreabilidade operacional e escopo por empresa.</p>
         </div>
     </header>
+
+    <section class="panel transfer-management-panel">
+        <div class="panel-header">
+            <div>
+                <h2>Transferências realizadas</h2>
+                <p>Consulte, visualize, altere ou exclua transferências já registradas.</p>
+            </div>
+            <button class="btn btn-secondary" type="button" id="transfers-refresh">Atualizar</button>
+        </div>
+        <div class="panel-body">
+            <div class="transfer-filters">
+                <label class="field">
+                    <span>Pesquisar</span>
+                    <input id="transfer-search" type="search" placeholder="Histórico, grupo ou conta">
+                </label>
+                <label class="field">
+                    <span>De</span>
+                    <input id="transfer-date-from" type="date">
+                </label>
+                <label class="field">
+                    <span>Até</span>
+                    <input id="transfer-date-to" type="date">
+                </label>
+                <label class="field">
+                    <span>Conta</span>
+                    <select id="transfer-bank-filter">
+                        <option value="">Todas</option>
+                    </select>
+                </label>
+            </div>
+            <div id="transfers-list-status" class="list-status">Carregando transferências...</div>
+            <div class="transfers-table-shell">
+                <table class="transfers-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Histórico</th>
+                            <th>Origem</th>
+                            <th>Destino</th>
+                            <th>Valor</th>
+                            <th>Anexos</th>
+                            <th class="actions-col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transfers-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
 
     <section class="stat-grid">
         <article class="stat-card">
@@ -100,6 +149,56 @@
     </section>
 </div>
 
+<div id="transfer-modal" class="modal-shell hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="transfer-modal-backdrop"></div>
+    <div class="modal-card">
+        <div class="modal-head">
+            <div>
+                <h2 id="transfer-modal-title">Transferência Bancária</h2>
+                <p id="transfer-modal-subtitle" class="modal-subtitle">Visualize ou altere as duas pontas da movimentação.</p>
+            </div>
+            <button type="button" class="btn btn-secondary" id="transfer-modal-close">Fechar</button>
+        </div>
+        <form id="transfer-edit-form" class="transfer-form">
+            <input type="hidden" id="edit-transfer-group-id">
+            <div class="form-grid">
+                <label class="field">
+                    <span>Conta origem</span>
+                    <select id="edit-source-bank-account-id" required></select>
+                </label>
+                <label class="field">
+                    <span>Conta destino</span>
+                    <select id="edit-destination-bank-account-id" required></select>
+                </label>
+                <label class="field">
+                    <span>Valor</span>
+                    <input id="edit-original-amount" type="number" min="0.01" step="0.01" required>
+                </label>
+                <label class="field">
+                    <span>Data da transferência</span>
+                    <input id="edit-occurred-on" type="date" required>
+                </label>
+                <label class="field field-span-2">
+                    <span>Histórico</span>
+                    <input id="edit-description" maxlength="255" required>
+                </label>
+                <label class="field field-span-2">
+                    <span>Observações</span>
+                    <textarea id="edit-notes" rows="3"></textarea>
+                </label>
+            </div>
+            <div class="modal-transfer-meta">
+                <div><strong>Grupo:</strong> <span id="edit-group-label">-</span></div>
+                <div><strong>Anexos:</strong> <span id="edit-attachments-label">0</span></div>
+            </div>
+            <div class="transfer-actions">
+                <button type="button" class="btn btn-danger" id="transfer-delete">Excluir</button>
+                <button type="submit" class="btn btn-primary" id="transfer-edit-submit">Salvar alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <style>
     .finance-page { padding: 0 2rem 2rem; }
     .finance-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; gap:1rem; }
@@ -145,13 +244,32 @@
     .result-card p { margin:.2rem 0; color:var(--text-secondary); }
     .result-card a { display:inline-flex; margin-top:.6rem; color:var(--primary); font-weight:700; text-decoration:none; }
     .transfer-actions { display:flex; justify-content:flex-end; gap:.75rem; }
+    .btn-danger { background:#dc2626; color:#fff; }
     .selected-files { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.15rem; }
     .selected-file {
         background:var(--surface-secondary); border:1px solid var(--border); border-radius:999px;
         padding:.35rem .65rem; font-size:.78rem; color:var(--text-secondary);
     }
+    .transfer-filters { display:grid; grid-template-columns:2fr 1fr 1fr 1.4fr; gap:1rem; margin-bottom:1rem; }
+    .list-status { color:var(--text-secondary); font-weight:700; margin-bottom:.75rem; }
+    .transfers-table-shell { overflow:auto; border:1px solid var(--border); border-radius:16px; }
+    .transfers-table { width:100%; border-collapse:collapse; min-width:980px; }
+    .transfers-table th, .transfers-table td { padding:.85rem .9rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle; }
+    .transfers-table th { color:var(--text-tertiary); text-transform:uppercase; font-size:.72rem; letter-spacing:.05em; background:var(--surface-secondary); }
+    .transfers-table tbody tr:hover { background:var(--surface-secondary); }
+    .actions-col { width:210px; }
+    .row-actions { display:flex; gap:.45rem; flex-wrap:wrap; }
+    .btn-small { padding:.45rem .65rem; border-radius:10px; font-size:.78rem; }
+    .modal-shell.hidden { display:none; }
+    .modal-shell { position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .modal-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.48); }
+    .modal-card { position:relative; width:min(880px, 96vw); max-height:92vh; overflow:auto; background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:var(--shadow-lg); padding:1.25rem; }
+    .modal-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+    .modal-head h2 { margin:0; }
+    .modal-subtitle { margin:.25rem 0 0; color:var(--text-secondary); }
+    .modal-transfer-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; padding:.9rem; margin-top:1rem; border:1px solid var(--border); border-radius:14px; color:var(--text-secondary); }
     @media (max-width: 960px) {
-        .stat-grid, .form-grid, .result-grid { grid-template-columns:1fr; }
+        .stat-grid, .form-grid, .result-grid, .transfer-filters, .modal-transfer-meta { grid-template-columns:1fr; }
         .field-span-2 { grid-column:auto; }
         .finance-page { padding:0 1rem 1.5rem; }
     }
@@ -173,6 +291,28 @@
         const resultNode = document.getElementById('transfer-result');
         const submitButton = document.getElementById('transfer-submit');
         const clearButton = document.getElementById('transfer-clear');
+        const transfersListBody = document.getElementById('transfers-list-body');
+        const transfersListStatus = document.getElementById('transfers-list-status');
+        const refreshButton = document.getElementById('transfers-refresh');
+        const searchInput = document.getElementById('transfer-search');
+        const dateFromInput = document.getElementById('transfer-date-from');
+        const dateToInput = document.getElementById('transfer-date-to');
+        const bankFilter = document.getElementById('transfer-bank-filter');
+        const modal = document.getElementById('transfer-modal');
+        const modalClose = document.getElementById('transfer-modal-close');
+        const modalBackdrop = document.getElementById('transfer-modal-backdrop');
+        const editForm = document.getElementById('transfer-edit-form');
+        const editGroupId = document.getElementById('edit-transfer-group-id');
+        const editSourceSelect = document.getElementById('edit-source-bank-account-id');
+        const editDestinationSelect = document.getElementById('edit-destination-bank-account-id');
+        const editOccurredOn = document.getElementById('edit-occurred-on');
+        const editAmount = document.getElementById('edit-original-amount');
+        const editDescription = document.getElementById('edit-description');
+        const editNotes = document.getElementById('edit-notes');
+        const editGroupLabel = document.getElementById('edit-group-label');
+        const editAttachmentsLabel = document.getElementById('edit-attachments-label');
+        const deleteButton = document.getElementById('transfer-delete');
+        let bankAccounts = [];
 
         occurredOn.value = new Date().toISOString().slice(0, 10);
 
@@ -202,6 +342,16 @@
         function showMessage(kind, text) {
             resultPanel.hidden = false;
             resultNode.innerHTML = `<div class="alert alert-${kind}">${escapeHtml(text)}</div>`;
+        }
+
+        function formatCurrency(value) {
+            return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function formatDate(value) {
+            if (!value) return '-';
+            const [year, month, day] = String(value).slice(0, 10).split('-');
+            return year && month && day ? `${day}/${month}/${year}` : value;
         }
 
         function renderSelectedFiles() {
@@ -252,11 +402,92 @@
             const response = await fetch(`/api/financial/catalogs/bank_accounts?company_id=${companyId}`);
             const items = await response.json();
             const accounts = Array.isArray(items) ? items : [];
+            bankAccounts = accounts;
             const options = ['<option value="">Selecione</option>'].concat(
                 accounts.map((item) => `<option value="${item.id}">${escapeHtml(accountLabel(item))}</option>`)
             ).join('');
             sourceSelect.innerHTML = options;
             destinationSelect.innerHTML = options;
+            editSourceSelect.innerHTML = options;
+            editDestinationSelect.innerHTML = options;
+            bankFilter.innerHTML = ['<option value="">Todas</option>'].concat(
+                accounts.map((item) => `<option value="${item.id}">${escapeHtml(accountLabel(item))}</option>`)
+            ).join('');
+        }
+
+        async function loadTransfers() {
+            transfersListStatus.textContent = 'Carregando transferências...';
+            const params = new URLSearchParams({ company_id: companyId });
+            if (searchInput.value.trim()) params.set('q', searchInput.value.trim());
+            if (dateFromInput.value) params.set('date_from', dateFromInput.value);
+            if (dateToInput.value) params.set('date_to', dateToInput.value);
+            if (bankFilter.value) params.set('bank_account_id', bankFilter.value);
+            const response = await fetch(`/api/financial/transfers?${params.toString()}`);
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Falha ao carregar transferências.');
+            }
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            transfersListStatus.textContent = items.length ? `${items.length} transferência(s) encontrada(s).` : 'Nenhuma transferência encontrada.';
+            transfersListBody.innerHTML = items.map((item) => `
+                <tr>
+                    <td>${escapeHtml(formatDate(item.occurred_on))}</td>
+                    <td>
+                        <strong>${escapeHtml(item.description || '-')}</strong><br>
+                        <small>${escapeHtml(item.transfer_group_id || '-')}</small>
+                    </td>
+                    <td>${escapeHtml(item.source_bank_account_name || '-')}</td>
+                    <td>${escapeHtml(item.destination_bank_account_name || '-')}</td>
+                    <td><strong>${escapeHtml(formatCurrency(item.original_amount))}</strong></td>
+                    <td>${Number(item.attachments_count || 0)}</td>
+                    <td>
+                        <div class="row-actions">
+                            <button type="button" class="btn btn-secondary btn-small" data-action="view" data-transfer-id="${escapeHtml(item.transfer_group_id)}">Ver/Alterar</button>
+                            <button type="button" class="btn btn-danger btn-small" data-action="delete" data-transfer-id="${escapeHtml(item.transfer_group_id)}">Excluir</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        async function openTransfer(transferGroupId) {
+            const response = await fetch(`/api/financial/transfers/${encodeURIComponent(transferGroupId)}?company_id=${companyId}`);
+            const item = await response.json();
+            if (!response.ok) {
+                throw new Error(item.error || 'Falha ao carregar transferência.');
+            }
+            editGroupId.value = item.transfer_group_id || '';
+            editSourceSelect.value = item.source_bank_account_id || '';
+            editDestinationSelect.value = item.destination_bank_account_id || '';
+            editOccurredOn.value = item.occurred_on || '';
+            editAmount.value = item.original_amount || '';
+            editDescription.value = item.description || '';
+            editNotes.value = item.notes || '';
+            editGroupLabel.textContent = item.transfer_group_id || '-';
+            editAttachmentsLabel.textContent = String(item.attachments_count || 0);
+            openModal();
+        }
+
+        async function deleteTransfer(transferGroupId) {
+            if (!transferGroupId) return;
+            if (!window.confirm('Excluir esta transferência bancária? As duas pontas serão removidas.')) return;
+            const response = await fetch(`/api/financial/transfers/${encodeURIComponent(transferGroupId)}?company_id=${companyId}`, { method: 'DELETE' });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Falha ao excluir transferência.');
+            }
+            await loadTransfers();
+            closeModal();
         }
 
         form?.addEventListener('submit', async (event) => {
@@ -326,6 +557,8 @@
                 `;
                 form.reset();
                 occurredOn.value = new Date().toISOString().slice(0, 10);
+                renderSelectedFiles();
+                loadTransfers().catch((error) => { transfersListStatus.textContent = error.message; });
             } catch (error) {
                 showMessage('error', error.message || 'Falha ao registrar transferência.');
             } finally {
@@ -340,10 +573,63 @@
         });
 
         filesInput?.addEventListener('change', renderSelectedFiles);
+        refreshButton?.addEventListener('click', () => loadTransfers().catch((error) => { transfersListStatus.textContent = error.message; }));
+        [searchInput, dateFromInput, dateToInput, bankFilter].forEach((node) => {
+            node?.addEventListener('change', () => loadTransfers().catch((error) => { transfersListStatus.textContent = error.message; }));
+        });
+        searchInput?.addEventListener('input', () => {
+            clearTimeout(searchInput._transferSearchTimer);
+            searchInput._transferSearchTimer = setTimeout(() => loadTransfers().catch((error) => { transfersListStatus.textContent = error.message; }), 350);
+        });
+        transfersListBody?.addEventListener('click', async (event) => {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+            const transferGroupId = button.dataset.transferId;
+            try {
+                if (button.dataset.action === 'view') {
+                    await openTransfer(transferGroupId);
+                } else if (button.dataset.action === 'delete') {
+                    await deleteTransfer(transferGroupId);
+                }
+            } catch (error) {
+                transfersListStatus.textContent = error.message || 'Falha ao executar ação.';
+            }
+        });
+        editForm?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (editSourceSelect.value === editDestinationSelect.value) {
+                window.alert('A conta de origem deve ser diferente da conta de destino.');
+                return;
+            }
+            const transferGroupId = editGroupId.value;
+            const payload = {
+                source_bank_account_id: Number(editSourceSelect.value || 0),
+                destination_bank_account_id: Number(editDestinationSelect.value || 0),
+                original_amount: Number(editAmount.value || 0),
+                occurred_on: editOccurredOn.value,
+                description: editDescription.value.trim(),
+                notes: editNotes.value.trim() || null,
+            };
+            const response = await fetch(`/api/financial/transfers/${encodeURIComponent(transferGroupId)}?company_id=${companyId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                window.alert(result.error || 'Falha ao salvar transferência.');
+                return;
+            }
+            closeModal();
+            await loadTransfers();
+        });
+        deleteButton?.addEventListener('click', () => deleteTransfer(editGroupId.value).catch((error) => window.alert(error.message || 'Falha ao excluir transferência.')));
+        modalClose?.addEventListener('click', closeModal);
+        modalBackdrop?.addEventListener('click', closeModal);
 
         loadBankAccounts().catch(() => {
             showMessage('error', 'Não foi possível carregar as contas bancárias da empresa.');
-        });
+        }).then(() => loadTransfers().catch((error) => { transfersListStatus.textContent = error.message || 'Falha ao carregar transferências.'; }));
     }
 
     if (document.readyState === 'loading') {
