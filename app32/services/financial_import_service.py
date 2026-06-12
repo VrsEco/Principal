@@ -778,6 +778,8 @@ class FinancialImportService:
             valid_rows = 0
             error_rows = 0
 
+            selected_bank_account_id = int((data.metadata_json or {}).get("bank_account_id") or 0) or None
+
             for idx, raw_row in enumerate(parsed_rows, start=1):
                 row_input = FinancialImportService._normalize_row(idx, raw_row)
                 row_payload = row_input.model_dump()
@@ -787,8 +789,16 @@ class FinancialImportService:
                 db.session.add(row)
                 staged_rows.append(row)
                 FinancialImportService._enrich_row_catalogs(data.company_id, row)
-                fallback_bank_account_id = (data.metadata_json or {}).get("bank_account_id")
-                if fallback_bank_account_id and not (row.normalized_payload or {}).get("bank_account_id"):
+                force_selected_bank_account = data.source_type == "ofx" and selected_bank_account_id
+                fallback_bank_account_id = selected_bank_account_id
+                if force_selected_bank_account:
+                    row.normalized_payload = {
+                        **(row.normalized_payload or {}),
+                        "bank_account_id": int(fallback_bank_account_id),
+                    }
+                    if row.processing_status == "staged":
+                        row.processing_status = "validated"
+                elif fallback_bank_account_id and not (row.normalized_payload or {}).get("bank_account_id"):
                     row.normalized_payload = {
                         **(row.normalized_payload or {}),
                         "bank_account_id": int(fallback_bank_account_id),
