@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from models import db
 from models.financial import (
+    FinancialBankAccount,
     FinancialClassificationSuggestion,
     FinancialEntry,
     FinancialImportBatch,
@@ -50,6 +51,35 @@ class FinancialImportService:
         {"key": "conta_bancaria", "label": "Conta Bancária", "required": False, "example": "001 - Banco do Brasil"},
         {"key": "observacoes", "label": "Observações", "required": False, "example": "Registro importado da planilha do cliente"},
     ]
+
+    @staticmethod
+    def _normalize_digits(value: Any) -> str:
+        return "".join(ch for ch in str(value or "") if ch.isdigit())
+
+    @staticmethod
+    def _normalize_text_token(value: Any) -> str:
+        return str(value or "").strip()
+
+    @staticmethod
+    def _normalize_account_variants(value: Any) -> set[str]:
+        digits = FinancialImportService._normalize_digits(value)
+        if not digits:
+            return set()
+        stripped = digits.lstrip("0")
+        return {digits, stripped or "0"}
+
+    @staticmethod
+    def _split_account_components(value: Any) -> Tuple[Optional[str], Optional[str]]:
+        text = str(value or "").strip()
+        if not text:
+            return None, None
+        if "-" in text:
+            number_part, digit_part = text.split("-", 1)
+            number_digits = FinancialImportService._normalize_digits(number_part)
+            digit_digits = FinancialImportService._normalize_digits(digit_part)
+            return (number_digits or None), (digit_digits or None)
+        digits = FinancialImportService._normalize_digits(text)
+        return (digits or None), None
 
     @staticmethod
     def _parse_decimal(value: Any) -> Optional[Decimal]:
@@ -212,6 +242,216 @@ class FinancialImportService:
         text = file_bytes.decode("utf-8-sig", errors="ignore")
         reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
         return [FinancialImportService._sanitize_raw_payload(dict(row)) for row in reader]
+
+    @staticmethod
+    def _extract_ofx_account_metadata(file_bytes: bytes) -> Dict[str, Any]:
+        text = file_bytes.decode("latin-1", errors="ignore")
+        account_block_match = re.search(
+            r"<(?:BANKACCTFROM|CCACCTFROM)>(.*?)</(?:BANKACCTFROM|CCACCTFROM)>",
+            text,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        account_block = account_block_match.group(1) if account_block_match else text
+        raw_account = FinancialImportService._extract_ofx_tag(account_block, "ACCTID")
+        account_number, account_digit = FinancialImportService._split_account_components(raw_account)
+        return {
+            "source_type": "ofx",
+            "validation_available": bool(
+                FinancialImportService._extract_ofx_tag(account_block, "BANKID")
+                or FinancialImportService._extract_ofx_tag(account_block, "BRANCHID")
+                or account_number
+            ),
+            "bank_code": FinancialImportService._normalize_digits(
+                FinancialImportService._extract_ofx_tag(account_block, "BANKID")
+            ) or None,
+            "branch_number": FinancialImportService._normalize_digits(
+                FinancialImportService._extract_ofx_tag(account_block, "BRANCHID")
+            ) or None,
+            "account_number": account_number,
+            "account_digit": account_digit,
+            "account_raw": raw_account,
+            "account_type": FinancialImportService._normalize_text_token(
+                FinancialImportService._extract_ofx_tag(account_block, "ACCTTYPE")
+            ) or None,
+            "validation_source": "ofx_header",
+        }
+
+    @staticmethod
+    def _extract_tabular_account_metadata(rows: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+        key_aliases = {
+            "bank_code": {"bank_code", "codigo_banco", "cod_banco", "banco_codigo", "bankid"},
+            "branch_number": {"branch", "agency", "agencia", "ag", "branch_number", "branchid"},
+            "account_number": {
+                "account",
+                "account_number",
+                "numero_conta",
+                "num_conta",
+                "conta",
+                "acctid",
+                "conta_corrente",
+            },
+            "account_digit": {"account_digit", "digito_conta", "digito", "dv_conta"},
+        }
+        for raw_row in rows[:5]:
+            normalized = {str(key or "").strip().lower(): value for key, value in (raw_row or {}).items()}
+            if not normalized:
+                continue
+            bank_code = next((normalized[key] for key in key_aliases["bank_code"] if key in normalized), None)
+            branch_number = next((normalized[key] for key in key_aliases["branch_number"] if key in normalized), None)
+            account_value = next((normalized[key] for key in key_aliases["account_number"] if key in normalized), None)
+            account_digit = next((normalized[key] for key in key_aliases["account_digit"] if key in normalized), None)
+            account_number, derived_digit = FinancialImportService._split_account_components(account_value)
+            resolved_digit = FinancialImportService._normalize_digits(account_digit) or derived_digit
+            if bank_code or branch_number or account_number:
+                return {
+                    "validation_available": True,
+                    "bank_code": FinancialImportService._normalize_digits(bank_code) or None,
+                    "branch_number": FinancialImportService._normalize_digits(branch_number) or None,
+                    "account_number": account_number,
+                    "account_digit": resolved_digit or None,
+                    "account_raw": FinancialImportService._normalize_text_token(account_value) or None,
+                    "validation_source": "tabular_columns",
+                }
+        return {"validation_available": False, "validation_source": "tabular_columns"}
+
+    @staticmethod
+    def _extract_source_account_metadata(
+        source_type: str,
+        file_bytes: bytes,
+        parsed_rows: Sequence[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        source = str(source_type or "").strip().lower()
+        if source == "ofx":
+            return FinancialImportService._extract_ofx_account_metadata(file_bytes)
+        metadata = FinancialImportService._extract_tabular_account_metadata(parsed_rows)
+        metadata["source_type"] = source
+        return metadata
+
+    @staticmethod
+    def _validate_batch_bank_account(
+        *,
+        company_id: int,
+        metadata_json: Dict[str, Any],
+        source_account_metadata: Dict[str, Any],
+    ) -> Optional[str]:
+        bank_account_id = int((metadata_json or {}).get("bank_account_id") or 0)
+        if not bank_account_id:
+            return None
+        if not (source_account_metadata or {}).get("validation_available"):
+            return None
+
+        account = FinancialBankAccount.query.filter(
+            FinancialBankAccount.id == bank_account_id,
+            FinancialBankAccount.company_id == company_id,
+            FinancialBankAccount.deleted_at.is_(None),
+        ).first()
+        if not account:
+            return "Conta bancária selecionada para o upload não foi encontrada no escopo da empresa."
+
+        source_bank_code = FinancialImportService._normalize_digits(source_account_metadata.get("bank_code"))
+        target_bank_code = FinancialImportService._normalize_digits(account.bank_code)
+        if source_bank_code and not target_bank_code:
+            return (
+                "A conta bancária selecionada não possui código do banco cadastrado no sistema. "
+                "Preencha o cadastro da conta antes de importar este arquivo."
+            )
+        if source_bank_code and target_bank_code and source_bank_code != target_bank_code:
+            return (
+                f"O arquivo pertence ao banco {source_bank_code}, mas a conta selecionada está cadastrada no banco "
+                f"{target_bank_code}. Selecione a conta correta antes do upload."
+            )
+
+        source_account_variants = FinancialImportService._normalize_account_variants(
+            source_account_metadata.get("account_number")
+        )
+        target_account_variants = FinancialImportService._normalize_account_variants(account.account_number)
+        if source_account_variants and not target_account_variants:
+            return (
+                "A conta bancária selecionada não possui número da conta cadastrado no sistema. "
+                "Preencha o cadastro da conta antes de importar este arquivo."
+            )
+        if source_account_variants and target_account_variants and source_account_variants.isdisjoint(target_account_variants):
+            return (
+                "O número da conta identificado no arquivo não corresponde à conta bancária selecionada. "
+                "Selecione a conta correta antes do upload."
+            )
+
+        source_branch_variants = FinancialImportService._normalize_account_variants(
+            source_account_metadata.get("branch_number")
+        )
+        target_branch_variants = FinancialImportService._normalize_account_variants(account.branch_number)
+        if source_branch_variants and target_branch_variants and source_branch_variants.isdisjoint(target_branch_variants):
+            return (
+                "A agência identificada no arquivo não corresponde à conta bancária selecionada. "
+                "Selecione a conta correta antes do upload."
+            )
+
+        source_digit = FinancialImportService._normalize_digits(source_account_metadata.get("account_digit"))
+        target_digit = FinancialImportService._normalize_digits(account.account_digit)
+        if source_digit and target_digit and source_digit != target_digit:
+            return (
+                "O dígito da conta identificado no arquivo não corresponde à conta bancária selecionada. "
+                "Selecione a conta correta antes do upload."
+            )
+
+        return None
+
+    @staticmethod
+    def get_import_batch_deletion_status(batch: FinancialImportBatch) -> Dict[str, Any]:
+        active_row_ids = [
+            int(item.id)
+            for item in FinancialImportRow.query.filter(
+                FinancialImportRow.company_id == batch.company_id,
+                FinancialImportRow.import_batch_id == batch.id,
+                FinancialImportRow.deleted_at.is_(None),
+            ).all()
+        ]
+        confirmed_matches = 0
+        active_created_entries = 0
+        if active_row_ids:
+            confirmed_matches = FinancialReconciliationMatch.query.filter(
+                FinancialReconciliationMatch.company_id == batch.company_id,
+                FinancialReconciliationMatch.import_batch_id == batch.id,
+                FinancialReconciliationMatch.import_row_id.in_(active_row_ids),
+                FinancialReconciliationMatch.match_status == "confirmed",
+                FinancialReconciliationMatch.deleted_at.is_(None),
+            ).count()
+            created_entry_ids = [
+                int(item[0])
+                for item in FinancialImportRow.query.with_entities(FinancialImportRow.created_entry_id).filter(
+                    FinancialImportRow.company_id == batch.company_id,
+                    FinancialImportRow.import_batch_id == batch.id,
+                    FinancialImportRow.deleted_at.is_(None),
+                    FinancialImportRow.created_entry_id.isnot(None),
+                ).all()
+                if item[0]
+            ]
+            if created_entry_ids:
+                active_created_entries = FinancialEntry.query.filter(
+                    FinancialEntry.company_id == batch.company_id,
+                    FinancialEntry.id.in_(created_entry_ids),
+                    FinancialEntry.deleted_at.is_(None),
+                ).count()
+
+        can_delete = confirmed_matches == 0 and active_created_entries == 0
+        blocked_reasons: List[str] = []
+        if confirmed_matches:
+            blocked_reasons.append(f"{confirmed_matches} linha(s) já conciliada(s)")
+        if active_created_entries:
+            blocked_reasons.append(f"{active_created_entries} lançamento(s) criado(s) pela conciliação")
+        return {
+            "can_delete": can_delete,
+            "confirmed_matches": confirmed_matches,
+            "created_entries": active_created_entries,
+            "blocked_reasons": blocked_reasons,
+        }
+
+    @staticmethod
+    def serialize_import_batch(batch: FinancialImportBatch) -> Dict[str, Any]:
+        payload = batch.to_dict()
+        if getattr(batch, "id", None) and getattr(batch, "company_id", None):
+            payload["deletion"] = FinancialImportService.get_import_batch_deletion_status(batch)
+        return payload
 
     @staticmethod
     def _parse_xlsx_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
@@ -508,8 +748,24 @@ class FinancialImportService:
         except Exception as exc:
             return None, f"Falha ao interpretar arquivo importado: {str(exc)}"
 
+        source_account_metadata = FinancialImportService._extract_source_account_metadata(
+            data.source_type,
+            file_bytes,
+            parsed_rows,
+        )
+        validation_error = FinancialImportService._validate_batch_bank_account(
+            company_id=data.company_id,
+            metadata_json=data.metadata_json or {},
+            source_account_metadata=source_account_metadata,
+        )
+        if validation_error:
+            return None, validation_error
+
         try:
             batch_payload = data.model_dump(exclude={"file_hash"})
+            batch_metadata = dict(batch_payload.get("metadata_json") or {})
+            batch_metadata["source_account"] = source_account_metadata
+            batch_payload["metadata_json"] = batch_metadata
             batch = FinancialImportBatch(
                 **batch_payload,
                 file_hash=hashlib.sha256(file_bytes).hexdigest(),
@@ -551,7 +807,7 @@ class FinancialImportService:
 
             db.session.commit()
             return {
-                "batch": batch.to_dict(),
+                "batch": FinancialImportService.serialize_import_batch(batch),
                 "rows": [row.to_dict() for row in staged_rows],
             }, None
         except Exception as exc:
@@ -573,7 +829,7 @@ class FinancialImportService:
             FinancialImportBatch.company_id == company_id,
             FinancialImportBatch.deleted_at.is_(None),
         ).order_by(FinancialImportBatch.imported_at.desc(), FinancialImportBatch.id.desc()).all()
-        return [batch.to_dict() for batch in batches], None
+        return [FinancialImportService.serialize_import_batch(batch) for batch in batches], None
 
     @staticmethod
     def get_import_batch(
@@ -613,11 +869,77 @@ class FinancialImportService:
             FinancialClassificationSuggestion.rank_position.asc(),
         ).all()
         return {
-            "batch": batch.to_dict(),
+            "batch": FinancialImportService.serialize_import_batch(batch),
             "rows": [row.to_dict() for row in rows],
             "matches": [match.to_dict() for match in matches],
             "suggestions": [suggestion.to_dict() for suggestion in suggestions],
         }, None
+
+    @staticmethod
+    def delete_import_batch(
+        *,
+        batch_id: int,
+        company_id: int,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        batch = FinancialImportBatch.query.filter(
+            FinancialImportBatch.id == batch_id,
+            FinancialImportBatch.company_id == company_id,
+            FinancialImportBatch.deleted_at.is_(None),
+        ).first()
+        if not batch:
+            return None, "Lote de importação não encontrado no escopo da empresa."
+
+        deletion_status = FinancialImportService.get_import_batch_deletion_status(batch)
+        if not deletion_status.get("can_delete"):
+            reasons = ", ".join(deletion_status.get("blocked_reasons") or []) or "há conciliação vinculada"
+            return None, f"Este upload não pode ser excluído porque {reasons}."
+
+        try:
+            now = datetime.utcnow()
+            deleted_matches = FinancialReconciliationMatch.query.filter(
+                FinancialReconciliationMatch.company_id == company_id,
+                FinancialReconciliationMatch.import_batch_id == batch.id,
+                FinancialReconciliationMatch.deleted_at.is_(None),
+            ).update(
+                {"deleted_at": now, "updated_at": now},
+                synchronize_session=False,
+            )
+            deleted_suggestions = FinancialClassificationSuggestion.query.filter(
+                FinancialClassificationSuggestion.company_id == company_id,
+                FinancialClassificationSuggestion.import_batch_id == batch.id,
+                FinancialClassificationSuggestion.deleted_at.is_(None),
+            ).update(
+                {"deleted_at": now, "updated_at": now},
+                synchronize_session=False,
+            )
+            deleted_rows = FinancialImportRow.query.filter(
+                FinancialImportRow.company_id == company_id,
+                FinancialImportRow.import_batch_id == batch.id,
+                FinancialImportRow.deleted_at.is_(None),
+            ).update(
+                {"deleted_at": now, "updated_at": now},
+                synchronize_session=False,
+            )
+            batch.deleted_at = now
+            batch.updated_at = now
+            batch.status = "cancelled"
+            db.session.commit()
+            return {
+                "batch_id": batch.id,
+                "batch_code": batch.batch_code,
+                "deleted_rows": int(deleted_rows or 0),
+                "deleted_matches": int(deleted_matches or 0),
+                "deleted_suggestions": int(deleted_suggestions or 0),
+            }, None
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erro ao excluir lote financeiro %s", batch_id)
+            return None, f"Erro ao excluir lote de importação: {str(exc)}"
 
     @staticmethod
     def _build_entry_payload_from_row(batch: FinancialImportBatch, row: FinancialImportRow) -> Dict[str, Any]:
