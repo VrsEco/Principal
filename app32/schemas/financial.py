@@ -1469,3 +1469,21 @@ class FinancialDirectEntryCreateInput(BaseModel):
     created_by_user_id: Optional[int] = None
     created_by_employee_id: Optional[int] = None
     created_by_agent: Optional[str] = Field(None, max_length=50)
+
+
+class FinancialTransferCreateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: int
+    source_bank_account_id: int
+    destination_bank_account_id: int
+    description: str = Field(..., min_length=3, max_length=255)
+    document_number: Optional[str] = Field(None, max_length=80)
+    occurred_on: date
+    competence_date: Optional[date] = None
+    original_amount: Decimal = Field(..., gt=0)
+    notes: Optional[str] = None
+    created_by_user_id: Optional[int] = None
+    created_by_employee_id: Optional[int] = None
+    created_by_agent: Optional[str] = Field(default="app32", max_length=80)
+    metadata_json: Dict[str, Any] = Field(default_factory=dict)

@@ -29,6 +29,7 @@ from services.financial_service import FinancialService
 from services.financial_import_service import FinancialImportService
 from services.financial_ingestion_service import FinancialIngestionService
 from services.financial_direct_entry_service import FinancialDirectEntryService
+from services.financial_transfer_service import FinancialTransferService
 from services.financial_classification_service import FinancialClassificationService
 from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 from services.financial_classification_dashboard_service import FinancialClassificationDashboardService
@@ -225,6 +226,20 @@ class FinancialDirectEntryCreateResource(Resource):
         payload["company_id"] = get_request_company_id()
         payload.setdefault("created_by_user_id", getattr(current_user, "id", None))
         result, error = FinancialDirectEntryService.create_direct_entry(
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 201
+
+
+class FinancialTransferCreateResource(Resource):
+    @permission_required("financial", "create")
+    def post(self):
+        payload = _attach_financial_actor_context(request.get_json(silent=True) or {})
+        payload["company_id"] = get_request_company_id()
+        result, error = FinancialTransferService.create_transfer(
             payload=payload,
             allowed_company_ids=get_accessible_company_ids(),
         )

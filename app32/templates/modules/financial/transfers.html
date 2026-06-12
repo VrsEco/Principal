@@ -1,0 +1,292 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Financeiro - Transferência Bancária{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/financial/entries">Financeiro</a>
+<span class="sep">/</span>
+<span class="current">Transferência Bancária</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="finance-page fade-in" data-company-id="{{ company_id or '' }}">
+    <header class="finance-header">
+        <div>
+            <h1>Transferência Bancária</h1>
+            <p class="subtitle">Workspace dedicada para movimentações entre contas bancárias da mesma empresa, com rastreabilidade operacional e escopo por empresa.</p>
+        </div>
+    </header>
+
+    <section class="stat-grid">
+        <article class="stat-card">
+            <span class="stat-label">Tipo</span>
+            <strong>Interna</strong>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">Escopo</span>
+            <strong>Mesma empresa</strong>
+        </article>
+        <article class="stat-card">
+            <span class="stat-label">Origem</span>
+            <strong>Manual</strong>
+        </article>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <h2>Nova transferência</h2>
+                <p>Crie duas pontas espelhadas de transferência: débito na origem e crédito no destino.</p>
+            </div>
+        </div>
+        <div class="panel-body">
+            <form id="transfer-form" class="transfer-form">
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Conta origem</span>
+                        <select id="source-bank-account-id" required>
+                            <option value="">Carregando...</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Conta destino</span>
+                        <select id="destination-bank-account-id" required>
+                            <option value="">Carregando...</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Valor</span>
+                        <input id="original-amount" type="number" min="0.01" step="0.01" required placeholder="0,00">
+                    </label>
+                    <label class="field">
+                        <span>Data da transferência</span>
+                        <input id="occurred-on" type="date" required>
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Histórico</span>
+                        <input id="description" type="text" maxlength="255" required placeholder="Ex.: Transferência entre contas da tesouraria">
+                    </label>
+                    <label class="field">
+                        <span>Documento (opcional)</span>
+                        <input id="document-number" type="text" maxlength="80" placeholder="Nº do comprovante, TED, PIX ou referência">
+                    </label>
+                    <label class="field">
+                        <span>Competência (opcional)</span>
+                        <input id="competence-date" type="date">
+                    </label>
+                    <label class="field field-span-2">
+                        <span>Observações</span>
+                        <textarea id="notes" rows="3" placeholder="Observações adicionais da transferência"></textarea>
+                    </label>
+                </div>
+                <div class="transfer-actions">
+                    <button class="btn btn-secondary" type="button" id="transfer-clear">Limpar</button>
+                    <button class="btn btn-primary" type="submit" id="transfer-submit">Registrar transferência</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="panel" id="transfer-result-panel" hidden>
+        <div class="panel-header">
+            <div>
+                <h2>Transferência registrada</h2>
+                <p>Consolidação das duas pontas geradas no financeiro.</p>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div id="transfer-result"></div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .finance-page { padding: 0 2rem 2rem; }
+    .finance-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; gap:1rem; }
+    .subtitle { color:var(--text-secondary); max-width:760px; margin-top:.35rem; }
+    .stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-bottom:1.5rem; }
+    .stat-card, .panel { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .stat-card { padding:1.25rem; display:flex; flex-direction:column; gap:.5rem; }
+    .stat-label { color:var(--text-tertiary); text-transform:uppercase; font-size:.75rem; font-weight:700; }
+    .stat-card strong { font-size:1.25rem; color:var(--text-primary); }
+    .panel { margin-bottom:1.5rem; }
+    .panel-header { padding:1.25rem; display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
+    .panel-header h2 { margin:0; }
+    .panel-header p { margin:.25rem 0 0; color:var(--text-secondary); }
+    .panel-body { padding:0 1.25rem 1.25rem; }
+    .transfer-form { display:flex; flex-direction:column; gap:1rem; }
+    .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .field { display:flex; flex-direction:column; gap:.45rem; }
+    .field-span-2 { grid-column:span 2; }
+    .field span { font-size:.78rem; font-weight:700; text-transform:uppercase; color:var(--text-tertiary); letter-spacing:.04em; }
+    .field input, .field select, .field textarea {
+        width:100%; padding:0.85rem 0.95rem; border-radius:12px; border:1.5px solid var(--border);
+        background:var(--surface-secondary); color:var(--text-primary); font-size:0.92rem;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+        outline:none; border-color:var(--primary); background:var(--surface);
+    }
+    .btn { border:none; border-radius:12px; padding:.85rem 1.1rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-secondary { background:var(--surface-secondary); color:var(--text-primary); border:1px solid var(--border); }
+    .alert {
+        border-radius:14px; padding:0.9rem 1rem; margin-bottom:1rem; font-weight:600;
+        border:1px solid transparent;
+    }
+    .alert-success { background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+    .alert-error { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+    .result-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .result-card {
+        border:1px solid var(--border); border-radius:14px; padding:1rem; background:var(--surface-secondary);
+    }
+    .result-card h3 { margin:0 0 .35rem; font-size:1rem; }
+    .result-card p { margin:.2rem 0; color:var(--text-secondary); }
+    .result-card a { display:inline-flex; margin-top:.6rem; color:var(--primary); font-weight:700; text-decoration:none; }
+    .transfer-actions { display:flex; justify-content:flex-end; gap:.75rem; }
+    @media (max-width: 960px) {
+        .stat-grid, .form-grid, .result-grid { grid-template-columns:1fr; }
+        .field-span-2 { grid-column:auto; }
+        .finance-page { padding:0 1rem 1.5rem; }
+    }
+</style>
+
+<script>
+    function initFinancialTransfersPage() {
+        const root = document.querySelector('.finance-page');
+        const companyId = root?.dataset.companyId;
+        if (!companyId) return;
+
+        const form = document.getElementById('transfer-form');
+        const sourceSelect = document.getElementById('source-bank-account-id');
+        const destinationSelect = document.getElementById('destination-bank-account-id');
+        const occurredOn = document.getElementById('occurred-on');
+        const resultPanel = document.getElementById('transfer-result-panel');
+        const resultNode = document.getElementById('transfer-result');
+        const submitButton = document.getElementById('transfer-submit');
+        const clearButton = document.getElementById('transfer-clear');
+
+        occurredOn.value = new Date().toISOString().slice(0, 10);
+
+        function resetFormState() {
+            form.reset();
+            occurredOn.value = new Date().toISOString().slice(0, 10);
+            resultPanel.hidden = true;
+            resultNode.innerHTML = '';
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function accountLabel(item) {
+            const bank = item.bank_name ? ` · ${item.bank_name}` : '';
+            const account = item.account_number ? ` · ${item.account_number}` : '';
+            return `${item.name || 'Conta'}${bank}${account}`;
+        }
+
+        function showMessage(kind, text) {
+            resultPanel.hidden = false;
+            resultNode.innerHTML = `<div class="alert alert-${kind}">${escapeHtml(text)}</div>`;
+        }
+
+        async function loadBankAccounts() {
+            const response = await fetch(`/api/financial/catalogs/bank_accounts?company_id=${companyId}`);
+            const items = await response.json();
+            const accounts = Array.isArray(items) ? items : [];
+            const options = ['<option value="">Selecione</option>'].concat(
+                accounts.map((item) => `<option value="${item.id}">${escapeHtml(accountLabel(item))}</option>`)
+            ).join('');
+            sourceSelect.innerHTML = options;
+            destinationSelect.innerHTML = options;
+        }
+
+        form?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!sourceSelect.value || !destinationSelect.value) {
+                showMessage('error', 'Selecione as contas de origem e destino.');
+                return;
+            }
+            if (sourceSelect.value === destinationSelect.value) {
+                showMessage('error', 'A conta de origem deve ser diferente da conta de destino.');
+                return;
+            }
+            submitButton.disabled = true;
+            clearButton.disabled = true;
+            submitButton.textContent = 'Registrando...';
+
+            const payload = {
+                source_bank_account_id: Number(sourceSelect.value || 0),
+                destination_bank_account_id: Number(destinationSelect.value || 0),
+                original_amount: Number(document.getElementById('original-amount').value || 0),
+                occurred_on: occurredOn.value,
+                competence_date: document.getElementById('competence-date').value || null,
+                description: document.getElementById('description').value.trim(),
+                document_number: document.getElementById('document-number').value.trim() || null,
+                notes: document.getElementById('notes').value.trim() || null,
+            };
+
+            try {
+                const response = await fetch(`/api/financial/transfers?company_id=${companyId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || 'Falha ao registrar transferência.');
+                }
+
+                resultPanel.hidden = false;
+                resultNode.innerHTML = `
+                    <div class="alert alert-success">Transferência registrada com sucesso.</div>
+                    <div class="result-grid">
+                        <div class="result-card">
+                            <h3>Saída</h3>
+                            <p><strong>Código:</strong> ${escapeHtml(result.source_entry?.entry_code || '-')}</p>
+                            <p><strong>Conta:</strong> ${escapeHtml(result.summary?.source_bank_account_name || '-')}</p>
+                            <p><strong>Valor:</strong> ${Number(result.summary?.original_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                            ${result.summary?.source_entry_url ? `<a href="${escapeHtml(result.summary.source_entry_url)}">Abrir lançamento de saída</a>` : ''}
+                        </div>
+                        <div class="result-card">
+                            <h3>Entrada</h3>
+                            <p><strong>Código:</strong> ${escapeHtml(result.destination_entry?.entry_code || '-')}</p>
+                            <p><strong>Conta:</strong> ${escapeHtml(result.summary?.destination_bank_account_name || '-')}</p>
+                            <p><strong>Grupo:</strong> ${escapeHtml(result.transfer_group_id || '-')}</p>
+                            ${result.summary?.destination_entry_url ? `<a href="${escapeHtml(result.summary.destination_entry_url)}">Abrir lançamento de entrada</a>` : ''}
+                        </div>
+                    </div>
+                `;
+                form.reset();
+                occurredOn.value = new Date().toISOString().slice(0, 10);
+            } catch (error) {
+                showMessage('error', error.message || 'Falha ao registrar transferência.');
+            } finally {
+                submitButton.disabled = false;
+                clearButton.disabled = false;
+                submitButton.textContent = 'Registrar transferência';
+            }
+        });
+
+        clearButton?.addEventListener('click', () => {
+            resetFormState();
+        });
+
+        loadBankAccounts().catch(() => {
+            showMessage('error', 'Não foi possível carregar as contas bancárias da empresa.');
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initFinancialTransfersPage, { once: true });
+    } else {
+        initFinancialTransfersPage();
+    }
+</script>
+{% endblock %}
