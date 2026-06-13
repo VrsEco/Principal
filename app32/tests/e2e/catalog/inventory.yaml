@@ -212,13 +212,13 @@ modules:
         owner: QA_AUTOMATION
         scenario: scripts/run_financial_functional_probe.py
       - key: financial.schedules_list_page
-        route: /financial/schedules?company_id=<company_id>
+        route: /financial/schedules
         environment_modes: [DEV_FULL, PROD_SAFE]
         actions: [abrir, validar_render, filtrar_favorecido]
         owner: QA_AUTOMATION
         scenario: scripts/run_financial_functional_probe.py
       - key: financial.schedules_api_counterparty_contract
-        route: /api/financial/schedules?company_id=<company_id>
+        route: /api/financial/schedules
         environment_modes: [DEV_FULL, PROD_SAFE]
         actions: [consultar_titulos, validar_favorecido_resolvido, validar_company_id]
         owner: QA_AUTOMATION
@@ -236,7 +236,7 @@ modules:
         owner: QA_AUTOMATION
         scenario: scripts/run_financial_functional_probe.py
       - key: financial.transfers_page
-        route: /financial/transfers?company_id=<company_id>
+        route: /financial/transfers
         environment_modes: [DEV_FULL, PROD_SAFE]
         actions: [abrir, validar_render, validar_company_id, bloquear_mutacao_prod_safe]
         owner: QA_AUTOMATION

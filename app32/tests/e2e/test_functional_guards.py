@@ -9,6 +9,14 @@ def test_contains_public_error_detects_common_public_messages():
     assert not contains_public_error("Operação concluída com sucesso.")
 
 
+def test_contains_public_error_ignores_non_visible_script_text():
+    html = """
+    <main>Gestão de Reuniões</main>
+    <script>console.error('Erro ao salvar reunião:', error)</script>
+    """
+    assert not contains_public_error(html)
+
+
 def test_is_html_success_requires_markers_and_rejects_public_error():
     assert is_html_success("<div>API / MCP</div>", any_markers=("API / MCP",))
     assert not is_html_success("<div>Erro ao salvar</div>", any_markers=("Salvar",))

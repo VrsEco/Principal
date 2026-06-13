@@ -16,6 +16,50 @@ from app32.tests.e2e.catalog.suite_catalog import list_suite_catalog
 EXCLUDED_FULL_RUN_SUITES = {"inventory_system_scan", "full_system_validation"}
 
 
+def _decode_stdout_json(stdout: str) -> object | None:
+    text = str(stdout or "").strip()
+    if not text:
+        return None
+    start_positions = [pos for pos in (text.find("["), text.find("{")) if pos >= 0]
+    if not start_positions:
+        return None
+    start = min(start_positions)
+    decoder = json.JSONDecoder()
+    try:
+        payload, _ = decoder.raw_decode(text[start:])
+        return payload
+    except json.JSONDecodeError:
+        return None
+
+
+def _collect_failed_success_checks(payload: object, *, path: str = "$") -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    if isinstance(payload, dict):
+        if payload.get("success") is False:
+            failures.append(
+                {
+                    "path": path,
+                    "check_name": payload.get("check_name"),
+                    "route": payload.get("route") or payload.get("endpoint"),
+                    "status_code": payload.get("status_code"),
+                    "details": payload.get("details"),
+                }
+            )
+        for key, value in payload.items():
+            failures.extend(_collect_failed_success_checks(value, path=f"{path}.{key}"))
+    elif isinstance(payload, list):
+        for index, value in enumerate(payload):
+            failures.extend(_collect_failed_success_checks(value, path=f"{path}[{index}]"))
+    return failures
+
+
+def _internal_failures_from_stdout(stdout: str) -> list[dict[str, object]]:
+    payload = _decode_stdout_json(stdout)
+    if payload is None:
+        return []
+    return _collect_failed_success_checks(payload)
+
+
 def main() -> int:
     environment = str(os.environ.get("E2E_ENV_NAME") or "DEV_FULL").strip().upper()
     suites = [
@@ -42,12 +86,16 @@ def main() -> int:
             text=True,
             check=False,
         )
+        internal_failures = _internal_failures_from_stdout(completed.stdout)
+        effective_returncode = completed.returncode if completed.returncode != 0 or not internal_failures else 1
         results.append(
             {
                 "suite_id": suite.suite_id,
                 "label": suite.label,
                 "domain": suite.domain,
-                "returncode": completed.returncode,
+                "returncode": effective_returncode,
+                "process_returncode": completed.returncode,
+                "internal_failures": internal_failures,
                 "stdout": completed.stdout,
                 "stderr": completed.stderr,
             }

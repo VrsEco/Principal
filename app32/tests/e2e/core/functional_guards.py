@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import re
 
 
 PUBLIC_ERROR_PATTERNS = (
@@ -12,8 +13,15 @@ PUBLIC_ERROR_PATTERNS = (
 )
 
 
+def _visible_text_for_guard(text: str | None) -> str:
+    body = str(text or "")
+    body = re.sub(r"<script\b[^>]*>.*?</script>", " ", body, flags=re.IGNORECASE | re.DOTALL)
+    body = re.sub(r"<style\b[^>]*>.*?</style>", " ", body, flags=re.IGNORECASE | re.DOTALL)
+    return body
+
+
 def contains_public_error(text: str | None) -> bool:
-    normalized = str(text or "").lower()
+    normalized = _visible_text_for_guard(text).lower()
     return any(pattern.lower() in normalized for pattern in PUBLIC_ERROR_PATTERNS)
 
 

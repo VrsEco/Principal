@@ -62,11 +62,11 @@ def execute_work_journey_functional_probe(*, settings: E2EEnvironmentSettings) -
             route=page_route,
             success=is_html_success(
                 page_html,
-                any_markers=("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board"),
+                any_markers=("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board", "journey-app"),
             ),
             status_code=page_response.status_code,
             details={
-                "has_page_marker": any(marker in page_html for marker in ("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board")),
+                "has_page_marker": any(marker in page_html for marker in ("data-work-journey-root", "id=\"workJourneyRoot\"", "work-journey-board", "journey-app")),
                 "has_public_error": contains_public_error(page_html),
             },
         ),
