@@ -235,6 +235,21 @@ class FinancialDirectEntryCreateResource(Resource):
 
 
 class FinancialTransferCreateResource(Resource):
+    @permission_required("financial", "view")
+    def get(self):
+        company_id = get_request_company_id()
+        result, error = FinancialTransferService.list_transfers(
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+            search_query=request.args.get("q") or request.args.get("search_query"),
+            date_from=_get_optional_iso_date_arg("date_from"),
+            date_to=_get_optional_iso_date_arg("date_to"),
+            bank_account_id=request.args.get("bank_account_id", type=int),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
     @permission_required("financial", "create")
     def post(self):
         payload = _attach_financial_actor_context(request.get_json(silent=True) or {})
@@ -246,6 +261,49 @@ class FinancialTransferCreateResource(Resource):
         if error:
             return {"error": error}, 400
         return result, 201
+
+
+class FinancialTransferResource(Resource):
+    @permission_required("financial", "view")
+    def get(self, transfer_group_id: str):
+        company_id = get_request_company_id()
+        result, error = FinancialTransferService.get_transfer(
+            transfer_group_id=transfer_group_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 404
+        return result, 200
+
+    @permission_required("financial", "edit")
+    def put(self, transfer_group_id: str):
+        payload = request.get_json(silent=True) or {}
+        payload["company_id"] = get_request_company_id()
+        payload.setdefault("updated_by_user_id", getattr(current_user, "id", None))
+        if getattr(current_user, "employee_id", None) is not None:
+            payload.setdefault("updated_by_employee_id", getattr(current_user, "employee_id", None))
+        payload.setdefault("updated_by_agent", "app32")
+        result, error = FinancialTransferService.update_transfer(
+            transfer_group_id=transfer_group_id,
+            payload=payload,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
+
+    @permission_required("financial", "delete")
+    def delete(self, transfer_group_id: str):
+        company_id = get_request_company_id()
+        result, error = FinancialTransferService.delete_transfer(
+            transfer_group_id=transfer_group_id,
+            company_id=company_id,
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        return result, 200
 
 
 class FinancialCatalogListResource(Resource):

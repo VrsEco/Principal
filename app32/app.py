@@ -785,6 +785,7 @@ def register_api_resources(api):
         FinancialDirectEntryOptionsResource,
         FinancialDirectEntryCreateResource,
         FinancialTransferCreateResource,
+        FinancialTransferResource,
         FinancialCatalogListResource,
         FinancialCatalogResource,
         FinancialCatalogToggleResource,
@@ -1020,6 +1021,7 @@ def register_api_resources(api):
     api.add_resource(FinancialDirectEntryOptionsResource, '/api/financial/entries/direct/options')
     api.add_resource(FinancialDirectEntryCreateResource, '/api/financial/entries/direct')
     api.add_resource(FinancialTransferCreateResource, '/api/financial/transfers')
+    api.add_resource(FinancialTransferResource, '/api/financial/transfers/<string:transfer_group_id>')
     api.add_resource(FinancialCatalogListResource, '/api/financial/catalogs/<string:catalog_type>')
     api.add_resource(FinancialCatalogResource, '/api/financial/catalogs/<string:catalog_type>/<int:item_id>')
     api.add_resource(FinancialCatalogToggleResource, '/api/financial/catalogs/<string:catalog_type>/<int:item_id>/toggle')
