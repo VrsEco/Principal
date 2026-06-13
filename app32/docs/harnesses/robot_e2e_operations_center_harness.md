@@ -27,6 +27,6 @@ Operar a camada supervisionada da suíte E2E dentro do app32.
 - catálogo: `C:\GestaoVersus\app32\app32\tests\e2e\catalog\suite_catalog.py`
 
 ## Cobertura funcional atualizada
-- Financeiro: valida lista/API de títulos, contrato `summary.counterparty_name` e aba local `Automações`.
+- Financeiro: valida lista/API de títulos, contrato `summary.counterparty_name`, aba local `Automações`, workspace de `Transferência Bancária` e catálogo tenant-safe de contas bancárias.
 - Contratos/fiscal: valida fila de notas fiscais, filtro por `issuer_legal_entity_id` e painel de ações em lote.
-- As novas rotas permanecem `PROD_SAFE` quando são somente leitura e exigem `company_id` explícito.
+- As novas rotas permanecem `PROD_SAFE` quando são somente leitura e exigem `company_id` explícito; mutações financeiras como `POST /api/financial/transfers` ficam fora do smoke seguro.
