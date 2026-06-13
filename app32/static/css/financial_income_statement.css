@@ -157,6 +157,69 @@
   color: #334155;
 }
 
+.dre-row[data-level="0"] {
+  --dre-level-accent: #1e40af;
+  background: linear-gradient(90deg, rgba(30, 64, 175, 0.30) 0%, rgba(37, 99, 235, 0.18) 42%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="1"] {
+  --dre-level-accent: #2563eb;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.24) 0%, rgba(59, 130, 246, 0.16) 46%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="2"] {
+  --dre-level-accent: #4f46e5;
+  background: linear-gradient(90deg, rgba(79, 70, 229, 0.22) 0%, rgba(124, 58, 237, 0.15) 48%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="3"] {
+  --dre-level-accent: #7c3aed;
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.20) 0%, rgba(168, 85, 247, 0.14) 50%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="4"] {
+  --dre-level-accent: #9333ea;
+  background: linear-gradient(90deg, rgba(147, 51, 234, 0.18) 0%, rgba(190, 24, 93, 0.13) 52%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="5"] {
+  --dre-level-accent: #be123c;
+  background: linear-gradient(90deg, rgba(190, 18, 60, 0.16) 0%, rgba(220, 38, 38, 0.12) 54%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="6"] {
+  --dre-level-accent: #dc2626;
+  background: linear-gradient(90deg, rgba(220, 38, 38, 0.15) 0%, rgba(248, 113, 113, 0.10) 56%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row[data-level="7"],
+.dre-row[data-level="8"],
+.dre-row[data-level="9"],
+.dre-row[data-level="10"] {
+  --dre-level-accent: #991b1b;
+  background: linear-gradient(90deg, rgba(153, 27, 27, 0.14) 0%, rgba(220, 38, 38, 0.09) 58%, rgba(255, 255, 255, 0.98) 100%);
+}
+
+.dre-row--account[data-level] {
+  background: #ffffff;
+}
+
+.dre-row--account[data-level]:nth-of-type(even) {
+  background: #f8fafc;
+}
+
+.dre-row--account[data-level]:nth-of-type(odd) {
+  background: #ffffff;
+}
+
+.dre-row[data-level] td:first-child {
+  box-shadow: inset 4px 0 0 var(--dre-level-accent);
+}
+
+.dre-row[data-level] .dre-account-code {
+  color: var(--dre-level-accent);
+}
+
 .dre-account-cell {
   display: flex;
   align-items: center;
@@ -169,7 +232,11 @@
 .dre-account-cell.level-3 { padding-left: 3rem; }
 .dre-account-cell.level-4,
 .dre-account-cell.level-5,
-.dre-account-cell.level-6 { padding-left: 4rem; }
+.dre-account-cell.level-6,
+.dre-account-cell.level-7,
+.dre-account-cell.level-8,
+.dre-account-cell.level-9,
+.dre-account-cell.level-10 { padding-left: 4rem; }
 
 .dre-toggle {
   width: 1.35rem;
@@ -432,6 +499,51 @@
 .dre-row--account .dre-value,
 .dre-row--account-group .dre-value {
   font-weight: 600;
+}
+
+.dre-row[data-level="0"] .dre-account-content,
+.dre-row[data-level="0"] .dre-value,
+.dre-row[data-level="0"] .dre-value-button {
+  font-size: 20px;
+}
+
+.dre-row[data-level="1"] .dre-account-content,
+.dre-row[data-level="1"] .dre-value,
+.dre-row[data-level="1"] .dre-value-button {
+  font-size: 16px;
+}
+
+.dre-row[data-level="2"] .dre-account-content,
+.dre-row[data-level="2"] .dre-value,
+.dre-row[data-level="2"] .dre-value-button {
+  font-size: 14px;
+}
+
+.dre-row[data-level="3"] .dre-account-content,
+.dre-row[data-level="3"] .dre-value,
+.dre-row[data-level="3"] .dre-value-button,
+.dre-row[data-level="4"] .dre-account-content,
+.dre-row[data-level="4"] .dre-value,
+.dre-row[data-level="4"] .dre-value-button,
+.dre-row[data-level="5"] .dre-account-content,
+.dre-row[data-level="5"] .dre-value,
+.dre-row[data-level="5"] .dre-value-button,
+.dre-row[data-level="6"] .dre-account-content,
+.dre-row[data-level="6"] .dre-value,
+.dre-row[data-level="6"] .dre-value-button,
+.dre-row[data-level="7"] .dre-account-content,
+.dre-row[data-level="7"] .dre-value,
+.dre-row[data-level="7"] .dre-value-button,
+.dre-row[data-level="8"] .dre-account-content,
+.dre-row[data-level="8"] .dre-value,
+.dre-row[data-level="8"] .dre-value-button,
+.dre-row[data-level="9"] .dre-account-content,
+.dre-row[data-level="9"] .dre-value,
+.dre-row[data-level="9"] .dre-value-button,
+.dre-row[data-level="10"] .dre-account-content,
+.dre-row[data-level="10"] .dre-value,
+.dre-row[data-level="10"] .dre-value-button {
+  font-size: 12px;
 }
 
 .dre-table tfoot th {

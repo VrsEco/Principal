@@ -8,7 +8,9 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from models import db
 from models.financial import (
     FinancialBankAccount,
+    FinancialChartAccount,
     FinancialCounterparty,
+    FinancialCorrectionIndex,
     FinancialEntry,
     FinancialImportBatch,
     FinancialImportRow,
@@ -45,6 +47,47 @@ class FinancialReconciliationService:
                 seen.add(current_id)
                 normalized.append(current_id)
         return normalized
+
+    @staticmethod
+    def _normalize_optional_int(value: object) -> Optional[int]:
+        try:
+            normalized = int(value or 0)
+        except (TypeError, ValueError):
+            return None
+        return normalized if normalized > 0 else None
+
+    @staticmethod
+    def _resolve_financial_correction_index_for_reconciliation(
+        *,
+        company_id: int,
+        correction_index_id: object,
+    ) -> Tuple[Optional[FinancialCorrectionIndex], Optional[str]]:
+        normalized_id = FinancialReconciliationService._normalize_optional_int(correction_index_id)
+        if not normalized_id:
+            return None, "Selecione a correção financeira cadastrada para registrar a diferença da conciliação."
+
+        correction_index = FinancialCorrectionIndex.query.filter(
+            FinancialCorrectionIndex.id == normalized_id,
+            FinancialCorrectionIndex.company_id == company_id,
+            FinancialCorrectionIndex.deleted_at.is_(None),
+            FinancialCorrectionIndex.is_active.is_(True),
+        ).first()
+        if not correction_index:
+            return None, "Correção financeira não encontrada ou inativa para a empresa ativa."
+
+        chart_account_id = (correction_index.metadata_json or {}).get("chart_account_id")
+        if not chart_account_id:
+            return None, "A correção financeira selecionada não possui conta contábil configurada."
+
+        chart_account = FinancialChartAccount.query.filter(
+            FinancialChartAccount.id == int(chart_account_id),
+            FinancialChartAccount.company_id == company_id,
+            FinancialChartAccount.deleted_at.is_(None),
+        ).first()
+        if not chart_account or not getattr(chart_account, "accepts_posting", False):
+            return None, "A conta contábil da correção financeira precisa ser analítica e pertencer à empresa ativa."
+
+        return correction_index, None
 
     @staticmethod
     def _settlement_reconciliation_amount(settlement: FinancialSettlement) -> Decimal:
@@ -110,6 +153,7 @@ class FinancialReconciliationService:
         discount_amount = Decimal(str(adjustments.get("discount_amount") or 0))
         fee_amount = Decimal(str(adjustments.get("fee_amount") or 0))
         other_adjustments_amount = Decimal(str(adjustments.get("other_adjustments_amount") or 0))
+        correction_index_id = FinancialReconciliationService._normalize_optional_int(adjustments.get("correction_index_id"))
         principal_amount = adjustments.get("principal_amount")
         if principal_amount is None:
             principal_amount = (
@@ -135,6 +179,7 @@ class FinancialReconciliationService:
             "settlement_type": "automatic_rule",
             "settlement_status": "posted",
             "settlement_date": row.occurred_on or row.due_date or entry.due_date or entry.competence_date,
+            "bank_account_id": (row.normalized_payload or {}).get("bank_account_id") or getattr(entry, "bank_account_id", None),
             "principal_amount": principal_amount,
             "interest_amount": interest_amount,
             "penalty_amount": penalty_amount,
@@ -150,8 +195,27 @@ class FinancialReconciliationService:
                 "reconciliation_match_id": match.id,
                 "mode": "auto_settlement_from_reconciliation",
                 "row_amount": float(row_amount),
+                "correction_index_id": correction_index_id,
             },
         }
+        if other_adjustments_amount > Decimal("0") and correction_index_id:
+            settlement_payload["settlement_components"] = [
+                {
+                    "component_type": "principal",
+                    "amount": principal_amount,
+                    "source": "reconciliation",
+                    "metadata_json": {"reconciliation_match_id": match.id},
+                },
+                {
+                    "component_type": "manual_adjustment",
+                    "amount": other_adjustments_amount,
+                    "source": "reconciliation",
+                    "metadata_json": {
+                        "correction_index_id": correction_index_id,
+                        "reconciliation_match_id": match.id,
+                    },
+                },
+            ]
         settlement, error = FinancialService.create_settlement(payload=settlement_payload)
         if error:
             return None, error
@@ -870,6 +934,7 @@ class FinancialReconciliationService:
         financial_schedule_id: Optional[int] = None,
         company_id: int,
         resolution_strategy: Optional[str] = None,
+        correction_index_id: Optional[int] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
@@ -1015,7 +1080,14 @@ class FinancialReconciliationService:
         elif normalized_strategy == "financial_correction":
             adjustments["principal_amount"] = remaining_principal
             if difference > 0:
+                correction_index, correction_error = FinancialReconciliationService._resolve_financial_correction_index_for_reconciliation(
+                    company_id=company_id,
+                    correction_index_id=correction_index_id,
+                )
+                if correction_error:
+                    return None, correction_error
                 adjustments["other_adjustments_amount"] = difference
+                adjustments["correction_index_id"] = correction_index.id if correction_index else None
             else:
                 adjustments["discount_amount"] = abs(difference)
 
@@ -1028,6 +1100,7 @@ class FinancialReconciliationService:
                 "manual_selection": True,
                 "open_title_reconciliation": True,
                 "resolution_strategy": normalized_strategy,
+                "correction_index_id": adjustments.get("correction_index_id"),
                 "difference": float(difference),
                 "title_amount_adjustment": amount_adjustment_snapshot,
                 "generated_entry_id": generated_entry_id,

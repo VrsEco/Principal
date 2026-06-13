@@ -1430,6 +1430,43 @@ for _tool_name in (
         tags=("work_journey", "delete"),
     )
 
+_register_mcp_support_capability(
+    "create_financial_bank_transfer",
+    domain="finance",
+    action="create",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.HIGH,
+    permissions=("financial.create",),
+    human_gate=True,
+    human_gate_reason="Transferência bancária cria lançamentos e baixas financeiras; exige confirmação explícita e trilha auditável.",
+    tags=("bank_transfer", "mutation"),
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+)
+
+_register_mcp_support_capability(
+    "preview_financial_bank_statement_repair",
+    domain="finance",
+    action="analyze",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+    risk=ToolRiskLevel.LOW,
+    permissions=("financial.view",),
+    tags=("bank_statement", "repair", "preview", "read"),
+    required_context=(TOOL_CONTEXT_COMPANY,),
+)
+
+_register_mcp_support_capability(
+    "apply_financial_bank_statement_repair",
+    domain="finance",
+    action="execute",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.HIGH,
+    permissions=("financial.edit",),
+    human_gate=True,
+    human_gate_reason="Reparo de extrato pode criar baixas históricas e alterar dados financeiros; exige preview e confirmação explícita.",
+    tags=("bank_statement", "repair", "mutation"),
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+)
+
 _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
     ("billing", "finance"),
     ("fiscal", "finance"),

@@ -198,6 +198,36 @@ def test_row_match_resource_delete_cancels_reconciliation(monkeypatch):
     assert captured["kwargs"]["reason"] == "Ajuste operacional"
 
 
+def test_title_settlement_resource_passes_correction_index(monkeypatch):
+    app = Flask(__name__)
+    captured = {}
+
+    monkeypatch.setattr(financial_resource_module, "get_request_company_id", lambda: 9)
+    monkeypatch.setattr(financial_resource_module, "get_accessible_company_ids", lambda: [9])
+    monkeypatch.setattr(
+        financial_resource_module.FinancialReconciliationService,
+        "settle_open_title_from_bank_row",
+        lambda **kwargs: (captured.setdefault("kwargs", kwargs) or {"ok": True}, None),
+    )
+
+    with app.test_request_context(
+        "/api/financial/reconciliation/rows/61/settle-title?company_id=9",
+        method="POST",
+        json={
+            "financial_entry_id": 11,
+            "financial_schedule_id": 22,
+            "resolution_strategy": "financial_correction",
+            "correction_index_id": 33,
+        },
+    ):
+        resource = financial_resource_module.FinancialBankReconciliationTitleSettlementResource()
+        response, status_code = resource.post.__wrapped__(resource, 61)
+
+    assert status_code == 200
+    assert captured["kwargs"]["row_id"] == 61
+    assert captured["kwargs"]["correction_index_id"] == 33
+
+
 def test_restore_title_amount_adjustment_reverts_original_amount_from_match_metadata():
     row = SimpleNamespace(id=61, import_batch_id=301)
     entry = SimpleNamespace(

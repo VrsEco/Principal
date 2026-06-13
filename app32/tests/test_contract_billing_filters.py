@@ -73,3 +73,50 @@ def test_contract_billing_template_renders_issuer_filter():
     assert "PJ emissora" in html
     assert "PJ.007 · Versus Emitente LTDA" in html
     assert 'value="7" selected' in html
+
+
+def test_contract_spot_billing_template_renders_split_labels():
+    app = Flask(__name__)
+    app.secret_key = "test"
+    app.jinja_env.filters["format_currency_br"] = _format_currency_br
+    app.jinja_loader = ChoiceLoader(
+        [
+            DictLoader(
+                {
+                    "layouts/base.html": "{% block layout %}{% endblock %}",
+                    "layouts/workspace.html": "{% block workspace_content %}{% endblock %}{% block sidebar_right %}{% endblock %}",
+                    "modules/contracts/_styles.html": "",
+                }
+            ),
+            FileSystemLoader(str(Path(__file__).resolve().parents[1] / "templates")),
+        ]
+    )
+
+    contracts_bp = Blueprint("contracts", __name__)
+
+    @contracts_bp.route("/contracts/billing/spot")
+    def contracts_billing_spot_workspace():
+        return ""
+
+    @contracts_bp.route("/contracts/billing")
+    def contracts_billing_workspace():
+        return ""
+
+    app.register_blueprint(contracts_bp)
+
+    with app.test_request_context("/contracts/billing/spot?company_id=1"):
+        html = render_template(
+            "modules/contracts/contracts_billing.html",
+            company_id=1,
+            company=SimpleNamespace(id=1),
+            billing_rows=[],
+            parties=[],
+            legal_entities=[],
+            managers=[],
+            filters={"billing_state": "eligible"},
+            kpis={"active": 0, "pending_billing": 0, "total": 0},
+            billing_mode="spot_services",
+        )
+
+    assert "Faturar Serv. Pontuais" in html
+    assert "Faturar Contr. Mensais" in html

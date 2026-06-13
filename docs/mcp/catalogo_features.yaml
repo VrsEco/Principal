@@ -1,4 +1,4 @@
-version: "2026-06-06.1"
+version: "2026-06-13.1"
 owner: "sapiens-mcp"
 description: "Catálogo resumido e seguro para bootstrap do MCP Sapiens."
 bootstrap:
@@ -248,10 +248,12 @@ features:
   - id: "financeiro_operacional"
     nome: "Financeiro Operacional e Orçamentário"
     dominio: "finance"
-    objetivo: "Executar e consultar cadastros, títulos, lançamentos, borderôs, orçamento, conciliação, classificação, fechamento e relatórios."
+    objetivo: "Executar e consultar cadastros, títulos, lançamentos, transferências bancárias, extrato, borderôs, orçamento, conciliação, classificação, fechamento e relatórios."
     quando_usar:
       - "consultar ou criar títulos financeiros"
       - "operar lançamentos, liquidações, borderôs e conciliações"
+      - "criar transferência bancária administrativa entre contas do tenant"
+      - "simular ou aplicar reparo controlado do Extrato Bancário"
       - "gerar relatórios e dashboard executivo financeiro"
       - "trabalhar com orçamento matricial ou classificação automática"
     entradas:
@@ -265,6 +267,8 @@ features:
     saidas:
       - "registros_financeiros"
       - "titulos"
+      - "transferencias_bancarias"
+      - "reparos_de_extrato"
       - "relatorios"
       - "matriz_orcamentaria"
       - "resumo_executivo"

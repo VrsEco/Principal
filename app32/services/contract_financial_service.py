@@ -7,6 +7,8 @@ from typing import Optional
 from models import db
 from models.contracts import Contract, ContractFinancialTerm, ContractNativeBilling, ContractNativeBillingItem
 from models.financial import (
+    FinancialChartAccount,
+    FinancialCostCenter,
     FinancialCounterparty,
     FinancialSatelliteExecution,
     FinancialSatellitePolicy,
@@ -300,6 +302,41 @@ class ContractFinancialService:
         ).first()
 
     @staticmethod
+    def _ensure_billing_accounting_dimensions(
+        *,
+        contract: Contract,
+        chart_account_id: Optional[int],
+        cost_center_id: Optional[int],
+    ) -> None:
+        missing = []
+        if not chart_account_id:
+            missing.append("conta contábil")
+        if not cost_center_id:
+            missing.append("centro de resultado")
+        if missing:
+            raise ValueError(
+                "Configure "
+                + " e ".join(missing)
+                + f" antes de gerar o faturamento financeiro do contrato {contract.code or contract.id}."
+            )
+
+        chart_account = FinancialChartAccount.query.filter(
+            FinancialChartAccount.id == chart_account_id,
+            FinancialChartAccount.company_id == contract.company_id,
+            FinancialChartAccount.deleted_at.is_(None),
+        ).first()
+        if not chart_account:
+            raise ValueError("Conta contábil inválida para a empresa ativa.")
+
+        cost_center = FinancialCostCenter.query.filter(
+            FinancialCostCenter.id == cost_center_id,
+            FinancialCostCenter.company_id == contract.company_id,
+            FinancialCostCenter.deleted_at.is_(None),
+        ).first()
+        if not cost_center:
+            raise ValueError("Centro de resultado inválido para a empresa ativa.")
+
+    @staticmethod
     def _resolve_main_schedule_payload(*, contract: Contract, native_billing: ContractNativeBilling, financial_terms: Optional[ContractFinancialTerm]) -> dict:
         counterparty = ContractFinancialService._resolve_counterparty(contract)
         competence_date = native_billing.competence_start or native_billing.issue_date or date.today()
@@ -314,6 +351,11 @@ class ContractFinancialService:
         cost_center_id = (
             getattr(financial_terms, "default_cost_center_id", None)
             or getattr(counterparty, "default_cost_center_id", None)
+        )
+        ContractFinancialService._ensure_billing_accounting_dimensions(
+            contract=contract,
+            chart_account_id=chart_account_id,
+            cost_center_id=cost_center_id,
         )
 
         item_allocations = []

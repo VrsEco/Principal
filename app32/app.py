@@ -784,6 +784,7 @@ def register_api_resources(api):
         FinancialEntryListResource,
         FinancialDirectEntryOptionsResource,
         FinancialDirectEntryCreateResource,
+        FinancialTransferCreateResource,
         FinancialCatalogListResource,
         FinancialCatalogResource,
         FinancialCatalogToggleResource,
@@ -820,6 +821,8 @@ def register_api_resources(api):
         FinancialEntryResource,
         FinancialEntryAllocationListResource,
         FinancialEntrySettlementListResource,
+        FinancialEntryAttachmentListResource,
+        FinancialEntryAttachmentResource,
         FinancialSettlementResource,
         FinancialSettlementAttachmentListResource,
         FinancialSettlementAttachmentResource,
@@ -1016,6 +1019,7 @@ def register_api_resources(api):
     api.add_resource(FinancialEntryListResource, '/api/financial/entries')
     api.add_resource(FinancialDirectEntryOptionsResource, '/api/financial/entries/direct/options')
     api.add_resource(FinancialDirectEntryCreateResource, '/api/financial/entries/direct')
+    api.add_resource(FinancialTransferCreateResource, '/api/financial/transfers')
     api.add_resource(FinancialCatalogListResource, '/api/financial/catalogs/<string:catalog_type>')
     api.add_resource(FinancialCatalogResource, '/api/financial/catalogs/<string:catalog_type>/<int:item_id>')
     api.add_resource(FinancialCatalogToggleResource, '/api/financial/catalogs/<string:catalog_type>/<int:item_id>/toggle')
@@ -1052,6 +1056,8 @@ def register_api_resources(api):
     api.add_resource(FinancialEntryResource, '/api/financial/entries/<int:entry_id>')
     api.add_resource(FinancialEntryAllocationListResource, '/api/financial/entries/<int:entry_id>/allocations')
     api.add_resource(FinancialEntrySettlementListResource, '/api/financial/entries/<int:entry_id>/settlements')
+    api.add_resource(FinancialEntryAttachmentListResource, '/api/financial/entries/<int:entry_id>/attachments')
+    api.add_resource(FinancialEntryAttachmentResource, '/api/financial/entries/<int:entry_id>/attachments/<string:attachment_id>')
     api.add_resource(FinancialSettlementResource, '/api/financial/settlements/<int:settlement_id>')
     api.add_resource(FinancialSettlementAttachmentListResource, '/api/financial/settlements/<int:settlement_id>/attachments')
     api.add_resource(FinancialSettlementAttachmentResource, '/api/financial/settlements/<int:settlement_id>/attachments/<string:attachment_id>')
