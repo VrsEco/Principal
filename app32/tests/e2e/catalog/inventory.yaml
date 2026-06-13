@@ -235,6 +235,18 @@ modules:
         actions: [abrir, validar_render]
         owner: QA_AUTOMATION
         scenario: scripts/run_financial_functional_probe.py
+      - key: financial.transfers_page
+        route: /financial/transfers?company_id=<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [abrir, validar_render, validar_company_id, bloquear_mutacao_prod_safe]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
+      - key: financial.bank_accounts_catalog_for_transfer
+        route: /api/financial/catalogs/bank_accounts?company_id=<company_id>
+        environment_modes: [DEV_FULL, PROD_SAFE]
+        actions: [consultar_contas_bancarias, validar_company_id, preparar_transferencia]
+        owner: QA_AUTOMATION
+        scenario: scripts/run_financial_functional_probe.py
       - key: financial.schedule_report_pdf
         route: /financial/reports/agendamento/export-pdf
         environment_modes: [DEV_FULL, PROD_SAFE]

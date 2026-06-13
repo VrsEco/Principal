@@ -61,6 +61,21 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
     bank_statement_html.raise_for_status()
     http.assert_not_login_redirect(bank_statement_html, operation="financial.bank_statement_page")
 
+    transfers_html = http.request("GET", _path_with_query("/financial/transfers", company_id=settings.company_id))
+    transfers_html.raise_for_status()
+    http.assert_not_login_redirect(transfers_html, operation="financial.transfers_page")
+
+    bank_accounts_payload = http.request_json(
+        "GET",
+        _path_with_query("/api/financial/catalogs/bank_accounts", company_id=settings.company_id),
+        operation="financial.bank_accounts_catalog_for_transfer",
+    )
+    bank_accounts = (
+        [item for item in bank_accounts_payload if isinstance(item, dict)]
+        if isinstance(bank_accounts_payload, list)
+        else []
+    )
+
     bordero_create_html = http.request("GET", f"/financial/borderos/new?company_id={settings.company_id}&bordero_type=receivable")
     bordero_create_html.raise_for_status()
     http.assert_not_login_redirect(bordero_create_html, operation="financial.bordero_create_page")
@@ -143,6 +158,31 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
             details={
                 "content_type": str(bank_statement_html.headers.get("Content-Type") or ""),
                 "has_public_error": contains_public_error(bank_statement_html.text),
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.transfers_page",
+            route=_path_with_query("/financial/transfers", company_id=settings.company_id),
+            success=is_html_success(
+                transfers_html.text,
+                all_markers=("Transferência Bancária", "Nova transferência", "data-company-id"),
+            ),
+            status_code=transfers_html.status_code,
+            details={
+                "content_type": str(transfers_html.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(transfers_html.text),
+                "company_id": settings.company_id,
+                "mutation_guard": "PROD_SAFE cobre apenas renderização; POST /api/financial/transfers permanece fora do probe.",
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.bank_accounts_catalog_for_transfer",
+            route=_path_with_query("/api/financial/catalogs/bank_accounts", company_id=settings.company_id),
+            success=isinstance(bank_accounts_payload, list),
+            status_code=200,
+            details={
+                "total_bank_accounts": len(bank_accounts),
+                "contract": "lista de contas bancárias deve ser tenant-safe via company_id para alimentar a workspace de transferência.",
             },
         ),
         FinancialFunctionalProbeResult(
