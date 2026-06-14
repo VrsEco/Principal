@@ -371,7 +371,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 window.location.reload();
             } catch (error) {
-                window.alert(error.message || 'Falha ao iniciar o teste.');
+                const message = error?.message || '';
+                if (message.includes('NetworkError') || message.includes('Failed to fetch') || message.includes('fetch')) {
+                    window.alert('A solicitação foi enviada, mas o navegador perdeu a resposta. A tela será atualizada para verificar se a execução foi registrada.');
+                    window.location.reload();
+                    return;
+                }
+                window.alert(message || 'Falha ao iniciar o teste.');
                 button.disabled = false;
                 button.innerHTML = defaultHtml;
             }

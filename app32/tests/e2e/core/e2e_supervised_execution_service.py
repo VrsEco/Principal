@@ -173,6 +173,8 @@ class E2ESupervisedExecutionService:
         stdout_path = Path(str(payload.get("stdout_path") or ""))
         stderr_text = stderr_path.read_text(encoding="utf-8", errors="ignore") if stderr_path.exists() else ""
         stdout_text = stdout_path.read_text(encoding="utf-8", errors="ignore") if stdout_path.exists() else ""
+        if not stdout_text.strip() and not stderr_text.strip():
+            return 1
         decoded_stdout = E2ESupervisedExecutionService._decode_stdout_json(stdout_text)
         if E2ESupervisedExecutionService._payload_has_failure(decoded_stdout):
             return 1
