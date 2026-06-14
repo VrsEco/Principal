@@ -1370,6 +1370,22 @@ _register_mcp_support_capability(
     tags=("incentives", "read"),
 )
 
+for _tool_name, _action in (
+    ("get_strategic_connection_graph", "read"),
+    ("get_strategic_connection_metrics", "read"),
+    ("generate_strategic_connection_summary", "analyze"),
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="analytics",
+        action=_action,
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_ANALYTICS.value),
+        risk=ToolRiskLevel.LOW,
+        permissions=("analytics.read",),
+        required_context=(TOOL_CONTEXT_COMPANY,),
+        tags=("strategic_connections", "incentives", "read_model", "tenant_safe"),
+    )
+
 for _tool_name in (
     "list_work_journey_absences_tool",
     "list_work_journey_transfers_tool",

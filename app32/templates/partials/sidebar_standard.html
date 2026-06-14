@@ -90,6 +90,8 @@
                 class="sub-nav-link {{ 'active' if '/structuring-journey' in request.path }}">Jornada de Estruturação</a>
             <a href="/strategy/alignment-n1/maturation"
                 class="sub-nav-link {{ 'active' if '/strategy/alignment-n1' in request.path }}">Maturação N1</a>
+            <a href="/incentives/spider-web"
+                class="sub-nav-link {{ 'active' if '/incentives/spider-web' in request.path }}">Teia de Conexões</a>
             
             <!-- Subgrupo: Indicadores -->
             <div class="sidebar-subgroup {{ 'open' if '/indicators' in request.path or '/okrs' in request.path }}">
@@ -111,7 +113,7 @@
             </div>
 
             <!-- Subgrupo: Gestão de Incentivos -->
-            <div class="sidebar-subgroup {{ 'open' if '/incentives' in request.path }}">
+            <div class="sidebar-subgroup {{ 'open' if '/incentives' in request.path and '/incentives/spider-web' not in request.path }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                     Gestão de Incentivos
                     <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -124,7 +126,6 @@
                     <a href="/incentives/closings" class="sub-nav-link {{ 'active' if '/incentives/closings' in request.path }}">Fechamento de Incentivos</a>
                     <a href="/incentives/reports" class="sub-nav-link {{ 'active' if '/incentives/reports' in request.path }}">Extratos de Incentivos</a>
                     <a href="/incentives/statement" class="sub-nav-link {{ 'active' if '/incentives/statement' in request.path }}">Meu Extrato</a>
-                    <a href="/incentives/spider-web" class="sub-nav-link {{ 'active' if '/incentives/spider-web' in request.path }}">Teia de Conexões</a>
                 </div>
             </div>
         </div>

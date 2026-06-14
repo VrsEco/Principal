@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from src.core import mcp_incentive_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
+from src.intelligence.tooling.capabilities import ToolScope, infer_tool_capability
 
 
 class _FakeMCP:
@@ -88,6 +89,83 @@ def test_get_incentive_indicators_rejects_invalid_limit():
 
     assert result["success"] is False
     assert result["error"]["code"] == "invalid_limit"
+
+
+def test_strategic_connection_tools_expose_graph_metrics_and_summary(monkeypatch):
+    fake_graph = {
+        "nodes": [
+            {"id": "colab_1", "label": "Ana", "type": "collaborator", "degree": 2, "health": "connected", "department": "Operações"},
+            {"id": "proc_1", "label": "Vendas", "type": "process", "degree": 1, "health": "fragile"},
+            {"id": "routine_1", "label": "Follow-up", "type": "routine", "degree": 1, "health": "fragile"},
+            {"id": "capacity_1", "label": "Manhã", "type": "capacity", "degree": 0, "health": "orphan"},
+            {"id": "ind_1", "label": "Conversão", "type": "indicator", "degree": 0, "health": "orphan"},
+        ],
+        "links": [
+            {"source": "colab_1", "target": "proc_1", "label": "dono", "strength": "direct"},
+            {"source": "colab_1", "target": "routine_1", "label": "atua na rotina", "strength": "direct"},
+        ],
+        "summary": {
+            "total": 5,
+            "orphans": 2,
+            "fragile": 2,
+            "connected": 1,
+            "by_type": {"collaborator": 1, "process": 1, "routine": 1, "capacity": 1, "indicator": 1},
+        },
+    }
+
+    monkeypatch.setattr(
+        mcp_incentive_tools.IncentiveSpiderWebService,
+        "build_graph",
+        classmethod(lambda cls, company_id: fake_graph),
+    )
+
+    mcp = _FakeMCP()
+    register_incentive_tools(mcp)
+
+    graph_result = mcp.registered["get_strategic_connection_graph"](company_id=31, anonymize=True, user_id=9)
+    metrics_result = mcp.registered["get_strategic_connection_metrics"](company_id=31)
+    summary_result = mcp.registered["generate_strategic_connection_summary"](company_id=31, max_gaps=5)
+
+    assert graph_result["success"] is True
+    assert graph_result["meta"]["domain"] == "analytics"
+    assert graph_result["meta"]["scope"] == "mcp_analytics"
+    assert graph_result["data"]["graph"]["nodes"][0]["label"] == "Colaborador 1"
+    assert "department" not in graph_result["data"]["graph"]["nodes"][0]
+
+    assert metrics_result["success"] is True
+    assert metrics_result["data"]["metrics"]["total_nodes"] == 5
+    assert metrics_result["data"]["metrics"]["by_health"]["orphan"] == 2
+    assert metrics_result["data"]["metrics"]["coverage"]["has_routines"] is True
+
+    assert summary_result["success"] is True
+    assert "Teia com 5 nós" in summary_result["data"]["executive_summary"]
+    assert summary_result["data"]["findings"][0]["gap_type"] == "ORPHAN_NODES"
+
+
+def test_strategic_connection_tools_reject_invalid_company_id():
+    mcp = _FakeMCP()
+    register_incentive_tools(mcp)
+
+    result = mcp.registered["get_strategic_connection_graph"](company_id=0)
+
+    assert result["success"] is False
+    assert result["error"]["code"] == "invalid_company_id"
+    assert result["meta"]["domain"] == "analytics"
+
+
+def test_strategic_connection_capabilities_are_analytics_scoped():
+    for tool_name in (
+        "get_strategic_connection_graph",
+        "get_strategic_connection_metrics",
+        "generate_strategic_connection_summary",
+    ):
+        capability = infer_tool_capability(SimpleNamespace(name=tool_name, description="Teia"))
+
+        assert capability.domain == "analytics"
+        assert ToolScope.SAPIENS.value in capability.scopes
+        assert ToolScope.MCP_ANALYTICS.value in capability.scopes
+        assert capability.permissions == ("analytics.read",)
+        assert "tenant_safe" in capability.tags
 
 
 def test_fetch_indicator_catalog_filters_company_and_optional_fields(monkeypatch):
