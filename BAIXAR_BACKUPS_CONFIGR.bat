@@ -1,5 +1,5 @@
 @echo off
 setlocal
 cd /d "%~dp0app32"
-call BAIXAR_BACKUPS_CONFIGR.bat
+python scripts\download_backups.py
 exit /b %ERRORLEVEL%

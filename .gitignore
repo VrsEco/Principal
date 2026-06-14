@@ -28,6 +28,8 @@ desktop.ini
 **/.pytest_cache/
 backups/database/*.sql
 backups/database/*.sql.gz
+backups/
+outputs/ui_mockups/
 
 # Project specific ignores
 **/2026.01 - XML - Entradas/

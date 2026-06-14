@@ -1,13 +1,18 @@
 @echo off
-title Baixar Backups do Servidor Configr
+title Baixar Backups de Producao do Servidor Configr
 echo ==================================================
-echo   GESTAOVERSUS - SINCRONIZACAO DE BACKUPS
+echo   GESTAOVERSUS - BACKUP DE PRODUCAO ^(CONFIGR^)
 echo ==================================================
 echo.
-cd /d %~dp0
+cd /d "%~dp0.."
 python scripts\download_backups.py
+set EXIT_CODE=%ERRORLEVEL%
 echo.
 echo ==================================================
-echo   Operacao finalizada. Pressione qualquer tecla.
+if %EXIT_CODE% EQU 0 (
+    echo   Backup de producao sincronizado com sucesso.
+) else (
+    echo   ERRO na sincronizacao do backup de producao ^(codigo %EXIT_CODE%^).
+)
 echo ==================================================
-pause > nul
+exit /b %EXIT_CODE%
