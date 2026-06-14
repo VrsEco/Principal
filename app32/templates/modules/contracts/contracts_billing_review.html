@@ -1,12 +1,11 @@
 {% extends "layouts/workspace.html" %}
 
-{% set is_spot_billing = billing_mode == 'spot_services' %}
-{% block title %}{{ 'Conferência de Serv. Pontuais' if is_spot_billing else 'Conferência de Faturamento' }}{% endblock %}
+{% block title %}Conferência de Faturamento{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
-<a href="{{ '/contracts/billing/spot' if is_spot_billing else '/contracts/billing' }}?company_id={{ company_id }}">{{ 'Faturar Serv. Pontuais' if is_spot_billing else 'Faturar Contr. Mensais' }}</a>
+<a href="/contracts/billing?company_id={{ company_id }}">Faturar</a>
 <span class="sep">/</span>
 <span class="current">Conferência</span>
 {% endblock %}
@@ -15,17 +14,17 @@
 <div class="contracts-page contracts-billing-review-page fade-in">
     <header class="contracts-header">
         <div>
-            <p class="eyebrow">{{ 'Faturamento de Serviços Pontuais' if is_spot_billing else 'Faturamento Contratual Mensal' }}</p>
-            <h1>{{ 'Conferência de Serviços Pontuais' if is_spot_billing else 'Conferência de Faturamento' }}</h1>
-            <p class="subtitle">{{ 'Revise emissão, vencimento, serviços selecionados, retenções e observações antes de consolidar o faturamento pontual.' if is_spot_billing else 'Revise competência, vencimento, itens, retenções e observações antes de consolidar o faturamento.' }}</p>
+            <p class="eyebrow">Faturamento Contratual</p>
+            <h1>Conferência de Faturamento</h1>
+            <p class="subtitle">Revise competência, vencimento, itens, retenções e observações antes de consolidar o faturamento.</p>
         </div>
         <div class="page-actions">
-            <a class="btn btn-secondary" href="{{ '/contracts/billing/spot' if is_spot_billing else '/contracts/billing' }}?company_id={{ company_id }}">Voltar para {{ 'Serv. Pontuais' if is_spot_billing else 'Contr. Mensais' }}</a>
+            <a class="btn btn-secondary" href="/contracts/billing?company_id={{ company_id }}">Voltar para Faturar</a>
             <a class="btn btn-secondary" href="/contracts/billing/done?company_id={{ company_id }}">Faturamentos Feitos</a>
         </div>
     </header>
 
-    <form method="post" action="{{ url_for('contracts.contracts_billing_spot_review' if is_spot_billing else 'contracts.contracts_billing_review', company_id=company_id) }}" class="billing-review-form">
+    <form method="post" action="{{ url_for('contracts.contracts_billing_review', company_id=company_id) }}" class="billing-review-form">
         <input type="hidden" name="company_id" value="{{ company_id }}">
         {% if review_rows %}
             {% for row in review_rows %}
@@ -64,11 +63,11 @@
 
                     <div class="form-grid billing-review-grid">
                         <label>
-                            <span>{{ 'Data do serviço' if is_spot_billing else 'Competência inicial' }}</span>
+                            <span>Competência inicial</span>
                             <input type="date" name="competence_start_{{ contract.id }}" value="{{ preview.competence_start.isoformat() if preview.competence_start else '' }}">
                         </label>
                         <label>
-                            <span>{{ 'Data final' if is_spot_billing else 'Competência final' }}</span>
+                            <span>Competência final</span>
                             <input type="date" name="competence_end_{{ contract.id }}" value="{{ preview.competence_end.isoformat() if preview.competence_end else '' }}">
                         </label>
                         <label>
@@ -87,8 +86,8 @@
 
                     <div class="billing-review-items">
                         <div class="billing-review-items-head">
-                            <h3>{{ 'Serviços do faturamento' if is_spot_billing else 'Itens do faturamento' }}</h3>
-                            <small>{{ 'Desmarque serviços que não serão faturados neste lançamento pontual.' if is_spot_billing else 'Desmarque itens que não serão faturados nesta competência.' }}</small>
+                            <h3>Itens do faturamento</h3>
+                            <small>Desmarque itens que não serão faturados nesta competência.</small>
                         </div>
                         <table class="data-table billing-review-items-table">
                             <thead>
@@ -102,10 +101,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% set item_field_name = 'billing_item_ids' if is_spot_billing else 'item_ids' %}
                                 {% for item in preview["items"] %}
                                 <tr>
-                                    <td><input type="checkbox" name="{{ item_field_name }}_{{ contract.id }}" value="{{ item.contract_billing_item_id if is_spot_billing else item.contract_item_id }}" checked></td>
+                                    <td><input type="checkbox" name="item_ids_{{ contract.id }}" value="{{ item.contract_item_id }}" checked></td>
                                     <td>
                                         <strong>{{ item.item_code or '-' }}</strong>
                                         <div>{{ item.description }}</div>
@@ -133,7 +131,7 @@
 
             <div class="billing-review-footer">
                 <button class="btn btn-secondary" type="submit" name="form_action" value="refresh">Recalcular conferência</button>
-                <button class="btn btn-primary" type="submit" name="form_action" value="confirm" onclick="return confirm('Confirmar geração dos faturamentos selecionados?')">{{ 'Faturar serviços agora' if is_spot_billing else 'Faturar agora' }}</button>
+                <button class="btn btn-primary" type="submit" name="form_action" value="confirm" onclick="return confirm('Confirmar geração dos faturamentos selecionados?')">Faturar agora</button>
             </div>
         {% else %}
             <section class="panel"><div class="panel-body"><p class="empty-state">Nenhum contrato selecionado para conferência.</p></div></section>

@@ -963,68 +963,6 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         return {"success": True, "item": result}
 
     @mcp.tool()
-    def create_financial_bank_transfer(payload: dict) -> dict:
-        """
-        Cria transferência entre contas bancárias do mesmo tenant, gerando lançamento de saída,
-        lançamento de entrada e baixas automáticas para composição do extrato bancário.
-        """
-        from services.financial_transfer_service import FinancialTransferService
-
-        result, error = _run_financial_action(
-            FinancialTransferService.create_transfer,
-            payload=_attach_mcp_audit_payload(payload),
-            allowed_company_ids=[int(payload["company_id"])] if payload and payload.get("company_id") else None,
-        )
-        if error:
-            return {"success": False, "error": error}
-        return {"success": True, **(result or {})}
-
-    @mcp.tool()
-    def preview_financial_bank_statement_repair(
-        company_id: int,
-        limit: Optional[int] = None,
-    ) -> dict:
-        """
-        Simula reparos idempotentes para movimentos que devem compor o Extrato Bancário,
-        sem persistir alterações.
-        """
-        from services.financial_bank_statement_repair_service import FinancialBankStatementRepairService
-
-        result = _run_financial_action(
-            FinancialBankStatementRepairService.repair_bank_statement_movements,
-            company_id=company_id,
-            apply=False,
-            limit=limit,
-        )
-        return {"success": True, **(result or {})}
-
-    @mcp.tool()
-    def apply_financial_bank_statement_repair(
-        company_id: int,
-        confirmed: bool = False,
-        limit: Optional[int] = None,
-    ) -> dict:
-        """
-        Aplica reparos idempotentes no Extrato Bancário. Exige confirmação explícita
-        porque pode criar baixas históricas e preencher conta bancária em baixas existentes.
-        """
-        if not confirmed:
-            return {
-                "success": False,
-                "error": "Confirmação explícita obrigatória: envie confirmed=true após revisar o preview.",
-            }
-
-        from services.financial_bank_statement_repair_service import FinancialBankStatementRepairService
-
-        result = _run_financial_action(
-            FinancialBankStatementRepairService.repair_bank_statement_movements,
-            company_id=company_id,
-            apply=True,
-            limit=limit,
-        )
-        return {"success": True, **(result or {})}
-
-    @mcp.tool()
     def list_financial_classification_rules(company_id: int) -> dict:
         """
         Lista regras de classificação automática do financeiro por empresa.

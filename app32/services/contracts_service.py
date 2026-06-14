@@ -968,7 +968,7 @@ class ContractService:
         rows: list[dict] = []
         for contract in contracts:
             native_billings = ContractService.list_native_billings(contract)
-            last_native_billing = ContractService.get_last_native_billing(contract, billing_mode="monthly_contracts")
+            last_native_billing = native_billings[0] if native_billings else None
             next_period = ContractService.build_contract_next_billing_period(contract)
             preview_payload = {
                 "competence_start": next_period["competence_start"].isoformat(),
@@ -996,64 +996,20 @@ class ContractService:
         return rows
 
     @staticmethod
-    def list_contracts_spot_billing_view(company_id: int, filters: Optional[dict] = None) -> list[dict]:
-        normalized_filters = dict(filters or {})
-        billing_state = ContractService._normalize_text(normalized_filters.get("billing_state") or "eligible").lower()
-        contracts = ContractService.list_contracts_filtered(company_id, normalized_filters)
-        rows: list[dict] = []
-        for contract in contracts:
-            spot_items = (
-                contract.billing_items.filter(ContractBillingItem.is_recurring.is_(False))
-                .order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc())
-                .all()
-            )
-            preview_payload = {
-                "billing_mode": "spot_services",
-                "contract_billing_item_ids": [item.id for item in spot_items],
-                "issue_date": date.today().isoformat(),
-                "competence_start": date.today().isoformat(),
-                "competence_end": date.today().isoformat(),
-            }
-            preview = ContractService.preview_native_billing(contract, preview_payload)
-            eligibility = ContractService.get_contract_billing_eligibility(contract, preview)
-            if billing_state == "eligible" and not eligibility["eligible"]:
-                continue
-            if billing_state == "blocked" and eligibility["eligible"]:
-                continue
-            rows.append(
-                {
-                    "contract": contract,
-                    "billing_item_count": preview["item_count"],
-                    "native_billing_count": len(ContractService.list_native_billings(contract)),
-                    "last_native_billing": ContractService.get_last_native_billing(contract, billing_mode="spot_services"),
-                    "next_period": {
-                        "competence_start": preview["competence_start"],
-                        "competence_end": preview["competence_end"],
-                        "issue_date": preview["issue_date"],
-                        "due_date": preview["due_date"],
-                    },
-                    "preview": preview,
-                    "eligibility": eligibility,
-                }
-            )
-        return rows
-
-    @staticmethod
-    def get_last_native_billing(contract: Contract, billing_mode: str = "monthly_contracts") -> Optional[ContractNativeBilling]:
+    def get_last_native_billing(contract: Contract) -> Optional[ContractNativeBilling]:
         if not hasattr(contract, "native_billings"):
             return None
-        query = contract.native_billings.filter(ContractNativeBilling.status != "cancelled")
-        if billing_mode == "spot_services":
-            query = query.filter(ContractNativeBilling.source_type == "native_contract_spot_service")
-        else:
-            query = query.filter(ContractNativeBilling.source_type != "native_contract_spot_service")
-        return query.order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc()).first()
+        return (
+            contract.native_billings.filter(ContractNativeBilling.status != "cancelled")
+            .order_by(ContractNativeBilling.competence_start.desc(), ContractNativeBilling.id.desc())
+            .first()
+        )
 
     @staticmethod
     def build_contract_next_billing_period(contract: Contract, issue_date: Optional[date] = None) -> dict:
         base_issue_date = issue_date or date.today()
         periodicity_key = ContractService._normalize_text(getattr(contract, "periodicity", None)).lower()
-        last_billing = ContractService.get_last_native_billing(contract, billing_mode="monthly_contracts")
+        last_billing = ContractService.get_last_native_billing(contract)
 
         if periodicity_key in {"weekly", "semanal"}:
             if last_billing and last_billing.competence_start:
@@ -1099,35 +1055,9 @@ class ContractService:
                 ContractNativeBilling.competence_start == competence_start,
                 ContractNativeBilling.competence_end == competence_end,
                 ContractNativeBilling.status != "cancelled",
-                ContractNativeBilling.source_type != "native_contract_spot_service",
             ).first()
             is not None
         )
-
-    @staticmethod
-    def _resolve_native_billing_mode(payload: Optional[dict] = None) -> str:
-        mode = ContractService._normalize_text((payload or {}).get("billing_mode")).lower()
-        return "spot_services" if mode == "spot_services" else "monthly_contracts"
-
-    @staticmethod
-    def _list_existing_spot_billed_item_ids(contract: Contract, billing_item_ids: list[int]) -> list[int]:
-        if not billing_item_ids:
-            return []
-        rows = (
-            ContractNativeBillingItem.query.join(
-                ContractNativeBilling,
-                ContractNativeBilling.id == ContractNativeBillingItem.contract_native_billing_id,
-            )
-            .filter(
-                ContractNativeBilling.company_id == contract.company_id,
-                ContractNativeBilling.contract_id == contract.id,
-                ContractNativeBilling.status != "cancelled",
-                ContractNativeBillingItem.contract_billing_item_id.in_(billing_item_ids),
-            )
-            .with_entities(ContractNativeBillingItem.contract_billing_item_id)
-            .all()
-        )
-        return [item_id for (item_id,) in rows if item_id]
 
     @staticmethod
     def get_contract_billing_eligibility(contract: Contract, preview: Optional[dict] = None) -> dict:
@@ -1138,25 +1068,17 @@ class ContractService:
             reasons.append("Cliente não definido.")
 
         preview_payload = preview or ContractService.preview_native_billing(contract, {})
-        billing_mode = ContractService._resolve_native_billing_mode(preview_payload)
         if int(preview_payload.get("item_count") or 0) <= 0:
-            reasons.append("Nenhum item elegível encontrado para faturamento.")
+            reasons.append("Nenhum item contratual cadastrado.")
         if ContractService._normalize_decimal(preview_payload.get("gross_amount")) <= Decimal("0.00"):
             reasons.append("Valor bruto igual a zero.")
 
         competence_start = preview_payload.get("competence_start")
         competence_end = preview_payload.get("competence_end")
-        if billing_mode != "spot_services" and contract.billing_end_at and competence_start and competence_start > contract.billing_end_at:
+        if contract.billing_end_at and competence_start and competence_start > contract.billing_end_at:
             reasons.append("Próxima competência está após o fim do faturamento.")
-        if billing_mode != "spot_services" and ContractService.has_existing_native_billing_for_period(contract, competence_start, competence_end):
+        if ContractService.has_existing_native_billing_for_period(contract, competence_start, competence_end):
             reasons.append("Competência já faturada.")
-        if billing_mode == "spot_services":
-            selected_billing_item_ids = ContractService._normalize_id_list(
-                preview_payload.get("contract_billing_item_ids") or preview_payload.get("billing_item_ids")
-            )
-            already_billed_item_ids = ContractService._list_existing_spot_billed_item_ids(contract, selected_billing_item_ids)
-            if already_billed_item_ids:
-                reasons.append("Um ou mais serviços pontuais selecionados já foram faturados.")
 
         return {
             "eligible": not reasons,
@@ -2632,79 +2554,22 @@ class ContractService:
         return query.all()
 
     @staticmethod
-    def _resolve_native_billing_billing_items(contract: Contract, payload: Optional[dict] = None) -> list[ContractBillingItem]:
-        payload = payload or {}
-        selected_ids: list[int] = []
-        for key in ("contract_billing_item_ids", "contract_billing_item_id", "billing_item_ids", "selected_billing_item_ids"):
-            raw_value = None
-            if hasattr(payload, "getlist"):
-                listed = payload.getlist(key)
-                raw_value = listed if listed else None
-            if raw_value is None:
-                raw_value = payload.get(key) if hasattr(payload, "get") else None
-            selected_ids.extend(ContractService._normalize_id_list(raw_value))
-
-        query = contract.billing_items.filter(ContractBillingItem.is_recurring.is_(False)).order_by(
-            ContractBillingItem.order_index.asc(),
-            ContractBillingItem.id.asc(),
-        )
-        if selected_ids:
-            return query.filter(ContractBillingItem.id.in_(selected_ids)).all()
-        return query.all()
-
-    @staticmethod
-    def _build_native_billing_snapshot_from_billing_item(billing_item: ContractBillingItem, reference_date: Optional[date] = None) -> dict:
-        retention_details = []
-        gross_amount = ContractService._normalize_decimal(getattr(billing_item, "amount", 0))
-        contract_item = getattr(billing_item, "contract_item", None)
-        if contract_item:
-            contract_snapshot = ContractService._build_native_billing_item_snapshot(contract_item, reference_date=reference_date)
-            retention_details = contract_snapshot.get("retention_details", [])
-        retention_total = sum(
-            (ContractService._normalize_decimal(detail.get("calculated_amount")) for detail in retention_details),
-            Decimal("0.00"),
-        )
-        return {
-            "contract_billing_item_id": getattr(billing_item, "id", None),
-            "contract_item_id": getattr(contract_item, "id", None),
-            "item_code": getattr(billing_item, "billing_code", None) or getattr(contract_item, "item_code", None),
-            "description": getattr(billing_item, "description", None) or "Serviço pontual",
-            "quantity": 1.0,
-            "unit_price": float(gross_amount.quantize(Decimal("0.01"))),
-            "gross_amount": float(gross_amount.quantize(Decimal("0.01"))),
-            "net_amount": float((gross_amount - retention_total).quantize(Decimal("0.01"))),
-            "retention_amount": float(retention_total.quantize(Decimal("0.01"))),
-            "retention_details": retention_details,
-            "billing_periodicity": getattr(billing_item, "billing_periodicity", None),
-            "is_recurring": bool(getattr(billing_item, "is_recurring", False)),
-        }
-
-    @staticmethod
     def preview_native_billing(contract: Contract, payload: dict) -> dict:
-        billing_mode = ContractService._resolve_native_billing_mode(payload)
         next_period = ContractService.build_contract_next_billing_period(contract)
-        default_competence_start = next_period["competence_start"] if billing_mode != "spot_services" else date.today()
-        default_competence_end = next_period["competence_end"] if billing_mode != "spot_services" else date.today()
-        default_issue_date = next_period["issue_date"] if billing_mode != "spot_services" else date.today()
-        competence_start = ContractService._normalize_date(payload.get("competence_start")) or default_competence_start
-        competence_end = ContractService._normalize_date(payload.get("competence_end")) or default_competence_end
-        issue_date = ContractService._normalize_date(payload.get("issue_date")) or default_issue_date
+        competence_start = ContractService._normalize_date(payload.get("competence_start")) or next_period["competence_start"]
+        competence_end = ContractService._normalize_date(payload.get("competence_end")) or next_period["competence_end"]
+        issue_date = ContractService._normalize_date(payload.get("issue_date")) or next_period["issue_date"]
         due_date = (
             ContractService._normalize_date(payload.get("due_date"))
             or ContractService.resolve_due_date(issue_date=issue_date, due_rule=getattr(contract, "due_rule", None))
             or issue_date
         )
-        if billing_mode == "spot_services":
-            items = ContractService._resolve_native_billing_billing_items(contract, payload)
-            item_snapshots = [ContractService._build_native_billing_snapshot_from_billing_item(item, reference_date=issue_date) for item in items]
-        else:
-            items = ContractService._resolve_native_billing_contract_items(contract, payload)
-            item_snapshots = [ContractService._build_native_billing_item_snapshot(item, reference_date=issue_date) for item in items]
+        items = ContractService._resolve_native_billing_contract_items(contract, payload)
+        item_snapshots = [ContractService._build_native_billing_item_snapshot(item, reference_date=issue_date) for item in items]
         gross_amount = sum((ContractService._normalize_decimal(item.get("gross_amount")) for item in item_snapshots), Decimal("0.00"))
         retention_amount = sum((ContractService._normalize_decimal(item.get("retention_amount")) for item in item_snapshots), Decimal("0.00"))
         net_amount = gross_amount - retention_amount
         return {
-            "billing_mode": billing_mode,
             "competence_start": competence_start,
             "competence_end": competence_end,
             "issue_date": issue_date,
@@ -2714,7 +2579,6 @@ class ContractService:
             "retention_amount": retention_amount.quantize(Decimal("0.01")) if item_snapshots else Decimal("0.00"),
             "net_amount": net_amount.quantize(Decimal("0.01")) if item_snapshots else Decimal("0.00"),
             "items": item_snapshots,
-            "contract_billing_item_ids": [item.get("contract_billing_item_id") for item in item_snapshots if item.get("contract_billing_item_id")],
         }
 
     @staticmethod
@@ -2722,7 +2586,6 @@ class ContractService:
         company_id: int,
         contract_ids: list[int],
         overrides_by_contract: Optional[dict[int, dict]] = None,
-        billing_mode: str = "monthly_contracts",
     ) -> list[dict]:
         overrides_by_contract = overrides_by_contract or {}
         rows: list[dict] = []
@@ -2731,16 +2594,7 @@ class ContractService:
             if not contract:
                 continue
             payload = dict(overrides_by_contract.get(contract.id) or {})
-            payload["billing_mode"] = billing_mode
-            if billing_mode == "spot_services":
-                if "contract_billing_item_ids" not in payload and "billing_item_ids" not in payload:
-                    payload["contract_billing_item_ids"] = [
-                        item.id
-                        for item in contract.billing_items.filter(ContractBillingItem.is_recurring.is_(False))
-                        .order_by(ContractBillingItem.order_index.asc(), ContractBillingItem.id.asc())
-                        .all()
-                    ]
-            elif "contract_item_ids" not in payload and "item_ids" not in payload:
+            if "contract_item_ids" not in payload and "item_ids" not in payload:
                 payload["contract_item_ids"] = [item.id for item in contract.items.order_by(ContractItem.order_index.asc(), ContractItem.id.asc()).all()]
             preview = ContractService.preview_native_billing(contract, payload)
             eligibility = ContractService.get_contract_billing_eligibility(contract, preview)
@@ -2749,11 +2603,8 @@ class ContractService:
                     "contract": contract,
                     "preview": preview,
                     "eligibility": eligibility,
-                    "selected_item_ids": [
-                        item.get("contract_billing_item_id") if billing_mode == "spot_services" else item.get("contract_item_id")
-                        for item in preview.get("items", [])
-                    ],
-                    "last_native_billing": ContractService.get_last_native_billing(contract, billing_mode=billing_mode),
+                    "selected_item_ids": [item.get("contract_item_id") for item in preview.get("items", [])],
+                    "last_native_billing": ContractService.get_last_native_billing(contract),
                     "review_notes": ContractService._normalize_text(payload.get("review_notes")),
                 }
             )
@@ -3036,33 +2887,23 @@ class ContractService:
         if not contract.party_id:
             raise ValueError("Defina o cliente do contrato antes de gerar o faturamento nativo.")
 
-        billing_mode = ContractService._resolve_native_billing_mode(payload)
         preview = ContractService.preview_native_billing(contract, payload)
         competence_start = preview["competence_start"]
         competence_end = preview["competence_end"]
         issue_date = preview["issue_date"]
         due_date = preview["due_date"]
-        contract_items = ContractService._resolve_native_billing_contract_items(contract, payload) if billing_mode != "spot_services" else []
-        contract_billing_items = ContractService._resolve_native_billing_billing_items(contract, payload) if billing_mode == "spot_services" else []
+        contract_items = ContractService._resolve_native_billing_contract_items(contract, payload)
 
-        if billing_mode == "spot_services" and not contract_billing_items:
-            raise ValueError("Selecione ao menos um serviço pontual antes de gerar o faturamento.")
-        if billing_mode != "spot_services" and not contract_items:
+        if not contract_items:
             raise ValueError("Cadastre ou selecione ao menos um item contratual antes de gerar a competência.")
 
         fiscal_snapshot = ContractService.build_contract_fiscal_snapshot(contract, reference_date=issue_date)
-        if billing_mode == "spot_services":
-            selected_billing_item_ids = [item.id for item in contract_billing_items]
-            idempotency_key = (
-                f"{ContractService.build_native_billing_idempotency_key(contract=contract, competence_start=competence_start, competence_end=competence_end)}"
-                f":spot:{'-'.join(str(item_id) for item_id in selected_billing_item_ids)}"
-            )
-        else:
-            idempotency_key = ContractService.build_native_billing_idempotency_key(
-                contract=contract,
-                competence_start=competence_start,
-                competence_end=competence_end,
-            )
+
+        idempotency_key = ContractService.build_native_billing_idempotency_key(
+            contract=contract,
+            competence_start=competence_start,
+            competence_end=competence_end,
+        )
         existing = ContractNativeBilling.query.filter_by(
             company_id=contract.company_id,
             idempotency_key=idempotency_key,
@@ -3084,6 +2925,7 @@ class ContractService:
             party_id=contract.party_id,
             billing_code=ContractService._next_native_billing_code(contract.company_id),
             status="generated",
+            source_type="native_contract",
             competence_start=competence_start,
             competence_end=competence_end,
             issue_date=issue_date,
@@ -3092,16 +2934,13 @@ class ContractService:
             net_amount=preview["net_amount"],
             idempotency_key=idempotency_key,
             generated_by_user_id=user_id,
-            source_type="native_contract_spot_service" if billing_mode == "spot_services" else "native_contract",
             metadata_json={
                 "contract_version": contract.version,
                 "generated_from": "contract_native_module",
                 "reviewed_from": payload.get("reviewed_from") or "contract_native_module",
                 "review_notes": review_notes,
-                "billing_mode": billing_mode,
-                "item_count": len(contract_billing_items) if billing_mode == "spot_services" else len(contract_items),
+                "item_count": len(contract_items),
                 "contract_item_ids": [item.id for item in contract_items],
-                "contract_billing_item_ids": [item.id for item in contract_billing_items],
                 "retention_amount": float(preview["retention_amount"]),
                 "fiscal_snapshot": fiscal_snapshot,
             },
@@ -3111,23 +2950,11 @@ class ContractService:
 
         retention_summary = {}
         snapshots_by_item_id = {
-            (
-                snapshot.get("contract_billing_item_id")
-                if billing_mode == "spot_services"
-                else snapshot.get("contract_item_id")
-            ): snapshot
+            snapshot["contract_item_id"]: snapshot
             for snapshot in preview.get("items", [])
         }
-        source_items = contract_billing_items if billing_mode == "spot_services" else contract_items
-        for item in source_items:
-            snapshot = (
-                snapshots_by_item_id.get(item.id)
-                or (
-                    ContractService._build_native_billing_snapshot_from_billing_item(item, reference_date=issue_date)
-                    if billing_mode == "spot_services"
-                    else ContractService._build_native_billing_item_snapshot(item, reference_date=issue_date)
-                )
-            )
+        for item in contract_items:
+            snapshot = snapshots_by_item_id.get(item.id) or ContractService._build_native_billing_item_snapshot(item, reference_date=issue_date)
             for retention in snapshot["retention_details"]:
                 key = retention.get("kind")
                 retention_summary[key] = round(
@@ -3138,18 +2965,17 @@ class ContractService:
                 ContractNativeBillingItem(
                     company_id=contract.company_id,
                     contract_native_billing_id=native_billing.id,
-                    contract_billing_item_id=item.id if billing_mode == "spot_services" else None,
-                    contract_item_id=getattr(item, "contract_item_id", None) if billing_mode == "spot_services" else item.id,
+                    contract_billing_item_id=None,
+                    contract_item_id=item.id,
                     description=item.description,
                     amount=ContractService._normalize_decimal(snapshot.get("gross_amount")),
-                    competence_rule=getattr(item, "competence_rule", None) if billing_mode == "spot_services" else contract.competence_rule,
-                    due_rule=getattr(item, "due_rule", None) if billing_mode == "spot_services" else contract.due_rule,
-                    trigger_type="contract_billing_item" if billing_mode == "spot_services" else "contract_item",
-                    trigger_reference_date=getattr(item, "trigger_reference_date", None) if billing_mode == "spot_services" else "contract_rule",
+                    competence_rule=contract.competence_rule,
+                    due_rule=contract.due_rule,
+                    trigger_type="contract_item",
+                    trigger_reference_date="contract_rule",
                     metadata_json={
-                        "billing_periodicity": getattr(item, "billing_periodicity", None) if billing_mode == "spot_services" else contract.periodicity,
-                        "is_recurring": bool(getattr(item, "is_recurring", False)) if billing_mode == "spot_services" else True,
-                        "billing_mode": billing_mode,
+                        "billing_periodicity": contract.periodicity,
+                        "is_recurring": True,
                         "review_notes": review_notes,
                         **snapshot,
                     },
@@ -3176,8 +3002,6 @@ class ContractService:
                 "net_amount": float(native_billing.net_amount or 0),
                 "retention_amount": float(preview["retention_amount"]),
                 "contract_item_ids": [item.id for item in contract_items],
-                "contract_billing_item_ids": [item.id for item in contract_billing_items],
-                "billing_mode": billing_mode,
                 "idempotency_key": idempotency_key,
             },
             user_id=user_id,

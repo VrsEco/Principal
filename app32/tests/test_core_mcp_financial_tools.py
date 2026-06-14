@@ -30,39 +30,10 @@ def test_register_financial_mcp_tools_registers_complete_financial_surface():
     assert "create_financial_catalog_item" in mcp.registered
     assert "create_financial_entry" in mcp.registered
     assert "match_financial_bank_reconciliation_row" in mcp.registered
-    assert "create_financial_bank_transfer" in mcp.registered
-    assert "preview_financial_bank_statement_repair" in mcp.registered
-    assert "apply_financial_bank_statement_repair" in mcp.registered
     assert "list_financial_closings" in mcp.registered
     assert "create_financial_closing" in mcp.registered
     assert "resolve_financial_classification_answer" in mcp.registered
-    assert len(mcp.registered) >= 73
-
-
-def test_new_financial_mcp_capabilities_are_admin_or_analytics_only():
-    from src.intelligence.tool_catalog import catalog
-
-    capabilities = {
-        item.name: item
-        for item in catalog.iter_capabilities(domain="finance")
-        if item.name
-        in {
-            "create_financial_bank_transfer",
-            "preview_financial_bank_statement_repair",
-            "apply_financial_bank_statement_repair",
-        }
-    }
-
-    assert set(capabilities) == {
-        "create_financial_bank_transfer",
-        "preview_financial_bank_statement_repair",
-        "apply_financial_bank_statement_repair",
-    }
-    assert "mcp_user" not in capabilities["create_financial_bank_transfer"].scopes
-    assert "mcp_user" not in capabilities["apply_financial_bank_statement_repair"].scopes
-    assert capabilities["create_financial_bank_transfer"].human_gate is True
-    assert capabilities["apply_financial_bank_statement_repair"].human_gate is True
-    assert "mcp_analytics" in capabilities["preview_financial_bank_statement_repair"].scopes
+    assert len(mcp.registered) >= 70
 
 
 def test_legacy_mcp_server_delegates_financial_surface_to_dedicated_module():

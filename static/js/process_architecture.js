@@ -274,8 +274,6 @@ function getPerfColor(perf) {
 }
 
 function renderTables() {
-    const areaById = new Map(state.areas.map(area => [Number(area.id), area]));
-
     // Areas
     const listAreas = document.getElementById('listAreas');
     if (listAreas) {
@@ -317,56 +315,6 @@ function renderTables() {
                 </tr>
             `;
         }).join('');
-    }
-
-    // Books dos macroprocessos
-    const listMacroBooks = document.getElementById('listMacroBooks');
-    if (listMacroBooks) {
-        const orderedMacros = [...state.macros].sort((left, right) => {
-            const leftArea = areaById.get(Number(left.area_id));
-            const rightArea = areaById.get(Number(right.area_id));
-            const leftAreaOrder = Number(leftArea?.order_index || 0);
-            const rightAreaOrder = Number(rightArea?.order_index || 0);
-            if (leftAreaOrder !== rightAreaOrder) return leftAreaOrder - rightAreaOrder;
-            return String(left.name || '').localeCompare(String(right.name || ''), 'pt-BR');
-        });
-
-        if (!orderedMacros.length) {
-            listMacroBooks.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align:center; color: var(--text-tertiary);">
-                        Nenhum macroprocesso cadastrado para gerar books.
-                    </td>
-                </tr>
-            `;
-        } else {
-            listMacroBooks.innerHTML = orderedMacros.map(macro => {
-                const area = areaById.get(Number(macro.area_id));
-                const processCount = state.processes.filter(process => Number(process.macro_id) === Number(macro.id)).length;
-                const areaLabel = area
-                    ? `${area.code ? `${area.code} - ` : ''}${area.name}`
-                    : 'Área não vinculada';
-
-                return `
-                    <tr>
-                        <td>${escapeHtml(areaLabel)}</td>
-                        <td>
-                            <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">
-                                <span style="color: var(--text-tertiary);">${escapeHtml(macro.code || 'S/C')}</span> - ${escapeHtml(macro.name)}
-                            </div>
-                            ${macro.description ? `<div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;">${escapeHtml(macro.description)}</div>` : ''}
-                        </td>
-                        <td style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHtml(macro.owner || '-')}</td>
-                        <td>${processCount}</td>
-                        <td>
-                            <div style="display:flex; gap: 0.5rem; flex-wrap: wrap;">
-                                <a class="btn btn-primary btn-sm" href="/macro-processes/${macro.id}/book">Abrir Book</a>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        }
     }
 
     // Processes
