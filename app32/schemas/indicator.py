@@ -1,7 +1,7 @@
 from marshmallow import fields
 from . import ma
 from models import db
-from models.indicator import IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
+from models.indicator import IndicatorEntityLink, IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
 
 class IndicatorDataSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -40,6 +40,19 @@ class IndicatorGoalSchema(ma.SQLAlchemyAutoSchema):
     collection_method = fields.String(allow_none=True)
     
     records = fields.Nested(IndicatorDataSchema, many=True, dump_only=True)
+
+
+class IndicatorEntityLinkSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = IndicatorEntityLink
+        load_instance = True
+        sqla_session = db.session
+        include_fk = True
+
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+    weight = fields.Float(allow_none=True)
+
 
 class IndicatorSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -117,3 +130,5 @@ indicator_goal_schema = IndicatorGoalSchema()
 indicator_goals_schema = IndicatorGoalSchema(many=True)
 indicator_data_schema = IndicatorDataSchema()
 indicator_data_list_schema = IndicatorDataSchema(many=True)
+indicator_entity_link_schema = IndicatorEntityLinkSchema()
+indicator_entity_links_schema = IndicatorEntityLinkSchema(many=True)

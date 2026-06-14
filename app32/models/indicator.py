@@ -1,6 +1,26 @@
 from datetime import datetime
 from . import db
 
+INDICATOR_LINK_TARGET_TYPES = (
+    "process",
+    "project",
+    "okr_global",
+    "okr_area",
+    "strategic_objective",
+)
+
+INDICATOR_LINK_ROLES = ("primary", "secondary", "diagnostic", "control")
+INDICATOR_HEALTH_DIMENSIONS = (
+    "prazo",
+    "qualidade",
+    "custo",
+    "risco",
+    "capacidade",
+    "conformidade",
+    "resultado",
+    "estrategia",
+)
+
 
 class IndicatorGroup(db.Model):
     """Legacy Group for organizing indicators"""
@@ -132,6 +152,12 @@ class Indicator(db.Model):
     responsible = db.relationship("Employee", foreign_keys=[responsible_id], backref="indicators_managed")
     goals = db.relationship("IndicatorGoal", backref="indicator", lazy="dynamic", cascade="all, delete-orphan")
     routine = db.relationship("Routine", backref="indicators", lazy=True)
+    entity_links = db.relationship(
+        "IndicatorEntityLink",
+        backref="indicator",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
 
     def to_dict(self):
         return {
@@ -156,6 +182,82 @@ class Indicator(db.Model):
             "source_config": self.source_config,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+        }
+
+
+class IndicatorEntityLink(db.Model):
+    """Vínculo N:N tenant-safe entre indicador e objetos monitorados.
+
+    Substitui gradualmente os vínculos diretos legados `process_id` e
+    `project_id`, permitindo que um indicador monitore vários processos,
+    projetos e objetos estratégicos — e vice-versa.
+    """
+
+    __tablename__ = "indicator_entity_links"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "company_id",
+            "indicator_id",
+            "target_type",
+            "target_ref",
+            name="uq_indicator_entity_links_company_indicator_target",
+        ),
+        db.ForeignKeyConstraint(
+            ["company_id", "indicator_id"],
+            ["indicators.company_id", "indicators.id"],
+            ondelete="CASCADE",
+            name="fk_indicator_entity_links_company_indicator",
+        ),
+        db.CheckConstraint(
+            f"target_type IN {INDICATOR_LINK_TARGET_TYPES}",
+            name="ck_indicator_entity_links_target_type",
+        ),
+        db.CheckConstraint(
+            f"role IN {INDICATOR_LINK_ROLES}",
+            name="ck_indicator_entity_links_role",
+        ),
+        db.CheckConstraint(
+            f"health_dimension IS NULL OR health_dimension IN {INDICATOR_HEALTH_DIMENSIONS}",
+            name="ck_indicator_entity_links_health_dimension",
+        ),
+        db.Index("ix_indicator_entity_links_company_target", "company_id", "target_type", "target_ref"),
+        db.Index("ix_indicator_entity_links_company_indicator", "company_id", "indicator_id"),
+        {'extend_existing': True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    indicator_id = db.Column(db.Integer, nullable=False, index=True)
+    target_type = db.Column(db.String(40), nullable=False, index=True)
+    target_id = db.Column(db.Integer, nullable=True, index=True)
+    target_ref = db.Column(db.String(180), nullable=False, index=True)
+    target_label = db.Column(db.String(255), nullable=True)
+    role = db.Column(db.String(30), nullable=False, default="primary")
+    health_dimension = db.Column(db.String(40), nullable=True)
+    weight = db.Column(db.Numeric(7, 4), nullable=True)
+    relationship_type = db.Column(db.String(60), nullable=True)
+    notes = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "indicator_id": self.indicator_id,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "target_ref": self.target_ref,
+            "target_label": self.target_label,
+            "role": self.role,
+            "health_dimension": self.health_dimension,
+            "weight": float(self.weight) if self.weight is not None else None,
+            "relationship_type": self.relationship_type,
+            "notes": self.notes,
+            "is_active": bool(self.is_active),
+            "created_at": self.created_at.isoformat() if hasattr(self.created_at, 'isoformat') else self.created_at,
+            "updated_at": self.updated_at.isoformat() if hasattr(self.updated_at, 'isoformat') else self.updated_at,
         }
 
 
