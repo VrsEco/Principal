@@ -14,7 +14,7 @@ from .user_employee_assignment import UserEmployeeAssignment
 
 # Planning & Strategic
 from .plan import Plan, PlanParticipant, PlanSectionStatus, PlanDriver, PlanImplantationData
-from .indicator import Indicator, IndicatorGroup, IndicatorTree, IndicatorGoal, IndicatorData
+from .indicator import Indicator, IndicatorEntityLink, IndicatorGroup, IndicatorTree, IndicatorGoal, IndicatorData
 from .okr_global import OKRGlobal, KeyResult
 from .okr_area import OKRArea, KeyResultArea
 
@@ -178,7 +178,7 @@ __all__ = [
     'db', 'Company', 'User', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
-    'Indicator', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
+    'Indicator', 'IndicatorEntityLink', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'MacroProcessSipocSnapshot', 'MacroProcessSipocItem', 'MacroProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ResourceCatalog', 'ProcessResourceLink', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',

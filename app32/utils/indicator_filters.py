@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from sqlalchemy import and_, inspect, or_
+from sqlalchemy import and_, exists, inspect, or_
 
-from models import Indicator, db
+from models import Indicator, IndicatorEntityLink, db
 
 PROCESS_SOURCE_MODULES = ("processo", "process")
 PROJECT_SOURCE_MODULES = ("projeto", "project")
@@ -29,6 +29,17 @@ def indicator_supports_source_context() -> bool:
 
 def build_indicator_process_filter(process_id: int):
     clauses = [Indicator.process_id == process_id]
+    clauses.append(
+        exists().where(
+            and_(
+                IndicatorEntityLink.company_id == Indicator.company_id,
+                IndicatorEntityLink.indicator_id == Indicator.id,
+                IndicatorEntityLink.target_type == "process",
+                IndicatorEntityLink.target_ref == str(process_id),
+                IndicatorEntityLink.is_active.is_(True),
+            )
+        )
+    )
     if indicator_supports_source_context():
         clauses.append(
             and_(
@@ -41,6 +52,17 @@ def build_indicator_process_filter(process_id: int):
 
 def build_indicator_project_filter(project_id: int):
     clauses = [Indicator.project_id == project_id]
+    clauses.append(
+        exists().where(
+            and_(
+                IndicatorEntityLink.company_id == Indicator.company_id,
+                IndicatorEntityLink.indicator_id == Indicator.id,
+                IndicatorEntityLink.target_type == "project",
+                IndicatorEntityLink.target_ref == str(project_id),
+                IndicatorEntityLink.is_active.is_(True),
+            )
+        )
+    )
     if indicator_supports_source_context():
         clauses.append(
             and_(

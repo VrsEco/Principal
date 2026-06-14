@@ -3,12 +3,13 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 import logging
 logger = logging.getLogger(__name__)
-from models import db, IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
+from models import db, IndicatorEntityLink, IndicatorGroup, Indicator, IndicatorGoal, IndicatorData
 from schemas.indicator import (
     indicator_schema, indicators_schema, 
     indicator_group_schema, indicator_groups_schema,
     indicator_goal_schema, indicator_goals_schema,
-    indicator_data_schema, indicator_data_list_schema
+    indicator_data_schema, indicator_data_list_schema,
+    indicator_entity_link_schema, indicator_entity_links_schema,
 )
 
 from utils.permissions import permission_required
@@ -453,6 +454,86 @@ class IndicatorAuditResource(Resource):
         from services.indicator_service import IndicatorService
         orphans = IndicatorService.get_orphaned_indicators(company_id)
         return indicators_schema.dump(orphans), 200
+
+
+class IndicatorEntityLinkListResource(Resource):
+    @permission_required('indicators', 'view')
+    def get(self):
+        company_id = get_request_company_id()
+        if not company_id:
+            return [], 200
+
+        query = IndicatorEntityLink.query.filter_by(company_id=company_id)
+        indicator_id = request.args.get('indicator_id', type=int)
+        target_type = request.args.get('target_type')
+        target_ref = request.args.get('target_ref')
+        active_only = request.args.get('active_only', '1') not in ('0', 'false', 'False')
+
+        if indicator_id:
+            query = query.filter_by(indicator_id=indicator_id)
+        if target_type:
+            query = query.filter_by(target_type=target_type)
+        if target_ref:
+            query = query.filter_by(target_ref=str(target_ref))
+        if active_only:
+            query = query.filter(IndicatorEntityLink.is_active.is_(True))
+
+        links = query.order_by(
+            IndicatorEntityLink.target_type,
+            IndicatorEntityLink.target_ref,
+            IndicatorEntityLink.indicator_id,
+        ).all()
+        return indicator_entity_links_schema.dump(links), 200
+
+    @permission_required('indicators', 'edit')
+    def post(self):
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"error": "company_id obrigatório"}, 400
+        try:
+            from services.indicator_link_map_service import IndicatorLinkMapService
+
+            payload = request.get_json(silent=True) or {}
+            link = IndicatorLinkMapService.upsert_link(company_id, payload)
+            db.session.commit()
+            return link, 201
+        except ValueError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            logger.exception("Erro ao criar vínculo N:N de indicador")
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class IndicatorEntityLinkResource(Resource):
+    @permission_required('indicators', 'delete')
+    def delete(self, link_id):
+        company_id = get_request_company_id()
+        link = IndicatorEntityLink.query.filter_by(id=link_id, company_id=company_id).first_or_404()
+        try:
+            link.is_active = False
+            db.session.commit()
+            return {"message": "Vínculo inativado com sucesso", "id": link.id}, 200
+        except Exception:
+            db.session.rollback()
+            logger.exception("Erro ao inativar vínculo N:N de indicador %s", link_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class IndicatorLinkMapResource(Resource):
+    @permission_required('indicators', 'view')
+    def get(self):
+        company_id = get_request_company_id()
+        if not company_id:
+            return {"summary": {}, "matrix": {"columns": [], "rows": []}, "network": {"nodes": [], "edges": []}, "recommendations": []}, 200
+        from services.indicator_link_map_service import IndicatorLinkMapService
+
+        payload = IndicatorLinkMapService.build_map(
+            int(company_id),
+            filters={"target_types": request.args.getlist("target_type") or request.args.get("target_types")},
+        )
+        return payload, 200
 
 class IndicatorWizardBatchResource(Resource):
     """Resource para o Sapiens Wizard aplicar vínculos em massa às metas."""

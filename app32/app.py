@@ -739,7 +739,9 @@ def register_api_resources(api):
         IndicatorGroupListResource,
         IndicatorGoalListResource, IndicatorGoalResource,
         IndicatorDataListResource, IndicatorDataResource,
-        IndicatorDataBatchResource
+        IndicatorDataBatchResource,
+        IndicatorEntityLinkListResource, IndicatorEntityLinkResource,
+        IndicatorLinkMapResource,
     )
     from api.resources.process import (
         ProcessAreaListResource, ProcessAreaResource,
@@ -924,6 +926,9 @@ def register_api_resources(api):
     api.add_resource(IndicatorDataListResource, '/api/indicator-data')
     api.add_resource(IndicatorDataBatchResource, '/api/indicator-data/batch')
     api.add_resource(IndicatorDataResource, '/api/indicator-data/<int:data_id>')
+    api.add_resource(IndicatorEntityLinkListResource, '/api/indicator-links')
+    api.add_resource(IndicatorEntityLinkResource, '/api/indicator-links/<int:link_id>')
+    api.add_resource(IndicatorLinkMapResource, '/api/indicator-link-map')
     api.add_resource(ProcessAreaListResource, '/api/process-areas')
     api.add_resource(ProcessAreaResource, '/api/process-areas/<int:area_id>')
     api.add_resource(MacroProcessListResource, '/api/macro-processes')

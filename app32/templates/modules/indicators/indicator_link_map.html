@@ -1,0 +1,193 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Mapa Indicadores × Entidades | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/indicators">Indicadores</a>
+<span class="sep">/</span>
+<span class="current">Mapa de Vínculos</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div style="display:flex;gap:.5rem;align-items:center;">
+  <a href="/indicators" class="btn btn-secondary btn-sm">Voltar</a>
+  <button class="btn btn-primary btn-sm" onclick="window.print()">Imprimir</button>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<style>
+  .ilm-page{padding:1rem 1.25rem 2rem}
+  .ilm-header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem}
+  .ilm-header h1{font-size:1.55rem;font-weight:800;margin:0;color:var(--text-primary)}
+  .ilm-header p{margin:.25rem 0 0;color:var(--text-secondary)}
+  .ilm-filters{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem}
+  .ilm-chip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:.4rem .7rem;font-size:.78rem;cursor:pointer;color:var(--text-secondary)}
+  .ilm-chip.active{background:#1d4ed8;color:white;border-color:#1d4ed8}
+  .ilm-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin-bottom:1rem}
+  .ilm-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1rem}
+  .ilm-card strong{display:block;font-size:1.6rem;line-height:1;color:var(--text-primary)}
+  .ilm-card span{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)}
+  .ilm-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:1rem}
+  .ilm-panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1rem;overflow:hidden}
+  .ilm-panel h2{font-size:1rem;margin:0 0 .75rem;color:var(--text-primary)}
+  .ilm-table-wrap{overflow:auto;max-height:62vh;border:1px solid var(--border);border-radius:12px}
+  .ilm-table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:.78rem}
+  .ilm-table th,.ilm-table td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:.5rem;text-align:center;background:var(--surface)}
+  .ilm-table th{position:sticky;top:0;z-index:2;background:var(--surface-elevated,#f8fafc);font-weight:700;color:var(--text-secondary)}
+  .ilm-table th:first-child,.ilm-table td:first-child{position:sticky;left:0;z-index:3;text-align:left;min-width:260px}
+  .ilm-table td:first-child{background:var(--surface)}
+  .ilm-cell{display:inline-flex;align-items:center;justify-content:center;width:1.55rem;height:1.55rem;border-radius:999px;font-weight:800;color:white}
+  .ilm-cell.verde{background:#16a34a}.ilm-cell.amarelo{background:#d97706}.ilm-cell.vermelho{background:#dc2626}.ilm-cell.sem_dados{background:#64748b}
+  .ilm-cell.empty{background:#e5e7eb;color:#94a3b8}
+  .ilm-network{width:100%;height:430px;border:1px dashed var(--border);border-radius:12px;background:linear-gradient(180deg,rgba(59,130,246,.06),transparent)}
+  .ilm-recs{display:grid;gap:.5rem}
+  .ilm-rec{border-left:4px solid #64748b;background:rgba(100,116,139,.08);padding:.75rem;border-radius:10px}
+  .ilm-rec.high{border-color:#dc2626;background:rgba(220,38,38,.08)}
+  .ilm-rec.medium{border-color:#d97706;background:rgba(217,119,6,.08)}
+  .ilm-rec.success{border-color:#16a34a;background:rgba(22,163,74,.08)}
+  .ilm-rec-title{font-weight:800;color:var(--text-primary);font-size:.85rem}
+  .ilm-rec-detail{font-size:.78rem;color:var(--text-secondary);margin-top:.2rem}
+  .ilm-small{font-size:.72rem;color:var(--text-tertiary)}
+  @media(max-width:1100px){.ilm-cards{grid-template-columns:repeat(2,1fr)}.ilm-grid{grid-template-columns:1fr}}
+  @media print{.ilm-filters,.navbar-actions,.sidebar{display:none!important}.ilm-page{padding:0}.ilm-grid{grid-template-columns:1fr}.ilm-panel{break-inside:avoid}}
+</style>
+
+<div class="ilm-page">
+  <div class="ilm-header">
+    <div>
+      <h1>Mapa Indicadores × Processos, Projetos e Estratégia</h1>
+      <p>Matriz N:N, teia de relacionamentos, resumos executivos e recomendações de governança.</p>
+    </div>
+  </div>
+
+  <div class="ilm-filters" id="ilmFilters">
+    <button class="ilm-chip active" data-type="process">Processos</button>
+    <button class="ilm-chip active" data-type="project">Projetos</button>
+    <button class="ilm-chip active" data-type="okr_global">OKR Global</button>
+    <button class="ilm-chip active" data-type="okr_area">OKR Área</button>
+    <button class="ilm-chip active" data-type="strategic_objective">Objetivos Estratégicos</button>
+  </div>
+
+  <div class="ilm-cards">
+    <div class="ilm-card"><strong id="sLinks">—</strong><span>Vínculos ativos</span></div>
+    <div class="ilm-card"><strong id="sTargets">—</strong><span>Entidades cobertas</span></div>
+    <div class="ilm-card"><strong id="sIndicators">—</strong><span>Indicadores vinculados</span></div>
+    <div class="ilm-card"><strong id="sGaps">—</strong><span>Alertas de cobertura</span></div>
+  </div>
+
+  <div class="ilm-grid">
+    <section class="ilm-panel">
+      <h2>Matriz de cobertura</h2>
+      <div class="ilm-table-wrap">
+        <table class="ilm-table" id="ilmMatrix"></table>
+      </div>
+    </section>
+
+    <aside class="ilm-panel">
+      <h2>Teia de vínculos</h2>
+      <svg class="ilm-network" id="ilmNetwork" viewBox="0 0 760 430" preserveAspectRatio="xMidYMid meet"></svg>
+    </aside>
+  </div>
+
+  <div class="ilm-grid" style="margin-top:1rem;">
+    <section class="ilm-panel">
+      <h2>Resumos</h2>
+      <div id="ilmSummary" class="ilm-small">Carregando...</div>
+    </section>
+    <aside class="ilm-panel">
+      <h2>Recomendações</h2>
+      <div class="ilm-recs" id="ilmRecommendations"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  const state = { types: new Set(['process','project','okr_global','okr_area','strategic_objective']) };
+  const $ = (id) => document.getElementById(id);
+
+  document.querySelectorAll('.ilm-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.type;
+      if (state.types.has(type)) state.types.delete(type); else state.types.add(type);
+      btn.classList.toggle('active', state.types.has(type));
+      loadMap();
+    });
+  });
+
+  async function loadMap(){
+    const params = [...state.types].map(t => `target_type=${encodeURIComponent(t)}`).join('&');
+    const res = await fetch(`/api/indicator-link-map?${params}`, {headers:{'Accept':'application/json'}});
+    const data = await res.json();
+    render(data);
+  }
+
+  function render(data){
+    const s = data.summary || {};
+    $('sLinks').textContent = s.total_links || 0;
+    $('sTargets').textContent = s.linked_targets || 0;
+    $('sIndicators').textContent = s.linked_indicators || 0;
+    $('sGaps').textContent = (s.unlinked_indicators || 0) + (s.targets_without_primary || 0);
+    renderMatrix(data.matrix || {columns:[], rows:[]});
+    renderNetwork(data.network || {nodes:[], edges:[]});
+    renderSummary(s);
+    renderRecommendations(data.recommendations || []);
+  }
+
+  function renderMatrix(matrix){
+    const cols = matrix.columns || [];
+    const rows = matrix.rows || [];
+    const head = `<thead><tr><th>Entidade monitorada</th>${cols.map(c => `<th title="${esc(c.name)}">${esc(c.code || ('I.'+c.id))}<br><span class="ilm-small">${esc(short(c.name,22))}</span></th>`).join('')}</tr></thead>`;
+    const body = `<tbody>${rows.map(r => `<tr><td><strong>${esc(r.target.code || '')}</strong> ${esc(r.target.name || '')}<br><span class="ilm-small">${esc(r.target.type_label || r.target.type)} · ${r.link_count || 0} vínculo(s)</span></td>${(r.cells||[]).map(c => `<td>${c.linked ? `<span class="ilm-cell ${esc(c.status||'sem_dados')}" title="${esc((c.role||'') + ' · ' + (c.dimension||'sem dimensão'))}">✓</span>` : '<span class="ilm-cell empty">–</span>'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    $('ilmMatrix').innerHTML = head + body;
+  }
+
+  function renderNetwork(network){
+    const svg = $('ilmNetwork');
+    const nodes = network.nodes || [];
+    const edges = network.edges || [];
+    const targets = nodes.filter(n => n.group === 'target');
+    const indicators = nodes.filter(n => n.group === 'indicator');
+    const pos = {};
+    targets.forEach((n,i) => pos[n.id] = {x:110, y:50 + i * (330 / Math.max(1, targets.length-1 || 1))});
+    indicators.forEach((n,i) => pos[n.id] = {x:650, y:50 + i * (330 / Math.max(1, indicators.length-1 || 1))});
+    const edgeSvg = edges.map(e => {
+      const a = pos[e.from], b = pos[e.to]; if(!a || !b) return '';
+      const color = e.role === 'primary' ? '#1d4ed8' : e.role === 'diagnostic' ? '#d97706' : '#64748b';
+      return `<path d="M ${a.x} ${a.y} C 300 ${a.y}, 460 ${b.y}, ${b.x} ${b.y}" fill="none" stroke="${color}" stroke-width="${e.role==='primary'?2.2:1.2}" opacity=".55"/>`;
+    }).join('');
+    const nodeSvg = nodes.map(n => {
+      const p = pos[n.id]; if(!p) return '';
+      const isInd = n.group === 'indicator';
+      const fill = isInd ? (n.status === 'vermelho' ? '#dc2626' : n.status === 'amarelo' ? '#d97706' : n.status === 'verde' ? '#16a34a' : '#64748b') : '#1d4ed8';
+      const anchor = isInd ? 'end' : 'start';
+      const tx = isInd ? p.x - 16 : p.x + 16;
+      return `<circle cx="${p.x}" cy="${p.y}" r="${isInd?7:8}" fill="${fill}"/><text x="${tx}" y="${p.y+4}" text-anchor="${anchor}" font-size="12" fill="currentColor">${esc(short(n.label,34))}</text>`;
+    }).join('');
+    svg.innerHTML = edgeSvg + nodeSvg;
+  }
+
+  function renderSummary(s){
+    const dims = Object.entries(s.dimension_counts || {}).map(([k,v]) => `${k}: ${v}`).join(' · ') || 'sem vínculos';
+    const roles = Object.entries(s.role_counts || {}).map(([k,v]) => `${k}: ${v}`).join(' · ') || 'sem vínculos';
+    $('ilmSummary').innerHTML = `
+      <p><strong>${s.active_indicators || 0}</strong> indicadores ativos; <strong>${s.unlinked_indicators || 0}</strong> sem vínculo.</p>
+      <p><strong>${s.linked_targets || 0}</strong> entidades cobertas; <strong>${s.targets_without_primary || 0}</strong> sem indicador primário.</p>
+      <p><strong>Dimensões:</strong> ${esc(dims)}</p>
+      <p><strong>Papéis:</strong> ${esc(roles)}</p>`;
+  }
+
+  function renderRecommendations(items){
+    $('ilmRecommendations').innerHTML = items.map(r => `<div class="ilm-rec ${esc(r.severity || '')}"><div class="ilm-rec-title">${esc(r.title)}</div><div class="ilm-rec-detail">${esc(r.detail)}</div></div>`).join('');
+  }
+
+  function short(text, max){ text = String(text || ''); return text.length > max ? text.slice(0, max-1) + '…' : text; }
+  function esc(text){ return String(text ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  loadMap().catch(err => {
+    console.error(err);
+    $('ilmSummary').textContent = 'Falha ao carregar o mapa de vínculos.';
+  });
+})();
+</script>
+{% endblock %}

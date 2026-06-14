@@ -152,6 +152,9 @@
             <h1 class="text-h1">📊 Indicadores de desempenho</h1>
         </div>
         <div class="header-actions" style="display: flex; gap: 0.5rem;">
+            <a href="{{ url_for('indicators.indicator_link_map') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-project-diagram"></i> Mapa N:N
+            </a>
             <button class="btn btn-secondary btn-sm" onclick="openWizard()" style="border-color: var(--primary); color: var(--primary);">
                 <i class="fas fa-magic"></i> Sapiens Wizard
             </button>

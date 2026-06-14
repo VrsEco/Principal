@@ -633,6 +633,17 @@ def indicator_dashboard():
         hoje=hoje,
     )
 
+
+@indicators_bp.route('/indicators/link-map')
+@permission_required('indicators', 'view')
+def indicator_link_map():
+    """Mapa N:N Indicadores × processos/projetos/estratégia."""
+    company_id = session.get('active_company_id')
+    if not company_id:
+        return redirect(url_for('auth.portal'))
+    return render_template('modules/indicators/indicator_link_map.html')
+
+
 @indicators_bp.route('/indicators/analysis')
 @permission_required('indicators', 'view')
 def indicator_analysis():
