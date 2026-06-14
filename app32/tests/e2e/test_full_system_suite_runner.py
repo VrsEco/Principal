@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app32.tests.e2e.scripts.run_full_system_suite import _internal_failures_from_stdout
+from app32.tests.e2e.scripts.run_full_system_suite import _build_manifest, _internal_failures_from_stdout
 
 
 def test_full_system_runner_detects_internal_success_false_checks():
@@ -35,3 +35,26 @@ def test_full_system_runner_ignores_non_json_stdout():
 
     assert _internal_failures_from_stdout(stdout) == []
 
+
+def test_full_system_runner_builds_manifest_for_robot_center():
+    summary = {
+        "run_id": "run_20260614_031024",
+        "environment": "PROD_SAFE",
+        "generated_at": "2026-06-14T03:10:24",
+        "total_suites": 2,
+        "passed_suites": 1,
+        "failed_suites": 1,
+        "results": [
+            {"suite_id": "smoke_real_navigation", "domain": "smoke", "returncode": 0},
+            {"suite_id": "financial_functional_probe", "domain": "financial", "returncode": 1, "internal_failures": []},
+        ],
+    }
+
+    manifest = _build_manifest(summary)
+
+    assert manifest["suite_id"] == "full_system_validation"
+    assert manifest["journeys"][0]["journey"] == "smoke::smoke_real_navigation"
+    assert manifest["journeys"][0]["status"] == "passed"
+    assert manifest["journeys"][1]["journey"] == "financial::financial_functional_probe"
+    assert manifest["journeys"][1]["status"] == "failed"
+    assert manifest["journeys"][1]["failed_step"] == "suite_command"

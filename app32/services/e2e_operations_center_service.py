@@ -274,6 +274,10 @@ class E2EOperationsCenterService:
         if not parts:
             return "unknown"
         first = str(parts[0]).lower()
+        if first == "full_system" and len(parts) > 1:
+            nested_environment = str(parts[1]).lower()
+            if nested_environment in {"dev_full", "prod_safe"}:
+                return nested_environment.upper()
         mapping = {
             "dev_full": "DEV_FULL",
             "prod_safe": "PROD_SAFE",

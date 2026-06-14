@@ -60,6 +60,56 @@ def _internal_failures_from_stdout(stdout: str) -> list[dict[str, object]]:
     return _collect_failed_success_checks(payload)
 
 
+def _build_manifest(summary: dict[str, object]) -> dict[str, object]:
+    """Converte o resumo do teste completo para o contrato operacional E2E.
+
+    A Central do Robô lê `manifest.json`; sem este arquivo a execução completa
+    terminava rápido, mas não atualizava as áreas funcionais na tela.
+    """
+    journeys: list[dict[str, object]] = []
+    for result in summary.get("results") or []:
+        if not isinstance(result, dict):
+            continue
+        returncode = int(result.get("returncode") or 0)
+        failed_step = None
+        failure_type = None
+        if returncode != 0:
+            failure_type = "assertion" if result.get("internal_failures") else "runtime"
+            failed_step = "internal_success_check" if result.get("internal_failures") else "suite_command"
+        journeys.append(
+            {
+                "journey": f"{result.get('domain') or 'system'}::{result.get('suite_id')}",
+                "status": "passed" if returncode == 0 else "failed",
+                "suite_id": result.get("suite_id"),
+                "domain": result.get("domain"),
+                "failed_step": failed_step,
+                "failure_type": failure_type,
+                "company_id": os.environ.get("E2E_COMPANY_ID"),
+            }
+        )
+    return {
+        "run_id": summary.get("run_id"),
+        "environment": summary.get("environment"),
+        "generated_at": summary.get("generated_at"),
+        "suite_id": "full_system_validation",
+        "journeys": journeys,
+        "events": [
+            {
+                "event": "full_system_suite_completed",
+                "total_suites": summary.get("total_suites"),
+                "passed_suites": summary.get("passed_suites"),
+                "failed_suites": summary.get("failed_suites"),
+            }
+        ],
+        "artifacts": [
+            {
+                "kind": "summary",
+                "path": "summary.json",
+            }
+        ],
+    }
+
+
 def main() -> int:
     environment = str(os.environ.get("E2E_ENV_NAME") or "DEV_FULL").strip().upper()
     suites = [
@@ -116,6 +166,8 @@ def main() -> int:
     }
     summary_path = target_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest_path = target_dir / "manifest.json"
+    manifest_path.write_text(json.dumps(_build_manifest(summary), ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0 if summary["failed_suites"] == 0 else 1
 

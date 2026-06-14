@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -121,3 +122,12 @@ def test_e2e_operations_center_service_resolves_run_detail_and_backlog_sync(tmp_
         create_task_fn=lambda **kwargs: (_Task(), None),
     )
     assert result["created"][0]["task_code"] == "AA.J.31.11"
+
+
+def test_infer_environment_supports_full_system_nested_outputs():
+    outputs_root = Path("outputs")
+    manifest_path = outputs_root / "full_system" / "prod_safe" / "run_20260614_031024" / "reports" / "manifest.json"
+
+    environment = E2EOperationsCenterService._infer_environment(outputs_root, manifest_path)
+
+    assert environment == "PROD_SAFE"
