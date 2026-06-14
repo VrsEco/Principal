@@ -14,7 +14,9 @@ from models import (
     Indicator,
     IndicatorData,
     IndicatorGoal,
+    MacroProcess,
     Process,
+    ProcessArea,
     ProcessBpmnDiagram,
     ProcessRoutine,
     ProcessStep,
@@ -50,6 +52,20 @@ SCHEDULE_LABELS = {
     "specific": "Data específica",
 }
 
+STAGE_COLORS = {
+    "inbox": "#cbd5e1",
+    "designing": "#93c5fd",
+    "deploying": "#3b82f6",
+    "stabilizing": "#a855f7",
+    "stable": "#6366f1",
+}
+
+PERFORMANCE_COLORS = {
+    "critical": "#ef4444",
+    "below": "#f59e0b",
+    "satisfactory": "#10b981",
+}
+
 WEEKDAY_LABELS = {
     "monday": "Segunda",
     "tuesday": "Terça",
@@ -78,6 +94,7 @@ class ProcessBookContext:
     company: Company
     generated_at: str
     first_page: dict[str, Any]
+    process_map: dict[str, Any]
     sipoc: dict[str, Any] | None
     pop_activities: list[dict[str, Any]]
     routines: list[dict[str, Any]]
@@ -89,6 +106,7 @@ class ProcessBookContext:
             "company": self.company,
             "generated_at": self.generated_at,
             "first_page": self.first_page,
+            "process_map": self.process_map,
             "sipoc": self.sipoc,
             "pop_activities": self.pop_activities,
             "routines": self.routines,
@@ -130,12 +148,99 @@ def build_process_book_context(process_id: int, company_id: int, request_root: s
             routine_count=len(routines),
             indicator_count=len(indicators),
         ),
+        process_map=_build_process_map_context(
+            current_process_id=process.id,
+            company_id=company_id,
+        ),
         sipoc=sipoc,
         pop_activities=pop_activities,
         routines=routines,
         indicators=indicators,
     )
     return context.to_dict()
+
+
+def _build_process_map_context(*, current_process_id: int, company_id: int) -> dict[str, Any]:
+    """Monta mapa MP-2 cliente-safe com destaque apenas do processo atual."""
+
+    areas = (
+        ProcessArea.query.filter(ProcessArea.company_id == company_id)
+        .order_by(ProcessArea.order_index.asc(), ProcessArea.code.asc(), ProcessArea.id.asc())
+        .all()
+    )
+    area_ids = [area.id for area in areas]
+    if not area_ids:
+        return {"areas": [], "current_process_id": current_process_id}
+
+    macros = (
+        MacroProcess.query.filter(
+            MacroProcess.company_id == company_id,
+            MacroProcess.area_id.in_(area_ids),
+        )
+        .order_by(MacroProcess.area_id.asc(), MacroProcess.order_index.asc(), MacroProcess.code.asc(), MacroProcess.id.asc())
+        .all()
+    )
+    macro_ids = [macro.id for macro in macros]
+    processes = (
+        Process.query.filter(
+            Process.company_id == company_id,
+            Process.macro_id.in_(macro_ids),
+            or_(Process.is_active.is_(True), Process.is_active.is_(None)),
+        )
+        .order_by(Process.macro_id.asc(), Process.order_index.asc(), Process.code.asc(), Process.id.asc())
+        .all()
+        if macro_ids
+        else []
+    )
+
+    processes_by_macro: dict[int, list[dict[str, Any]]] = {}
+    for item in processes:
+        processes_by_macro.setdefault(item.macro_id, []).append(
+            {
+                "id": item.id,
+                "display_name": _compose_process_title(item.code, item.name),
+                "kanban_stage": item.kanban_stage,
+                "performance_level": item.performance_level,
+                "stage_color": _get_stage_color(item.kanban_stage),
+                "perf_color": _get_performance_color(item.performance_level),
+                "is_current": item.id == current_process_id,
+            }
+        )
+
+    macros_by_area: dict[int, list[dict[str, Any]]] = {}
+    for macro in macros:
+        child_processes = processes_by_macro.get(macro.id, [])
+        macros_by_area.setdefault(macro.area_id, []).append(
+            {
+                "id": macro.id,
+                "display_name": _compose_process_title(macro.code, macro.name),
+                "owner": macro.owner or "Não definido",
+                "has_current_process": any(item["is_current"] for item in child_processes),
+                "processes": child_processes,
+            }
+        )
+
+    return {
+        "areas": [
+            {
+                "id": area.id,
+                "display_name": _compose_process_title(area.code, area.name),
+                "color": area.color,
+                "has_current_process": any(item["has_current_process"] for item in macros_by_area.get(area.id, [])),
+                "macros": macros_by_area.get(area.id, []),
+            }
+            for area in areas
+        ],
+        "current_process_id": current_process_id,
+    }
+
+
+def _get_stage_color(stage: str | None) -> str:
+    return STAGE_COLORS.get((stage or "").lower(), "#cbd5e1")
+
+
+def _get_performance_color(performance: str | None) -> str:
+    return PERFORMANCE_COLORS.get((performance or "").lower(), "#f1f5f9")
 
 
 def _build_first_page(

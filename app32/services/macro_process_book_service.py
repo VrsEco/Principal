@@ -15,6 +15,7 @@ from models import (
     IndicatorGoal,
     MacroProcess,
     Process,
+    ProcessArea,
     ProcessBpmnDiagram,
     ProcessRoutine,
     Routine,
@@ -55,6 +56,20 @@ SCHEDULE_LABELS = {
     "specific": "Data específica",
 }
 
+STAGE_COLORS = {
+    "inbox": "#cbd5e1",
+    "designing": "#93c5fd",
+    "deploying": "#3b82f6",
+    "stabilizing": "#a855f7",
+    "stable": "#6366f1",
+}
+
+PERFORMANCE_COLORS = {
+    "critical": "#ef4444",
+    "below": "#f59e0b",
+    "satisfactory": "#10b981",
+}
+
 
 @dataclass(frozen=True)
 class MacroProcessBookContext:
@@ -62,6 +77,7 @@ class MacroProcessBookContext:
     macro: MacroProcess
     generated_at: str
     first_page: dict[str, Any]
+    process_map: dict[str, Any]
     sipoc: dict[str, Any]
     processes: list[dict[str, Any]]
     routines: list[dict[str, Any]]
@@ -74,6 +90,7 @@ class MacroProcessBookContext:
             "macro": self.macro,
             "generated_at": self.generated_at,
             "first_page": self.first_page,
+            "process_map": self.process_map,
             "sipoc": self.sipoc,
             "processes": self.processes,
             "routines": self.routines,
@@ -144,6 +161,10 @@ def build_macro_process_book_context(
             indicator_count=len(indicators),
             published_flow_count=len(published_flow_ids),
         ),
+        process_map=_build_process_map_context(
+            current_macro_id=macro.id,
+            company_id=company_id,
+        ),
         sipoc=_build_sipoc_context(macro=macro, processes=process_payload),
         processes=process_payload,
         routines=routines,
@@ -151,6 +172,28 @@ def build_macro_process_book_context(
         safe_delivery=_build_safe_delivery_context(),
     )
     return context.to_dict()
+
+
+def ensure_process_map_context(
+    context: dict[str, Any],
+    *,
+    current_macro_id: int,
+    company_id: int,
+) -> dict[str, Any]:
+    """Garante compatibilidade de contexto para render do book.
+
+    Mantém a rota fina e concentra a regra de composição no service. Útil para
+    cenários de runtime local em que template e service podem ser recarregados
+    em momentos diferentes.
+    """
+
+    if context.get("process_map"):
+        return context
+    context["process_map"] = _build_process_map_context(
+        current_macro_id=current_macro_id,
+        company_id=company_id,
+    )
+    return context
 
 
 def _load_processes(*, macro_id: int, company_id: int) -> list[Process]:
@@ -163,6 +206,110 @@ def _load_processes(*, macro_id: int, company_id: int) -> list[Process]:
         .order_by(Process.order_index.asc(), Process.code.asc(), Process.id.asc())
         .all()
     )
+
+
+def _build_process_map_context(*, current_macro_id: int, company_id: int) -> dict[str, Any]:
+    """Monta mapa hierárquico cliente-safe com destaque do macroprocesso atual.
+
+    Guardrail: todas as consultas são escopadas por `company_id`, evitando
+    vazamento entre tenants mesmo quando `current_macro_id` é conhecido.
+    """
+
+    areas = (
+        ProcessArea.query.filter(ProcessArea.company_id == company_id)
+        .order_by(ProcessArea.order_index.asc(), ProcessArea.code.asc(), ProcessArea.id.asc())
+        .all()
+    )
+    area_ids = [area.id for area in areas]
+    if not area_ids:
+        return {"areas": [], "current_macro_id": current_macro_id, "totals": {"areas": 0, "macros": 0, "processes": 0}}
+
+    macros = (
+        MacroProcess.query.filter(
+            MacroProcess.company_id == company_id,
+            MacroProcess.area_id.in_(area_ids),
+        )
+        .order_by(MacroProcess.area_id.asc(), MacroProcess.order_index.asc(), MacroProcess.code.asc(), MacroProcess.id.asc())
+        .all()
+    )
+    macro_ids = [macro.id for macro in macros]
+    processes = (
+        Process.query.filter(
+            Process.company_id == company_id,
+            Process.macro_id.in_(macro_ids),
+            or_(Process.is_active.is_(True), Process.is_active.is_(None)),
+        )
+        .order_by(Process.macro_id.asc(), Process.order_index.asc(), Process.code.asc(), Process.id.asc())
+        .all()
+        if macro_ids
+        else []
+    )
+
+    processes_by_macro: dict[int, list[dict[str, Any]]] = {}
+    for process in processes:
+        processes_by_macro.setdefault(process.macro_id, []).append(
+            {
+                "id": process.id,
+                "code": process.code or "-",
+                "name": process.name,
+                "display_name": _compose_title(process.code, process.name),
+                "kanban_stage": process.kanban_stage,
+                "performance_level": process.performance_level,
+                "stage_color": _get_stage_color(process.kanban_stage),
+                "perf_color": _get_performance_color(process.performance_level),
+            }
+        )
+
+    macros_by_area: dict[int, list[dict[str, Any]]] = {}
+    for macro in macros:
+        child_processes = processes_by_macro.get(macro.id, [])
+        macros_by_area.setdefault(macro.area_id, []).append(
+            {
+                "id": macro.id,
+                "code": macro.code or "-",
+                "name": macro.name,
+                "display_name": _compose_title(macro.code, macro.name),
+                "owner": macro.owner or "Não definido",
+                "is_current": macro.id == current_macro_id,
+                "process_count": len(child_processes),
+                "processes": child_processes,
+            }
+        )
+
+    area_payload = []
+    for area in areas:
+        area_macros = macros_by_area.get(area.id, [])
+        area_payload.append(
+            {
+                "id": area.id,
+                "code": area.code or "-",
+                "name": area.name,
+                "display_name": _compose_title(area.code, area.name),
+                "color": area.color,
+                "is_current_area": any(item["is_current"] for item in area_macros),
+                "macro_count": len(area_macros),
+                "process_count": sum(item["process_count"] for item in area_macros),
+                "macros": area_macros,
+            }
+        )
+
+    return {
+        "areas": area_payload,
+        "current_macro_id": current_macro_id,
+        "totals": {
+            "areas": len(area_payload),
+            "macros": len(macros),
+            "processes": len(processes),
+        },
+    }
+
+
+def _get_stage_color(stage: str | None) -> str:
+    return STAGE_COLORS.get((stage or "").lower(), "#cbd5e1")
+
+
+def _get_performance_color(performance: str | None) -> str:
+    return PERFORMANCE_COLORS.get((performance or "").lower(), "#f1f5f9")
 
 
 def _load_pop_counts(*, process_ids: list[int], company_id: int) -> dict[int, int]:
