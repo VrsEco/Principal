@@ -31,6 +31,10 @@ class SupervisedExecutionRecord:
     stderr_path: str
     exit_code: int | None
     pid: int | None = None
+    worker_pid: int | None = None
+    child_pid: int | None = None
+    summary_path: str | None = None
+    manifest_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return self.__dict__.copy()
@@ -85,17 +89,6 @@ class E2ESupervisedExecutionService:
         if suite.command_kind == "pytest":
             env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 
-        stdout_handle = stdout_path.open("w", encoding="utf-8")
-        stderr_handle = stderr_path.open("w", encoding="utf-8")
-        process = subprocess.Popen(
-            command,
-            cwd=str(repo_root()),
-            env=env,
-            stdout=stdout_handle,
-            stderr=stderr_handle,
-        )
-        cls._process_registry[execution_id] = process
-
         record = SupervisedExecutionRecord(
             execution_id=execution_id,
             suite_id=suite_id,
@@ -108,10 +101,31 @@ class E2ESupervisedExecutionService:
             stdout_path=str(stdout_path),
             stderr_path=str(stderr_path),
             exit_code=None,
-            pid=process.pid,
         )
         cls._write_record(record)
-        return record.to_dict()
+        worker_command = cls._build_worker_command(
+            execution_id=execution_id,
+            command=command,
+            stdout_path=stdout_path,
+            stderr_path=stderr_path,
+        )
+        with open(os.devnull, "rb") as devnull_in, open(os.devnull, "wb") as devnull_out:
+            process = subprocess.Popen(
+                worker_command,
+                cwd=str(repo_root()),
+                env=env,
+                stdin=devnull_in,
+                stdout=devnull_out,
+                stderr=devnull_out,
+                close_fds=True,
+                start_new_session=(os.name != "nt"),
+            )
+        cls._process_registry[execution_id] = process
+        payload = record.to_dict()
+        payload["pid"] = process.pid
+        payload["worker_pid"] = process.pid
+        cls._write_payload(execution_id, payload)
+        return payload
 
     @classmethod
     def list_executions(cls) -> list[dict[str, Any]]:
@@ -240,6 +254,33 @@ class E2ESupervisedExecutionService:
                 continue
             return str(candidate)
         return "python3"
+
+    @staticmethod
+    def _build_worker_command(
+        *,
+        execution_id: str,
+        command: list[str],
+        stdout_path: Path,
+        stderr_path: Path,
+    ) -> list[str]:
+        python_executable = E2ESupervisedExecutionService._resolve_python_executable()
+        worker_script = repo_root() / "app32" / "tests" / "e2e" / "scripts" / "supervised_run_worker.py"
+        return [
+            python_executable,
+            str(worker_script.relative_to(repo_root())),
+            "--execution-id",
+            execution_id,
+            "--command-json",
+            json.dumps(command, ensure_ascii=False),
+            "--workdir",
+            str(repo_root()),
+            "--stdout-path",
+            str(stdout_path),
+            "--stderr-path",
+            str(stderr_path),
+            "--meta-path",
+            str(E2ESupervisedExecutionService._meta_path(execution_id)),
+        ]
 
     @staticmethod
     def _discover_repo_python_candidates() -> list[str]:
