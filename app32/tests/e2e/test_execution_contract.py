@@ -10,6 +10,9 @@ from app32.tests.e2e.config.environments import (
 
 
 def test_dev_full_contract_defaults(monkeypatch):
+    monkeypatch.delenv("E2E_DESTRUCTIVE_ACTIONS_ALLOWED", raising=False)
+    monkeypatch.delenv("E2E_REQUIRES_ISOLATED_TENANT", raising=False)
+    monkeypatch.delenv("E2E_REQUIRE_EXPLICIT_COMPANY", raising=False)
     monkeypatch.setenv("E2E_ENV_NAME", "DEV_FULL")
     monkeypatch.setenv("E2E_BASE_URL", "http://localhost:5002")
     monkeypatch.setenv("E2E_USERNAME", "dev@example.com")
