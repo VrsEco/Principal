@@ -18,6 +18,7 @@ from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
 from services.agent_backlog_service import create_backlog_task
 from services.e2e_operations_center_service import E2EOperationsCenterService
+from services.robot_tests_center_service import RobotTestsCenterService
 try:
     from app32.tests.e2e.core.e2e_supervised_execution_service import E2ESupervisedExecutionService
 except ModuleNotFoundError:  # pragma: no cover - compatibilidade de import local
@@ -311,6 +312,115 @@ def e2e_run_backlog_sync(run_id: str):
         return jsonify({"success": False, "error": "Run não encontrado."}), 404
     status_code = 201 if result.get('created') else 200
     return jsonify({"success": True, "result": result}), status_code
+
+
+def _resolve_robot_tests_company_id(active_company):
+    active_company_id = getattr(active_company, "id", None)
+    requested_company_id = request.args.get("company_id") or (request.get_json(silent=True) or {}).get("company_id")
+    company_id = int(requested_company_id or active_company_id or 0)
+    if not company_id:
+        abort(400, description="company_id é obrigatório para a Central do Robô de Testes.")
+    if active_company_id and int(company_id) != int(active_company_id) and not is_platform_admin():
+        abort(403)
+    return company_id
+
+
+@configs_bp.route('/qa/robot-tests')
+@login_required
+def robot_tests_center():
+    active_company = _resolve_active_company()
+    company_id = getattr(active_company, "id", None)
+    _require_ai_admin_access(company_id)
+    state = RobotTestsCenterService.build_overview_state(active_company=active_company, company_id=int(company_id or 0))
+    return render_template(
+        'modules/operations/robot_tests_center.html',
+        active_company=active_company,
+        state=state,
+    )
+
+
+@configs_bp.route('/api/qa/robot-tests/overview', methods=['GET'])
+@login_required
+def robot_tests_overview():
+    active_company = _resolve_active_company()
+    company_id = _resolve_robot_tests_company_id(active_company)
+    _require_ai_admin_access(company_id)
+    state = RobotTestsCenterService.build_overview_state(active_company=active_company, company_id=company_id)
+    return jsonify({"success": True, "state": state})
+
+
+@configs_bp.route('/api/qa/robot-tests/areas/latest', methods=['GET'])
+@login_required
+def robot_tests_areas_latest():
+    active_company = _resolve_active_company()
+    company_id = _resolve_robot_tests_company_id(active_company)
+    _require_ai_admin_access(company_id)
+    return jsonify({"success": True, "areas": RobotTestsCenterService.list_area_latest(company_id=company_id)})
+
+
+@configs_bp.route('/api/qa/robot-tests/areas/<string:area_id>/latest', methods=['GET'])
+@login_required
+def robot_tests_area_latest(area_id: str):
+    active_company = _resolve_active_company()
+    company_id = _resolve_robot_tests_company_id(active_company)
+    _require_ai_admin_access(company_id)
+    try:
+        area = RobotTestsCenterService.get_area_latest(area_id=area_id, company_id=company_id)
+    except KeyError:
+        return jsonify({"success": False, "error": "Área de teste não encontrada."}), 404
+    return jsonify({"success": True, "area": area})
+
+
+@configs_bp.route('/api/qa/robot-tests/errors', methods=['GET'])
+@login_required
+def robot_tests_errors():
+    active_company = _resolve_active_company()
+    company_id = _resolve_robot_tests_company_id(active_company)
+    _require_ai_admin_access(company_id)
+    return jsonify({"success": True, "errors": RobotTestsCenterService.list_open_errors(company_id=company_id)})
+
+
+@configs_bp.route('/api/qa/robot-tests/runs', methods=['POST'])
+@login_required
+def robot_tests_runs_create():
+    active_company = _resolve_active_company()
+    company_id = _resolve_robot_tests_company_id(active_company)
+    _require_ai_admin_access(company_id)
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = RobotTestsCenterService.start_run(
+            package_key=payload.get("package_key"),
+            suite_id=payload.get("suite_id"),
+            environment=str(payload.get("environment") or "PROD_SAFE").upper(),
+            company_id=company_id,
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+    return jsonify({"success": True, "result": result}), 201
+
+
+@configs_bp.route('/api/qa/robot-tests/errors/<string:error_id>/actions', methods=['POST'])
+@login_required
+def robot_tests_error_action(error_id: str):
+    active_company = _resolve_active_company()
+    company_id = _resolve_robot_tests_company_id(active_company)
+    _require_ai_admin_access(company_id)
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = RobotTestsCenterService.handle_error_action(
+            error_id=error_id,
+            action=str(payload.get("action") or "details"),
+            company_id=company_id,
+            user_id=getattr(current_user, "id", None),
+            create_task_fn=create_backlog_task,
+        )
+    except KeyError:
+        return jsonify({"success": False, "error": "Erro de teste não encontrado."}), 404
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    return jsonify({"success": True, "result": result})
 
 @configs_bp.route('/ai')
 @login_required
