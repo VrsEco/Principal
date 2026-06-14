@@ -507,7 +507,7 @@ class IndicatorEntityLinkListResource(Resource):
 
 
 class IndicatorEntityLinkResource(Resource):
-    @permission_required('indicators', 'delete')
+    @permission_required('indicators', 'edit')
     def delete(self, link_id):
         company_id = get_request_company_id()
         link = IndicatorEntityLink.query.filter_by(id=link_id, company_id=company_id).first_or_404()
