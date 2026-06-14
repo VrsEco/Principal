@@ -1,0 +1,407 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Central do Robô de Testes{% endblock %}
+
+{% block breadcrumb %}
+<a href="/portal">Portal</a>
+<span class="sep">/</span>
+<span class="current">Central do Robô de Testes</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="robot-tests-navbar-actions">
+    <a href="/qa/e2e" class="robot-tests-btn robot-tests-btn--secondary">Detalhes técnicos</a>
+    <a href="/qa/robot-tests" class="robot-tests-btn robot-tests-btn--primary">Atualizar</a>
+</div>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="robot-tests-center" id="robotTestsCenter" data-company-id="{{ state.company.id }}">
+    <section class="robot-tests-header">
+        <div>
+            <span class="robot-tests-eyebrow">QA Automation</span>
+            <h1>Central do Robô de Testes</h1>
+            <p>
+                Acompanhe, em linguagem simples, se as telas e funcionalidades estão funcionando como o usuário espera.
+                A central técnica E2E continua disponível em detalhes técnicos.
+            </p>
+        </div>
+        <div class="robot-tests-company-pill">
+            <span>Empresa ativa</span>
+            <strong>{{ state.company.name or active_company.name }}</strong>
+            <small>{{ state.company.client_code or 'Sem código' }}</small>
+        </div>
+    </section>
+
+    <section class="robot-tests-summary-grid">
+        {% for card in state.summary_cards %}
+        <article class="robot-tests-summary-card is-{{ card.tone }}">
+            <span>{{ card.label }}</span>
+            <strong>{{ card.value }}</strong>
+            <small>{{ card.hint }}</small>
+        </article>
+        {% endfor %}
+    </section>
+
+    <div class="robot-tests-main-grid">
+        <main class="robot-tests-main-column">
+            <details class="robot-tests-panel robot-tests-collapse" open>
+                <summary class="robot-tests-collapse__summary">
+                <div class="robot-tests-panel__header">
+                    <div>
+                        <h2>Biblioteca de testes</h2>
+                        <p>Esta é a árvore canônica do robô. Clique em uma categoria para ver o que ela valida ou execute diretamente.</p>
+                    </div>
+                    <span class="robot-tests-badge">{{ state.test_categories | length }} categorias</span>
+                </div>
+                </summary>
+                <div class="robot-tests-category-grid">
+                    {% for category in state.test_categories %}
+                    <article class="robot-tests-category-card">
+                        <button type="button"
+                                class="robot-tests-category-card__body"
+                                data-area='{{ {
+                                    "label": category.label,
+                                    "status_label": "Categoria de teste",
+                                    "last_checked_at": category.items_count ~ " verificação(ões) previstas",
+                                    "environment": "Conforme execução",
+                                    "run_id": category.suite_id,
+                                    "summary": category.summary ~ " Itens: " ~ (category["items"] | join(", "))
+                                } | tojson }}'>
+                            <span>{{ category.label }}</span>
+                            <strong>{{ category.summary }}</strong>
+                            <small>{{ category.items_count }} verificação(ões) previstas</small>
+                        </button>
+                        <ul>
+                            {% for item in category["items"][:4] %}
+                            <li>{{ item }}</li>
+                            {% endfor %}
+                            {% if category["items"] | length > 4 %}
+                            <li>+ {{ (category["items"] | length) - 4 }} item(ns)</li>
+                            {% endif %}
+                        </ul>
+                        <button type="button"
+                                class="robot-tests-link-btn robot-tests-category-run"
+                                data-package-key="{{ category.key }}"
+                                {% if not category.available %}disabled{% endif %}>
+                            Executar categoria
+                        </button>
+                    </article>
+                    {% else %}
+                    <p class="robot-tests-empty">Nenhuma categoria canônica mapeada ainda.</p>
+                    {% endfor %}
+                </div>
+            </details>
+
+            <details class="robot-tests-panel robot-tests-collapse">
+                <summary class="robot-tests-collapse__summary">
+                <div class="robot-tests-panel__header">
+                    <div>
+                        <h2>Último teste por área</h2>
+                        <p>Resultado mais recente consolidado pelo motor técnico atual.</p>
+                    </div>
+                    <span class="robot-tests-badge">Resultado</span>
+                </div>
+                </summary>
+                <div class="robot-tests-area-grid robot-tests-area-grid--compact">
+                    {% for area in state.areas %}
+                    <button type="button" class="robot-tests-area-card is-{{ area.status }}" data-area='{{ area | tojson }}'>
+                        <span class="robot-tests-area-card__label">{{ area.label }}</span>
+                        <strong>{{ area.status_label }}</strong>
+                        <small>Última checagem: {{ area.last_checked_at }}</small>
+                    </button>
+                    {% else %}
+                    <p class="robot-tests-empty">Nenhuma área mapeada ainda.</p>
+                    {% endfor %}
+                </div>
+            </details>
+
+            <details class="robot-tests-panel robot-tests-collapse">
+                <summary class="robot-tests-collapse__summary">
+                <div class="robot-tests-panel__header">
+                    <div>
+                        <h2>Erros encontrados e ações</h2>
+                        <p>Ao corrigir, o item deve sumir após novo teste aprovado ou decisão explícita do responsável.</p>
+                    </div>
+                    <span class="robot-tests-badge robot-tests-badge--danger">{{ state.errors | length }} aberto(s)</span>
+                </div>
+                </summary>
+                <div class="robot-tests-error-list">
+                    {% for error in state.errors %}
+                    <article class="robot-tests-error-card" data-error-id="{{ error.error_id }}">
+                        <div class="robot-tests-error-card__content">
+                            <span>{{ error.area_label }} · {{ error.severity }}</span>
+                            <strong>{{ error.title }}</strong>
+                            <p>{{ error.message }}</p>
+                            <small>{{ error.expected_action }}</small>
+                        </div>
+                        <div class="robot-tests-error-card__actions">
+                            <button type="button" class="robot-tests-btn robot-tests-btn--primary robot-tests-error-action" data-action="create_backlog" data-error-id="{{ error.error_id }}">Disparar correção</button>
+                            {% if error.manifest_download_url %}
+                            <a href="{{ error.manifest_download_url }}" class="robot-tests-btn robot-tests-btn--secondary">Evidência</a>
+                            {% endif %}
+                            <button type="button" class="robot-tests-link-btn robot-tests-area-detail" data-area-id="{{ error.area_id }}">Detalhes</button>
+                        </div>
+                    </article>
+                    {% else %}
+                    <div class="robot-tests-empty-state">
+                        <strong>Nenhum erro aberto no histórico recente.</strong>
+                        <p>Quando o robô encontrar uma falha funcional, ela aparecerá aqui com ação de correção.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </details>
+        </main>
+
+        <aside class="robot-tests-action-column">
+            <section class="robot-tests-panel robot-tests-panel--sticky">
+                <h2>Pacotes de execução</h2>
+                <p class="robot-tests-help-text">Escolha como o robô deve rodar. A biblioteca de testes ao lado mostra o que será coberto.</p>
+                <label class="robot-tests-field">
+                    <span>Ambiente</span>
+                    <select id="robotTestsEnvironment">
+                        <option value="PROD_SAFE">PROD_SAFE — seguro</option>
+                        <option value="DEV_FULL">DEV_FULL — laboratório</option>
+                    </select>
+                </label>
+
+                <div class="robot-tests-action-group">
+                    <span class="robot-tests-group-title">Execução</span>
+                    <div class="robot-tests-package-list">
+                    {% for package in state.execution_packages %}
+                    <button type="button"
+                            class="robot-tests-package-btn {{ 'is-highlight' if package.highlight else '' }}"
+                            data-package-key="{{ package.key }}"
+                            {% if not package.available %}disabled{% endif %}>
+                        <strong>{{ package.label }}</strong>
+                        <small>{{ package.description }}</small>
+                    </button>
+                    {% endfor %}
+                    </div>
+                </div>
+
+                <details class="robot-tests-area-picker robot-tests-area-picker--advanced">
+                    <summary>Avançado</summary>
+                    <p class="robot-tests-help-text">Use para ver evidências técnicas e acessar a Central E2E antiga.</p>
+                    <div class="robot-tests-side-links">
+                        <a href="{{ state.technical_center_url }}" class="robot-tests-btn robot-tests-btn--secondary">Central E2E técnica</a>
+                        {% if state.evidence_url %}
+                        <a href="{{ state.evidence_url }}" class="robot-tests-btn robot-tests-btn--secondary">Última evidência</a>
+                        {% endif %}
+                    </div>
+                </details>
+
+                <div class="robot-tests-side-links robot-tests-side-links--primary">
+                    <a href="{{ state.history_url }}" class="robot-tests-btn robot-tests-btn--secondary">Histórico</a>
+                    <a href="{{ state.reports_url }}" class="robot-tests-btn robot-tests-btn--secondary">Relatórios</a>
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<div class="robot-tests-modal" id="robotTestsAreaModal" hidden>
+    <div class="robot-tests-modal__overlay" data-close-modal></div>
+    <div class="robot-tests-modal__card" role="dialog" aria-modal="true" aria-labelledby="robotTestsModalTitle">
+        <button type="button" class="robot-tests-modal__close" data-close-modal>×</button>
+        <span class="robot-tests-eyebrow">Detalhamento</span>
+        <h2 id="robotTestsModalTitle">Área</h2>
+        <div class="robot-tests-kv">
+            <div><span>Status</span><strong id="robotTestsModalStatus">-</strong></div>
+            <div><span>Última checagem</span><strong id="robotTestsModalDate">-</strong></div>
+            <div><span>Ambiente</span><strong id="robotTestsModalEnvironment">-</strong></div>
+            <div><span>Run</span><strong id="robotTestsModalRun">-</strong></div>
+        </div>
+        <p id="robotTestsModalSummary"></p>
+        <a href="/qa/e2e" class="robot-tests-btn robot-tests-btn--primary">Abrir detalhes técnicos</a>
+    </div>
+</div>
+
+<style>
+    .robot-tests-center { padding:0 1.5rem 2rem; display:flex; flex-direction:column; gap:1rem; }
+    .robot-tests-navbar-actions { display:flex; gap:.75rem; }
+    .robot-tests-header { display:flex; justify-content:space-between; gap:1rem; border:1px solid var(--border); background:linear-gradient(135deg, rgba(37,99,235,.10), rgba(124,58,237,.06), rgba(255,255,255,.78)); border-radius:24px; padding:1.35rem; box-shadow:var(--shadow-sm); }
+    .robot-tests-eyebrow { display:inline-block; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--primary); font-weight:800; margin-bottom:.35rem; }
+    .robot-tests-header h1, .robot-tests-panel h2 { margin:0; }
+    .robot-tests-header p, .robot-tests-panel__header p { color:var(--text-secondary); max-width:78ch; margin:.45rem 0 0; }
+    .robot-tests-company-pill { min-width:220px; align-self:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:1rem; display:flex; flex-direction:column; gap:.25rem; }
+    .robot-tests-company-pill span, .robot-tests-company-pill small { color:var(--text-secondary); }
+    .robot-tests-summary-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:.85rem; }
+    .robot-tests-summary-card, .robot-tests-panel, .robot-tests-area-card, .robot-tests-category-card, .robot-tests-error-card, .robot-tests-empty-state { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
+    .robot-tests-summary-card { padding:1rem; border-left:5px solid transparent; }
+    .robot-tests-summary-card span, .robot-tests-summary-card small { display:block; color:var(--text-secondary); }
+    .robot-tests-summary-card strong { display:block; font-size:1.35rem; margin:.35rem 0; }
+    .robot-tests-summary-card.is-success { border-left-color:#10b981; }
+    .robot-tests-summary-card.is-danger { border-left-color:#ef4444; }
+    .robot-tests-summary-card.is-warning { border-left-color:#f59e0b; }
+    .robot-tests-summary-card.is-neutral { border-left-color:var(--primary); }
+    .robot-tests-main-grid { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:1rem; align-items:start; }
+    .robot-tests-main-column { display:flex; flex-direction:column; gap:1rem; }
+    .robot-tests-panel { padding:1.1rem; }
+    .robot-tests-panel--sticky { position:sticky; top:1rem; display:flex; flex-direction:column; gap:1rem; }
+    .robot-tests-panel__header { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem; }
+    .robot-tests-collapse { padding:0; overflow:hidden; }
+    .robot-tests-collapse__summary { list-style:none; cursor:pointer; padding:1.1rem 1.1rem .25rem; }
+    .robot-tests-collapse__summary::-webkit-details-marker { display:none; }
+    .robot-tests-collapse__summary h2::before { content:'▾'; display:inline-block; margin-right:.5rem; color:var(--primary); transition:transform .15s ease; }
+    .robot-tests-collapse:not([open]) .robot-tests-collapse__summary { padding-bottom:1.1rem; }
+    .robot-tests-collapse:not([open]) .robot-tests-collapse__summary h2::before { transform:rotate(-90deg); }
+    .robot-tests-collapse:not([open]) .robot-tests-panel__header { margin-bottom:0; }
+    .robot-tests-collapse > .robot-tests-category-grid,
+    .robot-tests-collapse > .robot-tests-area-grid,
+    .robot-tests-collapse > .robot-tests-error-list { padding:0 1.1rem 1.1rem; }
+    .robot-tests-badge { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:.35rem .7rem; font-size:.75rem; font-weight:800; color:var(--primary); background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.16); white-space:nowrap; }
+    .robot-tests-badge--danger { color:#b91c1c; background:rgba(239,68,68,.10); border-color:rgba(239,68,68,.18); }
+    .robot-tests-area-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.85rem; }
+    .robot-tests-area-grid--compact { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    .robot-tests-area-card { text-align:left; padding:1rem; cursor:pointer; border-left:5px solid var(--primary); display:flex; flex-direction:column; gap:.35rem; transition:transform .15s ease, box-shadow .15s ease; }
+    .robot-tests-area-card:hover { transform:translateY(-1px); box-shadow:var(--shadow-md); }
+    .robot-tests-area-card.is-passed { border-left-color:#10b981; }
+    .robot-tests-area-card.is-failed { border-left-color:#ef4444; }
+    .robot-tests-area-card.is-observed { border-left-color:#f59e0b; }
+    .robot-tests-area-card__label, .robot-tests-area-card small, .robot-tests-area-card em { color:var(--text-secondary); font-style:normal; }
+    .robot-tests-category-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.85rem; }
+    .robot-tests-category-card { padding:1rem; display:flex; flex-direction:column; gap:.75rem; border-left:5px solid var(--primary); }
+    .robot-tests-category-card__body { border:0; background:transparent; text-align:left; padding:0; cursor:pointer; display:flex; flex-direction:column; gap:.35rem; color:var(--text-primary); }
+    .robot-tests-category-card__body span { color:var(--primary); font-weight:900; }
+    .robot-tests-category-card__body strong { font-size:.94rem; line-height:1.35; }
+    .robot-tests-category-card__body small { color:var(--text-secondary); }
+    .robot-tests-category-card ul { margin:0; padding-left:1.1rem; color:var(--text-secondary); font-size:.86rem; line-height:1.35; }
+    .robot-tests-error-list, .robot-tests-package-list, .robot-tests-side-links { display:flex; flex-direction:column; gap:.75rem; }
+    .robot-tests-help-text { color:var(--text-secondary); margin:.15rem 0 .25rem; font-size:.9rem; line-height:1.4; }
+    .robot-tests-action-group { display:flex; flex-direction:column; gap:.55rem; }
+    .robot-tests-group-title { color:var(--text-secondary); font-weight:800; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; }
+    .robot-tests-area-picker { border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); padding:.85rem; }
+    .robot-tests-area-picker summary { cursor:pointer; font-weight:900; color:var(--text-primary); }
+    .robot-tests-area-picker .robot-tests-package-list { margin-top:.75rem; }
+    .robot-tests-area-picker--advanced { background:rgba(15,23,42,.03); }
+    .robot-tests-side-links--primary { display:grid; grid-template-columns:1fr 1fr; }
+    .robot-tests-error-card { padding:1rem; display:grid; grid-template-columns:minmax(0,1fr) 190px; gap:1rem; align-items:center; border-left:5px solid #ef4444; }
+    .robot-tests-error-card__content span, .robot-tests-error-card__content small { color:var(--text-secondary); }
+    .robot-tests-error-card__content strong { display:block; margin:.25rem 0; }
+    .robot-tests-error-card__content p { margin:.25rem 0 .4rem; color:var(--text-primary); }
+    .robot-tests-error-card__actions { display:flex; flex-direction:column; gap:.55rem; }
+    .robot-tests-btn, .robot-tests-package-btn, .robot-tests-link-btn { border-radius:12px; border:1px solid transparent; cursor:pointer; text-decoration:none; font-weight:800; }
+    .robot-tests-btn { display:inline-flex; align-items:center; justify-content:center; padding:.78rem 1rem; }
+    .robot-tests-btn--primary { background:var(--primary); color:#fff; }
+    .robot-tests-btn--secondary { background:var(--surface-secondary); color:var(--text-primary); border-color:var(--border); }
+    .robot-tests-link-btn { background:transparent; color:var(--primary); padding:.25rem; }
+    .robot-tests-link-btn:disabled { color:var(--text-secondary); cursor:not-allowed; opacity:.6; }
+    .robot-tests-field { display:flex; flex-direction:column; gap:.4rem; color:var(--text-secondary); }
+    .robot-tests-field select { border:1px solid var(--border); background:var(--surface-secondary); color:var(--text-primary); border-radius:12px; padding:.8rem .9rem; }
+    .robot-tests-package-btn { background:var(--surface-secondary); color:var(--text-primary); border-color:var(--border); padding:1rem; text-align:left; display:flex; flex-direction:column; gap:.3rem; }
+    .robot-tests-package-btn small { color:var(--text-secondary); font-weight:600; }
+    .robot-tests-package-btn.is-highlight { background:linear-gradient(135deg, var(--primary), #7c3aed); color:#fff; box-shadow:0 12px 28px rgba(37,99,235,.25); }
+    .robot-tests-package-btn.is-highlight small { color:rgba(255,255,255,.84); }
+    .robot-tests-package-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .robot-tests-empty, .robot-tests-empty-state { color:var(--text-secondary); padding:1rem; }
+    .robot-tests-modal[hidden] { display:none; }
+    .robot-tests-modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:1rem; }
+    .robot-tests-modal__overlay { position:absolute; inset:0; background:rgba(15,23,42,.45); }
+    .robot-tests-modal__card { position:relative; width:min(620px, 100%); background:var(--surface); border:1px solid var(--border); border-radius:22px; padding:1.25rem; box-shadow:var(--shadow-lg); }
+    .robot-tests-modal__close { position:absolute; right:1rem; top:1rem; border:0; background:var(--surface-secondary); border-radius:999px; width:34px; height:34px; cursor:pointer; font-size:1.25rem; }
+    .robot-tests-kv { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin:1rem 0; }
+    .robot-tests-kv div { background:var(--surface-secondary); border-radius:12px; padding:.75rem; }
+    .robot-tests-kv span { display:block; color:var(--text-secondary); font-size:.8rem; }
+    @media (max-width: 1180px) {
+        .robot-tests-main-grid, .robot-tests-summary-grid { grid-template-columns:1fr 1fr; }
+        .robot-tests-action-column { grid-column:1 / -1; }
+        .robot-tests-panel--sticky { position:static; }
+    }
+    @media (max-width: 760px) {
+        .robot-tests-center { padding:0 1rem 1.5rem; }
+        .robot-tests-header, .robot-tests-panel__header, .robot-tests-navbar-actions { flex-direction:column; }
+        .robot-tests-main-grid, .robot-tests-summary-grid, .robot-tests-area-grid, .robot-tests-category-grid, .robot-tests-error-card, .robot-tests-kv { grid-template-columns:1fr; }
+        .robot-tests-company-pill { width:100%; }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.getElementById('robotTestsCenter');
+    const companyId = root?.dataset.companyId;
+    const envSelect = document.getElementById('robotTestsEnvironment');
+    const modal = document.getElementById('robotTestsAreaModal');
+
+    function openAreaModal(area) {
+        if (!modal || !area) return;
+        document.getElementById('robotTestsModalTitle').textContent = area.label || 'Área';
+        document.getElementById('robotTestsModalStatus').textContent = area.status_label || '-';
+        document.getElementById('robotTestsModalDate').textContent = area.last_checked_at || '-';
+        document.getElementById('robotTestsModalEnvironment').textContent = area.environment || '-';
+        document.getElementById('robotTestsModalRun').textContent = area.run_id || '-';
+        document.getElementById('robotTestsModalSummary').textContent = area.summary || '';
+        modal.hidden = false;
+    }
+
+    document.querySelectorAll('.robot-tests-area-card').forEach((card) => {
+        card.addEventListener('click', () => {
+            try {
+                openAreaModal(JSON.parse(card.dataset.area || '{}'));
+            } catch (_error) {
+                openAreaModal({label: 'Área', summary: 'Não foi possível carregar o detalhe local.'});
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach((node) => {
+        node.addEventListener('click', () => {
+            if (modal) modal.hidden = true;
+        });
+    });
+
+    document.querySelectorAll('.robot-tests-package-btn, .robot-tests-category-run').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const defaultHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<strong>Disparando...</strong><small>Aguarde o registro da execução.</small>';
+            try {
+                const response = await fetch('/api/qa/robot-tests/runs', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        company_id: companyId,
+                        package_key: button.dataset.packageKey,
+                        environment: envSelect?.value || 'PROD_SAFE',
+                    }),
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || 'Falha ao iniciar o teste.');
+                }
+                window.location.reload();
+            } catch (error) {
+                window.alert(error.message || 'Falha ao iniciar o teste.');
+                button.disabled = false;
+                button.innerHTML = defaultHtml;
+            }
+        });
+    });
+
+    document.querySelectorAll('.robot-tests-error-action').forEach((button) => {
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            const originalText = button.textContent;
+            button.textContent = 'Enviando...';
+            try {
+                const response = await fetch(`/api/qa/robot-tests/errors/${button.dataset.errorId}/actions`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({company_id: companyId, action: button.dataset.action}),
+                });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || 'Falha ao disparar correção.');
+                }
+                window.alert('Correção enviada ao backlog. O erro sairá da lista quando a nova execução passar ou quando for decidido como falso positivo.');
+            } catch (error) {
+                window.alert(error.message || 'Falha ao disparar correção.');
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
