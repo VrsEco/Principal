@@ -1,0 +1,290 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Painel de Gestão Estratégica | Versus{% endblock %}
+
+{% block breadcrumb %}
+<a href="/my-work">Meu Trabalho</a>
+<span class="sep">/</span>
+<a href="{{ url_for('processes.process_portal_page', company_id=company_id) }}">Portal de Processos</a>
+<span class="sep">/</span>
+<span class="current">Painel de Gestão Estratégica</span>
+{% endblock %}
+
+{% block navbar_actions %}
+<a class="btn btn-secondary" href="{{ url_for('processes.process_portal_page', company_id=company_id) }}">Portal de Processos</a>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="smp-page" id="strategicManagementPanel" data-panel='{{ panel|tojson }}'>
+    <section class="smp-hero">
+        <div>
+            <span class="smp-eyebrow">Portal de Processos / Acesso Rápido</span>
+            <h1>Painel de Gestão Estratégica</h1>
+            <p>Visão executiva de indicadores, responsáveis, ações corretivas, projetos/atividades e reuniões de gestão.</p>
+        </div>
+        <div class="smp-actions">
+            <form method="get" class="smp-period-form">
+                <label for="period">Período</label>
+                <select id="period" name="period" onchange="this.form.submit()">
+                    <option value="month" {% if panel.period.key == 'month' %}selected{% endif %}>Mês vigente</option>
+                    <option value="quarter" {% if panel.period.key == 'quarter' %}selected{% endif %}>Trimestre</option>
+                    <option value="year" {% if panel.period.key == 'year' %}selected{% endif %}>Ano</option>
+                </select>
+            </form>
+            <a class="smp-btn smp-btn--secondary" href="{{ url_for('meetings.meetings_company_manage', company_id=company_id) }}">Nova reunião</a>
+            <a class="smp-btn smp-btn--primary" href="{{ url_for('projects.project_new') }}">Nova atividade / projeto</a>
+        </div>
+    </section>
+
+    <section class="smp-card">
+        <div class="smp-card__head">
+            <div>
+                <span class="smp-dot smp-dot--blue"></span>
+                <h2>Resumo por grupo de indicadores</h2>
+            </div>
+            <span class="smp-period-chip">{{ panel.period.start }} → {{ panel.period.end }}</span>
+        </div>
+        <div class="smp-group-grid">
+            {% for group in panel.groups %}
+            <button type="button" class="smp-group-card" data-open-group="{{ group.key }}" style="--accent: {{ group.color }};">
+                <div class="smp-group-card__top">
+                    <span class="smp-icon" style="background: {{ group.color }}1f; color: {{ group.color }};">●</span>
+                    <div>
+                        <h3>{{ group.short_label }}</h3>
+                        <p>{{ group.subtitle }}</p>
+                    </div>
+                    <strong>{{ group.total }}</strong>
+                </div>
+                <div class="smp-alert-chip" style="color: {{ group.color }}; border-color: {{ group.color }}55; background: {{ group.color }}12;">
+                    {{ group.alerts_count }} em atenção/críticos
+                </div>
+                <div class="smp-semaphore">
+                    <span><i class="green"></i>{{ group.semaphore.green or 0 }}</span>
+                    <span><i class="yellow"></i>{{ group.semaphore.yellow or 0 }}</span>
+                    <span><i class="red"></i>{{ group.semaphore.red or 0 }}</span>
+                    <span><i class="blue"></i>{{ group.semaphore.blue or 0 }}</span>
+                    <span><i class="gray"></i>{{ group.semaphore.gray or 0 }}</span>
+                </div>
+                <div class="smp-open">Abrir ›</div>
+            </button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="smp-card smp-card--meetings">
+        <div class="smp-card__head">
+            <div>
+                <span class="smp-dot smp-dot--blue"></span>
+                <h2>Próximas reuniões marcadas</h2>
+            </div>
+            <a class="smp-btn smp-btn--secondary" href="{{ url_for('meetings.meetings_company_manage', company_id=company_id) }}">Ver calendário</a>
+        </div>
+        {% if panel.meetings %}
+        <div class="smp-meeting-grid">
+            {% for meeting in panel.meetings %}
+            <article class="smp-meeting-card">
+                <span class="smp-meeting-date">{{ meeting.date or '-' }}{% if meeting.time %} • {{ meeting.time }}{% endif %}</span>
+                <h3>{{ meeting.title }}</h3>
+                <p>{{ meeting.project_title or 'Sem projeto vinculado' }}</p>
+                <div class="smp-guests">
+                    {% if meeting.guests %}
+                        {% for guest in meeting.guests %}
+                        <span>{{ guest }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span>Convidados não informados</span>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="smp-empty">Nenhuma reunião futura cadastrada para este período.</div>
+        {% endif %}
+    </section>
+</div>
+
+<div class="smp-layer-host" id="smpLayerHost" hidden>
+    <div class="smp-layer-backdrop" data-close-layer></div>
+    <div class="smp-layer-stack" id="smpLayerStack"></div>
+</div>
+
+<style>
+    .smp-page { display:flex; flex-direction:column; gap:1rem; color:#0f172a; }
+    .smp-hero {
+        display:flex; justify-content:space-between; gap:1rem; align-items:flex-start;
+        padding:1.35rem 1.5rem; border-radius:24px; background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%);
+        border:1px solid #dbeafe; box-shadow:0 12px 34px rgba(15,23,42,.06);
+    }
+    .smp-eyebrow { display:inline-flex; font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; font-weight:800; color:#2563eb; margin-bottom:.35rem; }
+    .smp-hero h1 { margin:0; font-size:2rem; line-height:1.08; }
+    .smp-hero p { margin:.45rem 0 0; color:#64748b; max-width:78ch; }
+    .smp-actions { display:flex; flex-wrap:wrap; gap:.6rem; justify-content:flex-end; align-items:end; }
+    .smp-period-form { display:flex; flex-direction:column; gap:.25rem; }
+    .smp-period-form label { font-size:.7rem; font-weight:800; color:#64748b; text-transform:uppercase; }
+    .smp-period-form select {
+        height:42px; min-width:150px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; padding:0 .75rem;
+        font-weight:800; color:#334155;
+    }
+    .smp-btn { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:.65rem .95rem; border-radius:12px; font-weight:800; text-decoration:none; border:1px solid transparent; }
+    .smp-btn--primary { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .smp-btn--secondary { background:#fff; color:#334155; border-color:#cbd5e1; }
+    .smp-card { background:#fff; border:1px solid #dbe4ef; border-radius:24px; box-shadow:0 12px 34px rgba(15,23,42,.06); overflow:hidden; }
+    .smp-card__head {
+        display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:1rem 1.25rem;
+        background:#edf3fb; border-bottom:1px solid #dbe4ef;
+    }
+    .smp-card__head > div { display:flex; align-items:center; gap:.75rem; }
+    .smp-card__head h2 { margin:0; font-size:1.12rem; }
+    .smp-dot { width:36px; height:36px; border-radius:12px; background:#dbeafe; position:relative; display:inline-flex; align-items:center; justify-content:center; }
+    .smp-dot::after { content:""; width:16px; height:16px; border-radius:999px; background:#2563eb; }
+    .smp-period-chip { padding:.4rem .7rem; border-radius:999px; background:#fff; border:1px solid #dbe4ef; color:#64748b; font-weight:800; font-size:.75rem; }
+    .smp-group-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; padding:1.25rem; }
+    .smp-group-card {
+        position:relative; text-align:left; background:#fff; border:1px solid #cbd5e1; border-radius:18px; padding:1rem; cursor:pointer; min-height:190px;
+        box-shadow:0 8px 24px rgba(15,23,42,.04); transition:.18s ease; border-left:5px solid var(--accent);
+    }
+    .smp-group-card:hover { transform:translateY(-2px); box-shadow:0 14px 32px rgba(15,23,42,.1); }
+    .smp-group-card__top { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:.75rem; align-items:start; }
+    .smp-icon { width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:14px; font-size:1.05rem; }
+    .smp-group-card h3 { margin:.1rem 0 0; font-size:1.25rem; }
+    .smp-group-card p { margin:.15rem 0 0; color:#64748b; font-size:.86rem; line-height:1.3; }
+    .smp-group-card strong { font-size:2.1rem; line-height:1; color:#0f172a; }
+    .smp-alert-chip { display:inline-flex; margin-top:1rem; padding:.35rem .7rem; border-radius:10px; border:1px solid; font-size:.78rem; font-weight:800; }
+    .smp-semaphore { display:flex; gap:.65rem; margin-top:.9rem; color:#64748b; font-weight:800; font-size:.78rem; }
+    .smp-semaphore span { display:inline-flex; align-items:center; gap:.28rem; }
+    .smp-semaphore i { width:10px; height:10px; border-radius:999px; display:inline-block; }
+    .smp-semaphore .green { background:#10b981; } .smp-semaphore .yellow { background:#f59e0b; }
+    .smp-semaphore .red { background:#ef4444; } .smp-semaphore .blue { background:#3b82f6; } .smp-semaphore .gray { background:#94a3b8; }
+    .smp-open { position:absolute; right:1rem; bottom:1rem; color:var(--accent); font-weight:900; }
+    .smp-meeting-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; padding:1.25rem; }
+    .smp-meeting-card { border:1px solid #dbe4ef; border-radius:18px; padding:1rem; background:linear-gradient(180deg,#fff,#f8fafc); }
+    .smp-meeting-date { display:inline-flex; color:#2563eb; font-weight:900; font-size:.78rem; margin-bottom:.45rem; }
+    .smp-meeting-card h3 { margin:0; font-size:1rem; }
+    .smp-meeting-card p { margin:.35rem 0 .75rem; color:#64748b; }
+    .smp-guests { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .smp-guests span { padding:.25rem .55rem; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:.72rem; font-weight:800; }
+    .smp-empty { padding:2rem; text-align:center; color:#64748b; }
+    .smp-layer-host[hidden] { display:none; }
+    .smp-layer-host { position:fixed; inset:0; z-index:1000; display:flex; justify-content:flex-end; align-items:stretch; }
+    .smp-layer-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.38); backdrop-filter:blur(3px); }
+    .smp-layer-stack { position:relative; display:flex; align-items:stretch; gap:.75rem; padding:1rem; overflow:auto; max-width:100%; }
+    .smp-layer {
+        width:min(520px,92vw); background:#fff; border:1px solid #dbe4ef; border-radius:22px; box-shadow:0 24px 70px rgba(15,23,42,.22);
+        overflow:hidden; display:flex; flex-direction:column; animation:smpSlide .16s ease-out;
+    }
+    @keyframes smpSlide { from { transform:translateX(24px); opacity:.6; } to { transform:translateX(0); opacity:1; } }
+    .smp-layer__head { display:flex; justify-content:space-between; gap:1rem; padding:1rem 1.1rem; background:#edf3fb; border-bottom:1px solid #dbe4ef; }
+    .smp-layer__head h3 { margin:0; font-size:1.12rem; }
+    .smp-layer__head p { margin:.2rem 0 0; color:#64748b; font-size:.84rem; }
+    .smp-layer__close { border:none; background:#fff; width:36px; height:36px; border-radius:12px; font-size:1.2rem; cursor:pointer; }
+    .smp-layer__body { padding:1rem; overflow:auto; display:flex; flex-direction:column; gap:.75rem; }
+    .smp-row-btn { text-align:left; width:100%; border:1px solid #dbe4ef; background:#fff; border-radius:16px; padding:.85rem; cursor:pointer; }
+    .smp-row-btn:hover { border-color:#93c5fd; background:#f8fbff; }
+    .smp-row-btn h4 { margin:0; font-size:.98rem; color:#0f172a; }
+    .smp-row-btn p { margin:.25rem 0 0; color:#64748b; font-size:.82rem; }
+    .smp-mini { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.55rem; }
+    .smp-mini span { padding:.24rem .5rem; border-radius:999px; background:#f1f5f9; font-size:.72rem; font-weight:800; color:#475569; }
+    .smp-badge { display:inline-flex; align-items:center; gap:.35rem; font-size:.76rem; font-weight:900; }
+    .smp-badge::before { content:""; width:10px; height:10px; border-radius:999px; background:var(--badge); }
+    .smp-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+    .smp-detail-box { border:1px solid #e2e8f0; border-radius:14px; padding:.8rem; background:#f8fafc; }
+    .smp-detail-box span { display:block; color:#64748b; font-size:.72rem; font-weight:900; text-transform:uppercase; }
+    .smp-detail-box strong { display:block; margin-top:.2rem; color:#0f172a; }
+    @media (max-width:1200px){ .smp-group-grid{grid-template-columns:repeat(2,1fr);} .smp-meeting-grid{grid-template-columns:repeat(2,1fr);} .smp-hero{flex-direction:column;} }
+    @media (max-width:760px){ .smp-group-grid,.smp-meeting-grid{grid-template-columns:1fr;} .smp-layer-stack{padding:.5rem;} .smp-detail-grid{grid-template-columns:1fr;} }
+</style>
+
+<script>
+(function () {
+    const root = document.getElementById('strategicManagementPanel');
+    const host = document.getElementById('smpLayerHost');
+    const stack = document.getElementById('smpLayerStack');
+    if (!root || !host || !stack) return;
+    const panel = JSON.parse(root.dataset.panel || '{}');
+    const colorMap = { green:'#10b981', yellow:'#f59e0b', red:'#ef4444', blue:'#3b82f6', gray:'#94a3b8' };
+
+    function clearFrom(index) {
+        [...stack.children].slice(index).forEach(el => el.remove());
+    }
+    function openHost() { host.hidden = false; }
+    function closeHost() { host.hidden = true; stack.innerHTML = ''; }
+    function layer(title, subtitle, bodyHtml, level) {
+        clearFrom(level);
+        const el = document.createElement('section');
+        el.className = 'smp-layer';
+        el.innerHTML = `
+            <header class="smp-layer__head">
+                <div><h3>${title}</h3><p>${subtitle || ''}</p></div>
+                <button type="button" class="smp-layer__close" aria-label="Fechar">×</button>
+            </header>
+            <div class="smp-layer__body">${bodyHtml}</div>
+        `;
+        el.querySelector('.smp-layer__close').addEventListener('click', closeHost);
+        stack.appendChild(el);
+        openHost();
+        return el;
+    }
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function badge(status) {
+        return `<span class="smp-badge" style="--badge:${colorMap[status] || colorMap.gray};">${esc(status || 'gray')}</span>`;
+    }
+    function openGroup(groupKey) {
+        const group = (panel.groups || []).find(g => g.key === groupKey);
+        if (!group) return;
+        const body = (group.subgroups || []).map((sub, idx) => `
+            <button class="smp-row-btn" data-subgroup="${idx}">
+                <h4>${esc(sub.name)}</h4>
+                <p>${sub.total} indicador(es) vinculados</p>
+                <div class="smp-mini"><span>Drill-down</span><span>Pop-up em camadas</span></div>
+            </button>
+        `).join('') || '<div class="smp-empty">Sem subgrupos no período.</div>';
+        const el = layer(group.label, group.subtitle, body, 0);
+        el.querySelectorAll('[data-subgroup]').forEach(btn => btn.addEventListener('click', () => openSubgroup(group, Number(btn.dataset.subgroup))));
+    }
+    function openSubgroup(group, index) {
+        const subgroup = group.subgroups[index];
+        const body = (subgroup.items || []).map((item, idx) => `
+            <button class="smp-row-btn" data-indicator="${idx}">
+                <h4>${badge(item.semaphore)} ${esc(item.name)}</h4>
+                <p>${esc(item.objective)}</p>
+                <div class="smp-mini">
+                    <span>${esc(item.code || 'Sem código')}</span>
+                    <span>${esc(item.situation || 'Sem situação')}</span>
+                    <span>${esc(item.responsible?.name || 'Sem responsável')}</span>
+                </div>
+            </button>
+        `).join('') || '<div class="smp-empty">Sem indicadores neste subgrupo.</div>';
+        const el = layer(subgroup.name, `${subgroup.total} indicador(es)`, body, 1);
+        el.querySelectorAll('[data-indicator]').forEach(btn => btn.addEventListener('click', () => openIndicator(subgroup.items[Number(btn.dataset.indicator)])));
+    }
+    function openIndicator(item) {
+        const project = item.project;
+        const activities = item.activities || [];
+        const body = `
+            <div class="smp-detail-grid">
+                <div class="smp-detail-box"><span>Semáforo</span><strong>${badge(item.semaphore)} ${esc(item.situation)}</strong></div>
+                <div class="smp-detail-box"><span>Responsável</span><strong>${esc(item.responsible?.name || 'Não informado')}</strong></div>
+                <div class="smp-detail-box"><span>Meta / Prazo</span><strong>${esc(item.goal ?? '-')} ${esc(item.unit || '')} • ${esc(item.goal_date || '-')}</strong></div>
+                <div class="smp-detail-box"><span>Situação atual</span><strong>${esc(item.current_value ?? '-')} ${esc(item.unit || '')} • ${esc(item.measured_date || '-')}</strong></div>
+                <div class="smp-detail-box"><span>Projeto associado</span><strong>${project ? esc(project.code + ' - ' + project.name) : 'Sem projeto vinculado'}</strong></div>
+                <div class="smp-detail-box"><span>Status projeto/atividades</span><strong>${project?.execution ? esc(project.execution.label) : 'Sem ação definida'}</strong></div>
+            </div>
+            <div class="smp-detail-box"><span>Objetivo</span><strong>${esc(item.objective)}</strong></div>
+            <div class="smp-detail-box"><span>Causa raiz / hipótese</span><strong>${esc(item.status_detail || 'Não informada')}</strong></div>
+            <div class="smp-detail-box"><span>Próxima cobrança</span><strong>${esc(item.next_charge || '-')}</strong></div>
+            <div class="smp-detail-box">
+                <span>Atividades associadas</span>
+                ${activities.length ? activities.map(a => `<p><strong>${esc(a.code)}</strong> — ${esc(a.what)} • ${esc(a.responsible)} • ${esc(a.due_date || '-')} ${a.late ? '• atrasada' : ''}</p>`).join('') : '<strong>Nenhuma atividade associada.</strong>'}
+            </div>
+        `;
+        layer(item.name, item.code || 'Card executivo do indicador', body, 2);
+    }
+    root.querySelectorAll('[data-open-group]').forEach(btn => btn.addEventListener('click', () => openGroup(btn.dataset.openGroup)));
+    host.querySelector('[data-close-layer]').addEventListener('click', closeHost);
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeHost(); });
+})();
+</script>
+{% endblock %}
