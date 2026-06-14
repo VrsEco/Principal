@@ -130,6 +130,44 @@
     }
     .sub-label i { color: var(--primary); }
 
+    /* ── N:N Links ── */
+    .links-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .links-toolbar p {
+        margin: 0;
+        color: var(--text-tertiary);
+        font-size: 0.78rem;
+    }
+    .link-row {
+        display: grid;
+        grid-template-columns: 1fr 1.35fr 0.9fr 1fr 0.65fr auto;
+        gap: 0.75rem;
+        align-items: end;
+        background: var(--surface-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    .link-row .field-label { margin-bottom: 0.3rem; }
+    .link-empty {
+        padding: 1rem;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        color: var(--text-tertiary);
+        background: var(--surface-secondary);
+        text-align: center;
+        font-size: 0.85rem;
+    }
+    @media (max-width: 1100px) {
+        .link-row { grid-template-columns: 1fr 1fr; }
+    }
+
     /* ── Form Actions ── */
     .form-footer {
         display: flex;
@@ -172,6 +210,7 @@
 
     @media (max-width: 768px) {
         .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+        .link-row { grid-template-columns: 1fr; }
         .section-header, .section-body, .form-footer { padding-left: 1.25rem; padding-right: 1.25rem; }
     }
 </style>
@@ -374,6 +413,27 @@
         </div>
     </div>
 
+    {# ─── SEÇÃO 5: VÍNCULOS N:N ─── #}
+    <div class="section-header">
+        <div class="section-accent" style="background: #2563eb;"></div>
+        <div>
+            <h3>4. VÍNCULOS — Quem este indicador monitora?</h3>
+            <p>Associe o indicador a processos, projetos e elementos estratégicos. Um indicador pode monitorar vários objetos.</p>
+        </div>
+    </div>
+    <div class="section-body">
+        <div class="links-toolbar">
+            <p>Use o papel, dimensão e peso para compor a matriz e a teia do Mapa N:N.</p>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addIndicatorLinkRow()">
+                <i class="fas fa-plus"></i> Adicionar vínculo
+            </button>
+        </div>
+        <div id="indicatorLinksRows"></div>
+        <div id="indicatorLinksEmpty" class="link-empty">
+            Nenhum vínculo adicionado. O indicador ficará no catálogo, mas não aparecerá conectado no Mapa N:N.
+        </div>
+    </div>
+
     {# ─── SEÇÃO 5: OBSERVAÇÕES ─── #}
     <div class="section-body" style="border-top: 1px solid var(--border);">
         <label class="field-label">Observações / Notas</label>
@@ -413,8 +473,35 @@ const EMPLOYEES_DATA = {{ employees_json | safe if employees_json else '[]' }};
 const PROJECTS_DATA = {{ projects_json | safe if projects_json else '[]' }};
 const PROCESSES_DATA = {{ processes_json | safe if processes_json else '[]' }};
 const OKRS_DATA = {{ okrs_json | safe if okrs_json else '[]' }};
+const STRATEGIC_OBJECTIVES_DATA = {{ strategic_objectives_json | safe if strategic_objectives_json else '[]' }};
 const TREE_NODES_DATA = {{ tree_nodes_json | safe if tree_nodes_json else '[]' }};
 const ROUTINES_DATA = {{ routines_json | safe if routines_json else '[]' }};
+
+const LINK_TARGET_TYPES = [
+    { value: 'process', label: 'Processo', items: PROCESSES_DATA, labelFn: item => `[${item.code || item.id}] ${item.name}` },
+    { value: 'project', label: 'Projeto', items: PROJECTS_DATA, labelFn: item => `[${item.code || item.id}] ${item.name}` },
+    { value: 'okr_global', label: 'OKR Global', items: OKRS_DATA.filter(item => item.target_type === 'okr_global' || String(item.name || '').startsWith('[Global]')), labelFn: item => item.name },
+    { value: 'okr_area', label: 'OKR Área', items: OKRS_DATA.filter(item => item.target_type === 'okr_area' || String(item.name || '').startsWith('[Área]')), labelFn: item => item.name },
+    { value: 'strategic_objective', label: 'Objetivo Estratégico', items: STRATEGIC_OBJECTIVES_DATA, labelFn: item => item.name },
+];
+const LINK_ROLES = [
+    ['primary', 'Principal'],
+    ['secondary', 'Apoio'],
+    ['diagnostic', 'Diagnóstico'],
+    ['control', 'Controle'],
+];
+const LINK_DIMENSIONS = [
+    ['', 'Sem dimensão'],
+    ['prazo', 'Prazo'],
+    ['qualidade', 'Qualidade'],
+    ['custo', 'Custo'],
+    ['risco', 'Risco'],
+    ['capacidade', 'Capacidade'],
+    ['conformidade', 'Conformidade'],
+    ['resultado', 'Resultado'],
+    ['estrategia', 'Estratégia'],
+];
+let loadedIndicatorLinks = [];
 
 // ──────────────────────────────────────────
 // Init
@@ -594,9 +681,154 @@ async function loadIndicatorData(id) {
         // Scope dynamic UI
         updateScopeUI(data.source_scope, data.source_id);
 
+        await loadIndicatorLinks(id);
+
     } catch (e) {
         console.error('Erro ao carregar indicador:', e);
         showAlert('Erro ao carregar dados do indicador: ' + e.message, 'danger');
+    }
+}
+
+// ──────────────────────────────────────────
+// Indicator N:N Links UI
+// ──────────────────────────────────────────
+function targetTypeConfig(targetType) {
+    return LINK_TARGET_TYPES.find(item => item.value === targetType) || LINK_TARGET_TYPES[0];
+}
+
+function optionHtml(value, label, selectedValue = null) {
+    const selected = selectedValue !== null && String(value) === String(selectedValue) ? 'selected' : '';
+    return `<option value="${escapeHtml(value)}" ${selected}>${escapeHtml(label)}</option>`;
+}
+
+function addIndicatorLinkRow(link = {}) {
+    const rows = document.getElementById('indicatorLinksRows');
+    const row = document.createElement('div');
+    row.className = 'link-row';
+    row.dataset.linkId = link.id || '';
+
+    const targetType = link.target_type || 'process';
+    const role = link.role || 'primary';
+    const cfg = targetTypeConfig(targetType);
+
+    row.innerHTML = `
+        <div>
+            <label class="field-label">Tipo</label>
+            <select class="field-select link-target-type">
+                ${LINK_TARGET_TYPES.map(item => optionHtml(item.value, item.label, targetType)).join('')}
+            </select>
+        </div>
+        <div>
+            <label class="field-label">Entidade vinculada</label>
+            <select class="field-select link-target-ref"></select>
+        </div>
+        <div>
+            <label class="field-label">Papel</label>
+            <select class="field-select link-role">
+                ${LINK_ROLES.map(([value, label]) => optionHtml(value, label, role)).join('')}
+            </select>
+        </div>
+        <div>
+            <label class="field-label">Dimensão</label>
+            <select class="field-select link-dimension">
+                ${LINK_DIMENSIONS.map(([value, label]) => optionHtml(value, label, link.health_dimension || '')).join('')}
+            </select>
+        </div>
+        <div>
+            <label class="field-label">Peso</label>
+            <input type="number" class="field-input link-weight" min="0" max="1" step="0.01" placeholder="0.30" value="${link.weight ?? ''}">
+        </div>
+        <div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="removeIndicatorLinkRow(this)">Remover</button>
+        </div>
+    `;
+
+    rows.appendChild(row);
+    row.querySelector('.link-target-type').addEventListener('change', () => populateLinkTargetSelect(row));
+    populateLinkTargetSelect(row, link.target_ref || link.target_id || '');
+    updateLinksEmptyState();
+}
+
+function populateLinkTargetSelect(row, selectedRef = '') {
+    const type = row.querySelector('.link-target-type').value;
+    const select = row.querySelector('.link-target-ref');
+    const cfg = targetTypeConfig(type);
+    const items = cfg.items || [];
+    select.innerHTML = '<option value="">Selecione...</option>' + items.map(item => {
+        const value = item.id;
+        return optionHtml(value, cfg.labelFn(item), selectedRef);
+    }).join('');
+    if (!items.length) {
+        select.innerHTML = '<option value="">Nenhuma opção disponível</option>';
+    }
+}
+
+function removeIndicatorLinkRow(button) {
+    button.closest('.link-row').remove();
+    updateLinksEmptyState();
+}
+
+function updateLinksEmptyState() {
+    const hasRows = document.querySelectorAll('#indicatorLinksRows .link-row').length > 0;
+    document.getElementById('indicatorLinksEmpty').style.display = hasRows ? 'none' : 'block';
+}
+
+async function loadIndicatorLinks(id) {
+    const res = await fetch(`/api/indicator-links?indicator_id=${encodeURIComponent(id)}`);
+    if (!res.ok) return;
+    loadedIndicatorLinks = await res.json();
+    document.getElementById('indicatorLinksRows').innerHTML = '';
+    loadedIndicatorLinks.forEach(link => addIndicatorLinkRow(link));
+    updateLinksEmptyState();
+}
+
+function collectIndicatorLinks(indicatorIdToUse) {
+    const rows = [...document.querySelectorAll('#indicatorLinksRows .link-row')];
+    const links = [];
+    const seen = new Set();
+    rows.forEach(row => {
+        const targetType = row.querySelector('.link-target-type').value;
+        const targetRef = row.querySelector('.link-target-ref').value;
+        if (!targetType || !targetRef) return;
+        const key = `${targetType}:${targetRef}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const weightValue = row.querySelector('.link-weight').value;
+        links.push({
+            indicator_id: Number(indicatorIdToUse),
+            target_type: targetType,
+            target_ref: String(targetRef),
+            target_id: targetType === 'strategic_objective' ? null : Number(targetRef),
+            role: row.querySelector('.link-role').value || 'primary',
+            health_dimension: row.querySelector('.link-dimension').value || null,
+            weight: weightValue === '' ? null : Number(weightValue),
+            is_active: true,
+        });
+    });
+    return links;
+}
+
+async function saveIndicatorLinks(indicatorIdToUse) {
+    const desiredLinks = collectIndicatorLinks(indicatorIdToUse);
+    const existing = indicatorId ? loadedIndicatorLinks : [];
+
+    for (const link of existing) {
+        if (link.id) {
+            const res = await fetch(`/api/indicator-links/${link.id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Falha ao substituir vínculos existentes.');
+        }
+    }
+
+    for (const link of desiredLinks) {
+        const res = await fetch('/api/indicator-links', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(link)
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || 'Falha ao salvar vínculo.');
+        }
     }
 }
 
@@ -650,6 +882,9 @@ document.getElementById('indForm').addEventListener('submit', async (e) => {
         });
 
         if (res.ok) {
+            const savedIndicator = await res.json();
+            const savedIndicatorId = savedIndicator.id || indicatorId;
+            await saveIndicatorLinks(savedIndicatorId);
             showAlert('Indicador salvo com sucesso! Redirecionando...', 'success');
             setTimeout(() => window.location.href = '/indicators', 1500);
         } else {
@@ -670,6 +905,12 @@ function showAlert(msg, type) {
     el.innerHTML = `<div class="form-alert ${type}">${msg}</div>`;
     el.style.display = 'block';
     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
 }
 </script>
 {% endblock %}

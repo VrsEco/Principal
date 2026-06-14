@@ -15,7 +15,7 @@ def _indicator_exists_for_tree(company_id: int, tree_id: int) -> bool:
 
 def _get_form_context(company_id):
     """Carrega e serializa todos os dados necessários para o formulário de indicadores."""
-    from models import Project, Process, OKRGlobal, OKRArea, Routine
+    from models import OrganizationalIdentity, Project, Process, OKRGlobal, OKRArea, Routine
 
     # Todos os nós da empresa
     all_tree_nodes = IndicatorTree.query.filter_by(company_id=company_id).order_by(IndicatorTree.code).all()
@@ -51,11 +51,31 @@ def _get_form_context(company_id):
     try:
         okrs_global = OKRGlobal.query.filter_by(company_id=company_id).all()
         okrs_area = OKRArea.query.filter_by(company_id=company_id).all()
-        okrs_combined = [{'id': o.id, 'name': f'[Global] {o.objective}'} for o in okrs_global] + \
-                        [{'id': o.id, 'name': f'[Área] {o.objective}'} for o in okrs_area]
+        okrs_combined = [
+            {'id': o.id, 'name': f'[Global] {o.objective}', 'target_type': 'okr_global'}
+            for o in okrs_global
+        ] + [
+            {'id': o.id, 'name': f'[Área] {o.objective}', 'target_type': 'okr_area'}
+            for o in okrs_area
+        ]
         okrs_json = json.dumps(okrs_combined)
     except Exception:
         okrs_json = '[]'
+
+    try:
+        identity = OrganizationalIdentity.query.filter_by(company_id=company_id).first()
+        strategic_objectives = []
+        for idx, item in enumerate((identity.strategic_objectives_json or []) if identity else []):
+            if isinstance(item, dict):
+                key = str(item.get('id') or item.get('key') or item.get('code') or item.get('name') or item.get('title') or idx + 1)
+                name = str(item.get('name') or item.get('title') or item.get('label') or key)
+            else:
+                key = str(item or idx + 1)
+                name = str(item or key)
+            strategic_objectives.append({'id': key, 'name': name, 'target_type': 'strategic_objective'})
+        strategic_objectives_json = json.dumps(strategic_objectives)
+    except Exception:
+        strategic_objectives_json = '[]'
 
     try:
         routines = Routine.query.filter_by(company_id=company_id, is_active=True).order_by(Routine.name).all()
@@ -81,6 +101,7 @@ def _get_form_context(company_id):
         'projects_json': projects_json,
         'processes_json': processes_json,
         'okrs_json': okrs_json,
+        'strategic_objectives_json': strategic_objectives_json,
         'routines_json': routines_json,
     }
 
