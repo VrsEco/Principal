@@ -3,7 +3,7 @@ from __future__ import annotations
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Locator, Page, expect
 
-from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
 from app32.tests.e2e.core.tenant_context import TenantContextResolver
 
 
@@ -13,6 +13,16 @@ class AuthPage:
         self.settings = settings
 
     def open(self) -> None:
+        if self.settings.execution_mode is E2EExecutionMode.PROD_SAFE and self.settings.post_login_path:
+            self.page.goto(
+                f"{self.settings.base_url.rstrip('/')}{self.settings.post_login_path}",
+                wait_until="domcontentloaded",
+                timeout=self.settings.navigation_timeout_ms,
+            )
+            self.page.locator("body").wait_for()
+            if not self._is_login_screen() and "/login" not in self.page.url:
+                return
+
         preferred_url = self.settings.login_url
         if self.settings.post_login_path:
             separator = "&" if "?" in preferred_url else "?"

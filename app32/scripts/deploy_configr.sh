@@ -67,6 +67,16 @@ else
     echo "⚠️  Nota: Migrations falharam ou não há mudanças pendentes."
 fi
 
+# 3.1 Runtime uWSGI: buffering de POST
+# Evita que requisições POST pequenas (/login, /portal, APIs JSON) prendam o
+# único worker do Configr quando o upstream repassa corpo sem buffering.
+echo "🛡️  Garantindo post-buffering do uWSGI para POSTs JSON..."
+mkdir -p "$BASE/etc/uwsgi/conf.d"
+cat > "$BASE/etc/uwsgi/conf.d/app32_post_buffering.ini" <<'EOF'
+post-buffering = 65536
+EOF
+echo "✅ post-buffering do uWSGI configurado."
+
 # 4. Reinício da Aplicação
 echo "🔄 Reiniciando servidor uWSGI (Configr)..."
 UWSGI_APP_INI="appgestaoversuscombr.45a4cd4b.configr.cloud.ini"
