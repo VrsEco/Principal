@@ -400,7 +400,7 @@ class RobotTestsCenterService:
             seen_domains.add(domain)
             area_runs = cls._runs_for_area(latest_runs, domain)
             latest = area_runs[0] if area_runs else fallback_run
-            status = cls._area_status(domain, latest, failed_names)
+            status = cls._area_status(domain, latest, failed_names, has_area_run=bool(area_runs))
             items.append(cls._build_area_record(domain=domain, status=status, latest=latest, suite=suite, company_id=company_id))
 
         preferred_order = ["system", "smoke", "financial", "reports", "integrations", "workspace", "processes", "contracts", "admin", "governance"]
@@ -610,11 +610,13 @@ class RobotTestsCenterService:
         return " ".join(names).lower()
 
     @staticmethod
-    def _area_status(domain: str, latest: dict[str, Any] | None, failed_names: str) -> str:
-        if not latest:
+    def _area_status(domain: str, latest: dict[str, Any] | None, failed_names: str, *, has_area_run: bool = True) -> str:
+        if not latest or not has_area_run:
             return "observed"
         if domain.lower() in failed_names:
             return "failed"
+        if str(latest.get("status") or "") == "failed":
+            return "passed"
         return str(latest.get("status") or "observed")
 
     @staticmethod
