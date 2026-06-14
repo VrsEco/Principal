@@ -73,3 +73,58 @@ def test_structuring_journey_gates_blocks_and_rolls_up_modeling_by_process():
     assert _subblock(journey, "modeling", "lanes")["status"] == "confirmed"
     assert _subblock(journey, "modeling", "pops")["status"] == "confirmed"
     assert journey["summary"]["blocks_ready"] == 3
+
+
+def test_structuring_journey_v2_includes_resources_and_strategic_management():
+    journey = StructuringJourneyService.build_structuring_journey_from_records(
+        company_id=9,
+        identity={
+            "mission": "Economizar água",
+            "vision": "Ser referência",
+            "values": [{"key": "sustentabilidade"}],
+            "value_propositions": [{"key": "vp-industria"}],
+            "strategic_objectives": [{"key": "okr-crescer"}],
+            "corporate_indicators": [{"id": 900, "name": "Economia de água"}],
+        },
+        process_areas=[{"id": 1, "name": "Operações"}],
+        macro_processes=[{"id": 10, "area_id": 1, "name": "Atendimento"}],
+        processes=[{"id": 100, "macro_id": 10, "name": "Instalar sensores", "responsible": "Ana"}],
+        profiles=[{"process_id": 100, "objective": "Instalar com qualidade"}],
+        bpmn_diagrams=[],
+        routines=[],
+        process_steps=[],
+        execution_contracts=[],
+        resource_catalog=[
+            {
+                "id": 7,
+                "type": "equipment_tools",
+                "item_name": "Kit de instalação",
+                "operational_capacity_value": 20,
+            }
+        ],
+        process_resource_links=[
+            {
+                "id": 8,
+                "process_id": 100,
+                "resource_id": 7,
+                "allocated_monthly_cost": 1200,
+                "capacity_bottleneck_notes": "Equipe limitada.",
+            }
+        ],
+        strategic_links=[{"id": 9, "process_id": 100, "link_type": "strategic_objective"}],
+        indicator_line_of_sight=[{"id": 10, "process_indicator_id": 1, "corporate_indicator_id": 900}],
+        maturation_items=[],
+    )
+
+    assert journey["version"] == "v2"
+    assert [block["key"] for block in journey["blocks"]] == [
+        "identity",
+        "process_architecture",
+        "resources_capacity",
+        "modeling",
+        "strategic_management",
+    ]
+    assert _subblock(journey, "resources_capacity", "resource_catalog")["status"] == "confirmed"
+    assert _subblock(journey, "resources_capacity", "process_resource_links")["status"] == "confirmed"
+    assert _subblock(journey, "strategic_management", "strategic_traceability")["status"] == "confirmed"
+    assert _subblock(journey, "strategic_management", "indicator_line_of_sight")["status"] == "confirmed"

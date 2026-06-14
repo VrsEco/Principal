@@ -244,16 +244,35 @@ Regras:
 - readiness/análise filtram itens estruturados por `status=confirmed`; itens sem status são tratados como legado confirmado.
 - readiness expõe `maturation.by_status` e `maturation.by_block` com backlog aberto e maturidade por bloco.
 
-### Jornada de Estruturação Sapiens
+### Jornada de Estruturação / Maturação Estratégica Sapiens
 
 A Jornada de Estruturação é uma camada de read model sobre a maturação N1, sem rebuild do dado transacional.
 
-Hierarquia oficial v1:
+Com a entrada da camada **Estrutura/Recursos**, do **Painel de Gestão Estratégica** e da tese da **Malha Analítica Estratégica via MCP/Sapiens**, a jornada deixa de medir apenas identidade e modelagem de processos. Ela passa a medir a maturidade da empresa para executar a estratégia com capacidade, custo, governança, evidências e análise econômica.
+
+Hierarquia oficial v2:
 
 - Jornada `sapiens_structuring`;
-- Blocos ordenados com gate soft: `identity`, `process_architecture`, `modeling`;
+- Read model `sapiens.structuring_journey`;
+- Versão `v2`;
+- Blocos ordenados com gate soft:
+  1. `identity`;
+  2. `process_architecture`;
+  3. `resources_capacity`;
+  4. `modeling`;
+  5. `strategic_management`;
 - Sub-blocos paralelos com criticidade `essential`, `recommended` ou `optional`;
 - Itens continuam sendo `strategy_maturation_items` quando estão em S1–S2.
+
+Blocos oficiais:
+
+| Ordem | Bloco | Objetivo | Essenciais |
+|---:|---|---|---|
+| 1 | `identity` | Estruturar o DNA estratégico da empresa. | Missão, visão, valores, proposta de valor e objetivos/pilares. |
+| 2 | `process_architecture` | Organizar como a empresa funciona. | Áreas, macroprocessos, processos, dono e objetivo do processo. |
+| 3 | `resources_capacity` | Evidenciar com quais recursos a empresa executa. | Catálogo de recursos e vínculo de recursos por processo. |
+| 4 | `modeling` | Detalhar a rotina em movimento. | Fluxo e raias/executores. |
+| 5 | `strategic_management` | Medir se a estratégia é executável e governável. | Rastreabilidade estratégica e linha de visada de indicadores. |
 
 Tool MCP:
 
@@ -268,6 +287,9 @@ Regras:
 - sub-blocos `recommended` e `optional` contam maturidade, mas não bloqueiam gate;
 - as duas UIs, cliente lúdico e consultor funcional, consomem o mesmo read model `sapiens.structuring_journey`;
 - B3 Modelagem calcula rollup por processo e pode ser filtrado por `scope=process&process_id=<id>`.
+- `resources_capacity` usa `resource_catalog` e `process_resource_links`, sempre com `company_id`;
+- `strategic_management` usa vínculos C1–C5, indicadores, painel executivo e snapshots analíticos como evidência de gestão;
+- benchmarking de capacidade permanece `optional` enquanto estiver no nível Paper; nenhuma recomendação externa pode virar decisão automática sem validação humana.
 
 ## 9. Saída mínima do read model
 

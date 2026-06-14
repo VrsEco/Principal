@@ -10,9 +10,13 @@ from models import (
     ProcessActivityExecutionContract,
     ProcessArea,
     ProcessBpmnDiagram,
+    ProcessResourceLink,
     ProcessRoutine,
     ProcessStep,
+    ProcessStrategicAlignmentLink,
     ProcessStrategyProfile,
+    ResourceCatalog,
+    IndicatorLineOfSight,
     StrategyMaturationItem,
 )
 from services.strategy_alignment_n1_service import StrategyAlignmentN1Error, StrategyAlignmentN1Service
@@ -27,7 +31,7 @@ class StructuringJourneyService:
 
     JOURNEY_KEY = "sapiens_structuring"
     READ_MODEL = "sapiens.structuring_journey"
-    VERSION = "v1"
+    VERSION = "v2"
     GATE_POLICY = "soft"
 
     IDENTITY_SUBBLOCK_FIELDS = {
@@ -106,7 +110,7 @@ class StructuringJourneyService:
             },
             {
                 "key": "modeling",
-                "order": 3,
+                "order": 4,
                 "label": "Modelagem",
                 "client_label": "Desenhe a rotina em movimento",
                 "consultant_label": "Modelagem BPMN/POP",
@@ -117,6 +121,34 @@ class StructuringJourneyService:
                     ("pops", "POPs", "recommended"),
                     ("contracts_automation", "Contratos/automação", "optional"),
                     ("flow_metrics", "Métricas de fluxo", "optional"),
+                ],
+            },
+            {
+                "key": "resources_capacity",
+                "order": 3,
+                "label": "Estrutura, Recursos e Capacidade",
+                "client_label": "Mostre com quais recursos a empresa executa",
+                "consultant_label": "Estrutura/Recursos e Capacidade",
+                "subblocks": [
+                    ("resource_catalog", "Catálogo de recursos", "essential"),
+                    ("process_resource_links", "Recursos por processo", "essential"),
+                    ("capacity_declared", "Capacidade declarada", "recommended"),
+                    ("cost_allocation", "Custo alocado", "recommended"),
+                    ("bottlenecks", "Gargalos/restrições", "optional"),
+                ],
+            },
+            {
+                "key": "strategic_management",
+                "order": 5,
+                "label": "Gestão Estratégica e Malha Analítica",
+                "client_label": "Acompanhe se a estratégia é executável",
+                "consultant_label": "Gestão Estratégica / Malha Analítica",
+                "subblocks": [
+                    ("strategic_traceability", "Rastreabilidade estratégica", "essential"),
+                    ("indicator_line_of_sight", "Linha de visada de indicadores", "essential"),
+                    ("executive_panel", "Painel executivo", "recommended"),
+                    ("analytics_snapshot", "Snapshot analítico MCP", "recommended"),
+                    ("market_benchmarking", "Benchmarking de capacidade", "optional"),
                 ],
             },
         ],
@@ -176,6 +208,25 @@ class StructuringJourneyService:
             for row in ProcessActivityExecutionContract.query.filter_by(company_id=company_id).all()
             if (not process_ids or int(row.process_id) in process_ids) and bool(getattr(row, "is_active", True))
         ]
+        resource_catalog = [
+            row.to_dict()
+            for row in ResourceCatalog.query.filter_by(company_id=company_id).all()
+            if bool(getattr(row, "is_active", True))
+        ]
+        process_resource_links = [
+            row.to_dict()
+            for row in ProcessResourceLink.query.filter_by(company_id=company_id).all()
+            if (not process_ids or int(row.process_id) in process_ids) and bool(getattr(row, "is_active", True))
+        ]
+        strategic_links = [
+            row.to_dict()
+            for row in ProcessStrategicAlignmentLink.query.filter_by(company_id=company_id).all()
+            if not process_ids or int(row.process_id) in process_ids
+        ]
+        indicator_line_of_sight = [
+            row.to_dict()
+            for row in IndicatorLineOfSight.query.filter_by(company_id=company_id).all()
+        ]
 
         if process_ids:
             macro_ids = {int(item["macro_id"]) for item in processes if item.get("macro_id") is not None}
@@ -208,6 +259,10 @@ class StructuringJourneyService:
             routines=routines,
             process_steps=process_steps,
             execution_contracts=contracts,
+            resource_catalog=resource_catalog,
+            process_resource_links=process_resource_links,
+            strategic_links=strategic_links,
+            indicator_line_of_sight=indicator_line_of_sight,
             maturation_items=maturation_items,
         )
 
@@ -224,17 +279,26 @@ class StructuringJourneyService:
         routines: list[dict[str, Any]],
         process_steps: list[dict[str, Any]],
         execution_contracts: list[dict[str, Any]],
-        maturation_items: list[dict[str, Any]],
+        resource_catalog: list[dict[str, Any]] | None = None,
+        process_resource_links: list[dict[str, Any]] | None = None,
+        strategic_links: list[dict[str, Any]] | None = None,
+        indicator_line_of_sight: list[dict[str, Any]] | None = None,
+        maturation_items: list[dict[str, Any]] | None = None,
         audience: str | None = "client",
         scope: str | None = "company",
         process_id: int | None = None,
     ) -> dict[str, Any]:
+        resource_catalog = resource_catalog or []
+        process_resource_links = process_resource_links or []
+        strategic_links = strategic_links or []
+        indicator_line_of_sight = indicator_line_of_sight or []
+        maturation_items = maturation_items or []
         blocks: list[dict[str, Any]] = []
         previous_ready = True
         current_block_key: str | None = None
         unlocked_until_order = 0
 
-        for block_def in StructuringJourneyService.REGISTRY["blocks"]:
+        for block_def in sorted(StructuringJourneyService.REGISTRY["blocks"], key=lambda item: int(item["order"])):
             block_key = block_def["key"]
             subblocks = [
                 StructuringJourneyService._build_subblock(
@@ -251,6 +315,10 @@ class StructuringJourneyService:
                     routines=routines,
                     process_steps=process_steps,
                     execution_contracts=execution_contracts,
+                    resource_catalog=resource_catalog,
+                    process_resource_links=process_resource_links,
+                    strategic_links=strategic_links,
+                    indicator_line_of_sight=indicator_line_of_sight,
                     maturation_items=maturation_items,
                 )
                 for sub_key, label, criticality in block_def["subblocks"]
@@ -350,6 +418,10 @@ class StructuringJourneyService:
         routines: list[dict[str, Any]],
         process_steps: list[dict[str, Any]],
         execution_contracts: list[dict[str, Any]],
+        resource_catalog: list[dict[str, Any]],
+        process_resource_links: list[dict[str, Any]],
+        strategic_links: list[dict[str, Any]],
+        indicator_line_of_sight: list[dict[str, Any]],
         maturation_items: list[dict[str, Any]],
     ) -> dict[str, Any]:
         required_count, confirmed_count, evidence = StructuringJourneyService._canonical_evidence(
@@ -364,6 +436,10 @@ class StructuringJourneyService:
             routines=routines,
             process_steps=process_steps,
             execution_contracts=execution_contracts,
+            resource_catalog=resource_catalog,
+            process_resource_links=process_resource_links,
+            strategic_links=strategic_links,
+            indicator_line_of_sight=indicator_line_of_sight,
         )
         maturity_pct = StructuringJourneyService._pct(confirmed_count, required_count)
         counts = StructuringJourneyService._maturation_counts(block_key, key, maturation_items)
@@ -409,6 +485,10 @@ class StructuringJourneyService:
         routines: list[dict[str, Any]],
         process_steps: list[dict[str, Any]],
         execution_contracts: list[dict[str, Any]],
+        resource_catalog: list[dict[str, Any]],
+        process_resource_links: list[dict[str, Any]],
+        strategic_links: list[dict[str, Any]],
+        indicator_line_of_sight: list[dict[str, Any]],
     ) -> tuple[int, int, dict[str, Any]]:
         if block_key == "identity":
             fields = StructuringJourneyService.IDENTITY_SUBBLOCK_FIELDS[key]
@@ -437,6 +517,41 @@ class StructuringJourneyService:
                 execution_contracts=execution_contracts,
             )
             return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+
+        if block_key == "resources_capacity":
+            covered = StructuringJourneyService._covered_processes_for_resources_key(
+                key,
+                processes=processes,
+                resource_catalog=resource_catalog,
+                process_resource_links=process_resource_links,
+            )
+            if key == "resource_catalog":
+                return 1, int(bool(resource_catalog)), {"count": len(resource_catalog)}
+            return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+
+        if block_key == "strategic_management":
+            if key == "strategic_traceability":
+                covered = {int(item["process_id"]) for item in strategic_links if item.get("process_id") is not None}
+                return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+            if key == "indicator_line_of_sight":
+                return 1, int(bool(indicator_line_of_sight)), {"count": len(indicator_line_of_sight)}
+            if key == "executive_panel":
+                has_indicators = StructuringJourneyService._has_identity_value(identity.get("corporate_indicators")) or bool(
+                    StructuringJourneyService._covered_processes_for_profile_key("process_indicators", profiles, processes)
+                )
+                return 1, int(has_indicators), {"source": "corporate_indicators/process_indicators"}
+            if key == "analytics_snapshot":
+                has_base = bool(strategic_links) and bool(indicator_line_of_sight)
+                return 1, int(has_base), {"requires": ["strategic_links", "indicator_line_of_sight"]}
+            if key == "market_benchmarking":
+                has_base = bool(
+                    resource_catalog
+                    and any(
+                        StructuringJourneyService._has_identity_value(item.get("operational_capacity_value"))
+                        for item in resource_catalog
+                    )
+                )
+                return 1, int(has_base), {"source": "resource_catalog.operational_capacity_value"}
 
         return 1, 0, {}
 
@@ -512,6 +627,42 @@ class StructuringJourneyService:
         return covered
 
     @staticmethod
+    def _covered_processes_for_resources_key(
+        key: str,
+        *,
+        processes: list[dict[str, Any]],
+        resource_catalog: list[dict[str, Any]],
+        process_resource_links: list[dict[str, Any]],
+    ) -> set[int]:
+        process_ids = {int(item["id"]) for item in processes if item.get("id") is not None}
+        resource_by_id = {
+            int(item["id"]): item
+            for item in resource_catalog
+            if item.get("id") is not None
+        }
+        covered: set[int] = set()
+        for link in process_resource_links:
+            process_id = int(link.get("process_id") or 0)
+            if process_id not in process_ids:
+                continue
+            resource = resource_by_id.get(int(link.get("resource_id") or 0), {})
+            if key == "process_resource_links":
+                covered.add(process_id)
+            elif key == "capacity_declared":
+                if StructuringJourneyService._has_identity_value(resource.get("operational_capacity_value")):
+                    covered.add(process_id)
+            elif key == "cost_allocation":
+                if any(
+                    StructuringJourneyService._has_identity_value(link.get(field))
+                    for field in ("allocated_monthly_cost", "estimated_cost_per_execution", "usage_percentage")
+                ):
+                    covered.add(process_id)
+            elif key == "bottlenecks":
+                if StructuringJourneyService._has_identity_value(link.get("capacity_bottleneck_notes")):
+                    covered.add(process_id)
+        return covered
+
+    @staticmethod
     def _maturation_counts(block_key: str, subblock_key: str, maturation_items: Iterable[dict[str, Any]]) -> Counter:
         counts: Counter = Counter()
         for item in maturation_items:
@@ -549,6 +700,30 @@ class StructuringJourneyService:
                 "pops": {"pops", "procedures", "steps"},
                 "contracts_automation": {"contracts", "automation", "execution_contracts"},
                 "flow_metrics": {"flow_metrics", "indicators"},
+            }
+            return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
+
+        if block_key == "resources_capacity":
+            if item_block not in {"process_resource", "resource", "process_profile"}:
+                return False
+            mapping = {
+                "resource_catalog": {"resource_catalog", "resource_id", "resource_type", "item_name"},
+                "process_resource_links": {"process_resource_links", "process_id", "resource_id"},
+                "capacity_declared": {"capacity", "operational_capacity_value", "operational_capacity_unit"},
+                "cost_allocation": {"allocated_monthly_cost", "estimated_cost_per_execution", "cost", "usage_percentage"},
+                "bottlenecks": {"bottleneck", "capacity_bottleneck_notes", "restriction", "constraint"},
+            }
+            return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
+
+        if block_key == "strategic_management":
+            if item_block not in {"strategy_management", "strategic_alignment", "indicator", "analytics"}:
+                return False
+            mapping = {
+                "strategic_traceability": {"strategic_links", "link_type", "strategic_objective", "pillar"},
+                "indicator_line_of_sight": {"indicator_line_of_sight", "corporate_indicator_id", "process_indicator_id"},
+                "executive_panel": {"executive_panel", "management_panel", "strategic_dashboard"},
+                "analytics_snapshot": {"analytics_snapshot", "snapshot", "mcp_snapshot"},
+                "market_benchmarking": {"market_benchmarking", "benchmark", "benchmarking", "market_alternative"},
             }
             return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
 

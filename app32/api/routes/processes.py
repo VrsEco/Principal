@@ -682,7 +682,7 @@ def process_book(process_id):
 @permission_required('processes', 'view')
 def macro_process_book(macro_id):
     """Renderiza o Book do Macroprocesso em layout print-friendly client-safe."""
-    from services.macro_process_book_service import build_macro_process_book_context
+    from services.macro_process_book_service import build_macro_process_book_context, ensure_process_map_context
 
     macro = _get_macro_process_with_access(macro_id, action='view')
     if is_collaborator_in_company(macro.company_id):
@@ -693,6 +693,11 @@ def macro_process_book(macro_id):
             macro_id=macro.id,
             company_id=macro.company_id,
             request_root=request.url_root,
+        )
+        context = ensure_process_map_context(
+            context,
+            current_macro_id=macro.id,
+            company_id=macro.company_id,
         )
     except ValueError as exc:
         current_app.logger.warning('Book do macroprocesso indisponível para macro_id=%s: %s', macro_id, exc)
