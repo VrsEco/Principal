@@ -21,6 +21,7 @@ from services.process_portal_service import (
     build_process_portal_process_detail,
     build_process_portal_summary,
 )
+from services.strategic_management_panel_service import build_strategic_management_panel
 from utils.indicator_filters import PROCESS_SOURCE_MODULES, indicator_supports_source_context
 from utils.permissions import get_default_company_id, permission_required, has_permission, has_company_full_access, is_collaborator_in_company, can_model_process
 
@@ -461,6 +462,19 @@ def process_portal_redirect():
     return redirect(url_for('my_work.my_work'))
 
 
+@processes_bp.route('/process-portal/strategic-management')
+@permission_required('processes', 'view')
+def strategic_management_panel_redirect():
+    company_id = session.get('active_company_id')
+    if not company_id and current_user.is_authenticated:
+        company_id = get_default_company_id()
+        if company_id:
+            session['active_company_id'] = company_id
+    if company_id:
+        return redirect(url_for('processes.strategic_management_panel_page', company_id=company_id))
+    return redirect(url_for('my_work.my_work'))
+
+
 @processes_bp.route('/companies/<int:company_id>/process-portal')
 @permission_required('processes', 'view')
 def process_portal_page(company_id):
@@ -491,6 +505,24 @@ def process_portal_process_page(company_id, process_id):
     )
 
 
+@processes_bp.route('/companies/<int:company_id>/process-portal/strategic-management')
+@permission_required('processes', 'view')
+def strategic_management_panel_page(company_id):
+    session['active_company_id'] = company_id
+    company = Company.query.get_or_404(company_id)
+    period = request.args.get('period') or 'month'
+    try:
+        panel = build_strategic_management_panel(company_id, period=period)
+    except ValueError as exc:
+        return str(exc), 400
+    return render_template(
+        'modules/processes/strategic_management_panel.html',
+        company=company,
+        company_id=company_id,
+        panel=panel,
+    )
+
+
 @processes_bp.route('/api/companies/<int:company_id>/process-portal', methods=['GET'])
 @permission_required('processes', 'view')
 def api_process_portal_summary(company_id):
@@ -501,6 +533,24 @@ def api_process_portal_summary(company_id):
         current_employee_id=current_employee.id if current_employee else None,
         can_manage_all=bool(has_company_full_access(company_id)),
     )
+    return jsonify({"ok": True, "data": payload})
+
+
+@processes_bp.route('/api/companies/<int:company_id>/process-portal/strategic-management', methods=['GET'])
+@permission_required('processes', 'view')
+def api_strategic_management_panel(company_id):
+    session['active_company_id'] = company_id
+    period = request.args.get('period') or 'month'
+    try:
+        payload = build_strategic_management_panel(company_id, period=period)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception:
+        current_app.logger.exception(
+            "Erro ao montar Painel de Gestão Estratégica company_id=%s",
+            company_id,
+        )
+        return jsonify({"ok": False, "error": PUBLIC_ERROR_MESSAGE}), 500
     return jsonify({"ok": True, "data": payload})
 
 

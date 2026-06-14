@@ -512,6 +512,147 @@ Cada processo relevante do APP32 deve ser modelado com um **mapa de atendimento 
 
 Esse modelo evita criação de módulo no escuro e transforma o BPMN em motor de descoberta e orquestração da plataforma.
 
+## 11-B. Modelo de gestão estratégica por indicadores, processos e projetos
+
+O APP32 deve tratar a gestão estratégica como um ciclo integrado entre **planejamento**, **processos**, **projetos**, **indicadores**, **reuniões de gestão** e **ações corretivas governadas**.
+
+### Classificação dos indicadores
+
+Os indicadores devem ser classificados, no mínimo, em quatro grupos operacionais:
+
+- **Indicadores de planejamento**: medem a aderência da empresa aos objetivos estratégicos, OKRs, metas corporativas, posicionamento e resultados esperados.
+- **Indicadores de processos**: medem a saúde da rotina operacional, desempenho de BPMNs, SLAs, gargalos, qualidade, retrabalho, produtividade e maturidade dos processos.
+- **Indicadores de projetos**: medem a execução das iniciativas fora da rotina, incluindo prazo, orçamento, avanço, entrega, risco, impacto esperado e benefício capturado.
+- **Indicadores de teias de conexões**: medem a qualidade das conexões entre pessoas, áreas, processos, projetos, indicadores, clientes, fornecedores, riscos, sistemas e decisões.
+
+Essa separação preserva a distinção central do APP32:
+
+- **processo/rotina** é o que deve ocorrer de forma recorrente, padronizada e gerenciável por fluxo, POP, dono, SLA e indicador;
+- **projeto** é toda iniciativa fora da rotina destinada a criar, corrigir, melhorar, implantar, transformar ou recuperar desempenho.
+- **teia de conexões** é a camada transversal que revela se as dependências, alinhamentos e relações que sustentam a execução estão fluindo ou gerando atrito organizacional.
+
+### Indicadores de teias de conexões
+
+As teias de conexões devem funcionar como uma camada diagnóstica transversal. Elas não substituem indicadores de planejamento, processos ou projetos; elas explicam a qualidade das relações que fazem esses três grupos performarem.
+
+A teia pode ser classificada em três estados:
+
+- **Satisfatória**: conexões claras, responsáveis definidos, dependências fluindo, comunicação adequada e baixo atrito entre áreas, processos e projetos.
+- **Insatisfatória**: lacunas de governança, atrasos recorrentes, dependências frágeis, comunicação incompleta, dono indefinido ou desalinhamento parcial.
+- **Crítica**: ruptura de governança, bloqueio de execução, conflito entre áreas, risco estratégico, perda operacional relevante ou impacto direto no cliente.
+
+Exemplos de sinais de teia insatisfatória ou crítica:
+
+- indicador sem dono claro;
+- projeto sem vínculo com indicador ou objetivo estratégico;
+- processo crítico sem responsável efetivo;
+- reunião sem decisão, encaminhamento ou cobrança;
+- dependência entre áreas sem SLA ou acordo de prioridade;
+- cliente impactado sem visibilidade gerencial;
+- fornecedor, sistema ou pessoa-chave bloqueando execução sem plano de contingência.
+
+Esse grupo permite que o APP32 vá além da leitura do sintoma. Um indicador vermelho pode ser consequência de falha de processo, mas também pode ser consequência de uma teia quebrada: áreas desalinhadas, dependências mal definidas, projeto desconectado da estratégia ou decisões que não chegam à execução.
+
+### Regra para indicador fora do range
+
+Quando um indicador ficar fora do range esperado, o APP32 deve exigir uma resposta gerencial estruturada:
+
+1. identificar o desvio;
+2. registrar responsável/dono;
+3. analisar causa raiz;
+4. vincular a ação corretiva a um projeto existente ou criar um novo projeto;
+5. desdobrar a correção em atividades com responsável, prazo e evidência;
+6. acompanhar em reunião de gerência;
+7. escalar para reunião de diretoria quando o desvio persistir, for crítico ou exigir mudança de prioridade.
+
+Portanto, a regra conceitual não é “todo indicador vermelho cria um projeto novo”.
+
+A regra correta para o APP32 é:
+
+> Todo indicador fora do range deve gerar uma ação corretiva governada, obrigatoriamente vinculada a um projeto existente ou a um novo projeto, com atividades, responsável, prazo, evidência e rito de cobrança.
+
+### Card executivo do indicador
+
+Cada indicador deve possuir uma visão executiva padronizada, suficiente para permitir leitura rápida da situação, cobrança do responsável e rastreabilidade da ação corretiva.
+
+O card executivo do indicador deve conter, no mínimo:
+
+- **semáforo do indicador**: verde, amarelo, vermelho ou azul, calculado conforme range, meta, polaridade e período de medição;
+- **responsável pelo indicador**: dono nominal, área/processo relacionado e eventual gestor para escalonamento;
+- **causa raiz ou hipótese de causa**: diagnóstico registrado para evitar tratamento apenas do sintoma;
+- **projeto associado**: projeto corretivo existente ou novo projeto criado para tratar o desvio, quando aplicável;
+- **atividades associadas**: atividades abertas, responsáveis, prazos, dependências e evidências;
+- **status do projeto e das atividades**: em dia, atrasado, crítico, bloqueado, concluído ou sem ação definida;
+- **próxima cobrança**: reunião, data ou rito em que o responsável deverá prestar contas da evolução.
+
+Quando o indicador estiver dentro do range, o card pode não ter projeto corretivo ativo, mas deve continuar exibindo responsável, última medição, tendência e evidência de acompanhamento.
+
+Essa estrutura cria a cadeia mínima de gestão:
+
+> medição → dono → diagnóstico → projeto/atividade → cobrança → nova medição.
+
+### Painel de Gestão Estratégica no Portal de Processos
+
+O APP32 deve expor uma tela executiva chamada **Painel de Gestão Estratégica**, posicionada abaixo do **Portal de Processos**, na área de **Acesso Rápido**.
+
+Essa tela não deve substituir os cadastros específicos de indicadores, metas, medições, processos ou projetos. Seu papel é ser uma visão executiva de leitura, navegação e acionamento gerencial.
+
+Na tela principal do painel:
+
+- não deve haver menu lateral próprio;
+- não deve haver ação genérica de `Novo`;
+- não deve haver cadastro de indicador diretamente nessa tela;
+- os indicadores devem ser apresentados em quatro grupos de acesso: estratégicos, processos, projetos e teias;
+- o clique em cada grupo deve abrir pop-ups em camadas para navegação progressiva;
+- as ações executivas permitidas devem ser **Nova reunião** e **Nova atividade/projeto**;
+- o período de gestão deve aparecer como contexto/filtro discreto, não como cadastro.
+
+Fluxo de navegação esperado:
+
+> Portal de Processos → Acesso Rápido → Painel de Gestão Estratégica → Grupo de Indicadores → Subgrupo → Indicador → Card Executivo.
+
+Esse posicionamento reforça que a gestão estratégica no APP32 nasce da leitura dos processos, indicadores, projetos e teias que sustentam a execução, sem duplicar os menus operacionais já existentes.
+
+### Encerramento da tese e promoção para SPEC
+
+A tese do **Painel de Gestão Estratégica** está suficientemente madura para sair do nível conceitual do paper e ser promovida para decisão oficial em SPEC.
+
+Decisão de arquitetura:
+
+- o painel será uma visão executiva de gestão estratégica, não um módulo de cadastro;
+- o ponto de entrada será o **Portal de Processos**, em **Acesso Rápido**;
+- os cadastros de indicadores, metas, medições, projetos e processos permanecem nos menus específicos;
+- a tela principal permitirá somente ações executivas coerentes com governança: **Nova reunião** e **Nova atividade/projeto**;
+- a implementação deverá respeitar multi-tenancy por `company_id`, leitura operacional MCP First e separação entre rota, service e UI.
+
+Documento oficial derivado: `docs/spec/painel_gestao_estrategica_app32_spec.md`.
+
+### Projeto guarda-chuva e atividade corretiva
+
+Para evitar proliferação de projetos pequenos e desconectados, desvios pontuais podem ser tratados como atividades dentro de um **projeto guarda-chuva**.
+
+Exemplo:
+
+- projeto: `Melhoria dos Indicadores Comerciais`;
+- atividade: `Corrigir baixa conversão de propostas`;
+- indicador vinculado: `Taxa de conversão`;
+- responsável: dono comercial ou gestor definido;
+- prazo: data objetiva de correção;
+- evidência: alteração de processo, treinamento, nova regra, relatório, experimento ou medição posterior.
+
+Esse modelo mantém a disciplina de execução sem transformar cada alerta em um projeto isolado.
+
+### Cadência de gestão recomendada
+
+O APP32 deve suportar ritos de gestão em camadas:
+
+- **reunião de rotina/processos**: acompanha operação, SLA, desvios e gargalos recorrentes;
+- **reunião de projetos**: acompanha atividades, prazos, riscos, dependências e entregáveis;
+- **reunião gerencial**: cobra responsáveis por indicadores fora do range e aprova correções;
+- **reunião de diretoria**: redefine prioridades, recursos, metas e caminhos quando os desvios forem estruturais ou estratégicos.
+
+Esse desenho conecta o indicador ao comportamento gerencial esperado: medir, diagnosticar, agir, cobrar, aprender e reajustar.
+
 ## 12. Decisão recomendada
 
 A recomendação é aprovar o APP32 como:
