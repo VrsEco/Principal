@@ -25,7 +25,7 @@
 
 {% block workspace_content %}
 <div class="process-page-shell process-details-container" id="processDetails">
-    <section class="process-hero workspace-header fade-in">
+    <section class="process-hero workspace-header fade-in" aria-labelledby="detName">
         <div class="process-hero__content">
             <div class="process-meta-chips">
                 <span class="process-chip process-chip--primary" id="detArea">Área</span>
@@ -38,6 +38,10 @@
             </div>
             <h1 class="text-h1 process-hero__title" id="detName">Carregando Processo...</h1>
             <p class="text-secondary process-hero__description" id="detDescription">Aguarde enquanto carregamos as informações.</p>
+            <div class="process-hero__signal">
+                <span class="process-hero__signal-dot" aria-hidden="true"></span>
+                <span>Workspace APP32 · Processo estruturado por SIPOC, recursos, fluxo, POP, rotinas e indicadores.</span>
+            </div>
         </div>
         <div class="process-hero__actions">
             <a href="{{ url_for('processes.processes_list', company_id=company.id) }}" class="btn btn-ghost" onclick="setTimeout(() => this.blur(), 150)">← Voltar ao Kanban</a>
@@ -77,7 +81,7 @@
         </article>
     </section>
 
-    <div class="tabs-nav process-tabs-nav">
+    <div class="tabs-nav process-tabs-nav" aria-label="Navegação do detalhe do processo">
         <button class="tab-btn process-tab-btn active" onclick="switchTab('sipoc')"><span class="process-tab-btn__icon">🧩</span><span>SIPOC</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧱</span><span>Estrutura/Recursos</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
@@ -145,23 +149,18 @@
 
                 <form id="processResourceForm" class="pop-create-form" onsubmit="createProcessResource(event)" style="align-items:flex-end; flex-wrap:wrap;">
                     <div style="min-width:320px; flex:1;">
-                        <label class="pop-field-label">Recurso do catálogo *</label>
+                        <label class="pop-field-label">Recurso a ser incluído *</label>
                         <select id="existingResourceId" class="form-control" required>
                             <option value="">Selecione um recurso cadastrado...</option>
                         </select>
-                        <small style="color:var(--text-tertiary);">O processo pode ter vários recursos. Cadastre/ajuste capacidades no catálogo geral.</small>
                     </div>
                     <div style="width:170px;">
                         <label class="pop-field-label">Uso por instância</label>
-                        <input id="resourceUsedPerExecution" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 40">
+                        <input id="resourceUsedPerExecution" type="text" inputmode="decimal" class="form-control app32-decimal-input" placeholder="0,00" autocomplete="off">
                     </div>
                     <div style="width:170px;">
                         <label class="pop-field-label">Instâncias/mês</label>
-                        <input id="resourceEstimatedInstances" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 2">
-                    </div>
-                    <div style="width:170px;">
-                        <label class="pop-field-label">Custo por instância</label>
-                        <input id="resourceExecutionCostInput" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 500">
+                        <input id="resourceEstimatedInstances" type="text" inputmode="decimal" class="form-control app32-decimal-input" placeholder="0,00" autocomplete="off">
                     </div>
                     <div style="min-width:220px; flex:1;">
                         <label class="pop-field-label">Notas de capacidade/gargalo</label>
@@ -397,7 +396,10 @@
     .process-page-shell {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1.25rem;
+        max-width: 1480px;
+        margin: 0 auto;
+        padding-bottom: 2rem;
     }
 
     .process-hero {
@@ -406,32 +408,74 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 1.5rem;
-        padding: 1.75rem 2rem;
-        border-radius: 24px;
-        border: 1px solid rgba(37, 99, 235, 0.12);
+        padding: 1.35rem 1.5rem;
+        border-radius: 22px;
+        border: 1px solid rgba(37, 99, 235, 0.14);
         background:
-            radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 34%),
-            linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 247, 251, 0.94));
-        box-shadow: var(--shadow-md);
+            radial-gradient(circle at top right, rgba(37, 99, 235, 0.13), transparent 32%),
+            radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.08), transparent 30%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .process-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: linear-gradient(180deg, var(--primary), #0ea5e9);
+        opacity: 0.95;
     }
 
     .process-hero__content {
         min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.85rem;
+        gap: 0.7rem;
+        position: relative;
+        z-index: 1;
     }
 
     .process-hero__title {
         margin: 0;
-        line-height: 1.08;
+        max-width: 980px;
+        line-height: 1.06;
+        letter-spacing: -0.04em;
     }
 
     .process-hero__description {
         margin: 0;
-        max-width: 76ch;
+        max-width: 88ch;
         font-size: 0.95rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+
+    .process-hero__signal {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: fit-content;
+        max-width: 100%;
+        padding: 0.45rem 0.7rem;
+        border: 1px solid rgba(37, 99, 235, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
         color: var(--text-tertiary);
+        font-size: 0.76rem;
+        font-weight: 700;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .process-hero__signal-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+        flex: 0 0 auto;
     }
 
     .process-hero__actions {
@@ -439,6 +483,15 @@
         flex-wrap: wrap;
         justify-content: flex-end;
         gap: 0.75rem;
+        min-width: 260px;
+        max-width: 430px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .process-hero__actions .btn {
+        min-height: 40px;
+        border-radius: 12px;
     }
 
     .process-meta-chips {
@@ -452,15 +505,16 @@
         display: inline-flex;
         align-items: center;
         gap: 0.45rem;
-        min-height: 34px;
-        padding: 0.45rem 0.85rem;
+        min-height: 32px;
+        padding: 0.4rem 0.75rem;
         border-radius: 999px;
         border: 1px solid var(--border);
         background: var(--surface);
         color: var(--text-secondary);
-        font-size: 0.74rem;
-        font-weight: 700;
-        letter-spacing: 0.01em;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
         box-shadow: var(--shadow-sm);
     }
 
@@ -513,19 +567,20 @@
     .process-kpis {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1rem;
+        gap: 0.9rem;
     }
 
     .process-kpi-card {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        padding: 1.15rem 1.2rem;
-        border-radius: 18px;
+        gap: 0.9rem;
+        padding: 1rem 1.05rem;
+        border-radius: 16px;
         border: 1px solid var(--border);
-        background: var(--surface);
+        background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.88));
         box-shadow: var(--shadow-sm);
-        min-height: 100px;
+        min-height: 92px;
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
 
@@ -536,15 +591,15 @@
     }
 
     .process-kpi-card__icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 14px;
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--primary-light);
         color: var(--primary);
-        font-size: 1.35rem;
+        font-size: 1.18rem;
         flex-shrink: 0;
     }
 
@@ -564,7 +619,7 @@
     }
 
     .process-kpi-card__value {
-        font-size: 2rem;
+        font-size: 1.75rem;
         font-weight: 800;
         line-height: 1.05;
         color: var(--text-primary);
@@ -573,20 +628,26 @@
     }
 
     .process-kpi-card__value--compact {
-        font-size: 1.08rem;
+        font-size: 0.98rem;
         line-height: 1.35;
         letter-spacing: -0.02em;
     }
 
     .process-tabs-nav {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        padding: 0.8rem;
-        border-radius: 20px;
+        flex-wrap: nowrap;
+        gap: 0.55rem;
+        padding: 0.55rem;
+        border-radius: 18px;
         border: 1px solid var(--border);
-        background: var(--surface);
-        box-shadow: var(--shadow-sm);
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+        overflow-x: auto;
+        position: sticky;
+        top: 0.75rem;
+        z-index: 20;
+        backdrop-filter: blur(12px);
+        scrollbar-width: thin;
     }
 
     .process-tab-btn {
@@ -594,13 +655,15 @@
         align-items: center;
         justify-content: center;
         gap: 0.55rem;
-        padding: 0.85rem 1rem;
-        min-height: 46px;
+        padding: 0.75rem 0.95rem;
+        min-height: 42px;
         border: 1px solid transparent;
-        border-radius: 14px;
+        border-radius: 13px;
         background: transparent;
         color: var(--text-secondary);
         font-weight: 700;
+        white-space: nowrap;
+        transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
     }
 
     .process-tab-btn__icon {
@@ -613,17 +676,17 @@
     }
 
     .process-tab-btn.active {
-        background: var(--primary-light);
+        background: linear-gradient(180deg, rgba(219, 234, 254, 0.95), rgba(239, 246, 255, 0.9));
         color: var(--primary);
         border-color: rgba(37, 99, 235, 0.14);
-        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
+        box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08), 0 8px 18px rgba(37, 99, 235, 0.08);
     }
 
     .process-section {
         border: 1px solid var(--border);
-        border-radius: 22px;
+        border-radius: 20px;
         background: var(--surface);
-        box-shadow: var(--shadow-sm);
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
         overflow: hidden;
     }
 
@@ -632,9 +695,10 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 1rem;
-        padding: 1.35rem 1.5rem;
+        padding: 1.2rem 1.35rem;
         border-bottom: 1px solid var(--border);
-        background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.96));
+        background:
+            linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
     }
 
     .process-section__header h2 {
@@ -668,7 +732,7 @@
     }
 
     .process-section__body {
-        padding: 1.5rem;
+        padding: 1.35rem;
     }
 
     .process-indicators-list {
@@ -1451,9 +1515,20 @@
             align-items: stretch;
         }
 
+        .process-hero__actions {
+            min-width: 0;
+            max-width: none;
+        }
+
         .process-hero__actions,
         .process-section__actions {
             justify-content: flex-start;
+        }
+
+        .process-tabs-nav {
+            position: static;
+            flex-wrap: wrap;
+            overflow-x: visible;
         }
 
         .process-tab-btn {
@@ -1614,6 +1689,7 @@
     window.showNewStepForm = showNewStepForm;
 
     document.addEventListener('DOMContentLoaded', () => {
+        bindApp32DecimalInputs();
         init();
         document.addEventListener('paste', handleStepImagePaste);
         const routineForm = document.getElementById('routineForm');
@@ -1845,6 +1921,35 @@
         return numeric.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
     }
 
+    function parseApp32Decimal(value) {
+        const cleaned = String(value || '').replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
+        if (!cleaned) return null;
+        const numeric = Number(cleaned);
+        return Number.isFinite(numeric) ? numeric.toFixed(2) : null;
+    }
+
+    function formatApp32DecimalInput(input) {
+        const digits = String(input.value || '').replace(/\D/g, '');
+        if (!digits) {
+            input.value = '';
+            return;
+        }
+        const numeric = Number(digits) / 100;
+        input.value = numeric.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function bindApp32DecimalInputs() {
+        document.querySelectorAll('.app32-decimal-input').forEach(input => {
+            if (input.dataset.app32DecimalBound === '1') return;
+            input.dataset.app32DecimalBound = '1';
+            input.addEventListener('input', () => formatApp32DecimalInput(input));
+            input.addEventListener('blur', () => formatApp32DecimalInput(input));
+        });
+    }
+
     function formatCapacityUnit(unit) {
         return ({ hour: 'h/mês', day: 'dia/mês', month: 'mês' })[unit] || '';
     }
@@ -1950,9 +2055,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     resource_id: Number(selectedResourceId),
-                    used_quantity_per_execution: document.getElementById('resourceUsedPerExecution').value || null,
-                    estimated_monthly_instances: document.getElementById('resourceEstimatedInstances').value || null,
-                    estimated_cost_per_execution: document.getElementById('resourceExecutionCostInput').value || null,
+                    used_quantity_per_execution: parseApp32Decimal(document.getElementById('resourceUsedPerExecution').value),
+                    estimated_monthly_instances: parseApp32Decimal(document.getElementById('resourceEstimatedInstances').value),
                     capacity_bottleneck_notes: document.getElementById('resourceBottleneckNotes').value || null
                 })
             });
