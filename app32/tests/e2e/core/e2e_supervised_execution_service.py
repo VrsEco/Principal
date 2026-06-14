@@ -30,6 +30,7 @@ class SupervisedExecutionRecord:
     stdout_path: str
     stderr_path: str
     exit_code: int | None
+    pid: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return self.__dict__.copy()
@@ -107,6 +108,7 @@ class E2ESupervisedExecutionService:
             stdout_path=str(stdout_path),
             stderr_path=str(stderr_path),
             exit_code=None,
+            pid=process.pid,
         )
         cls._write_record(record)
         return record.to_dict()
@@ -143,7 +145,37 @@ class E2ESupervisedExecutionService:
             payload["finished_at"] = payload.get("finished_at") or datetime.now().isoformat()
             cls._process_registry.pop(execution_id, None)
             cls._write_payload(execution_id, payload)
+            return payload
+        if payload.get("status") == "running" and not cls._pid_is_alive(payload.get("pid")):
+            payload["exit_code"] = cls._infer_orphan_exit_code(payload)
+            payload["status"] = "passed" if payload["exit_code"] == 0 else "failed"
+            payload["finished_at"] = payload.get("finished_at") or datetime.now().isoformat()
+            cls._write_payload(execution_id, payload)
         return payload
+
+    @staticmethod
+    def _pid_is_alive(raw_pid: Any) -> bool:
+        try:
+            pid = int(raw_pid)
+        except (TypeError, ValueError):
+            return False
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+    @staticmethod
+    def _infer_orphan_exit_code(payload: dict[str, Any]) -> int:
+        stderr_path = Path(str(payload.get("stderr_path") or ""))
+        stdout_path = Path(str(payload.get("stdout_path") or ""))
+        stderr_text = stderr_path.read_text(encoding="utf-8", errors="ignore") if stderr_path.exists() else ""
+        stdout_text = stdout_path.read_text(encoding="utf-8", errors="ignore") if stdout_path.exists() else ""
+        if "Traceback" in stderr_text or "Error:" in stderr_text or "FAILED" in stdout_text:
+            return 1
+        return 0
 
     @staticmethod
     def _build_command(command_kind: str, command_args: tuple[str, ...]) -> list[str]:
