@@ -75,6 +75,34 @@ def test_robot_tests_center_filters_errors_by_company(monkeypatch):
     assert errors[0]["run_id"] == "run-a"
 
 
+def test_robot_tests_center_full_run_marks_only_failed_area_as_failed():
+    fake_e2e_state = {
+        "suite_catalog": [
+            {"suite_id": "smoke_real_navigation", "label": "Smoke", "domain": "smoke", "summary": "Smoke."},
+            {"suite_id": "financial_functional_probe", "label": "Financeiro", "domain": "financial", "summary": "Financeiro."},
+            {"suite_id": "mcp_concurrency_probe", "label": "MCP", "domain": "mcp", "summary": "MCP."},
+        ],
+        "latest_runs": [
+            {
+                "run_id": "run-full",
+                "generated_at": "2026-06-14T19:45:16",
+                "status": "failed",
+                "journeys_failed": 1,
+                "journey_names": ["smoke::smoke_real_navigation", "financial::financial_functional_probe"],
+                "failed_journey_names": ["smoke::smoke_real_navigation"],
+                "environment": "PROD_SAFE",
+            }
+        ],
+    }
+
+    areas = RobotTestsCenterService.list_area_latest(company_id=9, e2e_state=fake_e2e_state)
+    by_id = {area["area_id"]: area for area in areas}
+
+    assert by_id["smoke"]["status"] == "failed"
+    assert by_id["financial"]["status"] == "passed"
+    assert by_id["mcp"]["status"] == "observed"
+
+
 def test_robot_tests_center_uses_clear_label_for_not_tested_cycle():
     area = RobotTestsCenterService._build_area_record(
         domain="financial",
