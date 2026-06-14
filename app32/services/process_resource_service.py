@@ -158,6 +158,8 @@ def _calculate_link_usage_metrics(resource: ResourceCatalog, payload: dict, link
         payload.get("estimated_cost_per_execution"),
         field="custo estimado por execução",
     ) if ("estimated_cost_per_execution" in payload or link is None) else link.estimated_cost_per_execution
+    if cost_per_execution is None and used_per_execution is not None and resource.unit_value is not None:
+        cost_per_execution = used_per_execution * Decimal(str(resource.unit_value))
     monthly_cost = _decimal_or_none(payload.get("allocated_monthly_cost"), field="custo mensal alocado") if "allocated_monthly_cost" in payload else None
     if monthly_cost is None and cost_per_execution is not None and estimated_instances is not None:
         monthly_cost = cost_per_execution * estimated_instances
