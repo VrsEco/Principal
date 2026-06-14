@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -59,9 +60,70 @@ with app.test_client() as client:
 """
 
 
+def _write_storage_state(settings: E2EEnvironmentSettings, *, cookie_name: str, cookie_value: str) -> Path:
+    hostname = urlparse(settings.base_url).hostname or ""
+    storage_payload = {
+        "cookies": [
+            {
+                "name": cookie_name,
+                "value": cookie_value,
+                "domain": hostname,
+                "path": "/",
+                "httpOnly": True,
+                "secure": True,
+                "sameSite": "Lax",
+            }
+        ],
+        "origins": [],
+    }
+    settings.storage_state_path.parent.mkdir(parents=True, exist_ok=True)
+    settings.storage_state_path.write_text(
+        json.dumps(storage_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return settings.storage_state_path
+
+
+def _bootstrap_local_prod_safe_storage_state(settings: E2EEnvironmentSettings) -> Path | None:
+    """Cria cookie autenticado sem SSH quando a suíte já roda no servidor.
+
+    O clique na Central injeta `E2E_USER_ID`/`E2E_COMPANY_ID`; nesse cenário o
+    subprocesso E2E está no próprio Configr e não deve depender de `paramiko`.
+    """
+    if settings.user_id is None:
+        return None
+
+    from app import create_app
+    from models import User
+
+    app = create_app(os.environ.get("FLASK_CONFIG") or "production")
+    with app.test_client() as client:
+        with app.app_context():
+            user = User.query.get(int(settings.user_id))
+            valid_user = user is not None and getattr(user, "is_active", True)
+            resolved_user_id = getattr(user, "id", None)
+        if not valid_user:
+            raise RuntimeError("Bootstrap PROD_SAFE inválido: usuário E2E inativo ou inexistente.")
+
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(resolved_user_id)
+            sess["_fresh"] = True
+            sess["active_company_id"] = settings.company_id
+
+        cookie = client.get_cookie("gv_session")
+        if cookie is None or not getattr(cookie, "value", None):
+            raise RuntimeError("Bootstrap PROD_SAFE inválido: cookie gv_session ausente.")
+
+    return _write_storage_state(settings, cookie_name="gv_session", cookie_value=cookie.value)
+
+
 def bootstrap_remote_prod_safe_storage_state(settings: E2EEnvironmentSettings) -> Path | None:
     if not _supports_remote_bootstrap(settings):
         return None
+
+    local_storage_state = _bootstrap_local_prod_safe_storage_state(settings)
+    if local_storage_state is not None:
+        return local_storage_state
 
     from app32.scripts.deploy.configr_remote_helper import APP_DIR, connect_ssh, run_command
 
@@ -86,24 +148,4 @@ def bootstrap_remote_prod_safe_storage_state(settings: E2EEnvironmentSettings) -
     if not payload.get("ok"):
         raise RuntimeError(f"Bootstrap remoto PROD_SAFE inválido: {payload}")
 
-    hostname = urlparse(settings.base_url).hostname or ""
-    storage_payload = {
-        "cookies": [
-            {
-                "name": payload["cookie_name"],
-                "value": payload["cookie_value"],
-                "domain": hostname,
-                "path": "/",
-                "httpOnly": True,
-                "secure": True,
-                "sameSite": "Lax",
-            }
-        ],
-        "origins": [],
-    }
-    settings.storage_state_path.parent.mkdir(parents=True, exist_ok=True)
-    settings.storage_state_path.write_text(
-        json.dumps(storage_payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return settings.storage_state_path
+    return _write_storage_state(settings, cookie_name=payload["cookie_name"], cookie_value=payload["cookie_value"])
