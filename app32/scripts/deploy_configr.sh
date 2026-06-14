@@ -75,6 +75,26 @@ mkdir -p "$BASE/etc/uwsgi/conf.d"
 cat > "$BASE/etc/uwsgi/conf.d/app32_post_buffering.ini" <<'EOF'
 post-buffering = 65536
 EOF
+UWSGI_INI="$BASE/etc/uwsgi/uwsgi.ini"
+if [ -f "$UWSGI_INI" ] && ! grep -qE '^[[:space:]]*post-buffering[[:space:]]*=' "$UWSGI_INI"; then
+    "$PYTHON" - "$UWSGI_INI" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+lines = path.read_text().splitlines()
+out = []
+inserted = False
+for line in lines:
+    out.append(line)
+    if not inserted and line.strip().startswith("harakiri"):
+        out.append("post-buffering  = 65536")
+        inserted = True
+if not inserted:
+    out.append("post-buffering  = 65536")
+path.write_text("\n".join(out) + "\n")
+PY
+fi
 echo "✅ post-buffering do uWSGI configurado."
 
 # 4. Reinício da Aplicação
