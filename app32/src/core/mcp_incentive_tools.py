@@ -39,10 +39,16 @@ def _meta(
 
 
 def _success(operation: str, data: Any, **context: Any) -> dict[str, Any]:
+    messages = {
+        "get_incentive_indicators": "Catálogo de indicadores retornado com sucesso.",
+        "get_strategic_connection_graph": "Grafo da Teia de Conexões retornado com sucesso.",
+        "get_strategic_connection_metrics": "Métricas da Teia de Conexões retornadas com sucesso.",
+        "generate_strategic_connection_summary": "Relatório analítico da Teia de Conexões gerado com sucesso.",
+    }
     return MCPSuccessEnvelope[Any](
         data=data,
         meta=_meta(operation, **context),
-        message="Catálogo de indicadores retornado com sucesso.",
+        message=messages.get(operation, "Consulta MCP retornada com sucesso."),
     ).model_dump(mode="json")
 
 
