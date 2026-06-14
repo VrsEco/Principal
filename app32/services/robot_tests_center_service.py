@@ -389,7 +389,6 @@ class RobotTestsCenterService:
         suite_catalog = e2e_state.get("suite_catalog") or []
         latest_runs = e2e_state.get("latest_runs") or []
         fallback_run = latest_runs[0] if latest_runs else None
-        failed_names = cls._failed_names(latest_runs)
         items: list[dict[str, Any]] = []
 
         seen_domains: set[str] = set()
@@ -400,6 +399,7 @@ class RobotTestsCenterService:
             seen_domains.add(domain)
             area_runs = cls._runs_for_area(latest_runs, domain)
             latest = area_runs[0] if area_runs else fallback_run
+            failed_names = cls._failed_names([latest] if latest else [])
             status = cls._area_status(domain, latest, failed_names, has_area_run=bool(area_runs))
             items.append(cls._build_area_record(domain=domain, status=status, latest=latest, suite=suite, company_id=company_id))
 

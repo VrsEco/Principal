@@ -91,6 +91,15 @@ def test_robot_tests_center_full_run_marks_only_failed_area_as_failed():
                 "journey_names": ["smoke::smoke_real_navigation", "financial::financial_functional_probe"],
                 "failed_journey_names": ["smoke::smoke_real_navigation"],
                 "environment": "PROD_SAFE",
+            },
+            {
+                "run_id": "run-old",
+                "generated_at": "2026-06-14T18:45:16",
+                "status": "failed",
+                "journeys_failed": 1,
+                "journey_names": ["financial::financial_functional_probe"],
+                "failed_journey_names": ["financial::financial_functional_probe"],
+                "environment": "PROD_SAFE",
             }
         ],
     }
