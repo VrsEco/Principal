@@ -393,6 +393,7 @@ def robot_tests_runs_create():
             suite_id=payload.get("suite_id"),
             environment=str(payload.get("environment") or "PROD_SAFE").upper(),
             company_id=company_id,
+            user_id=getattr(current_user, "id", None),
         )
     except ValueError as exc:
         return jsonify({"success": False, "error": str(exc)}), 400

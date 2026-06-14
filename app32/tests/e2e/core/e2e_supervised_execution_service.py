@@ -55,7 +55,14 @@ class E2ESupervisedExecutionService:
         return [item.to_dict() for item in list_suite_catalog()]
 
     @classmethod
-    def start_execution(cls, *, suite_id: str, environment: str) -> dict[str, Any]:
+    def start_execution(
+        cls,
+        *,
+        suite_id: str,
+        environment: str,
+        company_id: int | None = None,
+        user_id: int | None = None,
+    ) -> dict[str, Any]:
         suite = get_suite_definition(suite_id)
         if environment not in suite.environments:
             raise ValueError(f"Suíte {suite_id} não suporta ambiente {environment}.")
@@ -69,6 +76,11 @@ class E2ESupervisedExecutionService:
         command = cls._build_command(suite.command_kind, suite.command_args)
         env = os.environ.copy()
         env["E2E_ENV_NAME"] = environment
+        env.setdefault("E2E_BASE_URL", env.get("EXTERNAL_URL") or "https://app.gestaoversus.com.br")
+        if company_id is not None:
+            env["E2E_COMPANY_ID"] = str(company_id)
+        if user_id is not None:
+            env["E2E_USER_ID"] = str(user_id)
         if suite.command_kind == "pytest":
             env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 

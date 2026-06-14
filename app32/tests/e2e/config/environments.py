@@ -41,6 +41,7 @@ class E2EEnvironmentSettings:
     require_explicit_company: bool
     request_timeout_seconds: int = 30
     navigation_timeout_ms: int = 30000
+    user_id: int | None = None
 
     @property
     def login_url(self) -> str:
@@ -55,10 +56,11 @@ class E2EEnvironmentSettings:
         missing: list[str] = []
         if not self.base_url:
             missing.append("E2E_BASE_URL")
-        if not self.username:
-            missing.append("E2E_USERNAME")
-        if not self.password:
-            missing.append("E2E_PASSWORD")
+        if not self.user_id:
+            if not self.username:
+                missing.append("E2E_USERNAME")
+            if not self.password:
+                missing.append("E2E_PASSWORD")
         if self.require_explicit_company and self.company_id is None:
             missing.append("E2E_COMPANY_ID")
         return missing
@@ -126,15 +128,18 @@ def load_environment_settings() -> E2EEnvironmentSettings:
 
     company_id_raw = str(os.environ.get("E2E_COMPANY_ID") or "").strip()
     company_id = int(company_id_raw) if company_id_raw.isdigit() else None
+    user_id_raw = str(os.environ.get("E2E_USER_ID") or "").strip()
+    user_id = int(user_id_raw) if user_id_raw.isdigit() else None
 
     settings = E2EEnvironmentSettings(
         environment_name=execution_mode.value,
         execution_mode=execution_mode,
-        base_url=str(os.environ.get("E2E_BASE_URL") or "").strip(),
+        base_url=str(os.environ.get("E2E_BASE_URL") or os.environ.get("EXTERNAL_URL") or "").strip(),
         login_path=str(os.environ.get("E2E_LOGIN_PATH") or "/login").strip() or "/login",
         post_login_path=str(os.environ.get("E2E_POST_LOGIN_PATH") or "/my-work").strip() or "/my-work",
         username=str(os.environ.get("E2E_USERNAME") or "").strip(),
         password=str(os.environ.get("E2E_PASSWORD") or ""),
+        user_id=user_id,
         company_id=company_id,
         headless=_parse_bool(os.environ.get("E2E_HEADLESS"), _default_headless(execution_mode)),
         browser_name=str(os.environ.get("E2E_BROWSER") or "chromium").strip() or "chromium",

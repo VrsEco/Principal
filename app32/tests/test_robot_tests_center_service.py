@@ -90,7 +90,7 @@ def test_robot_tests_center_uses_clear_label_for_not_tested_cycle():
 def test_robot_tests_center_start_run_uses_supervised_e2e(monkeypatch):
     monkeypatch.setattr(
         "services.robot_tests_center_service.E2ESupervisedExecutionService.start_execution",
-        lambda suite_id, environment: {"execution_id": "exec-1", "suite_id": suite_id, "environment": environment},
+        lambda suite_id, environment, **kwargs: {"execution_id": "exec-1", "suite_id": suite_id, "environment": environment},
     )
 
     result = RobotTestsCenterService.start_run(
@@ -107,7 +107,7 @@ def test_robot_tests_center_start_run_uses_supervised_e2e(monkeypatch):
 def test_robot_tests_center_start_run_accepts_canonical_category(monkeypatch):
     monkeypatch.setattr(
         "services.robot_tests_center_service.E2ESupervisedExecutionService.start_execution",
-        lambda suite_id, environment: {"execution_id": "exec-cat", "suite_id": suite_id, "environment": environment},
+        lambda suite_id, environment, **kwargs: {"execution_id": "exec-cat", "suite_id": suite_id, "environment": environment},
     )
 
     result = RobotTestsCenterService.start_run(

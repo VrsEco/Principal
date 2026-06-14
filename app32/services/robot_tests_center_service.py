@@ -451,7 +451,15 @@ class RobotTestsCenterService:
         return errors
 
     @classmethod
-    def start_run(cls, *, package_key: str | None, suite_id: str | None, environment: str, company_id: int) -> dict[str, Any]:
+    def start_run(
+        cls,
+        *,
+        package_key: str | None,
+        suite_id: str | None,
+        environment: str,
+        company_id: int,
+        user_id: int | None = None,
+    ) -> dict[str, Any]:
         package = cls._find_execution_target(str(package_key or ""))
         selected_suite = suite_id or package.get("suite_id")
         if not selected_suite:
@@ -459,7 +467,12 @@ class RobotTestsCenterService:
         environment = str(package.get("forced_environment") or environment).upper()
         if environment not in {"DEV_FULL", "PROD_SAFE"}:
             raise ValueError("Ambiente inválido. Use DEV_FULL ou PROD_SAFE.")
-        execution = E2ESupervisedExecutionService.start_execution(suite_id=selected_suite, environment=environment)
+        execution = E2ESupervisedExecutionService.start_execution(
+            suite_id=selected_suite,
+            environment=environment,
+            company_id=company_id,
+            user_id=user_id,
+        )
         return {
             "company_id": company_id,
             "package_key": package_key,
