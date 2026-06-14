@@ -11,6 +11,7 @@ from models import (
     IndicatorData,
     IndicatorGoal,
     Meeting,
+    Process,
     Project,
     ProjectTask,
     db,
@@ -74,6 +75,7 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
         .all()
     }
     project_task_stats = _project_task_stats(company_id)
+    indicator_task_links = _indicator_task_links(company_id)
     employees_by_id = {
         employee.id: employee
         for employee in Employee.query.filter(Employee.company_id == company_id).all()
@@ -125,7 +127,11 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
             if responsible
             else None,
             "project": _project_payload(project, project_status),
-            "activities": _project_activity_payload(project, project_task_stats.get(indicator.project_id or 0)),
+            "activities": _merged_activity_payload(
+                project,
+                project_task_stats.get(indicator.project_id or 0),
+                indicator_task_links.get(indicator.id, []),
+            ),
             "status_detail": status["detail"],
             "next_charge": "Próxima reunião de gestão do período",
         }
@@ -156,6 +162,7 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
         "period": period_context,
         "groups": ordered_groups,
         "meetings": _upcoming_meetings(company_id, today),
+        "form_options": _form_options(company_id, employees_by_id, projects_by_id),
         "actions": {
             "new_meeting_url": f"/meetings/company/{company_id}",
             "new_activity_project_url": "/projects/new",
@@ -261,6 +268,58 @@ def _project_task_stats(company_id: int) -> dict[int, dict[str, Any]]:
     return stats
 
 
+def _indicator_task_links(company_id: int) -> dict[int, list[dict[str, Any]]]:
+    marker = "APP32_INDICATOR_LINK:"
+    rows = (
+        db.session.query(ProjectTask, Project)
+        .join(Project, Project.id == ProjectTask.project_id)
+        .filter(Project.company_id == company_id)
+        .filter(Project.is_deleted.is_(False))
+        .filter(ProjectTask.is_deleted.is_(False))
+        .filter(ProjectTask.notes.ilike(f"%{marker}%"))
+        .all()
+    )
+    links: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    today = date.today()
+    for task, project in rows:
+        indicator_id = _extract_indicator_link(task.notes)
+        if not indicator_id:
+            continue
+        due_date = _date_only(task.due_date)
+        is_completed = task.stage == "completed" or task.status == "completed"
+        links[indicator_id].append(
+            {
+                "id": task.id,
+                "code": task.code,
+                "what": task.what,
+                "responsible": task.employee_name,
+                "due_date": _date_to_iso(due_date),
+                "stage": task.stage,
+                "status": task.status,
+                "late": bool(due_date and due_date < today and not is_completed),
+                "project_id": project.id,
+                "project_code": project.code,
+                "project_name": project.name,
+                "linked_by_indicator": True,
+            }
+        )
+    return links
+
+
+def _extract_indicator_link(notes: str | None) -> int | None:
+    if not notes:
+        return None
+    marker = "APP32_INDICATOR_LINK:"
+    for line in str(notes).splitlines():
+        if marker not in line:
+            continue
+        try:
+            return int(line.split(marker, 1)[1].strip().split()[0])
+        except (TypeError, ValueError, IndexError):
+            return None
+    return None
+
+
 def _classify_indicator(indicator: Indicator) -> str:
     source = (indicator.source_module or "").lower()
     text = " ".join(
@@ -348,6 +407,45 @@ def _project_activity_payload(project: Project | None, stats: dict[str, Any] | N
     if not project or not stats:
         return []
     return stats.get("items", [])[:5]
+
+
+def _merged_activity_payload(project: Project | None, stats: dict[str, Any] | None, linked_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    items = []
+    seen = set()
+    for item in _project_activity_payload(project, stats) + list(linked_items or []):
+        key = int(item.get("id") or 0)
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append(item)
+    return items[:8]
+
+
+def _form_options(company_id: int, employees_by_id: dict[int, Employee], projects_by_id: dict[int, Project]) -> dict[str, Any]:
+    processes = (
+        Process.query.filter(Process.company_id == company_id)
+        .order_by(Process.name.asc())
+        .all()
+    )
+    active_projects = [
+        project
+        for project in projects_by_id.values()
+        if project.status not in {"completed", "cancelled", "archived"}
+    ]
+    return {
+        "projects": [
+            {"id": project.id, "code": project.code, "name": project.name}
+            for project in sorted(active_projects, key=lambda item: item.name or "")
+        ],
+        "processes": [
+            {"id": process.id, "code": process.code, "name": process.name}
+            for process in processes
+        ],
+        "employees": [
+            {"id": employee.id, "name": employee.name, "email": employee.email}
+            for employee in sorted(employees_by_id.values(), key=lambda item: item.name or "")
+        ],
+    }
 
 
 def _enrich_web_group(group: dict[str, Any], company_id: int, indicators: list[Indicator], projects: dict[int, Project], task_stats: dict[int, dict[str, Any]]) -> None:

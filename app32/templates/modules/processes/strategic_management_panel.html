@@ -32,7 +32,7 @@
                 </select>
             </form>
             <a class="smp-btn smp-btn--secondary" href="{{ url_for('meetings.meetings_company_manage', company_id=company_id) }}">Nova reunião</a>
-            <a class="smp-btn smp-btn--primary" href="{{ url_for('projects.project_new') }}">Nova atividade / projeto</a>
+            <button type="button" class="smp-btn smp-btn--primary" id="smpNewActionButton">Nova atividade / projeto</button>
         </div>
     </section>
 
@@ -109,6 +109,53 @@
     <div class="smp-layer-stack" id="smpLayerStack"></div>
 </div>
 
+<div class="smp-action-modal" id="smpActionModal" hidden>
+    <div class="smp-layer-backdrop" data-close-action-modal></div>
+    <div class="smp-action-dialog">
+        <div class="smp-layer__head">
+            <div>
+                <h3>Nova atividade / projeto</h3>
+                <p>Escolha se a correção será um novo projeto ou uma atividade dentro de um projeto existente.</p>
+            </div>
+            <button type="button" class="smp-layer__close" data-close-action-modal>×</button>
+        </div>
+        <div class="smp-layer__body">
+            <div class="smp-action-notice">
+                <strong>Regra de governança:</strong> após criar um projeto, crie as atividades corretivas. Ao criar uma atividade, escolha obrigatoriamente o projeto ao qual ela pertence.
+            </div>
+            <label class="smp-form-label">Indicador vinculado</label>
+            <select class="smp-form-control" id="smpActionIndicator"></select>
+
+            <div class="smp-choice-grid">
+                <button type="button" class="smp-choice-card" data-action-type="project">
+                    <strong>Criar projeto</strong>
+                    <span>Abre o formulário padrão de projeto já com contexto do indicador.</span>
+                </button>
+                <button type="button" class="smp-choice-card" data-action-type="activity">
+                    <strong>Criar atividade</strong>
+                    <span>Cria atividade corretiva dentro de um projeto existente.</span>
+                </button>
+            </div>
+
+            <form id="smpActivityForm" class="smp-activity-form" hidden>
+                <label class="smp-form-label">Projeto da atividade <span>*</span></label>
+                <select class="smp-form-control" id="smpActivityProject" required></select>
+                <label class="smp-form-label">Processo vinculado</label>
+                <select class="smp-form-control" id="smpActivityProcess"></select>
+                <label class="smp-form-label">Descrição da atividade <span>*</span></label>
+                <textarea class="smp-form-control" id="smpActivityWhat" rows="3" required placeholder="Ex: Corrigir causa raiz do desvio do indicador..."></textarea>
+                <label class="smp-form-label">Responsável</label>
+                <select class="smp-form-control" id="smpActivityEmployee"></select>
+                <label class="smp-form-label">Prazo</label>
+                <input type="date" class="smp-form-control" id="smpActivityDueDate">
+                <label class="smp-form-label">Observações</label>
+                <textarea class="smp-form-control" id="smpActivityNotes" rows="2"></textarea>
+                <button type="submit" class="smp-btn smp-btn--primary">Criar atividade vinculada</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <style>
     .smp-page { display:flex; flex-direction:column; gap:1rem; color:#0f172a; }
     .smp-hero {
@@ -166,6 +213,19 @@
     .smp-guests span { padding:.25rem .55rem; border-radius:999px; background:#eff6ff; color:#1d4ed8; font-size:.72rem; font-weight:800; }
     .smp-empty { padding:2rem; text-align:center; color:#64748b; }
     .smp-layer-host[hidden] { display:none; }
+    .smp-action-modal[hidden] { display:none; }
+    .smp-action-modal { position:fixed; inset:0; z-index:1100; display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .smp-action-dialog { position:relative; width:min(720px,96vw); max-height:92vh; background:#fff; border-radius:22px; box-shadow:0 24px 70px rgba(15,23,42,.25); overflow:auto; }
+    .smp-action-notice { padding:.85rem 1rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:14px; line-height:1.4; }
+    .smp-choice-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+    .smp-choice-card { text-align:left; border:1px solid #dbe4ef; border-radius:16px; padding:1rem; background:#fff; cursor:pointer; }
+    .smp-choice-card:hover,.smp-choice-card.is-selected { border-color:#2563eb; background:#eff6ff; }
+    .smp-choice-card strong,.smp-choice-card span { display:block; }
+    .smp-choice-card span { color:#64748b; margin-top:.25rem; font-size:.84rem; }
+    .smp-activity-form { display:flex; flex-direction:column; gap:.55rem; padding-top:.4rem; }
+    .smp-form-label { font-size:.78rem; font-weight:900; color:#475569; text-transform:uppercase; }
+    .smp-form-label span { color:#ef4444; }
+    .smp-form-control { width:100%; border:1px solid #cbd5e1; border-radius:12px; padding:.65rem .75rem; color:#0f172a; background:#fff; }
     .smp-layer-host { position:fixed; inset:0; z-index:1000; display:flex; justify-content:flex-end; align-items:stretch; }
     .smp-layer-backdrop { position:absolute; inset:0; background:rgba(15,23,42,.38); backdrop-filter:blur(3px); }
     .smp-layer-stack { position:relative; display:flex; align-items:stretch; gap:.75rem; padding:1rem; overflow:auto; max-width:100%; }
@@ -192,7 +252,7 @@
     .smp-detail-box span { display:block; color:#64748b; font-size:.72rem; font-weight:900; text-transform:uppercase; }
     .smp-detail-box strong { display:block; margin-top:.2rem; color:#0f172a; }
     @media (max-width:1200px){ .smp-group-grid{grid-template-columns:repeat(2,1fr);} .smp-meeting-grid{grid-template-columns:repeat(2,1fr);} .smp-hero{flex-direction:column;} }
-    @media (max-width:760px){ .smp-group-grid,.smp-meeting-grid{grid-template-columns:1fr;} .smp-layer-stack{padding:.5rem;} .smp-detail-grid{grid-template-columns:1fr;} }
+    @media (max-width:760px){ .smp-group-grid,.smp-meeting-grid,.smp-choice-grid{grid-template-columns:1fr;} .smp-layer-stack{padding:.5rem;} .smp-detail-grid{grid-template-columns:1fr;} }
 </style>
 
 <script>
@@ -202,6 +262,8 @@
     const stack = document.getElementById('smpLayerStack');
     if (!root || !host || !stack) return;
     const panel = JSON.parse(root.dataset.panel || '{}');
+    const allIndicators = (panel.groups || []).flatMap(group => (group.items || []).filter(item => item.id !== 'web-health'));
+    const formOptions = panel.form_options || { projects: [], processes: [], employees: [] };
     const colorMap = { green:'#10b981', yellow:'#f59e0b', red:'#ef4444', blue:'#3b82f6', gray:'#94a3b8' };
 
     function clearFrom(index) {
@@ -279,9 +341,72 @@
                 <span>Atividades associadas</span>
                 ${activities.length ? activities.map(a => `<p><strong>${esc(a.code)}</strong> — ${esc(a.what)} • ${esc(a.responsible)} • ${esc(a.due_date || '-')} ${a.late ? '• atrasada' : ''}</p>`).join('') : '<strong>Nenhuma atividade associada.</strong>'}
             </div>
+            <button type="button" class="smp-btn smp-btn--primary" data-create-for-indicator="${esc(item.id)}">Criar atividade / projeto vinculado</button>
         `;
-        layer(item.name, item.code || 'Card executivo do indicador', body, 2);
+        const el = layer(item.name, item.code || 'Card executivo do indicador', body, 2);
+        el.querySelector('[data-create-for-indicator]')?.addEventListener('click', () => openActionModal(item.id));
     }
+    function fillSelect(select, items, placeholder, labelFn) {
+        select.innerHTML = `<option value="">${placeholder}</option>` + (items || []).map(item => `<option value="${esc(item.id)}">${esc(labelFn(item))}</option>`).join('');
+    }
+    function openActionModal(indicatorId) {
+        const modal = document.getElementById('smpActionModal');
+        const indicatorSelect = document.getElementById('smpActionIndicator');
+        fillSelect(indicatorSelect, allIndicators, 'Selecione o indicador...', item => `${item.code || ''} ${item.name || ''}`);
+        if (indicatorId) indicatorSelect.value = String(indicatorId);
+        fillSelect(document.getElementById('smpActivityProject'), formOptions.projects, 'Selecione o projeto...', item => `${item.code || ''} - ${item.name || ''}`);
+        fillSelect(document.getElementById('smpActivityProcess'), formOptions.processes, 'Selecione o processo...', item => `${item.code || ''} - ${item.name || ''}`);
+        fillSelect(document.getElementById('smpActivityEmployee'), formOptions.employees, 'Selecione o responsável...', item => item.name || '');
+        document.getElementById('smpActivityForm').hidden = true;
+        modal.hidden = false;
+    }
+    function selectedIndicator() {
+        const id = document.getElementById('smpActionIndicator').value;
+        return allIndicators.find(item => String(item.id) === String(id));
+    }
+    document.getElementById('smpNewActionButton')?.addEventListener('click', () => openActionModal(null));
+    document.querySelectorAll('[data-close-action-modal]').forEach(el => el.addEventListener('click', () => document.getElementById('smpActionModal').hidden = true));
+    document.querySelectorAll('[data-action-type]').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-action-type]').forEach(item => item.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        const indicator = selectedIndicator();
+        if (!indicator) { alert('Escolha o indicador que receberá o vínculo.'); return; }
+        if (btn.dataset.actionType === 'project') {
+            const url = `/projects/new?indicator_id=${encodeURIComponent(indicator.id)}&indicator_name=${encodeURIComponent(indicator.name || '')}`;
+            window.location.href = url;
+            return;
+        }
+        document.getElementById('smpActivityForm').hidden = false;
+        document.getElementById('smpActivityWhat').value = `Corrigir desvio do indicador: ${indicator.name}`;
+    }));
+    document.getElementById('smpActivityForm')?.addEventListener('submit', async ev => {
+        ev.preventDefault();
+        const indicator = selectedIndicator();
+        const projectId = document.getElementById('smpActivityProject').value;
+        if (!indicator || !projectId) { alert('Escolha indicador e projeto.'); return; }
+        const payload = {
+            indicator_id: Number(indicator.id),
+            process_id: document.getElementById('smpActivityProcess').value ? Number(document.getElementById('smpActivityProcess').value) : null,
+            what: document.getElementById('smpActivityWhat').value,
+            employee_id: document.getElementById('smpActivityEmployee').value || null,
+            due_date: document.getElementById('smpActivityDueDate').value || null,
+            notes: document.getElementById('smpActivityNotes').value || null,
+            priority: 'high',
+            stage: 'inbox',
+        };
+        const response = await fetch(`/api/projects/${projectId}/tasks?company_id=${panel.company_id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.error || error.message || 'Erro ao criar atividade.');
+            return;
+        }
+        alert('Atividade criada e vinculada ao indicador. Ela aparecerá no card executivo para cobrança.');
+        window.location.reload();
+    });
     root.querySelectorAll('[data-open-group]').forEach(btn => btn.addEventListener('click', () => openGroup(btn.dataset.openGroup)));
     host.querySelector('[data-close-layer]').addEventListener('click', closeHost);
     document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeHost(); });

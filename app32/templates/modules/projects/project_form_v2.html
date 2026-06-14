@@ -21,6 +21,11 @@
     <p class="text-subtitle">Defina os objetivos, prazos e responsabilidades desta iniciativa estratégica.</p>
 </div>
 
+<div id="indicator-context-alert" class="alert alert-info" style="display:none; border-radius:16px; padding:1rem 1.25rem; margin-bottom:1rem; background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a;">
+    <strong>Projeto corretivo vinculado ao indicador.</strong>
+    Após criar o projeto, crie as atividades corretivas dentro dele para que apareçam nas cobranças do Painel de Gestão Estratégica.
+</div>
+
 <div class="row fade-in">
     <div class="col-lg-12">
         <form id="project-form" class="card" style="padding: 2.5rem; border-radius: 24px; background: var(--surface);">
@@ -136,8 +141,22 @@
     const projectId = JSON.parse('{{ project_id | tojson if project_id else "null" }}');
     const form = document.getElementById('project-form');
     const companyId = parseInt('{{ company.id if company else 0 }}') || null;
+    const urlParams = new URLSearchParams(window.location.search);
+    const indicatorId = urlParams.get('indicator_id');
+    const indicatorName = urlParams.get('indicator_name');
 
     document.addEventListener('DOMContentLoaded', async () => {
+        if (indicatorId) {
+            const alert = document.getElementById('indicator-context-alert');
+            alert.style.display = 'block';
+            if (indicatorName) {
+                alert.innerHTML = `<strong>Projeto corretivo vinculado ao indicador:</strong> ${indicatorName}.<br>Após criar o projeto, crie as atividades corretivas dentro dele para que apareçam nas cobranças do Painel de Gestão Estratégica.`;
+            }
+            const notes = document.getElementById('notes');
+            if (notes && !notes.value) {
+                notes.value = `Projeto corretivo criado para tratar o indicador: ${indicatorName || ('ID ' + indicatorId)}.\n\nApós criar este projeto, cadastre as atividades corretivas vinculadas ao indicador.`;
+            }
+        }
         try {
             // Load plans
             const plansResponse = await fetch('/api/plans');
@@ -246,6 +265,7 @@
         if (data.notes === "") data.notes = null;
 
         if (companyId) data.company_id = companyId;
+        if (indicatorId) data.indicator_id = parseInt(indicatorId);
 
         const url = projectId ? `/api/projects/${projectId}` : '/api/projects';
         const method = projectId ? 'PUT' : 'POST';
