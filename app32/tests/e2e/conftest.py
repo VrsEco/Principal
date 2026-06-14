@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import os
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,15 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "smoke: cobertura mínima operacional")
     config.addinivalue_line("markers", "dev_full: execução destrutiva autorizada apenas em DEV/HML")
     config.addinivalue_line("markers", "prod_safe: execução segura para produção controlada")
+
+
+def pytest_collection_modifyitems(config, items):
+    execution_mode = str(os.environ.get("E2E_ENV_NAME") or "DEV_FULL").strip().upper()
+    if execution_mode == "PROD_SAFE":
+        skip_dev_full = pytest.mark.skip(reason="DEV_FULL não roda em PROD_SAFE.")
+        for item in items:
+            if "dev_full" in item.keywords:
+                item.add_marker(skip_dev_full)
 
 
 @pytest.fixture(scope="session")
