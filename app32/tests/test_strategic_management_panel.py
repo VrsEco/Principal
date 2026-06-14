@@ -143,6 +143,34 @@ def test_process_portal_has_strategic_management_quick_access():
     assert "Acesso Rápido" in content
 
 
+def test_strategic_management_panel_action_modal_links_indicator_to_project_or_activity():
+    template_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "templates", "modules", "processes", "strategic_management_panel.html")
+    )
+
+    with open(template_path, encoding="utf-8") as handle:
+        content = handle.read()
+
+    assert "Nova atividade / projeto" in content
+    assert "Escolha se a correção será um novo projeto ou uma atividade" in content
+    assert "indicator_id" in content
+    assert "process_id" in content
+    assert "/api/projects/${projectId}/tasks" in content
+
+
+def test_project_form_warns_to_create_activities_when_project_is_indicator_corrective():
+    template_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "templates", "modules", "projects", "project_form_v2.html")
+    )
+
+    with open(template_path, encoding="utf-8") as handle:
+        content = handle.read()
+
+    assert "Projeto corretivo vinculado ao indicador" in content
+    assert "Após criar o projeto, crie as atividades corretivas" in content
+    assert "data.indicator_id" in content
+
+
 def test_standard_sidebar_has_strategic_management_quick_access():
     template_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "templates", "partials", "sidebar_standard.html")

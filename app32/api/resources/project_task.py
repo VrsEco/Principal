@@ -3,7 +3,7 @@ from flask_restful import Resource
 from marshmallow import ValidationError
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
-from models import db, ProjectTask, Project
+from models import db, ProjectTask, Project, Indicator, Process
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_task_schema, project_tasks_schema
 from utils.permissions import can_manage_project_tasks, has_company_full_access, has_permission, permission_required
@@ -293,12 +293,48 @@ class ProjectTaskListResource(Resource):
         if not _user_can_create_task(company_id, project_id):
             return {"error": "Permission denied: create on projects"}, 403
         try:
-            data = _normalize_task_assignment_payload(company_id, request.get_json())
+            raw_data = request.get_json() or {}
+            indicator_id = raw_data.pop('indicator_id', None)
+            process_id = raw_data.pop('process_id', None)
+            data = _normalize_task_assignment_payload(company_id, raw_data)
             data['project_id'] = project_id
             
             # Basic validation check
             if not data.get('what'):
                 return {"error": "Description is required"}, 400
+
+            if indicator_id:
+                indicator = Indicator.query.filter_by(
+                    id=indicator_id,
+                    company_id=company_id,
+                    is_active=True,
+                ).first()
+                if not indicator:
+                    return {"error": "Indicador inválido para a empresa ativa."}, 400
+            else:
+                indicator = None
+
+            if process_id:
+                process = Process.query.filter_by(
+                    id=process_id,
+                    company_id=company_id,
+                ).first()
+                if not process:
+                    return {"error": "Processo inválido para a empresa ativa."}, 400
+            else:
+                process = None
+
+            if indicator or process:
+                marker_lines = []
+                if indicator:
+                    marker_lines.append(f"APP32_INDICATOR_LINK: {indicator.id}")
+                    marker_lines.append(f"Indicador vinculado: {indicator.name}")
+                if process:
+                    marker_lines.append(f"APP32_PROCESS_LINK: {process.id}")
+                    marker_lines.append(f"Processo vinculado: {process.name}")
+                marker_lines.append("Atividade corretiva criada a partir do Painel de Gestão Estratégica.")
+                existing_notes = data.get('notes') or ''
+                data['notes'] = (existing_notes + "\n\n" if existing_notes else "") + "\n".join(marker_lines)
             
             # Garantir sincronia status/stage na criação
             if data.get('stage') == 'completed':

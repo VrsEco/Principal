@@ -151,6 +151,19 @@ A ação **Nova atividade/projeto** deve ser usada para criar resposta executiva
 
 Ela deve respeitar a estrutura atual de projetos e atividades do APP32.
 
+Ao acionar **Nova atividade/projeto**, o usuário deve escolher explicitamente:
+
+- criar **Projeto**; ou
+- criar **Atividade**.
+
+Regras:
+
+- se escolher **Projeto**, o APP32 deve abrir o formulário padrão de projeto, mantendo o contexto do indicador;
+- a tela deve informar que, após criar o projeto, o usuário deve criar as atividades corretivas;
+- se escolher **Atividade**, o APP32 deve exigir a escolha do projeto ao qual a atividade pertence;
+- o formulário de atividade deve seguir o padrão de **Nova Atividade**, adicionando a escolha do processo quando aplicável;
+- projeto, atividade e reunião criados a partir do painel devem ficar vinculados ao indicador de origem para exibição e acesso futuro durante cobranças.
+
 ## 11. Guardrails técnicos
 
 - Toda leitura e escrita deve ser tenant-safe com `company_id`.
@@ -182,4 +195,8 @@ Ela deve respeitar a estrutura atual de projetos e atividades do APP32.
 - Cada grupo abre navegação em pop-up/camada.
 - A tela exibe próximas reuniões.
 - A tela oferece **Nova reunião** e **Nova atividade/projeto**.
+- **Nova atividade/projeto** exige escolha entre projeto e atividade.
+- Projeto criado a partir do painel preserva contexto do indicador.
+- Atividade criada a partir do painel exige projeto e permite escolher processo.
+- Projeto, atividade e reunião vinculados ao indicador aparecem no card executivo para cobrança.
 - Todas as consultas respeitam `company_id`.

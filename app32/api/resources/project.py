@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from models import db, Project, Company
+from models import db, Project, Company, Indicator
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_schema, projects_schema
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required, can_create_projects
@@ -157,6 +157,7 @@ class ProjectListResource(Resource):
         if not can_create_projects(company_id):
             return {"message": "Acesso negado: usuário não pode criar projetos nesta empresa."}, 403
         data = request.get_json()
+        indicator_id = data.pop('indicator_id', None)
         new_project = Project(
             company_id=company_id,
             name=data['name'],
@@ -170,6 +171,23 @@ class ProjectListResource(Resource):
             portfolio_id=data.get('portfolio_id')
         )
         db.session.add(new_project)
+        if indicator_id:
+            indicator = Indicator.query.filter_by(
+                id=indicator_id,
+                company_id=company_id,
+                is_active=True,
+            ).first()
+            if not indicator:
+                return {"message": "Indicador inválido para a empresa ativa."}, 400
+            indicator.project = new_project
+            marker = f"APP32_INDICATOR_LINK: {indicator.id}"
+            notes = new_project.notes or ""
+            if marker not in notes:
+                new_project.notes = (notes + "\n\n" if notes else "") + (
+                    f"{marker}\n"
+                    "Projeto criado a partir do Painel de Gestão Estratégica. "
+                    "Após criar o projeto, crie as atividades corretivas vinculadas ao indicador."
+                )
         db.session.commit()
         return project_schema.dump(new_project), 201
 
