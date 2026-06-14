@@ -20,7 +20,7 @@
         box-shadow: var(--shadow-md);
         overflow: hidden;
         position: relative;
-        height: 75vh;
+        height: calc(100vh - 104px);
         min-height: 650px;
     }
 
@@ -123,20 +123,24 @@
 </style>
 {% endblock %}
 
+{% block navbar_actions %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <a href="{{ url_for('incentives.dashboard') }}" class="btn-icon filter-toggle" title="Voltar para Incentivos">
+        <i class="fas fa-arrow-left"></i>
+        <span class="btn-text">Voltar</span>
+    </a>
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endblock %}
+
 {% block workspace_content %}
 <div class="workspace-wrapper">
-    <div class="workspace-header" style="margin-bottom: 1rem;">
-        <div class="header-content">
-            <h1 class="text-h1">🕸️ Teia de Governança</h1>
-            <p class="text-secondary">Cargos · Indicadores · Processos · Projetos · Rotinas · Capacidade — e saúde das conexões.</p>
-        </div>
-        <div class="header-actions">
-            <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Voltar
-            </a>
-        </div>
-    </div>
-
     <div class="canvas-card" id="canvasCard">
         <div id="spiderWeb" class="spider-web-canvas"></div>
         
