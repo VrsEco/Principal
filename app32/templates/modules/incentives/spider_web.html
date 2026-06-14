@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block head %}
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
     .canvas-card {
         background: var(--surface);
@@ -39,6 +39,8 @@
     .node-indicator    { fill: #7c3aed; stroke: #fff; stroke-width: 2.5px; }
     .node-process      { fill: #ea580c; stroke: #fff; stroke-width: 2.5px; }
     .node-project      { fill: #059669; stroke: #fff; stroke-width: 2.5px; }
+    .node-routine      { fill: #0891b2; stroke: #fff; stroke-width: 2.5px; }
+    .node-capacity     { fill: #db2777; stroke: #fff; stroke-width: 2.5px; }
 
     /* Health rings */
     .health-orphan  { stroke: #ef4444 !important; stroke-width: 3px !important; stroke-dasharray: 4,3; }
@@ -126,7 +128,7 @@
     <div class="workspace-header" style="margin-bottom: 1rem;">
         <div class="header-content">
             <h1 class="text-h1">🕸️ Teia de Governança</h1>
-            <p class="text-secondary">Cargos · Indicadores · Processos · Projetos — e saúde das conexões.</p>
+            <p class="text-secondary">Cargos · Indicadores · Processos · Projetos · Rotinas · Capacidade — e saúde das conexões.</p>
         </div>
         <div class="header-actions">
             <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-secondary btn-sm">
@@ -148,7 +150,7 @@
             <div style="font-size:3rem;">🕸️</div>
             <h3 style="margin:0; font-size:1.1rem; font-weight:700;">Teia Vazia</h3>
             <p style="font-size:0.85rem; color:var(--text-secondary); max-width:380px; margin:0;">
-                Configure Indicadores com Processos ou Projetos no seu Plano para que a Teia seja gerada.
+                Configure Indicadores, Processos, Projetos, Rotinas ou Blocos de Jornada para que a Teia seja gerada.
             </p>
             <a href="{{ url_for('incentives.dashboard') }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-arrow-left"></i> Ver Incentivos
@@ -163,6 +165,8 @@
                 <div><span class="dot" style="background:#ea580c;"></span> <span style="font-size:0.78rem;font-weight:600;">Processo</span></div>
                 <div><span class="dot" style="background:#059669;"></span> <span style="font-size:0.78rem;font-weight:600;">Projeto</span></div>
                 <div><span class="dot" style="background:#7c3aed;"></span> <span style="font-size:0.78rem;font-weight:600;">Indicador</span></div>
+                <div><span class="dot" style="background:#0891b2;"></span> <span style="font-size:0.78rem;font-weight:600;">Rotina</span></div>
+                <div><span class="dot" style="background:#db2777;"></span> <span style="font-size:0.78rem;font-weight:600;">Capacidade</span></div>
                 <hr style="border:none;border-top:1px solid var(--border);margin:4px 0;">
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.72rem;">
                     <svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="#1e40af" stroke-width="2"/></svg> Direto
@@ -237,6 +241,80 @@
             </label>
             <label class="filter-toggle" data-filter="type" data-value="project">
                 <span class="ftog-dot" style="background:#065f46;"></span> Projetos
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="type" data-value="routine">
+                <span class="ftog-dot" style="background:#0891b2;"></span> Rotinas
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="type" data-value="capacity">
+                <span class="ftog-dot" style="background:#db2777;"></span> Capacidade/Jornada
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Frequência de Rotina -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Frequência de Rotinas</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="routine_schedule" data-value="daily">
+                <span class="ftog-dot" style="background:#06b6d4;"></span> Diária
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="routine_schedule" data-value="weekly">
+                <span class="ftog-dot" style="background:#0891b2;"></span> Semanal
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="routine_schedule" data-value="monthly">
+                <span class="ftog-dot" style="background:#0e7490;"></span> Mensal
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="routine_schedule" data-value="quarterly">
+                <span class="ftog-dot" style="background:#155e75;"></span> Trimestral
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="routine_schedule" data-value="yearly">
+                <span class="ftog-dot" style="background:#164e63;"></span> Anual
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="routine_schedule" data-value="specific">
+                <span class="ftog-dot" style="background:#67e8f9;"></span> Específica
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Capacidade -->
+    <div style="margin-bottom:1.25rem;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">Blocos de Jornada</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            <label class="filter-toggle" data-filter="capacity_mode" data-value="operational">
+                <span class="ftog-dot" style="background:#db2777;"></span> Operacional
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="capacity_mode" data-value="deep_work">
+                <span class="ftog-dot" style="background:#be185d;"></span> Foco
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="capacity_mode" data-value="meeting">
+                <span class="ftog-dot" style="background:#f472b6;"></span> Reunião
+                <input type="checkbox" checked hidden>
+                <span class="ftog-sw"></span>
+            </label>
+            <label class="filter-toggle" data-filter="capacity_mode" data-value="reserved">
+                <span class="ftog-dot" style="background:#831843;"></span> Reserva
                 <input type="checkbox" checked hidden>
                 <span class="ftog-sw"></span>
             </label>
@@ -437,8 +515,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         .on('zoom', e => g.attr('transform', e.transform));
     svg.call(zoom);
 
-    const radius = { collaborator: 35, indicator: 28, process: 25, project: 25 };
-    const icons  = { collaborator: '\uf007', indicator: '\uf080', process: '\uf0e8', project: '\uf542' };
+    const radius = { collaborator: 35, indicator: 28, process: 25, project: 25, routine: 24, capacity: 23 };
+    const icons  = { collaborator: '\uf007', indicator: '\uf080', process: '\uf0e8', project: '\uf542', routine: '\uf017', capacity: '\uf2f2' };
 
     const sim = d3.forceSimulation(data.nodes)
         .force('link', d3.forceLink(data.links).id(d => d.id).distance(d => d.strength === 'direct' ? 80 : 140))
@@ -506,10 +584,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── FILTER SYSTEM ──────────────────────────────────────────────────────
     // State: which values are active per filter group
     const filterState = {
-        type:         new Set(['collaborator','indicator','process','project']),
+        type:         new Set(['collaborator','indicator','process','project','routine','capacity']),
         health:       new Set(['connected','fragile','orphan']),
         proj_status:  new Set(['planned','in_progress','completed','cancelled']),
         proc_stage:   new Set(['inbox','designing','deploying','stabilizing','stable']),
+        routine_schedule: new Set(['daily','weekly','monthly','quarterly','yearly','specific']),
+        capacity_mode: new Set(['operational','deep_work','meeting','reserved']),
         link_strength: new Set(['direct','indirect','normal'])
     };
 
@@ -518,6 +598,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!filterState.health.has(d.health)) return false;
         if (d.type === 'project' && d.status && !filterState.proj_status.has(d.status)) return false;
         if (d.type === 'process' && d.kanban_stage && !filterState.proc_stage.has(d.kanban_stage)) return false;
+        if (d.type === 'routine' && d.schedule_type && !filterState.routine_schedule.has(d.schedule_type)) return false;
+        if (d.type === 'capacity' && d.block_mode && !filterState.capacity_mode.has(d.block_mode)) return false;
         return true;
     }
 
@@ -568,7 +650,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // ── HOVER INFO ─────────────────────────────────────────────────────────
-    const typeLabels   = { collaborator:'Colaborador', indicator:'Indicador', process:'Processo', project:'Projeto' };
+    const typeLabels   = { collaborator:'Colaborador', indicator:'Indicador', process:'Processo', project:'Projeto', routine:'Rotina', capacity:'Capacidade/Jornada' };
     const healthLabels = { orphan:'🔴 Órfão — sem conexões', fragile:'🟡 Frágil — apenas 1 ligação', connected:'🟢 Conectado' };
 
     function showInfo(event, d) {
@@ -583,6 +665,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         let extra = '';
         if (d.type === 'process' && d.kanban_stage) extra = `<br>Est\u00e1gio: <strong>${d.kanban_stage}</strong>`;
         if (d.type === 'project' && d.status)        extra = `<br>Status: <strong>${d.status}</strong> \u00b7 Progresso: <strong>${d.progress || 0}%</strong>`;
+        if (d.type === 'routine') {
+            extra = `<br>Frequ\u00eancia: <strong>${d.schedule_type || 'n/a'}</strong>`
+                  + `<br>In\u00edcio: <strong>${d.start_time || 'n/a'}</strong>`
+                  + `<br>Peso: <strong>${d.score_weight || 0}</strong>`;
+        }
+        if (d.type === 'capacity') {
+            extra = `<br>Modo: <strong>${d.block_mode || 'operational'}</strong>`
+                  + `<br>Janela: <strong>${d.start_time || '--'} - ${d.end_time || '--'}</strong>`;
+        }
 
         document.getElementById('infoDetails').innerHTML =
             `${healthLabels[d.health] || ''}<br>Conex\u00f5es: <strong>${conns}</strong>${extra}`;
