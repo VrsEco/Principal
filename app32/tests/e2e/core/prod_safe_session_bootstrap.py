@@ -19,17 +19,31 @@ def _remote_script(settings: E2EEnvironmentSettings) -> str:
     return f"""
 import json
 from app import create_app
+from models import User
 
 app = create_app('production')
 with app.test_client() as client:
-    login_response = client.post('/login', json={{
-        'email': {settings.username!r},
-        'password': {settings.password!r},
-        'next': {settings.post_login_path!r},
-    }})
-    payload = login_response.get_json(silent=True) or {{}}
-    if login_response.status_code != 200 or not payload.get('success'):
-        raise SystemExit(json.dumps({{'ok': False, 'stage': 'login', 'status': login_response.status_code, 'payload': payload}}))
+    user_id = {settings.user_id!r}
+    if user_id is not None:
+        with app.app_context():
+            user = User.query.get(int(user_id))
+            valid_user = user is not None and getattr(user, 'is_active', True)
+            resolved_user_id = getattr(user, 'id', None)
+        if not valid_user:
+            raise SystemExit(json.dumps({{'ok': False, 'stage': 'user', 'status': 404, 'payload': 'invalid user'}}))
+        with client.session_transaction() as sess:
+            sess['_user_id'] = str(resolved_user_id)
+            sess['_fresh'] = True
+            sess['active_company_id'] = {settings.company_id!r}
+    else:
+        login_response = client.post('/login', json={{
+            'email': {settings.username!r},
+            'password': {settings.password!r},
+            'next': {settings.post_login_path!r},
+        }})
+        payload = login_response.get_json(silent=True) or {{}}
+        if login_response.status_code != 200 or not payload.get('success'):
+            raise SystemExit(json.dumps({{'ok': False, 'stage': 'login', 'status': login_response.status_code, 'payload': payload}}))
 
     if {settings.company_id!r} is not None:
         portal_response = client.post('/portal', json={{'company_id': {settings.company_id!r}}})
