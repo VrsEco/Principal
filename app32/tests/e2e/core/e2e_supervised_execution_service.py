@@ -173,9 +173,39 @@ class E2ESupervisedExecutionService:
         stdout_path = Path(str(payload.get("stdout_path") or ""))
         stderr_text = stderr_path.read_text(encoding="utf-8", errors="ignore") if stderr_path.exists() else ""
         stdout_text = stdout_path.read_text(encoding="utf-8", errors="ignore") if stdout_path.exists() else ""
+        decoded_stdout = E2ESupervisedExecutionService._decode_stdout_json(stdout_text)
+        if E2ESupervisedExecutionService._payload_has_failure(decoded_stdout):
+            return 1
         if "Traceback" in stderr_text or "Error:" in stderr_text or "FAILED" in stdout_text:
             return 1
         return 0
+
+    @staticmethod
+    def _decode_stdout_json(stdout: str) -> Any:
+        text = str(stdout or "").strip()
+        if not text:
+            return None
+        start_positions = [pos for pos in (text.find("["), text.find("{")) if pos >= 0]
+        if not start_positions:
+            return None
+        decoder = json.JSONDecoder()
+        try:
+            payload, _ = decoder.raw_decode(text[min(start_positions):])
+            return payload
+        except json.JSONDecodeError:
+            return None
+
+    @staticmethod
+    def _payload_has_failure(payload: Any) -> bool:
+        if isinstance(payload, dict):
+            if payload.get("failed_suites") or payload.get("returncode") not in {None, 0}:
+                return True
+            if payload.get("success") is False:
+                return True
+            return any(E2ESupervisedExecutionService._payload_has_failure(value) for value in payload.values())
+        if isinstance(payload, list):
+            return any(E2ESupervisedExecutionService._payload_has_failure(item) for item in payload)
+        return False
 
     @staticmethod
     def _build_command(command_kind: str, command_args: tuple[str, ...]) -> list[str]:

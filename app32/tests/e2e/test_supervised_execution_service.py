@@ -78,6 +78,41 @@ def test_supervised_execution_service_refreshes_orphan_running_execution(tmp_pat
     assert items[0]["exit_code"] == 0
 
 
+def test_supervised_execution_service_marks_orphan_summary_with_failed_suites_as_failed(tmp_path, monkeypatch):
+    execution_root = tmp_path / "supervised_runs"
+    execution_dir = execution_root / "exec-full"
+    execution_dir.mkdir(parents=True)
+    stdout_path = execution_dir / "stdout.log"
+    stderr_path = execution_dir / "stderr.log"
+    stdout_path.write_text(json.dumps({"failed_suites": 2, "results": []}), encoding="utf-8")
+    stderr_path.write_text("", encoding="utf-8")
+    (execution_dir / "meta.json").write_text(
+        json.dumps(
+            {
+                "execution_id": "exec-full",
+                "suite_id": "full_system_validation",
+                "environment": "PROD_SAFE",
+                "status": "running",
+                "started_at": "2026-06-14T19:35:00",
+                "finished_at": None,
+                "command": ["python"],
+                "workdir": "C:/GestaoVersus/app32",
+                "stdout_path": str(stdout_path),
+                "stderr_path": str(stderr_path),
+                "exit_code": None,
+                "pid": 99999999,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(E2ESupervisedExecutionService, "supervised_root", classmethod(lambda cls: execution_root))
+    items = E2ESupervisedExecutionService.list_executions()
+
+    assert items[0]["status"] == "failed"
+    assert items[0]["exit_code"] == 1
+
+
 def test_supervised_execution_service_resolves_python_without_uwsgi(monkeypatch):
     monkeypatch.setenv("APP32_E2E_PYTHON", "")
     monkeypatch.setenv("VIRTUAL_ENV", "")
