@@ -126,3 +126,37 @@ def test_http_session_uses_remote_internal_bootstrap_before_browser(monkeypatch)
 
     payload = session.login()
     assert payload["auth_source"] == "remote_internal_bootstrap"
+
+
+def test_prod_safe_login_uses_remote_bootstrap_without_public_post(monkeypatch):
+    settings = _settings()
+    settings = E2EEnvironmentSettings(**{**settings.__dict__, "environment_name": "PROD_SAFE", "execution_mode": E2EExecutionMode.PROD_SAFE})
+    session = AuthenticatedHTTPSession.create(settings)
+
+    class _NoPublicPostSession:
+        headers = {"Content-Type": "application/json"}
+        cookies = session.session.cookies
+
+        def post(self, *_args, **_kwargs):
+            raise AssertionError("PROD_SAFE não deve chamar POST público de login")
+
+    monkeypatch.setattr(session, "session", _NoPublicPostSession())
+    monkeypatch.setattr(
+        session,
+        "_bootstrap_via_remote_internal_session",
+        lambda: {"success": True, "redirect": "/my-work", "auth_source": "remote_internal_bootstrap"},
+    )
+
+    payload = session.login()
+    assert payload["auth_source"] == "remote_internal_bootstrap"
+
+
+def test_prod_safe_select_company_skips_public_portal_post():
+    settings = _settings()
+    settings = E2EEnvironmentSettings(**{**settings.__dict__, "environment_name": "PROD_SAFE", "execution_mode": E2EExecutionMode.PROD_SAFE})
+    session = AuthenticatedHTTPSession.create(settings)
+    session.session.cookies.set_cookie(create_cookie(name="gv_session", value="valid", domain="app.example.com", path="/"))
+
+    payload = session.select_company()
+
+    assert payload == {"success": True, "redirect": "/my-work", "auth_source": "remote_internal_bootstrap"}

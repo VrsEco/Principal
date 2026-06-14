@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 
-from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
 from app32.tests.e2e.core.auth import AuthPage
 from app32.tests.e2e.core.browser_session import managed_page
 from app32.tests.e2e.core.evidence import EvidenceCollector, create_evidence_paths
@@ -28,6 +28,9 @@ class AuthenticatedHTTPSession:
         return instance
 
     def login(self) -> dict[str, Any]:
+        if self.settings.execution_mode is E2EExecutionMode.PROD_SAFE:
+            return self._bootstrap_via_remote_internal_session()
+
         if self._has_session_cookie():
             if self._session_is_authenticated():
                 return {"success": True, "redirect": self.settings.post_login_path, "auth_source": "storage_state"}
@@ -56,6 +59,8 @@ class AuthenticatedHTTPSession:
     def select_company(self) -> dict[str, Any] | None:
         if self.settings.company_id is None:
             return None
+        if self.settings.execution_mode is E2EExecutionMode.PROD_SAFE and self._has_session_cookie():
+            return {"success": True, "redirect": self.settings.post_login_path, "auth_source": "remote_internal_bootstrap"}
         response = self.session.post(
             f"{self.settings.base_url.rstrip('/')}/portal",
             json={"company_id": self.settings.company_id},

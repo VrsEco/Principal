@@ -39,15 +39,16 @@ class _DummyLocator:
 
 
 class _DummyPage:
-    def __init__(self, *, login_inputs_present: bool = False):
+    def __init__(self, *, login_inputs_present: bool = False, fail_first_goto: bool = True):
         self.context = _DummyContext()
         self.calls: list[tuple[str, str, int | None]] = []
         self.url = "https://app.example.com/login?next=/my-work"
         self.login_inputs_present = login_inputs_present
+        self.fail_first_goto = fail_first_goto
 
     def goto(self, url: str, wait_until: str, timeout: int | None = None):
         self.calls.append((url, wait_until, timeout))
-        if len(self.calls) == 1:
+        if self.fail_first_goto and len(self.calls) == 1:
             raise PlaywrightError("timeout")
         self.url = url
         return None
@@ -87,13 +88,24 @@ def _settings() -> E2EEnvironmentSettings:
 
 
 def test_auth_page_open_retries_on_initial_timeout():
+    settings = _settings()
+    settings = E2EEnvironmentSettings(**{**settings.__dict__, "environment_name": "DEV_FULL", "execution_mode": E2EExecutionMode.DEV_FULL})
     page = _DummyPage()
-    auth = AuthPage(page, _settings())
+    auth = AuthPage(page, settings)
     auth.open()
 
     assert page.context.cookies_cleared == 1
     assert page.calls[0][0].endswith("/login?next=/my-work")
     assert page.calls[1][0].endswith("/login")
+
+
+def test_auth_page_prod_safe_opens_post_login_path_first():
+    page = _DummyPage(fail_first_goto=False)
+    auth = AuthPage(page, _settings())
+
+    auth.open()
+
+    assert page.calls[0][0] == "https://app.example.com/my-work"
 
 
 def test_auth_page_login_waits_for_authenticated_transition():

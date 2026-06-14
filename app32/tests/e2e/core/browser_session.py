@@ -6,7 +6,7 @@ from typing import Iterator
 
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 
-from app32.tests.e2e.config.environments import E2EEnvironmentSettings
+from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
 from app32.tests.e2e.core.evidence import EvidenceCollector, EvidencePaths
 from app32.tests.e2e.core.prod_safe_session_bootstrap import bootstrap_remote_prod_safe_storage_state
 
@@ -30,7 +30,7 @@ def managed_page(
     *,
     use_storage_state: bool = True,
 ) -> Iterator[tuple[Playwright, Browser, BrowserContext, Page]]:
-    if use_storage_state and not settings.storage_state_path.exists():
+    if use_storage_state and (settings.execution_mode is E2EExecutionMode.PROD_SAFE or not settings.storage_state_path.exists()):
         try:
             bootstrap_remote_prod_safe_storage_state(settings)
         except Exception:
