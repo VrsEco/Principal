@@ -93,8 +93,12 @@ def _bootstrap_local_prod_safe_storage_state(settings: E2EEnvironmentSettings) -
     if settings.user_id is None:
         return None
 
-    from app import create_app
-    from models import User
+    try:
+        from app import create_app
+        from models import User
+    except ModuleNotFoundError:
+        from app32.app import create_app
+        from app32.models import User
 
     app = create_app(os.environ.get("FLASK_CONFIG") or "production")
     with app.test_client() as client:
