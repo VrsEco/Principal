@@ -106,6 +106,75 @@ def list_resources(company_id: int, *, resource_type: str | None = None, active_
     return query.order_by(ResourceCatalog.type.asc(), ResourceCatalog.subtype.asc(), ResourceCatalog.item_name.asc()).all()
 
 
+def _resource_capacity_total(resource: ResourceCatalog) -> float | None:
+    """Capacidade operacional total para rateio/uso mensal.
+
+    Preferimos operational_capacity_value (ex.: 220 horas/mês). Se não existir,
+    usamos quantity como fallback para manter compatibilidade com cadastros simples.
+    """
+    if resource.operational_capacity_value is not None:
+        return float(resource.operational_capacity_value)
+    if resource.quantity is not None:
+        return float(resource.quantity)
+    return None
+
+
+def _link_monthly_used_quantity(link: ProcessResourceLink) -> float:
+    if link.monthly_used_quantity is not None:
+        return float(link.monthly_used_quantity)
+    if link.used_quantity_per_execution is not None and link.estimated_monthly_instances is not None:
+        return float(link.used_quantity_per_execution or 0) * float(link.estimated_monthly_instances or 0)
+    return float(link.used_quantity or 0)
+
+
+def _calculate_link_usage_metrics(resource: ResourceCatalog, payload: dict, link: ProcessResourceLink | None = None) -> dict:
+    used_per_execution = _decimal_or_none(
+        payload.get("used_quantity_per_execution", payload.get("used_quantity")),
+        field="quantidade usada por instância",
+    ) if ("used_quantity_per_execution" in payload or "used_quantity" in payload or link is None) else link.used_quantity_per_execution
+    estimated_instances = _decimal_or_none(
+        payload.get("estimated_monthly_instances"),
+        field="instâncias estimadas por mês",
+    ) if ("estimated_monthly_instances" in payload or link is None) else link.estimated_monthly_instances
+
+    explicit_monthly = _decimal_or_none(payload.get("monthly_used_quantity"), field="consumo mensal estimado") if "monthly_used_quantity" in payload else None
+    if explicit_monthly is not None:
+        monthly_used = explicit_monthly
+    elif used_per_execution is not None and estimated_instances is not None:
+        monthly_used = used_per_execution * estimated_instances
+    elif link is not None and link.monthly_used_quantity is not None and "used_quantity_per_execution" not in payload and "estimated_monthly_instances" not in payload:
+        monthly_used = link.monthly_used_quantity
+    else:
+        monthly_used = used_per_execution
+
+    capacity_total = _resource_capacity_total(resource)
+    usage_percentage = None
+    if monthly_used is not None and capacity_total and capacity_total > 0:
+        usage_percentage = min((monthly_used / Decimal(str(capacity_total))) * Decimal("100"), Decimal("100"))
+    elif "usage_percentage" in payload:
+        usage_percentage = _percentage_or_none(payload.get("usage_percentage"))
+
+    cost_per_execution = _decimal_or_none(
+        payload.get("estimated_cost_per_execution"),
+        field="custo estimado por execução",
+    ) if ("estimated_cost_per_execution" in payload or link is None) else link.estimated_cost_per_execution
+    monthly_cost = _decimal_or_none(payload.get("allocated_monthly_cost"), field="custo mensal alocado") if "allocated_monthly_cost" in payload else None
+    if monthly_cost is None and cost_per_execution is not None and estimated_instances is not None:
+        monthly_cost = cost_per_execution * estimated_instances
+    elif monthly_cost is None and link is not None and "estimated_cost_per_execution" not in payload and "estimated_monthly_instances" not in payload:
+        monthly_cost = link.allocated_monthly_cost
+
+    return {
+        "used_quantity_per_execution": used_per_execution,
+        "estimated_monthly_instances": estimated_instances,
+        "monthly_used_quantity": monthly_used,
+        "used_quantity": monthly_used,
+        "usage_percentage": usage_percentage,
+        "estimated_cost_per_execution": cost_per_execution,
+        "allocated_monthly_cost": monthly_cost,
+    }
+
+
 def get_resource_usage_summary(company_id: int, resource_id: int) -> dict:
     resource = _get_resource_for_company(company_id, resource_id)
     links = ProcessResourceLink.query.filter_by(
@@ -113,15 +182,16 @@ def get_resource_usage_summary(company_id: int, resource_id: int) -> dict:
         resource_id=resource.id,
         is_active=True,
     ).all()
-    used_quantity = sum(float(link.used_quantity or 0) for link in links)
-    total_quantity = float(resource.quantity or 0)
-    available_quantity = max(total_quantity - used_quantity, 0) if resource.quantity is not None else None
+    used_quantity = sum(_link_monthly_used_quantity(link) for link in links)
+    capacity_total = _resource_capacity_total(resource)
+    available_quantity = max(capacity_total - used_quantity, 0) if capacity_total is not None else None
     used_percentage_total = (
-        min((used_quantity / total_quantity) * 100, 100)
-        if total_quantity > 0
+        min((used_quantity / capacity_total) * 100, 100)
+        if capacity_total and capacity_total > 0
         else sum(float(link.usage_percentage or 0) for link in links)
     )
     return {
+        "capacity_total": capacity_total,
         "used_quantity_total": used_quantity,
         "available_quantity": available_quantity,
         "usage_percentage_total": used_percentage_total,
@@ -226,10 +296,7 @@ def create_process_resource_link(company_id: int, process_id: int, payload: dict
         process_routine_id=process_routine_id,
         bpmn_element_id=_clean_text(payload.get("bpmn_element_id")),
         resource_id=resource.id,
-        used_quantity=_decimal_or_none(payload.get("used_quantity"), field="quantidade usada"),
-        usage_percentage=_percentage_or_none(payload.get("usage_percentage")),
-        allocated_monthly_cost=_decimal_or_none(payload.get("allocated_monthly_cost"), field="custo mensal alocado"),
-        estimated_cost_per_execution=_decimal_or_none(payload.get("estimated_cost_per_execution"), field="custo estimado por execução"),
+        **_calculate_link_usage_metrics(resource, payload),
         capacity_bottleneck_notes=_clean_text(payload.get("capacity_bottleneck_notes")),
         is_active=_bool_or_default(payload.get("is_active"), True),
     )
@@ -250,14 +317,16 @@ def update_process_resource_link(company_id: int, process_id: int, link_id: int,
         _validate_process_routine(company_id, process_id, link.process_routine_id)
     if "bpmn_element_id" in payload:
         link.bpmn_element_id = _clean_text(payload.get("bpmn_element_id"))
-    if "used_quantity" in payload:
-        link.used_quantity = _decimal_or_none(payload.get("used_quantity"), field="quantidade usada")
-    if "usage_percentage" in payload:
-        link.usage_percentage = _percentage_or_none(payload.get("usage_percentage"))
-    if "allocated_monthly_cost" in payload:
-        link.allocated_monthly_cost = _decimal_or_none(payload.get("allocated_monthly_cost"), field="custo mensal alocado")
-    if "estimated_cost_per_execution" in payload:
-        link.estimated_cost_per_execution = _decimal_or_none(payload.get("estimated_cost_per_execution"), field="custo estimado por execução")
+    if any(field in payload for field in ("used_quantity", "used_quantity_per_execution", "estimated_monthly_instances", "monthly_used_quantity", "usage_percentage", "allocated_monthly_cost", "estimated_cost_per_execution", "resource_id")):
+        resource = _get_resource_for_company(company_id, int(link.resource_id or 0))
+        metrics = _calculate_link_usage_metrics(resource, payload, link)
+        link.used_quantity = metrics["used_quantity"]
+        link.used_quantity_per_execution = metrics["used_quantity_per_execution"]
+        link.estimated_monthly_instances = metrics["estimated_monthly_instances"]
+        link.monthly_used_quantity = metrics["monthly_used_quantity"]
+        link.usage_percentage = metrics["usage_percentage"]
+        link.allocated_monthly_cost = metrics["allocated_monthly_cost"]
+        link.estimated_cost_per_execution = metrics["estimated_cost_per_execution"]
     if "capacity_bottleneck_notes" in payload:
         link.capacity_bottleneck_notes = _clean_text(payload.get("capacity_bottleneck_notes"))
     if "is_active" in payload:
@@ -295,7 +364,7 @@ def build_process_resources_bundle(company_id: int, process_id: int) -> dict:
         grouped.setdefault(resource.get("type") or "other", []).append(payload)
         totals["allocated_monthly_cost"] += float(link.allocated_monthly_cost or 0)
         totals["estimated_cost_per_execution"] += float(link.estimated_cost_per_execution or 0)
-        totals["used_quantity_total"] += float(link.used_quantity or 0)
+        totals["used_quantity_total"] += _link_monthly_used_quantity(link)
         if link.resource:
             totals["capex_registered"] += float(link.resource.acquisition_total_amount or 0) + float(link.resource.installation_total_amount or 0)
             totals["monthly_recurring_registered"] += float(link.resource.monthly_recurring_amount or 0)

@@ -112,7 +112,7 @@
                 <div>
                     <span class="process-section__eyebrow">Capacidade operacional</span>
                     <h2 class="text-h2">Utilização de Recursos no Processo</h2>
-                    <p class="process-section__description">Vincule recursos do catálogo geral ao processo, informando percentual de uso, quantidade consumida, custo e gargalo.</p>
+                    <p class="process-section__description">Vincule um ou mais recursos já cadastrados, informando uso por instância e instâncias mensais estimadas; o sistema calcula consumo mensal, custo e saldo de capacidade.</p>
                 </div>
                 <div class="process-section__actions">
                     <a class="btn btn-secondary btn-sm" href="/process-map?tab=resources">🧱 Gerenciar catálogo geral</a>
@@ -144,60 +144,31 @@
                 </div>
 
                 <form id="processResourceForm" class="pop-create-form" onsubmit="createProcessResource(event)" style="align-items:flex-end; flex-wrap:wrap;">
-                    <div style="min-width:260px;">
-                        <label class="pop-field-label">Recurso do catálogo</label>
-                        <select id="existingResourceId" class="form-control">
-                            <option value="">Criar novo recurso e vincular...</option>
+                    <div style="min-width:320px; flex:1;">
+                        <label class="pop-field-label">Recurso do catálogo *</label>
+                        <select id="existingResourceId" class="form-control" required>
+                            <option value="">Selecione um recurso cadastrado...</option>
                         </select>
+                        <small style="color:var(--text-tertiary);">O processo pode ter vários recursos. Cadastre/ajuste capacidades no catálogo geral.</small>
                     </div>
-                    <div style="min-width:180px;">
-                        <label class="pop-field-label">Tipo</label>
-                        <select id="resourceType" class="form-control" required>
-                            <option value="people">Pessoas</option>
-                            <option value="inputs">Insumos</option>
-                            <option value="facilities">Imóveis / Instalações</option>
-                            <option value="digital_it">TI / Digital</option>
-                            <option value="equipment_tools">Equipamentos / Ferramentas</option>
-                            <option value="other">Outros</option>
-                        </select>
+                    <div style="width:170px;">
+                        <label class="pop-field-label">Uso por instância</label>
+                        <input id="resourceUsedPerExecution" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 40">
                     </div>
-                    <div style="min-width:160px;">
-                        <label class="pop-field-label">Subtipo</label>
-                        <input id="resourceSubtype" class="form-control" placeholder="Ex: licença, equipe">
+                    <div style="width:170px;">
+                        <label class="pop-field-label">Instâncias/mês</label>
+                        <input id="resourceEstimatedInstances" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 2">
                     </div>
-                    <div style="min-width:220px; flex:1;">
-                        <label class="pop-field-label">Nome do item</label>
-                        <input id="resourceItemName" class="form-control" placeholder="Nome do recurso">
-                    </div>
-                    <div style="width:120px;">
-                        <label class="pop-field-label">Valor unit.</label>
-                        <input id="resourceUnitValue" type="number" min="0" step="0.01" class="form-control">
-                    </div>
-                    <div style="width:110px;">
-                        <label class="pop-field-label">Qtd. total</label>
-                        <input id="resourceQuantity" type="number" min="0" step="0.01" class="form-control">
-                    </div>
-                    <div style="width:120px;">
-                        <label class="pop-field-label">Qtd. usada</label>
-                        <input id="resourceUsedQuantity" type="number" min="0" step="0.01" class="form-control">
-                    </div>
-                    <div style="width:120px;">
-                        <label class="pop-field-label">% usado</label>
-                        <input id="resourceUsagePercentage" type="number" min="0" max="100" step="0.01" class="form-control">
-                    </div>
-                    <div style="width:150px;">
-                        <label class="pop-field-label">Custo mensal alocado</label>
-                        <input id="resourceAllocatedCost" type="number" min="0" step="0.01" class="form-control">
-                    </div>
-                    <div style="width:150px;">
-                        <label class="pop-field-label">Custo por execução</label>
-                        <input id="resourceExecutionCostInput" type="number" min="0" step="0.01" class="form-control">
+                    <div style="width:170px;">
+                        <label class="pop-field-label">Custo por instância</label>
+                        <input id="resourceExecutionCostInput" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 500">
                     </div>
                     <div style="min-width:220px; flex:1;">
                         <label class="pop-field-label">Notas de capacidade/gargalo</label>
                         <input id="resourceBottleneckNotes" class="form-control" placeholder="Opcional">
                     </div>
                     <button class="btn btn-primary" type="submit">Vincular recurso</button>
+                    <a class="btn btn-secondary" href="/process-map?tab=resources">Cadastrar / alterar recursos</a>
                 </form>
 
                 <div id="processResourcesList" style="margin-top:1rem;"></div>
@@ -1867,14 +1838,27 @@
         other: 'Outros'
     };
 
+    function formatNumberBR(value) {
+        if (value === null || value === undefined || value === '') return '--';
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return '--';
+        return numeric.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+    }
+
+    function formatCapacityUnit(unit) {
+        return ({ hour: 'h/mês', day: 'dia/mês', month: 'mês' })[unit] || '';
+    }
+
     function populateResourceCatalogSelect() {
         const select = document.getElementById('existingResourceId');
         if (!select) return;
         const resources = (state.resourceCatalog && state.resourceCatalog.resources) || [];
-        select.innerHTML = '<option value="">Criar novo recurso e vincular...</option>' + resources.map(resource => {
+        select.innerHTML = '<option value="">Selecione um recurso cadastrado...</option>' + resources.map(resource => {
             const usage = resource.usage || {};
+            const capacity = usage.capacity_total ?? resource.operational_capacity_value ?? resource.quantity ?? '--';
             const available = usage.available_quantity ?? '--';
-            return `<option value="${resource.id}">${escapeHtml(resource.item_name || '--')} · ${resourceTypeLabels[resource.type] || resource.type} · disponível: ${available}</option>`;
+            const unit = formatCapacityUnit(resource.operational_capacity_unit);
+            return `<option value="${resource.id}">${escapeHtml(resourceTypeLabels[resource.type] || resource.type)} · ${escapeHtml(resource.subtype || '--')} · ${escapeHtml(resource.item_name || '--')} · disponível: ${formatNumberBR(available)} ${unit} / total: ${formatNumberBR(capacity)} ${unit}</option>`;
         }).join('');
     }
 
@@ -1913,24 +1897,30 @@
                                 <tr>
                                     <th>Item</th>
                                     <th>Subtipo</th>
-                                    <th>Uso / Total</th>
-                                    <th>% usado</th>
+                                    <th>Uso por instância</th>
+                                    <th>Instâncias/mês</th>
+                                    <th>Uso mensal / Capacidade</th>
                                     <th>Disponível</th>
-                                    <th>Custo mensal alocado</th>
-                                    <th>Custo/execução</th>
+                                    <th>Custo mensal</th>
+                                    <th>Custo/instância</th>
                                     <th>Capacidade/Gargalo</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${items.map(link => {
                                     const resource = link.resource || {};
+                                    const usage = resource.usage || {};
+                                    const unit = formatCapacityUnit(resource.operational_capacity_unit);
+                                    const capacityTotal = usage.capacity_total ?? resource.operational_capacity_value ?? resource.quantity;
+                                    const available = usage.available_quantity;
                                     return `
                                         <tr>
                                             <td><strong>${escapeHtml(resource.item_name || '--')}</strong></td>
                                             <td>${escapeHtml(resource.subtype || '--')}</td>
-                                            <td>${link.used_quantity ?? '--'} / ${resource.quantity ?? '--'}</td>
-                                            <td>${link.usage_percentage ?? 0}%</td>
-                                            <td>${resource.usage && resource.usage.available_quantity !== undefined && resource.usage.available_quantity !== null ? resource.usage.available_quantity : '--'}</td>
+                                            <td>${formatNumberBR(link.used_quantity_per_execution)} ${unit}</td>
+                                            <td>${formatNumberBR(link.estimated_monthly_instances)}</td>
+                                            <td>${formatNumberBR(link.monthly_used_quantity ?? link.used_quantity)} ${unit} / ${formatNumberBR(capacityTotal)} ${unit}<br><small>${formatNumberBR(link.usage_percentage)}% deste recurso</small></td>
+                                            <td>${formatNumberBR(available)} ${unit}</td>
                                             <td>${formatCurrencyBR(link.allocated_monthly_cost)}</td>
                                             <td>${formatCurrencyBR(link.estimated_cost_per_execution)}</td>
                                             <td>${escapeHtml(link.capacity_bottleneck_notes || 'Sem notas')}</td>
@@ -1949,36 +1939,19 @@
         event.preventDefault();
         const form = event.target;
         const selectedResourceId = document.getElementById('existingResourceId').value;
-        const resourcePayload = {
-            company_id: Number(companyId),
-            type: document.getElementById('resourceType').value,
-            subtype: document.getElementById('resourceSubtype').value,
-            item_name: document.getElementById('resourceItemName').value,
-            unit_value: document.getElementById('resourceUnitValue').value || null,
-            quantity: document.getElementById('resourceQuantity').value || null,
-            notes: document.getElementById('resourceBottleneckNotes').value || null
-        };
+        if (!selectedResourceId) {
+            alert('Selecione um recurso já cadastrado no catálogo geral.');
+            return;
+        }
 
         try {
-            let resource = selectedResourceId ? { id: Number(selectedResourceId) } : null;
-            if (!resource) {
-                const resourceRes = await fetch('/api/resources', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(resourcePayload)
-                });
-                resource = await resourceRes.json();
-                if (!resourceRes.ok) throw new Error(resource.error || 'Falha ao cadastrar recurso');
-            }
-
             const linkRes = await fetch(`/api/processes/${processId}/resources`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    resource_id: resource.id,
-                    used_quantity: document.getElementById('resourceUsedQuantity').value || null,
-                    usage_percentage: document.getElementById('resourceUsagePercentage').value || null,
-                    allocated_monthly_cost: document.getElementById('resourceAllocatedCost').value || null,
+                    resource_id: Number(selectedResourceId),
+                    used_quantity_per_execution: document.getElementById('resourceUsedPerExecution').value || null,
+                    estimated_monthly_instances: document.getElementById('resourceEstimatedInstances').value || null,
                     estimated_cost_per_execution: document.getElementById('resourceExecutionCostInput').value || null,
                     capacity_bottleneck_notes: document.getElementById('resourceBottleneckNotes').value || null
                 })

@@ -115,6 +115,18 @@ class ProcessResourceLink(db.Model):
             name="ck_process_resource_links_used_quantity_non_negative",
         ),
         db.CheckConstraint(
+            "used_quantity_per_execution IS NULL OR used_quantity_per_execution >= 0",
+            name="ck_process_resource_links_used_per_execution_non_negative",
+        ),
+        db.CheckConstraint(
+            "estimated_monthly_instances IS NULL OR estimated_monthly_instances >= 0",
+            name="ck_process_resource_links_instances_non_negative",
+        ),
+        db.CheckConstraint(
+            "monthly_used_quantity IS NULL OR monthly_used_quantity >= 0",
+            name="ck_process_resource_links_monthly_used_non_negative",
+        ),
+        db.CheckConstraint(
             "usage_percentage IS NULL OR (usage_percentage >= 0 AND usage_percentage <= 100)",
             name="ck_process_resource_links_usage_percentage_range",
         ),
@@ -129,7 +141,10 @@ class ProcessResourceLink(db.Model):
     process_routine_id = db.Column(db.Integer, db.ForeignKey("process_routines.id"), nullable=True, index=True)
     bpmn_element_id = db.Column(db.String(255), nullable=True, index=True)
     resource_id = db.Column(db.Integer, db.ForeignKey("resource_catalog.id"), nullable=False, index=True)
-    used_quantity = db.Column(db.Numeric(14, 2), nullable=True)
+    used_quantity = db.Column(db.Numeric(14, 2), nullable=True)  # compat: consumo mensal estimado
+    used_quantity_per_execution = db.Column(db.Numeric(14, 2), nullable=True)
+    estimated_monthly_instances = db.Column(db.Numeric(14, 2), nullable=True)
+    monthly_used_quantity = db.Column(db.Numeric(14, 2), nullable=True)
     usage_percentage = db.Column(db.Numeric(7, 4), nullable=True)
     allocated_monthly_cost = db.Column(db.Numeric(14, 2), nullable=True)
     estimated_cost_per_execution = db.Column(db.Numeric(14, 2), nullable=True)
@@ -153,6 +168,9 @@ class ProcessResourceLink(db.Model):
             "bpmn_element_id": self.bpmn_element_id,
             "resource_id": self.resource_id,
             "used_quantity": num(self.used_quantity),
+            "used_quantity_per_execution": num(self.used_quantity_per_execution),
+            "estimated_monthly_instances": num(self.estimated_monthly_instances),
+            "monthly_used_quantity": num(self.monthly_used_quantity),
             "usage_percentage": num(self.usage_percentage),
             "allocated_monthly_cost": num(self.allocated_monthly_cost),
             "estimated_cost_per_execution": num(self.estimated_cost_per_execution),

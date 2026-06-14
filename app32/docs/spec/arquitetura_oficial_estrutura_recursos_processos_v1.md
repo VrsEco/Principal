@@ -118,6 +118,9 @@ Campos mínimos:
 - `resource_id`
 - `used_quantity`
 - `usage_percentage`
+- `used_quantity_per_execution`
+- `estimated_monthly_instances`
+- `monthly_used_quantity`
 - `allocated_monthly_cost`
 - `estimated_cost_per_execution`
 - `capacity_bottleneck_notes`
@@ -130,8 +133,10 @@ Mapeamento funcional:
 - `processo` -> `process_id`
 - `atividade/POP opcional` -> `process_routine_id`
 - `elemento BPMN opcional` -> `bpmn_element_id`
-- `quanto usado no processo` -> `used_quantity`
-- `% usado no processo` -> `usage_percentage`
+- `quanto usado por instância` -> `used_quantity_per_execution`
+- `instâncias estimadas por mês` -> `estimated_monthly_instances`
+- `quanto usado total no mês` -> `monthly_used_quantity`/`used_quantity` calculado
+- `% usado no processo` -> `usage_percentage` calculado
 - `custo mensal alocado ao processo` -> `allocated_monthly_cost`
 - `custo estimado por execução` -> `estimated_cost_per_execution`
 - `notas de capacidade/gargalo` -> `capacity_bottleneck_notes`
@@ -175,7 +180,7 @@ Arquivos-alvo:
 Seções oficiais:
 
 - `Arquitetura de Processos > Recursos`: catálogo geral, posicionado após o SIPOC de Macroprocesso e antes de Processos;
-- `Detalhe do Processo > Estrutura/Recursos`: utilização/alocação do catálogo geral no processo.
+- `Detalhe do Processo > Estrutura/Recursos`: utilização/alocação de múltiplos recursos já existentes no catálogo geral.
 
 Ordem oficial das abas:
 
@@ -190,12 +195,12 @@ Blocos mínimos:
 
 1. resumo econômico do processo;
 2. recursos vinculados por tipo;
-3. seleção de recurso existente com atalho para criar novo recurso;
+3. seleção obrigatória de recurso existente, com botão de atalho para cadastrar/alterar recursos no catálogo geral;
 4. vínculo do recurso ao processo;
 5. custo mensal alocado;
 6. custo estimado por execução;
 7. notas de capacidade/gargalo;
-8. quantidade usada, percentual usado, uso total e saldo disponível do recurso compartilhado.
+8. uso por instância, instâncias estimadas por mês, uso mensal calculado, percentual usado e saldo disponível do recurso compartilhado.
 
 ## 8. API oficial
 
@@ -236,6 +241,7 @@ Responsabilidades:
 - validar tipo/subtipo;
 - criar e atualizar recurso;
 - criar e atualizar vínculo com processo;
+- calcular uso mensal por recurso a partir de uso por instância x instâncias/mês;
 - calcular uso total e disponibilidade do recurso compartilhado;
 - calcular resumo econômico;
 - consolidar recursos por tipo;
@@ -265,6 +271,7 @@ Indicadores futuros possíveis:
 - quantidade de recursos críticos por processo;
 - capacidade operacional declarada versus demanda estimada;
 - percentual usado por recurso compartilhado;
+- consumo mensal estimado por processo;
 - saldo disponível por recurso/capacidade.
 
 ## 11. Integrações oficiais
@@ -417,7 +424,8 @@ A camada Estrutura/Recursos estará aderente quando:
 - todo vínculo possuir `company_id`;
 - recurso e processo de tenants diferentes forem bloqueados;
 - for possível cadastrar/modificar recurso no catálogo geral;
-- for possível vincular recurso ao processo;
+- for possível vincular múltiplos recursos ao mesmo processo;
+- a tela de processo exigir seleção de recurso já cadastrado e oferecer atalho para cadastro/alteração no catálogo;
 - for possível vincular recurso opcionalmente à atividade/POP;
 - for possível apontar `bpmn_element_id`;
 - a tela do processo exibir recursos por tipo;
