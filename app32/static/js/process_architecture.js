@@ -15,6 +15,7 @@ const state = {
     areas: [],
     macros: [],
     processes: [],
+    resources: [],
     employees: [],
     companyId: normalizedCompanyId,
     viewType: localStorage.getItem('arch_view_type') || 'classic',
@@ -27,7 +28,8 @@ const state = {
 const FORM_ALLOWED_FIELDS = {
     formArea: ['id', 'code', 'name', 'color', 'description'],
     formMacro: ['id', 'area_id', 'order_index', 'owner', 'name', 'description'],
-    formProcess: ['id', 'macro_id', 'order_index', 'responsible', 'name', 'performance_level', 'description']
+    formProcess: ['id', 'macro_id', 'order_index', 'responsible', 'name', 'performance_level', 'description'],
+    formResourceCatalog: ['id', 'type', 'subtype', 'item_name', 'unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'operational_capacity_unit', 'estimated_useful_life', 'notes']
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -103,7 +105,8 @@ async function refreshData() {
         const responses = await Promise.all([
             fetch(`/api/process-areas?company_id=${fetchId || ''}&${cb}`),
             fetch(`/api/macro-processes?company_id=${fetchId || ''}&${cb}`),
-            fetch(`/api/processes?company_id=${fetchId || ''}&${cb}`)
+            fetch(`/api/processes?company_id=${fetchId || ''}&${cb}`),
+            fetch(`/api/resources?company_id=${fetchId || ''}&active_only=false&${cb}`)
         ]);
 
         for (const res of responses) {
@@ -114,12 +117,14 @@ async function refreshData() {
             }
         }
 
-        const [areas, macros, processes] = await Promise.all(responses.map(r => r.json()));
-        console.log("Data loaded:", { areasCount: areas.length, macrosCount: macros.length, processesCount: processes.length });
+        const [areas, macros, processes, resourceCatalog] = await Promise.all(responses.map(r => r.json()));
+        const resourceList = resourceCatalog && Array.isArray(resourceCatalog.resources) ? resourceCatalog.resources : [];
+        console.log("Data loaded:", { areasCount: areas.length, macrosCount: macros.length, processesCount: processes.length, resourcesCount: resourceList.length });
 
         state.areas = Array.isArray(areas) ? areas : [];
         state.macros = Array.isArray(macros) ? macros : [];
         state.processes = Array.isArray(processes) ? processes : [];
+        state.resources = resourceList;
     } catch (e) {
         console.error("Error refreshing architecture data:", e);
         window.showMessage?.("Erro ao carregar dados da arquitetura. Verifique o console.", "error");
@@ -147,6 +152,7 @@ function switchTab(tabId) {
 
     if (tabId === 'visual') renderMap();
     if (tabId === 'macro-sipoc') renderMacroSipoc();
+    if (tabId === 'resources') renderResourceCatalog();
 
     // Smooth scroll to top of panel
     const tabsEl = document.querySelector('.arch-tabs');
@@ -273,6 +279,68 @@ function getPerfColor(perf) {
     return colors[perf] || '#f1f5f9';
 }
 
+function formatNumberBR(value) {
+    if (value === null || value === undefined || value === '') return '--';
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return '--';
+    return numeric.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+function resourceTypeLabel(type) {
+    return {
+        people: 'Pessoas',
+        inputs: 'Insumos',
+        facilities: 'Imóveis / Instalações',
+        digital_it: 'TI / Digital',
+        equipment_tools: 'Equipamentos / Ferramentas',
+        other: 'Outros'
+    }[type] || type || '--';
+}
+
+function renderResourceCatalog() {
+    const list = document.getElementById('listResourceCatalog');
+    if (!list) return;
+
+    const resources = Array.isArray(state.resources) ? state.resources : [];
+    if (!resources.length) {
+        list.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center; color: var(--text-tertiary); padding: 1rem;">
+                    Nenhum recurso cadastrado. Cadastre a capacidade geral da empresa para usar na modelagem dos processos.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    list.innerHTML = resources.map(resource => {
+        const usage = resource.usage || {};
+        const inactiveBadge = resource.is_active === false ? '<span class="badge bg-secondary" style="margin-left:.35rem;">Inativo</span>' : '';
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight:700; color: var(--text-primary);">${escapeHtml(resource.item_name || '--')}${inactiveBadge}</div>
+                    <div style="font-size:.82rem; color: var(--text-secondary);">${escapeHtml(resource.subtype || '--')}</div>
+                </td>
+                <td>${escapeHtml(resourceTypeLabel(resource.type))}</td>
+                <td>${formatNumberBR(resource.quantity)}</td>
+                <td>${formatNumberBR(usage.used_quantity_total)}</td>
+                <td>${formatNumberBR(usage.available_quantity)}</td>
+                <td>
+                    <strong>${formatNumberBR(usage.usage_percentage_total)}%</strong>
+                    <div style="font-size:.78rem; color: var(--text-tertiary);">${formatNumberBR(usage.active_allocations_count || 0)} processos ativos</div>
+                </td>
+                <td>
+                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" type="button" onclick="editResourceCatalog(${resource.id})">Editar</button>
+                        <button class="btn btn-icon btn-sm text-danger" type="button" onclick="deactivateResourceCatalog(${resource.id})">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
 function renderTables() {
     const areaById = new Map(state.areas.map(area => [Number(area.id), area]));
 
@@ -371,6 +439,8 @@ function renderTables() {
 
     // Processes
     const listProcesses = document.getElementById('listProcesses');
+    renderResourceCatalog();
+
     if (listProcesses) {
         listProcesses.innerHTML = state.processes.map(p => {
             return `
@@ -651,6 +721,7 @@ function setupFormListeners() {
     document.getElementById('formArea')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/process-areas'));
     document.getElementById('formMacro')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/macro-processes'));
     document.getElementById('formProcess')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/processes'));
+    document.getElementById('formResourceCatalog')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/resources'));
 
     // Fix for Reset buttons to clear hidden ID
     document.querySelectorAll('button[type="reset"]').forEach(btn => {
@@ -702,8 +773,14 @@ async function handleFormSubmit(e, endpoint) {
         delete data.company_id;
     }
 
-    // Convert numeric fields to integers
+    // Convert numeric fields to integers/decimals
     if (data.order_index) data.order_index = parseInt(data.order_index, 10);
+    if (formId === 'formResourceCatalog') {
+        ['unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value'].forEach((field) => {
+            if (data[field] === '') data[field] = null;
+            else if (data[field] !== undefined && data[field] !== null) data[field] = Number(data[field]);
+        });
+    }
     // For Area, code is currently used as the sequence (like in app31)
     if (formId === 'formArea' && data.code) {
         data.order_index = parseInt(data.code, 10);
@@ -726,8 +803,9 @@ async function handleFormSubmit(e, endpoint) {
             // Revert button text
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
+                const labels = { formArea: 'Salvar Área', formMacro: 'Salvar Macro', formProcess: 'Salvar Processo', formResourceCatalog: 'Salvar Recurso' };
                 const type = formId.replace('form', '').toLowerCase();
-                submitBtn.textContent = `Salvar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+                submitBtn.textContent = labels[formId] || `Salvar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
             }
 
             await initArchitecture();
@@ -1051,6 +1129,31 @@ function editProcess(id) {
 
     form.querySelector('button[type="submit"]').textContent = 'Atualizar Processo';
     form.scrollIntoView({ behavior: 'smooth' });
+}
+
+function editResourceCatalog(id) {
+    const item = state.resources.find(resource => Number(resource.id) === Number(id));
+    const form = document.getElementById('formResourceCatalog');
+    if (!item || !form) return;
+
+    ['id', 'type', 'subtype', 'item_name', 'unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'operational_capacity_unit', 'estimated_useful_life', 'notes'].forEach((field) => {
+        if (form.elements[field]) form.elements[field].value = item[field] ?? '';
+    });
+    form.querySelector('button[type="submit"]').textContent = 'Atualizar Recurso';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function deactivateResourceCatalog(id) {
+    if (!confirm('Deseja inativar este recurso? As alocações históricas permanecem vinculadas.')) return;
+    try {
+        const res = await fetch(`/api/resources/${id}`, { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Falha ao inativar recurso.');
+        await refreshData();
+        renderResourceCatalog();
+    } catch (error) {
+        alert(error.message || 'Erro ao inativar recurso.');
+    }
 }
 
 // Deletes

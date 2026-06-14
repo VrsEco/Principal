@@ -111,6 +111,17 @@ from services.process_sipoc_service import (
     update_sipoc_item,
     update_sipoc_snapshot,
 )
+from services.process_resource_service import (
+    ProcessResourceValidationError,
+    build_resource_catalog_bundle,
+    build_process_resources_bundle,
+    create_process_resource_link,
+    create_resource,
+    deactivate_process_resource_link,
+    deactivate_resource,
+    update_process_resource_link,
+    update_resource,
+)
 from services.macro_process_sipoc_service import (
     archive_sipoc_snapshot as archive_macro_process_sipoc_snapshot,
     create_regulatory_item as create_macro_process_regulatory_item,
@@ -3021,3 +3032,141 @@ class ProcessScheduleListResource(Resource):
         finally:
             if 'conn' in locals() and conn:
                 conn.close()
+
+
+class ResourceCatalogListResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self):
+        company_id = request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(company_id, 'processes', 'view'):
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            return build_resource_catalog_bundle(
+                company_id,
+                resource_type=request.args.get('type'),
+                active_only=request.args.get('active_only', '').lower() in ('1', 'true', 'yes'),
+            ), 200
+        except ProcessResourceValidationError as err:
+            return {"error": str(err)}, 400
+        except Exception:
+            current_app.logger.exception("Erro ao listar catálogo de recursos company_id=%s", company_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            resource = create_resource(int(company_id), data)
+            return resource.to_dict(), 201
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar recurso company_id=%s", company_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ResourceCatalogResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, resource_id):
+        data = request.get_json(silent=True) or {}
+        company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            resource = update_resource(int(company_id), int(resource_id), data)
+            return resource.to_dict(), 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar recurso resource_id=%s", resource_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, resource_id):
+        company_id = request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            resource = deactivate_resource(int(company_id), int(resource_id))
+            return resource.to_dict(), 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao inativar recurso resource_id=%s", resource_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessResourceLinkListResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            return build_process_resources_bundle(process.company_id, process.id), 200
+        except ProcessResourceValidationError as err:
+            return {"error": str(err)}, 400
+        except Exception:
+            current_app.logger.exception("Erro ao listar recursos do processo process_id=%s", process_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def post(self, process_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+        data = request.get_json(silent=True) or {}
+        try:
+            link = create_process_resource_link(process.company_id, process.id, data)
+            return link.to_dict(include_resource=True), 201
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao vincular recurso ao processo process_id=%s", process_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessResourceLinkResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, process_id, link_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+        data = request.get_json(silent=True) or {}
+        try:
+            link = update_process_resource_link(process.company_id, process.id, int(link_id), data)
+            return link.to_dict(include_resource=True), 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar vínculo de recurso link_id=%s", link_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, process_id, link_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            link = deactivate_process_resource_link(process.company_id, process.id, int(link_id))
+            return link.to_dict(include_resource=True), 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao inativar vínculo de recurso link_id=%s", link_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500

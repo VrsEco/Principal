@@ -79,6 +79,7 @@
 
     <div class="tabs-nav process-tabs-nav">
         <button class="tab-btn process-tab-btn active" onclick="switchTab('sipoc')"><span class="process-tab-btn__icon">🧩</span><span>SIPOC</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧱</span><span>Estrutura/Recursos</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('routine')"><span class="process-tab-btn__icon">📅</span><span>Rotinas</span></button>
@@ -101,6 +102,105 @@
             </div>
             <div class="process-section__body">
                 <div id="sipocWorkspace"></div>
+            </div>
+        </section>
+    </div>
+
+    <div id="tab-resources" class="tab-content">
+        <section class="process-section mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Capacidade operacional</span>
+                    <h2 class="text-h2">Utilização de Recursos no Processo</h2>
+                    <p class="process-section__description">Vincule recursos do catálogo geral ao processo, informando percentual de uso, quantidade consumida, custo e gargalo.</p>
+                </div>
+                <div class="process-section__actions">
+                    <a class="btn btn-secondary btn-sm" href="/process-map?tab=resources">🧱 Gerenciar catálogo geral</a>
+                </div>
+            </div>
+            <div class="process-section__body">
+                <div class="process-kpis" style="margin-bottom:1rem;">
+                    <article class="process-kpi-card">
+                        <div class="process-kpi-card__icon">💰</div>
+                        <div class="process-kpi-card__content">
+                            <span class="process-kpi-card__label">Custo mensal alocado</span>
+                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceAllocatedMonthly">R$ 0,00</strong>
+                        </div>
+                    </article>
+                    <article class="process-kpi-card">
+                        <div class="process-kpi-card__icon">🔁</div>
+                        <div class="process-kpi-card__content">
+                            <span class="process-kpi-card__label">Custo por execução</span>
+                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceExecutionCost">R$ 0,00</strong>
+                        </div>
+                    </article>
+                    <article class="process-kpi-card">
+                        <div class="process-kpi-card__icon">🏗️</div>
+                        <div class="process-kpi-card__content">
+                            <span class="process-kpi-card__label">CAPEX cadastrado</span>
+                            <strong class="process-kpi-card__value process-kpi-card__value--compact" id="resourceCapex">R$ 0,00</strong>
+                        </div>
+                    </article>
+                </div>
+
+                <form id="processResourceForm" class="pop-create-form" onsubmit="createProcessResource(event)" style="align-items:flex-end; flex-wrap:wrap;">
+                    <div style="min-width:260px;">
+                        <label class="pop-field-label">Recurso do catálogo</label>
+                        <select id="existingResourceId" class="form-control">
+                            <option value="">Criar novo recurso e vincular...</option>
+                        </select>
+                    </div>
+                    <div style="min-width:180px;">
+                        <label class="pop-field-label">Tipo</label>
+                        <select id="resourceType" class="form-control" required>
+                            <option value="people">Pessoas</option>
+                            <option value="inputs">Insumos</option>
+                            <option value="facilities">Imóveis / Instalações</option>
+                            <option value="digital_it">TI / Digital</option>
+                            <option value="equipment_tools">Equipamentos / Ferramentas</option>
+                            <option value="other">Outros</option>
+                        </select>
+                    </div>
+                    <div style="min-width:160px;">
+                        <label class="pop-field-label">Subtipo</label>
+                        <input id="resourceSubtype" class="form-control" placeholder="Ex: licença, equipe">
+                    </div>
+                    <div style="min-width:220px; flex:1;">
+                        <label class="pop-field-label">Nome do item</label>
+                        <input id="resourceItemName" class="form-control" placeholder="Nome do recurso">
+                    </div>
+                    <div style="width:120px;">
+                        <label class="pop-field-label">Valor unit.</label>
+                        <input id="resourceUnitValue" type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <div style="width:110px;">
+                        <label class="pop-field-label">Qtd. total</label>
+                        <input id="resourceQuantity" type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <div style="width:120px;">
+                        <label class="pop-field-label">Qtd. usada</label>
+                        <input id="resourceUsedQuantity" type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <div style="width:120px;">
+                        <label class="pop-field-label">% usado</label>
+                        <input id="resourceUsagePercentage" type="number" min="0" max="100" step="0.01" class="form-control">
+                    </div>
+                    <div style="width:150px;">
+                        <label class="pop-field-label">Custo mensal alocado</label>
+                        <input id="resourceAllocatedCost" type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <div style="width:150px;">
+                        <label class="pop-field-label">Custo por execução</label>
+                        <input id="resourceExecutionCostInput" type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <div style="min-width:220px; flex:1;">
+                        <label class="pop-field-label">Notas de capacidade/gargalo</label>
+                        <input id="resourceBottleneckNotes" class="form-control" placeholder="Opcional">
+                    </div>
+                    <button class="btn btn-primary" type="submit">Vincular recurso</button>
+                </form>
+
+                <div id="processResourcesList" style="margin-top:1rem;"></div>
             </div>
         </section>
     </div>
@@ -1479,6 +1579,8 @@
     let state = {
         process: initialProcess || null,
         sipoc: null,
+        resources: null,
+        resourceCatalog: null,
         routines: [],
         indicators: [],
         schedules: [],
@@ -1615,6 +1717,8 @@
 
             const results = await Promise.allSettled([
                 fetchSipoc(),
+                fetchResourceCatalog(),
+                fetchProcessResources(),
                 fetchRoutines(),
                 fetchIndicators(),
                 fetchSchedules()
@@ -1622,13 +1726,15 @@
 
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
-                    const loaders = ['sipoc', 'roteiros', 'indicadores', 'agendamentos'];
+                    const loaders = ['sipoc', 'catálogo de recursos', 'estrutura/recursos', 'roteiros', 'indicadores', 'agendamentos'];
                     console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
                 }
             });
 
             renderProcess();
             renderSipoc();
+            populateResourceCatalogSelect();
+            renderProcessResources();
             renderRoutines();
             renderIndicators();
             renderInstances();
@@ -1683,6 +1789,28 @@
         }
     }
 
+    async function fetchProcessResources() {
+        try {
+            const res = await fetch(`/api/processes/${processId}/resources`);
+            if (!res.ok) throw new Error('Falha ao carregar Estrutura/Recursos');
+            state.resources = await res.json();
+        } catch (e) {
+            console.warn('Erro ao buscar Estrutura/Recursos:', e);
+            state.resources = null;
+        }
+    }
+
+    async function fetchResourceCatalog() {
+        try {
+            const res = await fetch(`/api/resources?company_id=${companyId}&active_only=true`);
+            if (!res.ok) throw new Error('Falha ao carregar catálogo de recursos');
+            state.resourceCatalog = await res.json();
+        } catch (e) {
+            console.warn('Erro ao buscar catálogo de recursos:', e);
+            state.resourceCatalog = { resources: [] };
+        }
+    }
+
     async function fetchIndicators() {
         try {
             if (!state.process || !state.process.company_id) {
@@ -1722,6 +1850,150 @@
         } catch (e) {
             console.warn('Erro ao buscar colaboradores:', e);
             state.employees = [];
+        }
+    }
+
+    function formatCurrencyBR(value) {
+        const number = Number(value || 0);
+        return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    const resourceTypeLabels = {
+        people: 'Pessoas',
+        inputs: 'Insumos',
+        facilities: 'Imóveis / Instalações',
+        digital_it: 'TI / Digital',
+        equipment_tools: 'Equipamentos / Ferramentas',
+        other: 'Outros'
+    };
+
+    function populateResourceCatalogSelect() {
+        const select = document.getElementById('existingResourceId');
+        if (!select) return;
+        const resources = (state.resourceCatalog && state.resourceCatalog.resources) || [];
+        select.innerHTML = '<option value="">Criar novo recurso e vincular...</option>' + resources.map(resource => {
+            const usage = resource.usage || {};
+            const available = usage.available_quantity ?? '--';
+            return `<option value="${resource.id}">${escapeHtml(resource.item_name || '--')} · ${resourceTypeLabels[resource.type] || resource.type} · disponível: ${available}</option>`;
+        }).join('');
+    }
+
+    function renderProcessResources() {
+        const host = document.getElementById('processResourcesList');
+        if (!host) return;
+
+        const bundle = state.resources || {};
+        const totals = bundle.totals || {};
+        setElementText('resourceAllocatedMonthly', formatCurrencyBR(totals.allocated_monthly_cost));
+        setElementText('resourceExecutionCost', formatCurrencyBR(totals.estimated_cost_per_execution));
+        setElementText('resourceCapex', formatCurrencyBR(totals.capex_registered));
+
+        const grouped = bundle.grouped || {};
+        const links = bundle.links || [];
+        if (!links.length) {
+            host.innerHTML = `
+                <div class="sipoc-empty-state">
+                    <div style="font-size:2rem;">🧱</div>
+                    <h3 style="margin:0 0 0.5rem 0;">Nenhum recurso vinculado</h3>
+                    <p style="margin:0;">Cadastre o primeiro recurso para medir custo, capacidade e gargalos deste processo.</p>
+                </div>
+            `;
+            return;
+        }
+
+        host.innerHTML = Object.entries(resourceTypeLabels).map(([type, label]) => {
+            const items = grouped[type] || [];
+            if (!items.length) return '';
+            return `
+                <section class="card" style="padding:1rem; margin-bottom:1rem;">
+                    <h3 style="margin:0 0 0.75rem 0;">${label}</h3>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Subtipo</th>
+                                    <th>Uso / Total</th>
+                                    <th>% usado</th>
+                                    <th>Disponível</th>
+                                    <th>Custo mensal alocado</th>
+                                    <th>Custo/execução</th>
+                                    <th>Capacidade/Gargalo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map(link => {
+                                    const resource = link.resource || {};
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(resource.item_name || '--')}</strong></td>
+                                            <td>${escapeHtml(resource.subtype || '--')}</td>
+                                            <td>${link.used_quantity ?? '--'} / ${resource.quantity ?? '--'}</td>
+                                            <td>${link.usage_percentage ?? 0}%</td>
+                                            <td>${resource.usage && resource.usage.available_quantity !== undefined && resource.usage.available_quantity !== null ? resource.usage.available_quantity : '--'}</td>
+                                            <td>${formatCurrencyBR(link.allocated_monthly_cost)}</td>
+                                            <td>${formatCurrencyBR(link.estimated_cost_per_execution)}</td>
+                                            <td>${escapeHtml(link.capacity_bottleneck_notes || 'Sem notas')}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            `;
+        }).join('');
+    }
+
+    async function createProcessResource(event) {
+        event.preventDefault();
+        const form = event.target;
+        const selectedResourceId = document.getElementById('existingResourceId').value;
+        const resourcePayload = {
+            company_id: Number(companyId),
+            type: document.getElementById('resourceType').value,
+            subtype: document.getElementById('resourceSubtype').value,
+            item_name: document.getElementById('resourceItemName').value,
+            unit_value: document.getElementById('resourceUnitValue').value || null,
+            quantity: document.getElementById('resourceQuantity').value || null,
+            notes: document.getElementById('resourceBottleneckNotes').value || null
+        };
+
+        try {
+            let resource = selectedResourceId ? { id: Number(selectedResourceId) } : null;
+            if (!resource) {
+                const resourceRes = await fetch('/api/resources', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(resourcePayload)
+                });
+                resource = await resourceRes.json();
+                if (!resourceRes.ok) throw new Error(resource.error || 'Falha ao cadastrar recurso');
+            }
+
+            const linkRes = await fetch(`/api/processes/${processId}/resources`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    resource_id: resource.id,
+                    used_quantity: document.getElementById('resourceUsedQuantity').value || null,
+                    usage_percentage: document.getElementById('resourceUsagePercentage').value || null,
+                    allocated_monthly_cost: document.getElementById('resourceAllocatedCost').value || null,
+                    estimated_cost_per_execution: document.getElementById('resourceExecutionCostInput').value || null,
+                    capacity_bottleneck_notes: document.getElementById('resourceBottleneckNotes').value || null
+                })
+            });
+            const link = await linkRes.json();
+            if (!linkRes.ok) throw new Error(link.error || 'Falha ao vincular recurso');
+
+            form.reset();
+            await fetchResourceCatalog();
+            await fetchProcessResources();
+            populateResourceCatalogSelect();
+            renderProcessResources();
+        } catch (err) {
+            console.error('Erro ao criar recurso do processo:', err);
+            alert(err.message || 'Erro ao criar recurso do processo.');
         }
     }
 
