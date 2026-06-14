@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -92,6 +93,11 @@ def _bootstrap_local_prod_safe_storage_state(settings: E2EEnvironmentSettings) -
     """
     if settings.user_id is None:
         return None
+
+    for candidate in (Path.cwd(), Path.cwd() / "app32"):
+        candidate_text = str(candidate)
+        if candidate.exists() and candidate_text not in sys.path:
+            sys.path.insert(0, candidate_text)
 
     try:
         from app import create_app
