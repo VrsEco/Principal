@@ -34,6 +34,7 @@
         <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
         <button class="arch-tab" onclick="switchTab('macro-books')">📚 Books dos Macroprocessos</button>
         <button class="arch-tab" onclick="switchTab('macro-sipoc')">🧩 SIPOC de Macroprocesso</button>
+        <button class="arch-tab" onclick="switchTab('resources')">🧱 Recursos</button>
         <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
         {% endif %}
     </div>
@@ -301,6 +302,111 @@
             </div>
 
             <div id="macroSipocWorkspace" class="macro-sipoc-workspace"></div>
+        </div>
+    </div>
+
+    <!-- Painel: Catálogo Geral de Recursos -->
+    <div id="panel-resources" class="arch-panel">
+        <div class="grid-form-list">
+            <div class="card p-5" style="padding: 2.5rem !important;">
+                <div class="process-section__header" style="margin-bottom: 1rem;">
+                    <div>
+                        <span class="process-section__eyebrow">Catálogo geral</span>
+                        <h2 class="text-h2">Recursos da Arquitetura de Processos</h2>
+                        <p class="process-section__description">Cadastre a capacidade disponível da empresa para reutilização em múltiplos processos.</p>
+                    </div>
+                </div>
+                <form id="formResourceCatalog" class="arch-form">
+                    <input type="hidden" name="id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Tipo *</label>
+                            <select name="type" class="form-control" required>
+                                <option value="people">Pessoas</option>
+                                <option value="inputs">Insumos</option>
+                                <option value="facilities">Imóveis / Instalações</option>
+                                <option value="digital_it">TI / Digital</option>
+                                <option value="equipment_tools">Equipamentos / Ferramentas</option>
+                                <option value="other">Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subtipo *</label>
+                            <input name="subtype" class="form-control" placeholder="Ex: equipe, licença, máquina" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do item *</label>
+                        <input name="item_name" class="form-control" placeholder="Ex: Licença Power BI, Equipe Fiscal" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Valor unitário</label>
+                            <input name="unit_value" type="number" min="0" step="0.01" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Quantidade total</label>
+                            <input name="quantity" type="number" min="0" step="0.01" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Aquisição total</label>
+                            <input name="acquisition_total_amount" type="number" min="0" step="0.01" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Instalação total</label>
+                            <input name="installation_total_amount" type="number" min="0" step="0.01" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Gasto mensal recorrente</label>
+                            <input name="monthly_recurring_amount" type="number" min="0" step="0.01" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Capacidade operacional</label>
+                            <div style="display:flex; gap:.5rem;">
+                                <input name="operational_capacity_value" type="number" min="0" step="0.01" class="form-control">
+                                <select name="operational_capacity_unit" class="form-control">
+                                    <option value="">Unid.</option>
+                                    <option value="hour">Hora</option>
+                                    <option value="day">Dia</option>
+                                    <option value="month">Mês</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vida útil estimada</label>
+                        <input name="estimated_useful_life" class="form-control" placeholder="Ex: 24 meses">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Observações</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-actions-row">
+                        <button type="reset" class="btn btn-secondary btn-sm">Limpar</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Salvar Recurso</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card p-0 overflow-hidden">
+                <table class="arch-table">
+                    <thead>
+                        <tr>
+                            <th>Recurso</th>
+                            <th>Tipo</th>
+                            <th>Total</th>
+                            <th>Usado</th>
+                            <th>Disponível</th>
+                            <th>Alocações</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="listResourceCatalog"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
