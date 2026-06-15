@@ -606,8 +606,12 @@ class RobotTestsCenterService:
                 run
                 for run in runs
                 if "full_system" in str(run.get("root_dir") or run.get("manifest_path") or "").lower()
+                or "devfull_full_app" in str(run.get("root_dir") or run.get("manifest_path") or "").lower()
                 or any("full_system_validation" in str(name or "").lower() for name in (run.get("journey_names") or []))
+                or any("devfull_full_app_validation" in str(name or "").lower() for name in (run.get("journey_names") or []))
             ]
+        if normalized == "reporting":
+            normalized = "reports"
         return [
             run
             for run in runs
