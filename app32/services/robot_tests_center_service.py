@@ -326,6 +326,7 @@ class RobotTestsCenterService:
         "governance": "Governança dos Testes",
         "smoke": "Navegação Crítica",
         "system": "Sistema Completo",
+        "mcp": "MCP Runtime",
     }
 
     STATUS_LABELS = {
@@ -595,6 +596,13 @@ class RobotTestsCenterService:
     @staticmethod
     def _runs_for_area(runs: list[dict[str, Any]], domain: str) -> list[dict[str, Any]]:
         normalized = domain.lower()
+        if normalized == "system":
+            return [
+                run
+                for run in runs
+                if "full_system" in str(run.get("root_dir") or run.get("manifest_path") or "").lower()
+                or any("full_system_validation" in str(name or "").lower() for name in (run.get("journey_names") or []))
+            ]
         return [
             run
             for run in runs

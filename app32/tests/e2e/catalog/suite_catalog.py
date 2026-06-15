@@ -99,6 +99,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=False,
         summary="Executa múltiplas sessões MCP autenticadas em paralelo.",
     ),
+    "mcp_http_health_probe": E2ESuiteDefinition(
+        suite_id="mcp_http_health_probe",
+        label="Probe MCP HTTP",
+        domain="mcp",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_mcp_http_health_probe.py",),
+        destructive=False,
+        summary="Valida reachability pública do runtime MCP HTTP e contrato mínimo de health.",
+    ),
     "operational_reports": E2ESuiteDefinition(
         suite_id="operational_reports",
         label="Relatórios operacionais",
