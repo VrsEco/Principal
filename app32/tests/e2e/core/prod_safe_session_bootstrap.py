@@ -101,30 +101,21 @@ def _bootstrap_local_prod_safe_storage_state(settings: E2EEnvironmentSettings) -
 
     try:
         from app import create_app
-        from models import User
     except ModuleNotFoundError:
         from app32.app import create_app
-        from app32.models import User
 
     app = create_app(os.environ.get("FLASK_CONFIG") or "production")
-    with app.test_client() as client:
-        with app.app_context():
-            user = User.query.get(int(settings.user_id))
-            valid_user = user is not None and getattr(user, "is_active", True)
-            resolved_user_id = getattr(user, "id", None)
-        if not valid_user:
-            raise RuntimeError("Bootstrap PROD_SAFE inválido: usuário E2E inativo ou inexistente.")
-
-        with client.session_transaction() as sess:
-            sess["_user_id"] = str(resolved_user_id)
-            sess["_fresh"] = True
-            sess["active_company_id"] = settings.company_id
-
-        cookie = client.get_cookie("gv_session")
-        if cookie is None or not getattr(cookie, "value", None):
-            raise RuntimeError("Bootstrap PROD_SAFE inválido: cookie gv_session ausente.")
-
-    return _write_storage_state(settings, cookie_name="gv_session", cookie_value=cookie.value)
+    serializer = app.session_interface.get_signing_serializer(app)
+    if serializer is None:
+        raise RuntimeError("Bootstrap PROD_SAFE inválido: serializer de sessão Flask ausente.")
+    cookie_value = serializer.dumps(
+        {
+            "_user_id": str(settings.user_id),
+            "_fresh": True,
+            "active_company_id": settings.company_id,
+        }
+    )
+    return _write_storage_state(settings, cookie_name="gv_session", cookie_value=cookie_value)
 
 
 def bootstrap_remote_prod_safe_storage_state(settings: E2EEnvironmentSettings) -> Path | None:
