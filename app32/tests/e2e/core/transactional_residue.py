@@ -39,10 +39,10 @@ def scan_marker_residue(*, company_id: int, markers: list[str]) -> list[ResidueH
 
     try:
         from app import create_app
-        from extensions import db
+        from models import db
     except ModuleNotFoundError:
         from app32.app import create_app
-        from app32.extensions import db
+        from app32.models import db
 
     app = create_app("production")
     hits: list[ResidueHit] = []
