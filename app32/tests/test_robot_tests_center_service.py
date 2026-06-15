@@ -37,6 +37,13 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
                 "manifest_download_url": "/manifest",
             }
         ],
+        "devfull_transactional": {
+            "run_id": "run-tx",
+            "passed_suites": 6,
+            "failed_suites": 0,
+            "residue_total": 0,
+            "controlled_mutation": {"mutating_steps_total": 20, "rollback_steps_total": 8},
+        },
     }
     monkeypatch.setattr(
         "services.robot_tests_center_service.E2EOperationsCenterService.build_frontend_state",
@@ -57,6 +64,7 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
     assert any(package["label"] == "Rodar teste completo" for package in state["execution_packages"])
     assert any(category["label"] == "Saúde do Sistema" for category in state["test_categories"])
     assert any(category["label"] == "Cleanup / Reversão" for category in state["test_categories"])
+    assert state["devfull_transactional"]["controlled_mutation"]["rollback_steps_total"] == 8
 
 
 def test_robot_tests_center_filters_errors_by_company(monkeypatch):

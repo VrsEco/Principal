@@ -74,6 +74,7 @@ class E2EOperationsCenterService:
         ui_inventory = cls._latest_ui_inventory_summary(outputs_root)
         ui_contracts = cls._latest_ui_contracts_summary(outputs_root)
         ui_safe_execution = cls._latest_ui_safe_execution_summary(outputs_root)
+        devfull_transactional = cls._latest_devfull_transactional_summary(outputs_root)
         operational_view = cls._build_operational_view(
             inventory_items,
             runs,
@@ -81,6 +82,7 @@ class E2EOperationsCenterService:
             ui_inventory=ui_inventory,
             ui_contracts=ui_contracts,
             ui_safe_execution=ui_safe_execution,
+            devfull_transactional=devfull_transactional,
         )
 
         return {
@@ -120,6 +122,7 @@ class E2EOperationsCenterService:
             "ui_inventory": ui_inventory,
             "ui_contracts": ui_contracts,
             "ui_safe_execution": ui_safe_execution,
+            "devfull_transactional": devfull_transactional,
             "latest_runs": runs[:20],
             "latest_by_mode": latest_by_mode,
             "latest_diff": latest_diff,
@@ -327,6 +330,7 @@ class E2EOperationsCenterService:
         ui_inventory: dict[str, Any] | None = None,
         ui_contracts: dict[str, Any] | None = None,
         ui_safe_execution: dict[str, Any] | None = None,
+        devfull_transactional: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         latest_run = runs[0] if runs else None
         approved_runs = sum(1 for run in runs if run.get("status") == "passed")
@@ -403,6 +407,32 @@ class E2EOperationsCenterService:
                         "label": "Rotas UI abertas",
                         "value": int(ui_safe_execution.get("routes_opened_total") or 0),
                         "hint": "Telas abertas de forma autenticada durante a execução segura.",
+                    },
+                ]
+            )
+        if devfull_transactional:
+            controlled = devfull_transactional.get("controlled_mutation") or {}
+            coverage_cards.extend(
+                [
+                    {
+                        "label": "Suítes com mutação controlada",
+                        "value": int(devfull_transactional.get("passed_suites") or 0),
+                        "hint": "Cadastros/processamentos executados em DEV_FULL com empresa explícita.",
+                    },
+                    {
+                        "label": "Ações criar/editar/processar/cancelar/excluir",
+                        "value": int(controlled.get("mutating_steps_total") or 0),
+                        "hint": "Passos mutáveis aprovados pelo harness destrutivo controlado.",
+                    },
+                    {
+                        "label": "Rollback/limpezas executados",
+                        "value": int(controlled.get("rollback_steps_total") or 0),
+                        "hint": "Passos de reversão, exclusão ou restauração executados ao final.",
+                    },
+                    {
+                        "label": "Resíduos encontrados",
+                        "value": int(devfull_transactional.get("residue_total") or 0),
+                        "hint": "Deve permanecer zero após a limpeza por company_id.",
                     },
                 ]
             )
@@ -592,6 +622,20 @@ class E2EOperationsCenterService:
     def _latest_ui_safe_execution_summary(outputs_root: Path) -> dict[str, Any] | None:
         candidates = sorted(
             outputs_root.glob("ui_safe_execution/run_*/reports/summary.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if not candidates:
+            return None
+        try:
+            return json.loads(candidates[0].read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _latest_devfull_transactional_summary(outputs_root: Path) -> dict[str, Any] | None:
+        candidates = sorted(
+            outputs_root.glob("devfull_transactional/run_*/reports/summary.json"),
             key=lambda path: path.stat().st_mtime,
             reverse=True,
         )

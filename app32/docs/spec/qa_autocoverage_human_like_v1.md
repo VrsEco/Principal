@@ -66,3 +66,20 @@ A primeira execução automática de contratos deve ser **não persistente**:
 - não executar contratos com `cleanup_strategy=rollback_or_delete_and_residue_zero`.
 
 A execução de mutações reais só pode ser liberada por lotes com teardown comprovado na empresa M1.
+
+## Execução destrutiva controlada
+A segunda camada de execução usa suítes transacionais reais, sempre em `DEV_FULL`, com:
+- `E2E_COMPANY_ID` obrigatório;
+- `E2E_DESTRUCTIVE_ACTIONS_ALLOWED=true`;
+- massa marcada por execução;
+- criação, edição, processamento/cancelamento e exclusão/restauração;
+- auditoria conservadora de resíduo por `company_id`;
+- resumo operacional publicado na Central QA.
+
+O relatório `devfull_transactional` deve evidenciar:
+- suítes executadas/aprovadas/falhas;
+- passos mutáveis aprovados por tipo (`create`, `update`, `process`, `cancel`, `delete`);
+- passos de rollback/limpeza;
+- `residue_total=0`.
+
+Essa camada é permitida na empresa M1 - Testes Versus e continua bloqueada para tenants comuns sem autorização explícita.
