@@ -39,11 +39,9 @@ def managed_page(
     use_storage_state: bool = True,
 ) -> Iterator[tuple[Playwright, Browser, BrowserContext, Page]]:
     must_bootstrap = use_storage_state and (
-        not settings.storage_state_path.exists()
-        or (
-            settings.execution_mode is E2EExecutionMode.PROD_SAFE
-            and not _storage_state_has_auth_cookie(settings.storage_state_path)
-        )
+        settings.execution_mode is E2EExecutionMode.PROD_SAFE
+        or not settings.storage_state_path.exists()
+        or not _storage_state_has_auth_cookie(settings.storage_state_path)
     )
     if must_bootstrap:
         try:
