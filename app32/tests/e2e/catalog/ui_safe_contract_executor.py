@@ -27,6 +27,10 @@ SAFE_EXECUTION_STRATEGIES = {
     "playwright_fill_validate",
 }
 
+VOLATILE_SAFE_EXECUTION_SELECTORS = {
+    "#refreshLogsBtn",
+}
+
 
 @dataclass(frozen=True)
 class UISafeExecutionResult:
@@ -88,6 +92,7 @@ def _safe_contracts(limit: int) -> list[dict[str, Any]]:
         and item.get("route") != "/"
         and item.get("risk_level") == "low"
         and item.get("execution_strategy") in SAFE_EXECUTION_STRATEGIES
+        and str(item.get("selector") or "") not in VOLATILE_SAFE_EXECUTION_SELECTORS
         and not item.get("requires_company_id")
         and not item.get("requires_human_gate")
         and "{{" not in str(item.get("selector") or "")
