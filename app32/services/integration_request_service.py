@@ -164,6 +164,59 @@ class IntegrationRequestService:
         return record
 
     @classmethod
+    def delete_request(
+        cls,
+        *,
+        request_id: int,
+        company_id: int,
+        requester_user_id: int | None = None,
+    ) -> dict[str, Any] | None:
+        """Remove uma solicitação de integração e o card de backlog gerado por ela.
+
+        A remoção é física por desenho: `integration_requests` não possui
+        soft-delete e o harness DEV_FULL precisa garantir resíduo textual zero.
+        O card derivado só é apagado quando contém o marcador técnico da
+        solicitação, evitando remoção acidental de tarefas manuais.
+        """
+        record = IntegrationRequest.query.filter(
+            IntegrationRequest.id == int(request_id),
+            IntegrationRequest.company_id == int(company_id),
+        ).first()
+        if record is None:
+            return None
+
+        backlog_task_id = int(record.backlog_task_id) if record.backlog_task_id else None
+        deleted_task_id: int | None = None
+        marker = f"integration_request_id={record.id}"
+
+        if backlog_task_id:
+            task = (
+                ProjectTask.query.join(ProjectTask.project)
+                .filter(
+                    ProjectTask.id == backlog_task_id,
+                    ProjectTask.notes.isnot(None),
+                    ProjectTask.notes.contains(marker),
+                    ProjectTask.project.has(company_id=int(company_id)),
+                )
+                .first()
+            )
+            if task is not None:
+                deleted_task_id = int(task.id)
+                db.session.delete(task)
+
+        deleted_payload = {
+            "id": int(record.id),
+            "company_id": int(record.company_id),
+            "requester_user_id": int(record.requester_user_id),
+            "backlog_task_id": backlog_task_id,
+            "deleted_backlog_task_id": deleted_task_id,
+            "deleted_by_user_id": int(requester_user_id) if requester_user_id else None,
+        }
+        db.session.delete(record)
+        db.session.commit()
+        return deleted_payload
+
+    @classmethod
     def _build_catalog_seed_payload(cls, item: dict[str, Any]) -> dict[str, Any]:
         use_cases = item.get("use_cases") or []
         requirements = item.get("activation_requirements") or []

@@ -73,6 +73,17 @@ TRANSACTIONAL_COMMANDS: list[dict[str, Any]] = [
             "-q",
         ],
     },
+    {
+        "suite_id": "integrations_request_transactional_devfull",
+        "domain": "integrations",
+        "command": [
+            sys.executable,
+            "-m",
+            "pytest",
+            "app32/tests/e2e/journeys/crud/test_integrations_request_crud_e2e.py",
+            "-q",
+        ],
+    },
 ]
 
 

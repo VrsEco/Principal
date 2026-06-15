@@ -1160,6 +1160,30 @@ def create_integration_request():
     return jsonify({"success": True, "request": record.to_dict()}), 201
 
 
+@integrations_bp.route("/api/integrations/requests/<int:request_id>", methods=["DELETE"])
+@login_required
+def delete_integration_request(request_id: int):
+    company = _safe_active_company()
+    company_id = getattr(company, "id", None)
+    if not company_id:
+        return jsonify({"success": False, "error": "Empresa ativa obrigatória para excluir solicitação de integração."}), 400
+    _require_integration_admin(company_id)
+
+    try:
+        deleted = IntegrationRequestService.delete_request(
+            request_id=int(request_id),
+            company_id=int(company_id),
+            requester_user_id=int(current_user.id),
+        )
+    except Exception as exc:
+        current_app.logger.exception("Falha ao excluir solicitação de integração %s.", request_id)
+        return jsonify({"success": False, "error": str(exc)}), 400
+
+    if deleted is None:
+        return jsonify({"success": False, "error": "Solicitação de integração não encontrada."}), 404
+    return jsonify({"success": True, "deleted": deleted})
+
+
 @integrations_bp.route("/api/integrations/status", methods=["GET"])
 @login_required
 def integrations_status():

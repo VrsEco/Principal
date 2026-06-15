@@ -109,6 +109,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=True,
         summary="Cria/edita/exclui cadastros financeiros e cria/edita/cancela/exclui título financeiro com resíduo zero.",
     ),
+    "integrations_request_transactional_devfull": E2ESuiteDefinition(
+        suite_id="integrations_request_transactional_devfull",
+        label="Integrações request/API-MCP DEV_FULL",
+        domain="integrations",
+        environments=("DEV_FULL",),
+        command_kind="pytest",
+        command_args=("app32/tests/e2e/journeys/crud/test_integrations_request_crud_e2e.py", "-q"),
+        destructive=True,
+        summary="Valida catálogo, página API/MCP, health MCP e cria/lista/exclui solicitação fake de integração com card derivado e resíduo zero.",
+    ),
     "devfull_transactional_validation": E2ESuiteDefinition(
         suite_id="devfull_transactional_validation",
         label="Validação transacional DEV_FULL",
