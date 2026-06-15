@@ -222,7 +222,9 @@ class _LocalResponse:
         self.status_code = int(getattr(response, "status_code", 0) or 0)
         self.headers = getattr(response, "headers", {}) or {}
         self.url = ""
-        self.text = response.get_data(as_text=True)
+        self.ok = self.status_code < 400
+        self.content = response.get_data()
+        self.text = self.content.decode("utf-8", errors="replace")
 
     def json(self) -> Any:
         return self._response.get_json(silent=False)

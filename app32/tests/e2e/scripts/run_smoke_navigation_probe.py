@@ -86,6 +86,10 @@ def _execute_prod_safe_http_smoke() -> list[SmokeNavigationProbeResult]:
 
 def main() -> int:
     settings = load_environment_settings()
+    if settings.execution_mode is E2EExecutionMode.DEV_FULL and settings.user_id is not None:
+        results = _execute_prod_safe_http_smoke()
+        print(json.dumps([asdict(item) for item in results], ensure_ascii=False, indent=2))
+        return 0 if all(item.success for item in results) else 1
     if settings.execution_mode is not E2EExecutionMode.PROD_SAFE:
         return _run_browser_smoke_for_dev_full()
 
