@@ -79,6 +79,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=True,
         summary="CRUD HTTP real de tarefa avulsa da jornada de trabalho.",
     ),
+    "admin_performance_settings_transactional_devfull": E2ESuiteDefinition(
+        suite_id="admin_performance_settings_transactional_devfull",
+        label="Parametrização admin DEV_FULL",
+        domain="admin",
+        environments=("DEV_FULL",),
+        command_kind="pytest",
+        command_args=("app32/tests/e2e/journeys/crud/test_admin_settings_crud_e2e.py", "-q"),
+        destructive=True,
+        summary="Altera parametrização administrativa controlada e restaura o valor original.",
+    ),
     "devfull_transactional_validation": E2ESuiteDefinition(
         suite_id="devfull_transactional_validation",
         label="Validação transacional DEV_FULL",
@@ -88,6 +98,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         command_args=("app32/tests/e2e/scripts/run_devfull_transactional_suite.py",),
         destructive=True,
         summary="Executa suítes destrutivas DEV_FULL com massa marcada, cleanup obrigatório e auditoria de resíduo zero.",
+    ),
+    "devfull_full_app_validation": E2ESuiteDefinition(
+        suite_id="devfull_full_app_validation",
+        label="Validação full-app DEV_FULL",
+        domain="system",
+        environments=("DEV_FULL",),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_devfull_full_app_suite.py",),
+        destructive=True,
+        summary="Orquestra probes funcionais full-app e suítes transacionais DEV_FULL com matriz de cobertura por domínio.",
     ),
     "user_concurrency_probe": E2ESuiteDefinition(
         suite_id="user_concurrency_probe",
