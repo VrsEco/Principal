@@ -30,6 +30,8 @@ class AuthenticatedHTTPSession:
     def login(self) -> dict[str, Any]:
         if self.settings.execution_mode is E2EExecutionMode.PROD_SAFE:
             return self._bootstrap_via_remote_internal_session()
+        if self.settings.user_id is not None:
+            return self._bootstrap_via_remote_internal_session()
 
         if self._has_session_cookie():
             if self._session_is_authenticated():
