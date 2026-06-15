@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import json
 from pathlib import Path
 from typing import Iterator
 
@@ -22,6 +23,13 @@ def _has_auth_cookie(storage_state: dict) -> bool:
     return False
 
 
+def _storage_state_has_auth_cookie(path: Path) -> bool:
+    try:
+        return _has_auth_cookie(json.loads(path.read_text(encoding="utf-8")))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return False
+
+
 @contextmanager
 def managed_page(
     settings: E2EEnvironmentSettings,
@@ -30,7 +38,14 @@ def managed_page(
     *,
     use_storage_state: bool = True,
 ) -> Iterator[tuple[Playwright, Browser, BrowserContext, Page]]:
-    if use_storage_state and (settings.execution_mode is E2EExecutionMode.PROD_SAFE or not settings.storage_state_path.exists()):
+    must_bootstrap = use_storage_state and (
+        not settings.storage_state_path.exists()
+        or (
+            settings.execution_mode is E2EExecutionMode.PROD_SAFE
+            and not _storage_state_has_auth_cookie(settings.storage_state_path)
+        )
+    )
+    if must_bootstrap:
         try:
             bootstrap_remote_prod_safe_storage_state(settings)
         except Exception:

@@ -88,6 +88,7 @@ class E2ESupervisedExecutionService:
             env["E2E_USER_ID"] = str(user_id)
         if suite.command_kind == "pytest":
             env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        cls._inject_browser_native_library_path(env)
 
         record = SupervisedExecutionRecord(
             execution_id=execution_id,
@@ -281,6 +282,24 @@ class E2ESupervisedExecutionService:
             "--meta-path",
             str(E2ESupervisedExecutionService._meta_path(execution_id)),
         ]
+
+    @staticmethod
+    def _inject_browser_native_library_path(env: dict[str, str]) -> None:
+        """Permite Playwright em hosts sem pacotes nativos instalados via sudo.
+
+        No Configr o usuário `app` não possui sudo; as bibliotecas do Chromium
+        podem ser provisionadas em espaço do usuário e expostas ao subprocesso
+        E2E por `LD_LIBRARY_PATH`.
+        """
+        candidates = [
+            Path("/home/app/.local/gv-browser-libs/root/usr/lib/x86_64-linux-gnu"),
+            repo_root().parent / ".local" / "gv-browser-libs" / "root" / "usr" / "lib" / "x86_64-linux-gnu",
+        ]
+        existing = [str(path) for path in candidates if path.exists()]
+        if not existing:
+            return
+        current = env.get("LD_LIBRARY_PATH")
+        env["LD_LIBRARY_PATH"] = ":".join([*existing, current] if current else existing)
 
     @staticmethod
     def _discover_repo_python_candidates() -> list[str]:
