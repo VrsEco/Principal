@@ -37,7 +37,7 @@ FULL_APP_SUITE_IDS = [
     "drift_detection",
 ]
 
-TRANSACTIONAL_DOMAINS_IMPLEMENTED = {"admin", "meetings", "work_journey"}
+TRANSACTIONAL_DOMAINS_IMPLEMENTED = {"admin", "meetings", "processes", "work_journey"}
 
 
 def _run_suite(suite_id: str, env: dict[str, str]) -> dict[str, Any]:
