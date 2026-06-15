@@ -49,6 +49,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=False,
         summary="Descobre templates, rotas renderizadas, campos, botões, links, formulários e lacunas de contrato UI human-like.",
     ),
+    "ui_human_like_contract_generation": E2ESuiteDefinition(
+        suite_id="ui_human_like_contract_generation",
+        label="Contratos UI human-like",
+        domain="governance",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_ui_human_like_contract_generation.py",),
+        destructive=False,
+        summary="Gera contratos canônicos por elemento UI com estratégia de execução, dados sintéticos, risco, confirmação e rollback.",
+    ),
     "full_system_validation": E2ESuiteDefinition(
         suite_id="full_system_validation",
         label="Teste completo do sistema",
