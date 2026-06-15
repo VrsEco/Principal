@@ -62,6 +62,7 @@ def test_meetings_crud_e2e_contract(
     create_response.raise_for_status()
     create_payload_response = create_response.json()
     meeting_id = int(create_payload_response["meeting_id"])
+    project_id: int | None = None
     journey.step("create_meeting", status="passed", details={"meeting_id": meeting_id})
 
     routes = tasks.route_map(meeting_id)
@@ -74,7 +75,10 @@ def test_meetings_crud_e2e_contract(
         journey.step("start_meeting", status="running")
         start_response = http.request("POST", routes.start, json_payload={"project_type": "new"})
         start_response.raise_for_status()
-        journey.step("start_meeting", status="passed", details=start_response.json())
+        start_payload = start_response.json()
+        if start_payload.get("project_id"):
+            project_id = int(start_payload["project_id"])
+        journey.step("start_meeting", status="passed", details=start_payload)
 
         journey.step("save_execution", status="running")
         execution_response = http.request("PUT", routes.execution, json_payload=execution_payload)
@@ -97,5 +101,13 @@ def test_meetings_crud_e2e_contract(
         delete_response = http.request("DELETE", routes.delete)
         delete_response.raise_for_status()
         journey.step("delete_meeting", status="passed")
+        if project_id is not None:
+            journey.step("delete_generated_project", status="running", details={"project_id": project_id})
+            project_delete_response = http.request(
+                "DELETE",
+                f"/api/projects/{project_id}?company_id={e2e_settings.company_id}",
+            )
+            project_delete_response.raise_for_status()
+            journey.step("delete_generated_project", status="passed")
 
     journey.succeed()
