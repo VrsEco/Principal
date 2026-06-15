@@ -99,6 +99,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=True,
         summary="Salva rascunho BPMN marcado, valida persistência e restaura o diagrama original.",
     ),
+    "financial_catalog_schedule_transactional_devfull": E2ESuiteDefinition(
+        suite_id="financial_catalog_schedule_transactional_devfull",
+        label="Financeiro catálogos/títulos DEV_FULL",
+        domain="financial",
+        environments=("DEV_FULL",),
+        command_kind="pytest",
+        command_args=("app32/tests/e2e/journeys/crud/test_financial_catalog_schedule_crud_e2e.py", "-q"),
+        destructive=True,
+        summary="Cria/edita/exclui cadastros financeiros e cria/edita/cancela/exclui título financeiro com resíduo zero.",
+    ),
     "devfull_transactional_validation": E2ESuiteDefinition(
         suite_id="devfull_transactional_validation",
         label="Validação transacional DEV_FULL",
