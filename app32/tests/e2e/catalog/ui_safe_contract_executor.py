@@ -85,10 +85,13 @@ def _safe_contracts(limit: int) -> list[dict[str, Any]]:
         item
         for item in payload.get("contracts") or []
         if item.get("route")
+        and item.get("route") != "/"
         and item.get("risk_level") == "low"
         and item.get("execution_strategy") in SAFE_EXECUTION_STRATEGIES
         and not item.get("requires_company_id")
         and not item.get("requires_human_gate")
+        and "{{" not in str(item.get("selector") or "")
+        and "}}" not in str(item.get("selector") or "")
     ]
     contracts.sort(key=lambda item: (str(item.get("route") or ""), str(item.get("priority") or ""), str(item.get("contract_id") or "")))
     return contracts[:limit]
