@@ -61,7 +61,10 @@ class AuthenticatedHTTPSession:
     def select_company(self) -> dict[str, Any] | None:
         if self.settings.company_id is None:
             return None
-        if self.settings.execution_mode is E2EExecutionMode.PROD_SAFE and self._has_session_cookie():
+        if self._has_session_cookie() and (
+            self.settings.execution_mode is E2EExecutionMode.PROD_SAFE
+            or self.settings.user_id is not None
+        ):
             return {"success": True, "redirect": self.settings.post_login_path, "auth_source": "remote_internal_bootstrap"}
         response = self.session.post(
             f"{self.settings.base_url.rstrip('/')}/portal",
