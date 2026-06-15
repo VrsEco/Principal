@@ -53,3 +53,16 @@ Cada elemento UI descoberto deve gerar um contrato contendo:
 - `requires_human_gate`.
 
 Contratos de alto risco podem ser inventariados e planejados automaticamente, mas só podem ser executados em `DEV_FULL` com tenant autorizado, confirmação explícita e rollback validável.
+
+## Execução segura inicial
+A primeira execução automática de contratos deve ser **não persistente**:
+- abrir rotas autenticadas;
+- validar HTML sem erro público;
+- localizar campos, links e botões esperados;
+- simular contratos de preenchimento como validação de presença/renderização;
+- não submeter formulários;
+- não executar contratos `requires_company_id`;
+- não executar contratos `requires_human_gate`;
+- não executar contratos com `cleanup_strategy=rollback_or_delete_and_residue_zero`.
+
+A execução de mutações reais só pode ser liberada por lotes com teardown comprovado na empresa M1.
