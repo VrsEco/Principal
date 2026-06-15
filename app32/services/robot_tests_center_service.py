@@ -377,6 +377,8 @@ class RobotTestsCenterService:
             "test_packages": cls.list_test_packages(e2e_state=e2e_state),
             "areas": areas,
             "errors": errors,
+            "operational_view": e2e_state.get("operational_view") or {},
+            "ui_inventory": e2e_state.get("ui_inventory"),
             "latest_run": latest_run,
             "technical_center_url": "/qa/e2e",
             "history_url": "/qa/e2e",

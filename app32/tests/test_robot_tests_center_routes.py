@@ -78,11 +78,12 @@ def test_robot_tests_run_create_api(monkeypatch):
     monkeypatch.setattr(
         configs_route.RobotTestsCenterService,
         "start_run",
-        lambda package_key, suite_id, environment, company_id: {
+        lambda package_key, suite_id, environment, company_id, user_id=None: {
             "package_key": package_key,
             "suite_id": suite_id or "full_system_validation",
             "environment": environment,
             "company_id": company_id,
+            "user_id": user_id,
         },
     )
 
