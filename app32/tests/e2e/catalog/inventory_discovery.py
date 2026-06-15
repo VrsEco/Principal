@@ -12,6 +12,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback para runtime enxuto
 
 from app32.tests.e2e.catalog.drift_detector import discover_registered_routes, normalize_route, routes_compatible
 from app32.tests.e2e.catalog.inventory import iter_inventory_items
+from app32.tests.e2e.catalog.ui_inventory_discovery import discover_ui_inventory
 
 
 def _guess_module(route: str) -> str:
@@ -77,12 +78,24 @@ def build_inventory_candidates() -> dict[str, Any]:
         )
 
     modules = sorted({candidate["module"] for candidate in candidates})
+    ui_inventory = discover_ui_inventory()
     return {
         "generated_at": datetime.now().isoformat(),
         "inventory_routes_total": len(inventory_routes),
         "discovered_routes_total": len(discovered_routes),
         "candidate_routes_total": len(candidates),
         "modules_detected": modules,
+        "ui_inventory_summary": {
+            "screens_total": ui_inventory["screens_total"],
+            "routable_screens_total": ui_inventory["routable_screens_total"],
+            "elements_total": ui_inventory["elements_total"],
+            "fields_total": ui_inventory["fields_total"],
+            "buttons_total": ui_inventory["buttons_total"],
+            "links_total": ui_inventory["links_total"],
+            "mutation_candidates_total": ui_inventory["mutation_candidates_total"],
+            "missing_contract_screens_total": ui_inventory["missing_contract_screens_total"],
+            "missing_contract_elements_total": ui_inventory["missing_contract_elements_total"],
+        },
         "candidates": candidates,
     }
 
@@ -111,6 +124,7 @@ def write_inventory_candidates_report(base_dir: Path) -> Path:
                 "inventory_routes_total": report["inventory_routes_total"],
                 "discovered_routes_total": report["discovered_routes_total"],
                 "modules_detected": report["modules_detected"],
+                "ui_inventory_summary": report.get("ui_inventory_summary"),
                 "json_path": str(json_path),
                 "yaml_path": str(yaml_path),
             },
