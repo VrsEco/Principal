@@ -86,6 +86,7 @@ class AuthenticatedHTTPSession:
                     path,
                     method=method.upper(),
                     json=json_payload,
+                    follow_redirects=True,
                 )
             )
         return self.session.request(
@@ -221,7 +222,8 @@ class _LocalResponse:
         self._response = response
         self.status_code = int(getattr(response, "status_code", 0) or 0)
         self.headers = getattr(response, "headers", {}) or {}
-        self.url = ""
+        request = getattr(response, "request", None)
+        self.url = str(getattr(request, "path", "") or "")
         self.ok = self.status_code < 400
         self.content = response.get_data()
         self.text = self.content.decode("utf-8", errors="replace")
