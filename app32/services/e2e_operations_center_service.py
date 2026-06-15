@@ -71,7 +71,8 @@ class E2EOperationsCenterService:
         quick_actions = cls._build_system_actions(suite_catalog)
         partial_suites = [item for item in suite_catalog if item["suite_id"] not in cls.SYSTEM_ACTION_SUITES]
         supervised_executions = E2ESupervisedExecutionService.list_executions()[:12]
-        operational_view = cls._build_operational_view(inventory_items, runs, backlog_candidates)
+        ui_inventory = cls._latest_ui_inventory_summary(outputs_root)
+        operational_view = cls._build_operational_view(inventory_items, runs, backlog_candidates, ui_inventory=ui_inventory)
 
         return {
             "summary": {
@@ -107,6 +108,7 @@ class E2EOperationsCenterService:
             },
             "system_actions": quick_actions,
             "operational_view": operational_view,
+            "ui_inventory": ui_inventory,
             "latest_runs": runs[:20],
             "latest_by_mode": latest_by_mode,
             "latest_diff": latest_diff,
@@ -305,7 +307,14 @@ class E2EOperationsCenterService:
         return compare_manifests(previous, current)
 
     @classmethod
-    def _build_operational_view(cls, inventory_items: list[dict[str, Any]], runs: list[dict[str, Any]], backlog_candidates: list[dict[str, Any]]) -> dict[str, Any]:
+    def _build_operational_view(
+        cls,
+        inventory_items: list[dict[str, Any]],
+        runs: list[dict[str, Any]],
+        backlog_candidates: list[dict[str, Any]],
+        *,
+        ui_inventory: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         latest_run = runs[0] if runs else None
         approved_runs = sum(1 for run in runs if run.get("status") == "passed")
         failed_runs = sum(1 for run in runs if run.get("status") == "failed")
@@ -319,6 +328,31 @@ class E2EOperationsCenterService:
             {"label": "Relatórios incluídos", "value": sum(1 for item in inventory_items if 'emitir_relatorio' in (item.get('actions') or [])), "hint": "Relatórios e exportações já dentro do robô."},
             {"label": "Integrações acompanhadas", "value": sum(1 for item in inventory_items if item.get('module') in {'integrations', 'work_journey'}), "hint": "Integrações, rotinas e automações já monitoradas."},
         ]
+        if ui_inventory:
+            coverage_cards.extend(
+                [
+                    {
+                        "label": "Elementos UI detectados",
+                        "value": int(ui_inventory.get("elements_total") or 0),
+                        "hint": "Campos, botões, links e formulários encontrados automaticamente nos templates.",
+                    },
+                    {
+                        "label": "Campos detectados",
+                        "value": int(ui_inventory.get("fields_total") or 0),
+                        "hint": "Inputs, selects, textareas e toggles candidatos a preenchimento human-like.",
+                    },
+                    {
+                        "label": "Botões/ações detectados",
+                        "value": int(ui_inventory.get("buttons_total") or 0),
+                        "hint": "Botões e submits candidatos a clique, processamento, confirmação e rollback.",
+                    },
+                    {
+                        "label": "Lacunas UI",
+                        "value": int(ui_inventory.get("missing_contract_elements_total") or 0),
+                        "hint": "Elementos descobertos que ainda precisam de contrato executável.",
+                    },
+                ]
+            )
 
         module_summary: list[dict[str, Any]] = []
         for module_name in sorted({item.get('module') for item in inventory_items if item.get('module')}):
@@ -472,6 +506,20 @@ class E2EOperationsCenterService:
                 "empty_message": "Nenhum problema reprovado no histórico recente.",
             },
         }
+
+    @staticmethod
+    def _latest_ui_inventory_summary(outputs_root: Path) -> dict[str, Any] | None:
+        candidates = sorted(
+            outputs_root.glob("ui_inventory_scan/run_*/reports/summary.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if not candidates:
+            return None
+        try:
+            return json.loads(candidates[0].read_text(encoding="utf-8"))
+        except Exception:
+            return None
 
     @staticmethod
     def _is_screen_like(item: dict[str, Any]) -> bool:

@@ -39,6 +39,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=False,
         summary="Descobre rotas novas, compara com o inventário e gera candidatos de cobertura.",
     ),
+    "ui_inventory_contract_scan": E2ESuiteDefinition(
+        suite_id="ui_inventory_contract_scan",
+        label="Inventário automático de telas/campos/botões",
+        domain="governance",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_ui_inventory_contract_scan.py",),
+        destructive=False,
+        summary="Descobre templates, rotas renderizadas, campos, botões, links, formulários e lacunas de contrato UI human-like.",
+    ),
     "full_system_validation": E2ESuiteDefinition(
         suite_id="full_system_validation",
         label="Teste completo do sistema",

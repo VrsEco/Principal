@@ -46,9 +46,16 @@ Inventário base de expansão:
 ## Critério de aceite full-app
 - `devfull_full_app_validation` deve rodar todos os probes funcionais aplicáveis em `DEV_FULL`.
 - `devfull_transactional_validation` deve rodar todos os journeys destrutivos já implementados.
+- `ui_inventory_contract_scan` deve rodar em todo teste completo para descobrir automaticamente templates, telas roteáveis, campos, botões, links, formulários e ações candidatas.
 - O relatório full-app deve listar domínio a domínio: funcional, transacional, pendente e motivo.
 - Nenhum journey destrutivo pode aprovar com `residue_total > 0`.
 - Toda expansão nova deve atualizar esta matriz antes do deploy.
+
+## Autocoverage human-like
+- Fonte oficial: `app32/docs/spec/qa_autocoverage_human_like_v1.md`.
+- Estado inicial automatizado: inventário estático de UI + rotas + candidatos de mutação.
+- Próximos níveis: contrato declarativo por elemento, execução Playwright/API, processamentos, gerações automáticas, conexões externas, rollback e resíduo zero.
+- O objetivo final é reproduzir o uso humano: abrir tela, preencher campos, acionar botões, validar efeitos, desfazer/cancelar e limpar massa na empresa M1.
 
 ## Evolução necessária para “tudo”
 Para cobrir literalmente todas as telas/campos/botões/processamentos, cada módulo precisa registrar seu contrato transacional: massa mínima, rotas de criação, processamento, reversão e limpeza. A suíte v1 cria a fundação e impede falsa impressão de cobertura total.
