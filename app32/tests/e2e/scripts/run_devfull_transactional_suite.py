@@ -51,6 +51,17 @@ TRANSACTIONAL_COMMANDS: list[dict[str, Any]] = [
             "-q",
         ],
     },
+    {
+        "suite_id": "processes_bpmn_diagram_transactional_devfull",
+        "domain": "processes",
+        "command": [
+            sys.executable,
+            "-m",
+            "pytest",
+            "app32/tests/e2e/journeys/crud/test_processes_bpmn_crud_e2e.py",
+            "-q",
+        ],
+    },
 ]
 
 

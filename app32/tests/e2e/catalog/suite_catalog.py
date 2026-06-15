@@ -89,6 +89,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=True,
         summary="Altera parametrização administrativa controlada e restaura o valor original.",
     ),
+    "processes_bpmn_diagram_transactional_devfull": E2ESuiteDefinition(
+        suite_id="processes_bpmn_diagram_transactional_devfull",
+        label="BPMN processes DEV_FULL",
+        domain="processes",
+        environments=("DEV_FULL",),
+        command_kind="pytest",
+        command_args=("app32/tests/e2e/journeys/crud/test_processes_bpmn_crud_e2e.py", "-q"),
+        destructive=True,
+        summary="Salva rascunho BPMN marcado, valida persistência e restaura o diagrama original.",
+    ),
     "devfull_transactional_validation": E2ESuiteDefinition(
         suite_id="devfull_transactional_validation",
         label="Validação transacional DEV_FULL",
