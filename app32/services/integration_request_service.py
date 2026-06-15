@@ -156,10 +156,15 @@ class IntegrationRequestService:
             ),
         )
         if error:
-            raise ValueError(error)
-        task = (result or {}).get("task")
-        if task is not None:
-            record.backlog_task_id = getattr(task, "id", None)
+            logger.warning(
+                "Solicitação de integração %s criada sem card de backlog: %s",
+                record.id,
+                error,
+            )
+        else:
+            task = (result or {}).get("task")
+            if task is not None:
+                record.backlog_task_id = getattr(task, "id", None)
         db.session.commit()
         return record
 
