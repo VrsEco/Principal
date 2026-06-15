@@ -17,6 +17,15 @@ from app32.tests.e2e.config.environments import E2EExecutionMode, load_environme
 from app32.tests.e2e.core.transactional_residue import scan_marker_residue
 
 
+MUTATION_STEP_HINTS: dict[str, tuple[str, ...]] = {
+    "create": ("create", "criar"),
+    "update": ("update", "edit", "alterar", "salvar", "save"),
+    "process": ("process", "gerar", "execute", "run"),
+    "cancel": ("cancel", "cancelar"),
+    "delete": ("delete", "excluir", "remove", "cleanup"),
+    "rollback": ("rollback", "restore", "restaura", "delete_", "cleanup"),
+}
+
 TRANSACTIONAL_COMMANDS: list[dict[str, Any]] = [
     {
         "suite_id": "meetings_crud_devfull",
@@ -139,9 +148,52 @@ def _build_manifest(summary: dict[str, Any]) -> dict[str, Any]:
                 "passed_suites": summary["passed_suites"],
                 "failed_suites": summary["failed_suites"],
                 "residue_total": summary["residue_total"],
+                "mutating_steps_total": (summary.get("controlled_mutation") or {}).get("mutating_steps_total"),
+                "rollback_steps_total": (summary.get("controlled_mutation") or {}).get("rollback_steps_total"),
             }
         ],
         "artifacts": [{"kind": "summary", "path": "summary.json"}],
+    }
+
+
+def _classify_step(name: str) -> set[str]:
+    normalized = str(name or "").lower()
+    return {
+        bucket
+        for bucket, hints in MUTATION_STEP_HINTS.items()
+        if any(hint in normalized for hint in hints)
+    }
+
+
+def _summarize_mutation_steps(manifests: list[dict[str, Any]]) -> dict[str, Any]:
+    counts = {bucket: 0 for bucket in MUTATION_STEP_HINTS}
+    domains: dict[str, dict[str, int]] = {}
+    total_passed_steps = 0
+    total_failed_steps = 0
+
+    for manifest in manifests:
+        for journey in manifest.get("journeys") or []:
+            domain = str((journey.get("metadata") or {}).get("domain") or "unknown")
+            domain_counts = domains.setdefault(domain, {bucket: 0 for bucket in MUTATION_STEP_HINTS})
+            for step in journey.get("steps") or []:
+                status = str(step.get("status") or "")
+                if status == "passed":
+                    total_passed_steps += 1
+                if status == "failed":
+                    total_failed_steps += 1
+                if status != "passed":
+                    continue
+                for bucket in _classify_step(str(step.get("name") or "")):
+                    counts[bucket] += 1
+                    domain_counts[bucket] += 1
+
+    return {
+        "mutation_step_counts": counts,
+        "mutation_steps_by_domain": domains,
+        "mutating_steps_total": sum(counts[bucket] for bucket in ("create", "update", "process", "cancel", "delete")),
+        "rollback_steps_total": counts["rollback"],
+        "passed_steps_total": total_passed_steps,
+        "failed_steps_total": total_failed_steps,
     }
 
 
@@ -191,6 +243,7 @@ def main() -> int:
     manifests = _load_manifests(child_outputs)
     markers = [f"AUTOE2E::{manifest['run_id']}" for manifest in manifests if manifest.get("run_id")]
     residue_hits = scan_marker_residue(company_id=int(settings.company_id), markers=markers)
+    mutation_summary = _summarize_mutation_steps(manifests)
     residue_total = sum(hit.count for hit in residue_hits)
     failed_suites = sum(1 for item in results if item["returncode"] != 0)
     summary = {
@@ -204,6 +257,14 @@ def main() -> int:
         "failed_suite_ids": [item["suite_id"] for item in results if item["returncode"] != 0],
         "residue_total": residue_total,
         "residue_hits": [hit.to_dict() for hit in residue_hits],
+        "controlled_mutation": {
+            "company_id": settings.company_id,
+            "destructive_actions_allowed": settings.destructive_actions_allowed,
+            "requires_explicit_company": True,
+            "cleanup_policy": "rollback_or_delete_and_residue_zero",
+            "residue_zero": residue_total == 0,
+            **mutation_summary,
+        },
         "markers": markers,
         "child_manifests": manifests,
         "results": results,
