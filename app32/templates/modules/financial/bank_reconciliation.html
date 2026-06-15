@@ -552,13 +552,21 @@ function setColumnSearch(columnKey, value){
     if(columnKey === 'workbench') applyWorkbenchColumnSearch();
 }
 function financialTitleLabel(item){
+    if(item?.is_bordero) return item?.bordero_code || item?.bordero_settlement_code || 'Borderô';
     const title = item?.title || {};
     return title.schedule_code || item?.origin_reference || item?.document_number || item?.entry_code || item?.financial_entry_id || item?.id || '-';
 }
 function bankLaunchLabel(item){
+    if(item?.is_bordero) return item?.bordero_settlement_code || item?.settlement_code || item?.bordero_code || 'Baixa de borderô';
     return item?.settlement_code || item?.entry_code || item?.bank_reference || `Lanç. ${Math.abs(Number(item?.id || 0)) || '-'}`;
 }
 function cardAmountLine(item){
+    if(item?.is_bordero){
+        const amount = item?.settlement_amount ?? item?.amount ?? 0;
+        const titleCount = item?.bordero_summary?.title_count || item?.financial_entry_ids?.length || 0;
+        const settlementCount = item?.bordero_summary?.financial_settlement_count || item?.financial_settlement_ids?.length || 0;
+        return `Borderô ${brl(amount)} - ${titleCount} título(s) / ${settlementCount} baixa(s)`;
+    }
     const titleValue = item?.title_original_amount ?? item?.title?.template_amount ?? item?.original_amount ?? 0;
     const balance = item?.title_remaining_amount ?? item?.remaining_amount ?? 0;
     return `Valor ${brl(titleValue)} - Saldo ${brl(balance)}`;
@@ -573,6 +581,7 @@ function cardDateLine(item, options={}){
     return `<p class="row-meta recon-card-line recon-card-dates" title="${escapeHtml(tooltip)}">Vcto ${escapeHtml(dueText)} · Liq ${escapeHtml(liquidationText)}</p>`;
 }
 function chartAccountLine(item){
+    if(item?.is_bordero) return item?.chart_account_label || 'Baixa agrupada por borderô';
     return item?.chart_account_label || (item?.chart_account_id ? `Plano ${item.chart_account_id}` : 'Plano de contas não informado');
 }
 function compactBadge(label, kind='mute'){
@@ -687,6 +696,9 @@ function isSystemEntryDisabled(item, activeRow=getActiveRow()){
     if(!state.selectedBankRowIds.length && !activeRow) return true;
     if(item?.is_reconciled) return true;
     const linkedIds = new Set((activeRow?.matches?.linked_entry_ids || []).map(Number));
+    if(item?.is_bordero){
+        return (item.financial_entry_ids || []).some((entryId) => linkedIds.has(Number(entryId)));
+    }
     return linkedIds.has(Number(item?.financial_entry_id || item?.id));
 }
 
@@ -962,6 +974,9 @@ function renderSystemRows(){
             item.external_reference,
             item.origin_reference,
             item.settlement_code,
+            item.bordero_code,
+            item.bordero_name,
+            item.bordero_settlement_code,
             item.counterparty_name,
             item.chart_account_label,
             item.due_date,
@@ -1001,7 +1016,9 @@ function renderSystemRows(){
                 <input type="checkbox" ${selectedIds.has(Number(item.id)) ? 'checked' : ''} ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''} onclick="event.stopPropagation()" onchange="toggleEntrySelection(${item.id})">
             </div>
             <div class="badges badges--compact">
+                ${item.is_bordero ? compactBadge('Borderô', 'info') : ''}
                 ${compactMovementNatureBadge(item.movement_nature) || movementNatureBadge(item.movement_nature)}
+                ${item.is_bordero && item.bordero_type ? compactBadge(item.bordero_type === 'payable' ? 'Pagamento' : 'Recebimento', 'mute') : ''}
                 ${linkedIds.has(Number(item.financial_entry_id || item.id)) ? compactBadge('Vinc.', 'ok') : ''}
                 ${suggestedIds.has(Number(item.financial_entry_id || item.id)) ? compactBadge('Sug.', 'info') : ''}
                 ${item.linked_rows_count ? compactBadge(`${item.linked_rows_count} banco`, 'mute') : compactBadge('S/vínc.', 'warn')}
@@ -1010,7 +1027,7 @@ function renderSystemRows(){
             </div>
             <!-- compat: ${movementNatureBadge(item.movement_nature)} -->
             <div class="inline-actions">
-                <a class="btn btn-secondary" href="${escapeHtml(item.navigation_url || (`/financial/entries/${item.financial_entry_id || item.id}${companyQuery()}`))}" style="text-decoration:none;" onclick="event.stopPropagation()">Abrir lançamento</a>
+                <a class="btn btn-secondary" href="${escapeHtml(item.navigation_url || (`/financial/entries/${item.financial_entry_id || item.id}${companyQuery()}`))}" style="text-decoration:none;" onclick="event.stopPropagation()">${item.is_bordero ? 'Abrir borderô' : 'Abrir lançamento'}</a>
                 <button type="button" class="btn btn-secondary" onclick="event.stopPropagation(); toggleEntrySelection(${item.id})" ${isSystemEntryDisabled(item, activeRow) && !selectedIds.has(Number(item.id)) ? 'disabled' : ''}>${selectedIds.has(Number(item.id)) ? 'Remover' : 'Selecionar'}</button>
             </div>
         </article>
@@ -1578,8 +1595,12 @@ async function confirmSelectedMatches(resolutionStrategy=null){
             headers:{'Content-Type':'application/json'},
             body: JSON.stringify({
                 bank_row_ids: bankRowIds,
-                financial_entry_ids: Array.from(new Set(getSelectedSystemRows().map(item => Number(item.financial_entry_id || item.id)).filter(Boolean))),
-                financial_settlement_ids: getSelectedSystemRows().map(item => Number(item.financial_settlement_id || 0)).filter(Boolean),
+                financial_entry_ids: Array.from(new Set(getSelectedSystemRows().flatMap(item => (
+                    item.is_bordero ? (item.financial_entry_ids || []) : [item.financial_entry_id || item.id]
+                )).map(Number).filter(Boolean))),
+                financial_settlement_ids: Array.from(new Set(getSelectedSystemRows().flatMap(item => (
+                    item.is_bordero ? (item.financial_settlement_ids || []) : [item.financial_settlement_id || 0]
+                )).map(Number).filter(Boolean))),
                 resolution_strategy: resolutionStrategy,
                 complementary_entry: resolutionStrategy === 'create_complement' ? {
                     description: 'Complemento criado pela conciliação bancária por conjunto',
