@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
+import sys
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import inspect, text
@@ -29,6 +31,11 @@ def scan_marker_residue(*, company_id: int, markers: list[str]) -> list[ResidueH
         return []
     if not company_id:
         raise ValueError("company_id obrigatório para auditoria de resíduos E2E.")
+
+    for candidate in (Path.cwd(), Path.cwd() / "app32"):
+        candidate_text = str(candidate)
+        if candidate.exists() and candidate_text not in sys.path:
+            sys.path.insert(0, candidate_text)
 
     try:
         from app import create_app
