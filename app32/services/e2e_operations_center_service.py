@@ -73,12 +73,14 @@ class E2EOperationsCenterService:
         supervised_executions = E2ESupervisedExecutionService.list_executions()[:12]
         ui_inventory = cls._latest_ui_inventory_summary(outputs_root)
         ui_contracts = cls._latest_ui_contracts_summary(outputs_root)
+        ui_safe_execution = cls._latest_ui_safe_execution_summary(outputs_root)
         operational_view = cls._build_operational_view(
             inventory_items,
             runs,
             backlog_candidates,
             ui_inventory=ui_inventory,
             ui_contracts=ui_contracts,
+            ui_safe_execution=ui_safe_execution,
         )
 
         return {
@@ -117,6 +119,7 @@ class E2EOperationsCenterService:
             "operational_view": operational_view,
             "ui_inventory": ui_inventory,
             "ui_contracts": ui_contracts,
+            "ui_safe_execution": ui_safe_execution,
             "latest_runs": runs[:20],
             "latest_by_mode": latest_by_mode,
             "latest_diff": latest_diff,
@@ -323,6 +326,7 @@ class E2EOperationsCenterService:
         *,
         ui_inventory: dict[str, Any] | None = None,
         ui_contracts: dict[str, Any] | None = None,
+        ui_safe_execution: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         latest_run = runs[0] if runs else None
         approved_runs = sum(1 for run in runs if run.get("status") == "passed")
@@ -379,6 +383,26 @@ class E2EOperationsCenterService:
                         "label": "Contratos com gate humano",
                         "value": int(ui_contracts.get("human_gate_required_total") or 0),
                         "hint": "Ações de maior risco que só podem ser exercitadas com confirmação explícita.",
+                    },
+                ]
+            )
+        if ui_safe_execution:
+            coverage_cards.extend(
+                [
+                    {
+                        "label": "Contratos UI executados",
+                        "value": int(ui_safe_execution.get("executed_contracts_total") or 0),
+                        "hint": "Contratos de baixo risco executados em modo não persistente.",
+                    },
+                    {
+                        "label": "Contratos UI aprovados",
+                        "value": int(ui_safe_execution.get("passed_contracts_total") or 0),
+                        "hint": "Contratos seguros que renderizaram e localizaram o elemento esperado.",
+                    },
+                    {
+                        "label": "Rotas UI abertas",
+                        "value": int(ui_safe_execution.get("routes_opened_total") or 0),
+                        "hint": "Telas abertas de forma autenticada durante a execução segura.",
                     },
                 ]
             )
@@ -554,6 +578,20 @@ class E2EOperationsCenterService:
     def _latest_ui_contracts_summary(outputs_root: Path) -> dict[str, Any] | None:
         candidates = sorted(
             outputs_root.glob("ui_contracts/run_*/reports/summary.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if not candidates:
+            return None
+        try:
+            return json.loads(candidates[0].read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _latest_ui_safe_execution_summary(outputs_root: Path) -> dict[str, Any] | None:
+        candidates = sorted(
+            outputs_root.glob("ui_safe_execution/run_*/reports/summary.json"),
             key=lambda path: path.stat().st_mtime,
             reverse=True,
         )

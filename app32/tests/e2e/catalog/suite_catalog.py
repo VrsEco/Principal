@@ -59,6 +59,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=False,
         summary="Gera contratos canônicos por elemento UI com estratégia de execução, dados sintéticos, risco, confirmação e rollback.",
     ),
+    "ui_safe_contract_execution": E2ESuiteDefinition(
+        suite_id="ui_safe_contract_execution",
+        label="Execução segura de contratos UI",
+        domain="governance",
+        environments=("DEV_FULL", "PROD_SAFE"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_ui_safe_contract_execution.py",),
+        destructive=False,
+        summary="Executa lote seguro de contratos UI de baixo risco, autenticado e não persistente, validando renderização e presença de elementos.",
+    ),
     "full_system_validation": E2ESuiteDefinition(
         suite_id="full_system_validation",
         label="Teste completo do sistema",
