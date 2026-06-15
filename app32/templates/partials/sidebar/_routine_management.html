@@ -128,7 +128,7 @@
                     class="sub-nav-link {{ 'active' if '/process-routines/analysis' in request.path }}">
                     Análise das Jornadas
                 </a>
-                <a href="{{ url_for('main.efficiency_analysis') }}"
+                <a href="{{ url_for('main.efficiency_analysis_company', company_id=session.get('active_company_id')) if session.get('active_company_id') else url_for('main.efficiency_analysis') }}"
                     class="sub-nav-link {{ 'active' if '/efficiency-analysis' in request.path }}">
                     Análise da Eficiência
                 </a>
