@@ -224,6 +224,16 @@ def test_financial_catalog_schedule_transactional_e2e(
             "cost_center_id": created["cost_centers"],
             "notes": "Título temporário de QA financeiro",
             "metadata_json": {"e2e": True, "cleanup": "delete_after_cancel"},
+            "allocations": [
+                {
+                    "chart_account_id": created["chart_accounts"],
+                    "cost_center_id": created["cost_centers"],
+                    "allocation_type": "percentage",
+                    "percentage": "100",
+                    "notes": "Rateio integral temporário de QA financeiro",
+                    "metadata_json": {"e2e": True},
+                }
+            ],
         }
         schedule = http.request_json(
             "POST",
