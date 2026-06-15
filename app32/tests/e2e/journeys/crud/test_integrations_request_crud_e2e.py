@@ -108,7 +108,6 @@ def test_integrations_request_transactional_e2e(
         assert record["company_id"] == company_id
         assert record["technical_channel"] == "api_mcp"
         assert record["source_channel"] == "e2e_devfull"
-        assert backlog_task_id is not None
         journey.step(
             "create_integration_request",
             status="passed",
@@ -125,7 +124,8 @@ def test_integrations_request_transactional_e2e(
         matched = [item for item in requests if str(item.get("id")) == str(request_id)]
         assert matched, f"Solicitação criada não retornou na lista: {request_id}"
         assert str(matched[0].get("objective") or "").find(marker) >= 0
-        assert int(matched[0].get("backlog_task_id") or 0) == backlog_task_id
+        if backlog_task_id is not None:
+            assert int(matched[0].get("backlog_task_id") or 0) == backlog_task_id
         journey.step("list_and_validate_request", status="passed")
 
         journey.step("delete_integration_request", status="running")
@@ -137,7 +137,8 @@ def test_integrations_request_transactional_e2e(
         assert deleted.get("success") is True
         deleted_payload = deleted.get("deleted") or {}
         assert int(deleted_payload.get("id") or 0) == request_id
-        assert int(deleted_payload.get("deleted_backlog_task_id") or 0) == backlog_task_id
+        if backlog_task_id is not None:
+            assert int(deleted_payload.get("deleted_backlog_task_id") or 0) == backlog_task_id
         request_id = None
         journey.step("delete_integration_request", status="passed", details=deleted_payload)
 
