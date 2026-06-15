@@ -228,7 +228,12 @@ class E2EOperationsCenterService:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             except Exception:
                 continue
-            environment = cls._infer_environment(outputs_root, manifest_path)
+            manifest_environment = str(manifest.get("environment") or "").upper()
+            environment = (
+                manifest_environment
+                if manifest_environment in cls.OPERATIONAL_ENVIRONMENTS
+                else cls._infer_environment(outputs_root, manifest_path)
+            )
             if environment not in cls.OPERATIONAL_ENVIRONMENTS:
                 continue
             runs.append(cls._build_run_record(outputs_root, manifest_path, manifest, environment=environment))
