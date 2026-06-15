@@ -65,14 +65,16 @@ def get_efficiency_collaborators(
         results[emp_id] = {
             "employee_id": emp_id,
             "employee_name": employee.name,
+            "role_title": employee.role.title if employee.role else None,
+            "department": employee.department,
             "in_progress": {"total": 0, "on_time": 0, "late": 0},
             "completed": {"total": 0, "on_time": 0, "late": 0},
             "positive_occurrences": {"count": 0, "score": 0},
             "negative_occurrences": {"count": 0, "score": 0},
             "delivery_scores": {
-                "process": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0},
-                "project": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0},
-                "overall": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0},
+                "process": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0, "assigned_count": 0},
+                "project": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0, "assigned_count": 0},
+                "overall": {"total": 0, "positive": 0, "negative": 0, "count": 0, "potential": 0, "assigned": 0, "assigned_count": 0},
             },
             "delivery_records": {"project": [], "process": []},
             "occurrence_records": {"positive": [], "negative": []},
@@ -236,6 +238,7 @@ def get_efficiency_collaborators(
             if emp_id not in results:
                 continue
             results[emp_id]["delivery_scores"]["project"]["assigned"] += (on_time_base * multiplier)
+            results[emp_id]["delivery_scores"]["project"]["assigned_count"] += 1
             if is_completed:
                 results[emp_id]["delivery_scores"]["project"]["potential"] += (on_time_base * multiplier)
                 results[emp_id]["completed"]["total"] += 1
@@ -321,6 +324,7 @@ def get_efficiency_collaborators(
             if emp_id not in results:
                 continue
             results[emp_id]["delivery_scores"]["process"]["assigned"] += (on_time_base * multiplier)
+            results[emp_id]["delivery_scores"]["process"]["assigned_count"] += 1
             if is_completed:
                 results[emp_id]["delivery_scores"]["process"]["potential"] += (on_time_base * multiplier)
                 results[emp_id]["completed"]["total"] += 1
@@ -435,6 +439,7 @@ def get_efficiency_collaborators(
         delivery_scores["overall"]["count"] = delivery_scores["project"]["count"] + delivery_scores["process"]["count"]
         delivery_scores["overall"]["potential"] = delivery_scores["project"]["potential"] + delivery_scores["process"]["potential"]
         delivery_scores["overall"]["assigned"] = delivery_scores["project"]["assigned"] + delivery_scores["process"]["assigned"]
+        delivery_scores["overall"]["assigned_count"] = delivery_scores["project"].get("assigned_count", 0) + delivery_scores["process"].get("assigned_count", 0)
 
         period_hours = data["period_hours"]
         period_hours["worked_project"] = round(period_hours["worked_project"], 2)
@@ -449,6 +454,268 @@ def get_efficiency_collaborators(
 
     ordered.sort(key=lambda item: str(item.get("employee_name") or "").lower())
     return ordered
+
+
+def build_team_efficiency_summary(
+    *,
+    company_id: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+    employee_ids: Iterable[int] | None = None,
+) -> dict:
+    """Consolida a eficiência da equipe para consumo executivo no painel.
+
+    Mantém a regra detalhada em ``get_efficiency_collaborators`` e devolve
+    apenas um read model agregado, tenant-safe por ``company_id``.
+    """
+    collaborators = get_efficiency_collaborators(
+        company_id=company_id,
+        start_date=start_date,
+        end_date=end_date,
+        employee_ids=employee_ids,
+    )
+
+    semaphore = {"green": 0, "yellow": 0, "red": 0, "blue": 0, "gray": 0}
+    contracted_total = 0.0
+    worked_total = 0.0
+    score_total = 0.0
+    score_max_total = 0.0
+    activity_count_total = 0
+    instance_count_total = 0
+    occurrence_count_total = 0
+    late_total = 0
+    items = []
+
+    for row in collaborators:
+        period_hours = row.get("period_hours") or {}
+        contracted = float(period_hours.get("contracted") or 0.0)
+        worked = float(period_hours.get("worked_total") or 0.0)
+        utilization = float(period_hours.get("utilization_percent") or 0.0)
+        in_progress_late = int((row.get("in_progress") or {}).get("late") or 0)
+        completed_late = int((row.get("completed") or {}).get("late") or 0)
+        employee_late = in_progress_late + completed_late
+        positive_occurrences = row.get("positive_occurrences") or {}
+        negative_occurrences = row.get("negative_occurrences") or {}
+        occurrence_score = float(positive_occurrences.get("score") or 0.0) + float(negative_occurrences.get("score") or 0.0)
+        occurrence_count = int(positive_occurrences.get("count") or 0) + int(negative_occurrences.get("count") or 0)
+        delivery_scores = row.get("delivery_scores") or {}
+        project_scores = delivery_scores.get("project") or {}
+        process_scores = delivery_scores.get("process") or {}
+        overall_scores = delivery_scores.get("overall") or {}
+        project_score = float(project_scores.get("total") or 0.0)
+        process_score = float(process_scores.get("total") or 0.0)
+        project_max = float(project_scores.get("assigned") or 0.0)
+        process_max = float(process_scores.get("assigned") or 0.0)
+        activity_count = int(project_scores.get("assigned_count") or project_scores.get("count") or 0)
+        instance_count = int(process_scores.get("assigned_count") or process_scores.get("count") or 0)
+        project_finished = int(project_scores.get("count") or 0)
+        process_finished = int(process_scores.get("count") or 0)
+        project_open = max(activity_count - project_finished, 0)
+        process_open = max(instance_count - process_finished, 0)
+        project_hours = float(period_hours.get("worked_project") or 0.0)
+        process_hours = float(period_hours.get("worked_process") or 0.0)
+        total_worked_for_split = project_hours + process_hours
+        project_capacity = round((contracted * (project_hours / total_worked_for_split)) if total_worked_for_split > 0 else 0.0, 2)
+        process_capacity = round(contracted - project_capacity, 2) if total_worked_for_split > 0 else contracted
+        project_planned_hours = project_capacity
+        process_planned_hours = process_capacity
+        employee_score_total = project_score + process_score + occurrence_score
+        employee_score_max = float(overall_scores.get("assigned") or 0.0)
+
+        contracted_total += contracted
+        worked_total += worked
+        score_total += employee_score_total
+        score_max_total += employee_score_max
+        activity_count_total += activity_count
+        instance_count_total += instance_count
+        occurrence_count_total += occurrence_count
+        late_total += employee_late
+
+        status = _team_efficiency_status(utilization, contracted, employee_late)
+        semaphore[status["semaphore"]] += 1
+        items.append(
+            {
+                "id": row.get("employee_id"),
+                "code": f"EQ-{row.get('employee_id')}",
+                "name": row.get("employee_name") or "Colaborador",
+                "group": "team_efficiency",
+                "subgroup": status["subgroup"],
+                "semaphore": status["semaphore"],
+                "situation": status["label"],
+                "objective": "Avaliar eficiência, capacidade utilizada e pontualidade das entregas do colaborador.",
+                "current_value": utilization,
+                "unit": "%",
+                "goal": employee_score_max,
+                "responsible": {
+                    "id": row.get("employee_id"),
+                    "name": row.get("employee_name") or "Colaborador",
+                    "email": None,
+                },
+                "project": None,
+                "activities": [],
+                "status_detail": status["detail"],
+                "next_charge": "Análise da Eficiência da Equipe",
+                "efficiency": {
+                    "role_title": row.get("role_title") or row.get("department") or "",
+                    "activity_count": activity_count,
+                    "instance_count": instance_count,
+                    "occurrence_count": occurrence_count,
+                    "status_label": _capacity_label(utilization, contracted, employee_late),
+                    "score_total": round(employee_score_total, 2),
+                    "score_max": round(employee_score_max, 2),
+                    "score_total_label": _format_score_ptbr(employee_score_total),
+                    "score_max_label": _format_score_ptbr(employee_score_max),
+                    "project_score": round(project_score, 2),
+                    "project_max": round(project_max, 2),
+                    "process_score": round(process_score, 2),
+                    "process_max": round(process_max, 2),
+                    "occurrence_score": round(occurrence_score, 2),
+                    "project_score_label": _format_score_ptbr(project_score),
+                    "project_max_label": _format_score_ptbr(project_max),
+                    "process_score_label": _format_score_ptbr(process_score),
+                    "process_max_label": _format_score_ptbr(process_max),
+                    "occurrence_score_label": _format_score_ptbr(occurrence_score),
+                    "project_quantity": {
+                        "total": activity_count,
+                        "open": project_open,
+                        "finished": project_finished,
+                    },
+                    "process_quantity": {
+                        "total": instance_count,
+                        "open": process_open,
+                        "finished": process_finished,
+                    },
+                    "project_hours": {
+                        "realized": round(project_hours, 2),
+                        "planned": round(project_planned_hours, 2),
+                        "capacity": round(project_capacity, 2),
+                        "realized_label": _format_hours_ptbr(project_hours),
+                        "planned_label": _format_hours_ptbr(project_planned_hours),
+                        "capacity_label": _format_hours_ptbr(project_capacity),
+                    },
+                    "process_hours": {
+                        "realized": round(process_hours, 2),
+                        "planned": round(process_planned_hours, 2),
+                        "capacity": round(process_capacity, 2),
+                        "realized_label": _format_hours_ptbr(process_hours),
+                        "planned_label": _format_hours_ptbr(process_planned_hours),
+                        "capacity_label": _format_hours_ptbr(process_capacity),
+                    },
+                    "occurrences": {
+                        "positive_count": int(positive_occurrences.get("count") or 0),
+                        "negative_count": int(negative_occurrences.get("count") or 0),
+                        "positive_score": float(positive_occurrences.get("score") or 0.0),
+                        "negative_score": float(negative_occurrences.get("score") or 0.0),
+                        "positive_score_label": _format_score_ptbr(float(positive_occurrences.get("score") or 0.0)),
+                        "negative_score_label": _format_score_ptbr(float(negative_occurrences.get("score") or 0.0)),
+                    },
+                    "utilization_percent": utilization,
+                    "contracted_hours": round(contracted, 2),
+                    "worked_hours": round(worked, 2),
+                    "free_capacity": round(float(period_hours.get("free_capacity") or 0.0), 2),
+                    "contracted_hours_label": _format_hours_ptbr(contracted),
+                    "worked_hours_label": _format_hours_ptbr(worked),
+                    "free_capacity_label": _format_hours_ptbr(float(period_hours.get("free_capacity") or 0.0)),
+                    "late_deliveries": employee_late,
+                    "score": employee_score_total,
+                },
+            }
+        )
+
+    overall_utilization = round((worked_total / contracted_total * 100) if contracted_total > 0 else 0.0, 1)
+    alerts_count = semaphore["yellow"] + semaphore["red"]
+    status_label = (
+        "Sem equipe ativa"
+        if not collaborators
+        else "Atenção na capacidade"
+        if alerts_count
+        else "Equipe em faixa saudável"
+    )
+
+    return {
+        "total": len(collaborators),
+        "card_title": "Pontuação Total",
+        "value_label": f"{_format_score_ptbr(score_total)} / {_format_score_ptbr(score_max_total)}",
+        "card_subtitle": "Global da Empresa",
+        "alerts_count": alerts_count,
+        "alert_label": f"{alerts_count} fora da faixa ideal" if alerts_count else "0 fora da faixa ideal",
+        "semaphore": semaphore,
+        "items": items,
+        "summary": {
+            "score_total": round(score_total, 2),
+            "score_max": round(score_max_total, 2),
+            "score_total_label": _format_score_ptbr(score_total),
+            "score_max_label": _format_score_ptbr(score_max_total),
+            "activity_count": activity_count_total,
+            "instance_count": instance_count_total,
+            "occurrence_count": occurrence_count_total,
+            "counts_label": f"{activity_count_total} atividades | {instance_count_total} instâncias | {occurrence_count_total} Ocorrências",
+            "utilization_percent": overall_utilization,
+            "contracted_hours": round(contracted_total, 2),
+            "worked_hours": round(worked_total, 2),
+            "free_capacity": round(contracted_total - worked_total, 2),
+            "late_deliveries": late_total,
+            "status_label": status_label,
+        },
+    }
+
+
+def _capacity_label(utilization_percent: float, contracted_hours: float, late_deliveries: int) -> str:
+    if contracted_hours <= 0:
+        return "Sem carga"
+    if late_deliveries > 0 or utilization_percent > 95:
+        return "Sobrecarregado"
+    if utilization_percent < 70:
+        return "Ocioso"
+    if utilization_percent <= 90:
+        return "Saudável"
+    return "Atenção"
+
+
+def _format_score_ptbr(value: float) -> str:
+    text = f"{float(value or 0.0):,.2f}"
+    return text.replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _format_hours_ptbr(value: float) -> str:
+    return f"{_format_score_ptbr(value)}h"
+
+
+def _team_efficiency_status(utilization_percent: float, contracted_hours: float, late_deliveries: int) -> dict:
+    if contracted_hours <= 0:
+        return {
+            "semaphore": "gray",
+            "label": "Sem capacidade configurada",
+            "subgroup": "Sem carga horária",
+            "detail": "Colaborador sem carga horária contratada configurada para o período.",
+        }
+    if utilization_percent > 95 or late_deliveries > 0:
+        return {
+            "semaphore": "red",
+            "label": "Fora da faixa ideal",
+            "subgroup": "Sobrecarga ou atraso",
+            "detail": "Há sobrecarga e/ou entregas atrasadas; requer ação de balanceamento.",
+        }
+    if utilization_percent < 70:
+        return {
+            "semaphore": "yellow",
+            "label": "Capacidade ociosa",
+            "subgroup": "Capacidade livre elevada",
+            "detail": "A utilização está abaixo da faixa esperada; avaliar redistribuição de demandas.",
+        }
+    if utilization_percent <= 90:
+        return {
+            "semaphore": "green",
+            "label": "Faixa saudável",
+            "subgroup": "Eficiência saudável",
+            "detail": "Capacidade e entregas em faixa saudável.",
+        }
+    return {
+        "semaphore": "yellow",
+        "label": "Próximo da sobrecarga",
+        "subgroup": "Atenção na capacidade",
+        "detail": "Utilização acima da faixa ideal; acompanhar para evitar sobrecarga.",
+    }
 
 
 def _business_days_between(start_date: date, end_date: date) -> int:

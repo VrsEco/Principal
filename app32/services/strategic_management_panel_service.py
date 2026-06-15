@@ -16,6 +16,7 @@ from models import (
     ProjectTask,
     db,
 )
+from services.efficiency_collaborators_service import build_team_efficiency_summary
 
 
 GROUP_DEFINITIONS = {
@@ -36,6 +37,12 @@ GROUP_DEFINITIONS = {
         "short_label": "Projetos",
         "subtitle": "Execução fora da rotina e iniciativas corretivas",
         "color": "#3b82f6",
+    },
+    "team_efficiency": {
+        "label": "Eficiência da Equipe",
+        "short_label": "Equipe",
+        "subtitle": "Eficiência, capacidade e entrega do time",
+        "color": "#10b981",
     },
     "webs": {
         "label": "Indicadores de Teia",
@@ -145,9 +152,10 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
             group["alerts"].append(item)
 
     _enrich_web_group(groups["webs"], company_id, indicators, projects_by_id, project_task_stats)
+    _enrich_team_efficiency_group(groups["team_efficiency"], company_id, period_context)
 
     ordered_groups = []
-    for key in ("strategic", "processes", "projects", "webs"):
+    for key in ("strategic", "processes", "projects", "team_efficiency", "webs"):
         group = groups[key]
         group["semaphore"] = dict(group["semaphore"])
         group["alerts_count"] = len(group["alerts"])
@@ -446,6 +454,31 @@ def _form_options(company_id: int, employees_by_id: dict[int, Employee], project
             for employee in sorted(employees_by_id.values(), key=lambda item: item.name or "")
         ],
     }
+
+
+def _enrich_team_efficiency_group(group: dict[str, Any], company_id: int, period: dict[str, Any]) -> None:
+    start = date.fromisoformat(period["start"])
+    end = date.fromisoformat(period["end"])
+    summary = build_team_efficiency_summary(
+        company_id=company_id,
+        start_date=start,
+        end_date=end,
+    )
+
+    group["total"] = summary["total"]
+    group["card_title"] = summary.get("card_title")
+    group["card_subtitle"] = summary.get("card_subtitle")
+    group["value_label"] = summary["value_label"]
+    group["alert_label"] = summary["alert_label"]
+    group["detail_url"] = f"/companies/{company_id}/efficiency-analysis"
+    group["summary"] = summary.get("summary") or {}
+    group["semaphore"].update(summary["semaphore"])
+    group["items"] = list(summary["items"])
+
+    for item in group["items"]:
+        group["subgroups"][item["subgroup"]].append(item)
+        if item["semaphore"] in {"red", "yellow"}:
+            group["alerts"].append(item)
 
 
 def _enrich_web_group(group: dict[str, Any], company_id: int, indicators: list[Indicator], projects: dict[int, Project], task_stats: dict[int, dict[str, Any]]) -> None:

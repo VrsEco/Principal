@@ -329,10 +329,37 @@ def main_notes():
 @main_bp.route('/efficiency-analysis')
 @login_required
 def efficiency_analysis():
-    """Efficiency Analysis Page"""
-    from flask import session
+    """Redirect legado para a análise tenant-aware."""
     company_id = session.get('active_company_id')
+    if not company_id and current_user.is_authenticated:
+        company_id = get_default_company_id()
+    if company_id:
+        return redirect(url_for('main.efficiency_analysis_company', company_id=company_id))
+    return redirect(url_for('my_work.my_work'))
+
+
+@main_bp.route('/companies/<int:company_id>/efficiency-analysis')
+@login_required
+def efficiency_analysis_company(company_id):
+    """Efficiency Analysis Page com escopo explícito por empresa."""
+    company = Company.query.get_or_404(company_id)
+    if not _can_access_company_efficiency(company_id):
+        return "Sem permissão para acessar a análise de eficiência desta empresa.", 403
+    session['active_company_id'] = company.id
     return render_template('efficiency_analysis.html', company_id=company_id)
+
+
+def _can_access_company_efficiency(company_id: int) -> bool:
+    if has_company_full_access(company_id):
+        return True
+    if not current_user.is_authenticated:
+        return False
+    return (
+        Employee.query
+        .filter(Employee.company_id == company_id, Employee.user_id == current_user.id, _active_employee_filter())
+        .first()
+        is not None
+    )
 
 @main_bp.errorhandler(404)
 def page_404(e=None):
