@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 
@@ -18,6 +19,7 @@ from app32.tests.e2e.core.prod_safe_session_bootstrap import bootstrap_remote_pr
 class AuthenticatedHTTPSession:
     settings: E2EEnvironmentSettings
     session: requests.Session
+    local_client: Any | None = None
 
     @classmethod
     def create(cls, settings: E2EEnvironmentSettings) -> "AuthenticatedHTTPSession":
@@ -78,6 +80,14 @@ class AuthenticatedHTTPSession:
         return payload
 
     def request(self, method: str, path: str, *, json_payload: dict[str, Any] | None = None) -> requests.Response:
+        if self.local_client is not None:
+            return _LocalResponse(
+                self.local_client.open(
+                    path,
+                    method=method.upper(),
+                    json=json_payload,
+                )
+            )
         return self.session.request(
             method=method.upper(),
             url=f"{self.settings.base_url.rstrip('/')}{path}",
@@ -159,6 +169,8 @@ class AuthenticatedHTTPSession:
 
     def _bootstrap_via_remote_internal_session(self) -> dict[str, Any]:
         bootstrap_remote_prod_safe_storage_state(self.settings)
+        if self.settings.execution_mode is E2EExecutionMode.DEV_FULL and self.settings.user_id is not None:
+            self._bootstrap_local_flask_client()
         self.session.cookies.clear()
         self._load_storage_state_cookie()
         if not self._has_session_cookie():
@@ -168,6 +180,23 @@ class AuthenticatedHTTPSession:
             "redirect": self.settings.post_login_path,
             "auth_source": "remote_internal_bootstrap",
         }
+
+    def _bootstrap_local_flask_client(self) -> None:
+        hostname = urlparse(self.settings.base_url).hostname or ""
+        if not hostname.endswith("gestaoversus.com.br"):
+            return
+        try:
+            from app import create_app
+        except ModuleNotFoundError:
+            from app32.app import create_app
+
+        app = create_app("production")
+        client = app.test_client()
+        with client.session_transaction() as sess:
+            sess["_user_id"] = str(self.settings.user_id)
+            sess["_fresh"] = True
+            sess["active_company_id"] = self.settings.company_id
+        self.local_client = client
 
     def _load_storage_state_cookie(self) -> None:
         storage_path = Path(self.settings.storage_state_path)
@@ -185,3 +214,19 @@ class AuthenticatedHTTPSession:
             domain = str(cookie.get("domain") or "").lstrip(".")
             path = str(cookie.get("path") or "/") or "/"
             self.session.cookies.set(name, value, domain=domain or None, path=path)
+
+
+class _LocalResponse:
+    def __init__(self, response: Any):
+        self._response = response
+        self.status_code = int(getattr(response, "status_code", 0) or 0)
+        self.headers = getattr(response, "headers", {}) or {}
+        self.url = ""
+        self.text = response.get_data(as_text=True)
+
+    def json(self) -> Any:
+        return self._response.get_json(silent=False)
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise requests.HTTPError(f"{self.status_code} Error", response=self)  # type: ignore[arg-type]
