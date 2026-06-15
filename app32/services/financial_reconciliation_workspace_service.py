@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from models import db
 from models.financial import (
     FinancialBankAccount,
+    FinancialBordero,
+    FinancialBorderoSettlement,
     FinancialChartAccount,
     FinancialCounterparty,
     FinancialEntry,
@@ -365,6 +367,168 @@ class FinancialReconciliationWorkspaceService:
             }
         )
         return payload
+
+    @staticmethod
+    def _bordero_reconciliation_row_id(bordero_settlement_id: int) -> int:
+        return -(100000000 + int(bordero_settlement_id or 0))
+
+    @staticmethod
+    def _extract_bordero_settlement_id(settlement: FinancialSettlement) -> Optional[int]:
+        metadata = dict(getattr(settlement, "metadata_json", None) or {})
+        raw_id = metadata.get("bordero_settlement_id") or (metadata.get("bordero_trace") or {}).get("bordero_settlement_id")
+        try:
+            normalized_id = int(raw_id or 0)
+        except (TypeError, ValueError):
+            return None
+        return normalized_id if normalized_id > 0 else None
+
+    @staticmethod
+    def _serialize_bordero_system_settlement(
+        bordero_settlement: FinancialBorderoSettlement,
+        bordero: FinancialBordero,
+        settlement_pairs: Sequence[Tuple[FinancialSettlement, FinancialEntry]],
+        *,
+        linked_settlement_ids: Optional[Dict[int, List[int]]] = None,
+    ) -> Dict:
+        linked_settlement_ids = linked_settlement_ids or {}
+        child_settlement_ids = [int(settlement.id) for settlement, _ in settlement_pairs]
+        child_entry_ids = sorted({int(entry.id) for _, entry in settlement_pairs if getattr(entry, "id", None)})
+        linked_row_ids = sorted(
+            {
+                int(row_id)
+                for settlement_id in child_settlement_ids
+                for row_id in linked_settlement_ids.get(int(settlement_id), [])
+            }
+        )
+        metadata = dict(bordero_settlement.metadata_json or {})
+        is_reconciled = str(metadata.get("reconciliation_status") or "").lower() in {"matched", "reconciled"}
+        if not is_reconciled and settlement_pairs:
+            is_reconciled = all(
+                str(settlement.reconciliation_status or "").lower() in {"matched", "reconciled"}
+                for settlement, _ in settlement_pairs
+            )
+        movement_natures = {str(entry.movement_nature or "").strip().lower() for _, entry in settlement_pairs}
+        movement_natures.discard("")
+        movement_nature = next(iter(movement_natures), None) if len(movement_natures) == 1 else (
+            "debit" if bordero.bordero_type == "payable" else "credit" if bordero.bordero_type == "receivable" else None
+        )
+        gross_amount = Decimal(bordero_settlement.gross_amount or 0)
+        allocated_amount = Decimal(bordero_settlement.allocated_amount or 0)
+        amount = gross_amount if gross_amount > 0 else allocated_amount
+        return {
+            "id": FinancialReconciliationWorkspaceService._bordero_reconciliation_row_id(bordero_settlement.id),
+            "source_type": "bordero_settlement",
+            "is_bordero": True,
+            "bordero_id": bordero.id,
+            "bordero_code": bordero.bordero_code,
+            "bordero_name": bordero.name,
+            "bordero_type": bordero.bordero_type,
+            "bordero_status": bordero.status,
+            "bordero_settlement_id": bordero_settlement.id,
+            "bordero_settlement_code": bordero_settlement.settlement_code,
+            "financial_settlement_ids": child_settlement_ids,
+            "financial_entry_ids": child_entry_ids,
+            "financial_settlement_id": None,
+            "financial_entry_id": child_entry_ids[0] if child_entry_ids else None,
+            "entry_code": bordero_settlement.settlement_code,
+            "settlement_code": bordero_settlement.settlement_code,
+            "description": bordero.name or bordero.description or bordero_settlement.notes or bordero.bordero_code,
+            "notes": bordero_settlement.notes or bordero.notes,
+            "document_number": bordero.bordero_code,
+            "external_reference": bordero.bordero_code,
+            "origin_reference": bordero.bordero_code,
+            "entry_type": bordero.bordero_type,
+            "movement_nature": movement_nature,
+            "status": bordero.status,
+            "occurred_on": bordero_settlement.settlement_date.isoformat() if bordero_settlement.settlement_date else None,
+            "due_date": bordero_settlement.settlement_date.isoformat() if bordero_settlement.settlement_date else None,
+            "competence_date": bordero_settlement.settlement_date.isoformat() if bordero_settlement.settlement_date else None,
+            "latest_settlement_date": bordero_settlement.settlement_date.isoformat() if bordero_settlement.settlement_date else None,
+            "settlement_date": bordero_settlement.settlement_date.isoformat() if bordero_settlement.settlement_date else None,
+            "original_amount": float(amount),
+            "remaining_amount": float(amount),
+            "amount": float(amount),
+            "settlement_amount": float(amount),
+            "title_original_amount": float(bordero.total_amount or amount),
+            "title_remaining_amount": float(bordero.open_amount or 0),
+            "settlement_status": bordero_settlement.settlement_status,
+            "reconciliation_status": metadata.get("reconciliation_status") or ("reconciled" if is_reconciled else "pending"),
+            "is_reconciled": is_reconciled,
+            "linked_row_ids": linked_row_ids,
+            "linked_rows_count": len(linked_row_ids),
+            "match_mode": "bordero",
+            "navigation_url": f"/financial/borderos/{bordero.id}?company_id={bordero.company_id}",
+            "counterparty_name": f"{len(child_entry_ids)} título(s) no borderô",
+            "chart_account_label": "Baixa agrupada por borderô",
+            "bordero_summary": {
+                "title_count": len(child_entry_ids),
+                "financial_settlement_count": len(child_settlement_ids),
+                "allocated_amount": float(bordero_settlement.allocated_amount or 0),
+                "gross_amount": float(bordero_settlement.gross_amount or 0),
+            },
+        }
+
+    @staticmethod
+    def _collapse_bordero_settlement_rows(
+        settlement_pairs: Sequence[Tuple[FinancialSettlement, FinancialEntry]],
+        *,
+        company_id: int,
+        linked_settlement_ids: Optional[Dict[int, List[int]]] = None,
+    ) -> List[Dict]:
+        regular_pairs: List[Tuple[FinancialSettlement, FinancialEntry]] = []
+        grouped_pairs: Dict[int, List[Tuple[FinancialSettlement, FinancialEntry]]] = {}
+        for settlement, entry in settlement_pairs:
+            bordero_settlement_id = FinancialReconciliationWorkspaceService._extract_bordero_settlement_id(settlement)
+            if bordero_settlement_id:
+                grouped_pairs.setdefault(bordero_settlement_id, []).append((settlement, entry))
+            else:
+                regular_pairs.append((settlement, entry))
+
+        collapsed_rows = [
+            FinancialReconciliationWorkspaceService._serialize_system_settlement(
+                settlement,
+                entry,
+                linked_row_ids=(linked_settlement_ids or {}).get(int(settlement.id), []),
+            )
+            for settlement, entry in regular_pairs
+        ]
+        if grouped_pairs:
+            bordero_settlements = FinancialBorderoSettlement.query.filter(
+                FinancialBorderoSettlement.company_id == company_id,
+                FinancialBorderoSettlement.id.in_(list(grouped_pairs.keys())),
+                FinancialBorderoSettlement.deleted_at.is_(None),
+            ).all()
+            bordero_settlement_by_id = {int(item.id): item for item in bordero_settlements}
+            bordero_ids = sorted({int(item.bordero_id) for item in bordero_settlements})
+            borderos = FinancialBordero.query.filter(
+                FinancialBordero.company_id == company_id,
+                FinancialBordero.id.in_(bordero_ids),
+                FinancialBordero.deleted_at.is_(None),
+            ).all() if bordero_ids else []
+            bordero_by_id = {int(item.id): item for item in borderos}
+            for bordero_settlement_id, pairs in grouped_pairs.items():
+                bordero_settlement = bordero_settlement_by_id.get(int(bordero_settlement_id))
+                bordero = bordero_by_id.get(int(getattr(bordero_settlement, "bordero_id", 0) or 0)) if bordero_settlement else None
+                if not bordero_settlement or not bordero:
+                    collapsed_rows.extend(
+                        FinancialReconciliationWorkspaceService._serialize_system_settlement(
+                            settlement,
+                            entry,
+                            linked_row_ids=(linked_settlement_ids or {}).get(int(settlement.id), []),
+                        )
+                        for settlement, entry in pairs
+                    )
+                    continue
+                collapsed_rows.append(
+                    FinancialReconciliationWorkspaceService._serialize_bordero_system_settlement(
+                        bordero_settlement,
+                        bordero,
+                        pairs,
+                        linked_settlement_ids=linked_settlement_ids,
+                    )
+                )
+        collapsed_rows.sort(key=lambda item: (item.get("latest_settlement_date") or "", int(item.get("id") or 0)), reverse=True)
+        return collapsed_rows
 
     @staticmethod
     def _serialize_open_title(
@@ -869,14 +1033,11 @@ class FinancialReconciliationWorkspaceService:
             rows=rows,
             movement_nature=movement_filter,
         )
-        system_rows = [
-            FinancialReconciliationWorkspaceService._serialize_system_settlement(
-                settlement,
-                entry,
-                linked_row_ids=linked_settlement_ids.get(int(settlement.id), []),
-            )
-            for settlement, entry in system_settlements
-        ]
+        system_rows = FinancialReconciliationWorkspaceService._collapse_bordero_settlement_rows(
+            system_settlements,
+            company_id=company_id,
+            linked_settlement_ids=linked_settlement_ids,
+        )
         system_rows = [
             item
             for item in system_rows

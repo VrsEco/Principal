@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from models import db
 from models.financial import (
     FinancialBankAccount,
+    FinancialBorderoSettlement,
     FinancialChartAccount,
     FinancialCounterparty,
     FinancialCorrectionIndex,
@@ -1235,6 +1236,15 @@ class FinancialReconciliationService:
         settlement_by_id = {int(settlement.id): settlement for settlement, _ in settlement_pairs}
         entry_by_settlement_id = {int(settlement.id): entry for settlement, entry in settlement_pairs}
         allocations_by_row: Dict[int, List[Dict]] = {int(row.id): [] for row in rows}
+        bordero_settlement_id_set = set()
+        for settlement, _ in settlement_pairs:
+            try:
+                bordero_settlement_id = int((settlement.metadata_json or {}).get("bordero_settlement_id") or 0)
+            except (TypeError, ValueError):
+                bordero_settlement_id = 0
+            if bordero_settlement_id > 0:
+                bordero_settlement_id_set.add(bordero_settlement_id)
+        bordero_settlement_ids = sorted(bordero_settlement_id_set)
 
         for row in rows:
             row_id = int(row.id)
@@ -1332,6 +1342,23 @@ class FinancialReconciliationService:
                     )
                     confirmations.append(match.to_dict())
 
+            if bordero_settlement_ids:
+                bordero_settlements = FinancialBorderoSettlement.query.filter(
+                    FinancialBorderoSettlement.company_id == company_id,
+                    FinancialBorderoSettlement.id.in_(bordero_settlement_ids),
+                    FinancialBorderoSettlement.deleted_at.is_(None),
+                ).all()
+                for bordero_settlement in bordero_settlements:
+                    bordero_settlement.metadata_json = {
+                        **dict(bordero_settlement.metadata_json or {}),
+                        "reconciliation_status": "reconciled",
+                        "reconciliation_group_key": group_key,
+                        "reconciliation_bank_row_ids": selected_row_ids,
+                        "reconciliation_financial_settlement_ids": selected_settlement_ids,
+                        "reconciliation_reconciled_at": datetime.utcnow().isoformat(),
+                        "mode": "bordero_existing_settlement_reconciliation",
+                    }
+
             db.session.commit()
         except Exception as exc:
             db.session.rollback()
@@ -1344,6 +1371,7 @@ class FinancialReconciliationService:
             "match_mode": "N:N" if len(selected_row_ids) > 1 and len(selected_settlement_ids) > 1 else ("N:1" if len(selected_row_ids) > 1 else "1:N"),
             "bank_row_ids": selected_row_ids,
             "financial_settlement_ids": selected_settlement_ids,
+            "bordero_settlement_ids": bordero_settlement_ids,
             "financial_entry_ids": sorted({int(entry.id) for _, entry in settlement_pairs}),
             "bank_total": float(bank_total),
             "system_total": float(system_total),
