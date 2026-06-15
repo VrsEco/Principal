@@ -51,7 +51,15 @@ def managed_page(
 
     playwright = sync_playwright().start()
     browser_launcher = getattr(playwright, settings.browser_name)
-    browser = browser_launcher.launch(headless=settings.headless)
+    launch_options = {"headless": settings.headless}
+    if settings.browser_name == "chromium":
+        launch_options["args"] = [
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--disable-software-rasterizer",
+        ]
+    browser = browser_launcher.launch(**launch_options)
 
     video_dir = evidence.videos_dir
     video_dir.mkdir(parents=True, exist_ok=True)
