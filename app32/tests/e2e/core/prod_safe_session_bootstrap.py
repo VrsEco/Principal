@@ -11,7 +11,7 @@ from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecu
 
 
 def _supports_remote_bootstrap(settings: E2EEnvironmentSettings) -> bool:
-    if settings.execution_mode is not E2EExecutionMode.PROD_SAFE:
+    if settings.execution_mode is not E2EExecutionMode.PROD_SAFE and settings.user_id is None:
         return False
     hostname = urlparse(settings.base_url).hostname or ""
     return hostname.endswith("gestaoversus.com.br")

@@ -8,7 +8,6 @@ from app32.tests.e2e.data.meeting_builders import (
     build_meeting_draft_payload,
     build_meeting_execution_payload,
 )
-from app32.tests.e2e.pages.meetings_page import MeetingsPage
 from app32.tests.e2e.tasks.meetings_tasks import MeetingsTasks
 
 
@@ -17,7 +16,6 @@ from app32.tests.e2e.tasks.meetings_tasks import MeetingsTasks
 def test_meetings_crud_e2e_contract(
     e2e_settings: E2EEnvironmentSettings,
     e2e_run_context,
-    page_context,
 ):
     if e2e_settings.execution_mode is not E2EExecutionMode.DEV_FULL:
         pytest.skip("CRUD inicial de meetings só deve rodar em DEV_FULL.")
@@ -27,8 +25,7 @@ def test_meetings_crud_e2e_contract(
             + ", ".join(e2e_settings.missing_requirements)
         )
 
-    _, _, _, page = page_context
-    tasks = MeetingsTasks(MeetingsPage(page), company_id=e2e_settings.company_id or 0)
+    tasks = MeetingsTasks(None, company_id=e2e_settings.company_id or 0)
     journey = e2e_run_context.reporter.start_journey(
         journey="meetings_crud_e2e",
         run_id=e2e_run_context.evidence.run_id,
