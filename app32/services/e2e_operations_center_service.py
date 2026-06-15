@@ -642,9 +642,35 @@ class E2EOperationsCenterService:
         if not candidates:
             return None
         try:
-            return json.loads(candidates[0].read_text(encoding="utf-8"))
+            payload = json.loads(candidates[0].read_text(encoding="utf-8"))
         except Exception:
             return None
+        controlled = payload.get("controlled_mutation") or {}
+        return {
+            "run_id": payload.get("run_id"),
+            "environment": payload.get("environment"),
+            "generated_at": payload.get("generated_at"),
+            "company_id": payload.get("company_id"),
+            "total_suites": payload.get("total_suites"),
+            "passed_suites": payload.get("passed_suites"),
+            "failed_suites": payload.get("failed_suites"),
+            "failed_suite_ids": payload.get("failed_suite_ids") or [],
+            "residue_total": payload.get("residue_total"),
+            "controlled_mutation": {
+                "company_id": controlled.get("company_id"),
+                "destructive_actions_allowed": controlled.get("destructive_actions_allowed"),
+                "requires_explicit_company": controlled.get("requires_explicit_company"),
+                "cleanup_policy": controlled.get("cleanup_policy"),
+                "residue_zero": controlled.get("residue_zero"),
+                "mutation_step_counts": controlled.get("mutation_step_counts") or {},
+                "mutation_steps_by_domain": controlled.get("mutation_steps_by_domain") or {},
+                "mutating_steps_total": controlled.get("mutating_steps_total"),
+                "rollback_steps_total": controlled.get("rollback_steps_total"),
+                "passed_steps_total": controlled.get("passed_steps_total"),
+                "failed_steps_total": controlled.get("failed_steps_total"),
+            },
+            "summary_path": str(candidates[0]),
+        }
 
     @staticmethod
     def _is_screen_like(item: dict[str, Any]) -> bool:
