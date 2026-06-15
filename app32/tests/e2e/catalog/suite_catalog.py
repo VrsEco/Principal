@@ -54,10 +54,10 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         label="Smoke real de navegação",
         domain="smoke",
         environments=("DEV_FULL", "PROD_SAFE"),
-        command_kind="pytest",
-        command_args=("app32/tests/e2e/journeys/smoke/test_real_navigation_smoke.py", "-q"),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_smoke_navigation_probe.py",),
         destructive=False,
-        summary="Login real e navegação crítica em my-work, meetings, api-mcp e channels.",
+        summary="Navegação crítica autenticada em my-work, meetings, api-mcp e channels; em DEV_FULL usa browser real.",
     ),
     "meetings_crud_devfull": E2ESuiteDefinition(
         suite_id="meetings_crud_devfull",
