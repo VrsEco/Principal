@@ -72,7 +72,14 @@ class E2EOperationsCenterService:
         partial_suites = [item for item in suite_catalog if item["suite_id"] not in cls.SYSTEM_ACTION_SUITES]
         supervised_executions = E2ESupervisedExecutionService.list_executions()[:12]
         ui_inventory = cls._latest_ui_inventory_summary(outputs_root)
-        operational_view = cls._build_operational_view(inventory_items, runs, backlog_candidates, ui_inventory=ui_inventory)
+        ui_contracts = cls._latest_ui_contracts_summary(outputs_root)
+        operational_view = cls._build_operational_view(
+            inventory_items,
+            runs,
+            backlog_candidates,
+            ui_inventory=ui_inventory,
+            ui_contracts=ui_contracts,
+        )
 
         return {
             "summary": {
@@ -109,6 +116,7 @@ class E2EOperationsCenterService:
             "system_actions": quick_actions,
             "operational_view": operational_view,
             "ui_inventory": ui_inventory,
+            "ui_contracts": ui_contracts,
             "latest_runs": runs[:20],
             "latest_by_mode": latest_by_mode,
             "latest_diff": latest_diff,
@@ -314,6 +322,7 @@ class E2EOperationsCenterService:
         backlog_candidates: list[dict[str, Any]],
         *,
         ui_inventory: dict[str, Any] | None = None,
+        ui_contracts: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         latest_run = runs[0] if runs else None
         approved_runs = sum(1 for run in runs if run.get("status") == "passed")
@@ -350,6 +359,26 @@ class E2EOperationsCenterService:
                         "label": "Lacunas UI",
                         "value": int(ui_inventory.get("missing_contract_elements_total") or 0),
                         "hint": "Elementos descobertos que ainda precisam de contrato executável.",
+                    },
+                ]
+            )
+        if ui_contracts:
+            coverage_cards.extend(
+                [
+                    {
+                        "label": "Contratos UI gerados",
+                        "value": int(ui_contracts.get("contracts_total") or 0),
+                        "hint": "Elementos com contrato canônico de execução human-like gerado.",
+                    },
+                    {
+                        "label": "Contratos com rollback",
+                        "value": int(ui_contracts.get("rollback_required_total") or 0),
+                        "hint": "Ações que exigem reversão/limpeza e auditoria de resíduo zero.",
+                    },
+                    {
+                        "label": "Contratos com gate humano",
+                        "value": int(ui_contracts.get("human_gate_required_total") or 0),
+                        "hint": "Ações de maior risco que só podem ser exercitadas com confirmação explícita.",
                     },
                 ]
             )
@@ -511,6 +540,20 @@ class E2EOperationsCenterService:
     def _latest_ui_inventory_summary(outputs_root: Path) -> dict[str, Any] | None:
         candidates = sorted(
             outputs_root.glob("ui_inventory_scan/run_*/reports/summary.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        if not candidates:
+            return None
+        try:
+            return json.loads(candidates[0].read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    @staticmethod
+    def _latest_ui_contracts_summary(outputs_root: Path) -> dict[str, Any] | None:
+        candidates = sorted(
+            outputs_root.glob("ui_contracts/run_*/reports/summary.json"),
             key=lambda path: path.stat().st_mtime,
             reverse=True,
         )

@@ -33,8 +33,23 @@ Cada item descoberto deve ter:
 
 ## Evolução incremental
 1. Scanner automático de UI.
-2. Comparador entre UI descoberta e contratos existentes.
-3. Geração assistida de testes.
-4. Execução human-like com Playwright/API.
-5. Gate de deploy por cobertura crítica.
-6. Expansão para processamentos, gerações automáticas, conexões externas e rollback completo.
+2. Gerador de contratos UI human-like com estratégia de dados, risco, confirmação e rollback.
+3. Comparador entre UI descoberta, contratos gerados e contratos já exercitados.
+4. Geração assistida de testes.
+5. Execução human-like com Playwright/API.
+6. Gate de deploy por cobertura crítica.
+7. Expansão para processamentos, gerações automáticas, conexões externas e rollback completo.
+
+## Contrato gerado
+Cada elemento UI descoberto deve gerar um contrato contendo:
+- `contract_id` estável.
+- `execution_strategy`.
+- `data_strategy`.
+- `risk_level`.
+- `priority`.
+- `confirmation_strategy`.
+- `cleanup_strategy`.
+- `requires_company_id`.
+- `requires_human_gate`.
+
+Contratos de alto risco podem ser inventariados e planejados automaticamente, mas só podem ser executados em `DEV_FULL` com tenant autorizado, confirmação explícita e rollback validável.

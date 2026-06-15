@@ -21,6 +21,7 @@ from app32.tests.e2e.config.environments import E2EExecutionMode, load_environme
 FULL_APP_SUITE_IDS = [
     "inventory_system_scan",
     "ui_inventory_contract_scan",
+    "ui_human_like_contract_generation",
     "smoke_real_navigation",
     "workspace_functional_probe",
     "integrations_functional_probe",
