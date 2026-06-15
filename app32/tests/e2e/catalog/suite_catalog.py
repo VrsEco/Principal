@@ -79,6 +79,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=True,
         summary="CRUD HTTP real de tarefa avulsa da jornada de trabalho.",
     ),
+    "devfull_transactional_validation": E2ESuiteDefinition(
+        suite_id="devfull_transactional_validation",
+        label="Validação transacional DEV_FULL",
+        domain="system",
+        environments=("DEV_FULL",),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_devfull_transactional_suite.py",),
+        destructive=True,
+        summary="Executa suítes destrutivas DEV_FULL com massa marcada, cleanup obrigatório e auditoria de resíduo zero.",
+    ),
     "user_concurrency_probe": E2ESuiteDefinition(
         suite_id="user_concurrency_probe",
         label="Probe multiusuário",
