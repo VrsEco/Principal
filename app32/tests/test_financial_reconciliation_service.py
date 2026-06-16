@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
 
 from flask import Flask
@@ -10,6 +11,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import api.resources.financial as financial_resource_module
 import services.financial_reconciliation_service as reconciliation_module
 from services.financial_reconciliation_service import FinancialReconciliationService
+
+
+APP_SOURCE_PATH = Path(r"C:\GestaoVersus\app32\app32\app.py")
 
 
 class _Column:
@@ -259,6 +263,15 @@ def test_bordero_match_resource_passes_title_allocations(monkeypatch):
     assert captured["kwargs"]["row_id"] == 61
     assert captured["kwargs"]["bordero_name"] == "Borderô de teste"
     assert len(captured["kwargs"]["title_allocations"]) == 2
+
+
+def test_app_registers_bordero_match_reconciliation_route():
+    content = APP_SOURCE_PATH.read_text(encoding="utf-8")
+
+    assert (
+        "api.add_resource(FinancialBankReconciliationBorderoMatchResource, "
+        "'/api/financial/reconciliation/rows/<int:row_id>/create-bordero-match')"
+    ) in content
 
 
 def test_restore_title_amount_adjustment_reverts_original_amount_from_match_metadata():
