@@ -441,7 +441,8 @@ const state = {
     selectedBankRowIds: [],
     bankFilter: 'all',
     selectedEntryIds: [],
-    selectedOpenTitleId: null,
+    selectedOpenTitleIds: [],
+    openTitleAllocations: {},
     entryAllocations: {},
     rowCandidates: {},
     directEntryOptions: null,
@@ -740,13 +741,20 @@ function getSelectedSystemRows(){
     return (state.workspace?.system_rows || []).filter(item => selectedIds.has(Number(item.id)));
 }
 
+function getSelectedOpenTitles(){
+    const selectedIds = new Set((state.selectedOpenTitleIds || []).map(Number));
+    return (state.workspace?.open_title_rows || []).filter(item => selectedIds.has(Number(item.id)));
+}
+
 function getSelectedOpenTitle(){
-    return (state.workspace?.open_title_rows || []).find(item => String(item.id) === String(state.selectedOpenTitleId || '')) || null;
+    const titles = getSelectedOpenTitles();
+    return titles.length === 1 ? titles[0] : null;
 }
 
 function resetOpenTitleSettlementFlow({keepSelection=false}={}){
     if(!keepSelection){
-        state.selectedOpenTitleId = null;
+        state.selectedOpenTitleIds = [];
+        state.openTitleAllocations = {};
     }
     state.resolutionPreview = null;
     closeReconModal();
@@ -1045,9 +1053,10 @@ function renderOpenTitleRows(){
         container.innerHTML = emptyState('Nenhum título elegível', 'Não há títulos em aberto compatíveis com o filtro atual para esta conta/empresa.');
         return;
     }
+    const selectedIds = new Set((state.selectedOpenTitleIds || []).map(Number));
     container.innerHTML = rows.map(item => {
         const title = item.title || {};
-        const selected = String(item.id) === String(state.selectedOpenTitleId || '');
+        const selected = selectedIds.has(Number(item.id));
         const disabled = isOpenTitleDisabled(item, activeRow) && !selected;
         const difference = Number(activeRow?.amount || 0) - Number(item.remaining_amount || 0);
         const canPreviewDiff = canUseOpenTitleFlow(activeRow);
@@ -1062,13 +1071,14 @@ function renderOpenTitleRows(){
                         <p class="row-meta recon-card-line">${compactText(title.name || item.description || '-')}</p>
                         <p class="row-meta recon-card-line recon-card-plan">${compactText(chartAccountLine(item))}</p>
                     </div>
-                    <input type="radio" name="open-title-selection" ${selected ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="selectOpenTitle(${item.id})">
+                    <input type="checkbox" ${selected ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="selectOpenTitle(${item.id})">
                 </div>
                 <div class="badges badges--compact">
                     ${compactMovementNatureBadge(item.movement_nature) || movementNatureBadge(item.movement_nature)}
                     ${compactBadge(item.entry_type === 'payable' ? 'Pagar' : 'Receber', 'mute')}
                     ${compactBadge(item.status || 'posted', 'info')}
                     ${canPreviewDiff ? compactBadge(`Dif. ${brl(difference)}`, Math.abs(difference) < 0.01 ? 'ok' : 'warn') : compactBadge('Selec. banco', 'warn')}
+                    ${selected ? compactBadge('Selecionado', 'ok') : ''}
                 </div>
                 <!-- compat: ${movementNatureBadge(item.movement_nature)} -->
                 <div class="inline-actions">
@@ -1104,7 +1114,10 @@ function renderWorkbench(){
     const row = getActiveRow();
     const selectedRows = getSelectedBankRows();
     const selectedOpenTitle = getSelectedOpenTitle();
+    const selectedOpenTitles = getSelectedOpenTitles();
     const titleFlowEnabled = canUseOpenTitleFlow(row);
+    const borderoSummary = getBorderoMatchSummary();
+    const borderoSuggestionName = buildBorderoSuggestionName(row, selectedOpenTitles);
     renderSelectedBankStrip();
     if(!selectedRows.length){
         container.innerHTML = emptyState('Selecione um ou mais registros bancários', 'O painel de decisão mostra totais, sugestões, vinculação por conjunto e criação rápida quando há seleção.');
@@ -1125,6 +1138,38 @@ function renderWorkbench(){
                 <button type="button" class="btn btn-primary" onclick="confirmSelectedMatches()" ${!state.selectedEntryIds.length ? 'disabled' : ''}>Conciliar conjunto</button>
                 <button type="button" class="btn btn-secondary" onclick="clearSelectedEntries()">Limpar sistema</button>
                 <button type="button" class="btn btn-secondary" onclick="clearSelectedBankRows()">Limpar banco</button>
+            </div>
+        </section>
+
+        <section class="workbench-card workbench-card--bordero-match" data-search="criar borderô e conciliar multi títulos títulos em aberto pagamento recebimento painel decisão">
+            <h4>Criar borderô e conciliar</h4>
+            <p class="row-meta">Use este fluxo quando 1 linha do extrato liquidar vários títulos em aberto. O sistema cria o borderô, registra a baixa e conclui a conciliação.</p>
+            <div class="group-totals">
+                <div class="group-total-card"><span>Linha bancária</span><strong>${row ? brl(row.amount) : brl(0)}</strong></div>
+                <div class="group-total-card"><span>Títulos selecionados</span><strong>${selectedOpenTitles.length}</strong></div>
+                <div class="group-total-card"><span>Diferença</span><strong>${brl(borderoSummary.difference)}</strong></div>
+            </div>
+            <div class="helper-list">
+                ${titleFlowEnabled && selectedOpenTitles.length >= 2 ? `
+                    <p class="row-meta">Borderô sugerido: ${escapeHtml(borderoSuggestionName)}</p>
+                    ${borderoSummary.allocations.map(allocation => `
+                        <div class="recon-allocation-row">
+                            <div>
+                                <p><strong>${escapeHtml(allocation.item.title?.schedule_code || allocation.item.entry_code || `Título ${allocation.item.id}`)}</strong></p>
+                                <p class="row-meta">Saldo ${brl(allocation.item.remaining_amount)} · ${escapeHtml(allocation.item.counterparty_name || 'Sem favorecido')}</p>
+                            </div>
+                            <label class="field" style="min-width:160px;">
+                                <span>Valor alocado</span>
+                                <input type="number" min="0" step="0.01" value="${Number(allocation.allocated_amount || 0).toFixed(2)}" onchange="updateOpenTitleAllocation(${allocation.item.id}, this.value)">
+                            </label>
+                        </div>
+                    `).join('')}
+                    <p class="row-meta">Total alocado ${brl(borderoSummary.allocatedTotal)} · Diferença ${brl(borderoSummary.difference)}</p>
+                ` : '<p class="row-meta">Selecione exatamente 1 linha bancária e pelo menos 2 títulos em aberto para habilitar esta operação.</p>'}
+            </div>
+            <div class="inline-actions">
+                <button type="button" class="btn btn-primary" onclick="createBorderoAndReconcile()" ${!borderoSummary.canSubmit ? 'disabled' : ''}>Criar borderô e conciliar</button>
+                <button type="button" class="btn btn-secondary" onclick="clearSelectedOpenTitle()">Limpar títulos</button>
             </div>
         </section>
 
@@ -1292,7 +1337,8 @@ async function openWorkspace(bankAccountId, batchId=null){
     state.selectedBatchId = batchId;
     state.selectedBankRowIds = [];
     state.selectedEntryIds = [];
-    state.selectedOpenTitleId = null;
+    state.selectedOpenTitleIds = [];
+    state.openTitleAllocations = {};
     state.entryAllocations = {};
     state.rowCandidates = {};
     state.showCreateEntry = false;
@@ -1554,8 +1600,15 @@ function clearSelectedEntries(){
 function selectOpenTitle(entryId){
     const activeRow = getActiveRow();
     const item = (state.workspace?.open_title_rows || []).find(row => String(row.id) === String(entryId));
-    if(isOpenTitleDisabled(item, activeRow) && String(state.selectedOpenTitleId || '') !== String(entryId)) return;
-    state.selectedOpenTitleId = String(state.selectedOpenTitleId || '') === String(entryId) ? null : Number(entryId);
+    const current = new Set((state.selectedOpenTitleIds || []).map(Number));
+    if(isOpenTitleDisabled(item, activeRow) && !current.has(Number(entryId))) return;
+    if(current.has(Number(entryId))){
+        current.delete(Number(entryId));
+        delete state.openTitleAllocations[entryId];
+    } else {
+        current.add(Number(entryId));
+    }
+    state.selectedOpenTitleIds = Array.from(current);
     renderOpenTitleRows();
     renderWorkbench();
 }
@@ -1564,6 +1617,51 @@ function clearSelectedOpenTitle(){
     resetOpenTitleSettlementFlow();
     renderOpenTitleRows();
     renderWorkbench();
+}
+
+function updateOpenTitleAllocation(entryId, value){
+    const numericValue = Number(String(value || '0').replace(',', '.')) || 0;
+    state.openTitleAllocations[entryId] = Math.max(0, numericValue);
+    renderWorkbench();
+}
+
+function getBorderoAllocationDraft(){
+    const row = getActiveRow();
+    const titles = getSelectedOpenTitles();
+    if(!row || !titles.length) return [];
+    let remaining = Number(row.amount || 0);
+    return titles.map((item) => {
+        const current = state.openTitleAllocations[item.id];
+        const fallbackAmount = Number(item.remaining_amount || 0);
+        const allocatedAmount = current != null ? Number(current) : Math.max(0, Math.min(fallbackAmount, remaining));
+        remaining = Math.max(0, remaining - allocatedAmount);
+        return {
+            financial_entry_id: Number(item.financial_entry_id || item.id),
+            financial_schedule_id: Number(item.financial_schedule_id || item.title?.schedule_id || 0) || null,
+            allocated_amount: allocatedAmount,
+            item,
+        };
+    });
+}
+
+function buildBorderoSuggestionName(row, titles){
+    const kind = rowEntryType(row) === 'payable' ? 'pagamento' : 'recebimento';
+    return `Borderô de ${kind} · linha ${row?.row_number || row?.id} · ${titles.length} título(s)`;
+}
+
+function getBorderoMatchSummary(){
+    const row = getActiveRow();
+    const allocations = getBorderoAllocationDraft();
+    const allocatedTotal = allocations.reduce((sum, item) => sum + Number(item.allocated_amount || 0), 0);
+    const bankAmount = Number(row?.amount || 0);
+    return {
+        row,
+        allocations,
+        allocatedTotal,
+        bankAmount,
+        difference: bankAmount - allocatedTotal,
+        canSubmit: Boolean(row) && allocations.length >= 2 && Math.abs(bankAmount - allocatedTotal) < 0.01 && allocations.every(item => Number(item.allocated_amount || 0) > 0),
+    };
 }
 
 function clearSelectedBankRows(){
@@ -1614,7 +1712,8 @@ async function confirmSelectedMatches(resolutionStrategy=null){
         closeReconModal();
         state.selectedBankRowIds = [];
         state.selectedEntryIds = [];
-        state.selectedOpenTitleId = null;
+        state.selectedOpenTitleIds = [];
+    state.openTitleAllocations = {};
         state.entryAllocations = {};
         await loadOverview();
         await refreshWorkspace();
@@ -1639,7 +1738,8 @@ async function cancelRowReconciliation(){
     });
     state.selectedEntryIds = [];
     state.entryAllocations = {};
-    state.selectedOpenTitleId = null;
+    state.selectedOpenTitleIds = [];
+    state.openTitleAllocations = {};
     await loadOverview();
     await refreshWorkspace();
 }
@@ -1661,7 +1761,8 @@ async function cancelSelectedReconciliations(){
     state.activeRowId = null;
     state.selectedEntryIds = [];
     state.entryAllocations = {};
-    state.selectedOpenTitleId = null;
+    state.selectedOpenTitleIds = [];
+    state.openTitleAllocations = {};
     await loadOverview();
     await refreshWorkspace();
     if(result?.failed_rows){
@@ -2061,6 +2162,39 @@ function handleCreateEntryAllocationChange(event){
     renderCreateEntryAllocations();
 }
 
+async function createBorderoAndReconcile(){
+    const summary = getBorderoMatchSummary();
+    if(!summary.row || summary.allocations.length < 2){
+        alert('Selecione exatamente 1 linha bancária e pelo menos 2 títulos em aberto.');
+        return;
+    }
+    if(!summary.canSubmit){
+        alert('A soma dos valores alocados precisa ser igual ao valor da linha bancária.');
+        return;
+    }
+    try{
+        await api(`/api/financial/reconciliation/rows/${summary.row.id}/create-bordero-match${companyQuery()}`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                bordero_name: buildBorderoSuggestionName(summary.row, getSelectedOpenTitles()),
+                title_allocations: summary.allocations.map(item => ({
+                    financial_entry_id: item.financial_entry_id,
+                    financial_schedule_id: item.financial_schedule_id,
+                    allocated_amount: Number(item.allocated_amount || 0),
+                })),
+            }),
+        });
+        closeReconModal();
+        state.selectedOpenTitleIds = [];
+        state.openTitleAllocations = {};
+        await loadOverview();
+        await refreshWorkspace();
+    } catch(error){
+        alert(error.message || 'Não foi possível criar o borderô e concluir a conciliação.');
+    }
+}
+
 async function settleSelectedOpenTitle(resolutionStrategy=null){
     const row = getActiveRow();
     const title = getSelectedOpenTitle();
@@ -2089,7 +2223,8 @@ async function settleSelectedOpenTitle(resolutionStrategy=null){
             }),
         });
         closeReconModal();
-        state.selectedOpenTitleId = null;
+        state.selectedOpenTitleIds = [];
+    state.openTitleAllocations = {};
         await loadOverview();
         await refreshWorkspace();
     } catch(error){

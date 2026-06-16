@@ -419,9 +419,23 @@ class FinancialBorderoService:
             FinancialBorderoService._sync_bordero_totals_from_items(bordero, items)
 
             db.session.commit()
+            financial_settlement_ids = [
+                int(entry_allocation.get("financial_settlement_id"))
+                for allocation in allocation_payload
+                for entry_allocation in (allocation.get("entry_allocations") or [])
+                if entry_allocation.get("financial_settlement_id")
+            ]
+            financial_entry_ids = [
+                int(entry_allocation.get("financial_entry_id"))
+                for allocation in allocation_payload
+                for entry_allocation in (allocation.get("entry_allocations") or [])
+                if entry_allocation.get("financial_entry_id")
+            ]
             return {
                 "bordero": FinancialBorderoService._serialize_bordero(bordero, include_items=True),
                 "settlement": settlement.to_dict(),
+                "financial_settlement_ids": financial_settlement_ids,
+                "financial_entry_ids": financial_entry_ids,
             }, None
         except Exception as exc:
             db.session.rollback()
