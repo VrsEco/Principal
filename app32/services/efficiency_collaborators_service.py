@@ -634,9 +634,9 @@ def build_team_efficiency_summary(
 
     return {
         "total": len(collaborators),
-        "card_title": "Equipe (Eficiência)",
+        "card_title": "Equipe",
         "value_label": f"{_format_score_ptbr(score_total)} / {_format_score_ptbr(score_max_total)}",
-        "card_subtitle": "Global da Empresa",
+        "card_subtitle": "Eficiência global do time da empresa",
         "alerts_count": alerts_count,
         "alert_label": f"{alerts_count} fora da faixa ideal" if alerts_count else "0 fora da faixa ideal",
         "semaphore": semaphore,
