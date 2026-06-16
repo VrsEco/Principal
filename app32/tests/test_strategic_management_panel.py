@@ -269,6 +269,13 @@ def test_strategic_management_panel_template_supports_five_cards_and_value_label
     assert "closeTopLayer" in content
     assert "closeLayer(level)" in content
     assert "position:absolute; inset:0; width:100%; min-height:100%" in content
+    assert "smp-group-card__content" in content
+    assert "smp-group-card__value" in content
+    assert "grid-template-areas:" in content
+    assert ".workspace-navbar .navbar-breadcrumb{display:none;}" in content
+    assert "smp-mobile-actions-toggle" in content
+    assert "smp-navbar-actions__menu" in content
+    assert "setMobileActionsOpen" in content
 
 
 def test_team_efficiency_summary_uses_total_score_contract(monkeypatch):
@@ -303,9 +310,9 @@ def test_team_efficiency_summary_uses_total_score_contract(monkeypatch):
     payload = build_team_efficiency_summary(company_id=9)
     item = payload["items"][0]["efficiency"]
 
-    assert payload["card_title"] == "Equipe (Eficiência)"
+    assert payload["card_title"] == "Equipe"
     assert payload["value_label"] == "16,00 / 5,00"
-    assert payload["card_subtitle"] == "Global da Empresa"
+    assert payload["card_subtitle"] == "Eficiência global do time da empresa"
     assert payload["summary"]["activity_count"] == 1
     assert payload["summary"]["instance_count"] == 2
     assert payload["summary"]["occurrence_count"] == 2
