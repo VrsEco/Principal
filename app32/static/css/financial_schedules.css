@@ -370,6 +370,18 @@
   min-width: 0;
 }
 
+.rateio-filter-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rateio-filter-select__input,
+.rateio-filter-select > select {
+  width: 100%;
+  min-width: 0;
+}
+
 .search-select {
   position: relative;
 }

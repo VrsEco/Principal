@@ -48,6 +48,7 @@
         <section class="report-workspace-sidebar__section dre-sidebar-section">
             <div class="filter-group">
                 <label class="filter-label" for="dre-report-chart-accounts">Planos de Conta</label>
+                <input type="search" placeholder="Buscar plano de contas" data-select-filter-target="dre-report-chart-accounts">
                 <select id="dre-report-chart-accounts" name="chart_account_ids" multiple size="8" data-filter-input data-default-value="">
                     {% for item in options.chart_accounts %}
                     {% set option_id = item.id|string %}
@@ -60,6 +61,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="dre-report-cost-centers">Centros de Resultado</label>
+                <input type="search" placeholder="Buscar centro de resultado" data-select-filter-target="dre-report-cost-centers">
                 <select id="dre-report-cost-centers" name="cost_center_ids" multiple size="7" data-filter-input data-default-value="">
                     {% for item in options.cost_centers %}
                     {% set option_id = item.id|string %}
@@ -72,6 +74,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="dre-report-projects">Projetos</label>
+                <input type="search" placeholder="Buscar projeto" data-select-filter-target="dre-report-projects">
                 <select id="dre-report-projects" name="project_ids" multiple size="6" data-filter-input data-default-value="">
                     {% for item in options.projects %}
                     {% set option_id = item.id|string %}

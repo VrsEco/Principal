@@ -54,6 +54,7 @@
         <section class="report-workspace-sidebar__section br-sidebar-section">
             <div class="filter-group">
                 <label class="filter-label" for="bank-report-bank-account">Conta bancária</label>
+                <input type="search" placeholder="Buscar conta bancária" data-select-filter-target="bank-report-bank-account">
                 <select id="bank-report-bank-account" name="bank_account_id" data-filter-input data-default-value="">
                     <option value="">Todas as contas bancárias</option>
                     {% for item in options.bank_accounts %}

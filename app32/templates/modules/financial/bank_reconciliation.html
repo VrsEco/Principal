@@ -390,6 +390,9 @@
     .rateio-table th,.rateio-table td{padding:.6rem;border-bottom:1px solid var(--border);vertical-align:top;text-align:left}
     .rateio-table th{font-size:.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
     .rateio-table td input,.rateio-table td select{width:100%;border:1px solid var(--border);border-radius:10px;padding:.55rem .65rem;font:inherit;background:var(--surface-secondary);color:var(--text-primary)}
+    .rateio-search-select{display:flex;flex-direction:column;gap:.45rem}
+    .rateio-search-select input[type="search"]{background:var(--surface);font-size:.85rem}
+    .rateio-search-select select[size]{background:var(--surface);min-height:220px}
     .rateio-table td .btn{padding:.48rem .65rem}
     .rateio-summary{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:.85rem}
     .rateio-pill{padding:.55rem .75rem;border-radius:999px;font-size:.82rem;font-weight:800;background:var(--surface-secondary);color:var(--text-secondary);border:1px solid var(--border)}
@@ -1821,10 +1824,125 @@ function createEntryOptionsLabel(item){
     return escapeHtml(item?.display_label || [item?.code, item?.name].filter(Boolean).join(' - ') || item?.name || item?.code || item?.id || '-');
 }
 
+function normalizeCreateEntrySearchTerm(value=''){
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
+
 function createEntrySelectOptions(items, placeholder='Selecione...', selectedValue=''){
     return [`<option value="">${escapeHtml(placeholder)}</option>`]
         .concat((items || []).map((item) => `<option value="${item.id}" ${String(item.id) === String(selectedValue || '') ? 'selected' : ''}>${createEntryOptionsLabel(item)}</option>`))
         .join('');
+}
+
+function renderCreateEntrySearchableSelect({ index, field, items, placeholder, selectedValue='', searchPlaceholder }){
+    return `
+        <div class="rateio-search-select">
+            <input
+                type="search"
+                placeholder="${escapeHtml(searchPlaceholder)}"
+                data-create-allocation-search="${escapeHtml(field)}"
+                data-index="${index}"
+                autocomplete="off"
+            >
+            <select data-create-allocation-field="${escapeHtml(field)}" data-index="${index}">
+                ${createEntrySelectOptions(items, placeholder, selectedValue)}
+            </select>
+        </div>
+    `;
+}
+
+function renderCreateEntrySearchableField({ field, items, placeholder, selectedValue='', searchPlaceholder, selectAttributes='' }){
+    return `
+        <div class="rateio-search-select">
+            <input
+                type="search"
+                placeholder="${escapeHtml(searchPlaceholder)}"
+                data-create-allocation-search="${escapeHtml(field)}"
+                data-index="form"
+                autocomplete="off"
+            >
+            <select data-create-allocation-field="${escapeHtml(field)}" data-index="form" ${selectAttributes}>
+                ${createEntrySelectOptions(items, placeholder, selectedValue)}
+            </select>
+        </div>
+    `;
+}
+
+function filterCreateEntryAllocationSelect(searchInput){
+    const field = searchInput?.dataset.createAllocationSearch;
+    const index = String(searchInput?.dataset.index || '');
+    if(!field || !index) return;
+    const select = document.querySelector(`select[data-create-allocation-field="${field}"][data-index="${index}"]`);
+    if(!select) return;
+    const search = normalizeCreateEntrySearchTerm(searchInput.value || '');
+    Array.from(select.options || []).forEach((option, optionIndex) => {
+        if(optionIndex === 0){
+            option.hidden = false;
+            return;
+        }
+        const label = normalizeCreateEntrySearchTerm(option.textContent || option.label || '');
+        option.hidden = Boolean(search) && !label.includes(search);
+    });
+    toggleCreateEntryAllocationSelectOpen(select, searchInput);
+}
+
+function visibleCreateEntryAllocationOptionCount(select){
+    return Array.from(select?.options || []).filter((option) => !option.hidden).length;
+}
+
+function toggleCreateEntryAllocationSelectOpen(select, searchInput=null){
+    if(!select) return;
+    const search = normalizeCreateEntrySearchTerm(searchInput?.value || '');
+    const visibleOptions = visibleCreateEntryAllocationOptionCount(select);
+    if(search && visibleOptions > 1){
+        select.size = Math.min(Math.max(visibleOptions, 2), 8);
+        return;
+    }
+    select.removeAttribute('size');
+}
+
+function handleCreateEntryAllocationSearchFocus(event){
+    const searchInput = event.target;
+    if(!searchInput?.dataset?.createAllocationSearch) return;
+    filterCreateEntryAllocationSelect(searchInput);
+}
+
+function handleCreateEntryAllocationSearchBlur(event){
+    const searchInput = event.target;
+    if(!searchInput?.dataset?.createAllocationSearch) return;
+    window.setTimeout(() => {
+        const field = searchInput.dataset.createAllocationSearch;
+        const index = String(searchInput.dataset.index || '');
+        const select = document.querySelector(`select[data-create-allocation-field="${field}"][data-index="${index}"]`);
+        toggleCreateEntryAllocationSelectOpen(select, { value: '' });
+    }, 180);
+}
+
+function bindCreateEntrySearchableSelects(){
+    const form = document.getElementById('create-entry-form');
+    if(!form || form.dataset.searchableSelectsBound === '1') return;
+    form.dataset.searchableSelectsBound = '1';
+    form.addEventListener('input', handleCreateEntryAllocationChange);
+    form.addEventListener('input', (event) => {
+        if(event.target?.dataset?.createAllocationSearch){
+            filterCreateEntryAllocationSelect(event.target);
+        }
+    });
+    form.addEventListener('focusin', (event) => {
+        if(event.target?.dataset?.createAllocationSearch){
+            handleCreateEntryAllocationSearchFocus(event);
+        }
+    });
+    form.addEventListener('focusout', (event) => {
+        if(event.target?.dataset?.createAllocationSearch){
+            handleCreateEntryAllocationSearchBlur(event);
+        }
+    });
+    form.addEventListener('change', handleCreateEntryAllocationChange);
 }
 
 async function ensureDirectEntryOptions(){
@@ -1869,8 +1987,22 @@ function renderCreateEntryAllocations(){
     const options = state.directEntryOptions || {};
     body.innerHTML = state.directEntryAllocations.map((row, index) => `
         <tr>
-            <td><select data-create-allocation-field="chart_account_id" data-index="${index}">${createEntrySelectOptions((options.chart_accounts || []).filter(item => item.accepts_posting), 'Plano de conta...', row.chart_account_id)}</select></td>
-            <td><select data-create-allocation-field="cost_center_id" data-index="${index}">${createEntrySelectOptions(options.cost_centers || [], 'Centro de resultado...', row.cost_center_id)}</select></td>
+            <td>${renderCreateEntrySearchableSelect({
+                index,
+                field: 'chart_account_id',
+                items: (options.chart_accounts || []).filter(item => item.accepts_posting),
+                placeholder: 'Plano de conta...',
+                selectedValue: row.chart_account_id,
+                searchPlaceholder: 'Buscar plano de conta',
+            })}</td>
+            <td>${renderCreateEntrySearchableSelect({
+                index,
+                field: 'cost_center_id',
+                items: options.cost_centers || [],
+                placeholder: 'Centro de resultado...',
+                selectedValue: row.cost_center_id,
+                searchPlaceholder: 'Buscar centro de resultado',
+            })}</td>
             <td><select data-create-allocation-field="budget_document_id" data-index="${index}">${createEntrySelectOptions(options.budget_documents || [], 'NF / Assemelhado...', row.budget_document_id)}</select></td>
             <td><input data-create-allocation-field="percentage" data-index="${index}" inputmode="decimal" value="${escapeHtml(row.percentage ?? '')}"></td>
             <td><input data-create-allocation-field="allocated_amount" data-index="${index}" type="number" min="0" step="0.01" value="${Number(row.allocated_amount || 0).toFixed(2)}"></td>
@@ -2002,7 +2134,14 @@ async function openCreateEntryModal(){
                     <label class="field field-span-2"><span>Competência</span><input type="date" name="competence_date" value="${escapeHtml(lockedDate)}" readonly></label>
                     <label class="field field-span-2"><span>Vencimento</span><input type="date" name="due_date" value="${escapeHtml(lockedDate)}" readonly></label>
                     <label class="field field-span-2"><span>Data do lançamento</span><input type="date" name="occurred_on" value="${escapeHtml(lockedDate)}" readonly></label>
-                    <label class="field field-span-3"><span>Favorecido</span><select name="counterparty_id">${createEntrySelectOptions(state.directEntryOptions?.counterparties || [], 'Selecione...')}</select></label>
+                    <label class="field field-span-3"><span>Favorecido</span>${renderCreateEntrySearchableField({
+                        field: 'counterparty_id',
+                        items: state.directEntryOptions?.counterparties || [],
+                        placeholder: 'Selecione...',
+                        selectedValue: '',
+                        searchPlaceholder: 'Buscar favorecido',
+                        selectAttributes: 'name="counterparty_id"',
+                    })}</label>
                     <label class="field field-span-3"><span>Observações</span><textarea name="notes" rows="3">Criado a partir da conciliação da linha ${row.row_number}. ${row.description || ''}</textarea></label>
                 </section>
                 <section class="form-block recon-direct-rateio">
@@ -2030,8 +2169,7 @@ async function openCreateEntryModal(){
             </form>
         `,
     });
-    document.getElementById('create-entry-allocations-body')?.addEventListener('input', handleCreateEntryAllocationChange);
-    document.getElementById('create-entry-allocations-body')?.addEventListener('change', handleCreateEntryAllocationChange);
+    bindCreateEntrySearchableSelects();
     renderCreateEntryAllocations();
 }
 

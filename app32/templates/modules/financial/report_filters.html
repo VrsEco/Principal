@@ -601,7 +601,8 @@
                 {% if "bank_account" in report_definition.filters %}
                 <label>
                     <span>Conta bancária</span>
-                    <select name="bank_account_id">
+                    <input type="search" placeholder="Buscar conta bancária" data-select-filter-target="generic-report-bank-account">
+                    <select id="generic-report-bank-account" name="bank_account_id">
                         <option value="">Todas</option>
                         {% for item in options.bank_accounts %}
                         <option value="{{ item.id }}" {% if (filters.get('bank_account_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
@@ -613,7 +614,8 @@
                 {% if "chart_account" in report_definition.filters %}
                 <label>
                     <span>Conta contábil</span>
-                    <select name="chart_account_id">
+                    <input type="search" placeholder="Buscar conta contábil" data-select-filter-target="generic-report-chart-account">
+                    <select id="generic-report-chart-account" name="chart_account_id">
                         <option value="">Todas</option>
                         {% for item in options.chart_accounts %}
                         <option value="{{ item.id }}" {% if (filters.get('chart_account_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
@@ -625,7 +627,8 @@
                 {% if "cost_center" in report_definition.filters %}
                 <label>
                     <span>Centro de resultados</span>
-                    <select name="cost_center_id">
+                    <input type="search" placeholder="Buscar centro de resultados" data-select-filter-target="generic-report-cost-center">
+                    <select id="generic-report-cost-center" name="cost_center_id">
                         <option value="">Todos</option>
                         {% for item in options.cost_centers %}
                         <option value="{{ item.id }}" {% if (filters.get('cost_center_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
@@ -637,7 +640,8 @@
                 {% if "counterparty" in report_definition.filters %}
                 <label>
                     <span>Favorecido</span>
-                    <select name="counterparty_id">
+                    <input type="search" placeholder="Buscar favorecido" data-select-filter-target="generic-report-counterparty">
+                    <select id="generic-report-counterparty" name="counterparty_id">
                         <option value="">Todos</option>
                         {% for item in options.counterparties %}
                         <option value="{{ item.id }}" {% if (filters.get('counterparty_id', ['']) | first) == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
@@ -649,7 +653,8 @@
                 {% if "movement_nature" in report_definition.filters %}
                 <label>
                     <span>Movimento</span>
-                    <select name="movement_nature">
+                    <input type="search" placeholder="Buscar movimento" data-select-filter-target="generic-report-movement-nature">
+                    <select id="generic-report-movement-nature" name="movement_nature">
                         <option value="">Todos</option>
                         {% for item in options.movement_natures %}
                         <option value="{{ item.id }}" {% if (filters.get('movement_nature', ['']) | first) == item.id %}selected{% endif %}>{{ item.label }}</option>
@@ -661,7 +666,8 @@
                 {% if "schedule_status" in report_definition.filters %}
                 <label>
                     <span>Status do agendamento</span>
-                    <select name="schedule_status">
+                    <input type="search" placeholder="Buscar status" data-select-filter-target="generic-report-schedule-status">
+                    <select id="generic-report-schedule-status" name="schedule_status">
                         <option value="">Todos</option>
                         {% for item in options.schedule_statuses %}
                         <option value="{{ item.id }}" {% if (filters.get('schedule_status', ['']) | first) == item.id %}selected{% endif %}>{{ item.label }}</option>
@@ -673,7 +679,8 @@
                 {% if "frequency" in report_definition.filters %}
                 <label>
                     <span>Frequência</span>
-                    <select name="frequency">
+                    <input type="search" placeholder="Buscar frequência" data-select-filter-target="generic-report-frequency">
+                    <select id="generic-report-frequency" name="frequency">
                         <option value="">Todas</option>
                         {% for item in options.frequencies %}
                         <option value="{{ item.id }}" {% if (filters.get('frequency', ['']) | first) == item.id %}selected{% endif %}>{{ item.label }}</option>
