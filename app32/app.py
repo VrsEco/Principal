@@ -1090,6 +1090,7 @@ def register_api_resources(api):
     api.add_resource(FinancialBankReconciliationGroupMatchResource, '/api/financial/reconciliation/groups/match')
     api.add_resource(FinancialBankReconciliationBatchCancelResource, '/api/financial/reconciliation/rows/cancel-batch')
     api.add_resource(FinancialBankReconciliationTitleSettlementResource, '/api/financial/reconciliation/rows/<int:row_id>/settle-title')
+    api.add_resource(FinancialBankReconciliationBorderoMatchResource, '/api/financial/reconciliation/rows/<int:row_id>/create-bordero-match')
     api.add_resource(FinancialBankReconciliationCreateEntryResource, '/api/financial/reconciliation/rows/<int:row_id>/create-entry')
     api.add_resource(
         FinancialAutomationOptionsResource,
