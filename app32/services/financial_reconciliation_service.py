@@ -22,6 +22,7 @@ from models.financial import (
 from services.financial_catalog_service import FinancialCatalogService
 from services.financial_service import FinancialService
 from services.financial_schedule_service import FinancialScheduleService
+from services.financial_bordero_service import FinancialBorderoService
 from services.financial_classification_hybrid_service import FinancialClassificationHybridService
 
 
@@ -1147,6 +1148,194 @@ class FinancialReconciliationService:
             db.session.rollback()
             logger.exception("Erro ao baixar título em aberto via conciliação bancária")
             return None, f"Erro ao baixar título em aberto: {str(exc)}"
+
+    @staticmethod
+    def create_bordero_and_reconcile_from_bank_row(
+        *,
+        row_id: int,
+        title_allocations: Sequence[Dict],
+        company_id: int,
+        bordero_name: Optional[str] = None,
+        notes: Optional[str] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Tuple[Optional[Dict], Optional[str]]:
+        scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
+        if scope_error:
+            return None, scope_error
+
+        row = FinancialImportRow.query.filter(
+            FinancialImportRow.id == row_id,
+            FinancialImportRow.company_id == company_id,
+            FinancialImportRow.deleted_at.is_(None),
+        ).first()
+        if not row:
+            return None, "Linha do extrato não encontrada no escopo da empresa."
+
+        existing_confirmed = FinancialReconciliationMatch.query.filter(
+            FinancialReconciliationMatch.company_id == company_id,
+            FinancialReconciliationMatch.import_row_id == row.id,
+            FinancialReconciliationMatch.match_status == "confirmed",
+            FinancialReconciliationMatch.deleted_at.is_(None),
+        ).first()
+        if existing_confirmed or row.created_entry_id:
+            return None, "A linha bancária já está conciliada. Cancele a conciliação antes de refazer a operação."
+
+        normalized_items: List[Dict[str, object]] = []
+        seen_entry_ids = set()
+        for raw_item in title_allocations or []:
+            if not isinstance(raw_item, dict):
+                continue
+            entry_id = FinancialReconciliationService._normalize_optional_int(raw_item.get("financial_entry_id") or raw_item.get("id"))
+            schedule_id = FinancialReconciliationService._normalize_optional_int(raw_item.get("financial_schedule_id") or raw_item.get("schedule_id"))
+            allocated_amount = FinancialReconciliationService._decimal(raw_item.get("allocated_amount") or raw_item.get("selected_amount") or 0).quantize(Decimal("0.01"))
+            if not entry_id or entry_id in seen_entry_ids:
+                continue
+            seen_entry_ids.add(entry_id)
+            normalized_items.append(
+                {
+                    "financial_entry_id": entry_id,
+                    "financial_schedule_id": schedule_id,
+                    "allocated_amount": allocated_amount,
+                }
+            )
+
+        if len(normalized_items) < 2:
+            return None, "Selecione ao menos 2 títulos em aberto para criar o borderô e conciliar."
+        if any(Decimal(str(item["allocated_amount"])) <= Decimal("0.00") for item in normalized_items):
+            return None, "Informe um valor alocado maior que zero para cada título selecionado."
+
+        entry_ids = [int(item["financial_entry_id"]) for item in normalized_items]
+        entries = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.id.in_(entry_ids),
+            FinancialEntry.deleted_at.is_(None),
+        ).order_by(FinancialEntry.id.asc()).all()
+        if len(entries) != len(entry_ids):
+            return None, "Um ou mais títulos financeiros não foram encontrados no escopo da empresa."
+
+        entry_by_id = {int(entry.id): entry for entry in entries}
+        row_nature = str(row.movement_nature or "").strip().lower()
+        expected_entry_type = "payable" if row_nature == "debit" else "receivable"
+        if row_nature not in {"debit", "credit"}:
+            return None, "A linha bancária precisa possuir natureza de débito ou crédito para criar o borderô."
+
+        bordero_items: List[Dict[str, object]] = []
+        allocated_total = Decimal("0.00")
+        for item in normalized_items:
+            entry = entry_by_id[int(item["financial_entry_id"])]
+            schedule_id = int(item["financial_schedule_id"] or getattr(entry, "financial_schedule_id", 0) or 0) or None
+            if not schedule_id:
+                return None, f"O título {entry.id} não possui agenda financeira vinculada para compor o borderô."
+            if str(entry.entry_type or "").strip().lower() != expected_entry_type:
+                return None, "Todos os títulos precisam ter o mesmo tipo operacional esperado para a linha bancária selecionada."
+            entry_nature = str(entry.movement_nature or "").strip().lower()
+            if row_nature and entry_nature and entry_nature != row_nature:
+                return None, "A natureza dos títulos precisa ser a mesma da linha bancária selecionada."
+            remaining_principal = FinancialReconciliationService._decimal(FinancialReconciliationService._get_remaining_principal(entry)).quantize(Decimal("0.01"))
+            allocated_amount = Decimal(str(item["allocated_amount"])).quantize(Decimal("0.01"))
+            if remaining_principal <= Decimal("0.00"):
+                return None, f"O título {entry.id} já está totalmente baixado."
+            if allocated_amount > remaining_principal:
+                return None, f"O valor alocado para o título {entry.id} excede o saldo em aberto."
+            allocated_total += allocated_amount
+            bordero_items.append(
+                {
+                    "financial_entry_id": int(entry.id),
+                    "financial_schedule_id": schedule_id,
+                    "selected_amount": allocated_amount,
+                }
+            )
+
+        row_amount = FinancialReconciliationService._decimal(row.amount or 0).quantize(Decimal("0.01"))
+        tolerance = Decimal("0.01")
+        difference = (row_amount - allocated_total).quantize(Decimal("0.01"))
+        if abs(difference) > tolerance:
+            return None, "A soma dos títulos selecionados precisa ser igual ao valor da linha bancária para criar o borderô e conciliar."
+
+        bordero_type = "payable" if row_nature == "debit" else "receivable"
+        bordero_label = (str(bordero_name or "").strip() or f"Borderô de {'pagamento' if bordero_type == 'payable' else 'recebimento'} · linha {row.row_number or row.id}")
+        base_notes = str(notes or "").strip() or f"Criado a partir da conciliação da linha bancária {row.row_number or row.id}."
+
+        bordero_payload = {
+            "company_id": company_id,
+            "bordero_type": bordero_type,
+            "name": bordero_label,
+            "description": base_notes,
+            "notes": base_notes,
+            "created_date": (row.occurred_on or row.due_date or datetime.utcnow().date()),
+            "items": [
+                {
+                    "financial_schedule_id": int(item["financial_schedule_id"]),
+                    "selected_amount": item["selected_amount"],
+                    "metadata_json": {
+                        "reconciliation_source": "bank_row_bordero_match",
+                        "import_row_id": row.id,
+                        "financial_entry_id": item["financial_entry_id"],
+                    },
+                }
+                for item in bordero_items
+            ],
+            "metadata_json": {
+                "reconciliation_source": "bank_row_bordero_match",
+                "import_row_id": row.id,
+                "bank_row_amount": float(row_amount),
+                "financial_entry_ids": [int(item["financial_entry_id"]) for item in bordero_items],
+            },
+        }
+        bordero_result, bordero_error = FinancialBorderoService.create_bordero(
+            payload=bordero_payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if bordero_error:
+            return None, bordero_error
+
+        bordero_id = int(((bordero_result or {}).get("bordero") or {}).get("id") or 0)
+        if not bordero_id:
+            return None, "Não foi possível identificar o borderô criado para concluir a conciliação."
+
+        settlement_payload = {
+            "company_id": company_id,
+            "settlement_date": row.occurred_on or row.due_date or datetime.utcnow().date(),
+            "gross_amount": row_amount,
+            "notes": base_notes,
+            "metadata_json": {
+                "reconciliation_source": "bank_row_bordero_match",
+                "import_row_id": row.id,
+                "bank_row_amount": float(row_amount),
+            },
+        }
+        settlement_result, settlement_error = FinancialBorderoService.create_settlement(
+            bordero_id=bordero_id,
+            payload=settlement_payload,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if settlement_error:
+            return None, settlement_error
+
+        settlement_ids = FinancialReconciliationService._normalize_ids((settlement_result or {}).get("financial_settlement_ids") or [])
+        if not settlement_ids:
+            return None, "O borderô foi criado, mas não retornou as baixas financeiras necessárias para conciliação automática."
+
+        reconciliation_result, reconciliation_error = FinancialReconciliationService.reconcile_group(
+            company_id=company_id,
+            bank_row_ids=[row.id],
+            financial_entry_ids=[],
+            financial_settlement_ids=settlement_ids,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if reconciliation_error:
+            return None, reconciliation_error
+
+        return {
+            "row_id": row.id,
+            "bordero": (settlement_result or {}).get("bordero") or (bordero_result or {}).get("bordero"),
+            "bordero_settlement": (settlement_result or {}).get("settlement"),
+            "financial_settlement_ids": settlement_ids,
+            "financial_entry_ids": [int(item["financial_entry_id"]) for item in bordero_items],
+            "allocated_total": float(allocated_total),
+            "difference": float((row_amount - allocated_total).quantize(Decimal("0.01"))),
+            "reconciliation": reconciliation_result,
+        }, None
 
     @staticmethod
     def _reconcile_group_with_existing_settlements(

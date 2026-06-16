@@ -843,6 +843,7 @@ def register_api_resources(api):
         FinancialBankReconciliationGroupMatchResource,
         FinancialBankReconciliationBatchCancelResource,
         FinancialBankReconciliationTitleSettlementResource,
+        FinancialBankReconciliationBorderoMatchResource,
         FinancialBankReconciliationCreateEntryResource,
         FinancialClassificationRuleListResource,
         FinancialClassificationRuleResource,

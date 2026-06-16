@@ -1733,6 +1733,26 @@ class FinancialBankReconciliationTitleSettlementResource(Resource):
         return result, 200
 
 
+class FinancialBankReconciliationBorderoMatchResource(Resource):
+    @permission_required("financial", "edit")
+    def post(self, row_id: int):
+        company_id = get_request_company_id()
+        payload = request.get_json(silent=True) or {}
+        result, error = FinancialReconciliationService.create_bordero_and_reconcile_from_bank_row(
+            company_id=company_id,
+            row_id=row_id,
+            title_allocations=payload.get("title_allocations") or [],
+            bordero_name=payload.get("bordero_name"),
+            notes=payload.get("notes"),
+            allowed_company_ids=get_accessible_company_ids(),
+        )
+        if error:
+            return {"error": error}, 400
+        if result and result.get("requires_resolution"):
+            return result, 409
+        return result, 201
+
+
 class FinancialBankReconciliationCreateEntryResource(Resource):
     @permission_required("financial", "create")
     def post(self, row_id: int):
