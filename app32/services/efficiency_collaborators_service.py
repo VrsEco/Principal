@@ -634,7 +634,7 @@ def build_team_efficiency_summary(
 
     return {
         "total": len(collaborators),
-        "card_title": "Pontuação Total",
+        "card_title": "Equipe (Eficiência)",
         "value_label": f"{_format_score_ptbr(score_total)} / {_format_score_ptbr(score_max_total)}",
         "card_subtitle": "Global da Empresa",
         "alerts_count": alerts_count,

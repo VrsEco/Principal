@@ -263,7 +263,17 @@
     .smp-team-section__title::before { content:""; width:10px; height:10px; border-radius:999px; background:var(--section-color,#94a3b8); }
     @media (max-width:1400px){ .smp-group-grid{grid-template-columns:repeat(3,1fr);} }
     @media (max-width:1200px){ .smp-group-grid{grid-template-columns:repeat(2,1fr);} .smp-meeting-grid{grid-template-columns:repeat(2,1fr);} .smp-hero{flex-direction:column;} }
-    @media (max-width:760px){ .smp-group-grid,.smp-meeting-grid,.smp-choice-grid{grid-template-columns:1fr;} .smp-layer-stack{padding:.5rem;} .smp-detail-grid{grid-template-columns:1fr;} }
+    @media (max-width:760px){
+        .smp-group-grid,.smp-meeting-grid,.smp-choice-grid{grid-template-columns:1fr;}
+        .smp-detail-grid{grid-template-columns:1fr;}
+        .smp-layer-host{justify-content:stretch;}
+        .smp-layer-stack{width:100%; height:100%; padding:0; gap:0; overflow:hidden;}
+        .smp-layer{
+            position:absolute; inset:0; width:100%; min-height:100%; border-radius:0; border:none; box-shadow:none;
+        }
+        .smp-layer__head{padding:1rem;}
+        .smp-layer__body{padding:1rem 1rem 1.25rem;}
+    }
 </style>
 
 <script>
@@ -284,10 +294,24 @@
     }
     function openHost() { host.hidden = false; }
     function closeHost() { host.hidden = true; stack.innerHTML = ''; }
+    function closeTopLayer() {
+        const layers = [...stack.children];
+        if (!layers.length) {
+            closeHost();
+            return;
+        }
+        layers[layers.length - 1].remove();
+        if (!stack.children.length) closeHost();
+    }
+    function closeLayer(level) {
+        clearFrom(level);
+        if (!stack.children.length) closeHost();
+    }
     function layer(title, subtitle, bodyHtml, level) {
         clearFrom(level);
         const el = document.createElement('section');
         el.className = 'smp-layer';
+        el.dataset.layerLevel = String(level);
         el.innerHTML = `
             <header class="smp-layer__head">
                 <div><h3>${title}</h3><p>${subtitle || ''}</p></div>
@@ -295,7 +319,7 @@
             </header>
             <div class="smp-layer__body">${bodyHtml}</div>
         `;
-        el.querySelector('.smp-layer__close').addEventListener('click', closeHost);
+        el.querySelector('.smp-layer__close').addEventListener('click', () => closeLayer(level));
         stack.appendChild(el);
         openHost();
         return el;
@@ -512,8 +536,8 @@
         window.location.reload();
     });
     root.querySelectorAll('[data-open-group]').forEach(btn => btn.addEventListener('click', () => openGroup(btn.dataset.openGroup)));
-    host.querySelector('[data-close-layer]').addEventListener('click', closeHost);
-    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeHost(); });
+    host.querySelector('[data-close-layer]').addEventListener('click', closeTopLayer);
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeTopLayer(); });
 })();
 </script>
 {% endblock %}
