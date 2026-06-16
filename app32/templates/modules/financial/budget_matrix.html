@@ -215,8 +215,8 @@ async function api(url, options = {}) { const r = await fetch(url, options); con
 function fillSelect(select, items, labelBuilder, placeholder = 'Selecione') {
     select.innerHTML = `<option value=\"\">${placeholder}</option>` + items.map(item => `<option value=\"${item.id}\">${labelBuilder(item)}</option>`).join('');
 }
-function normalizeSearchTerm(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
-function filterSelectOptions(selectId, searchValue) { const select = byId(selectId); if (!select) return; const search = normalizeSearchTerm(searchValue); Array.from(select.options || []).forEach((option) => { option.hidden = Boolean(search) && !normalizeSearchTerm(option.textContent || option.label || '').includes(search); }); }
+function normalizeSearchTerm(value) { return window.GVFinancialSearchableSelects?.normalizeSearchTerm ? window.GVFinancialSearchableSelects.normalizeSearchTerm(value) : String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+function filterSelectOptions(selectId, searchValue) { if (window.GVFinancialSearchableSelects?.filterSelectOptions) { window.GVFinancialSearchableSelects.filterSelectOptions(selectId, searchValue); return; } const select = byId(selectId); if (!select) return; const search = normalizeSearchTerm(searchValue); Array.from(select.options || []).forEach((option) => { option.hidden = Boolean(search) && !normalizeSearchTerm(option.textContent || option.label || '').includes(search); }); }
 
 function renderSummary() {
     const summary = state.workspace?.summary || {};
@@ -432,7 +432,7 @@ async function removeLine(lineId) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const initialQuery = new URLSearchParams(window.location.search);
-    document.querySelectorAll('[data-select-filter-target]').forEach((input) => { input.addEventListener('input', () => filterSelectOptions(input.dataset.selectFilterTarget, input.value || '')); });
+    window.GVFinancialSearchableSelects?.bindWithin?.(document);
     byId('btn-new-version').addEventListener('click', () => { state.creatingVersion = true; byId('version-code').value=''; byId('version-name').value=''; byId('version-scenario').value='original'; byId('version-status').value='draft'; byId('version-start').value=''; byId('version-end').value=''; byId('version-notes').value=''; byId('version-select').value=''; });
     byId('btn-save-version').addEventListener('click', () => saveVersion().catch(err => alert(err.message)));
     byId('btn-activate-version').addEventListener('click', () => activateVersion().catch(err => alert(err.message)));

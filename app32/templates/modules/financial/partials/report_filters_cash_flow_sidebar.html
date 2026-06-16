@@ -125,6 +125,7 @@
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-title-movement">Movimento</label>
+            <input type="search" placeholder="Buscar movimento" data-select-filter-target="cash-flow-title-movement">
             <select form="cash-flow-filter-form" id="cash-flow-title-movement" name="title_filter_movement_nature" data-filter-input data-default-value="">
                 <option value="">Todos</option>
                 <option value="credit" {% if title_filter_movement_nature == 'credit' %}selected{% endif %}>Entrada</option>
@@ -133,6 +134,7 @@
         </div>
         <div class="filter-group">
             <label class="filter-label" for="cash-flow-title-counterparty">Favorecido</label>
+            <input type="search" placeholder="Buscar favorecido" data-select-filter-target="cash-flow-title-counterparty">
             <select form="cash-flow-filter-form" id="cash-flow-title-counterparty" name="title_filter_counterparty_id" data-filter-input data-default-value="">
                 <option value="">Todos</option>
                 {% for item in options.counterparties %}

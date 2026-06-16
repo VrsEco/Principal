@@ -69,6 +69,7 @@
         <section class="report-workspace-sidebar__section ledger-sidebar-section">
             <div class="filter-group">
                 <label class="filter-label" for="ledger-counterparties">Favorecido</label>
+                <input type="search" placeholder="Buscar favorecido" data-select-filter-target="ledger-counterparties">
                 <select id="ledger-counterparties" name="counterparty_ids" multiple size="6" data-filter-input data-default-value="">
                     {% for item in options.counterparties %}
                     {% set option_id = item.id|string %}

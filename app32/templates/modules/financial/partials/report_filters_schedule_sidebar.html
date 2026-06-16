@@ -83,6 +83,7 @@
         <section class="report-workspace-sidebar__section sr-sidebar-section">
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-counterparties">Favorecido</label>
+                <input type="search" placeholder="Buscar favorecido" data-select-filter-target="schedule-report-counterparties">
                 <select id="schedule-report-counterparties" name="counterparty_ids" multiple size="6" data-filter-input data-default-value="">
                     <option value="" disabled {% if not selected_counterparties %}selected{% endif %}>Todos os favorecidos</option>
                     {% for item in options.counterparties %}
@@ -95,6 +96,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-chart-accounts">Planos de Conta</label>
+                <input type="search" placeholder="Buscar plano de contas" data-select-filter-target="schedule-report-chart-accounts">
                 <select id="schedule-report-chart-accounts" name="chart_account_ids" multiple size="7" data-filter-input data-default-value="">
                     {% for item in options.chart_accounts %}
                     {% set option_id = item.id|string %}
@@ -107,6 +109,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-cost-centers">Centros de Resultado</label>
+                <input type="search" placeholder="Buscar centro de resultado" data-select-filter-target="schedule-report-cost-centers">
                 <select id="schedule-report-cost-centers" name="cost_center_ids" multiple size="6" data-filter-input data-default-value="">
                     {% for item in options.cost_centers %}
                     {% set option_id = item.id|string %}
@@ -119,6 +122,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-processes">Processos</label>
+                <input type="search" placeholder="Buscar processo" data-select-filter-target="schedule-report-processes">
                 <select id="schedule-report-processes" name="process_ids" multiple size="5" data-filter-input data-default-value="">
                     {% for item in options.processes %}
                     {% set option_id = item.id|string %}
@@ -130,6 +134,7 @@
 
             <div class="filter-group">
                 <label class="filter-label" for="schedule-report-projects">Projetos</label>
+                <input type="search" placeholder="Buscar projeto" data-select-filter-target="schedule-report-projects">
                 <select id="schedule-report-projects" name="project_ids" multiple size="5" data-filter-input data-default-value="">
                     {% for item in options.projects %}
                     {% set option_id = item.id|string %}

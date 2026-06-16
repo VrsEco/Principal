@@ -950,7 +950,8 @@
             return `
                 <label class="${colSpanClass}">
                     <span>${field.label}</span>
-                    <select name="${field.name}" data-option-source="${field.optionSource || ''}" onchange="${field.onchange || 'updateGeneratedCode()'}">
+                    <input type="search" placeholder="Buscar ${field.label.toLowerCase()}" data-select-filter-target="cw-select-${field.name}">
+                    <select id="cw-select-${field.name}" name="${field.name}" data-option-source="${field.optionSource || ''}" onchange="${field.onchange || 'updateGeneratedCode()'}">
                         <option value="">${field.placeholderOption || 'Selecione'}</option>
                     </select>
                 </label>
@@ -961,7 +962,8 @@
             return `
                 <label class="${colSpanClass}">
                     <span>${field.label}</span>
-                    <select name="${field.name}" data-option-source="${field.optionSource || ''}" multiple size="6" ${onchangeAttr}>
+                    <input type="search" placeholder="Buscar ${field.label.toLowerCase()}" data-select-filter-target="cw-select-${field.name}">
+                    <select id="cw-select-${field.name}" name="${field.name}" data-option-source="${field.optionSource || ''}" multiple size="6" ${onchangeAttr}>
                     </select>
                     ${hintHtml}
                 </label>
@@ -1017,6 +1019,7 @@
                 <button type="submit" class="btn btn-primary">Salvar cadastro</button>
             </div>
         `;
+        window.GVFinancialSearchableSelects?.bindWithin?.(form);
         form.onsubmit = saveItem;
         applyDefaultValues();
     }
@@ -1149,6 +1152,11 @@
             }
             if (currentValue) {
                 select.value = currentValue;
+            }
+            const selectId = select.id;
+            const searchInput = selectId ? document.querySelector(`[data-select-filter-target="${selectId}"]`) : null;
+            if (selectId && searchInput) {
+                window.GVFinancialSearchableSelects?.filterSelectOptions?.(selectId, searchInput.value || '');
             }
         });
     }

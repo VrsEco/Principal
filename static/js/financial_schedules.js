@@ -342,6 +342,54 @@
     }[field] || 'Selecione...');
   }
 
+  function buildAllocationFilterSelect(field, index, value) {
+    const items = buildSearchableSelectItems(field);
+    const placeholder = searchableSelectPlaceholder(field);
+    const grouped = field === 'domain_value';
+    const inputPlaceholder = ({
+      chart_account_id: 'Buscar plano de contas',
+      cost_center_id: 'Buscar centro de resultado',
+      domain_value: 'Buscar projeto ou processo',
+    }[field] || 'Buscar');
+
+    const optionsHtml = grouped
+      ? (() => {
+        const groups = items.reduce((acc, item) => {
+          const key = item.group || 'Itens';
+          if (!acc[key]) acc[key] = [];
+          acc[key].push(item);
+          return acc;
+        }, {});
+        return [`<option value="">${placeholder}</option>`]
+          .concat(Object.entries(groups).map(([groupLabel, groupItems]) => `
+            <optgroup label="${escapeHtml(groupLabel)}">
+              ${groupItems.map((item) => `<option value="${escapeHtml(item.value)}" ${String(value || '') === item.value ? 'selected' : ''}>${escapeHtml(item.label)}</option>`).join('')}
+            </optgroup>
+          `))
+          .join('');
+      })()
+      : [`<option value="">${placeholder}</option>`]
+        .concat(items.map((item) => `<option value="${escapeHtml(item.value)}" ${String(value || '') === item.value ? 'selected' : ''}>${escapeHtml(item.label)}</option>`))
+        .join('');
+
+    return `
+      <div class="rateio-filter-select">
+        <input type="search"
+               class="rateio-filter-select__input"
+               data-select-filter-target="allocation-${field}-${index}"
+               placeholder="${inputPlaceholder}"
+               autocomplete="off"
+               spellcheck="false"
+               aria-label="${inputPlaceholder} da linha ${index + 1}">
+        <select id="allocation-${field}-${index}"
+                data-index="${index}"
+                data-field="${field}"
+                aria-label="${placeholder} da linha ${index + 1}">
+          ${optionsHtml}
+        </select>
+      </div>`;
+  }
+
   function selectedSearchableItemLabel(field, value) {
     if (!value) return searchableSelectPlaceholder(field);
     const item = buildSearchableSelectItems(field).find((candidate) => candidate.value === String(value));
@@ -827,49 +875,43 @@
   function renderAllocations() {
     const body = $('allocations-body');
     if (!allocationRows.length) {
-      body.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum rateio informado.</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum rateio informado.</td></tr>';
       renderAllocationSummary();
       return;
     }
 
     const budgetDocumentOptions = buildOptions(optionsCache.budget_documents, 'Selecione...', buildBudgetLabel);
 
-    body.innerHTML = allocationRows.map((row, index) => `
-      <tr class="${row.adjustment_kind ? 'rateio-row--adjustment' : ''}">
-        <td class="rateio-cell rateio-cell--chart-account">${renderSearchableSelect('chart_account_id', index, row.chart_account_id || '')}</td>
-        <td class="rateio-cell rateio-cell--cost-center">${renderSearchableSelect('cost_center_id', index, row.cost_center_id || '')}</td>
+      body.innerHTML = allocationRows.map((row, index) => `
+        <tr class="${row.adjustment_kind ? 'rateio-row--adjustment' : ''}">
+        <td class="rateio-cell rateio-cell--chart-account">${buildAllocationFilterSelect('chart_account_id', index, row.chart_account_id || '')}</td>
+        <td class="rateio-cell rateio-cell--cost-center">${buildAllocationFilterSelect('cost_center_id', index, row.cost_center_id || '')}</td>
         <td class="rateio-cell rateio-cell--budget-document"><select data-index="${index}" data-field="budget_document_id" aria-label="NF ou assemelhado da linha ${index + 1}">${budgetDocumentOptions}</select></td>
-        <td class="rateio-cell rateio-cell--domain">${renderSearchableSelect('domain_value', index, row.domain_value || '')}</td>
+        <td class="rateio-cell rateio-cell--domain">${buildAllocationFilterSelect('domain_value', index, row.domain_value || '')}</td>
         <td class="rateio-cell rateio-cell--percentage"><input data-index="${index}" data-field="percentage" value="${row.percentage ?? ''}" inputmode="decimal" placeholder="0,0000" aria-label="Percentual da linha ${index + 1}" ${row.adjustment_kind ? 'readonly tabindex="-1"' : ''}></td>
         <td class="rateio-cell rateio-cell--amount"><input data-index="${index}" data-field="allocated_amount_display" value="${row.allocated_amount_display || ''}" inputmode="numeric" placeholder="0,00" aria-label="Valor da linha ${index + 1}" ${row.adjustment_kind ? 'readonly tabindex="-1"' : ''}></td>
         <td class="rateio-cell rateio-cell--actions"><div class="rateio-actions">${row.adjustment_kind ? `<span class="rateio-adjustment-tag">${row.adjustment_label || 'Ajuste'}</span>` : `<button type="button" class="btn btn-secondary btn-icon" data-action="duplicate" data-index="${index}" aria-label="Duplicar linha ${index + 1}">+</button><button type="button" class="btn btn-secondary btn-icon" data-action="remove" data-index="${index}" aria-label="Remover linha ${index + 1}">×</button>`}</div></td>
-      </tr>`).join('');
+        </tr>`).join('');
 
-    allocationRows.forEach((row, index) => {
-      const chartSelect = body.querySelector(`.search-select__native[data-field="chart_account_id"][data-index="${index}"]`);
-      if (chartSelect) {
-        chartSelect.dataset.currentValue = row.chart_account_id || '';
-        fillNativeSearchableSelect(chartSelect);
-        chartSelect.value = row.chart_account_id || '';
-      }
-      const costCenterSelect = body.querySelector(`.search-select__native[data-field="cost_center_id"][data-index="${index}"]`);
-      if (costCenterSelect) {
-        costCenterSelect.dataset.currentValue = row.cost_center_id || '';
-        fillNativeSearchableSelect(costCenterSelect);
-        costCenterSelect.value = row.cost_center_id || '';
-      }
-      const domainSelect = body.querySelector(`.search-select__native[data-field="domain_value"][data-index="${index}"]`);
-      if (domainSelect) {
-        domainSelect.dataset.currentValue = row.domain_value || '';
-        fillNativeSearchableSelect(domainSelect);
-        domainSelect.value = row.domain_value || '';
-      }
-      body.querySelector(`select[data-field="budget_document_id"][data-index="${index}"]`).value = row.budget_document_id || '';
-    });
+      allocationRows.forEach((row, index) => {
+        const chartSelect = body.querySelector(`select[data-field="chart_account_id"][data-index="${index}"]`);
+        if (chartSelect) {
+          chartSelect.value = row.chart_account_id || '';
+        }
+      const costCenterSelect = body.querySelector(`select[data-field="cost_center_id"][data-index="${index}"]`);
+        if (costCenterSelect) {
+          costCenterSelect.value = row.cost_center_id || '';
+        }
+      const domainSelect = body.querySelector(`select[data-field="domain_value"][data-index="${index}"]`);
+        if (domainSelect) {
+          domainSelect.value = row.domain_value || '';
+        }
+        body.querySelector(`select[data-field="budget_document_id"][data-index="${index}"]`).value = row.budget_document_id || '';
+      });
 
-    initializeAllocationSearchableSelects();
-    renderAllocationSummary();
-  }
+      window.GVFinancialSearchableSelects?.bindWithin?.(body);
+      renderAllocationSummary();
+    }
 
   function createAllocationRow(defaults = {}) {
     const suggestions = defaultSuggestions();

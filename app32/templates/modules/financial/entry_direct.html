@@ -43,7 +43,10 @@
                     <label class="field field-span-3 field-counterparty">
                         <span>Favorecido</span>
                         <div class="field-inline">
-                            <select id="direct-counterparty" name="counterparty_id" required></select>
+                            <div class="field-inline field-inline--stack">
+                                <input id="direct-counterparty-search" type="search" placeholder="Buscar favorecido" data-select-filter-target="direct-counterparty">
+                                <select id="direct-counterparty" name="counterparty_id" required></select>
+                            </div>
                             <button type="button" class="btn btn-ghost btn-inline" onclick="openDirectCounterpartyModal()">Novo favorecido</button>
                         </div>
                     </label>
