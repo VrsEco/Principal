@@ -240,6 +240,11 @@ def test_bordero_match_resource_passes_title_allocations(monkeypatch):
     monkeypatch.setattr(financial_resource_module, "get_request_company_id", lambda: 9)
     monkeypatch.setattr(financial_resource_module, "get_accessible_company_ids", lambda: [9])
     monkeypatch.setattr(
+        financial_resource_module,
+        "current_user",
+        SimpleNamespace(id=77, employee_id=88),
+    )
+    monkeypatch.setattr(
         financial_resource_module.FinancialReconciliationService,
         "create_bordero_and_reconcile_from_bank_row",
         lambda **kwargs: (captured.setdefault("kwargs", kwargs) or {"ok": True}, None),
@@ -262,6 +267,9 @@ def test_bordero_match_resource_passes_title_allocations(monkeypatch):
     assert status_code == 201
     assert captured["kwargs"]["row_id"] == 61
     assert captured["kwargs"]["bordero_name"] == "Borderô de teste"
+    assert captured["kwargs"]["created_by_user_id"] == 77
+    assert captured["kwargs"]["created_by_employee_id"] == 88
+    assert captured["kwargs"]["created_by_agent"] == "app32"
     assert len(captured["kwargs"]["title_allocations"]) == 2
 
 
@@ -398,6 +406,7 @@ def test_create_bordero_and_reconcile_from_bank_row_orchestrates_bordero_flow(mo
         created_entry_id=None,
         occurred_on=date(2026, 6, 15),
         due_date=date(2026, 6, 15),
+        normalized_payload={"bank_account_id": 321},
     )
     entries = [
         SimpleNamespace(id=11, company_id=9, financial_schedule_id=101, entry_type="payable", movement_nature="debit"),
@@ -434,6 +443,11 @@ def test_create_bordero_and_reconcile_from_bank_row_orchestrates_bordero_flow(mo
         "_get_remaining_principal",
         lambda entry: 80 if entry.id == 11 else 20,
     )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialReconciliationService,
+        "_resolve_row_context",
+        lambda company_id, current_row: {"bank_account_id": 321},
+    )
     def _fake_create_bordero(**kwargs):
         captured["bordero_payload"] = kwargs["payload"]
         return {"bordero": {"id": 81, "name": kwargs["payload"]["name"]}}, None
@@ -469,15 +483,115 @@ def test_create_bordero_and_reconcile_from_bank_row_orchestrates_bordero_flow(mo
             {"financial_entry_id": 11, "financial_schedule_id": 101, "allocated_amount": 80},
             {"financial_entry_id": 12, "financial_schedule_id": 102, "allocated_amount": 20},
         ],
+        created_by_user_id=77,
+        created_by_employee_id=88,
+        created_by_agent="app32",
         allowed_company_ids=[9],
     )
 
     assert error is None
     assert result["bordero"]["id"] == 81
     assert captured["bordero_payload"]["bordero_type"] == "payable"
+    assert captured["bordero_payload"]["created_by_user_id"] == 77
     assert [item["financial_schedule_id"] for item in captured["bordero_payload"]["items"]] == [101, 102]
+    assert captured["settlement_payload"]["bank_account_id"] == 321
+    assert captured["settlement_payload"]["created_by_employee_id"] == 88
     assert captured["reconcile_kwargs"]["financial_settlement_ids"] == [501, 502]
     assert captured["reconcile_kwargs"]["bank_row_ids"] == [61]
+
+
+def test_create_bordero_and_reconcile_from_bank_row_rolls_back_bordero_when_reconciliation_requires_resolution(monkeypatch):
+    row = SimpleNamespace(
+        id=61,
+        company_id=9,
+        row_number=7,
+        amount=100,
+        movement_nature="debit",
+        created_entry_id=None,
+        occurred_on=date(2026, 6, 15),
+        due_date=date(2026, 6, 15),
+        normalized_payload={"bank_account_id": 321},
+    )
+    entries = [
+        SimpleNamespace(id=11, company_id=9, financial_schedule_id=101, entry_type="payable", movement_nature="debit"),
+        SimpleNamespace(id=12, company_id=9, financial_schedule_id=102, entry_type="payable", movement_nature="debit"),
+    ]
+
+    class _RowModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueueQuery(first_results=[row])
+
+    class _EntryModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _QueueQuery(all_results=entries)
+
+    class _MatchModel:
+        company_id = _Column()
+        import_row_id = _Column()
+        match_status = _Column()
+        deleted_at = _Column()
+        query = _QueueQuery(first_results=[None])
+
+    captured = {}
+
+    monkeypatch.setattr(reconciliation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(reconciliation_module, "FinancialImportRow", _RowModel)
+    monkeypatch.setattr(reconciliation_module, "FinancialEntry", _EntryModel)
+    monkeypatch.setattr(reconciliation_module, "FinancialReconciliationMatch", _MatchModel)
+    monkeypatch.setattr(
+        reconciliation_module.FinancialReconciliationService,
+        "_get_remaining_principal",
+        lambda entry: 80 if entry.id == 11 else 20,
+    )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialReconciliationService,
+        "_resolve_row_context",
+        lambda company_id, current_row: {"bank_account_id": 321},
+    )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialBorderoService,
+        "create_bordero",
+        lambda **kwargs: ({"bordero": {"id": 81, "name": kwargs["payload"]["name"]}}, None),
+    )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialBorderoService,
+        "create_settlement",
+        lambda **kwargs: ({"bordero": {"id": 81}, "settlement": {"id": 91}, "financial_settlement_ids": [501, 502]}, None),
+    )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialReconciliationService,
+        "reconcile_group",
+        lambda **kwargs: ({"requires_resolution": True, "message": "Diferença entre banco e baixas."}, None),
+    )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialBorderoService,
+        "delete_settlement",
+        lambda **kwargs: (captured.setdefault("delete_settlement_kwargs", kwargs) or {"ok": True}, None),
+    )
+    monkeypatch.setattr(
+        reconciliation_module.FinancialBorderoService,
+        "delete_bordero",
+        lambda **kwargs: (captured.setdefault("delete_bordero_kwargs", kwargs) or {"ok": True}, None),
+    )
+
+    result, error = FinancialReconciliationService.create_bordero_and_reconcile_from_bank_row(
+        company_id=9,
+        row_id=61,
+        title_allocations=[
+            {"financial_entry_id": 11, "financial_schedule_id": 101, "allocated_amount": 80},
+            {"financial_entry_id": 12, "financial_schedule_id": 102, "allocated_amount": 20},
+        ],
+        allowed_company_ids=[9],
+    )
+
+    assert result is None
+    assert error == "Diferença entre banco e baixas."
+    assert captured["delete_settlement_kwargs"]["settlement_id"] == 91
+    assert captured["delete_bordero_kwargs"]["bordero_id"] == 81
 
 
 def test_group_match_resource_returns_resolution_conflict(monkeypatch):
