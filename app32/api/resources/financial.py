@@ -1744,6 +1744,9 @@ class FinancialBankReconciliationBorderoMatchResource(Resource):
             title_allocations=payload.get("title_allocations") or [],
             bordero_name=payload.get("bordero_name"),
             notes=payload.get("notes"),
+            created_by_user_id=getattr(current_user, "id", None),
+            created_by_employee_id=getattr(current_user, "employee_id", None),
+            created_by_agent="app32",
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

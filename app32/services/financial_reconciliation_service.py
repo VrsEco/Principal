@@ -1157,6 +1157,9 @@ class FinancialReconciliationService:
         company_id: int,
         bordero_name: Optional[str] = None,
         notes: Optional[str] = None,
+        created_by_user_id: Optional[int] = None,
+        created_by_employee_id: Optional[int] = None,
+        created_by_agent: Optional[str] = None,
         allowed_company_ids: Optional[Sequence[int]] = None,
     ) -> Tuple[Optional[Dict], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
@@ -1252,6 +1255,8 @@ class FinancialReconciliationService:
         if abs(difference) > tolerance:
             return None, "A soma dos títulos selecionados precisa ser igual ao valor da linha bancária para criar o borderô e conciliar."
 
+        row_context = FinancialReconciliationService._resolve_row_context(company_id, row)
+        bank_account_id = FinancialReconciliationService._normalize_optional_int(row_context.get("bank_account_id"))
         bordero_type = "payable" if row_nature == "debit" else "receivable"
         bordero_label = (str(bordero_name or "").strip() or f"Borderô de {'pagamento' if bordero_type == 'payable' else 'recebimento'} · linha {row.row_number or row.id}")
         base_notes = str(notes or "").strip() or f"Criado a partir da conciliação da linha bancária {row.row_number or row.id}."
@@ -1263,6 +1268,9 @@ class FinancialReconciliationService:
             "description": base_notes,
             "notes": base_notes,
             "created_date": (row.occurred_on or row.due_date or datetime.utcnow().date()),
+            "created_by_user_id": created_by_user_id,
+            "created_by_employee_id": created_by_employee_id,
+            "created_by_agent": created_by_agent,
             "items": [
                 {
                     "financial_schedule_id": int(item["financial_schedule_id"]),
@@ -1297,7 +1305,11 @@ class FinancialReconciliationService:
             "company_id": company_id,
             "settlement_date": row.occurred_on or row.due_date or datetime.utcnow().date(),
             "gross_amount": row_amount,
+            "bank_account_id": bank_account_id,
             "notes": base_notes,
+            "created_by_user_id": created_by_user_id,
+            "created_by_employee_id": created_by_employee_id,
+            "created_by_agent": created_by_agent,
             "metadata_json": {
                 "reconciliation_source": "bank_row_bordero_match",
                 "import_row_id": row.id,
@@ -1310,11 +1322,28 @@ class FinancialReconciliationService:
             allowed_company_ids=allowed_company_ids,
         )
         if settlement_error:
+            cleanup_error = FinancialReconciliationService._cleanup_bordero_artifacts_after_failed_reconciliation(
+                company_id=company_id,
+                bordero_id=bordero_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if cleanup_error:
+                return None, f"{settlement_error} | rollback do borderô falhou: {cleanup_error}"
             return None, settlement_error
 
+        bordero_settlement_id = FinancialReconciliationService._normalize_optional_int(((settlement_result or {}).get("settlement") or {}).get("id"))
         settlement_ids = FinancialReconciliationService._normalize_ids((settlement_result or {}).get("financial_settlement_ids") or [])
         if not settlement_ids:
-            return None, "O borderô foi criado, mas não retornou as baixas financeiras necessárias para conciliação automática."
+            cleanup_error = FinancialReconciliationService._cleanup_bordero_artifacts_after_failed_reconciliation(
+                company_id=company_id,
+                bordero_id=bordero_id,
+                bordero_settlement_id=bordero_settlement_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            base_error = "O borderô foi criado, mas não retornou as baixas financeiras necessárias para conciliação automática."
+            if cleanup_error:
+                return None, f"{base_error} | rollback do borderô falhou: {cleanup_error}"
+            return None, base_error
 
         reconciliation_result, reconciliation_error = FinancialReconciliationService.reconcile_group(
             company_id=company_id,
@@ -1324,7 +1353,29 @@ class FinancialReconciliationService:
             allowed_company_ids=allowed_company_ids,
         )
         if reconciliation_error:
+            cleanup_error = FinancialReconciliationService._cleanup_bordero_artifacts_after_failed_reconciliation(
+                company_id=company_id,
+                bordero_id=bordero_id,
+                bordero_settlement_id=bordero_settlement_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if cleanup_error:
+                return None, f"{reconciliation_error} | rollback do borderô falhou: {cleanup_error}"
             return None, reconciliation_error
+        if reconciliation_result and reconciliation_result.get("requires_resolution"):
+            cleanup_error = FinancialReconciliationService._cleanup_bordero_artifacts_after_failed_reconciliation(
+                company_id=company_id,
+                bordero_id=bordero_id,
+                bordero_settlement_id=bordero_settlement_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            resolution_error = str(
+                (reconciliation_result or {}).get("message")
+                or "Não foi possível concluir automaticamente a conciliação do borderô."
+            ).strip()
+            if cleanup_error:
+                return None, f"{resolution_error} | rollback do borderô falhou: {cleanup_error}"
+            return None, resolution_error
 
         return {
             "row_id": row.id,
@@ -1336,6 +1387,35 @@ class FinancialReconciliationService:
             "difference": float((row_amount - allocated_total).quantize(Decimal("0.01"))),
             "reconciliation": reconciliation_result,
         }, None
+
+    @staticmethod
+    def _cleanup_bordero_artifacts_after_failed_reconciliation(
+        *,
+        company_id: int,
+        bordero_id: int,
+        bordero_settlement_id: Optional[int] = None,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Optional[str]:
+        cleanup_errors: List[str] = []
+        if bordero_settlement_id:
+            _, settlement_delete_error = FinancialBorderoService.delete_settlement(
+                bordero_id=bordero_id,
+                settlement_id=bordero_settlement_id,
+                company_id=company_id,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if settlement_delete_error:
+                cleanup_errors.append(f"baixa do borderô {bordero_settlement_id}: {settlement_delete_error}")
+        _, bordero_delete_error = FinancialBorderoService.delete_bordero(
+            bordero_id=bordero_id,
+            company_id=company_id,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if bordero_delete_error:
+            cleanup_errors.append(f"borderô {bordero_id}: {bordero_delete_error}")
+        if cleanup_errors:
+            return "; ".join(cleanup_errors)
+        return None
 
     @staticmethod
     def _reconcile_group_with_existing_settlements(
