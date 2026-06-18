@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from decimal import Decimal
 
 from app32.services.financial_schedule_service import FinancialScheduleService
 
@@ -217,3 +218,162 @@ def test_normalize_schedule_allocations_keeps_empty_domain_without_routine_defau
     assert result[0]["domain_source_id"] is None
     assert result[0]["domain_source_kind"] is None
     assert result[0]["domain_value"] == ""
+
+
+def test_sync_generated_entries_for_schedule_updates_materialized_entry(monkeypatch):
+    schedule = SimpleNamespace(
+        id=705,
+        company_id=13,
+        next_due_date=None,
+        first_due_date=None,
+    )
+    entry = SimpleNamespace(
+        id=11,
+        entry_code="AG-000412-2025-11-07",
+        due_date="2025-11-07",
+        issue_date=None,
+        competence_date=None,
+        occurred_on=None,
+        status="posted",
+    )
+
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_list_generated_entries",
+        staticmethod(lambda **kwargs: [entry]),
+    )
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_build_entry_payload",
+        staticmethod(
+            lambda **kwargs: {
+                "entry_type": "payable",
+                "movement_nature": "debit",
+                "origin_type": "manual",
+                "status": "posted",
+                "review_status": "approved",
+                "description": "6/7 - análises laboratoriais 6/7",
+                "memo": "memo novo",
+                "document_number": "DOC-1",
+                "external_reference": "financial_schedule:705",
+                "origin_reference": "AG-000412",
+                "financial_schedule_id": 705,
+                "issue_date": "2025-11-07",
+                "competence_date": "2025-11-07",
+                "due_date": "2025-11-07",
+                "occurred_on": "2025-11-07",
+                "original_amount": Decimal("985.34"),
+                "currency_code": "BRL",
+                "bank_account_id": 9,
+                "counterparty_id": 21,
+                "chart_account_id": 31,
+                "cost_center_id": 41,
+                "budget_line_id": None,
+                "budget_contract_id": None,
+                "budget_document_id": None,
+                "activity_id": None,
+                "process_instance_id": None,
+                "routine_id": None,
+                "notes": "nota nova",
+                "metadata_json": {"generated_from_schedule": True, "schedule_updated_amount": 985.34},
+            }
+        ),
+    )
+
+    captured_allocations = []
+
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_apply_schedule_allocations",
+        staticmethod(
+            lambda **kwargs: captured_allocations.append(kwargs["entry_id"]) or None
+        ),
+    )
+
+    error = FinancialScheduleService._sync_generated_entries_for_schedule(schedule=schedule)
+
+    assert error is None
+    assert entry.original_amount == Decimal("985.34")
+    assert entry.description == "6/7 - análises laboratoriais 6/7"
+    assert entry.financial_schedule_id == 705
+    assert entry.external_reference == "financial_schedule:705"
+    assert entry.metadata_json["schedule_updated_amount"] == 985.34
+    assert captured_allocations == [11]
+
+
+def test_sync_generated_entries_for_schedule_preserves_entry_due_date_for_payload(monkeypatch):
+    schedule = SimpleNamespace(
+        id=705,
+        company_id=13,
+        next_due_date="2026-05-06",
+        first_due_date="2025-11-07",
+    )
+    entry = SimpleNamespace(
+        id=22,
+        entry_code="AG-000412-2025-11-07",
+        due_date="2025-11-07",
+        issue_date=None,
+        competence_date=None,
+        occurred_on=None,
+        status="scheduled",
+    )
+
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_list_generated_entries",
+        staticmethod(lambda **kwargs: [entry]),
+    )
+
+    captured = {}
+
+    def _build_payload(**kwargs):
+        captured["occurrence_date"] = kwargs["occurrence_date"]
+        captured["force_posted"] = kwargs["force_posted"]
+        return {
+            "entry_type": "payable",
+            "movement_nature": "debit",
+            "origin_type": "manual",
+            "status": "scheduled",
+            "review_status": "pending_review",
+            "description": "desc",
+            "memo": None,
+            "document_number": None,
+            "external_reference": "financial_schedule:705",
+            "origin_reference": "AG-000412",
+            "financial_schedule_id": 705,
+            "issue_date": "2025-11-07",
+            "competence_date": "2025-11-07",
+            "due_date": "2025-11-07",
+            "occurred_on": None,
+            "original_amount": Decimal("100.00"),
+            "currency_code": "BRL",
+            "bank_account_id": None,
+            "counterparty_id": None,
+            "chart_account_id": None,
+            "cost_center_id": None,
+            "budget_line_id": None,
+            "budget_contract_id": None,
+            "budget_document_id": None,
+            "activity_id": None,
+            "process_instance_id": None,
+            "routine_id": None,
+            "notes": None,
+            "metadata_json": {},
+        }
+
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_build_entry_payload",
+        staticmethod(_build_payload),
+    )
+    monkeypatch.setattr(
+        FinancialScheduleService,
+        "_apply_schedule_allocations",
+        staticmethod(lambda **kwargs: None),
+    )
+
+    error = FinancialScheduleService._sync_generated_entries_for_schedule(schedule=schedule)
+
+    assert error is None
+    assert captured["occurrence_date"] == "2025-11-07"
+    assert captured["force_posted"] is False
