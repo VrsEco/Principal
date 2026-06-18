@@ -180,6 +180,92 @@ class FinancialScheduleService:
         return query.first() is not None
 
     @staticmethod
+    def _list_generated_entries(*, company_id: int, schedule_id: int) -> List[FinancialEntry]:
+        return (
+            FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                db.or_(
+                    FinancialEntry.financial_schedule_id == schedule_id,
+                    FinancialEntry.external_reference == f"financial_schedule:{schedule_id}",
+                ),
+                FinancialEntry.deleted_at.is_(None),
+            )
+            .order_by(FinancialEntry.id.asc())
+            .all()
+        )
+
+    @staticmethod
+    def _sync_generated_entries_for_schedule(
+        *,
+        schedule: FinancialSchedule,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+        ignore_bordero_lock: bool = False,
+    ) -> Optional[str]:
+        generated_entries = FinancialScheduleService._list_generated_entries(
+            company_id=schedule.company_id,
+            schedule_id=schedule.id,
+        )
+        for entry in generated_entries:
+            occurrence_date = (
+                getattr(entry, "due_date", None)
+                or getattr(entry, "issue_date", None)
+                or getattr(entry, "competence_date", None)
+                or schedule.next_due_date
+                or schedule.first_due_date
+            )
+            force_posted = bool(
+                getattr(entry, "occurred_on", None)
+                or str(getattr(entry, "status", "") or "").strip().lower() in {"posted", "partially_settled", "settled"}
+            )
+            entry_payload = FinancialScheduleService._build_entry_payload(
+                schedule=schedule,
+                entry_code=entry.entry_code,
+                force_posted=force_posted,
+                occurrence_date=occurrence_date,
+            )
+            for field in (
+                "entry_type",
+                "movement_nature",
+                "origin_type",
+                "status",
+                "review_status",
+                "description",
+                "memo",
+                "document_number",
+                "external_reference",
+                "origin_reference",
+                "financial_schedule_id",
+                "issue_date",
+                "competence_date",
+                "due_date",
+                "occurred_on",
+                "original_amount",
+                "currency_code",
+                "bank_account_id",
+                "counterparty_id",
+                "chart_account_id",
+                "cost_center_id",
+                "budget_line_id",
+                "budget_contract_id",
+                "budget_document_id",
+                "activity_id",
+                "process_instance_id",
+                "routine_id",
+                "notes",
+                "metadata_json",
+            ):
+                setattr(entry, field, entry_payload[field])
+            allocation_error = FinancialScheduleService._apply_schedule_allocations(
+                schedule=schedule,
+                entry_id=entry.id,
+                allowed_company_ids=allowed_company_ids,
+                ignore_bordero_lock=ignore_bordero_lock,
+            )
+            if allocation_error:
+                return allocation_error
+        return None
+
+    @staticmethod
     def list_schedules(
         *,
         company_id: int,
@@ -874,6 +960,13 @@ class FinancialScheduleService:
             )
             for key, value in merged.items():
                 setattr(schedule, key, value)
+            sync_error = FinancialScheduleService._sync_generated_entries_for_schedule(
+                schedule=schedule,
+                allowed_company_ids=allowed_company_ids,
+            )
+            if sync_error:
+                db.session.rollback()
+                return None, sync_error
             if auto_commit:
                 db.session.commit()
             else:
