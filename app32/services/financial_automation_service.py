@@ -375,18 +375,19 @@ class FinancialAutomationService:
                     FinancialAutomationRecord.deleted_at.is_(None),
                     FinancialAutomationRecord.source_document_id == duplicate_document.id,
                 ).order_by(FinancialAutomationRecord.id.desc()).first()
-                duplicate_context.update(
-                    {
-                        "status": "duplicate",
-                        "reason": "sha256",
-                        "matched_record_id": getattr(existing_record, "id", None),
-                        "matched_batch_id": getattr(existing_record, "batch_id", None) or duplicate_document.batch_id,
-                        "matched_document_id": duplicate_document.id,
-                        "matched_document_group_key": duplicate_document.document_group_key,
-                        "matched_sha256": sha256,
-                    }
-                )
-                return duplicate_context
+                if existing_record:
+                    duplicate_context.update(
+                        {
+                            "status": "duplicate",
+                            "reason": "sha256",
+                            "matched_record_id": existing_record.id,
+                            "matched_batch_id": existing_record.batch_id,
+                            "matched_document_id": duplicate_document.id,
+                            "matched_document_group_key": duplicate_document.document_group_key,
+                            "matched_sha256": sha256,
+                        }
+                    )
+                    return duplicate_context
 
         if composite_key:
             candidates = FinancialAutomationRecord.query.filter(
