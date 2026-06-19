@@ -14,7 +14,10 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from models import db
 from models.financial import (
     FinancialBankAccount,
+    FinancialChartAccount,
     FinancialClassificationSuggestion,
+    FinancialCounterparty,
+    FinancialCostCenter,
     FinancialEntry,
     FinancialImportBatch,
     FinancialImportRow,
@@ -22,6 +25,8 @@ from models.financial import (
 )
 from schemas.financial import FinancialImportBatchInput, FinancialImportRowInput
 from services.financial_catalog_service import FinancialCatalogService
+from services.financial_direct_entry_service import FinancialDirectEntryService
+from services.financial_schedule_service import FinancialScheduleService
 from services.financial_service import FinancialService
 
 
@@ -107,10 +112,23 @@ class FinancialImportService:
     def _parse_date(value: Any) -> Optional[datetime.date]:
         if value in (None, ""):
             return None
+        if isinstance(value, datetime):
+            return value.date()
         if hasattr(value, "isoformat") and hasattr(value, "year"):
             return value
 
         text = str(value).strip()
+        if "T" in text:
+            try:
+                return datetime.fromisoformat(text).date()
+            except ValueError:
+                pass
+        if " " in text:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S"):
+                try:
+                    return datetime.strptime(text, fmt).date()
+                except ValueError:
+                    continue
         for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y%m%d"):
             try:
                 return datetime.strptime(text, fmt).date()
@@ -123,6 +141,108 @@ class FinancialImportService:
         if amount is None:
             return None
         return "credit" if amount >= 0 else "debit"
+
+    @staticmethod
+    def _normalize_choice(value: Any) -> str:
+        text = str(value or "").strip().lower()
+        if not text:
+            return ""
+        text = unicodedata.normalize("NFKD", text)
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        return re.sub(r"\s+", " ", text)
+
+    @staticmethod
+    def _extract_code_token(value: Any) -> Optional[str]:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        token = re.split(r"\s+-\s+|\s{2,}", text, maxsplit=1)[0].strip(" -")
+        return token or text
+
+    @staticmethod
+    def _map_entry_type(value: Any) -> Optional[str]:
+        normalized = FinancialImportService._normalize_choice(value)
+        if normalized in {"pagar", "conta a pagar", "a pagar", "payable"}:
+            return "payable"
+        if normalized in {"receber", "conta a receber", "a receber", "receivable"}:
+            return "receivable"
+        return None
+
+    @staticmethod
+    def _map_record_type(value: Any) -> Optional[str]:
+        normalized = FinancialImportService._normalize_choice(value)
+        if normalized in {"agendamento", "agendar"}:
+            return "agendamento"
+        if normalized in {"lancamento", "lançamento", "baixa", "quitado", "pago", "recebido"}:
+            return "lancamento"
+        return None
+
+    @staticmethod
+    def _movement_nature_from_entry_type(entry_type: Optional[str]) -> Optional[str]:
+        if entry_type == "receivable":
+            return "credit"
+        if entry_type == "payable":
+            return "debit"
+        return None
+
+    @staticmethod
+    def _resolve_origin_type(source_type: Any) -> str:
+        normalized = FinancialImportService._normalize_choice(source_type)
+        if normalized == "xlsx":
+            return "xls"
+        if normalized in {"ofx", "csv", "xls", "csc", "api", "mcp"}:
+            return normalized
+        return "manual"
+
+    @staticmethod
+    def _resolve_counterparty_id_by_code(company_id: int, code: Any) -> Optional[int]:
+        code_text = FinancialImportService._extract_code_token(code)
+        if not code_text:
+            return None
+        item = FinancialCounterparty.query.filter(
+            FinancialCounterparty.company_id == company_id,
+            FinancialCounterparty.code == code_text,
+            FinancialCounterparty.deleted_at.is_(None),
+        ).first()
+        return item.id if item else None
+
+    @staticmethod
+    def _resolve_chart_account_id_by_code(company_id: int, code: Any) -> Optional[int]:
+        code_text = FinancialImportService._extract_code_token(code)
+        if not code_text:
+            return None
+        item = FinancialChartAccount.query.filter(
+            FinancialChartAccount.company_id == company_id,
+            FinancialChartAccount.code == code_text,
+            FinancialChartAccount.deleted_at.is_(None),
+            FinancialChartAccount.accepts_posting.is_(True),
+        ).first()
+        return item.id if item else None
+
+    @staticmethod
+    def _resolve_cost_center_id_by_code(company_id: int, code: Any) -> Optional[int]:
+        code_text = FinancialImportService._extract_code_token(code)
+        if not code_text:
+            return None
+        item = FinancialCostCenter.query.filter(
+            FinancialCostCenter.company_id == company_id,
+            FinancialCostCenter.code == code_text,
+            FinancialCostCenter.deleted_at.is_(None),
+            FinancialCostCenter.accepts_posting.is_(True),
+        ).first()
+        return item.id if item else None
+
+    @staticmethod
+    def _resolve_bank_account_id_by_code(company_id: int, code: Any) -> Optional[int]:
+        code_text = FinancialImportService._extract_code_token(code)
+        if not code_text:
+            return None
+        item = FinancialBankAccount.query.filter(
+            FinancialBankAccount.company_id == company_id,
+            FinancialBankAccount.code == code_text,
+            FinancialBankAccount.deleted_at.is_(None),
+        ).first()
+        return item.id if item else None
 
     @staticmethod
     def _sanitize_raw_payload(raw_payload: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -187,6 +307,11 @@ class FinancialImportService:
             FinancialImportService._parse_date(normalized.get("due_date"))
             or FinancialImportService._parse_date(normalized.get("vencimento"))
         )
+        settlement_date = (
+            FinancialImportService._parse_date(normalized.get("settlement_date"))
+            or FinancialImportService._parse_date(normalized.get("data_da_baixa"))
+            or FinancialImportService._parse_date(normalized.get("data_baixa"))
+        )
         document_number = (
             normalized.get("document_number")
             or normalized.get("documento")
@@ -207,7 +332,23 @@ class FinancialImportService:
             or normalized.get("payee")
             or normalized.get("name")
         )
-        movement_nature = normalized.get("movement_nature") or FinancialImportService._guess_movement_nature(amount)
+        entry_type = FinancialImportService._map_entry_type(
+            normalized.get("entry_type")
+            or normalized.get("tipo_titulo")
+            or normalized.get("tipo_do_titulo")
+            or normalized.get("tipo_do_titulo_")
+        )
+        record_type = FinancialImportService._map_record_type(
+            normalized.get("record_type")
+            or normalized.get("tipo_registro")
+            or normalized.get("tipo_de_registro")
+            or normalized.get("tipo_de_registro_")
+        )
+        movement_nature = (
+            FinancialImportService._movement_nature_from_entry_type(entry_type)
+            or normalized.get("movement_nature")
+            or FinancialImportService._guess_movement_nature(amount)
+        )
         if amount is not None and amount < 0:
             amount = abs(amount)
 
@@ -238,11 +379,36 @@ class FinancialImportService:
                 "competence_date": competence_date.isoformat() if competence_date else None,
                 "occurred_on": occurred_on.isoformat() if occurred_on else None,
                 "due_date": due_date.isoformat() if due_date else None,
+                "settlement_date": settlement_date.isoformat() if settlement_date else None,
                 "amount": float(amount) if amount is not None else None,
+                "entry_type": entry_type,
+                "record_type": record_type,
                 "movement_nature": movement_nature,
                 "document_number": document_number,
                 "bank_reference": bank_reference,
                 "counterparty_name": counterparty_name,
+                "counterparty_hint": counterparty_name,
+                "counterparty_code": FinancialImportService._extract_code_token(
+                    normalized.get("counterparty_code")
+                    or normalized.get("codigo_favorecido")
+                    or normalized.get("codigo_do_favorecido")
+                    or normalized.get("favorecido")
+                    or normalized.get("favorecido_")
+                ),
+                "chart_account_code": FinancialImportService._extract_code_token(
+                    normalized.get("chart_account_code")
+                    or normalized.get("plano_conta")
+                    or normalized.get("plano_de_conta")
+                ),
+                "cost_center_code": FinancialImportService._extract_code_token(
+                    normalized.get("cost_center_code")
+                    or normalized.get("centro_resultado")
+                    or normalized.get("centro_de_resultado")
+                ),
+                "bank_account_code": FinancialImportService._extract_code_token(
+                    normalized.get("bank_account_code")
+                    or normalized.get("conta_bancaria")
+                ),
             },
             error_message=error_message,
         )
@@ -250,6 +416,26 @@ class FinancialImportService:
     @staticmethod
     def _enrich_row_catalogs(company_id: int, row: FinancialImportRow) -> None:
         normalized = dict(row.normalized_payload or {})
+        if not normalized.get("counterparty_id") and normalized.get("counterparty_code"):
+            normalized["counterparty_id"] = FinancialImportService._resolve_counterparty_id_by_code(
+                company_id,
+                normalized.get("counterparty_code"),
+            )
+        if not normalized.get("chart_account_id") and normalized.get("chart_account_code"):
+            normalized["chart_account_id"] = FinancialImportService._resolve_chart_account_id_by_code(
+                company_id,
+                normalized.get("chart_account_code"),
+            )
+        if not normalized.get("cost_center_id") and normalized.get("cost_center_code"):
+            normalized["cost_center_id"] = FinancialImportService._resolve_cost_center_id_by_code(
+                company_id,
+                normalized.get("cost_center_code"),
+            )
+        if not normalized.get("bank_account_id") and normalized.get("bank_account_code"):
+            normalized["bank_account_id"] = FinancialImportService._resolve_bank_account_id_by_code(
+                company_id,
+                normalized.get("bank_account_code"),
+            )
         enriched = FinancialCatalogService.enrich_reference_payload(
             company_id=company_id,
             payload=normalized,
@@ -983,6 +1169,27 @@ class FinancialImportService:
     @staticmethod
     def _build_entry_payload_from_row(batch: FinancialImportBatch, row: FinancialImportRow) -> Dict[str, Any]:
         normalized = row.normalized_payload or {}
+        normalized = dict(normalized)
+        if not normalized.get("counterparty_id") and normalized.get("counterparty_code"):
+            normalized["counterparty_id"] = FinancialImportService._resolve_counterparty_id_by_code(
+                batch.company_id,
+                normalized.get("counterparty_code"),
+            )
+        if not normalized.get("chart_account_id") and normalized.get("chart_account_code"):
+            normalized["chart_account_id"] = FinancialImportService._resolve_chart_account_id_by_code(
+                batch.company_id,
+                normalized.get("chart_account_code"),
+            )
+        if not normalized.get("cost_center_id") and normalized.get("cost_center_code"):
+            normalized["cost_center_id"] = FinancialImportService._resolve_cost_center_id_by_code(
+                batch.company_id,
+                normalized.get("cost_center_code"),
+            )
+        if not normalized.get("bank_account_id") and normalized.get("bank_account_code"):
+            normalized["bank_account_id"] = FinancialImportService._resolve_bank_account_id_by_code(
+                batch.company_id,
+                normalized.get("bank_account_code"),
+            )
         occurred_on = row.occurred_on or FinancialImportService._parse_date(normalized.get("occurred_on"))
         due_date = row.due_date or FinancialImportService._parse_date(normalized.get("due_date"))
         competence_date = FinancialImportService._parse_date(normalized.get("competence_date"))
@@ -992,7 +1199,7 @@ class FinancialImportService:
             "entry_code": f"{batch.batch_code}-{row.row_number}",
             "entry_type": normalized.get("entry_type") or "bank_movement",
             "movement_nature": normalized.get("movement_nature") or row.movement_nature or "debit",
-            "origin_type": batch.source_type,
+            "origin_type": FinancialImportService._resolve_origin_type(batch.source_type),
             "status": "posted",
             "review_status": "pending_review",
             "description": row.description or normalized.get("description") or f"Importação {batch.batch_code} linha {row.row_number}",
@@ -1028,6 +1235,98 @@ class FinancialImportService:
             description_text=row.description,
             bank_reference=row.bank_reference,
         )
+
+    @staticmethod
+    def _build_schedule_payload_from_row(batch: FinancialImportBatch, row: FinancialImportRow) -> Dict[str, Any]:
+        normalized = FinancialImportService._build_entry_payload_from_row(batch, row)
+        competence_date = (
+            FinancialImportService._parse_date(normalized.get("competence_date"))
+            or FinancialImportService._parse_date(normalized.get("occurred_on"))
+            or FinancialImportService._parse_date(normalized.get("due_date"))
+            or batch.imported_at.date()
+        )
+        due_date = (
+            FinancialImportService._parse_date(normalized.get("due_date"))
+            or FinancialImportService._parse_date(normalized.get("occurred_on"))
+            or competence_date
+        )
+        notes = f"Gerado a partir do lote {batch.batch_code}, linha {row.row_number}."
+        return {
+            "company_id": batch.company_id,
+            "name": (row.description or normalized.get('description') or f'Importação {batch.batch_code}')[:120],
+            "entry_type": normalized.get("entry_type") or "payable",
+            "movement_nature": normalized.get("movement_nature") or "debit",
+            "origin_type": FinancialImportService._resolve_origin_type(batch.source_type),
+            "status": "active",
+            "frequency": "one_time",
+            "interval_value": 1,
+            "start_date": competence_date,
+            "competence_date": competence_date,
+            "first_due_date": due_date,
+            "next_due_date": due_date,
+            "description": row.description or normalized.get("description") or f"Importação {batch.batch_code} linha {row.row_number}",
+            "document_number_prefix": row.document_number,
+            "template_amount": row.amount or Decimal("0"),
+            "bank_account_id": normalized.get("bank_account_id"),
+            "counterparty_id": normalized.get("counterparty_id"),
+            "chart_account_id": normalized.get("chart_account_id"),
+            "cost_center_id": normalized.get("cost_center_id"),
+            "activity_id": normalized.get("activity_id"),
+            "process_instance_id": normalized.get("process_instance_id"),
+            "routine_id": normalized.get("routine_id"),
+            "notes": notes,
+            "metadata_json": {
+                **(normalized.get("metadata_json") or {}),
+                "import_batch_id": batch.id,
+                "import_row_id": row.id,
+                "source_type": batch.source_type,
+                "counterparty_name": row.counterparty_name,
+                "classification_rule_id": normalized.get("classification_rule_id"),
+                "classification_rule_name": normalized.get("classification_rule_name"),
+                "raw_payload": row.raw_payload or {},
+            },
+        }
+
+    @staticmethod
+    def _build_direct_entry_payload_from_row(batch: FinancialImportBatch, row: FinancialImportRow) -> Dict[str, Any]:
+        normalized = FinancialImportService._build_entry_payload_from_row(batch, row)
+        competence_date = (
+            FinancialImportService._parse_date(normalized.get("competence_date"))
+            or FinancialImportService._parse_date(normalized.get("due_date"))
+            or FinancialImportService._parse_date(normalized.get("occurred_on"))
+            or batch.imported_at.date()
+        )
+        due_date = FinancialImportService._parse_date(normalized.get("due_date"))
+        settlement_date = (
+            FinancialImportService._parse_date((row.normalized_payload or {}).get("settlement_date"))
+            or FinancialImportService._parse_date(normalized.get("occurred_on"))
+            or due_date
+            or competence_date
+        )
+        return {
+            "company_id": batch.company_id,
+            "entry_type": normalized.get("entry_type") or "payable",
+            "description": row.description or normalized.get("description") or f"Importação {batch.batch_code} linha {row.row_number}",
+            "document_number": row.document_number,
+            "counterparty_id": normalized.get("counterparty_id"),
+            "bank_account_id": normalized.get("bank_account_id"),
+            "competence_date": competence_date,
+            "occurred_on": settlement_date,
+            "due_date": due_date or settlement_date,
+            "original_amount": row.amount or Decimal("0"),
+            "chart_account_id": normalized.get("chart_account_id"),
+            "cost_center_id": normalized.get("cost_center_id"),
+            "notes": f"Gerado a partir do lote {batch.batch_code}, linha {row.row_number}.",
+            "metadata_json": {
+                "import_batch_id": batch.id,
+                "import_row_id": row.id,
+                "source_type": batch.source_type,
+                "counterparty_name": row.counterparty_name,
+                "classification_rule_id": normalized.get("classification_rule_id"),
+                "classification_rule_name": normalized.get("classification_rule_name"),
+                "raw_payload": row.raw_payload or {},
+            },
+        }
 
     @staticmethod
     def process_import_batch(
@@ -1077,18 +1376,38 @@ class FinancialImportService:
                     skipped_count += 1
                     continue
 
-                payload = FinancialImportService._build_entry_payload_from_row(batch, row)
-                entry, error = FinancialService.create_entry(
-                    payload=payload,
-                    allowed_company_ids=allowed_company_ids,
-                )
-                if error:
-                    row.processing_status = "rejected"
-                    row.error_message = error
-                    rejected_count += 1
-                    continue
-
-                row.created_entry_id = entry.id
+                normalized = dict(row.normalized_payload or {})
+                record_type = normalized.get("record_type") or "lancamento"
+                if record_type == "agendamento":
+                    payload = FinancialImportService._build_schedule_payload_from_row(batch, row)
+                    schedule_result, error = FinancialScheduleService.create_schedule(
+                        payload=payload,
+                        allowed_company_ids=allowed_company_ids,
+                    )
+                    if error:
+                        row.processing_status = "rejected"
+                        row.error_message = error
+                        rejected_count += 1
+                        continue
+                    normalized["created_schedule_id"] = schedule_result.get("id")
+                    normalized["created_schedule_code"] = schedule_result.get("schedule_code")
+                    row.normalized_payload = normalized
+                else:
+                    payload = FinancialImportService._build_direct_entry_payload_from_row(batch, row)
+                    result, error = FinancialDirectEntryService.create_direct_entry(
+                        payload=payload,
+                        allowed_company_ids=allowed_company_ids,
+                    )
+                    if error:
+                        row.processing_status = "rejected"
+                        row.error_message = error
+                        rejected_count += 1
+                        continue
+                    row.created_entry_id = (result or {}).get("entry", {}).get("id")
+                    normalized["created_schedule_id"] = (result or {}).get("schedule", {}).get("id")
+                    normalized["created_schedule_code"] = (result or {}).get("schedule", {}).get("schedule_code")
+                    normalized["created_settlement_id"] = (result or {}).get("settlement", {}).get("id")
+                    row.normalized_payload = normalized
                 row.processing_status = "imported"
                 row.error_message = None
                 created_count += 1
