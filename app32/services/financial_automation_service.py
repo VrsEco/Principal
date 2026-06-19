@@ -2020,21 +2020,42 @@ class FinancialAutomationService:
     ) -> Dict[str, Any]:
         normalized_payload = dict(getattr(row_input, "normalized_payload", {}) or {})
         movement_nature = normalized_payload.get("movement_nature")
+        normalized_entry_type = str(normalized_payload.get("entry_type") or "").strip().lower()
+        normalized_record_type = str(normalized_payload.get("record_type") or "").strip().lower()
         amount = getattr(row_input, "amount", None) or Decimal("0")
-        competence_date = getattr(row_input, "occurred_on", None) or getattr(row_input, "due_date", None)
-        due_date = getattr(row_input, "due_date", None) or competence_date
+        competence_date = (
+            FinancialImportService._parse_date(normalized_payload.get("competence_date"))
+            or getattr(row_input, "occurred_on", None)
+            or getattr(row_input, "due_date", None)
+        )
+        occurred_on = (
+            getattr(row_input, "occurred_on", None)
+            or FinancialImportService._parse_date(normalized_payload.get("occurred_on"))
+        )
+        due_date = getattr(row_input, "due_date", None) or FinancialImportService._parse_date(normalized_payload.get("due_date")) or competence_date
+        settlement_date = FinancialImportService._parse_date(normalized_payload.get("settlement_date"))
+        entry_direction = normalized_entry_type if normalized_entry_type in {"payable", "receivable"} else FinancialAutomationService._guess_entry_direction(movement_nature)
         settlement_state = FinancialAutomationService._guess_settlement_state(source_type, normalized_payload)
+        if normalized_record_type == "lancamento":
+            settlement_date = settlement_date or occurred_on or due_date or competence_date
+            settlement_state = "settled"
+        generate_target = "entry" if normalized_record_type == "lancamento" or settlement_state == "settled" else "schedule"
         record_kwargs = {
             "company_id": company_id,
             "batch_id": batch_id,
             "source_document_id": source_document_id,
             "status": "imported",
-            "entry_direction": FinancialAutomationService._guess_entry_direction(movement_nature),
+            "entry_direction": entry_direction,
             "settlement_state": settlement_state,
             "description": str(getattr(row_input, "description", None) or f"Documento importado {source_document_id}")[:255],
             "amount": amount,
             "competence_date": competence_date,
             "due_date": due_date,
+            "settlement_date": settlement_date,
+            "bank_account_id": normalized_payload.get("bank_account_id"),
+            "counterparty_id": normalized_payload.get("counterparty_id"),
+            "chart_account_id": normalized_payload.get("chart_account_id"),
+            "cost_center_id": normalized_payload.get("cost_center_id"),
             "confidence_score": Decimal("0.78"),
             "validation_notes": None if getattr(row_input, "processing_status", None) != "rejected" else getattr(row_input, "error_message", None),
             "normalized_payload_json": {
@@ -2043,7 +2064,7 @@ class FinancialAutomationService:
                 "source_type": source_type,
             },
             "metadata_json": {
-                "generate_target": "entry" if settlement_state == "settled" else "schedule",
+                "generate_target": generate_target,
                 "document_parser": source_type,
                 "parser_mode": "structured_import",
                 "bank_reference": getattr(row_input, "bank_reference", None),
