@@ -123,6 +123,12 @@ class FinancialImportService:
                 return datetime.fromisoformat(text).date()
             except ValueError:
                 pass
+        if " " in text:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S"):
+                try:
+                    return datetime.strptime(text, fmt).date()
+                except ValueError:
+                    continue
         for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y%m%d"):
             try:
                 return datetime.strptime(text, fmt).date()
@@ -1163,6 +1169,27 @@ class FinancialImportService:
     @staticmethod
     def _build_entry_payload_from_row(batch: FinancialImportBatch, row: FinancialImportRow) -> Dict[str, Any]:
         normalized = row.normalized_payload or {}
+        normalized = dict(normalized)
+        if not normalized.get("counterparty_id") and normalized.get("counterparty_code"):
+            normalized["counterparty_id"] = FinancialImportService._resolve_counterparty_id_by_code(
+                batch.company_id,
+                normalized.get("counterparty_code"),
+            )
+        if not normalized.get("chart_account_id") and normalized.get("chart_account_code"):
+            normalized["chart_account_id"] = FinancialImportService._resolve_chart_account_id_by_code(
+                batch.company_id,
+                normalized.get("chart_account_code"),
+            )
+        if not normalized.get("cost_center_id") and normalized.get("cost_center_code"):
+            normalized["cost_center_id"] = FinancialImportService._resolve_cost_center_id_by_code(
+                batch.company_id,
+                normalized.get("cost_center_code"),
+            )
+        if not normalized.get("bank_account_id") and normalized.get("bank_account_code"):
+            normalized["bank_account_id"] = FinancialImportService._resolve_bank_account_id_by_code(
+                batch.company_id,
+                normalized.get("bank_account_code"),
+            )
         occurred_on = row.occurred_on or FinancialImportService._parse_date(normalized.get("occurred_on"))
         due_date = row.due_date or FinancialImportService._parse_date(normalized.get("due_date"))
         competence_date = FinancialImportService._parse_date(normalized.get("competence_date"))
