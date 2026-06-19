@@ -6,6 +6,7 @@ import io
 import logging
 import os
 import re
+import unicodedata
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -135,12 +136,35 @@ class FinancialImportService:
         return sanitized
 
     @staticmethod
+    def _canonicalize_column_key(value: Any) -> str:
+        text = str(value or "").strip().lower()
+        if not text:
+            return ""
+        text = unicodedata.normalize("NFKD", text)
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        text = re.sub(r"[^a-z0-9]+", "_", text)
+        return text.strip("_")
+
+    @staticmethod
     def _normalize_row(row_number: int, raw_payload: Dict[str, Any]) -> FinancialImportRowInput:
         sanitized_raw_payload = FinancialImportService._sanitize_raw_payload(raw_payload)
-        normalized = {str(key).strip().lower(): value for key, value in sanitized_raw_payload.items()}
+        normalized: Dict[str, Any] = {}
+        for key, value in sanitized_raw_payload.items():
+            raw_key = str(key).strip().lower()
+            canonical_key = FinancialImportService._canonicalize_column_key(key)
+            if raw_key and raw_key not in normalized:
+                normalized[raw_key] = value
+            if canonical_key and canonical_key not in normalized:
+                normalized[canonical_key] = value
+        competence_date = (
+            FinancialImportService._parse_date(normalized.get("competence_date"))
+            or FinancialImportService._parse_date(normalized.get("competencia"))
+            or FinancialImportService._parse_date(normalized.get("competencia_"))
+        )
         amount = (
             FinancialImportService._parse_decimal(normalized.get("amount"))
             or FinancialImportService._parse_decimal(normalized.get("valor"))
+            or FinancialImportService._parse_decimal(normalized.get("valor_"))
             or FinancialImportService._parse_decimal(normalized.get("valor_documento"))
             or FinancialImportService._parse_decimal(normalized.get("amount_br"))
         )
@@ -149,6 +173,7 @@ class FinancialImportService:
             or normalized.get("descricao")
             or normalized.get("memo")
             or normalized.get("historico")
+            or normalized.get("historico_")
             or normalized.get("payee")
         )
         occurred_on = (
@@ -156,6 +181,7 @@ class FinancialImportService:
             or FinancialImportService._parse_date(normalized.get("data"))
             or FinancialImportService._parse_date(normalized.get("date"))
             or FinancialImportService._parse_date(normalized.get("posted_at"))
+            or FinancialImportService._parse_date(normalized.get("data_do_lancamento"))
         )
         due_date = (
             FinancialImportService._parse_date(normalized.get("due_date"))
@@ -166,6 +192,7 @@ class FinancialImportService:
             or normalized.get("documento")
             or normalized.get("doc")
             or normalized.get("checknum")
+            or normalized.get("numero_do_documento")
         )
         bank_reference = (
             normalized.get("bank_reference")
@@ -176,6 +203,7 @@ class FinancialImportService:
         counterparty_name = (
             normalized.get("counterparty_name")
             or normalized.get("favorecido")
+            or normalized.get("favorecido_")
             or normalized.get("payee")
             or normalized.get("name")
         )
@@ -207,6 +235,7 @@ class FinancialImportService:
             raw_payload=sanitized_raw_payload,
             normalized_payload={
                 "description": description,
+                "competence_date": competence_date.isoformat() if competence_date else None,
                 "occurred_on": occurred_on.isoformat() if occurred_on else None,
                 "due_date": due_date.isoformat() if due_date else None,
                 "amount": float(amount) if amount is not None else None,
@@ -956,6 +985,7 @@ class FinancialImportService:
         normalized = row.normalized_payload or {}
         occurred_on = row.occurred_on or FinancialImportService._parse_date(normalized.get("occurred_on"))
         due_date = row.due_date or FinancialImportService._parse_date(normalized.get("due_date"))
+        competence_date = FinancialImportService._parse_date(normalized.get("competence_date"))
 
         payload = {
             "company_id": batch.company_id,
@@ -969,7 +999,7 @@ class FinancialImportService:
             "document_number": row.document_number,
             "external_reference": row.bank_reference,
             "origin_reference": batch.batch_code,
-            "competence_date": occurred_on or due_date or batch.imported_at.date(),
+            "competence_date": competence_date or occurred_on or due_date or batch.imported_at.date(),
             "due_date": due_date,
             "occurred_on": occurred_on,
             "original_amount": row.amount or Decimal("0"),
