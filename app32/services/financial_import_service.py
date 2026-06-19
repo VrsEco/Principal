@@ -242,6 +242,15 @@ class FinancialImportService:
             FinancialBankAccount.code == code_text,
             FinancialBankAccount.deleted_at.is_(None),
         ).first()
+        if item:
+            return item.id
+        normalized_numeric_code = code_text.lstrip("0")
+        if normalized_numeric_code and normalized_numeric_code.isdigit() and normalized_numeric_code != code_text:
+            item = FinancialBankAccount.query.filter(
+                FinancialBankAccount.company_id == company_id,
+                FinancialBankAccount.deleted_at.is_(None),
+                db.func.ltrim(FinancialBankAccount.code, "0") == normalized_numeric_code,
+            ).first()
         return item.id if item else None
 
     @staticmethod
