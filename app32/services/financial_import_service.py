@@ -425,26 +425,30 @@ class FinancialImportService:
     @staticmethod
     def _enrich_row_catalogs(company_id: int, row: FinancialImportRow) -> None:
         normalized = dict(row.normalized_payload or {})
-        if not normalized.get("counterparty_id") and normalized.get("counterparty_code"):
-            normalized["counterparty_id"] = FinancialImportService._resolve_counterparty_id_by_code(
-                company_id,
-                normalized.get("counterparty_code"),
-            )
-        if not normalized.get("chart_account_id") and normalized.get("chart_account_code"):
-            normalized["chart_account_id"] = FinancialImportService._resolve_chart_account_id_by_code(
-                company_id,
-                normalized.get("chart_account_code"),
-            )
-        if not normalized.get("cost_center_id") and normalized.get("cost_center_code"):
-            normalized["cost_center_id"] = FinancialImportService._resolve_cost_center_id_by_code(
-                company_id,
-                normalized.get("cost_center_code"),
-            )
-        if not normalized.get("bank_account_id") and normalized.get("bank_account_code"):
-            normalized["bank_account_id"] = FinancialImportService._resolve_bank_account_id_by_code(
-                company_id,
-                normalized.get("bank_account_code"),
-            )
+        resolved_counterparty_id = FinancialImportService._resolve_counterparty_id_by_code(
+            company_id,
+            normalized.get("counterparty_code"),
+        ) if normalized.get("counterparty_code") else None
+        if resolved_counterparty_id:
+            normalized["counterparty_id"] = resolved_counterparty_id
+        resolved_chart_account_id = FinancialImportService._resolve_chart_account_id_by_code(
+            company_id,
+            normalized.get("chart_account_code"),
+        ) if normalized.get("chart_account_code") else None
+        if resolved_chart_account_id:
+            normalized["chart_account_id"] = resolved_chart_account_id
+        resolved_cost_center_id = FinancialImportService._resolve_cost_center_id_by_code(
+            company_id,
+            normalized.get("cost_center_code"),
+        ) if normalized.get("cost_center_code") else None
+        if resolved_cost_center_id:
+            normalized["cost_center_id"] = resolved_cost_center_id
+        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_code(
+            company_id,
+            normalized.get("bank_account_code"),
+        ) if normalized.get("bank_account_code") else None
+        if resolved_bank_account_id:
+            normalized["bank_account_id"] = resolved_bank_account_id
         enriched = FinancialCatalogService.enrich_reference_payload(
             company_id=company_id,
             payload=normalized,
@@ -1179,26 +1183,30 @@ class FinancialImportService:
     def _build_entry_payload_from_row(batch: FinancialImportBatch, row: FinancialImportRow) -> Dict[str, Any]:
         normalized = row.normalized_payload or {}
         normalized = dict(normalized)
-        if not normalized.get("counterparty_id") and normalized.get("counterparty_code"):
-            normalized["counterparty_id"] = FinancialImportService._resolve_counterparty_id_by_code(
-                batch.company_id,
-                normalized.get("counterparty_code"),
-            )
-        if not normalized.get("chart_account_id") and normalized.get("chart_account_code"):
-            normalized["chart_account_id"] = FinancialImportService._resolve_chart_account_id_by_code(
-                batch.company_id,
-                normalized.get("chart_account_code"),
-            )
-        if not normalized.get("cost_center_id") and normalized.get("cost_center_code"):
-            normalized["cost_center_id"] = FinancialImportService._resolve_cost_center_id_by_code(
-                batch.company_id,
-                normalized.get("cost_center_code"),
-            )
-        if not normalized.get("bank_account_id") and normalized.get("bank_account_code"):
-            normalized["bank_account_id"] = FinancialImportService._resolve_bank_account_id_by_code(
-                batch.company_id,
-                normalized.get("bank_account_code"),
-            )
+        resolved_counterparty_id = FinancialImportService._resolve_counterparty_id_by_code(
+            batch.company_id,
+            normalized.get("counterparty_code"),
+        ) if normalized.get("counterparty_code") else None
+        if resolved_counterparty_id:
+            normalized["counterparty_id"] = resolved_counterparty_id
+        resolved_chart_account_id = FinancialImportService._resolve_chart_account_id_by_code(
+            batch.company_id,
+            normalized.get("chart_account_code"),
+        ) if normalized.get("chart_account_code") else None
+        if resolved_chart_account_id:
+            normalized["chart_account_id"] = resolved_chart_account_id
+        resolved_cost_center_id = FinancialImportService._resolve_cost_center_id_by_code(
+            batch.company_id,
+            normalized.get("cost_center_code"),
+        ) if normalized.get("cost_center_code") else None
+        if resolved_cost_center_id:
+            normalized["cost_center_id"] = resolved_cost_center_id
+        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_code(
+            batch.company_id,
+            normalized.get("bank_account_code"),
+        ) if normalized.get("bank_account_code") else None
+        if resolved_bank_account_id:
+            normalized["bank_account_id"] = resolved_bank_account_id
         occurred_on = row.occurred_on or FinancialImportService._parse_date(normalized.get("occurred_on"))
         due_date = row.due_date or FinancialImportService._parse_date(normalized.get("due_date"))
         competence_date = FinancialImportService._parse_date(normalized.get("competence_date"))

@@ -2035,6 +2035,22 @@ class FinancialAutomationService:
         due_date = getattr(row_input, "due_date", None) or FinancialImportService._parse_date(normalized_payload.get("due_date")) or competence_date
         settlement_date = FinancialImportService._parse_date(normalized_payload.get("settlement_date"))
         entry_direction = normalized_entry_type if normalized_entry_type in {"payable", "receivable"} else FinancialAutomationService._guess_entry_direction(movement_nature)
+        resolved_counterparty_id = FinancialImportService._resolve_counterparty_id_by_code(
+            company_id,
+            normalized_payload.get("counterparty_code"),
+        ) if normalized_payload.get("counterparty_code") else None
+        resolved_chart_account_id = FinancialImportService._resolve_chart_account_id_by_code(
+            company_id,
+            normalized_payload.get("chart_account_code"),
+        ) if normalized_payload.get("chart_account_code") else None
+        resolved_cost_center_id = FinancialImportService._resolve_cost_center_id_by_code(
+            company_id,
+            normalized_payload.get("cost_center_code"),
+        ) if normalized_payload.get("cost_center_code") else None
+        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_code(
+            company_id,
+            normalized_payload.get("bank_account_code"),
+        ) if normalized_payload.get("bank_account_code") else None
         settlement_state = FinancialAutomationService._guess_settlement_state(source_type, normalized_payload)
         if normalized_record_type == "lancamento":
             settlement_date = settlement_date or occurred_on or due_date or competence_date
@@ -2052,10 +2068,10 @@ class FinancialAutomationService:
             "competence_date": competence_date,
             "due_date": due_date,
             "settlement_date": settlement_date,
-            "bank_account_id": normalized_payload.get("bank_account_id"),
-            "counterparty_id": normalized_payload.get("counterparty_id"),
-            "chart_account_id": normalized_payload.get("chart_account_id"),
-            "cost_center_id": normalized_payload.get("cost_center_id"),
+            "bank_account_id": resolved_bank_account_id or normalized_payload.get("bank_account_id"),
+            "counterparty_id": resolved_counterparty_id or normalized_payload.get("counterparty_id"),
+            "chart_account_id": resolved_chart_account_id or normalized_payload.get("chart_account_id"),
+            "cost_center_id": resolved_cost_center_id or normalized_payload.get("cost_center_id"),
             "confidence_score": Decimal("0.78"),
             "validation_notes": None if getattr(row_input, "processing_status", None) != "rejected" else getattr(row_input, "error_message", None),
             "normalized_payload_json": {
