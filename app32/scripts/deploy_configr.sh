@@ -14,6 +14,8 @@ PYTHON="$BASE/.virtualenv/3.12/bin/python"
 PIP="$BASE/.virtualenv/3.12/bin/pip"
 DEPLOY_STDOUT_LOG="$APP/deploy_stdout.txt"
 DEPLOY_STDERR_LOG="$APP/deploy_stderr.txt"
+WEB_HEALTH_URL="http://127.0.0.1/healthz"
+WEB_HEALTH_HOST="app.gestaoversus.com.br"
 
 mkdir -p "$APP"
 : > "$DEPLOY_STDOUT_LOG"
@@ -67,13 +69,20 @@ else
     echo "⚠️  Nota: Migrations falharam ou não há mudanças pendentes."
 fi
 
-# 3.1 Runtime uWSGI: buffering de POST
-# Evita que requisições POST pequenas (/login, /portal, APIs JSON) prendam o
-# único worker do Configr quando o upstream repassa corpo sem buffering.
-echo "🛡️  Garantindo post-buffering do uWSGI para POSTs JSON..."
+# 3.1 Runtime uWSGI: buffering de POST + resiliência básica
+# - Evita que requisições POST pequenas (/login, /portal, APIs JSON) prendam o
+#   worker quando o upstream repassa corpo sem buffering.
+# - Sobe 2 workers para reduzir indisponibilidade total durante reciclagem.
+# - Aplica reciclagem preventiva de workers para reduzir degradação acumulada.
+echo "🛡️  Garantindo parâmetros de resiliência do uWSGI..."
 mkdir -p "$BASE/etc/uwsgi/conf.d"
 cat > "$BASE/etc/uwsgi/conf.d/app32_post_buffering.ini" <<'EOF'
 post-buffering = 65536
+workers = 2
+max-requests = 1000
+max-worker-lifetime = 3600
+reload-on-rss = 768
+thunder-lock = true
 EOF
 UWSGI_INI="$BASE/etc/uwsgi/uwsgi.ini"
 if [ -f "$UWSGI_INI" ] && ! grep -qE '^[[:space:]]*post-buffering[[:space:]]*=' "$UWSGI_INI"; then
@@ -95,7 +104,11 @@ if not inserted:
 path.write_text("\n".join(out) + "\n")
 PY
 fi
-echo "✅ post-buffering do uWSGI configurado."
+echo "✅ parâmetros de resiliência do uWSGI configurados."
+
+check_web_readiness() {
+    curl -fsS --max-time 5 -H "Host: $WEB_HEALTH_HOST" "$WEB_HEALTH_URL" >/dev/null
+}
 
 # 4. Reinício da Aplicação
 echo "🔄 Reiniciando servidor uWSGI (Configr)..."
@@ -141,6 +154,27 @@ if [ -f "passenger_wsgi.py" ]; then
 fi
 if [ -f "$WWW/passenger_wsgi.py" ]; then
     touch "$WWW/passenger_wsgi.py"
+fi
+
+echo "🌐 Validando readiness HTTP do app web..."
+WEB_READY=0
+for i in {1..60}; do
+    set +e
+    check_web_readiness
+    WEB_HEALTH_CODE=$?
+    set -e
+    if [ "$WEB_HEALTH_CODE" -eq 0 ]; then
+        WEB_READY=1
+        echo "✅ App web respondeu ao healthcheck em ${i}s."
+        break
+    fi
+    sleep 1
+done
+
+if [ "$WEB_READY" -ne 1 ]; then
+    echo "❌ ERRO: app web não respondeu ao healthcheck local após restart."
+    echo "   URL: $WEB_HEALTH_URL (Host: $WEB_HEALTH_HOST)"
+    exit 1
 fi
 
 # 5. MCP HTTP remoto (reinício controlado para refletir novas tools/contratos após deploy)

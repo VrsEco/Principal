@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_login import LoginManager, login_required
 from flask_restful import Api
@@ -250,6 +250,16 @@ def create_app(config_name=None):
     app.config.from_object(app_configs[config_name])
     app.config["FLASK_CONFIG"] = config_name
     _sync_public_static_assets(app)
+
+    @app.get("/healthz")
+    def healthz():
+        return jsonify(
+            {
+                "ok": True,
+                "service": "app32-web",
+                "config": app.config.get("FLASK_CONFIG"),
+            }
+        ), 200
 
     @app.context_processor
     def inject_static_asset_version():
@@ -599,6 +609,7 @@ def create_app(config_name=None):
         
         # Public endpoints that don't require authentication
         public_endpoints = ['auth.login', 'static', 'telegram.telegram_webhook']
+        public_endpoints.append('healthz')
         if app.config.get("DEV_ROUTES_ENABLED"):
             public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
