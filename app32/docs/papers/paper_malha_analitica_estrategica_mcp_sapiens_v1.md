@@ -512,7 +512,172 @@ Exemplo seguro:
 
 No MVP, essa dimensão deve funcionar como análise de desenho do trabalho e bem-estar organizacional. Não deve gerar diagnóstico psicológico, fisiológico ou médico.
 
-## 7. Fórmulas de referência
+## 7. Nova dimensão — Alinhamento Estratégico dos Incentivos e Impacto Motivacional
+
+Os incentivos devem ser tratados como uma camada estratégica da Malha, e não apenas como cálculo financeiro ou premiação isolada.
+
+Essa dimensão responde:
+
+> Os incentivos atuais reforçam comportamentos, processos, rotinas e indicadores que realmente aproximam a empresa da estratégia, preservando qualidade, margem, colaboração e sustentabilidade motivacional?
+
+### 7.1 Tese
+
+Incentivo é um mecanismo de direcionamento comportamental. Quando bem desenhado, ele reforça prioridades estratégicas, melhora execução dos processos e aumenta engajamento. Quando mal desenhado, pode estimular comportamento oportunista, competição tóxica, curto-prazismo, queda de qualidade, pressão improdutiva e manipulação de indicadores.
+
+A Malha deve conectar:
+
+```text
+Estratégia
+→ Indicadores
+→ Processos
+→ Rotinas
+→ Executores / Equipes
+→ Incentivos
+→ Motivação / Engajamento
+→ Resultado econômico e operacional
+```
+
+### 7.2 Perguntas analíticas
+
+Para cada incentivo, a IA deve avaliar:
+
+- qual objetivo estratégico o incentivo apoia;
+- qual indicador ele pretende mover;
+- qual processo ele influencia;
+- qual rotina ele estimula;
+- qual comportamento explícito ele reforça;
+- qual comportamento indesejado ele pode gerar;
+- quais executores/equipes são impactados;
+- se o incentivo melhora ou prejudica colaboração;
+- se reforça qualidade ou apenas volume;
+- se preserva margem de contribuição;
+- se aumenta pressão improdutiva;
+- se estimula curto-prazismo;
+- se cria risco de manipulação de métrica;
+- se é percebido como justo e alcançável;
+- se há equilíbrio entre incentivo individual, coletivo e organizacional;
+- se o incentivo favorece motivação sustentável ou apenas esforço pontual.
+
+### 7.3 Relação com motivação e engajamento
+
+Incentivos podem reforçar diferentes estados motivacionais:
+
+| Dimensão motivacional | Incentivo saudável |
+|---|---|
+| Progresso / conquista | metas curtas, marcos visíveis, feedback rápido |
+| Reconhecimento / orgulho | reconhecimento público respeitoso, premiação simbólica, status saudável |
+| Pertencimento / colaboração | bônus coletivo, celebrações de equipe, metas compartilhadas |
+| Energia de ação | campanhas pontuais, desafios temporários e bem dimensionados |
+| Foco / prioridade | incentivo atrelado à prioridade estratégica do ciclo |
+
+O desenho deve evitar:
+
+- ranking humilhante;
+- pressão permanente;
+- metas inalcançáveis;
+- competição destrutiva;
+- bônus que prejudica qualidade;
+- incentivo individual que rompe processo coletivo;
+- incentivo financeiro que ignora margem;
+- reconhecimento simbólico usado como substituto de remuneração justa.
+
+### 7.4 Exemplo conceitual
+
+Incentivo atual:
+
+- prêmio por quantidade de peças produzidas.
+
+Riscos:
+
+- queda de qualidade;
+- aumento de retrabalho;
+- desperdício de insumos;
+- pressão improdutiva;
+- competição entre colaboradores;
+- margem menor apesar de maior volume.
+
+Incentivo redesenhado:
+
+```text
+produção entregue
++ qualidade
++ prazo
++ baixo retrabalho
++ baixo desperdício
++ colaboração
++ margem mínima
+```
+
+Relatório esperado:
+
+> O incentivo X está conectado ao indicador de volume, mas não possui proteção de qualidade, retrabalho ou margem. Há risco de aumento de produção com perda econômica e desgaste da equipe. Recomenda-se redesenhar a regra incluindo qualidade, desperdício, colaboração e margem mínima, além de reconhecimento coletivo para fortalecer pertencimento.
+
+### 7.5 Métricas sugeridas
+
+- índice de alinhamento estratégico do incentivo;
+- cobertura objetivo → indicador → processo → incentivo;
+- risco de comportamento indesejado;
+- risco de manipulação de indicador;
+- risco de pressão improdutiva;
+- impacto esperado na motivação;
+- impacto esperado na colaboração;
+- impacto esperado na qualidade;
+- impacto esperado na margem;
+- equilíbrio individual/coletivo;
+- percepção de justiça;
+- clareza da regra;
+- alcançabilidade da meta;
+- frequência de feedback;
+- sustentabilidade do incentivo.
+
+### 7.6 Tipos de incentivo analisáveis
+
+- financeiro individual;
+- financeiro coletivo;
+- reconhecimento simbólico;
+- progressão de carreira;
+- capacitação patrocinada;
+- autonomia ampliada;
+- flexibilidade de jornada;
+- participação em projetos estratégicos;
+- celebrações de equipe;
+- gamificação saudável;
+- benefícios de bem-estar;
+- melhoria de ambiente/recursos.
+
+### 7.7 Guardrails específicos
+
+A IA pode:
+
+- apontar desalinhamento entre incentivo e estratégia;
+- sugerir combinação de indicadores;
+- identificar risco de efeito colateral;
+- sugerir incentivo financeiro ou não financeiro;
+- comparar impacto motivacional e econômico;
+- propor simulações antes de implantação.
+
+A IA não pode:
+
+- definir remuneração final automaticamente;
+- alterar regra de incentivo sem aprovação humana;
+- criar incentivo discriminatório;
+- sugerir ranking humilhante;
+- recomendar pressão permanente como mecanismo de performance;
+- premiar volume sem avaliar qualidade, margem e sustentabilidade;
+- ignorar efeitos coletivos e comportamentais.
+
+### 7.8 Tools MCP futuras sugeridas
+
+- `get_incentive_strategy_alignment_snapshot`
+- `analyze_incentive_process_impact`
+- `analyze_incentive_motivation_impact`
+- `simulate_incentive_rule_outcomes`
+- `detect_incentive_unintended_behaviors`
+- `generate_incentive_redesign_recommendations`
+
+No MVP, essa dimensão deve ser leitura/análise/simulação. Alteração de regra, cálculo oficial ou pagamento deve continuar em fluxo governado com aprovação humana.
+
+## 8. Fórmulas de referência
 
 ```text
 Custo total unitário = custo variável unitário + (custo fixo alocado / volume produzido)
@@ -532,21 +697,21 @@ Lucro operacional potencial = margem de contribuição total potencial - custo f
 Payback = investimento / ganho operacional incremental mensal
 ```
 
-## 8. Tools MCP futuras sugeridas
+## 9. Tools MCP futuras sugeridas
 
-### 8.1 Leitura interna
+### 9.1 Leitura interna
 
 - `get_process_operational_capacity_state`
 - `get_process_resource_cost_structure`
 - `get_process_break_even_snapshot`
 
-### 8.2 Benchmarking externo assistido
+### 9.2 Benchmarking externo assistido
 
 - `prepare_process_benchmarking_brief`
 - `register_process_market_benchmark_evidence`
 - `compare_process_market_alternatives`
 
-### 8.3 Análise econômica
+### 9.3 Análise econômica
 
 - `simulate_process_capacity_upgrade`
 - `analyze_process_efficiency_gap`
@@ -554,7 +719,7 @@ Payback = investimento / ganho operacional incremental mensal
 
 No MVP, essas tools devem ser somente leitura/simulação. Nenhuma compra, contratação, alteração de recurso ou mudança de capacidade deve ser executada automaticamente.
 
-## 9. Guardrails anti-alucinação
+## 10. Guardrails anti-alucinação
 
 A IA pode:
 
@@ -579,6 +744,8 @@ A IA não pode:
 - afirmar que um processo “gera dopamina/serotonina” no colaborador.
 - prescrever dieta, suplemento ou intervenção médica.
 - confundir suporte ambiental de bem-estar com tratamento de saúde.
+- redesenhar incentivo oficial sem fluxo de aprovação.
+- sugerir incentivo que melhore um indicador e prejudique margem, qualidade ou colaboração sem explicitar o trade-off.
 
 Toda recomendação deve conter:
 
@@ -592,7 +759,7 @@ Toda recomendação deve conter:
 - limitações;
 - necessidade de validação humana.
 
-## 10. Relatório analítico esperado
+## 11. Relatório analítico esperado
 
 O relatório por processo deve conter:
 
@@ -613,10 +780,12 @@ O relatório por processo deve conter:
 15. validação humana necessária quando houver impacto em pessoas.
 16. análise de motivação/desenho do trabalho quando aplicável.
 17. sugestões de suporte ambiental e pausas, quando aplicável.
+18. análise de alinhamento dos incentivos à estratégia, processos e indicadores.
+19. riscos de efeitos comportamentais indesejados dos incentivos.
 
-## 11. Decisão conceitual
+## 12. Decisão conceitual
 
-Essas dimensões transformam a Malha em uma análise de **executabilidade econômica, operacional, humana e motivacional da estratégia**.
+Essas dimensões transformam a Malha em uma análise de **executabilidade econômica, operacional, humana, motivacional e comportamental da estratégia**.
 
 Ela permite sair de:
 
@@ -624,11 +793,11 @@ Ela permite sair de:
 
 Para:
 
-> “Nossos processos, recursos, tecnologias, executores e rotinas de trabalho são competitivos, saudáveis, motivadores e aderentes ao que a estratégia exige?”
+> “Nossos processos, recursos, tecnologias, executores, rotinas e incentivos estão desenhados para produzir os comportamentos, resultados e motivação que a estratégia exige?”
 
-Essa frente deve amadurecer como Paper antes de virar SPEC, pois envolve dados internos, pesquisa externa, simulação financeira, dados pessoais, bem-estar no trabalho, risco de recomendação e governança de decisão.
+Essa frente deve amadurecer como Paper antes de virar SPEC, pois envolve dados internos, pesquisa externa, simulação financeira, dados pessoais, incentivos/remuneração, bem-estar no trabalho, risco de recomendação e governança de decisão.
 
-## 12. Impacto na Jornada de Estruturação / Maturação Estratégica
+## 13. Impacto na Jornada de Estruturação / Maturação Estratégica
 
 A Malha Analítica Estratégica deve alimentar a jornada oficial sem criar estado transacional paralelo.
 
@@ -638,6 +807,7 @@ Impactos esperados na jornada:
 - recursos, capacidade, custo e gargalos passam a compor maturidade estratégica, não apenas maturidade operacional;
 - fit executor–processo passa a compor a leitura de capacidade estratégica, com foco em desenvolvimento e alocação responsável;
 - motivação, engajamento e desenho do trabalho passam a compor a leitura de sustentabilidade da execução;
+- incentivos passam a ser analisados como mecanismo de alinhamento entre estratégia, processo, indicador e comportamento;
 - o **Painel de Gestão Estratégica** passa a ser a visão executiva de consumo da maturidade, indicadores e ações governadas;
 - snapshots MCP/Sapiens passam a evidenciar a qualidade da análise e o frescor dos dados;
 - benchmarking externo permanece opcional e assistido até virar SPEC, sempre com fontes, premissas e validação humana.

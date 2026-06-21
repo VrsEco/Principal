@@ -45,6 +45,14 @@ def _panel_payload(company_id=9):
                 "alerts_count": 1,
                 "semaphore": {"green": 0, "yellow": 0, "red": 1, "blue": 0, "gray": 0},
                 "subgroups": [],
+                "coverage": {
+                    "target_type": "process",
+                    "total_existing": 12,
+                    "monitored_total": 7,
+                    "coverage_percent": 58,
+                    "label": "12 processos · 7 monitorados · 58%",
+                    "summary": "12 processos cadastrados; 7 processos com indicadores.",
+                },
             }
         ],
         "meetings": [],
@@ -263,6 +271,15 @@ def test_strategic_management_panel_template_supports_five_cards_and_value_label
     assert "smp-team-summary" in content
     assert "smp-team-section" in content
     assert "counts_label" in content
+    assert "group.coverage.coverage_percent" in content
+    assert "group.coverage.monitored_total" in content
+    assert "group.coverage.total_existing" in content
+    assert "smp-coverage-chip" in content
+    assert "smp-coverage-chip--" in content
+    assert "coverage_percent >= 80" in content
+    assert "coverage_percent >= 50" in content
+    assert "smp-coverage-chip__percent" in content
+    assert "Cobertura" in content
     assert "Sobrecarregado" in content
     assert "Ocioso" in content
     assert "team_efficiency" in content

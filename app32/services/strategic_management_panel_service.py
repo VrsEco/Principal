@@ -9,6 +9,7 @@ from models import (
     Employee,
     Indicator,
     IndicatorData,
+    IndicatorEntityLink,
     IndicatorGoal,
     Meeting,
     Process,
@@ -153,6 +154,18 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
 
     _enrich_web_group(groups["webs"], company_id, indicators, projects_by_id, project_task_stats)
     _enrich_team_efficiency_group(groups["team_efficiency"], company_id, period_context)
+    _enrich_group_monitoring_coverage(
+        groups["processes"],
+        company_id=company_id,
+        indicators=indicators,
+        target_type="process",
+    )
+    _enrich_group_monitoring_coverage(
+        groups["projects"],
+        company_id=company_id,
+        indicators=indicators,
+        target_type="project",
+    )
 
     ordered_groups = []
     for key in ("strategic", "processes", "projects", "team_efficiency", "webs"):
@@ -479,6 +492,81 @@ def _enrich_team_efficiency_group(group: dict[str, Any], company_id: int, period
         group["subgroups"][item["subgroup"]].append(item)
         if item["semaphore"] in {"red", "yellow"}:
             group["alerts"].append(item)
+
+
+def _enrich_group_monitoring_coverage(
+    group: dict[str, Any],
+    *,
+    company_id: int,
+    indicators: list[Indicator],
+    target_type: str,
+) -> None:
+    if target_type == "process":
+        total_existing = (
+            Process.query.filter(Process.company_id == company_id)
+            .filter(Process.is_active.is_(True))
+            .count()
+        )
+        legacy_attr = "process_id"
+        source_modules = {"process", "processes", "processo"}
+        singular_label = "processo"
+        plural_label = "processos"
+    elif target_type == "project":
+        total_existing = (
+            Project.query.filter(Project.company_id == company_id)
+            .filter(Project.is_deleted.is_(False))
+            .filter(Project.status.notin_(("completed", "cancelled", "archived")))
+            .count()
+        )
+        legacy_attr = "project_id"
+        source_modules = {"project", "projects", "projeto", "projetos"}
+        singular_label = "projeto"
+        plural_label = "projetos"
+    else:
+        return
+
+    monitored_ids: set[int] = set()
+    active_indicator_ids = {int(indicator.id) for indicator in indicators}
+
+    for indicator in indicators:
+        legacy_id = getattr(indicator, legacy_attr, None)
+        if legacy_id:
+            monitored_ids.add(int(legacy_id))
+        source_module = str(getattr(indicator, "source_module", "") or "").strip().lower()
+        source_id = getattr(indicator, "source_id", None)
+        if source_id and source_module in source_modules:
+            monitored_ids.add(int(source_id))
+
+    link_rows = (
+        IndicatorEntityLink.query.filter(IndicatorEntityLink.company_id == company_id)
+        .filter(IndicatorEntityLink.target_type == target_type)
+        .filter(IndicatorEntityLink.is_active.is_(True))
+        .all()
+    )
+    for link in link_rows:
+        if int(link.indicator_id) not in active_indicator_ids:
+            continue
+        if link.target_id:
+            monitored_ids.add(int(link.target_id))
+            continue
+        try:
+            monitored_ids.add(int(str(link.target_ref or "").strip()))
+        except (TypeError, ValueError):
+            continue
+
+    monitored_total = min(len(monitored_ids), total_existing)
+    coverage_percent = round((monitored_total / total_existing) * 100) if total_existing else 0
+    existing_label = singular_label if total_existing == 1 else plural_label
+    monitored_label = singular_label if monitored_total == 1 else plural_label
+
+    group["coverage"] = {
+        "target_type": target_type,
+        "total_existing": total_existing,
+        "monitored_total": monitored_total,
+        "coverage_percent": coverage_percent,
+        "label": f"{total_existing} {existing_label} · {monitored_total} monitorados · {coverage_percent}%",
+        "summary": f"{total_existing} {existing_label} cadastrados; {monitored_total} {monitored_label} com indicadores.",
+    }
 
 
 def _enrich_web_group(group: dict[str, Any], company_id: int, indicators: list[Indicator], projects: dict[int, Project], task_stats: dict[int, dict[str, Any]]) -> None:

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$InstallRoot = (Join-Path $HOME ".app32-mcp"),
-    [string]$ServerPrefix = "sapiens-prod",
+    [string]$ServerPrefix = "app32-prod",
     [string]$SshKeyPath,
     [string]$McpUserId,
     [string]$McpCompanyId,
@@ -77,7 +77,7 @@ function Add-McpServer(
     & $script:ClaudeExe @args
 }
 
-Write-Host "== Sapiens MCP / Claude Code installer ==" -ForegroundColor Cyan
+Write-Host "== APP32 MCP / Claude Code installer ==" -ForegroundColor Cyan
 
 $script:ClaudeExe = Require-Command "claude"
 $script:PwshExe = Require-Command "pwsh"
@@ -189,7 +189,7 @@ Set-Content -LiteralPath $launcherPath -Value $launcherContent -Encoding UTF8
 
 $readmePath = Join-Path $InstallRoot "README_APP32_MCP.txt"
 $readme = @"
-Sapiens MCP para Claude Code
+APP32 MCP para Claude Code
 ==========================
 
 Launcher instalado em:
