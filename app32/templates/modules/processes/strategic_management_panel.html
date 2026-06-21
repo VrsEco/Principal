@@ -66,6 +66,21 @@
                 <div class="smp-alert-chip" style="color: {{ group.color }}; border-color: {{ group.color }}55; background: {{ group.color }}12;">
                     {{ group.alert_label or (group.alerts_count ~ ' em atenção/críticos') }}
                 </div>
+                {% if group.coverage %}
+                <div
+                    class="smp-coverage-chip smp-coverage-chip--{{ 'healthy' if group.coverage.coverage_percent >= 80 else 'warning' if group.coverage.coverage_percent >= 50 else 'critical' }}"
+                    title="{{ group.coverage.summary }}"
+                >
+                    <div class="smp-coverage-chip__top">
+                        <span class="smp-coverage-chip__eyebrow">Cobertura</span>
+                        <strong class="smp-coverage-chip__percent">{{ group.coverage.coverage_percent }}%</strong>
+                    </div>
+                    <div class="smp-coverage-chip__meta">
+                        <span>{{ group.coverage.monitored_total }} monitorados</span>
+                        <span>de {{ group.coverage.total_existing }}</span>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="smp-semaphore">
                     <span><i class="green"></i>{{ group.semaphore.green or 0 }}</span>
                     <span><i class="yellow"></i>{{ group.semaphore.yellow or 0 }}</span>
@@ -216,6 +231,34 @@
     .smp-group-card__value { justify-self:end; text-align:right; }
     .smp-group-card strong.smp-score-value { font-size:1.18rem; line-height:1.12; max-width:120px; }
     .smp-alert-chip { display:inline-flex; margin-top:1rem; padding:.35rem .7rem; border-radius:10px; border:1px solid; font-size:.78rem; font-weight:800; }
+    .smp-coverage-chip {
+        display:flex; flex-direction:column; gap:.28rem; margin-top:.55rem; padding:.65rem .75rem; border-radius:14px; border:1px solid #dbe4ef;
+        background:linear-gradient(180deg,#f8fafc 0%,#eef4ff 100%); color:#475569; white-space:normal;
+    }
+    .smp-coverage-chip--healthy {
+        border-color:#a7f3d0; background:linear-gradient(180deg,#f0fdf4 0%,#ecfdf5 100%);
+    }
+    .smp-coverage-chip--warning {
+        border-color:#fde68a; background:linear-gradient(180deg,#fffbeb 0%,#fef3c7 100%);
+    }
+    .smp-coverage-chip--critical {
+        border-color:#fecaca; background:linear-gradient(180deg,#fef2f2 0%,#fee2e2 100%);
+    }
+    .smp-coverage-chip__top {
+        display:flex; align-items:flex-end; justify-content:space-between; gap:.75rem;
+    }
+    .smp-coverage-chip__eyebrow {
+        font-size:.68rem; font-weight:900; color:#64748b; text-transform:uppercase; letter-spacing:.08em;
+    }
+    .smp-coverage-chip__percent {
+        font-size:1.15rem; line-height:1; color:#0f172a;
+    }
+    .smp-coverage-chip--healthy .smp-coverage-chip__percent { color:#047857; }
+    .smp-coverage-chip--warning .smp-coverage-chip__percent { color:#b45309; }
+    .smp-coverage-chip--critical .smp-coverage-chip__percent { color:#b91c1c; }
+    .smp-coverage-chip__meta {
+        display:flex; flex-wrap:wrap; gap:.35rem .55rem; font-size:.74rem; font-weight:800; color:#475569;
+    }
     .smp-semaphore { display:flex; gap:.65rem; margin-top:.9rem; color:#64748b; font-weight:800; font-size:.78rem; }
     .smp-semaphore span { display:inline-flex; align-items:center; gap:.28rem; }
     .smp-semaphore i { width:10px; height:10px; border-radius:999px; display:inline-block; }
@@ -301,6 +344,9 @@
         .smp-group-card h3{font-size:1rem;}
         .smp-group-card p{font-size:.78rem; line-height:1.22;}
         .smp-group-card strong.smp-score-value{font-size:1.08rem; line-height:1.05;}
+        .smp-coverage-chip{padding:.58rem .62rem;}
+        .smp-coverage-chip__percent{font-size:1rem;}
+        .smp-coverage-chip__meta{font-size:.7rem;}
         .smp-layer-host{justify-content:stretch;}
         .smp-layer-stack{width:100%; height:100%; padding:0; gap:0; overflow:hidden;}
         .smp-layer{
