@@ -83,6 +83,7 @@ max-requests = 1000
 max-worker-lifetime = 3600
 reload-on-rss = 768
 thunder-lock = true
+env = APP_BOOTSTRAP_RUNTIME_SERVICES=0
 EOF
 UWSGI_INI="$BASE/etc/uwsgi/uwsgi.ini"
 if [ -f "$UWSGI_INI" ] && ! grep -qE '^[[:space:]]*post-buffering[[:space:]]*=' "$UWSGI_INI"; then

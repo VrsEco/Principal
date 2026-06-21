@@ -40,7 +40,7 @@ def _should_run_runtime_bootstrap(config_name: str) -> bool:
         return _env_flag("APP_BOOTSTRAP_RUNTIME_SERVICES", default=True)
     if _is_migration_command():
         return False
-    return True
+    return config_name != "production"
 
 
 def _sync_public_static_assets(app: Flask) -> None:
