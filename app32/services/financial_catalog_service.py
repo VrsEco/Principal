@@ -759,7 +759,8 @@ class FinancialCatalogService:
                     if not normalized.get("cost_center_id") and match.default_cost_center_id:
                         normalized["cost_center_id"] = match.default_cost_center_id
 
-        if not normalized.get("bank_account_id"):
+        explicit_bank_account_code = str(normalized.get("bank_account_code") or "").strip()
+        if not normalized.get("bank_account_id") and not explicit_bank_account_code:
             reference_text = " ".join(
                 filter(
                     None,

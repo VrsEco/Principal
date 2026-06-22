@@ -246,11 +246,18 @@ class FinancialImportService:
             return item.id
         normalized_numeric_code = code_text.lstrip("0")
         if normalized_numeric_code and normalized_numeric_code.isdigit():
-            item = FinancialBankAccount.query.filter(
+            candidates = FinancialBankAccount.query.filter(
                 FinancialBankAccount.company_id == company_id,
                 FinancialBankAccount.deleted_at.is_(None),
-                db.func.ltrim(FinancialBankAccount.code, "0") == normalized_numeric_code,
-            ).first()
+            ).all()
+            item = next(
+                (
+                    account for account in candidates
+                    if FinancialImportService._normalize_digits(getattr(account, "code", "")) == code_text
+                    or FinancialImportService._normalize_digits(getattr(account, "code", "")).lstrip("0") == normalized_numeric_code
+                ),
+                None,
+            )
         return item.id if item else None
 
     @staticmethod
