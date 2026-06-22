@@ -823,6 +823,7 @@
       const label = statusLabels[status] || status;
       alert(`${payload.count || 0} registro(s) atualizado(s) para ${label}.`);
     } catch (error) {
+      await loadRecords();
       alert(error.message);
     }
   }

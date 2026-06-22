@@ -188,6 +188,7 @@ def test_delete_record_soft_deletes_when_no_active_links(monkeypatch):
 
     monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
     monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_delete_generated_targets_for_record", lambda *args, **kwargs: None)
     monkeypatch.setattr(automation_module.FinancialAutomationService, "_append_history", lambda **kwargs: None)
     monkeypatch.setattr(automation_module.FinancialAutomationService, "_refresh_batch_summary", lambda batch: None)
     monkeypatch.setattr(automation_module.db.session, "commit", lambda: None)
@@ -226,6 +227,7 @@ def test_delete_record_blocks_when_generated_links_are_active(monkeypatch):
 
     monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
     monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_delete_generated_targets_for_record", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         automation_module.FinancialAutomationService,
         "_list_delete_blockers",
@@ -242,6 +244,91 @@ def test_delete_record_blocks_when_generated_links_are_active(monkeypatch):
     assert result is None
     assert "vínculos financeiros ativos" in error
     assert "Lançamento financeiro #501" in error
+
+
+def test_delete_record_removes_own_generated_schedule_before_soft_delete(monkeypatch):
+    batch = _Batch()
+    item = _Record(record_id=43, settlement_state="open", batch=batch)
+    item.status = "generated"
+    item.generated_financial_schedule_id = 1323
+
+    class _Query:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return item
+
+    class _RecordModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _Query()
+
+    class _ScheduleQuery:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return SimpleNamespace(
+                id=1323,
+                company_id=9,
+                deleted_at=None,
+                metadata_json={"financial_automation_record_id": 43},
+            )
+
+    class _ScheduleModel:
+        id = _Column()
+        company_id = _Column()
+        deleted_at = _Column()
+        query = _ScheduleQuery()
+
+    deleted_schedules = []
+
+    monkeypatch.setattr(automation_module, "FinancialAutomationRecord", _RecordModel)
+    monkeypatch.setattr(automation_module, "FinancialSchedule", _ScheduleModel)
+    monkeypatch.setattr(automation_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_reconcile_generated_records", lambda *args, **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_append_history", lambda **kwargs: None)
+    monkeypatch.setattr(automation_module.FinancialAutomationService, "_refresh_batch_summary", lambda batch: None)
+    monkeypatch.setattr(
+        automation_module.FinancialScheduleService,
+        "delete_schedule",
+        lambda **kwargs: (deleted_schedules.append(kwargs) or {"id": kwargs["schedule_id"]}, None),
+    )
+    monkeypatch.setattr(automation_module.db.session, "commit", lambda: None)
+    monkeypatch.setattr(automation_module.db.session, "rollback", lambda: None)
+
+    result, error = FinancialAutomationService.delete_record(
+        company_id=9,
+        record_id=43,
+        allowed_company_ids=[9],
+        performed_by_user_id=77,
+    )
+
+    assert error is None
+    assert result == {"id": 43, "deleted": True}
+    assert deleted_schedules == [{"schedule_id": 1323, "company_id": 9, "allowed_company_ids": [9]}]
+    assert item.generated_financial_schedule_id is None
+    assert item.status == "excluded"
+
+
+def test_reconcile_generated_records_keeps_active_removable_links(monkeypatch):
+    item = _Record(record_id=44, settlement_state="open")
+    item.status = "generated"
+    item.generated_financial_schedule_id = 1324
+
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_list_delete_blockers",
+        lambda current: [{"type": "financial_schedule", "id": 1324, "label": "Agendamento financeiro #1324", "removable": True}],
+    )
+
+    error = FinancialAutomationService._reconcile_generated_records([item], performed_by_user_id=77)
+
+    assert error is None
+    assert item.status == "generated"
+    assert item.generated_financial_schedule_id == 1324
 
 
 def test_financial_import_service_accepts_xls_dispatch(monkeypatch):

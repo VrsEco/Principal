@@ -80,7 +80,7 @@ class FinancialAutomationService:
         payload["batch"] = record.batch.to_dict() if getattr(record, "batch", None) else None
         payload["related_documents"] = FinancialAutomationService._list_related_documents(record)
         payload["delete_blockers"] = FinancialAutomationService._list_delete_blockers(record)
-        payload["can_delete"] = len(payload["delete_blockers"]) == 0
+        payload["can_delete"] = all(bool(item.get("removable")) for item in payload["delete_blockers"])
         return payload
 
     @staticmethod
@@ -96,11 +96,13 @@ class FinancialAutomationService:
                     FinancialEntry.deleted_at.is_(None),
                 ).first()
                 if active_entry:
+                    removable = FinancialAutomationService._is_automation_generated_entry(record, active_entry)
                     blockers.append(
                         {
                             "type": "financial_entry",
                             "id": entry_id,
                             "label": f"Lançamento financeiro #{entry_id}",
+                            "removable": removable,
                         }
                     )
             except Exception:
@@ -115,17 +117,103 @@ class FinancialAutomationService:
                     FinancialSchedule.deleted_at.is_(None),
                 ).first()
                 if active_schedule:
+                    removable = FinancialAutomationService._is_automation_generated_schedule(record, active_schedule)
                     blockers.append(
                         {
                             "type": "financial_schedule",
                             "id": schedule_id,
                             "label": f"Agendamento financeiro #{schedule_id}",
+                            "removable": removable,
                         }
                     )
             except Exception:
                 pass
 
         return blockers
+
+    @staticmethod
+    def _metadata_matches_record(metadata_json: Optional[Dict[str, Any]], record: FinancialAutomationRecord) -> bool:
+        metadata = dict(metadata_json or {})
+        try:
+            return int(metadata.get("financial_automation_record_id") or 0) == int(record.id)
+        except Exception:
+            return False
+
+    @staticmethod
+    def _is_automation_generated_entry(record: FinancialAutomationRecord, entry: Optional[FinancialEntry]) -> bool:
+        if not record or not entry:
+            return False
+        if int(getattr(entry, "company_id", 0) or 0) != int(getattr(record, "company_id", 0) or 0):
+            return False
+        expected_external = f"financial_automation:{record.id}"
+        expected_origin = f"financial_automation_batch:{record.batch_id}"
+        return (
+            str(getattr(entry, "external_reference", "") or "") == expected_external
+            or str(getattr(entry, "origin_reference", "") or "") == expected_origin
+            or FinancialAutomationService._metadata_matches_record(getattr(entry, "metadata_json", None), record)
+        )
+
+    @staticmethod
+    def _is_automation_generated_schedule(record: FinancialAutomationRecord, schedule: Optional[FinancialSchedule]) -> bool:
+        if not record or not schedule:
+            return False
+        if int(getattr(schedule, "company_id", 0) or 0) != int(getattr(record, "company_id", 0) or 0):
+            return False
+        return FinancialAutomationService._metadata_matches_record(getattr(schedule, "metadata_json", None), record)
+
+    @staticmethod
+    def _delete_generated_targets_for_record(
+        item: FinancialAutomationRecord,
+        *,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+    ) -> Optional[str]:
+        """Remove artefatos financeiros gerados pela própria Central antes do soft delete.
+
+        A operação é deliberadamente restrita por `company_id` e por evidência
+        de ownership (`financial_automation_record_id`, `external_reference` ou
+        `origin_reference`). Artefatos financeiros criados fora da Central
+        continuam bloqueando exclusão.
+        """
+
+        schedule_id = getattr(item, "generated_financial_schedule_id", None)
+        if schedule_id:
+            schedule = FinancialSchedule.query.filter(
+                FinancialSchedule.id == schedule_id,
+                FinancialSchedule.company_id == item.company_id,
+                FinancialSchedule.deleted_at.is_(None),
+            ).first()
+            if schedule:
+                if not FinancialAutomationService._is_automation_generated_schedule(item, schedule):
+                    return f"Agendamento financeiro #{schedule_id} não foi gerado pela Central para este registro."
+                _, error = FinancialScheduleService.delete_schedule(
+                    schedule_id=schedule_id,
+                    company_id=item.company_id,
+                    allowed_company_ids=allowed_company_ids,
+                )
+                if error:
+                    return f"Não foi possível desfazer o agendamento financeiro #{schedule_id}: {error}"
+            item.generated_financial_schedule_id = None
+
+        entry_id = getattr(item, "generated_financial_entry_id", None)
+        if entry_id:
+            entry = FinancialEntry.query.filter(
+                FinancialEntry.id == entry_id,
+                FinancialEntry.company_id == item.company_id,
+                FinancialEntry.deleted_at.is_(None),
+            ).first()
+            if entry:
+                if not FinancialAutomationService._is_automation_generated_entry(item, entry):
+                    return f"Lançamento financeiro #{entry_id} não foi gerado pela Central para este registro."
+                _, error = FinancialService.delete_entry(
+                    entry_id=entry_id,
+                    company_id=item.company_id,
+                    allowed_company_ids=allowed_company_ids,
+                )
+                if error:
+                    return f"Não foi possível desfazer o lançamento financeiro #{entry_id}: {error}"
+            item.generated_financial_entry_id = None
+
+        return None
 
     @staticmethod
     def _reconcile_generated_records(
@@ -835,7 +923,7 @@ class FinancialAutomationService:
         payload["batch"] = record.batch.to_dict() if getattr(record, "batch", None) else None
         payload["related_documents"] = FinancialAutomationService._list_related_documents(record)
         payload["delete_blockers"] = FinancialAutomationService._list_delete_blockers(record)
-        payload["can_delete"] = len(payload["delete_blockers"]) == 0
+        payload["can_delete"] = all(bool(item.get("removable")) for item in payload["delete_blockers"])
         return payload
 
     @staticmethod
@@ -2414,6 +2502,13 @@ class FinancialAutomationService:
         )
         if reconcile_error:
             return None, reconcile_error
+
+        target_delete_error = FinancialAutomationService._delete_generated_targets_for_record(
+            item,
+            allowed_company_ids=allowed_company_ids,
+        )
+        if target_delete_error:
+            return None, target_delete_error
 
         blockers = FinancialAutomationService._list_delete_blockers(item)
         if blockers:
