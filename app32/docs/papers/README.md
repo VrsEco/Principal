@@ -5,6 +5,7 @@ Diretório canônico da governança documental oficial do APP32.
 Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_v1.md`
 
 ## Papers canônicos iniciais
+- `C:\GestaoVersus\app32\app32\docs\papers\paper_metodo_versus_estruturacao_evolutiva_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_conceitual_modo_conselho_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_adaptacao_especificacao_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_sc_coord_squad_cliente_v1.md`

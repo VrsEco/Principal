@@ -511,8 +511,9 @@ def strategic_management_panel_page(company_id):
     session['active_company_id'] = company_id
     company = Company.query.get_or_404(company_id)
     period = request.args.get('period') or 'month'
+    audience = request.args.get('audience') or 'consultant'
     try:
-        panel = build_strategic_management_panel(company_id, period=period)
+        panel = build_strategic_management_panel(company_id, period=period, audience=audience)
     except ValueError as exc:
         return str(exc), 400
     return render_template(
@@ -541,8 +542,9 @@ def api_process_portal_summary(company_id):
 def api_strategic_management_panel(company_id):
     session['active_company_id'] = company_id
     period = request.args.get('period') or 'month'
+    audience = request.args.get('audience') or 'consultant'
     try:
-        payload = build_strategic_management_panel(company_id, period=period)
+        payload = build_strategic_management_panel(company_id, period=period, audience=audience)
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception:

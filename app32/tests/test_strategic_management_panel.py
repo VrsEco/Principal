@@ -9,7 +9,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from api.routes import processes as processes_route
 from services.efficiency_collaborators_service import build_team_efficiency_summary
-from services.strategic_management_panel_service import GROUP_DEFINITIONS, _evaluate_indicator_status, _resolve_period
+from services.strategic_management_panel_service import (
+    GROUP_DEFINITIONS,
+    _build_stability_gate_payload,
+    _evaluate_indicator_status,
+    _indicator_required_stable_cycles,
+    _indicator_stability_summary,
+    _is_finalistic_profile,
+    _resolve_period,
+)
 
 
 def _build_app():
@@ -33,7 +41,25 @@ def _build_app():
 def _panel_payload(company_id=9):
     return {
         "company_id": company_id,
+        "audience": "consultant",
         "period": {"key": "month", "label": "Junho/2026", "start": "2026-06-01", "end": "2026-06-30"},
+        "structuring_trail": {
+            "hero_title": "Fase atual: 00 — 75% até o gate · Próximo nível: 01",
+            "hero_subtitle": "Próximo item faltante: Organograma",
+            "phases": [
+                {
+                    "key": "phase_00",
+                    "code": "00",
+                    "label": "Básico",
+                    "state": "current",
+                    "maturity_pct": 75,
+                    "promise": "Base mínima de execução.",
+                    "next_missing_label": "Organograma",
+                    "gate": {"name": "Funcionando", "ready": False, "rule": "critério soft"},
+                    "deliverables": [],
+                }
+            ],
+        },
         "groups": [
             {
                 "key": "strategic",
@@ -68,7 +94,7 @@ def test_strategic_management_panel_api_is_tenant_scoped(monkeypatch):
     monkeypatch.setattr(
         processes_route,
         "build_strategic_management_panel",
-        lambda company_id, period=None: _panel_payload(company_id),
+        lambda company_id, period=None, audience=None: _panel_payload(company_id),
     )
 
     response = app.test_client().get("/api/companies/9/process-portal/strategic-management?period=month")
@@ -104,7 +130,7 @@ def test_strategic_management_panel_page_uses_executive_template(monkeypatch):
         "Company",
         SimpleNamespace(query=SimpleNamespace(get_or_404=lambda company_id: SimpleNamespace(id=company_id, name="Empresa Teste"))),
     )
-    monkeypatch.setattr(processes_route, "build_strategic_management_panel", lambda company_id, period=None: _panel_payload(company_id))
+    monkeypatch.setattr(processes_route, "build_strategic_management_panel", lambda company_id, period=None, audience=None: _panel_payload(company_id))
     monkeypatch.setattr(
         processes_route,
         "render_template",
@@ -293,6 +319,11 @@ def test_strategic_management_panel_template_supports_five_cards_and_value_label
     assert "smp-mobile-actions-toggle" in content
     assert "smp-navbar-actions__menu" in content
     assert "setMobileActionsOpen" in content
+    assert "Trilha de Maturidade da Estruturação" in content
+    assert "data-open-phase" in content
+    assert "openPhase" in content
+    assert 'name="audience"' in content
+    assert "Você está aqui" in content
 
 
 def test_team_efficiency_summary_uses_total_score_contract(monkeypatch):
@@ -353,6 +384,104 @@ def test_team_efficiency_summary_uses_total_score_contract(monkeypatch):
     assert item["worked_hours_label"] == "0,00h"
     assert item["free_capacity_label"] == "40,00h"
     assert item["status_label"] == "Ocioso"
+
+
+def test_indicator_required_stable_cycles_defaults_to_three():
+    indicator = SimpleNamespace(source_config={})
+
+    assert _indicator_required_stable_cycles(indicator) == 3
+
+
+def test_indicator_required_stable_cycles_accepts_source_config_override():
+    indicator = SimpleNamespace(source_config={"required_stable_cycles": 4})
+
+    assert _indicator_required_stable_cycles(indicator) == 4
+
+
+def test_indicator_stability_summary_marks_indicator_ready_with_three_good_cycles():
+    indicator = SimpleNamespace(
+        id=11,
+        code="IP1",
+        full_code="AA.I.1",
+        name="Lead time",
+        polarity="positive",
+        source_config={},
+    )
+    goal = SimpleNamespace(id=31, goal_value=100, goal_date=None, period_start=None, period_end=None, performance_ranges={"red": 80, "yellow": 90, "green": 110})
+    measurements = [
+        SimpleNamespace(id=1, goal_id=31, measured_value=95, measured_date=__import__("datetime").date(2026, 6, 1), period_start=None, period_end=None),
+        SimpleNamespace(id=2, goal_id=31, measured_value=92, measured_date=__import__("datetime").date(2026, 5, 1), period_start=None, period_end=None),
+        SimpleNamespace(id=3, goal_id=31, measured_value=110, measured_date=__import__("datetime").date(2026, 4, 1), period_start=None, period_end=None),
+    ]
+
+    summary = _indicator_stability_summary(indicator=indicator, measurements=measurements, goals=[goal])
+
+    assert summary["ready"] is True
+    assert summary["stable_cycles"] == 3
+    assert summary["required_cycles"] == 3
+
+
+def test_indicator_stability_summary_blocks_when_recent_cycle_is_below_goal():
+    indicator = SimpleNamespace(
+        id=12,
+        code="IP2",
+        full_code="AA.I.2",
+        name="Retrabalho",
+        polarity="positive",
+        source_config={},
+    )
+    goal = SimpleNamespace(id=32, goal_value=100, goal_date=None, period_start=None, period_end=None, performance_ranges={"red": 80, "yellow": 90, "green": 110})
+    measurements = [
+        SimpleNamespace(id=1, goal_id=32, measured_value=70, measured_date=__import__("datetime").date(2026, 6, 1), period_start=None, period_end=None),
+        SimpleNamespace(id=2, goal_id=32, measured_value=95, measured_date=__import__("datetime").date(2026, 5, 1), period_start=None, period_end=None),
+        SimpleNamespace(id=3, goal_id=32, measured_value=98, measured_date=__import__("datetime").date(2026, 4, 1), period_start=None, period_end=None),
+    ]
+
+    summary = _indicator_stability_summary(indicator=indicator, measurements=measurements, goals=[goal])
+
+    assert summary["ready"] is False
+    assert summary["stable_cycles"] == 0
+    assert summary["reason"] == "insufficient_stable_cycles"
+
+
+def test_build_stability_gate_payload_exposes_missing_count():
+    indicator = SimpleNamespace(
+        id=13,
+        code="IP3",
+        full_code="AA.I.3",
+        name="SLA",
+        polarity="positive",
+        source_config={},
+    )
+    goal = SimpleNamespace(id=33, goal_value=100, goal_date=None, period_start=None, period_end=None, performance_ranges={"red": 80, "yellow": 90, "green": 110})
+    measurements = {
+        13: [
+            SimpleNamespace(id=1, goal_id=33, measured_value=95, measured_date=__import__("datetime").date(2026, 6, 1), period_start=None, period_end=None),
+            SimpleNamespace(id=2, goal_id=33, measured_value=85, measured_date=__import__("datetime").date(2026, 5, 1), period_start=None, period_end=None),
+        ]
+    }
+    payload = _build_stability_gate_payload(
+        indicators=[indicator],
+        measurement_rows=measurements,
+        goals_by_indicator={13: [goal]},
+        scope_label="processos finalísticos",
+        scope_mode="explicit_finalistic_profiles",
+    )
+
+    assert payload["ready"] is False
+    assert "Faltam 1 indicador(es)" in payload["next_missing_label"]
+
+
+def test_is_finalistic_profile_detects_external_customer():
+    profile = SimpleNamespace(customer_type="Cliente externo", customer_description="")
+
+    assert _is_finalistic_profile(profile) is True
+
+
+def test_is_finalistic_profile_rejects_internal_support():
+    profile = SimpleNamespace(customer_type="Interno", customer_description="Apoio administrativo")
+
+    assert _is_finalistic_profile(profile) is False
 
 
 def test_efficiency_analysis_has_company_aware_route_and_sidebar_link():

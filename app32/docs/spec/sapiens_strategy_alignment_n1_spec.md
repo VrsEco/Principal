@@ -268,6 +268,11 @@ Regras:
 - sub-blocos `recommended` e `optional` contam maturidade, mas não bloqueiam gate;
 - as duas UIs, cliente lúdico e consultor funcional, consomem o mesmo read model `sapiens.structuring_journey`;
 - B3 Modelagem calcula rollup por processo e pode ser filtrado por `scope=process&process_id=<id>`.
+- para os gates objetivos de estabilidade das fases `01` e `02`, o APP32 reaproveita `IndicatorData` + `IndicatorGoal`:
+  - default de estabilidade = `3` ciclos consecutivos;
+  - override por indicador em `indicators.source_config.required_stable_cycles` (compatível também com `stable_cycles`/`gate_cycles`);
+  - um ciclo conta como válido quando a medição fica `on_target`, `exceeded` ou `alert`, conforme `performance_ranges`/polaridade do indicador;
+  - quando ainda não existir classificação explícita de processo finalístico no domínio, a fase `01` opera em fallback controlado usando todos os indicadores de processo e expõe esse modo na UI.
 
 ## 9. Saída mínima do read model
 

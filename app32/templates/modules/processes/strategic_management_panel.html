@@ -31,6 +31,11 @@
         <p class="text-body-secondary" style="font-size: 0.8rem;">Refine o período do painel executivo.</p>
     </div>
     <form method="get" class="smp-period-form">
+        <label for="audience">Audiência</label>
+        <select id="audience" name="audience">
+            <option value="consultant" {% if panel.audience == 'consultant' %}selected{% endif %}>Consultor</option>
+            <option value="client" {% if panel.audience == 'client' %}selected{% endif %}>Cliente</option>
+        </select>
         <label for="period">Período</label>
         <select id="period" name="period">
             <option value="month" {% if panel.period.key == 'month' %}selected{% endif %}>Mês vigente</option>
@@ -44,6 +49,67 @@
 
 {% block workspace_content %}
 <div class="smp-page" id="strategicManagementPanel" data-panel='{{ panel|tojson }}'>
+    <div class="smp-layout">
+        <aside class="smp-trail-column">
+            <section class="smp-card smp-trail-card">
+                <div class="smp-card__head smp-card__head--trail">
+                    <div>
+                        <span class="smp-dot smp-dot--blue"></span>
+                        <div>
+                            <h2>Trilha de Maturidade da Estruturação</h2>
+                            <p>{{ panel.structuring_trail.hero_title }}</p>
+                        </div>
+                    </div>
+                    <span class="smp-period-chip">{{ 'Cliente' if panel.audience == 'client' else 'Consultor' }}</span>
+                </div>
+                <div class="smp-trail-hero">
+                    <strong>{{ panel.structuring_trail.hero_title }}</strong>
+                    <p>{{ panel.structuring_trail.hero_subtitle }}</p>
+                </div>
+                <div class="smp-trail-list">
+                    {% for phase in panel.structuring_trail.phases %}
+                    <button
+                        type="button"
+                        class="smp-phase-card smp-phase-card--{{ phase.state }}"
+                        data-open-phase="{{ phase.key }}"
+                    >
+                        <div class="smp-phase-card__head">
+                            <span class="smp-phase-icon">
+                                {% if phase.state == 'completed' %}✓{% elif phase.state == 'current' %}▶{% else %}○{% endif %}
+                            </span>
+                            <div class="smp-phase-card__titles">
+                                <span class="smp-phase-code">{{ phase.code }}</span>
+                                <h3>{{ phase.label }}</h3>
+                            </div>
+                            {% if panel.audience == 'consultant' %}
+                            <strong class="smp-phase-pct">{{ phase.maturity_pct }}%</strong>
+                            {% endif %}
+                        </div>
+                        {% if phase.state == 'current' %}
+                        <div class="smp-phase-progress" title="{{ phase.maturity_pct }}% até o gate"><span style="width:{{ phase.maturity_pct }}%"></span></div>
+                        {% endif %}
+                        <p class="smp-phase-copy">
+                            {% if phase.state == 'future' or panel.audience == 'client' %}
+                                {{ phase.promise }}
+                            {% else %}
+                                {{ phase.next_missing_label }}
+                            {% endif %}
+                        </p>
+                        <div class="smp-phase-meta">
+                            <span>Gate: {{ phase.gate.name }}</span>
+                            {% if panel.audience == 'consultant' %}
+                            <span>{{ 'Pronta' if phase.gate.ready else 'Em evolução' }}</span>
+                            {% else %}
+                            <span>{{ 'Nível conquistado' if phase.gate.ready else 'Próximo nível em construção' }}</span>
+                            {% endif %}
+                        </div>
+                    </button>
+                    {% endfor %}
+                </div>
+            </section>
+        </aside>
+
+        <div class="smp-main-column">
     <section class="smp-card">
         <div class="smp-card__head">
             <div>
@@ -125,6 +191,8 @@
         <div class="smp-empty">Nenhuma reunião futura cadastrada para este período.</div>
         {% endif %}
     </section>
+        </div>
+    </div>
 </div>
 
 <div class="smp-layer-host" id="smpLayerHost" hidden>
@@ -181,6 +249,38 @@
 
 <style>
     .smp-page { display:flex; flex-direction:column; gap:1rem; color:#0f172a; }
+    .smp-layout { display:grid; grid-template-columns:minmax(300px,360px) minmax(0,1fr); gap:1rem; align-items:start; }
+    .smp-trail-column { position:relative; }
+    .smp-main-column { display:flex; flex-direction:column; gap:1rem; min-width:0; }
+    .smp-trail-card { position:sticky; top:1rem; overflow:visible; }
+    .smp-card__head--trail h2 { margin-bottom:.15rem; }
+    .smp-card__head--trail p { margin:0; color:#64748b; font-size:.78rem; }
+    .smp-trail-hero { padding:1rem 1.15rem; border-bottom:1px solid #e2e8f0; background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%); }
+    .smp-trail-hero strong { display:block; font-size:1rem; line-height:1.3; }
+    .smp-trail-hero p { margin:.4rem 0 0; color:#475569; font-size:.84rem; }
+    .smp-trail-list { display:flex; flex-direction:column; gap:.85rem; padding:1rem; }
+    .smp-phase-card {
+        text-align:left; border:1px solid #dbe4ef; border-radius:18px; background:#fff; padding:.95rem;
+        cursor:pointer; transition:.18s ease; box-shadow:0 8px 24px rgba(15,23,42,.04);
+    }
+    .smp-phase-card:hover { transform:translateY(-1px); box-shadow:0 12px 28px rgba(15,23,42,.08); }
+    .smp-phase-card--completed { border-color:#bbf7d0; background:linear-gradient(180deg,#f0fdf4 0%,#ffffff 100%); }
+    .smp-phase-card--current { border-color:#93c5fd; background:linear-gradient(180deg,#eff6ff 0%,#ffffff 100%); }
+    .smp-phase-card--future { border-color:#e2e8f0; background:linear-gradient(180deg,#f8fafc 0%,#ffffff 100%); opacity:.92; }
+    .smp-phase-card__head { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:.75rem; align-items:start; }
+    .smp-phase-icon {
+        width:36px; height:36px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+        background:#e2e8f0; color:#0f172a; font-weight:900;
+    }
+    .smp-phase-card--completed .smp-phase-icon { background:#16a34a; color:#fff; }
+    .smp-phase-card--current .smp-phase-icon { background:#2563eb; color:#fff; }
+    .smp-phase-code { display:inline-flex; font-size:.72rem; font-weight:900; color:#64748b; letter-spacing:.08em; }
+    .smp-phase-card h3 { margin:.15rem 0 0; font-size:1rem; line-height:1.2; }
+    .smp-phase-pct { font-size:1.15rem; line-height:1; color:#0f172a; }
+    .smp-phase-progress { height:8px; border-radius:999px; background:#dbeafe; overflow:hidden; margin:.8rem 0 .65rem; }
+    .smp-phase-progress span { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#2563eb 0%,#60a5fa 100%); }
+    .smp-phase-copy { margin:0; color:#475569; font-size:.84rem; line-height:1.4; }
+    .smp-phase-meta { display:flex; justify-content:space-between; gap:.6rem; margin-top:.75rem; font-size:.74rem; color:#64748b; font-weight:800; }
     .smp-navbar-actions { position:relative; display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
     .smp-navbar-actions__menu { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; justify-content:flex-end; }
     .smp-mobile-actions-toggle {
@@ -316,7 +416,7 @@
     .smp-team-section { border:1px solid #e2e8f0; border-radius:18px; padding:.75rem; background:#f8fafc; display:flex; flex-direction:column; gap:.55rem; }
     .smp-team-section__title { display:flex; align-items:center; gap:.5rem; margin:0; color:#0f172a; font-size:.9rem; }
     .smp-team-section__title::before { content:""; width:10px; height:10px; border-radius:999px; background:var(--section-color,#94a3b8); }
-    @media (max-width:1400px){ .smp-group-grid{grid-template-columns:repeat(3,1fr);} }
+    @media (max-width:1400px){ .smp-layout{grid-template-columns:1fr;} .smp-trail-card{position:static;} .smp-group-grid{grid-template-columns:repeat(3,1fr);} }
     @media (max-width:1200px){ .smp-group-grid{grid-template-columns:repeat(2,1fr);} .smp-meeting-grid{grid-template-columns:repeat(2,1fr);} .smp-hero{flex-direction:column;} }
     @media (max-width:760px){
         .workspace-navbar .navbar-breadcrumb{display:none;}
@@ -330,6 +430,8 @@
         .smp-navbar-actions.is-open .smp-navbar-actions__menu{display:flex;}
         .smp-navbar-action-item{width:100%; justify-content:flex-start;}
         .smp-group-grid,.smp-meeting-grid,.smp-choice-grid{grid-template-columns:1fr;}
+        .smp-phase-card__head{grid-template-columns:auto minmax(0,1fr);}
+        .smp-phase-pct{grid-column:2; justify-self:start; margin-top:.1rem;}
         .smp-detail-grid{grid-template-columns:1fr;}
         .smp-group-card__top{
             grid-template-columns:auto minmax(0,1fr);
@@ -366,6 +468,7 @@
     const mobileActionsToggle = document.getElementById('smpMobileActionsToggle');
     if (!root || !host || !stack) return;
     const panel = JSON.parse(root.dataset.panel || '{}');
+    const structuringTrail = panel.structuring_trail || { phases: [] };
     const allIndicators = (panel.groups || []).flatMap(group => (
         group.key === 'team_efficiency' ? [] : (group.items || []).filter(item => item.id !== 'web-health')
     ));
@@ -417,6 +520,40 @@
     }
     function badge(status) {
         return `<span class="smp-badge" style="--badge:${colorMap[status] || colorMap.gray};">${esc(status || 'gray')}</span>`;
+    }
+    function phaseStateLabel(phase) {
+        if (phase.is_completed) return 'Concluída';
+        if (phase.is_current) return 'Você está aqui';
+        return 'Próxima fase';
+    }
+    function openPhase(phaseKey) {
+        const phase = (structuringTrail.phases || []).find(item => item.key === phaseKey);
+        if (!phase) return;
+        const deliverables = (phase.deliverables || []).map(item => `
+            <article class="smp-row-btn">
+                <h4>${esc(item.label)} · ${item.ready ? 'Pronto' : item.dependency ? 'Dependência' : 'Pendente'}</h4>
+                <p>${esc(item.detail || '')}</p>
+                <div class="smp-mini">
+                    <span>${esc(item.maturity_pct || 0)}% concluído</span>
+                    <span>${esc(item.next_missing_label || 'Sem pendência')}</span>
+                </div>
+            </article>
+        `).join('');
+        const body = `
+            <div class="smp-detail-grid">
+                <div class="smp-detail-box"><span>Estado</span><strong>${esc(phaseStateLabel(phase))}</strong></div>
+                <div class="smp-detail-box"><span>Gate</span><strong>${esc(phase.gate?.name || '-')} · ${phase.gate?.ready ? 'Fechado' : 'Aberto'}</strong></div>
+                <div class="smp-detail-box"><span>Regra objetiva</span><strong>${esc(phase.gate?.rule || '-')}</strong></div>
+                <div class="smp-detail-box"><span>Progresso</span><strong>${esc(phase.maturity_pct || 0)}%</strong></div>
+            </div>
+            <div class="smp-detail-box"><span>Promessa de valor</span><strong>${esc(phase.promise || '')}</strong></div>
+            <div class="smp-detail-box"><span>Próximo item faltante</span><strong>${esc(phase.next_missing_label || 'Sem pendência')}</strong></div>
+            <section class="smp-team-section" style="--section-color:${phase.is_completed ? '#16a34a' : phase.is_current ? '#2563eb' : '#94a3b8'};">
+                <h4 class="smp-team-section__title">Entregáveis da fase</h4>
+                ${deliverables || '<div class="smp-empty">Sem entregáveis nesta fase.</div>'}
+            </section>
+        `;
+        layer(`Fase ${esc(phase.code)} — ${esc(phase.label)}`, panel.audience === 'client' ? 'Bússola de evolução da empresa' : 'Cockpit operacional da estruturação', body, 0);
     }
     function openGroup(groupKey) {
         const group = (panel.groups || []).find(g => g.key === groupKey);
@@ -630,6 +767,7 @@
         alert('Atividade criada e vinculada ao indicador. Ela aparecerá no card executivo para cobrança.');
         window.location.reload();
     });
+    root.querySelectorAll('[data-open-phase]').forEach(btn => btn.addEventListener('click', () => openPhase(btn.dataset.openPhase)));
     root.querySelectorAll('[data-open-group]').forEach(btn => btn.addEventListener('click', () => openGroup(btn.dataset.openGroup)));
     host.querySelector('[data-close-layer]').addEventListener('click', closeTopLayer);
     document.addEventListener('click', (event) => {

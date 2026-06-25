@@ -2197,7 +2197,8 @@ body {
   color: var(--color-text-primary);
 }
 
-.activity-item__instance--project {
+.activity-item__instance--project,
+.activity-item__instance--process {
   font-size: 0.875rem;
   color: var(--color-text-secondary);
 }

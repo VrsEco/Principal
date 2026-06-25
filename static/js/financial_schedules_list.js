@@ -24,6 +24,60 @@
 
     if (!tbody || !filters.search) return;
 
+    const storageKey = `gestao_versus:financial_schedules:list_filters:v1:company:${companyId || 'none'}:path:${window.location.pathname}`;
+    const persistableFilters = Object.entries(filters).filter(([, input]) => Boolean(input));
+
+    function readFilterValue(input) {
+      if (!input) return '';
+      if (input.multiple) {
+        return Array.from(input.selectedOptions || []).map((option) => option.value);
+      }
+      return input.value || '';
+    }
+
+    function writeFilterValue(input, value) {
+      if (!input) return;
+      if (input.multiple) {
+        const values = Array.isArray(value) ? value.map(String) : [];
+        Array.from(input.options || []).forEach((option) => {
+          option.selected = values.includes(String(option.value));
+        });
+        return;
+      }
+      input.value = value == null ? '' : String(value);
+    }
+
+    function saveFiltersState() {
+      try {
+        const payload = persistableFilters.reduce((acc, [name, input]) => {
+          acc[name] = readFilterValue(input);
+          return acc;
+        }, {});
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Não foi possível persistir filtros de títulos financeiros.', error);
+      }
+    }
+
+    function restoreFiltersState() {
+      try {
+        const raw = window.localStorage.getItem(storageKey);
+        if (!raw) return;
+        const payload = JSON.parse(raw);
+        persistableFilters.forEach(([name, input]) => writeFilterValue(input, payload[name]));
+      } catch (error) {
+        console.warn('Não foi possível restaurar filtros de títulos financeiros.', error);
+      }
+    }
+
+    function clearFiltersState() {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch (error) {
+        console.warn('Não foi possível limpar filtros persistidos de títulos financeiros.', error);
+      }
+    }
+
     let schedules = [];
     let borderos = [];
     let scheduleItems = [];
@@ -258,19 +312,22 @@
       await loadSchedules();
     }
 
-    Object.values(filters).forEach((input) => input?.addEventListener('input', () => {
+    persistableFilters.forEach(([, input]) => input?.addEventListener('input', () => {
       updateFiltersCount();
+      saveFiltersState();
       renderTable();
     }));
-    Object.values(filters).forEach((input) => input?.addEventListener('change', () => {
+    persistableFilters.forEach(([, input]) => input?.addEventListener('change', () => {
       updateFiltersCount();
+      saveFiltersState();
       renderTable();
     }));
 
     const clearAllFilters = () => {
-      Object.values(filters).forEach((input) => {
-        if (input) input.value = '';
+      persistableFilters.forEach(([, input]) => {
+        writeFilterValue(input, '');
       });
+      clearFiltersState();
       updateFiltersCount();
       renderTable();
     };
@@ -294,6 +351,7 @@
     });
 
     try {
+      restoreFiltersState();
       updateFiltersCount();
       await loadSchedules();
     } catch (error) {

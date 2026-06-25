@@ -11,13 +11,17 @@ from models import (
     IndicatorData,
     IndicatorEntityLink,
     IndicatorGoal,
+    IndicatorLineOfSight,
     Meeting,
     Process,
+    ProcessStrategyProfile,
     Project,
     ProjectTask,
     db,
 )
 from services.efficiency_collaborators_service import build_team_efficiency_summary
+from services.structuring_journey_service import StructuringJourneyService
+from utils.indicator_ranges import normalize_performance_ranges
 
 
 GROUP_DEFINITIONS = {
@@ -54,7 +58,12 @@ GROUP_DEFINITIONS = {
 }
 
 
-def build_strategic_management_panel(company_id: int, *, period: str | None = None) -> dict[str, Any]:
+def build_strategic_management_panel(
+    company_id: int,
+    *,
+    period: str | None = None,
+    audience: str | None = "consultant",
+) -> dict[str, Any]:
     """Monta a visão executiva tenant-safe do Painel de Gestão Estratégica.
 
     A service não cria cadastros nem altera estado: apenas consolida dados já
@@ -65,6 +74,7 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
 
     period_context = _resolve_period(period)
     today = date.today()
+    normalized_audience = _normalize_audience(audience)
 
     indicators = (
         Indicator.query.filter(Indicator.company_id == company_id)
@@ -166,6 +176,13 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
         indicators=indicators,
         target_type="project",
     )
+    structuring_trail = _build_structuring_trail(
+        company_id=company_id,
+        audience=normalized_audience,
+        indicators=indicators,
+        active_projects=list(projects_by_id.values()),
+        meetings=_upcoming_meetings(company_id, today),
+    )
 
     ordered_groups = []
     for key in ("strategic", "processes", "projects", "team_efficiency", "webs"):
@@ -180,9 +197,11 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
 
     return {
         "company_id": company_id,
+        "audience": normalized_audience,
         "period": period_context,
+        "structuring_trail": structuring_trail,
         "groups": ordered_groups,
-        "meetings": _upcoming_meetings(company_id, today),
+        "meetings": structuring_trail["meetings"],
         "form_options": _form_options(company_id, employees_by_id, projects_by_id),
         "actions": {
             "new_meeting_url": f"/meetings/company/{company_id}",
@@ -190,6 +209,605 @@ def build_strategic_management_panel(company_id: int, *, period: str | None = No
         },
         "generated_at": datetime.utcnow().isoformat(),
     }
+
+
+def _normalize_audience(audience: str | None) -> str:
+    raw = str(audience or "consultant").strip().lower()
+    return raw if raw in {"client", "consultant"} else "consultant"
+
+
+def _build_structuring_trail(
+    *,
+    company_id: int,
+    audience: str,
+    indicators: list[Indicator],
+    active_projects: list[Project],
+    meetings: list[dict[str, Any]],
+) -> dict[str, Any]:
+    journey = StructuringJourneyService.get_journey(company_id=company_id, audience=audience, scope="company")
+    blocks_by_key = {block["key"]: block for block in journey.get("blocks", [])}
+
+    process_indicators = [item for item in indicators if _classify_indicator(item) == "processes"]
+    strategic_indicators = [item for item in indicators if _classify_indicator(item) == "strategic"]
+    active_projects = [project for project in active_projects if getattr(project, "is_deleted", False) is False]
+    process_profiles = {
+        int(profile.process_id): profile
+        for profile in ProcessStrategyProfile.query.filter(ProcessStrategyProfile.company_id == company_id).all()
+        if getattr(profile, "process_id", None) is not None
+    }
+    finalistic_process_ids = {
+        process_id for process_id, profile in process_profiles.items() if _is_finalistic_profile(profile)
+    }
+    scoped_finalistic_indicators = [
+        indicator for indicator in process_indicators if getattr(indicator, "process_id", None) in finalistic_process_ids
+    ]
+    finalistic_scope_mode = "explicit_finalistic_profiles" if scoped_finalistic_indicators else "fallback_all_process_indicators"
+    if not scoped_finalistic_indicators:
+        scoped_finalistic_indicators = list(process_indicators)
+
+    indicator_ids = [int(item.id) for item in process_indicators if getattr(item, "id", None) is not None]
+    measurement_rows = _load_indicator_measurements(company_id, indicator_ids)
+    goals_by_indicator = _load_indicator_goals_history(company_id, indicator_ids)
+
+    phase_00_deliverables = [
+        _phase_deliverable(
+            key="process_architecture",
+            label="Arquitetura de processos",
+            source_block=blocks_by_key.get("process_architecture"),
+            detail="Mapa com áreas, macroprocessos, processos essenciais e donos.",
+        ),
+        _phase_deliverable(
+            key="basic_indicators",
+            label="Árvore de indicadores básicos",
+            ready=bool(strategic_indicators),
+            maturity_pct=100 if strategic_indicators else 0,
+            detail=f"{len(strategic_indicators)} indicador(es) corporativo(s)/estratégico(s) ativo(s).",
+            missing_message="Cadastre indicadores básicos/vitais da empresa para fechar a fase 00.",
+        ),
+        _phase_deliverable(
+            key="project_engine",
+            label="Motor de projetos operante",
+            ready=bool(active_projects),
+            maturity_pct=100 if active_projects else 0,
+            detail=f"{len(active_projects)} projeto(s) ativo(s) disponível(is) para follow-up e ação corretiva.",
+            missing_message="Falta evidência de motor de projetos operante no tenant.",
+        ),
+        _phase_deliverable(
+            key="organogram",
+            label="Organograma",
+            ready=False,
+            maturity_pct=0,
+            detail="Dependência conhecida: módulo de organograma ainda não existe no APP32.",
+            missing_message="Spike/build do organograma é obrigatório para fechar a fase 00.",
+            dependency=True,
+        ),
+    ]
+
+    modeling_block = blocks_by_key.get("modeling") or {}
+    phase_01_deliverables = [
+        _phase_deliverable(
+            key="finalistic_modeling",
+            label="Processos finalísticos modelados",
+            source_block=modeling_block,
+            detail="MVP usa a cobertura de modelagem existente; classificação explícita de finalísticos ainda é lacuna de dados.",
+        ),
+        _phase_deliverable(
+            key="finalistic_indicators",
+            label="Indicadores por processo",
+            ready=bool(process_indicators),
+            maturity_pct=100 if process_indicators else 0,
+            detail=f"{len(process_indicators)} indicador(es) de processo ativo(s).",
+            missing_message="Associe indicadores aos processos modelados para sustentar a fase 01.",
+        ),
+        _phase_deliverable(
+            key="stable_cycles",
+            label="Gate estável (N ciclos)",
+            stable_gate=_build_stability_gate_payload(
+                indicators=scoped_finalistic_indicators,
+                measurement_rows=measurement_rows,
+                goals_by_indicator=goals_by_indicator,
+                scope_label="processos finalísticos",
+                scope_mode=finalistic_scope_mode,
+            ),
+        ),
+    ]
+
+    phase_02_deliverables = [
+        _phase_deliverable(
+            key="all_process_modeling",
+            label="Todos os processos modelados",
+            source_block=modeling_block,
+            detail="Expansão da modelagem para Gestão + Apoio com o mesmo motor BPMN/POP.",
+        ),
+        _phase_deliverable(
+            key="all_process_indicators",
+            label="Cobertura de indicadores por processo",
+            ready=bool(process_indicators),
+            maturity_pct=100 if process_indicators else 0,
+            detail="Cobertura atual reaproveita indicadores ligados a processos existentes.",
+            missing_message="Amplie a linha de visada dos indicadores para todos os processos.",
+        ),
+        _phase_deliverable(
+            key="stable_all_cycles",
+            label="Gate estável em todos os processos",
+            stable_gate=_build_stability_gate_payload(
+                indicators=process_indicators,
+                measurement_rows=measurement_rows,
+                goals_by_indicator=goals_by_indicator,
+                scope_label="todos os processos",
+                scope_mode="all_process_indicators",
+            ),
+        ),
+    ]
+
+    phase_03_deliverables = [
+        _phase_deliverable(
+            key="strategic_identity",
+            label="Identidade e alinhamento estratégico",
+            source_block=blocks_by_key.get("identity"),
+            detail="Identidade aprofundada, pilares, objetivos e elementos de cenário/alinhamento.",
+        ),
+        _phase_deliverable(
+            key="strategic_cycle",
+            label="Ciclo de gestão estratégica rodando",
+            ready=bool(meetings),
+            maturity_pct=100 if meetings else 0,
+            detail=f"{len(meetings)} reunião(ões) futura(s) já aparecem no cockpit estratégico.",
+            missing_message="Agende/reforce a cadência de revisão estratégica para fechar a fase 03.",
+        ),
+    ]
+
+    phases = [
+        _build_phase(
+            code="00",
+            key="phase_00",
+            label="Básico",
+            promise="Coloca a casa em ordem para executar com donos, arquitetura mínima e rotina gerencial.",
+            gate_name="Funcionando",
+            gate_rule="indicadores básicos alimentados e revisados na rotina; donos definidos; motor de projetos operante",
+            deliverables=phase_00_deliverables,
+        ),
+        _build_phase(
+            code="01",
+            key="phase_01",
+            label="Processos Finalísticos",
+            promise="Foca o que gera valor ao cliente primeiro, com modelagem e indicador por processo.",
+            gate_name="Estável",
+            gate_rule="indicador na meta/trajetória por N ciclos consecutivos (default 3, configurável por indicador)",
+            deliverables=phase_01_deliverables,
+        ),
+        _build_phase(
+            code="02",
+            key="phase_02",
+            label="Todos os Processos",
+            promise="Expande a governança para Gestão + Apoio e tira a operação do improviso.",
+            gate_name="Estável",
+            gate_rule="mesmo critério de estabilidade, aplicado a todos os processos modelados",
+            deliverables=phase_02_deliverables,
+        ),
+        _build_phase(
+            code="03",
+            key="phase_03",
+            label="Plan. e Gestão Estratégicos",
+            promise="Transforma a estrutura em ciclo estratégico recorrente, com direção e revisão.",
+            gate_name="Rodando",
+            gate_rule="ciclo de gestão estratégica ativo, com revisão periódica acontecendo",
+            deliverables=phase_03_deliverables,
+        ),
+    ]
+
+    current_index = next((index for index, phase in enumerate(phases) if not phase["gate"]["ready"]), len(phases) - 1)
+    if all(phase["gate"]["ready"] for phase in phases):
+        current_index = len(phases) - 1
+
+    for index, phase in enumerate(phases):
+        phase["state"] = "completed" if index < current_index else "current" if index == current_index else "future"
+        phase["is_completed"] = phase["state"] == "completed"
+        phase["is_current"] = phase["state"] == "current"
+        phase["is_future"] = phase["state"] == "future"
+
+    current_phase = phases[current_index]
+    next_phase = phases[current_index + 1] if current_index + 1 < len(phases) else None
+    hero_title = (
+        f"Fase atual: {current_phase['code']} — {current_phase['maturity_pct']}% até o gate"
+        + (f" · Próximo nível: {next_phase['code']}" if next_phase else " · Jornada completa")
+    )
+    hero_subtitle = (
+        current_phase["client_pulse"]
+        if audience == "client"
+        else f"Próximo item faltante: {current_phase['next_missing_label']}"
+    )
+
+    return {
+        "audience": audience,
+        "hero_title": hero_title,
+        "hero_subtitle": hero_subtitle,
+        "current_phase_key": current_phase["key"],
+        "current_phase_code": current_phase["code"],
+        "next_phase_code": next_phase["code"] if next_phase else None,
+        "phases": phases,
+        "journey_source": {
+            "read_model": journey.get("read_model"),
+            "journey_key": journey.get("journey_key"),
+            "gate_policy": journey.get("gate_policy"),
+        },
+        "meetings": meetings,
+    }
+
+
+def _phase_deliverable(
+    *,
+    key: str,
+    label: str,
+    source_block: dict[str, Any] | None = None,
+    stable_gate: dict[str, Any] | None = None,
+    ready: bool | None = None,
+    maturity_pct: int | None = None,
+    detail: str | None = None,
+    missing_message: str | None = None,
+    dependency: bool = False,
+) -> dict[str, Any]:
+    if stable_gate is not None:
+        ready = bool(stable_gate.get("ready"))
+        maturity_pct = int(stable_gate.get("maturity_pct") or 0)
+        dependency = bool(stable_gate.get("dependency"))
+        return {
+            "key": key,
+            "label": label,
+            "ready": ready,
+            "maturity_pct": maturity_pct,
+            "detail": stable_gate.get("detail") or "",
+            "dependency": dependency,
+            "status": "ready" if ready else "dependency" if dependency else "pending",
+            "next_missing_label": stable_gate.get("next_missing_label") or "Sem pendência operacional.",
+            "source_block_key": None,
+            "missing_items": list(stable_gate.get("missing_items") or []),
+            "subblocks": [],
+            "stable_gate": stable_gate,
+        }
+
+    if source_block is not None:
+        source_gate = source_block.get("gate") or {}
+        ready = bool(source_gate.get("ready"))
+        maturity_pct = int(source_block.get("maturity_pct") or 0)
+        missing_items = list(source_gate.get("missing_essentials") or [])
+        missing_messages = [item.get("missing_to_ready", [None])[0] for item in source_block.get("subblocks", []) if item.get("missing_to_ready")]
+        next_missing_label = ", ".join(item.get("label") for item in missing_items if item.get("label")) or (
+            next((message for message in missing_messages if message), None) or missing_message or "Sem pendência operacional."
+        )
+        return {
+            "key": key,
+            "label": label,
+            "ready": ready,
+            "maturity_pct": maturity_pct,
+            "detail": detail or source_gate.get("message") or "",
+            "dependency": dependency,
+            "status": "ready" if ready else "dependency" if dependency else "pending",
+            "next_missing_label": next_missing_label,
+            "source_block_key": source_block.get("key"),
+            "missing_items": missing_items,
+            "subblocks": source_block.get("subblocks") or [],
+        }
+
+    return {
+        "key": key,
+        "label": label,
+        "ready": bool(ready),
+        "maturity_pct": int(maturity_pct or 0),
+        "detail": detail or "",
+        "dependency": dependency,
+        "status": "ready" if ready else "dependency" if dependency else "pending",
+        "next_missing_label": missing_message or "Sem pendência operacional.",
+        "source_block_key": None,
+        "missing_items": [],
+        "subblocks": [],
+    }
+
+
+def _build_phase(
+    *,
+    code: str,
+    key: str,
+    label: str,
+    promise: str,
+    gate_name: str,
+    gate_rule: str,
+    deliverables: list[dict[str, Any]],
+) -> dict[str, Any]:
+    scores = [int(item.get("maturity_pct") or 0) for item in deliverables]
+    maturity_pct = round(sum(scores) / len(scores)) if scores else 0
+    next_missing = next((item for item in deliverables if not item.get("ready")), None)
+    return {
+        "code": code,
+        "key": key,
+        "label": label,
+        "promise": promise,
+        "deliverables": deliverables,
+        "maturity_pct": maturity_pct,
+        "next_missing_label": next_missing.get("next_missing_label") if next_missing else "Todos os entregáveis desta fase já estão prontos.",
+        "client_pulse": "Você já tem base para subir de nível." if maturity_pct >= 60 else "Ainda faltam bases importantes para consolidar este nível.",
+        "gate": {
+            "name": gate_name,
+            "rule": gate_rule,
+            "ready": all(bool(item.get("ready")) for item in deliverables),
+            "policy": "soft",
+        },
+    }
+
+
+def _load_indicator_measurements(company_id: int, indicator_ids: list[int]) -> dict[int, list[IndicatorData]]:
+    if not indicator_ids:
+        return {}
+    rows = (
+        IndicatorData.query.filter(IndicatorData.company_id == company_id)
+        .filter(IndicatorData.indicator_id.in_(indicator_ids))
+        .order_by(IndicatorData.indicator_id.asc(), IndicatorData.measured_date.desc(), IndicatorData.id.desc())
+        .all()
+    )
+    by_indicator: dict[int, list[IndicatorData]] = {}
+    for row in rows:
+        by_indicator.setdefault(int(row.indicator_id), []).append(row)
+    return by_indicator
+
+
+def _load_indicator_goals_history(company_id: int, indicator_ids: list[int]) -> dict[int, list[IndicatorGoal]]:
+    if not indicator_ids:
+        return {}
+    rows = (
+        IndicatorGoal.query.filter(IndicatorGoal.company_id == company_id)
+        .filter(IndicatorGoal.indicator_id.in_(indicator_ids))
+        .filter(IndicatorGoal.status == "active")
+        .order_by(
+            IndicatorGoal.indicator_id.asc(),
+            IndicatorGoal.period_end.desc().nullslast(),
+            IndicatorGoal.goal_date.desc().nullslast(),
+            IndicatorGoal.period_start.desc().nullslast(),
+            IndicatorGoal.id.desc(),
+        )
+        .all()
+    )
+    by_indicator: dict[int, list[IndicatorGoal]] = {}
+    for row in rows:
+        by_indicator.setdefault(int(row.indicator_id), []).append(row)
+    return by_indicator
+
+
+def _is_finalistic_profile(profile: ProcessStrategyProfile | None) -> bool:
+    customer_type = _slug_text(getattr(profile, "customer_type", None))
+    customer_description = _slug_text(getattr(profile, "customer_description", None))
+    combined = f"{customer_type} {customer_description}".strip()
+    if not combined:
+        return False
+    internal_markers = {"interno", "internal", "apoio", "support", "suporte", "gestao", "management", "backoffice"}
+    if any(marker in combined for marker in internal_markers):
+        return False
+    external_markers = {"cliente", "customer", "externo", "external", "mercado", "usuario", "venda", "comercial"}
+    return any(marker in combined for marker in external_markers)
+
+
+def _slug_text(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _build_stability_gate_payload(
+    *,
+    indicators: list[Indicator],
+    measurement_rows: dict[int, list[IndicatorData]],
+    goals_by_indicator: dict[int, list[IndicatorGoal]],
+    scope_label: str,
+    scope_mode: str,
+) -> dict[str, Any]:
+    if not indicators:
+        return {
+            "ready": False,
+            "maturity_pct": 0,
+            "dependency": True,
+            "detail": f"Sem indicadores vinculados a {scope_label} para avaliar estabilidade.",
+            "next_missing_label": f"Cadastre indicadores por processo para medir estabilidade em {scope_label}.",
+            "missing_items": [{"reason": "no_indicators", "label": scope_label}],
+            "scope_mode": scope_mode,
+            "indicator_summaries": [],
+        }
+
+    summaries = []
+    ratios: list[float] = []
+    missing = []
+    for indicator in indicators:
+        summary = _indicator_stability_summary(
+            indicator=indicator,
+            measurements=measurement_rows.get(int(indicator.id), []),
+            goals=goals_by_indicator.get(int(indicator.id), []),
+        )
+        summaries.append(summary)
+        ratios.append(summary["completion_ratio"])
+        if not summary["ready"]:
+            missing.append(summary)
+
+    maturity_pct = int(round((sum(ratios) / len(ratios)) * 100)) if ratios else 0
+    ready = not missing
+    required_cycles = max((int(item["required_cycles"]) for item in summaries), default=3)
+    missing_count = len(missing)
+    scope_text = "processos finalísticos" if scope_mode == "explicit_finalistic_profiles" else scope_label
+    if ready:
+        next_missing_label = f"Todos os indicadores de {scope_text} fecharam o gate estável."
+    else:
+        next_missing_label = f"Faltam {missing_count} indicador(es) de {scope_text} com estabilidade em {required_cycles} ciclos."
+    detail = (
+        f"{len(summaries)} indicador(es) avaliados em {scope_text}; "
+        f"{sum(1 for item in summaries if item['ready'])} prontos; "
+        f"critério: meta ou trajetória clara por N ciclos consecutivos."
+    )
+    if scope_mode == "fallback_all_process_indicators":
+        detail += " Fallback aplicado: não há marcação explícita de finalístico no domínio; usando todos os indicadores de processo."
+
+    return {
+        "ready": ready,
+        "maturity_pct": maturity_pct,
+        "dependency": False,
+        "detail": detail,
+        "next_missing_label": next_missing_label,
+        "missing_items": [
+            {
+                "indicator_id": item["indicator_id"],
+                "label": item["indicator_name"],
+                "reason": item["reason"],
+                "stable_cycles": item["stable_cycles"],
+                "required_cycles": item["required_cycles"],
+            }
+            for item in missing
+        ],
+        "scope_mode": scope_mode,
+        "indicator_summaries": summaries,
+    }
+
+
+def _indicator_stability_summary(
+    *,
+    indicator: Indicator,
+    measurements: list[IndicatorData],
+    goals: list[IndicatorGoal],
+) -> dict[str, Any]:
+    required_cycles = _indicator_required_stable_cycles(indicator)
+    cycle_rows = _dedupe_measurements_by_cycle(measurements)
+    evaluated_cycles = []
+    stable_cycles = 0
+    last_ratio = 0.0
+
+    for row in cycle_rows:
+        goal = _resolve_goal_for_measurement(row, goals)
+        evaluation = _evaluate_measurement_against_goal(indicator, row, goal)
+        if evaluation["is_good"]:
+            stable_cycles += 1
+        else:
+            break
+        evaluated_cycles.append(evaluation)
+        if len(evaluated_cycles) >= required_cycles:
+            break
+
+    if evaluated_cycles:
+        last_ratio = min(stable_cycles, required_cycles) / float(required_cycles)
+    reason = "ok"
+    if not cycle_rows:
+        reason = "no_measurements"
+    elif not goals:
+        reason = "no_goals"
+    elif stable_cycles < required_cycles:
+        reason = "insufficient_stable_cycles"
+
+    return {
+        "indicator_id": int(indicator.id),
+        "indicator_name": indicator.name,
+        "indicator_code": indicator.full_code or indicator.code,
+        "required_cycles": required_cycles,
+        "stable_cycles": stable_cycles,
+        "ready": stable_cycles >= required_cycles,
+        "completion_ratio": last_ratio,
+        "reason": reason,
+        "cycles_evaluated": evaluated_cycles,
+    }
+
+
+def _indicator_required_stable_cycles(indicator: Indicator) -> int:
+    source_config = getattr(indicator, "source_config", None) or {}
+    for key in ("required_stable_cycles", "stable_cycles", "gate_cycles"):
+        value = source_config.get(key) if isinstance(source_config, dict) else None
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = None
+        if parsed and parsed > 0:
+            return parsed
+    return 3
+
+
+def _dedupe_measurements_by_cycle(measurements: list[IndicatorData]) -> list[IndicatorData]:
+    unique: list[IndicatorData] = []
+    seen = set()
+    for row in sorted(measurements, key=lambda item: ((item.period_end or item.measured_date), item.id), reverse=True):
+        cycle_key = (
+            getattr(row, "period_start", None) or getattr(row, "measured_date", None),
+            getattr(row, "period_end", None) or getattr(row, "measured_date", None),
+        )
+        if cycle_key in seen:
+            continue
+        seen.add(cycle_key)
+        unique.append(row)
+    return unique
+
+
+def _resolve_goal_for_measurement(measurement: IndicatorData, goals: list[IndicatorGoal]) -> IndicatorGoal | None:
+    measurement_date = getattr(measurement, "measured_date", None)
+    if getattr(measurement, "goal_id", None):
+        for goal in goals:
+            if int(goal.id) == int(measurement.goal_id):
+                return goal
+    for goal in goals:
+        period_start = getattr(goal, "period_start", None)
+        period_end = getattr(goal, "period_end", None) or getattr(goal, "goal_date", None)
+        if period_start and period_end and measurement_date and period_start <= measurement_date <= period_end:
+            return goal
+    dated_goals = [goal for goal in goals if getattr(goal, "goal_date", None) and measurement_date and goal.goal_date <= measurement_date]
+    if dated_goals:
+        dated_goals.sort(key=lambda item: (item.goal_date, item.id), reverse=True)
+        return dated_goals[0]
+    return goals[0] if goals else None
+
+
+def _evaluate_measurement_against_goal(indicator: Indicator, measurement: IndicatorData, goal: IndicatorGoal | None) -> dict[str, Any]:
+    value = _to_float(getattr(measurement, "measured_value", None))
+    goal_value = _to_float(getattr(goal, "goal_value", None))
+    if value is None or goal_value is None or goal_value == 0:
+        return {
+            "measured_date": _date_to_iso(getattr(measurement, "measured_date", None)),
+            "status": "no_goal",
+            "is_good": False,
+            "value": value,
+            "goal_value": goal_value,
+        }
+
+    status = _classify_measurement_status(indicator, value=value, goal=goal)
+    return {
+        "measured_date": _date_to_iso(getattr(measurement, "measured_date", None)),
+        "status": status,
+        "is_good": status in {"on_target", "exceeded", "alert"},
+        "value": value,
+        "goal_value": goal_value,
+    }
+
+
+def _classify_measurement_status(indicator: Indicator, *, value: float, goal: IndicatorGoal) -> str:
+    goal_value = _to_float(getattr(goal, "goal_value", None))
+    if goal_value in (None, 0):
+        return "no_goal"
+    ranges = normalize_performance_ranges(getattr(goal, "performance_ranges", None))
+    red_max = float(ranges.get("red", 80))
+    yellow_max = float(ranges.get("yellow", 90))
+    green_max = float(ranges.get("green", 110))
+    polarity = str(getattr(indicator, "polarity", "positive") or "positive").strip().lower()
+    if polarity == "negative":
+        if value <= goal_value * (red_max / 100):
+            return "on_target"
+        if value <= goal_value * (yellow_max / 100):
+            return "alert"
+        return "below"
+
+    performance_pct = (value / goal_value) * 100
+    if performance_pct >= green_max:
+        return "exceeded"
+    if performance_pct >= yellow_max:
+        return "on_target"
+    if performance_pct >= red_max:
+        return "alert"
+    return "below"
+
+
+def _to_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _resolve_period(period: str | None) -> dict[str, Any]:
