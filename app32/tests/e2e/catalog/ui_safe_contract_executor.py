@@ -19,6 +19,7 @@ from app32.tests.e2e.catalog.ui_contract_generator import build_ui_human_like_co
 from app32.tests.e2e.config.environments import load_environment_settings
 from app32.tests.e2e.core.functional_guards import contains_public_error
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
+from app32.tests.e2e.catalog.ui_dynamic_fixture_resolver import DynamicFixtureResolver
 
 
 SAFE_EXECUTION_STRATEGIES = {
@@ -54,12 +55,20 @@ def _has_unresolved_placeholder(route: str) -> bool:
     return re.search(r"<[^>]+>", str(route or "")) is not None
 
 
-def _resolve_contract_route(route: str, *, company_id: int | None) -> tuple[str, str | None]:
+def _resolve_contract_route(
+    route: str,
+    *,
+    company_id: int | None,
+    fixture_resolver: DynamicFixtureResolver | None = None,
+) -> tuple[str, str | None]:
     resolved = str(route or "").strip()
     if not resolved:
         return resolved, "empty_route"
     if _is_public_auth_route(resolved):
         return resolved, "public_auth_route_requires_unauthenticated_context"
+    if fixture_resolver is not None:
+        resolution = fixture_resolver.resolve_route(resolved)
+        return resolution.resolved_route, resolution.reason
     if company_id is not None:
         resolved = resolved.replace("<company_id>", str(company_id)).replace("<int:company_id>", str(company_id))
     if _has_unresolved_placeholder(resolved):
@@ -132,6 +141,7 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
     http = AuthenticatedHTTPSession.create(settings)
     http.login()
     http.select_company()
+    fixture_resolver = DynamicFixtureResolver(settings)
 
     contracts = _safe_contracts(limit)
     route_cache: dict[str, tuple[int, str, str]] = {}
@@ -139,7 +149,7 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
 
     for contract in contracts:
         original_route = str(contract.get("route") or "")
-        route, skip_reason = _resolve_contract_route(original_route, company_id=settings.company_id)
+        route, skip_reason = _resolve_contract_route(original_route, company_id=settings.company_id, fixture_resolver=fixture_resolver)
         if skip_reason:
             results.append(
                 UISafeExecutionResult(
