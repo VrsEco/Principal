@@ -47,6 +47,9 @@
             font-size: .88rem; font-weight: 700;
         }
         .btn:hover { background: #f8fafc; }
+        .toolbar__actions .btn {
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+        }
 
         .page {
             max-width: 1480px;
@@ -385,11 +388,12 @@
             .toolbar {
                 align-items: flex-start;
                 flex-direction: column;
-                padding: .75rem .9rem;
+                gap: .55rem;
+                padding: .65rem .85rem;
             }
             .toolbar__title {
                 width: 100%;
-                font-size: .95rem;
+                font-size: .9rem;
                 line-height: 1.25;
             }
             .toolbar__actions {
@@ -398,6 +402,11 @@
             .toolbar__actions .btn {
                 width: 100%;
                 justify-content: center;
+                padding: .52rem .8rem;
+                border-radius: 10px;
+                font-size: .8rem;
+                font-weight: 600;
+                box-shadow: none;
             }
             .page {
                 padding: .85rem;
@@ -447,6 +456,18 @@
             .portal-step-media { grid-template-columns: 1fr; }
         }
         @media (max-width: 520px) {
+            .toolbar {
+                padding: .55rem .7rem;
+            }
+            .toolbar__title {
+                font-size: .84rem;
+            }
+            .toolbar__actions .btn {
+                padding: .46rem .72rem;
+                min-height: 38px;
+                font-size: .76rem;
+                border-radius: 10px;
+            }
             .page {
                 padding: .7rem;
             }
