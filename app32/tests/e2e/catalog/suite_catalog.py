@@ -69,6 +69,16 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=False,
         summary="Executa lote seguro de contratos UI de baixo risco, autenticado e não persistente, validando renderização e presença de elementos.",
     ),
+    "ui_mutation_contract_execution": E2ESuiteDefinition(
+        suite_id="ui_mutation_contract_execution",
+        label="Execução mutacional de contratos UI",
+        domain="governance",
+        environments=("DEV_FULL",),
+        command_kind="python",
+        command_args=("app32/tests/e2e/scripts/run_ui_mutation_contract_execution.py",),
+        destructive=True,
+        summary="Valida contratos UI mutacionais com gate DEV_FULL, resolução de fixtures dinâmicas, rollback obrigatório e human gate.",
+    ),
     "full_system_validation": E2ESuiteDefinition(
         suite_id="full_system_validation",
         label="Teste completo do sistema",
