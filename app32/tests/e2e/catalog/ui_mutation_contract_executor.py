@@ -21,6 +21,13 @@ from app32.tests.e2e.catalog.ui_contract_generator import build_ui_human_like_co
 from app32.tests.e2e.catalog.ui_dynamic_fixture_resolver import DynamicFixtureResolver
 from app32.tests.e2e.catalog.ui_safe_contract_executor import _is_public_auth_route, _selector_present
 from app32.tests.e2e.config.environments import E2EExecutionMode, load_environment_settings
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = str(os.environ.get(name) or "").strip().lower()
+    if not raw:
+        return default
+    return raw in {"1", "true", "yes", "y", "on", "sim"}
 from app32.tests.e2e.core.functional_guards import contains_public_error
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
@@ -73,7 +80,7 @@ def _domain_adapter_id(route: str) -> str | None:
     normalized = str(route or "").split("?", 1)[0].rstrip("/") or "/"
     if normalized.startswith("/financial") or normalized.startswith("/contracts"):
         return "financial_contracts"
-    if normalized.startswith("/process") or "/process-" in normalized or normalized == "/process-map" or normalized.startswith("/projects/analysis"):
+    if normalized.startswith("/process") or "/process-" in normalized or normalized == "/process-map" or normalized.startswith("/projects"):
         return "processes"
     if normalized.startswith("/my-work") or "/work-journey" in normalized:
         return "work_journey"
@@ -139,6 +146,7 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
     raw_limit = os.environ.get("E2E_UI_MUTATION_CONTRACT_LIMIT")
     limit = int(limit if limit is not None else (raw_limit if raw_limit is not None else 0))
     contracts = _mutation_contracts(limit)
+    allow_human_gate = _env_bool("E2E_ALLOW_HUMAN_GATE_MUTATION", default=False)
     results: list[UIMutationExecutionResult] = []
 
     destructive_gate_ok = (
@@ -199,7 +207,7 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
                     )
                 )
                 continue
-            if bool(contract.get("requires_human_gate")):
+            if bool(contract.get("requires_human_gate")) and not allow_human_gate:
                 results.append(
                     UIMutationExecutionResult(
                         contract_id=str(contract.get("contract_id")),
@@ -209,7 +217,7 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
                         status="skipped",
                         status_code=None,
                         mode="mutation_human_gate",
-                        details={**base_details, "reason": "human_gate_required", "maintenance_point": False},
+                        details={**base_details, "reason": "human_gate_required", "maintenance_point": False, "human_gate_override": False},
                     )
                 )
                 continue
@@ -273,6 +281,7 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
                         "adapter_id": adapter_id,
                         "adapter_available": adapter_id is not None,
                         "adapter_result": adapter_result,
+                        "human_gate_override": bool(contract.get("requires_human_gate")) and allow_human_gate,
                         "mutation_performed": bool(adapter_result and adapter_result.get("mutation_performed")),
                         "rollback_performed": bool(adapter_result and adapter_result.get("rollback_performed")),
                         "reason": maintenance_reason,

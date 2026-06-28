@@ -100,3 +100,9 @@ def test_mutation_domain_adapter_routes_known_domains():
     assert _domain_adapter_id("/company/10") == "meetings"
     assert _domain_adapter_id("/companies/10/edit") == "admin_company"
     assert _domain_adapter_id("/sapiens") is None
+
+
+
+def test_mutation_domain_adapter_routes_projects_to_processes():
+    assert _domain_adapter_id("/projects/60/manage") == "processes"
+    assert _domain_adapter_id("/projects/60/edit") == "processes"
