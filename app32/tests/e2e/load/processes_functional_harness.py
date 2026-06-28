@@ -60,6 +60,32 @@ def execute_processes_functional_probe(*, settings: E2EEnvironmentSettings) -> l
         operation="processes.bpmn_diagram",
     )
 
+    portal_detail_route = f"/companies/{settings.company_id}/process-portal/processes/{process_id}"
+    portal_detail_response = http.request("GET", portal_detail_route)
+    portal_detail_response.raise_for_status()
+    http.assert_not_login_redirect(portal_detail_response, operation="processes.portal_detail_page")
+
+    portal_detail_payload = http.request_json(
+        "GET",
+        f"/api/companies/{settings.company_id}/process-portal/processes/{process_id}",
+        operation="processes.portal_detail_api",
+    )
+    portal_detail_data = portal_detail_payload.get("data") if isinstance(portal_detail_payload, dict) else None
+    portal_detail_data = portal_detail_data if isinstance(portal_detail_data, dict) else {}
+
+    strategic_route = f"/companies/{settings.company_id}/process-portal/strategic-management?period=month&audience=client"
+    strategic_response = http.request("GET", strategic_route)
+    strategic_response.raise_for_status()
+    http.assert_not_login_redirect(strategic_response, operation="processes.strategic_management_page")
+
+    strategic_payload = http.request_json(
+        "GET",
+        f"/api/companies/{settings.company_id}/process-portal/strategic-management?period=month&audience=client",
+        operation="processes.strategic_management_api_client",
+    )
+    strategic_data = strategic_payload.get("data") if isinstance(strategic_payload, dict) else None
+    strategic_data = strategic_data if isinstance(strategic_data, dict) else {}
+
     results = [
         ProcessesFunctionalProbeResult(
             check_name="processes.list",
@@ -83,6 +109,61 @@ def execute_processes_functional_probe(*, settings: E2EEnvironmentSettings) -> l
             details={
                 "has_save_button": "Salvar rascunho" in modeler_html,
                 "has_public_error": contains_public_error(modeler_html),
+            },
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.portal_detail_page",
+            route=portal_detail_route,
+            success=is_html_success(
+                portal_detail_response.text,
+                any_markers=("Estrutura/Recursos", "Processo", "Recursos"),
+            ),
+            status_code=portal_detail_response.status_code,
+            details={
+                "has_resources_action": "Estrutura/Recursos" in portal_detail_response.text,
+                "has_public_error": contains_public_error(portal_detail_response.text),
+            },
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.portal_detail_resources_contract",
+            route=f"/api/companies/{settings.company_id}/process-portal/processes/{process_id}",
+            success=(
+                isinstance(portal_detail_data.get("resources"), dict)
+                and isinstance((portal_detail_data.get("stats") or {}).get("resource_count"), int)
+            ),
+            status_code=200,
+            details={
+                "resource_count": (portal_detail_data.get("stats") or {}).get("resource_count"),
+                "has_grouped_resources": isinstance((portal_detail_data.get("resources") or {}).get("grouped"), dict),
+                "contract": "detalhe do portal deve expor resources e stats.resource_count para a nova aba Estrutura/Recursos.",
+            },
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.strategic_management_page_client",
+            route=strategic_route,
+            success=is_html_success(
+                strategic_response.text,
+                any_markers=("smpLayerStack", "Painel", "Gestão Estratégica"),
+            ),
+            status_code=strategic_response.status_code,
+            details={
+                "has_mobile_actions": "smpMobileActionsToggle" in strategic_response.text,
+                "has_public_error": contains_public_error(strategic_response.text),
+            },
+        ),
+        ProcessesFunctionalProbeResult(
+            check_name="processes.strategic_management_api_client",
+            route=f"/api/companies/{settings.company_id}/process-portal/strategic-management?period=month&audience=client",
+            success=(
+                strategic_data.get("audience") == "client"
+                and isinstance((strategic_data.get("structuring_trail") or {}).get("phases"), list)
+                and any(group.get("key") == "team_efficiency" for group in (strategic_data.get("groups") or []) if isinstance(group, dict))
+            ),
+            status_code=200,
+            details={
+                "audience": strategic_data.get("audience"),
+                "groups": [group.get("key") for group in (strategic_data.get("groups") or []) if isinstance(group, dict)],
+                "contract": "painel estratégico deve aceitar audience=client, expor trilha de estruturação e grupo team_efficiency.",
             },
         ),
         ProcessesFunctionalProbeResult(

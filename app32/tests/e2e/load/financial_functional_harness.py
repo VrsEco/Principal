@@ -61,6 +61,20 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
     bank_statement_html.raise_for_status()
     http.assert_not_login_redirect(bank_statement_html, operation="financial.bank_statement_page")
 
+    reconciliation_html = http.request("GET", _path_with_query("/financial/reconciliation", company_id=settings.company_id))
+    reconciliation_html.raise_for_status()
+    http.assert_not_login_redirect(reconciliation_html, operation="financial.bank_reconciliation_workspace")
+
+    bordero_match_guard_response = http.request(
+        "POST",
+        _path_with_query(
+            "/api/financial/reconciliation/rows/0/create-bordero-match",
+            company_id=settings.company_id,
+        ),
+        json_payload={"title_allocations": []},
+    )
+    http.assert_not_login_redirect(bordero_match_guard_response, operation="financial.bordero_match_guard")
+
     transfers_html = http.request("GET", _path_with_query("/financial/transfers", company_id=settings.company_id))
     transfers_html.raise_for_status()
     http.assert_not_login_redirect(transfers_html, operation="financial.transfers_page")
@@ -158,6 +172,33 @@ def execute_financial_functional_probe(*, settings: E2EEnvironmentSettings) -> l
             details={
                 "content_type": str(bank_statement_html.headers.get("Content-Type") or ""),
                 "has_public_error": contains_public_error(bank_statement_html.text),
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.bank_reconciliation_workspace",
+            route=_path_with_query("/financial/reconciliation", company_id=settings.company_id),
+            success=is_html_success(
+                reconciliation_html.text,
+                all_markers=("Criar borderô e conciliar", "reconciliation-amount-filter", "selectedBankRowIds = []"),
+            ),
+            status_code=reconciliation_html.status_code,
+            details={
+                "content_type": str(reconciliation_html.headers.get("Content-Type") or ""),
+                "has_public_error": contains_public_error(reconciliation_html.text),
+                "contract": "workspace de conciliação deve iniciar sem marcação automática e expor fluxo borderô + multi títulos.",
+            },
+        ),
+        FinancialFunctionalProbeResult(
+            check_name="financial.bordero_match_guard",
+            route=_path_with_query(
+                "/api/financial/reconciliation/rows/0/create-bordero-match",
+                company_id=settings.company_id,
+            ),
+            success=bordero_match_guard_response.status_code in {400, 404},
+            status_code=bordero_match_guard_response.status_code,
+            details={
+                "mutation_guard": "Payload inválido com row_id inexistente valida contrato sem criar borderô/baixa/conciliação.",
+                "content_type": str(bordero_match_guard_response.headers.get("Content-Type") or ""),
             },
         ),
         FinancialFunctionalProbeResult(
