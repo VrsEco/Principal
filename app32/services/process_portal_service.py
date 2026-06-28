@@ -29,6 +29,7 @@ from services.process_book_service import (
 )
 from services.process_bpmn_service import sanitize_svg_snapshot, serialize_flow_snapshot
 from services.process_flow_copilot_service import build_process_flow_copilot_analysis
+from services.process_resource_service import build_process_resources_bundle
 from utils.indicator_filters import (
     PROCESS_SOURCE_MODULES,
     indicator_supports_source_context,
@@ -275,6 +276,7 @@ def build_process_portal_process_detail(
     indicators = list(context.get("indicators") or [])
     routines = list(context.get("routines") or [])
     videos = _collect_video_entries(pop_activities)
+    resources = build_process_resources_bundle(company_id, process.id)
 
     macro = getattr(process, "macro", None)
     area = getattr(macro, "area", None) if macro else None
@@ -312,10 +314,12 @@ def build_process_portal_process_detail(
             "indicator_count": len(indicators),
             "spec_count": len(contract_payload),
             "video_count": len(videos),
+            "resource_count": len(resources.get("links") or []),
         },
         "pop_activities": pop_activities,
         "routines": routines,
         "indicators": indicators,
+        "resources": resources,
         "ai_specs": {
             "contracts": contract_payload,
             "flow_copilot_analysis": flow_copilot,
