@@ -56,34 +56,47 @@
 
         .hero {
             display: grid;
-            grid-template-columns: minmax(0, 2.2fr) minmax(360px, 1fr);
-            gap: 1rem;
-            padding: 1.5rem;
+            grid-template-columns: minmax(0, 2.45fr) minmax(380px, 1fr);
+            gap: .8rem;
+            padding: 1.15rem 1.2rem;
             border-radius: 28px;
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: #fff;
             box-shadow: var(--shadow);
         }
         .hero__eyebrow {
-            font-size: .72rem; text-transform: uppercase; letter-spacing: .16em; font-weight: 800; opacity: .82;
+            font-size: .62rem; text-transform: uppercase; letter-spacing: .16em; font-weight: 800; opacity: .78;
         }
-        .hero h1 { margin-top: .35rem; font-size: 2rem; font-weight: 800; }
-        .hero p { margin-top: .55rem; max-width: 72ch; color: rgba(255,255,255,.86); }
+        .hero h1 { margin-top: .2rem; font-size: 1.6rem; line-height: 1.08; font-weight: 800; }
+        .hero p { margin-top: .35rem; max-width: 72ch; font-size: .95rem; line-height: 1.35; color: rgba(255,255,255,.86); }
         .hero__stats {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: .75rem;
-            align-self: end;
+            gap: .55rem;
+            align-self: center;
         }
         .hero-stat {
-            padding: 1rem;
-            border-radius: 20px;
+            padding: .7rem .6rem;
+            border-radius: 16px;
             border: 1px solid rgba(255,255,255,.18);
             background: rgba(255,255,255,.14);
             backdrop-filter: blur(10px);
+            min-height: 78px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        .hero-stat strong { display: block; font-size: 1.6rem; }
-        .hero-stat span { display: block; margin-top: .25rem; font-size: .78rem; color: rgba(255,255,255,.84); }
+        .hero-stat strong { display: block; font-size: 1.18rem; line-height: 1; }
+        .hero-stat span {
+            display: block;
+            margin-top: .22rem;
+            font-size: .68rem;
+            line-height: 1.15;
+            color: rgba(255,255,255,.84);
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            text-wrap: balance;
+        }
 
         .content-shell {
             display: grid;
@@ -108,31 +121,31 @@
             justify-content: space-between;
             align-items: flex-start;
             gap: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: .75rem;
         }
         .viewer-label {
             display: inline-flex;
-            margin-bottom: .5rem;
-            font-size: .76rem;
+            margin-bottom: .35rem;
+            font-size: .68rem;
             font-weight: 800;
             letter-spacing: .16em;
             text-transform: uppercase;
             color: #334155;
         }
         .viewer-title {
-            font-size: 1.7rem;
+            font-size: 1.45rem;
             font-weight: 800;
             color: #0f172a;
             line-height: 1.15;
         }
         .viewer-subline {
-            margin-top: .55rem;
+            margin-top: .35rem;
             display: flex;
             flex-wrap: wrap;
-            gap: .4rem;
+            gap: .28rem;
             align-items: center;
             color: #64748b;
-            font-size: 1rem;
+            font-size: .9rem;
             font-weight: 700;
         }
         .viewer-badges {
@@ -144,12 +157,12 @@
         .chip {
             display: inline-flex;
             align-items: center;
-            padding: .42rem .74rem;
+            padding: .34rem .62rem;
             border-radius: 999px;
             border: 1px solid #dbeafe;
             background: #eff6ff;
             color: #1d4ed8;
-            font-size: .76rem;
+            font-size: .7rem;
             font-weight: 800;
         }
         .flow-viewer {
@@ -403,8 +416,9 @@
             }
             .hero__stats { grid-template-columns: 1fr 1fr; }
             .hero-stat {
-                padding: .85rem;
+                padding: .7rem;
                 border-radius: 16px;
+                min-height: 72px;
             }
             .viewer-head { flex-direction: column; }
             .viewer-badges { justify-content: flex-start; }
@@ -437,17 +451,18 @@
                 padding: .7rem;
             }
             .hero h1 {
-                font-size: 1.4rem;
+                font-size: 1.22rem;
                 line-height: 1.15;
             }
             .hero p {
-                margin-top: .45rem;
-                font-size: .92rem;
+                margin-top: .3rem;
+                font-size: .84rem;
+                line-height: 1.3;
             }
             .hero__stats {
                 grid-template-columns: 1fr;
-                gap: .55rem;
-                margin-top: .4rem;
+                gap: .45rem;
+                margin-top: .25rem;
             }
             .flow-viewer {
                 min-height: 28vh;
@@ -459,10 +474,10 @@
                 border-radius: 14px;
             }
             .hero-stat strong {
-                font-size: 1.15rem;
+                font-size: 1.05rem;
             }
             .hero-stat span {
-                font-size: .72rem;
+                font-size: .66rem;
             }
             .action-btn {
                 padding: .72rem .8rem;
@@ -492,10 +507,10 @@
                 border-radius: 22px;
             }
             .viewer-title {
-                font-size: 1.2rem;
+                font-size: 1.08rem;
             }
             .viewer-subline {
-                font-size: .85rem;
+                font-size: .78rem;
                 gap: .25rem;
             }
             .portal-modal__header {
