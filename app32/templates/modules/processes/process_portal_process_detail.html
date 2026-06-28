@@ -71,7 +71,7 @@
         .hero p { margin-top: .55rem; max-width: 72ch; color: rgba(255,255,255,.86); }
         .hero__stats {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: .75rem;
             align-self: end;
         }
@@ -230,6 +230,113 @@
         .portal-step-media [data-previewable] { cursor: zoom-in; }
         .portal-spec-block { padding: 1rem; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0; }
         .portal-spec-block pre { white-space: pre-wrap; word-break: break-word; margin: .5rem 0 0; font-family: inherit; font-size: .86rem; color: #334155; }
+        .resource-summary-card {
+            background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+            border-color: #cfe1ff;
+        }
+        .resource-summary-card p {
+            margin-top: .35rem;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .resource-section-card {
+            border: 1px solid #dbeafe;
+            border-radius: 22px;
+            padding: 1rem;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        }
+        .resource-section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: .75rem;
+            margin-bottom: .9rem;
+        }
+        .resource-section-head h4 {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+        .resource-counter {
+            display: inline-flex;
+            align-items: center;
+            padding: .3rem .65rem;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: .76rem;
+            font-weight: 800;
+            border: 1px solid #bfdbfe;
+        }
+        .resource-item-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 1rem;
+            background: #fff;
+        }
+        .resource-item-card--alert {
+            border-color: #fecaca;
+            background: linear-gradient(180deg, #fff7f7 0%, #ffffff 100%);
+        }
+        .resource-item-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: .75rem;
+            margin-bottom: .7rem;
+        }
+        .resource-item-title {
+            margin: 0;
+            font-size: .98rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .resource-item-subtitle {
+            margin-top: .2rem;
+            font-size: .82rem;
+            color: #64748b;
+            font-weight: 700;
+        }
+        .resource-item-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .45rem;
+            justify-content: flex-end;
+        }
+        .resource-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: .7rem;
+            margin-top: .8rem;
+        }
+        .resource-metric {
+            padding: .75rem;
+            border-radius: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .resource-metric strong {
+            display: block;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .resource-metric span {
+            display: block;
+            margin-top: .2rem;
+            font-size: .76rem;
+            color: #64748b;
+            font-weight: 700;
+        }
+        .resource-note {
+            margin-top: .85rem;
+            padding: .8rem .95rem;
+            border-radius: 16px;
+            border: 1px solid #fecaca;
+            background: #fff1f2;
+            color: #9f1239;
+            font-size: .84rem;
+            font-weight: 700;
+        }
         .portal-modal--media { z-index: 90; }
         .portal-modal--media .portal-modal__dialog {
             width: calc(100vw - 2rem);
@@ -262,10 +369,138 @@
             .sidebar { position: static; }
         }
         @media (max-width: 768px) {
+            .toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: .75rem .9rem;
+            }
+            .toolbar__title {
+                width: 100%;
+                font-size: .95rem;
+                line-height: 1.25;
+            }
+            .toolbar__actions {
+                width: 100%;
+            }
+            .toolbar__actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .page {
+                padding: .85rem;
+            }
+            .hero {
+                padding: 1rem;
+                border-radius: 22px;
+            }
+            .flow-viewer {
+                min-height: 36vh;
+                padding: .75rem;
+            }
+            .flow-viewer img,
+            .flow-viewer iframe {
+                min-height: 32vh;
+            }
             .hero__stats { grid-template-columns: 1fr 1fr; }
+            .hero-stat {
+                padding: .85rem;
+                border-radius: 16px;
+            }
             .viewer-head { flex-direction: column; }
             .viewer-badges { justify-content: flex-start; }
+            .viewer-title {
+                font-size: 1.35rem;
+            }
+            .viewer-subline {
+                font-size: .92rem;
+            }
+            .portal-modal__dialog {
+                width: calc(100vw - 1rem);
+                max-height: calc(100vh - 1rem);
+                padding: 1rem;
+            }
+            .resource-section-head,
+            .resource-item-head {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .resource-item-chips {
+                justify-content: flex-start;
+            }
+            .resource-metric-grid {
+                grid-template-columns: 1fr 1fr;
+            }
             .portal-step-media { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 520px) {
+            .page {
+                padding: .7rem;
+            }
+            .hero h1 {
+                font-size: 1.4rem;
+                line-height: 1.15;
+            }
+            .hero p {
+                margin-top: .45rem;
+                font-size: .92rem;
+            }
+            .hero__stats {
+                grid-template-columns: 1fr;
+                gap: .55rem;
+                margin-top: .4rem;
+            }
+            .flow-viewer {
+                min-height: 28vh;
+                border-radius: 18px;
+            }
+            .flow-viewer img,
+            .flow-viewer iframe {
+                min-height: 24vh;
+                border-radius: 14px;
+            }
+            .hero-stat strong {
+                font-size: 1.15rem;
+            }
+            .hero-stat span {
+                font-size: .72rem;
+            }
+            .action-btn {
+                padding: .72rem .8rem;
+                font-size: .88rem;
+                border-radius: 14px;
+            }
+            .sidebar-toolbar {
+                padding: .75rem .75rem 0;
+            }
+            .sidebar-content {
+                padding: .75rem;
+                gap: .6rem;
+            }
+            .portal-grid,
+            .portal-grid--cards,
+            .resource-metric-grid {
+                grid-template-columns: 1fr;
+            }
+            .portal-content-card,
+            .resource-section-card,
+            .resource-item-card,
+            .portal-spec-block {
+                padding: .85rem;
+            }
+            .viewer-card,
+            .sidebar-card {
+                border-radius: 22px;
+            }
+            .viewer-title {
+                font-size: 1.2rem;
+            }
+            .viewer-subline {
+                font-size: .85rem;
+                gap: .25rem;
+            }
+            .portal-modal__header {
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -288,6 +523,7 @@
                 <div class="hero-stat"><strong>-</strong><span>POP</span></div>
                 <div class="hero-stat"><strong>-</strong><span>Rotinas</span></div>
                 <div class="hero-stat"><strong>-</strong><span>Indicadores</span></div>
+                <div class="hero-stat"><strong>-</strong><span>Recursos</span></div>
                 <div class="hero-stat"><strong>-</strong><span>SPEC IA</span></div>
             </div>
         </section>
@@ -321,6 +557,7 @@
                         <button class="action-btn" disabled>🎬 Vídeos</button>
                         <button class="action-btn" disabled>📅 Rotinas</button>
                         <button class="action-btn" disabled>📈 Indicadores</button>
+                        <button class="action-btn" disabled>🧱 Estrutura/Recursos</button>
                         <button class="action-btn" disabled>🤖 SPEC para IA</button>
                         <button class="action-btn" disabled>📘 Book do Processo</button>
                     </div>
@@ -472,6 +709,7 @@
                 <div class="hero-stat"><strong>${cardValue(stats.pop_count)}</strong><span>POP</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.routine_count)}</strong><span>Rotinas</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.indicator_count)}</strong><span>Indicadores</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.resource_count)}</strong><span>Recursos</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.spec_count)}</strong><span>SPEC IA</span></div>
             `;
         }
@@ -496,6 +734,7 @@
             const hasVideos = (data.videos || []).length > 0;
             const hasRoutines = (data.routines || []).length > 0;
             const hasIndicators = (data.indicators || []).length > 0;
+            const hasResources = ((data.resources || {}).links || []).length > 0;
             const hasSpecs = (data.ai_specs?.contracts || []).length > 0 || !!data.ai_specs?.flow_copilot_analysis;
             actionButtons.innerHTML = `
                 <button class="action-btn" data-action="start-instance">▶️ Iniciar instância</button>
@@ -503,12 +742,35 @@
                 <button class="action-btn" ${hasVideos ? '' : 'disabled'} data-action="videos">🎬 Vídeos</button>
                 <button class="action-btn" ${hasRoutines ? '' : 'disabled'} data-action="routines">📅 Rotinas</button>
                 <button class="action-btn" ${hasIndicators ? '' : 'disabled'} data-action="indicators">📈 Indicadores</button>
+                <button class="action-btn" ${hasResources ? '' : 'disabled'} data-action="resources">🧱 Estrutura/Recursos</button>
                 <button class="action-btn" ${hasSpecs ? '' : 'disabled'} data-action="specs">🤖 SPEC para IA</button>
                 <button class="action-btn" data-action="book">📘 Book do Processo</button>
             `;
             actionButtons.querySelectorAll('[data-action]').forEach(button => {
                 button.addEventListener('click', () => openAction(button.dataset.action));
             });
+        }
+
+        function formatCurrencyBR(value) {
+            return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function formatNumberBR(value) {
+            if (value === null || value === undefined || value === '') return '--';
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric)) return '--';
+            return numeric.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+        }
+
+        function formatCapacityUnit(unit) {
+            return ({ hour: 'h/mês', day: 'dia/mês', month: 'mês' })[unit] || '';
+        }
+
+        function getUsageTone(usagePercentage) {
+            const value = Number(usagePercentage || 0);
+            if (value >= 85) return { label: 'Gargalo provável', color: '#b91c1c', bg: '#fee2e2', border: '#fecaca', alert: true };
+            if (value >= 60) return { label: 'Atenção de capacidade', color: '#b45309', bg: '#fef3c7', border: '#fde68a', alert: false };
+            return { label: 'Capacidade controlada', color: '#047857', bg: '#d1fae5', border: '#a7f3d0', alert: false };
         }
 
         async function startInstance() {
@@ -607,6 +869,81 @@
             `).join('')}</div>`;
         }
 
+        function renderResources(bundle) {
+            const links = bundle?.links || [];
+            const grouped = bundle?.grouped || {};
+            const totals = bundle?.totals || {};
+            const resourceTypeLabels = {
+                people: 'Pessoas',
+                inputs: 'Insumos',
+                facilities: 'Imóveis / Instalações',
+                digital_it: 'TI / Digital',
+                equipment_tools: 'Equipamentos / Ferramentas',
+                other: 'Outros'
+            };
+
+            if (!links.length) {
+                return '<div class="portal-empty" style="min-height:180px;">Nenhum recurso publicado neste processo.</div>';
+            }
+
+            const summary = `
+                <div class="portal-grid portal-grid--cards" style="margin-bottom:1rem;">
+                    <article class="portal-content-card resource-summary-card"><h4>Custo mensal alocado</h4><p>${esc(formatCurrencyBR(totals.allocated_monthly_cost))}</p></article>
+                    <article class="portal-content-card resource-summary-card"><h4>Custo por execução</h4><p>${esc(formatCurrencyBR(totals.estimated_cost_per_execution))}</p></article>
+                    <article class="portal-content-card resource-summary-card"><h4>CAPEX cadastrado</h4><p>${esc(formatCurrencyBR(totals.capex_registered))}</p></article>
+                </div>
+            `;
+
+            const sections = Object.entries(resourceTypeLabels).map(([type, label]) => {
+                const items = grouped[type] || [];
+                if (!items.length) return '';
+                return `
+                    <section class="resource-section-card" style="margin-bottom:1rem;">
+                        <div class="resource-section-head">
+                            <h4>${esc(label)}</h4>
+                            <span class="resource-counter">${esc(String(items.length))} item(ns)</span>
+                        </div>
+                        <div style="display:grid; gap:.75rem; margin-top:.85rem;">
+                            ${items.map(link => {
+                                const resource = link.resource || {};
+                                const usage = resource.usage || {};
+                                const unit = formatCapacityUnit(resource.operational_capacity_unit);
+                                const capacityTotal = usage.capacity_total ?? resource.operational_capacity_value ?? resource.quantity;
+                                const monthlyUsed = link.monthly_used_quantity ?? link.used_quantity;
+                                const tone = getUsageTone(link.usage_percentage);
+                                return `
+                                    <article class="resource-item-card ${tone.alert ? 'resource-item-card--alert' : ''}">
+                                        <div class="resource-item-head">
+                                            <div>
+                                                <h5 class="resource-item-title">${esc(resource.item_name || '--')}</h5>
+                                                <div class="resource-item-subtitle">${esc(resource.subtype || '--')}</div>
+                                            </div>
+                                            <div class="resource-item-chips">
+                                                <span class="chip" style="background:${esc(tone.bg)}; color:${esc(tone.color)}; border-color:${esc(tone.border)};">${esc(tone.label)}</span>
+                                                <span class="chip">${esc(formatNumberBR(link.usage_percentage))}% usado</span>
+                                            </div>
+                                        </div>
+                                        <div class="resource-metric-grid">
+                                            <div class="resource-metric"><strong>${esc(formatNumberBR(link.used_quantity_per_execution))} ${esc(unit)}</strong><span>Uso por instância</span></div>
+                                            <div class="resource-metric"><strong>${esc(formatNumberBR(link.estimated_monthly_instances))}</strong><span>Instâncias/mês</span></div>
+                                            <div class="resource-metric"><strong>${esc(formatNumberBR(monthlyUsed))} ${esc(unit)}</strong><span>Uso mensal</span></div>
+                                            <div class="resource-metric"><strong>${esc(formatNumberBR(capacityTotal))} ${esc(unit)}</strong><span>Capacidade total</span></div>
+                                            <div class="resource-metric"><strong>${esc(formatNumberBR(usage.available_quantity))} ${esc(unit)}</strong><span>Disponível</span></div>
+                                            <div class="resource-metric"><strong>${esc(formatCurrencyBR(link.allocated_monthly_cost))}</strong><span>Custo mensal alocado</span></div>
+                                            <div class="resource-metric"><strong>${esc(formatCurrencyBR(link.estimated_cost_per_execution))}</strong><span>Custo por execução</span></div>
+                                        </div>
+                                        ${link.capacity_bottleneck_notes ? `<div class="resource-note">Gargalo/observação: ${esc(link.capacity_bottleneck_notes)}</div>` : ''}
+                                    </article>
+                                `;
+                            }).join('')}
+                        </div>
+                    </section>
+                `;
+            }).join('');
+
+            return summary + sections;
+        }
+
         function renderSpecs(specs) {
             const contracts = specs.contracts || [];
             const blocks = [];
@@ -660,6 +997,7 @@
             if (action === 'videos') showModal('Vídeos do Processo', 'Clipes operacionais publicados', renderVideos(data.videos || []));
             if (action === 'routines') showModal('Rotinas do Processo', 'Agenda operacional vinculada', renderRoutines(data.routines || []));
             if (action === 'indicators') showModal('Indicadores do Processo', 'Medição e acompanhamento', renderIndicators(data.indicators || []));
+            if (action === 'resources') showModal('Estrutura/Recursos', 'Capacidade, custo e alocação publicada', renderResources(data.resources || {}));
             if (action === 'specs') showModal('SPEC para IA', 'Contratos e leitura do copiloto de fluxo', renderSpecs(data.ai_specs || {}));
             if (action === 'book') window.open(data.flow?.book_url, '_blank', 'noopener');
         }
