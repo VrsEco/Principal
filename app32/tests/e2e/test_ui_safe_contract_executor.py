@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app32.tests.e2e.catalog.ui_dynamic_fixture_resolver import DynamicFixtureResolver
-from app32.tests.e2e.catalog.ui_mutation_contract_executor import _mutation_contracts
+from app32.tests.e2e.catalog.ui_mutation_contract_executor import _domain_adapter_id, _mutation_contracts
 from app32.tests.e2e.catalog.ui_safe_contract_executor import _resolve_contract_route, _safe_contracts, _selector_present
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
 from pathlib import Path
@@ -88,3 +88,15 @@ def test_mutation_contracts_are_cataloged_separately_from_safe_contracts():
     assert contracts
     assert all(item["execution_strategy"] == "playwright_or_api_mutation_with_rollback" for item in contracts)
     assert all(item["cleanup_strategy"] == "rollback_or_delete_and_residue_zero" for item in contracts)
+
+
+
+def test_mutation_domain_adapter_routes_known_domains():
+    assert _domain_adapter_id("/financial/schedules/58") == "financial_contracts"
+    assert _domain_adapter_id("/contracts/list") == "financial_contracts"
+    assert _domain_adapter_id("/processes/528") == "processes"
+    assert _domain_adapter_id("/my-work/project-task/2496") == "work_journey"
+    assert _domain_adapter_id("/channels") == "integrations"
+    assert _domain_adapter_id("/company/10") == "meetings"
+    assert _domain_adapter_id("/companies/10/edit") == "admin_company"
+    assert _domain_adapter_id("/sapiens") is None

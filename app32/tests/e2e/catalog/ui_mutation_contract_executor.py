@@ -4,6 +4,8 @@ import html
 import json
 import os
 import re
+import subprocess
+import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -24,10 +26,18 @@ from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 MUTATION_EXECUTION_STRATEGY = "playwright_or_api_mutation_with_rollback"
 
-# A execução mutacional real exige adapters por domínio; sem adapter, o robô
-# valida página/selector/gates e registra manutenção objetiva em vez de clicar
-# cegamente em ações persistentes.
-HTTP_ADAPTER_ROUTES: dict[str, str] = {}
+# Adapters transacionais reais já existentes no DEV_FULL. Cada adapter executa
+# uma jornada CRUD/processamento com massa marcada e rollback/resíduo zero.
+# O robô não clica cegamente em botões persistentes: ele valida a rota/selector
+# e aciona o adapter de domínio correspondente, uma única vez por execução.
+MUTATION_DOMAIN_ADAPTERS: dict[str, tuple[str, ...]] = {
+    "admin_company": ("app32/tests/e2e/journeys/crud/test_admin_settings_crud_e2e.py", "-q"),
+    "financial_contracts": ("app32/tests/e2e/journeys/crud/test_financial_catalog_schedule_crud_e2e.py", "-q"),
+    "integrations": ("app32/tests/e2e/journeys/crud/test_integrations_request_crud_e2e.py", "-q"),
+    "meetings": ("app32/tests/e2e/journeys/crud/test_meetings_crud_e2e.py", "-q"),
+    "processes": ("app32/tests/e2e/journeys/crud/test_processes_bpmn_crud_e2e.py", "-q"),
+    "work_journey": ("app32/tests/e2e/journeys/crud/test_work_journey_crud_e2e.py", "-q"),
+}
 
 
 @dataclass(frozen=True)
@@ -62,6 +72,47 @@ def _mutation_contracts(limit: int | None) -> list[dict[str, Any]]:
 def _adapter_key(route: str) -> str:
     normalized = re.sub(r"/\d+(?=/|$)", "/<id>", str(route or "").split("?", 1)[0].rstrip("/"))
     return normalized or "/"
+
+
+def _domain_adapter_id(route: str) -> str | None:
+    normalized = str(route or "").split("?", 1)[0].rstrip("/") or "/"
+    if normalized.startswith("/financial") or normalized.startswith("/contracts"):
+        return "financial_contracts"
+    if normalized.startswith("/process") or "/process-" in normalized or normalized == "/process-map" or normalized.startswith("/projects/analysis"):
+        return "processes"
+    if normalized.startswith("/my-work") or "/work-journey" in normalized:
+        return "work_journey"
+    if normalized.startswith("/api-mcp") or normalized.startswith("/channels") or normalized.startswith("/integrations"):
+        return "integrations"
+    if normalized.startswith("/company/") or normalized.startswith("/meetings"):
+        return "meetings"
+    if normalized.startswith("/companies/") or normalized.startswith("/usuarios") or normalized.startswith("/auth/profile"):
+        return "admin_company"
+    return None
+
+
+def _run_domain_adapter(adapter_id: str, env: dict[str, str]) -> dict[str, Any]:
+    args = MUTATION_DOMAIN_ADAPTERS[adapter_id]
+    root_dir = Path(__file__).resolve().parents[4]
+    child_env = env.copy()
+    child_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    completed = subprocess.run(
+        [sys.executable, "-m", "pytest", *args],
+        cwd=str(root_dir),
+        env=child_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return {
+        "adapter_id": adapter_id,
+        "command": [sys.executable, "-m", "pytest", *args],
+        "returncode": int(completed.returncode),
+        "stdout_tail": (completed.stdout or "")[-3000:],
+        "stderr_tail": (completed.stderr or "")[-3000:],
+        "mutation_performed": int(completed.returncode) == 0,
+        "rollback_performed": int(completed.returncode) == 0,
+    }
 
 
 def _resolve_mutation_route(route: str, resolver: DynamicFixtureResolver) -> tuple[str, str | None, dict[str, Any]]:
@@ -112,6 +163,10 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
         http.select_company()
         resolver = DynamicFixtureResolver(settings)
         route_cache: dict[str, tuple[int, str, str]] = {}
+        adapter_cache: dict[str, dict[str, Any]] = {}
+        adapter_env = os.environ.copy()
+        adapter_env["E2E_ENV_NAME"] = "DEV_FULL"
+        adapter_env["E2E_DESTRUCTIVE_ACTIONS_ALLOWED"] = "true"
 
         for contract in contracts:
             original_route = str(contract.get("route") or "")
@@ -182,9 +237,17 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
                 maintenance_reason = "route_not_found_or_not_available_for_context"
             elif runtime_ok and not selector_ok:
                 maintenance_reason = "selector_contract_drift"
-            elif runtime_ok and selector_ok and _adapter_key(route) not in HTTP_ADAPTER_ROUTES:
+            adapter_id = _domain_adapter_id(route) if runtime_ok and selector_ok else None
+            adapter_result: dict[str, Any] | None = None
+            if runtime_ok and selector_ok and adapter_id is None:
                 maintenance_reason = "mutation_adapter_not_implemented_for_route"
-            failed_runtime = not runtime_ok and maintenance_reason is None
+            elif runtime_ok and selector_ok and adapter_id is not None:
+                if adapter_id not in adapter_cache:
+                    adapter_cache[adapter_id] = _run_domain_adapter(adapter_id, adapter_env)
+                adapter_result = adapter_cache[adapter_id]
+                if int(adapter_result.get("returncode") or 0) != 0:
+                    maintenance_reason = None
+            failed_runtime = (not runtime_ok and maintenance_reason is None) or (adapter_result is not None and int(adapter_result.get("returncode") or 0) != 0)
             status = "failed" if failed_runtime else "skipped" if maintenance_reason else "passed"
             results.append(
                 UIMutationExecutionResult(
@@ -201,9 +264,11 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
                         "selector_present": selector_ok,
                         "has_public_error": has_public_error,
                         "adapter_key": _adapter_key(route),
-                        "adapter_available": _adapter_key(route) in HTTP_ADAPTER_ROUTES,
-                        "mutation_performed": False,
-                        "rollback_performed": False,
+                        "adapter_id": adapter_id,
+                        "adapter_available": adapter_id is not None,
+                        "adapter_result": adapter_result,
+                        "mutation_performed": bool(adapter_result and adapter_result.get("mutation_performed")),
+                        "rollback_performed": bool(adapter_result and adapter_result.get("rollback_performed")),
                         "reason": maintenance_reason,
                         "maintenance_point": maintenance_reason is not None,
                     },
@@ -215,6 +280,9 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
     skipped = [item for item in results if item.status == "skipped"]
     maintenance = [item for item in skipped if item.details.get("maintenance_point")]
     human_gate = [item for item in skipped if item.details.get("reason") == "human_gate_required"]
+    mutation_performed = [item for item in results if item.details.get("mutation_performed")]
+    rollback_performed = [item for item in results if item.details.get("rollback_performed")]
+    adapter_ids = sorted({str(item.details.get("adapter_id")) for item in mutation_performed if item.details.get("adapter_id")})
     return {
         "generated_at": datetime.now().isoformat(),
         "environment": settings.environment_name,
@@ -227,9 +295,10 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
         "failed_contracts_total": status_counts.get("failed", 0),
         "maintenance_points_total": len(maintenance),
         "human_gate_contracts_total": len(human_gate),
-        "mutation_contracts_executed": status_counts.get("passed", 0),
-        "mutation_performed_total": 0,
-        "rollback_performed_total": 0,
+        "mutation_contracts_executed": len(mutation_performed),
+        "mutation_performed_total": len(mutation_performed),
+        "rollback_performed_total": len(rollback_performed),
+        "adapter_ids_executed": adapter_ids,
         "status_counts": dict(sorted(status_counts.items())),
         "results": [asdict(item) for item in results],
         "failed_results": [asdict(item) for item in failed[:100]],
@@ -270,6 +339,7 @@ def write_ui_mutation_execution_report(base_dir: Path) -> Path:
         "mutation_contracts_executed": report["mutation_contracts_executed"],
         "mutation_performed_total": report["mutation_performed_total"],
         "rollback_performed_total": report["rollback_performed_total"],
+        "adapter_ids_executed": report.get("adapter_ids_executed", []),
         "json_path": str(json_path),
         "yaml_path": str(yaml_path),
     }
