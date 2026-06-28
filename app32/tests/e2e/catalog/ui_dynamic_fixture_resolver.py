@@ -157,6 +157,13 @@ def _resolve_process_id(resolver: DynamicFixtureResolver) -> int | None:
 
 
 @_with_db
+def _resolve_instance_id(resolver: DynamicFixtureResolver) -> int | None:
+    from models.process import ProcessInstance  # type: ignore
+
+    return resolver._first_id(ProcessInstance)
+
+
+@_with_db
 def _resolve_macro_id(resolver: DynamicFixtureResolver) -> int | None:
     from models.process import MacroProcess  # type: ignore
 
@@ -214,6 +221,27 @@ def _resolve_project_id(resolver: DynamicFixtureResolver) -> int | None:
 
 
 @_with_db
+def _resolve_indicator_id(resolver: DynamicFixtureResolver) -> int | None:
+    from models.indicator import Indicator  # type: ignore
+
+    return resolver._first_id(Indicator)
+
+
+@_with_db
+def _resolve_rule_set_id(resolver: DynamicFixtureResolver) -> int | None:
+    from models.incentive import IncentiveRuleSet  # type: ignore
+
+    return resolver._first_id(IncentiveRuleSet)
+
+
+@_with_db
+def _resolve_calc_id(resolver: DynamicFixtureResolver) -> int | None:
+    from models.incentive import IncentiveCalculation  # type: ignore
+
+    return resolver._first_id(IncentiveCalculation)
+
+
+@_with_db
 def _resolve_task_id(resolver: DynamicFixtureResolver) -> int | None:
     from models.project import Project, ProjectTask  # type: ignore
 
@@ -257,6 +285,7 @@ _STATIC_RESOLVERS: dict[str, Callable[[DynamicFixtureResolver], int | str | None
 _DB_RESOLVERS: dict[str, Callable[[DynamicFixtureResolver], int | str | None]] = {
     "employee_id": _resolve_employee_id,
     "process_id": _resolve_process_id,
+    "instance_id": _resolve_instance_id,
     "macro_id": _resolve_macro_id,
     "routine_id": _resolve_routine_id,
     "schedule_id": _resolve_schedule_id,
@@ -265,6 +294,9 @@ _DB_RESOLVERS: dict[str, Callable[[DynamicFixtureResolver], int | str | None]] =
     "batch_id": _resolve_batch_id,
     "property_id": _resolve_property_id,
     "project_id": _resolve_project_id,
+    "indicator_id": _resolve_indicator_id,
+    "rule_set_id": _resolve_rule_set_id,
+    "calc_id": _resolve_calc_id,
     "task_id": _resolve_task_id,
     "portfolio_id": _resolve_portfolio_id,
     "party_id": _resolve_party_id,
