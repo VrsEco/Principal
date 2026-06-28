@@ -31,12 +31,7 @@ MUTATION_EXECUTION_STRATEGY = "playwright_or_api_mutation_with_rollback"
 # O robô não clica cegamente em botões persistentes: ele valida a rota/selector
 # e aciona o adapter de domínio correspondente, uma única vez por execução.
 MUTATION_DOMAIN_ADAPTERS: dict[str, tuple[str, ...]] = {
-    "admin_company": ("app32/tests/e2e/journeys/crud/test_admin_settings_crud_e2e.py", "-q"),
-    "financial_contracts": ("app32/tests/e2e/journeys/crud/test_financial_catalog_schedule_crud_e2e.py", "-q"),
-    "integrations": ("app32/tests/e2e/journeys/crud/test_integrations_request_crud_e2e.py", "-q"),
-    "meetings": ("app32/tests/e2e/journeys/crud/test_meetings_crud_e2e.py", "-q"),
-    "processes": ("app32/tests/e2e/journeys/crud/test_processes_bpmn_crud_e2e.py", "-q"),
-    "work_journey": ("app32/tests/e2e/journeys/crud/test_work_journey_crud_e2e.py", "-q"),
+    "devfull_transactional_core": ("app32/tests/e2e/scripts/run_devfull_transactional_suite.py",),
 }
 
 
@@ -91,13 +86,22 @@ def _domain_adapter_id(route: str) -> str | None:
     return None
 
 
+def _adapter_execution_id(adapter_id: str) -> str:
+    # Um único processo executa todas as suítes transacionais DEV_FULL com
+    # cleanup/resíduo zero. Evita OOM/RC=137 por múltiplos subprocessos pesados
+    # dentro da suíte de contratos UI.
+    return "devfull_transactional_core"
+
+
 def _run_domain_adapter(adapter_id: str, env: dict[str, str]) -> dict[str, Any]:
-    args = MUTATION_DOMAIN_ADAPTERS[adapter_id]
+    execution_id = _adapter_execution_id(adapter_id)
+    args = MUTATION_DOMAIN_ADAPTERS[execution_id]
     root_dir = Path(__file__).resolve().parents[4]
     child_env = env.copy()
     child_env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    child_env.setdefault("PYTHONWARNINGS", "ignore")
     completed = subprocess.run(
-        [sys.executable, "-m", "pytest", *args],
+        [sys.executable, *args],
         cwd=str(root_dir),
         env=child_env,
         capture_output=True,
@@ -106,10 +110,11 @@ def _run_domain_adapter(adapter_id: str, env: dict[str, str]) -> dict[str, Any]:
     )
     return {
         "adapter_id": adapter_id,
-        "command": [sys.executable, "-m", "pytest", *args],
+        "execution_id": execution_id,
+        "command": [sys.executable, *args],
         "returncode": int(completed.returncode),
-        "stdout_tail": (completed.stdout or "")[-3000:],
-        "stderr_tail": (completed.stderr or "")[-3000:],
+        "stdout_tail": (completed.stdout or "")[-2000:],
+        "stderr_tail": (completed.stderr or "")[-2000:],
         "mutation_performed": int(completed.returncode) == 0,
         "rollback_performed": int(completed.returncode) == 0,
     }
@@ -242,9 +247,10 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
             if runtime_ok and selector_ok and adapter_id is None:
                 maintenance_reason = "mutation_adapter_not_implemented_for_route"
             elif runtime_ok and selector_ok and adapter_id is not None:
-                if adapter_id not in adapter_cache:
-                    adapter_cache[adapter_id] = _run_domain_adapter(adapter_id, adapter_env)
-                adapter_result = adapter_cache[adapter_id]
+                execution_id = _adapter_execution_id(adapter_id)
+                if execution_id not in adapter_cache:
+                    adapter_cache[execution_id] = _run_domain_adapter(adapter_id, adapter_env)
+                adapter_result = {**adapter_cache[execution_id], "adapter_id": adapter_id}
                 if int(adapter_result.get("returncode") or 0) != 0:
                     maintenance_reason = None
             failed_runtime = (not runtime_ok and maintenance_reason is None) or (adapter_result is not None and int(adapter_result.get("returncode") or 0) != 0)
