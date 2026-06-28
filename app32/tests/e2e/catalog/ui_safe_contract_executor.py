@@ -45,6 +45,28 @@ class UISafeExecutionResult:
     details: dict[str, Any]
 
 
+def _is_public_auth_route(route: str) -> bool:
+    normalized = str(route or "").strip().split("?", 1)[0].rstrip("/")
+    return normalized in {"/login", "/auth/login", "/auth/register"}
+
+
+def _has_unresolved_placeholder(route: str) -> bool:
+    return re.search(r"<[^>]+>", str(route or "")) is not None
+
+
+def _resolve_contract_route(route: str, *, company_id: int | None) -> tuple[str, str | None]:
+    resolved = str(route or "").strip()
+    if not resolved:
+        return resolved, "empty_route"
+    if _is_public_auth_route(resolved):
+        return resolved, "public_auth_route_requires_unauthenticated_context"
+    if company_id is not None:
+        resolved = resolved.replace("<company_id>", str(company_id)).replace("<int:company_id>", str(company_id))
+    if _has_unresolved_placeholder(resolved):
+        return resolved, "dynamic_route_requires_fixture_resolution"
+    return resolved, None
+
+
 def _selector_marker(selector: str) -> tuple[str, str] | None:
     selector = str(selector or "").strip()
     if not selector:
@@ -83,7 +105,7 @@ def _selector_present(body: str, selector: str) -> bool:
     )
 
 
-def _safe_contracts(limit: int) -> list[dict[str, Any]]:
+def _safe_contracts(limit: int | None) -> list[dict[str, Any]]:
     payload = build_ui_human_like_contracts()
     contracts = [
         item
@@ -93,18 +115,20 @@ def _safe_contracts(limit: int) -> list[dict[str, Any]]:
         and item.get("risk_level") == "low"
         and item.get("execution_strategy") in SAFE_EXECUTION_STRATEGIES
         and str(item.get("selector") or "") not in VOLATILE_SAFE_EXECUTION_SELECTORS
-        and not item.get("requires_company_id")
         and not item.get("requires_human_gate")
         and "{{" not in str(item.get("selector") or "")
         and "}}" not in str(item.get("selector") or "")
     ]
     contracts.sort(key=lambda item: (str(item.get("route") or ""), str(item.get("priority") or ""), str(item.get("contract_id") or "")))
+    if limit is None or limit <= 0:
+        return contracts
     return contracts[:limit]
 
 
 def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
     settings = load_environment_settings()
-    limit = int(limit or os.environ.get("E2E_UI_SAFE_CONTRACT_LIMIT") or 80)
+    raw_limit = os.environ.get("E2E_UI_SAFE_CONTRACT_LIMIT")
+    limit = int(limit if limit is not None else (raw_limit if raw_limit is not None else 0))
     http = AuthenticatedHTTPSession.create(settings)
     http.login()
     http.select_company()
@@ -114,7 +138,27 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
     results: list[UISafeExecutionResult] = []
 
     for contract in contracts:
-        route = str(contract.get("route") or "")
+        original_route = str(contract.get("route") or "")
+        route, skip_reason = _resolve_contract_route(original_route, company_id=settings.company_id)
+        if skip_reason:
+            results.append(
+                UISafeExecutionResult(
+                    contract_id=str(contract.get("contract_id")),
+                    route=original_route,
+                    selector=str(contract.get("selector") or ""),
+                    action_kind=str(contract.get("action_kind") or ""),
+                    execution_strategy=str(contract.get("execution_strategy") or ""),
+                    status="skipped",
+                    status_code=None,
+                    mode="http_authenticated_safe_execution",
+                    details={
+                        "reason": skip_reason,
+                        "resolved_route": route,
+                        "maintenance_point": skip_reason == "dynamic_route_requires_fixture_resolution",
+                    },
+                )
+            )
+            continue
         if route not in route_cache:
             try:
                 response = http.request("GET", route)
@@ -175,16 +219,20 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
 
     status_counts = Counter(item.status for item in results)
     strategy_counts = Counter(item.execution_strategy for item in results)
-    failed = [item for item in results if item.status != "passed"]
+    failed = [item for item in results if item.status == "failed"]
+    skipped = [item for item in results if item.status == "skipped"]
+    maintenance = [item for item in skipped if item.details.get("maintenance_point")]
     return {
         "generated_at": datetime.now().isoformat(),
         "environment": settings.environment_name,
         "company_id": settings.company_id,
         "limit": limit,
         "selected_contracts_total": len(contracts),
-        "executed_contracts_total": len(results),
+        "executed_contracts_total": status_counts.get("passed", 0) + status_counts.get("failed", 0),
+        "skipped_contracts_total": status_counts.get("skipped", 0),
         "passed_contracts_total": status_counts.get("passed", 0),
         "failed_contracts_total": status_counts.get("failed", 0),
+        "maintenance_points_total": len(maintenance),
         "status_counts": dict(sorted(status_counts.items())),
         "execution_strategy_counts": dict(sorted(strategy_counts.items())),
         "routes_opened_total": len(route_cache),
@@ -192,6 +240,8 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
         "mutation_contracts_executed": 0,
         "results": [asdict(item) for item in results],
         "failed_results": [asdict(item) for item in failed[:100]],
+        "skipped_results": [asdict(item) for item in skipped[:100]],
+        "maintenance_points": [asdict(item) for item in maintenance[:100]],
     }
 
 
@@ -219,8 +269,10 @@ def write_ui_safe_execution_report(base_dir: Path) -> Path:
         "company_id": report["company_id"],
         "selected_contracts_total": report["selected_contracts_total"],
         "executed_contracts_total": report["executed_contracts_total"],
+        "skipped_contracts_total": report.get("skipped_contracts_total", 0),
         "passed_contracts_total": report["passed_contracts_total"],
         "failed_contracts_total": report["failed_contracts_total"],
+        "maintenance_points_total": report.get("maintenance_points_total", 0),
         "routes_opened_total": report["routes_opened_total"],
         "mutation_contracts_executed": report["mutation_contracts_executed"],
         "non_persistent": report["non_persistent"],
