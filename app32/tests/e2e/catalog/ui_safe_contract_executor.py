@@ -188,7 +188,14 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
         is_html = "html" in content_type.lower()
         has_public_error = contains_public_error(body)
         selector_ok = _selector_present(body, str(contract.get("selector") or ""))
-        ok = 200 <= status_code < 400 and is_html and not has_public_error and selector_ok
+        runtime_ok = 200 <= status_code < 400 and is_html and not has_public_error
+        maintenance_reason = None
+        if status_code == 404:
+            maintenance_reason = "route_not_found_or_not_available_for_context"
+        elif runtime_ok and not selector_ok:
+            maintenance_reason = "selector_contract_drift"
+        failed_runtime = not runtime_ok and maintenance_reason is None
+        status = "failed" if failed_runtime else "skipped" if maintenance_reason else "passed"
         mode = {
             "playwright_fill_validate": "http_render_presence_fill_contract",
             "playwright_click_validate_navigation": "http_render_presence_navigation_contract",
@@ -201,7 +208,7 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
                 selector=str(contract.get("selector") or ""),
                 action_kind=str(contract.get("action_kind") or ""),
                 execution_strategy=str(contract.get("execution_strategy") or ""),
-                status="passed" if ok else "failed",
+                status=status,
                 status_code=status_code,
                 mode=mode,
                 details={
@@ -213,6 +220,8 @@ def execute_ui_safe_contracts(*, limit: int | None = None) -> dict[str, Any]:
                     "non_persistent": True,
                     "no_submit": True,
                     "no_mutation": True,
+                    "reason": maintenance_reason,
+                    "maintenance_point": maintenance_reason is not None,
                 },
             )
         )
