@@ -15,6 +15,11 @@ Este checklist deve ser seguido para **TODOS** os deploys em produção.
 - 🟡 **Urgente:** Bug fix importante mas não crítico
 - 🔴 **Hotfix:** Correção crítica (produção quebrada)
 
+**Modos operacionais do workflow de produção:**
+- `quick` = código + restart + healthcheck
+- `standard` = `quick` + dependências
+- `full` = `standard` + migrations
+
 ---
 
 ## 📋 Checklist Completo
@@ -216,6 +221,11 @@ Este checklist deve ser seguido para **TODOS** os deploys em produção.
   - ✅ Recomendado: Madrugada, fim de semana
   - ❌ Evitar: Horário comercial, início do mês, fim do ano
 
+- [ ] **Escolher o modo correto do workflow**
+  - [ ] `quick` para mudança sem schema e sem dependência
+  - [ ] `standard` para mudança com dependência, sem migration
+  - [ ] `full` para mudança estrutural com migration
+
 - [ ] **Team de prontidão**
   - [ ] Dev responsável disponível
   - [ ] DevOps/SRE disponível
@@ -246,29 +256,15 @@ cd /var/www/app
 # 3. Ativar modo de manutenção (se disponível)
 touch maintenance.flag
 
-# 4. Pull do código
-git fetch origin
-git checkout main
-git pull origin main
+# 4. Acionar workflow manual no GitHub Actions
+# - ref
+# - deploy_mode = quick | standard | full
+# - restart_mcp = true | false
+# - confirm_production = PRODUCAO
 
-# 5. Atualizar dependências
-source venv/bin/activate
-pip install -r requirements.txt
+# 5. Aguardar o healthcheck final do workflow
 
-# 6. Aplicar migrations
-flask db upgrade
-
-# 7. Coletar arquivos estáticos (se aplicável)
-# python manage.py collectstatic
-
-# 8. Reiniciar aplicação
-sudo systemctl restart app.service
-# Ou: sudo supervisorctl restart app
-
-# 9. Desativar modo de manutenção
-rm maintenance.flag
-
-# 10. Verificar logs
+# 6. Verificar logs/resultados pós-publicação
 tail -f /var/log/app/app.log
 ```
 

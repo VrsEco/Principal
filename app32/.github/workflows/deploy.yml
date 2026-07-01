@@ -1,63 +1,236 @@
 name: 🚀 Deploy to Production (Cloudez)
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag ou commit para publicar"
+        required: true
+        default: "main"
+        type: string
+      deploy_mode:
+        description: "Modo do deploy"
+        required: true
+        default: "quick"
+        type: choice
+        options:
+          - quick
+          - standard
+          - full
+      restart_mcp:
+        description: "Reiniciar runtime MCP HTTP após publicar o código"
+        required: true
+        default: true
+        type: boolean
+      confirm_production:
+        description: "Digite PRODUCAO para confirmar este deploy"
+        required: true
+        type: string
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    name: Deploy via SSH
+    name: Deploy manual via SSH
     runs-on: ubuntu-latest
 
     steps:
+      - name: ✅ Validar confirmação
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.confirm_production }}" != "PRODUCAO" ]; then
+            echo "Confirmação inválida. Digite exatamente PRODUCAO."
+            exit 1
+          fi
+
       - name: ✅ Checkout code
         uses: actions/checkout@v4
 
-      - name: 🚀 Deploy via SSH to Cloudez
+      - name: 🚀 Deploy manual seguro para Cloudez
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
-          command_timeout: 15m
+          command_timeout: 20m
           script: |
-            set -e
+            set -euo pipefail
+
+            MODE="${{ inputs.deploy_mode }}"
+            REF="${{ inputs.ref }}"
+            RESTART_MCP="${{ inputs.restart_mcp }}"
+
             BASE=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud
             WWW=$BASE/www
             APP=$WWW/app32
             PYTHON=$BASE/.virtualenv/3.12/bin/python
             PIP=$BASE/.virtualenv/3.12/bin/pip
+            WEB_HEALTH_URL="http://127.0.0.1/healthz"
+            WEB_HEALTH_HOST="app.gestaoversus.com.br"
+            MCP_HEALTH_URL="http://127.0.0.1:8101/healthz"
+            MCP_PUBLIC_HEALTH_URL="https://app.gestaoversus.com.br/mcp/healthz"
+            MCP_STDOUT_LOG="$APP/logs/mcp_http_stdout.log"
+            MCP_STDERR_LOG="$APP/logs/mcp_http_stderr.log"
+
+            case "$MODE" in
+              quick)
+                RUN_DEPS=0
+                RUN_MIGRATIONS=0
+                ;;
+              standard)
+                RUN_DEPS=1
+                RUN_MIGRATIONS=0
+                ;;
+              full)
+                RUN_DEPS=1
+                RUN_MIGRATIONS=1
+                ;;
+              *)
+                echo "Modo de deploy inválido: $MODE"
+                exit 2
+                ;;
+            esac
+
+            echo "----------------------------------------------------"
+            echo "🚀 DEPLOY INICIADO: $(date)"
+            echo "   - ref: $REF"
+            echo "   - mode: $MODE"
+            echo "   - restart_mcp: $RESTART_MCP"
+            echo "----------------------------------------------------"
 
             echo "📂 Atualizando código em $APP ..."
-            cd $APP
-            git fetch origin main
-            git reset --hard origin/main
+            cd "$APP"
+            git fetch origin "$REF"
+            git reset --hard FETCH_HEAD
+            echo "✅ Código atualizado com sucesso."
 
-            echo "📦 Instalando/atualizando dependências Python..."
-            $PIP install langchain langchain-openai langchain-core langgraph langgraph-prebuilt pydantic --quiet
-            $PIP install -r requirements.txt --quiet
+            if [ "$RUN_DEPS" -eq 1 ]; then
+              echo "📦 Instalando dependências versionadas pelo requirements.txt ..."
+              "$PIP" install -r requirements.txt --quiet
+              echo "✅ Dependências em conformidade."
+            else
+              echo "⏭️  Modo quick: install de dependências ignorado."
+            fi
 
-            echo "🗃️ Executando migrations do banco de dados..."
-            set +e
-            cd $APP
-            $PYTHON -c "
+            if [ "$RUN_MIGRATIONS" -eq 1 ]; then
+              echo "🗃️ Executando migrations do banco de dados ..."
+              "$PYTHON" -c "
             import sys, os
             sys.path.insert(0, '.')
             from dotenv import load_dotenv
             load_dotenv('.env')
             os.environ.setdefault('FLASK_CONFIG', 'production')
+            os.environ['APP_BOOTSTRAP_DB_SCHEMA'] = '0'
+            os.environ['APP_BOOTSTRAP_RUNTIME_SERVICES'] = '0'
             from flask_migrate import upgrade
             from app import create_app
             app = create_app('production')
             with app.app_context():
-                upgrade()
+                upgrade(revision='heads')
             print('✅ Migrations OK')
-            " 2>&1 || echo "⚠️  Migrations falharam ou não há migrações pendentes"
-            set -e
+            "
+            else
+              echo "⏭️  Modo $MODE: migrations ignoradas."
+            fi
 
-            echo "🔄 Reiniciando o servidor uWSGI (método Configr)..."
-            touch $WWW/restart.txt
-            echo "✅ Deploy concluído com sucesso! (restart.txt tocado em $WWW)"
+            echo "🔄 Publicando app web (método Configr restart.txt) ..."
+            touch "$WWW/restart.txt"
+            mkdir -p "$WWW/tmp" && touch "$WWW/tmp/restart.txt"
+            mkdir -p "$APP/tmp" && touch "$APP/tmp/restart.txt"
+            touch "$APP/restart.txt"
+            if [ -f "$APP/passenger_wsgi.py" ]; then
+              touch "$APP/passenger_wsgi.py"
+            fi
 
+            echo "🌐 Validando readiness HTTP do app web ..."
+            WEB_READY=0
+            for i in {1..90}; do
+              if curl -fsS --max-time 5 -H "Host: $WEB_HEALTH_HOST" "$WEB_HEALTH_URL" >/dev/null; then
+                WEB_READY=1
+                echo "✅ App web respondeu ao healthcheck em ${i}s."
+                break
+              fi
+              sleep 1
+            done
+
+            if [ "$WEB_READY" -ne 1 ]; then
+              echo "❌ ERRO: app web não respondeu ao healthcheck local após restart."
+              exit 1
+            fi
+
+            if [ "$RESTART_MCP" = "true" ]; then
+              echo "🧠 Reiniciando runtime MCP HTTP remoto ..."
+              if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
+                mkdir -p "$APP/logs"
+                chmod +x "$APP/scripts/start_mcp_http.sh"
+
+                set +e
+                MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
+                if [ -n "$MCP_OLD_PIDS" ]; then
+                  kill -TERM $MCP_OLD_PIDS
+                  for i in {1..10}; do
+                    sleep 1
+                    MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
+                    if [ -z "$MCP_OLD_PIDS" ]; then
+                      break
+                    fi
+                  done
+                fi
+
+                MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
+                if [ -n "$MCP_OLD_PIDS" ]; then
+                  kill -KILL $MCP_OLD_PIDS
+                  sleep 1
+                fi
+
+                pkill -TERM -f "start_mcp_http.sh|src.core.mcp_http_server" >/dev/null 2>&1
+                set -e
+
+                nohup env \
+                  APP32_MCP_PUBLIC_BASE_URL="https://app.gestaoversus.com.br" \
+                  APP32_MCP_HTTP_PORT="8101" \
+                  "$APP/scripts/start_mcp_http.sh" \
+                  >> "$MCP_STDOUT_LOG" 2>> "$MCP_STDERR_LOG" < /dev/null &
+
+                MCP_LOCAL_OK=0
+                for i in {1..45}; do
+                  if curl -fsS --max-time 5 "$MCP_HEALTH_URL" >/dev/null; then
+                    MCP_LOCAL_OK=1
+                    break
+                  fi
+                  sleep 1
+                done
+
+                if [ "$MCP_LOCAL_OK" -ne 1 ]; then
+                  echo "❌ ERRO: MCP HTTP não respondeu ao health local após restart."
+                  exit 1
+                fi
+
+                MCP_PUBLIC_OK=0
+                for i in {1..20}; do
+                  if curl -k -fsS --max-time 8 "$MCP_PUBLIC_HEALTH_URL" >/dev/null; then
+                    MCP_PUBLIC_OK=1
+                    break
+                  fi
+                  sleep 1
+                done
+
+                if [ "$MCP_PUBLIC_OK" -eq 1 ]; then
+                  echo "✅ MCP HTTP respondeu ao health público."
+                else
+                  echo "⚠️  Aviso: MCP HTTP respondeu localmente, mas não confirmou no health público."
+                fi
+              else
+                echo "⚠️  Aviso: script start_mcp_http.sh não encontrado; MCP não reiniciado."
+              fi
+            else
+              echo "⏭️  Reinício do MCP ignorado por configuração manual."
+            fi
+
+            echo "----------------------------------------------------"
+            echo "✨ DEPLOY CONCLUÍDO COM SUCESSO"
+            echo "----------------------------------------------------"

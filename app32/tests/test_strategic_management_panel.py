@@ -165,7 +165,7 @@ def test_indicator_status_requires_corrective_action_when_red():
     assert "ação corretiva governada" in status["detail"]
 
 
-def test_process_portal_has_strategic_management_quick_access():
+def test_process_portal_does_not_expose_strategic_management_quick_access():
     template_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "templates", "modules", "processes", "process_portal_compact.html")
     )
@@ -173,9 +173,9 @@ def test_process_portal_has_strategic_management_quick_access():
     with open(template_path, encoding="utf-8") as handle:
         content = handle.read()
 
-    assert "Painel de Gestão Estratégica" in content
-    assert "strategic_management_panel_page" in content
-    assert "Acesso Rápido" in content
+    assert "quick-access-card" not in content
+    assert "strategic_management_panel_page" not in content
+    assert "Painel de Gestão Estratégica" not in content
 
 
 def test_strategic_management_panel_action_modal_links_indicator_to_project_or_activity():
@@ -319,11 +319,15 @@ def test_strategic_management_panel_template_supports_five_cards_and_value_label
     assert "smp-mobile-actions-toggle" in content
     assert "smp-navbar-actions__menu" in content
     assert "setMobileActionsOpen" in content
-    assert "Trilha de Maturidade da Estruturação" in content
-    assert "data-open-phase" in content
-    assert "openPhase" in content
+    assert "Maturidade metodológica" in content
+    assert "Abrir Cockpit do Consultor" in content
+    assert "/consultive/cockpit" in content
+    assert "Fases, gates e leitura de maturidade" in content
+    assert "data-open-phase" not in content
+    assert "openPhase" not in content
+    assert "Trilha de Maturidade da Estruturação" not in content
     assert 'name="audience"' in content
-    assert "Você está aqui" in content
+    assert "Você está aqui" not in content
 
 
 def test_team_efficiency_summary_uses_total_score_contract(monkeypatch):

@@ -65,6 +65,29 @@
 
     <span class="sidebar-section-title">Módulos</span>
 
+    <div class="sidebar-group {{ 'open' if request.path.startswith('/consultive') }}">
+        <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19V5"></path>
+                <path d="M4 19h16"></path>
+                <path d="M8 15l3-4 3 2 4-7"></path>
+                <circle cx="8" cy="15" r="1"></circle>
+                <circle cx="11" cy="11" r="1"></circle>
+                <circle cx="14" cy="13" r="1"></circle>
+                <circle cx="18" cy="6" r="1"></circle>
+            </svg>
+            Consultivo
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+        <div class="sub-menu">
+            <a href="/consultive/cockpit" class="sub-nav-link {{ 'active' if request.path == '/consultive/cockpit' }}">
+                <span>Cockpit do Consultor</span>
+            </a>
+        </div>
+    </div>
+
     {% include 'partials/sidebar/_routine_management.html' %}
 
 

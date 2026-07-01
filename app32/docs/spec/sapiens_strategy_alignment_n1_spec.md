@@ -367,3 +367,71 @@ Engenharia deve seguir com:
 2. validar tools MCP no runtime real;
 3. carregar dados piloto;
 4. entregar o primeiro mapa `strategic_alignment_n1`.
+
+---
+
+## 13. Realinhamento com o Cockpit do Consultor
+
+Status em 2026-07-01:
+
+A capacidade **Strategic Alignment N1** permanece válida como motor técnico e consultivo de alinhamento, maturação e human gate.
+
+Entretanto, sua superfície principal deixa de ser uma entrada independente de menu para o usuário comum.
+
+### 13.1 Decisão oficial
+
+O **Cockpit do Consultor** passa a ser a superfície oficial de condução da Camada Consultiva/Evolutiva.
+
+A Maturação N1 deve ser entendida como:
+
+- motor de revisão S1–S2;
+- fila de hipóteses, drafts e pendências;
+- mecanismo de human gate;
+- apoio à maturidade das frentes Identidade, Processos, Planejamento Estratégico e Gerenciamento Estratégico.
+
+### 13.2 Jornada de Estruturação
+
+A Jornada de Estruturação continua sendo um read model relevante, mas subordinado ao cockpit.
+
+Ela deve alimentar, principalmente:
+
+- maturidade por frente;
+- pendências essenciais;
+- gates;
+- próximos itens a revisar;
+- evidências de avanço.
+
+### 13.3 Maturação N1 como detalhe
+
+A tela atual de Maturação N1 pode permanecer como superfície técnica ou administrativa durante a transição.
+
+O destino recomendado é que suas ações sejam acessadas a partir do Cockpit do Consultor, especialmente pelo botão **Abrir frente** ou por indicadores de pendência.
+
+A linguagem exposta ao usuário comum deve evitar termos técnicos como:
+
+- S1/S2;
+- payload;
+- draft/pending como conceitos primários;
+- nomes internos de block_type.
+
+Esses conceitos podem permanecer na camada técnica, nos serviços, MCP tools, logs e documentação de engenharia.
+
+### 13.4 Compatibilidade
+
+As tools MCP e APIs existentes continuam válidas para agentes, engenharia e integrações.
+
+A mudança é de **surface e experiência de produto**, não de invalidação do motor N1.
+
+### 13.5 Papel do N1 na maturação assistida
+
+No contexto do Cockpit do Consultor, o N1 deve operar como um dos motores técnicos da maturação assistida.
+
+Seu papel é apoiar agentes, Squad Versus e Squad de Engenharia em:
+
+- detectar hipóteses de maturação ainda não confirmadas;
+- organizar pendências S1–S2 sem expor jargão técnico ao usuário comum;
+- fornecer evidências e lacunas para as quatro frentes do Cockpit;
+- apoiar human gate antes de promover informação para dado canônico;
+- alimentar recomendações contextuais de Identidade, Processos, Planejamento Estratégico e Gerenciamento Estratégico.
+
+A camada agentic pode usar o N1 para análise e sugestão, mas a confirmação continua exigindo validação humana quando houver impacto metodológico ou operacional relevante.

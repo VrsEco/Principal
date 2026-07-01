@@ -1,0 +1,684 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ page_title or "Cockpit Consultivo" }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<span>Consultivo</span>
+<span class="sep">/</span>
+<span class="current">Cockpit</span>
+{% endblock %}
+
+
+{% block workspace_content %}
+<div class="consultive-cockpit" data-company-id="{{ company_id or '' }}" data-company-name="{{ active_company.name if active_company else '' }}">
+    <header class="cc-compact-header">
+        <div class="cc-title">
+            <span class="cc-dot" aria-hidden="true"></span>
+            <div>
+                <p>Camada Consultiva</p>
+                <h1>Cockpit do Consultor</h1>
+                <small>{{ active_company.name if active_company else 'Empresa não selecionada' }}</small>
+            </div>
+        </div>
+        <div class="cc-header-metrics" aria-live="polite">
+            <span><strong id="cc-open-urgent">--</strong> urgências</span>
+            <span><strong id="cc-pending-review">--</strong> reviews</span>
+            <span><strong id="cc-structural-fronts-count">--</strong> frentes</span>
+        </div>
+    </header>
+
+    <section class="cc-grid">
+        <article class="cc-panel cc-structural-panel">
+            <div class="cc-panel-head">
+                <div>
+                    <h2>Estruturação Empresarial</h2>
+                </div>
+            </div>
+            <div id="cc-maturity-track" class="cc-maturity-track"></div>
+            <div id="cc-structural-list" class="cc-structural-list"></div>
+        </article>
+
+        <article class="cc-panel cc-operational-panel cc-urgent-panel">
+            <div class="cc-panel-head">
+                <div>
+                    <h2>Necessidades Urgentes</h2>
+                </div>
+                <span id="cc-critical-chip" class="cc-chip danger">-- críticas</span>
+            </div>
+            <div id="cc-urgent-list" class="cc-list"></div>
+        </article>
+
+        <article class="cc-panel cc-operational-panel cc-review-panel">
+            <div class="cc-panel-head">
+                <div>
+                    <h2>Business Reviews</h2>
+                </div>
+            </div>
+            <div id="cc-review-list" class="cc-list compact"></div>
+        </article>
+
+    </section>
+
+    <div id="cc-br-modal" class="cc-modal" hidden>
+        <div class="cc-modal-card" role="dialog" aria-modal="true" aria-labelledby="cc-br-modal-title">
+            <div class="cc-modal-head">
+                <div>
+                    <p>Business Review</p>
+                    <h2 id="cc-br-modal-title">Registrar valor agregado</h2>
+                </div>
+                <button type="button" class="cc-icon-button" data-cc-modal-close aria-label="Fechar">×</button>
+            </div>
+            <form id="cc-br-form" class="cc-br-form">
+                <input type="hidden" id="cc-br-id">
+                <label>Necessidade Identificada<textarea id="cc-br-identified-need" rows="3" required></textarea></label>
+                <label>Solução Aplicada<textarea id="cc-br-applied-solution" rows="3" required></textarea></label>
+                <label>Resultado Alcançado<textarea id="cc-br-achieved-result" rows="3" required></textarea></label>
+                <div class="cc-value-grid">
+                    <label>Valor<input id="cc-br-added-value-amount" type="text" placeholder="48.000,00" required></label>
+                    <label>Tipo<select id="cc-br-added-value-type" required><option value="única">Única</option><option value="recorrente">Recorrente</option></select></label>
+                    <label>Periodicidade<select id="cc-br-added-value-period" required><option value="anual">Anual</option><option value="mensal">Mensal</option><option value="única">Única</option><option value="semanal">Semanal</option><option value="diária">Diária</option></select></label>
+                </div>
+                <div class="cc-modal-actions">
+                    <button type="button" class="cc-secondary-button" data-cc-modal-close>Cancelar</button>
+                    <button type="submit" class="cc-primary-button">Salvar Business Review</button>
+                </div>
+                <p id="cc-br-form-message" class="cc-form-message" aria-live="polite"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="cc-front-analysis-modal" class="cc-modal" hidden>
+        <div class="cc-modal-card cc-analysis-card" role="dialog" aria-modal="true" aria-labelledby="cc-front-analysis-title">
+            <div class="cc-modal-head">
+                <div>
+                    <p>Maturação Assistida</p>
+                    <h2 id="cc-front-analysis-title">Analisar frente</h2>
+                </div>
+                <button type="button" class="cc-icon-button" data-cc-analysis-close aria-label="Fechar">×</button>
+            </div>
+            <div id="cc-front-analysis-body" class="cc-analysis-body" aria-live="polite"></div>
+            <div class="cc-modal-actions">
+                <button type="button" class="cc-secondary-button" data-cc-analysis-close>Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .consultive-cockpit { color: #0f172a; padding: 0 1.25rem 1.5rem; }
+    .cc-compact-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .65rem .85rem; margin: 0 0 .65rem; border: 1px solid #e2e8f0; border-radius: 1rem; background: #fff; box-shadow: 0 8px 22px rgba(15, 23, 42, .05); }
+    .cc-title { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+    .cc-dot { width: .65rem; height: .65rem; border-radius: 999px; background: #0f766e; box-shadow: 0 0 0 5px #ccfbf1; flex: 0 0 auto; }
+    .cc-title p, .cc-panel-head p { margin: 0; color: #64748b; font-size: .7rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .cc-title h1 { margin: .02rem 0 0; font-size: 1.02rem; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cc-title small { display: block; margin-top: .08rem; color: #64748b; font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42vw; }
+    .cc-header-metrics { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; font-size: .76rem; color: #475569; }
+    .cc-header-metrics span { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 999px; padding: .24rem .52rem; white-space: nowrap; }
+    .cc-header-metrics strong { color: #0f766e; }
+    .cc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .85rem; align-items: start; }
+    .cc-panel { border: 1px solid #e2e8f0; border-radius: 1.15rem; background: #fff; padding: .9rem; box-shadow: 0 12px 32px rgba(15, 23, 42, .06); min-width: 0; }
+    .cc-structural-panel { grid-column: 1 / -1; border-color: #99f6e4; background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 72%); }
+    .cc-urgent-panel { min-height: 24rem; border-color: #fecaca; background: linear-gradient(135deg, #fff1f2 0%, #ffffff 74%); }
+    .cc-review-panel { min-height: 24rem; border-color: #bfdbfe; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 74%); }
+    .cc-structural-panel .cc-panel-head h2 { color: #0f766e; }
+    .cc-urgent-panel .cc-panel-head h2 { color: #991b1b; }
+    .cc-review-panel .cc-panel-head h2 { color: #1d4ed8; }
+    .cc-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .65rem; margin-bottom: .7rem; }
+    .cc-panel-head h2 { margin: .1rem 0 0; font-size: .98rem; line-height: 1.2; }
+    .cc-chip { display: inline-flex; align-items: center; border-radius: 999px; padding: .23rem .52rem; font-size: .7rem; font-weight: 850; background: #f1f5f9; color: #334155; white-space: nowrap; }
+    .cc-chip.danger { background: #fee2e2; color: #991b1b; }
+    .cc-list { display: grid; gap: .58rem; }
+    .cc-item { border: 1px solid #e2e8f0; border-radius: .95rem; padding: .74rem; background: #f8fafc; }
+    .cc-item-head { display: flex; justify-content: space-between; gap: .6rem; align-items: flex-start; }
+
+    .cc-collapse-button { width: 100%; border: 0; background: transparent; padding: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: .6rem; text-align: left; cursor: pointer; }
+    .cc-collapse-button h3 { margin: 0; }
+    .cc-collapse-body { margin-top: .55rem; }
+    .cc-item.is-collapsed .cc-collapse-body { display: none; }
+
+    .cc-item h3 { margin: 0; font-size: .94rem; line-height: 1.22; }
+    .cc-item p { margin: .34rem 0 0; color: #64748b; font-size: .81rem; line-height: 1.32; }
+    .cc-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .52rem; }
+    .cc-tag { font-size: .68rem; border-radius: 999px; padding: .17rem .44rem; background: #fff; border: 1px solid #e2e8f0; color: #475569; font-weight: 750; }
+    .cc-tag.critical, .cc-tag.high { color: #991b1b; background: #fff1f2; border-color: #fecaca; }
+    .cc-tag.status-ok { color: #166534; background: #dcfce7; border-color: #bbf7d0; }
+    .cc-tag.status-partial { color: #1d4ed8; background: #dbeafe; border-color: #bfdbfe; }
+    .cc-tag.status-review { color: #92400e; background: #fef3c7; border-color: #fde68a; }
+    .cc-tag.status-pending { color: #475569; background: #f8fafc; border-color: #cbd5e1; }
+    .cc-tag.status-critical { color: #991b1b; background: #fee2e2; border-color: #fecaca; }
+    .cc-tag.meta-program { color: #0f766e; background: #ccfbf1; border-color: #99f6e4; }
+    .cc-tag.meta-urgency { color: #991b1b; background: #fee2e2; border-color: #fecaca; }
+    .cc-tag.meta-created { color: #1d4ed8; background: #dbeafe; border-color: #bfdbfe; }
+    .cc-tag.meta-due { color: #92400e; background: #fef3c7; border-color: #fde68a; }
+    .cc-tag.meta-owner { color: #6d28d9; background: #ede9fe; border-color: #ddd6fe; }
+    .cc-tag.meta-updated { color: #334155; background: #f1f5f9; border-color: #cbd5e1; }
+
+    .cc-item-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .65rem; }
+    .cc-open-link { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; border: 1px solid #99f6e4; background: #ccfbf1; color: #0f766e; padding: .28rem .58rem; font-size: .72rem; font-weight: 850; text-decoration: none; white-space: nowrap; }
+    .cc-progress { flex: 1 1 auto; min-width: 90px; height: .42rem; border-radius: 999px; overflow: hidden; background: #e2e8f0; }
+    .cc-progress span { display: block; height: 100%; width: var(--cc-progress, 0%); background: linear-gradient(90deg, #0f766e, #14b8a6); }
+    .cc-list.compact .cc-item { padding: .66rem; }
+    .cc-list.compact .cc-item h3 { font-size: .88rem; }
+    .cc-panel-question { margin: -.25rem 0 .7rem; color: #64748b; font-size: .78rem; line-height: 1.35; }
+    .cc-maturity-track { margin-bottom: .72rem; }
+    .cc-track-card { border: 1px solid #99f6e4; border-radius: 1rem; background: linear-gradient(135deg, #ecfeff 0%, #ffffff 78%); padding: .78rem; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: .75rem; align-items: stretch; }
+    .cc-track-main { display: grid; gap: .52rem; min-width: 0; }
+    .cc-track-eyebrow { margin: 0; color: #0f766e; font-size: .68rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .cc-track-title { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; }
+    .cc-track-title h3 { margin: 0; font-size: .98rem; line-height: 1.16; color: #0f172a; }
+    .cc-track-title strong { color: #0f766e; }
+    .cc-track-desc { margin: 0; color: #475569; font-size: .8rem; line-height: 1.35; }
+    .cc-track-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .38rem; }
+    .cc-track-step { border: 1px solid #e2e8f0; background: #fff; color: #475569; border-radius: .78rem; padding: .42rem .48rem; min-width: 0; }
+    .cc-track-step strong { display: block; font-size: .72rem; color: #334155; }
+    .cc-track-step span { display: block; margin-top: .08rem; font-size: .66rem; line-height: 1.16; }
+    .cc-track-step.done { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+    .cc-track-step.done strong { color: #166534; }
+    .cc-track-step.current { background: #ccfbf1; border-color: #5eead4; color: #0f766e; box-shadow: inset 0 0 0 1px #99f6e4; }
+    .cc-track-step.current strong { color: #0f766e; }
+    .cc-track-side { border: 1px solid #e2e8f0; background: rgba(255,255,255,.82); border-radius: .9rem; padding: .65rem; display: grid; gap: .45rem; }
+    .cc-track-side h4 { margin: 0; color: #0f172a; font-size: .8rem; }
+    .cc-track-side ul { margin: 0; padding-left: 1rem; color: #475569; font-size: .74rem; line-height: 1.32; }
+    .cc-track-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: auto; flex-wrap: wrap; }
+    .cc-structural-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .65rem; }
+    .cc-structural-card { border: 1px solid #e2e8f0; border-radius: .95rem; padding: .68rem; background: #f8fafc; min-width: 0; min-height: 13.5rem; display: flex; flex-direction: column; }
+    .cc-structural-card h3 { margin: 0; color: #0f172a; font-size: .86rem; line-height: 1.18; }
+    .cc-structural-card p { margin: .32rem 0 0; color: #64748b; font-size: .74rem; line-height: 1.3; }
+    .cc-structural-card .cc-tags,
+    .cc-urgent-panel .cc-item .cc-tags,
+    .cc-review-panel .cc-item .cc-tags { display: grid; grid-template-columns: 1fr; align-items: stretch; gap: .34rem; }
+    .cc-structural-card .cc-tag,
+    .cc-urgent-panel .cc-item .cc-tag,
+    .cc-review-panel .cc-item .cc-tag { width: 100%; border-radius: .65rem; padding: .28rem .46rem; line-height: 1.18; white-space: normal; }
+    .cc-structural-meta { display: flex; align-items: center; justify-content: space-between; gap: .45rem; margin-top: auto; padding-top: .65rem; }
+    .cc-review-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+    .cc-review-fields div { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .85rem; padding: .64rem; }
+    .cc-review-fields span { display: block; font-size: .71rem; color: #64748b; font-weight: 750; }
+    .cc-review-fields strong { display: block; margin-top: .2rem; font-size: .92rem; color: #0f172a; overflow-wrap: anywhere; }
+
+    .cc-status-tag { display: inline-flex; align-items: center; border-radius: 999px; padding: .2rem .5rem; font-size: .68rem; font-weight: 900; background: #fffbeb; color: #92400e; border: 1px solid #fde68a; white-space: nowrap; }
+    .cc-status-tag.done { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .cc-review-preview { display: grid; grid-template-columns: 1fr; gap: .34rem; margin-top: .55rem; }
+    .cc-review-preview div { border: 1px solid #e2e8f0; background: #fff; border-radius: .65rem; padding: .45rem .55rem; }
+    .cc-review-preview .field-need { background: #f0fdfa; border-color: #99f6e4; }
+    .cc-review-preview .field-solution { background: #eff6ff; border-color: #bfdbfe; }
+    .cc-review-preview .field-result { background: #ecfdf5; border-color: #bbf7d0; }
+    .cc-review-preview .field-value { background: #fffbeb; border-color: #fde68a; }
+    .cc-review-preview span { display: block; color: #64748b; font-size: .67rem; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
+    .cc-review-preview strong { display: block; margin-top: .12rem; color: #0f172a; font-size: .78rem; line-height: 1.25; }
+    .cc-primary-button, .cc-secondary-button { border-radius: 999px; padding: .45rem .75rem; font-size: .78rem; font-weight: 850; cursor: pointer; }
+    .cc-primary-button { border: 1px solid #0f766e; background: #0f766e; color: #fff; }
+    .cc-secondary-button { border: 1px solid #e2e8f0; background: #fff; color: #475569; }
+    .cc-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: rgba(15, 23, 42, .42); }
+    .cc-modal[hidden] { display: none; }
+    .cc-modal-card { width: min(680px, 100%); max-height: min(86vh, 760px); overflow: auto; border-radius: 1.1rem; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 24px 70px rgba(15, 23, 42, .28); padding: 1rem; }
+    .cc-analysis-card { width: min(920px, 100%); padding: 0; overflow: hidden; }
+    .cc-analysis-card .cc-modal-head { position: sticky; top: 0; z-index: 1; margin: 0; padding: .95rem 1rem .8rem; background: rgba(255,255,255,.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+    .cc-analysis-card > .cc-modal-actions { position: sticky; bottom: 0; margin: 0; padding: .75rem 1rem; background: rgba(255,255,255,.96); border-top: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
+    .cc-analysis-body { display: grid; gap: .7rem; }
+    .cc-analysis-card .cc-analysis-body { padding: .9rem 1rem; }
+    .cc-analysis-summary { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: .9rem; padding: .75rem; color: #0f766e; font-weight: 800; line-height: 1.35; }
+    .cc-analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+    .cc-analysis-section { border: 1px solid #e2e8f0; border-radius: .9rem; background: #f8fafc; padding: .75rem; min-width: 0; }
+    .cc-analysis-section h3 { display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .45rem; font-size: .86rem; color: #0f172a; }
+    .cc-analysis-section h3 span { color: #64748b; font-size: .7rem; font-weight: 850; }
+    .cc-analysis-list { display: grid; gap: .38rem; }
+    .cc-analysis-row { border: 1px solid #e2e8f0; border-radius: .72rem; background: #fff; padding: .48rem .55rem; }
+    .cc-analysis-row strong { display: block; color: #0f172a; font-size: .76rem; line-height: 1.25; }
+    .cc-analysis-row span { display: block; margin-top: .1rem; color: #475569; font-size: .75rem; line-height: 1.3; }
+    .cc-analysis-pill-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .55rem; }
+    .cc-analysis-next { border: 1px solid #bfdbfe; background: #eff6ff; border-radius: .9rem; padding: .7rem .75rem; color: #1d4ed8; font-weight: 850; line-height: 1.3; }
+    .cc-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .85rem; }
+    .cc-modal-head p { margin: 0; color: #64748b; font-size: .7rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .cc-modal-head h2 { margin: .1rem 0 0; font-size: 1.05rem; }
+    .cc-icon-button { width: 2rem; height: 2rem; border-radius: 999px; border: 1px solid #e2e8f0; background: #f8fafc; color: #334155; cursor: pointer; font-size: 1.25rem; line-height: 1; }
+    .cc-br-form { display: grid; gap: .7rem; }
+    .cc-br-form label { display: grid; gap: .3rem; color: #334155; font-size: .78rem; font-weight: 850; }
+    .cc-br-form textarea, .cc-br-form input, .cc-br-form select { width: 100%; border: 1px solid #cbd5e1; border-radius: .75rem; padding: .65rem; color: #0f172a; font: inherit; font-size: .85rem; background: #fff; }
+    .cc-br-form textarea { resize: vertical; }
+    .cc-value-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .55fr) minmax(120px, .55fr); gap: .6rem; }
+    .cc-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; flex-wrap: wrap; }
+    .cc-form-message { min-height: 1rem; margin: 0; color: #64748b; font-size: .78rem; font-weight: 700; }
+    .cc-empty, .cc-loading { color: #64748b; font-weight: 650; }
+    @media (max-width: 1180px) { .cc-structural-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cc-track-card { grid-template-columns: 1fr; } }
+    @media (max-width: 1040px) { .cc-grid { grid-template-columns: 1fr; } .cc-structural-panel { grid-column: auto; } .cc-urgent-panel, .cc-review-panel { min-height: auto; } }
+    @media (max-width: 780px) { .consultive-cockpit { padding: 0 .75rem 1rem; } .cc-compact-header { align-items: flex-start; flex-direction: column; } .cc-header-metrics { justify-content: flex-start; } .cc-item-head { flex-direction: column; } .cc-title small { max-width: 86vw; } .cc-analysis-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 460px) { .cc-review-fields, .cc-value-grid, .cc-structural-list, .cc-track-steps { grid-template-columns: 1fr; } .cc-title h1 { font-size: .98rem; } .cc-panel { padding: .78rem; } }
+</style>
+
+<script>
+(() => {
+    const root = document.querySelector('.consultive-cockpit');
+    const companyId = root?.dataset.companyId;
+    const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    const label = {
+        urgency: { low: 'baixa', medium: 'média', high: 'alta', critical: 'crítica' },
+        status: { inbox: 'entrada', triage: 'triagem', in_review: 'em review', decided: 'decidida', in_execution: 'em execução', closed: 'fechada', cancelled: 'cancelada', draft: 'rascunho', in_analysis: 'em análise', pending_decision: 'valor a consolidar', approved: 'aprovada', risk_accepted: 'risco aceito', rejected: 'rejeitada' },
+        learning: { process_change: 'processo', routine_change: 'rotina', indicator_change: 'indicador', control_change: 'controle', policy_change: 'política', project_creation: 'projeto', task_creation: 'tarefa', risk_acceptance: 'risco aceito', no_structural_action: 'sem ação' }
+    };
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch])); }
+    function money(value) { return moneyFormatter.format(Number(value || 0)); }
+    function shortText(value, fallback = 'Sem descrição registrada.') { const text = String(value || '').trim(); return escapeHtml(text || fallback); }
+    function itemTags(tags) { return `<div class="cc-tags">${tags.filter(Boolean).map((tag) => { const tagStatus = String(tag.status || '').toLowerCase(); const statusClass = tagStatus ? ` status-${tagStatus}` : ''; const className = ['critical', 'high'].includes(String(tag.value || '').toLowerCase()) ? 'cc-tag high' : `cc-tag${statusClass}`; return `<span class="${className}">${escapeHtml(tag.label)}</span>`; }).join('')}</div>`; }
+    function dateLabel(value) {
+        if (!value) return '--';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+        return date.toLocaleDateString('pt-BR');
+    }
+
+    function renderUrgentItem(item) {
+        const project = item.project || {};
+        const projectCode = project.code || (project.id ? `#${project.id}` : '--');
+        const projectTitle = `${projectCode} - ${project.name || item.title}`;
+        const projectStatus = project.status || item.status;
+        const progress = Math.max(0, Math.min(Number(project.progress ?? 0), 100));
+        const projectUrl = project.url || (item.project_id ? `/projects/${item.project_id}/manage` : null);
+        return `
+            <article class="cc-item">
+                <div class="cc-item-head">
+                    <h3>${escapeHtml(projectTitle)}</h3>
+                    <span class="cc-chip">${escapeHtml(label.status[projectStatus] || projectStatus || 'projeto')}</span>
+                </div>
+                <p>${shortText(item.business_impact_summary || item.operational_impact_summary || item.risk_summary, 'Projeto classificado como Necessidade Urgente.')}</p>
+                ${itemTags([
+                    { label: `Programa: ${project.program || '--'}`, status: 'meta-program' },
+                    { label: `Urgência: ${label.urgency[item.urgency_level] || item.urgency_level || '--'}`, status: 'meta-urgency', value: item.urgency_level },
+                    { label: `Criação: ${dateLabel(project.created_at || item.created_at)}`, status: 'meta-created' },
+                    { label: `Vencimento: ${dateLabel(project.end_date || item.closed_at)}`, status: 'meta-due' },
+                    { label: `Responsável: ${project.owner || '--'}`, status: 'meta-owner' },
+                    { label: `Última movimentação: ${dateLabel(project.updated_at || item.updated_at)}`, status: 'meta-updated' }
+                ])}
+                <div class="cc-item-actions">
+                    <div class="cc-progress" title="Progresso do projeto"><span style="--cc-progress: ${progress}%"></span></div>
+                    ${projectUrl ? `<a class="cc-open-link" href="${escapeHtml(projectUrl)}">Abrir projeto</a>` : ''}
+                </div>
+            </article>
+        `;
+    }
+
+    function truncateText(value, size = 92) {
+        const text = String(value || '').trim();
+        return text.length > size ? `${text.slice(0, size - 1)}…` : text;
+    }
+
+    function isReviewRegistered(item) {
+        const fields = item.simple_fields || {};
+        return Boolean(item.is_registered || (fields.identified_need && fields.applied_solution && fields.achieved_result && fields.added_value));
+    }
+
+    function renderReviewItem(item) {
+        const fields = item.simple_fields || {};
+        const registered = isReviewRegistered(item);
+        const title = fields.identified_need || item.title;
+        const stateLabel = registered ? 'Registrado' : 'A registrar';
+        const summaryTitle = `${title} - ${stateLabel}`;
+        return `
+            <article class="cc-item is-collapsed" data-review-id="${escapeHtml(item.id)}">
+                <button type="button" class="cc-collapse-button" data-cc-toggle-review="${escapeHtml(item.id)}" aria-expanded="false">
+                    <h3>${escapeHtml(summaryTitle)}</h3>
+                    <span class="cc-status-tag ${registered ? 'done' : ''}">${stateLabel}</span>
+                </button>
+                <div class="cc-collapse-body">
+                    <p>${shortText(fields.added_value || item.decision_summary, 'Aguardando registro do valor agregado pela Versus.')}</p>
+                    ${registered ? `<div class="cc-tags"><span class="cc-tag high">Valor capturado: ${escapeHtml(truncateText(fields.added_value || item.captured_value, 54))}</span></div>` : ''}
+                    <div class="cc-review-preview">
+                        <div class="field-need"><span>Necessidade</span><strong>${escapeHtml(truncateText(fields.identified_need || item.title || '--'))}</strong></div>
+                        <div class="field-solution"><span>Solução</span><strong>${escapeHtml(truncateText(fields.applied_solution || '--'))}</strong></div>
+                        <div class="field-result"><span>Resultado</span><strong>${escapeHtml(truncateText(fields.achieved_result || '--'))}</strong></div>
+                        <div class="field-value"><span>Valor agregado</span><strong>${escapeHtml(truncateText(fields.added_value || '--'))}</strong></div>
+                    </div>
+                    <div class="cc-item-actions">
+                        <span></span>
+                        <button type="button" class="cc-primary-button" data-cc-register-br="${escapeHtml(item.id)}">Registrar</button>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
+    const defaultMaturityTrack = {
+        title: 'Trilha de Maturidade da Estruturação',
+        current_phase: { number: '00', title: 'Base Organizacional / empresa na mão', label: 'Fase 00 — Base Organizacional / empresa na mão' },
+        gate: { status: 'Em maturação', description: 'identidade mínima, organograma, responsabilidades, controle mínimo e visão inicial confiável' },
+        maturity_pct: 0,
+        next_advance: 'Validar identidade organizacional mínima antes de avançar.',
+        missing_evidence: ['Validar missão, visão, valores, posicionamento e organograma.'],
+        risks: ['Não avançar fase por cadastro preenchido sem funcionamento comprovado.'],
+        detail_url: '/structuring-journey/consultant',
+        phases: [
+            { number: '00', title: 'Base Organizacional / empresa na mão', status: 'current', current: true },
+            { number: '01', title: 'Processos finalísticos', status: 'pending' },
+            { number: '02', title: 'Todos os processos', status: 'pending' },
+            { number: '03', title: 'Planejamento e gestão estratégicos', status: 'pending' }
+        ]
+    };
+
+    const defaultStructuralFronts = [
+        { key: 'identity', title: 'Identidade Organizacional', status: 'A estruturar', maturity: '56%', tags: [
+            { label: '1 - Missão · OK · 100%', status: 'ok' },
+            { label: '2 - Visão · Parcial · 60%', status: 'partial' },
+            { label: '3 - Valores · Revisar · 80%', status: 'review' },
+            { label: '4 - Posicionamento · Pendente · 0%', status: 'pending' },
+            { label: '5 - Organograma · Parcial · 40%', status: 'partial' }
+        ] },
+        { key: 'processes', title: 'Processos', status: 'A estruturar', maturity: '47%', tags: [
+            { label: '1 - Arquitetura · OK · 100%', status: 'ok' },
+            { label: '2 - Modelagem · Parcial · 55%', status: 'partial' },
+            { label: '3 - Implantação · Em projeto · 30%', status: 'partial' },
+            { label: '4 - Estabilização · 1/3 ciclos', status: 'review' },
+            { label: '5 - Auditoria · Pendente · 0%', status: 'pending' }
+        ] },
+        { key: 'growth_plan', title: 'Planejamento Estratégico', status: 'A estruturar', maturity: '52%', tags: [
+            { label: '1 - Estruturado · OK · 100%', status: 'ok' },
+            { label: '2 - Conectado · Parcial · 60%', status: 'partial' },
+            { label: '3 - Desdobrado · Parcial · 50%', status: 'partial' },
+            { label: '4 - Vinculado à gestão · Pendente · 0%', status: 'pending' }
+        ] },
+        { key: 'strategic_management', title: 'Gerenciamento Estratégico', status: 'A estruturar', maturity: '40%', tags: [
+            { label: '1 - Indicadores · Parcial · 60%', status: 'partial' },
+            { label: '2 - Ciclos · OK · 100%', status: 'ok' },
+            { label: '3 - Incentivos · Revisar · 40%', status: 'review' },
+            { label: '4 - Teia · Pendente · 0%', status: 'pending' }
+        ] }
+    ];
+
+    function renderMaturityTrack(track) {
+        const payload = track || defaultMaturityTrack;
+        const phase = payload.current_phase || defaultMaturityTrack.current_phase;
+        const gate = payload.gate || {};
+        const phases = Array.isArray(payload.phases) && payload.phases.length ? payload.phases : defaultMaturityTrack.phases;
+        const missing = Array.isArray(payload.missing_evidence) ? payload.missing_evidence.slice(0, 4) : [];
+        const maturity = Math.max(0, Math.min(Number(payload.maturity_pct || 0), 100));
+        const detailUrl = payload.detail_url || '/structuring-journey/consultant';
+        return `
+            <article class="cc-track-card">
+                <div class="cc-track-main">
+                    <p class="cc-track-eyebrow">${escapeHtml(payload.title || 'Trilha de Maturidade da Estruturação')}</p>
+                    <div class="cc-track-title">
+                        <h3><strong>Fase ${escapeHtml(phase.number || '--')}</strong> — ${escapeHtml(phase.title || '--')}</h3>
+                        <span class="cc-status-tag">${escapeHtml(gate.status || 'Em maturação')}</span>
+                    </div>
+                    <p class="cc-track-desc"><strong>Gate:</strong> ${escapeHtml(gate.description || '--')}</p>
+                    <div class="cc-track-steps">
+                        ${phases.map((item) => `<div class="cc-track-step ${escapeHtml(item.status || '')}"><strong>Fase ${escapeHtml(item.number)}</strong><span>${escapeHtml(item.title)}</span></div>`).join('')}
+                    </div>
+                    <div class="cc-track-actions">
+                        <span class="cc-tag status-partial">Maturidade da trilha: ${maturity}%</span>
+                        <a class="cc-open-link" href="${escapeHtml(detailUrl)}">Ver detalhe da trilha</a>
+                    </div>
+                </div>
+                <aside class="cc-track-side">
+                    <h4>Próximo avanço</h4>
+                    <p class="cc-track-desc">${escapeHtml(payload.next_advance || 'Validar próximo avanço com o consultor.')}</p>
+                    <h4>Evidências faltantes</h4>
+                    <ul>${(missing.length ? missing : ['Validar evidências do gate atual.']).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+                </aside>
+            </article>
+        `;
+    }
+
+    function renderStructuralFront(front) {
+        const tags = (front.tags || []).map((tag) => typeof tag === 'string' ? ({ label: tag }) : tag);
+        return `
+            <article class="cc-structural-card" data-structural-front="${escapeHtml(front.key)}">
+                <div class="cc-item-head">
+                    <h3>${escapeHtml(front.title)}</h3>
+                    <span class="cc-status-tag">${escapeHtml(front.status || 'A estruturar')}</span>
+                </div>
+                ${itemTags(tags)}
+                <div class="cc-structural-meta">
+                    <span class="cc-tag">Maturidade: ${escapeHtml(front.maturity || '--')}</span>
+                    <div class="cc-modal-actions">
+                        <button type="button" class="cc-secondary-button" data-cc-analyze-structural-front="${escapeHtml(front.key)}">Analisar frente</button>
+                        <button type="button" class="cc-secondary-button" data-cc-open-structural-front="${escapeHtml(front.key)}">Abrir frente</button>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
+    function renderLearningItem(item) { return `<article class="cc-item"><div class="cc-item-head"><h3>${escapeHtml(label.learning[item.learning_type] || item.learning_type)}</h3><span class="cc-chip">${escapeHtml(item.action_decision)}</span></div><p>${shortText(item.recommended_change, 'Converter aprendizado em ação estrutural ou aceitar risco conscientemente.')}</p>${itemTags([item.business_review_id ? { label: `BR #${item.business_review_id}` } : null, item.target_process_id ? { label: `Processo #${item.target_process_id}` } : null, item.target_indicator_id ? { label: `Indicador #${item.target_indicator_id}` } : null])}</article>`; }
+    function renderList(selector, items, renderer, emptyText) { const el = document.querySelector(selector); el.innerHTML = items?.length ? items.map(renderer).join('') : `<div class="cc-empty">${emptyText}</div>`; }
+    function render(data) {
+        cockpitState = data;
+        const summary = data.summary || {};
+        document.getElementById('cc-open-urgent').textContent = summary.urgent_needs_open ?? 0;
+        document.getElementById('cc-pending-review').textContent = summary.business_reviews_pending_decision ?? 0;
+        document.getElementById('cc-structural-fronts-count').textContent = (data.structural_enterprise?.fronts || defaultStructuralFronts).length;
+        document.getElementById('cc-critical-chip').textContent = `${summary.critical_urgent_needs_open ?? 0} críticas`;
+        document.getElementById('cc-maturity-track').innerHTML = renderMaturityTrack(data.structural_enterprise?.maturity_track || defaultMaturityTrack);
+        renderList('#cc-urgent-list', data.urgent_needs?.open_items || [], renderUrgentItem, 'Nenhum projeto/programa marcado como Necessidade Urgente.');
+        renderList('#cc-review-list', data.business_reviews?.pending_decisions || [], renderReviewItem, 'Nenhum Business Review a consolidar.');
+        renderList('#cc-structural-list', data.structural_enterprise?.fronts || defaultStructuralFronts, renderStructuralFront, 'Nenhuma frente de estruturação configurada.');
+    }
+
+    let cockpitState = null;
+
+    function getReviewById(reviewId) {
+        return (cockpitState?.business_reviews?.pending_decisions || []).find((item) => String(item.id) === String(reviewId));
+    }
+
+    function getStructuralFrontByKey(frontKey) {
+        return (cockpitState?.structural_enterprise?.fronts || defaultStructuralFronts).find((item) => String(item.key) === String(frontKey));
+    }
+
+    function analysisItemText(item) {
+        return item.description || item.finding || item.summary || item.label || '--';
+    }
+
+    function analysisItemTitle(item) {
+        return item.label || item.type || item.priority || item.severity || 'Item';
+    }
+
+    function renderAnalysisList(items, fallback) {
+        const rows = Array.isArray(items) ? items : [];
+        if (!rows.length) return `<p class="cc-empty">${escapeHtml(fallback)}</p>`;
+        return `<div class="cc-analysis-list">${rows.map((item) => `
+            <div class="cc-analysis-row">
+                <strong>${escapeHtml(analysisItemTitle(item))}</strong>
+                <span>${escapeHtml(analysisItemText(item))}</span>
+            </div>
+        `).join('')}</div>`;
+    }
+
+    function renderFrontAnalysis(payload) {
+        const maturity = payload.maturity || {};
+        const score = Number(maturity.score ?? 0);
+        const evidenceCount = Array.isArray(payload.internal_evidence) ? payload.internal_evidence.length : 0;
+        const gapsCount = Array.isArray(payload.gaps) ? payload.gaps.length : 0;
+        const recommendationsCount = Array.isArray(payload.recommendations) ? payload.recommendations.length : 0;
+        const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+        const nextActionLabel = {
+            open_maturation_plan: 'Abrir plano de maturação',
+            analyze_front: 'Revisar diagnóstico da frente',
+            convert_to_action: 'Converter em ação'
+        }[payload.suggested_next_action] || (payload.suggested_next_action || 'Validar com o consultor');
+        return `
+            <div class="cc-analysis-summary">
+                ${escapeHtml(payload.summary || 'Diagnóstico inicial gerado para a frente.')}
+                <div class="cc-analysis-pill-row">
+                    <span class="cc-tag status-${escapeHtml(maturity.status || 'partial')}">Maturidade: ${score}%</span>
+                    <span class="cc-tag status-review">Estado: ${escapeHtml(payload.state || 'rascunho')}</span>
+                    <span class="cc-tag status-${payload.human_gate_required ? 'review' : 'ok'}">${payload.human_gate_required ? 'Validação do consultor obrigatória' : 'Sem validação obrigatória'}</span>
+                </div>
+            </div>
+            <div class="cc-analysis-grid">
+                <section class="cc-analysis-section">
+                    <h3>Evidências internas <span>${evidenceCount}</span></h3>
+                    ${renderAnalysisList(payload.internal_evidence, 'Nenhuma evidência interna retornada.')}
+                </section>
+                <section class="cc-analysis-section">
+                    <h3>Gaps metodológicos <span>${gapsCount}</span></h3>
+                    ${renderAnalysisList(payload.gaps, 'Nenhum gap metodológico identificado.')}
+                </section>
+                <section class="cc-analysis-section">
+                    <h3>Recomendações <span>${recommendationsCount}</span></h3>
+                    ${renderAnalysisList(payload.recommendations, 'Nenhuma recomendação gerada.')}
+                </section>
+                <section class="cc-analysis-section">
+                    <h3>Gaps técnicos <span>${Array.isArray(payload.engineering_gaps) ? payload.engineering_gaps.length : 0}</span></h3>
+                    ${renderAnalysisList(payload.engineering_gaps, 'Nenhum gap técnico identificado.')}
+                </section>
+                ${warnings.length ? `<section class="cc-analysis-section"><h3>Avisos técnicos <span>${warnings.length}</span></h3>${renderAnalysisList(warnings.map((warning) => ({ label: 'Aviso', finding: warning })), 'Nenhum aviso técnico.')}</section>` : ''}
+            </div>
+            <div class="cc-analysis-next">Próxima ação recomendada: ${escapeHtml(nextActionLabel)}.</div>
+        `;
+    }
+
+    async function openFrontAnalysis(frontKey) {
+        const front = getStructuralFrontByKey(frontKey);
+        const modal = document.getElementById('cc-front-analysis-modal');
+        const title = document.getElementById('cc-front-analysis-title');
+        const body = document.getElementById('cc-front-analysis-body');
+        title.textContent = front ? `Analisar frente · ${front.title}` : 'Analisar frente';
+        body.innerHTML = '<div class="cc-loading">Gerando diagnóstico determinístico da frente...</div>';
+        modal.hidden = false;
+        try {
+            const response = await fetch(`/api/consultive/cockpit/structural-fronts/${encodeURIComponent(frontKey)}/analysis`, {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) throw new Error(`Falha ao analisar frente. Código HTTP: ${response.status}.`);
+            body.innerHTML = renderFrontAnalysis(await response.json());
+        } catch (error) {
+            body.innerHTML = `<div class="cc-empty">${escapeHtml(error.message || 'Não foi possível analisar a frente.')}</div>`;
+        }
+    }
+
+    function closeFrontAnalysis() {
+        document.getElementById('cc-front-analysis-modal').hidden = true;
+    }
+
+
+    function parseAddedValue(value) {
+        const parts = String(value || '').split(' - ').map((part) => part.trim()).filter(Boolean);
+        return {
+            amount: parts[0] || '',
+            type: parts[1] || 'única',
+            period: parts[2] || 'anual'
+        };
+    }
+
+    function formatAddedValue(amount, type, period) {
+        return [amount, type, period].map((part) => String(part || '').trim()).filter(Boolean).join(' - ');
+    }
+
+    function openBusinessReviewModal(reviewId) {
+        const item = getReviewById(reviewId);
+        if (!item) return;
+        const fields = item.simple_fields || {};
+        document.getElementById('cc-br-id').value = item.id;
+        document.getElementById('cc-br-identified-need').value = fields.identified_need || item.title || '';
+        document.getElementById('cc-br-applied-solution').value = fields.applied_solution || '';
+        document.getElementById('cc-br-achieved-result').value = fields.achieved_result || '';
+        const addedValue = parseAddedValue(fields.added_value || '');
+        document.getElementById('cc-br-added-value-amount').value = addedValue.amount;
+        document.getElementById('cc-br-added-value-type').value = addedValue.type;
+        document.getElementById('cc-br-added-value-period').value = addedValue.period;
+        document.getElementById('cc-br-form-message').textContent = '';
+        document.getElementById('cc-br-modal').hidden = false;
+    }
+
+    function closeBusinessReviewModal() {
+        document.getElementById('cc-br-modal').hidden = true;
+    }
+
+    document.addEventListener('click', (event) => {
+        const toggleButton = event.target.closest('[data-cc-toggle-review]');
+        if (toggleButton) {
+            const card = toggleButton.closest('.cc-item');
+            const isCollapsed = card.classList.toggle('is-collapsed');
+            toggleButton.setAttribute('aria-expanded', String(!isCollapsed));
+            return;
+        }
+        const registerButton = event.target.closest('[data-cc-register-br]');
+        if (registerButton) {
+            openBusinessReviewModal(registerButton.dataset.ccRegisterBr);
+            return;
+        }
+        const analyzeButton = event.target.closest('[data-cc-analyze-structural-front]');
+        if (analyzeButton) {
+            openFrontAnalysis(analyzeButton.dataset.ccAnalyzeStructuralFront);
+            return;
+        }
+        if (event.target.closest('[data-cc-analysis-close]') || event.target.id === 'cc-front-analysis-modal') {
+            closeFrontAnalysis();
+            return;
+        }
+        if (event.target.closest('[data-cc-modal-close]') || event.target.id === 'cc-br-modal') {
+            closeBusinessReviewModal();
+        }
+    });
+
+    document.getElementById('cc-br-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const reviewId = document.getElementById('cc-br-id').value;
+        const message = document.getElementById('cc-br-form-message');
+        const payload = {
+            status: 'approved',
+            title: document.getElementById('cc-br-identified-need').value.trim(),
+            next_action: document.getElementById('cc-br-applied-solution').value.trim(),
+            structural_learning_summary: document.getElementById('cc-br-achieved-result').value.trim(),
+            decision_summary: formatAddedValue(
+                document.getElementById('cc-br-added-value-amount').value,
+                document.getElementById('cc-br-added-value-type').value,
+                document.getElementById('cc-br-added-value-period').value
+            )
+        };
+        if (!payload.title || !payload.next_action || !payload.structural_learning_summary || !payload.decision_summary) {
+            message.textContent = 'Preencha todos os campos do Business Review.';
+            return;
+        }
+        try {
+            message.textContent = 'Salvando...';
+            const response = await fetch(`/api/consultive/business-reviews/${encodeURIComponent(reviewId)}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error('Falha ao salvar Business Review.');
+            closeBusinessReviewModal();
+            await loadCockpit();
+        } catch (error) {
+            message.textContent = error.message || 'Não foi possível salvar o Business Review.';
+        }
+    });
+
+    function renderStructuralFallback() {
+        document.getElementById('cc-maturity-track').innerHTML = renderMaturityTrack(defaultMaturityTrack);
+        renderList('#cc-structural-list', defaultStructuralFronts, renderStructuralFront, 'Nenhuma frente de estruturação configurada.');
+        document.getElementById('cc-structural-fronts-count').textContent = defaultStructuralFronts.length;
+    }
+
+    async function loadCockpit() {
+        renderStructuralFallback();
+        if (!companyId) {
+            document.getElementById('cc-urgent-list').innerHTML = '<div class="cc-empty">Selecione uma empresa para visualizar o cockpit.</div>';
+            document.getElementById('cc-review-list').innerHTML = '<div class="cc-empty">Selecione uma empresa para visualizar os Business Reviews.</div>';
+            return;
+        }
+        try {
+            const response = await fetch('/api/consultive/cockpit?limit=12', {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) {
+                const detail = response.status === 401
+                    ? 'Sessão não autenticada para carregar a API do cockpit. Recarregue a página ou faça login novamente.'
+                    : `Falha ao carregar API do cockpit. Código HTTP: ${response.status}.`;
+                throw new Error(detail);
+            }
+            render(await response.json());
+        } catch (error) {
+            document.getElementById('cc-urgent-list').innerHTML = `<div class="cc-empty">${escapeHtml(error.message || 'Não foi possível carregar o cockpit consultivo.')}</div>`;
+            document.getElementById('cc-review-list').innerHTML = '<div class="cc-empty">Business Reviews indisponíveis enquanto a API do cockpit não carregar.</div>';
+            renderStructuralFallback();
+        }
+    }
+    loadCockpit();
+})();
+</script>
+{% endblock %}

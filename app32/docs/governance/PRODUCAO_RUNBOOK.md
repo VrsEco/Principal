@@ -18,7 +18,7 @@
 | **Servidor WSGI** | uWSGI (config: `.../etc/uwsgi/`) |
 | **Virtualenv** | `.../virtualenv/3.12/` (Python 3.12) |
 | **Banco** | PostgreSQL (externo ao servidor Flask) |
-| **Deploy** | GitHub Actions → SSH → git pull + pip install + touch restart.txt |
+| **Deploy** | GitHub Actions manual (`workflow_dispatch`) → SSH → deploy por modo (`quick`/`standard`/`full`) |
 
 > ⚠️ **CRÍTICO:** O arquivo `uwsgi.ini` do servidor está **fora do repositório Git** e é controlado pela Configr. Alterações nele requerem intervenção do suporte.
 
@@ -47,7 +47,35 @@
 
 ### 5. Migrations do Banco
 - Geradas localmente com `flask db migrate` e enviadas via Git
-- Executadas automaticamente pela pipeline do GitHub Actions
+- Executadas apenas quando o operador escolher o modo `full` no workflow manual de produção
+
+---
+
+## 🚦 Modelo oficial de deploy em produção
+
+O deploy de produção passa a ser **manual e controlado pelo operador**, sem publicação automática a cada `push` na `main`.
+
+### Modos oficiais
+
+| Modo | O que faz | Quando usar |
+|---|---|---|
+| `quick` | atualiza código + reinicia app web + valida health + opcionalmente reinicia MCP | ajustes leves, UI, textos, correções sem mudança de dependência/schema |
+| `standard` | `quick` + `pip install -r requirements.txt` | mudanças com dependências novas/alteradas, sem migration |
+| `full` | `standard` + migrations | mudanças estruturais, schema, rollout controlado |
+
+### Regras de ouro do novo fluxo
+
+1. **Não existe mais deploy automático por push na `main`.**
+2. **Dependência Python não é mais instalada por comando avulso fora do `requirements.txt`.**
+3. **Migration não roda por padrão; só no modo `full`.**
+4. **Restart continua automatizado**, com validação de `healthz` ao final.
+5. **MCP pode ser reiniciado no mesmo workflow**, mas continua sob decisão explícita do operador.
+
+### Decisão prática por tipo de mudança
+
+- mudança leve sem schema e sem dependência -> `quick`
+- mudança com dependência, sem schema -> `standard`
+- mudança com schema/migration/backfill -> `full`
 
 ---
 
@@ -127,8 +155,9 @@ Precisamos das últimas 100 linhas do arquivo de log de erro do uWSGI:
 
 ### Passo 6 — Restartar após correção
 1. Fazer `git push origin main` com a correção
-2. Aguardar o GitHub Actions concluir (≈ 3 min)
-3. Acessar Painel Configr → Reiniciar Instância
+2. Acionar manualmente o workflow de produção no modo adequado
+3. Aguardar o `healthz` web responder com sucesso
+4. Validar MCP, se o deploy tiver reiniciado o runtime remoto
 
 ---
 

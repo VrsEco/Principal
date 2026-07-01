@@ -107,71 +107,6 @@
             color: var(--text-primary);
         }
 
-        .quick-access {
-            margin-top: 1rem;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 0.85rem;
-        }
-
-        .quick-access-card {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: center;
-            padding: 1rem;
-            border-radius: 16px;
-            border: 1px solid #bfdbfe;
-            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
-            box-shadow: var(--shadow-sm);
-            color: var(--text-primary);
-            text-decoration: none;
-            transition: all .18s ease;
-        }
-
-        .quick-access-card:hover {
-            transform: translateY(-1px);
-            border-color: #60a5fa;
-            box-shadow: var(--shadow-md);
-            background: linear-gradient(135deg, #dbeafe 0%, #ffffff 100%);
-        }
-
-        .quick-access-card__eyebrow {
-            display: inline-flex;
-            margin-bottom: .3rem;
-            font-size: .68rem;
-            font-weight: 900;
-            color: #2563eb;
-            letter-spacing: .12em;
-            text-transform: uppercase;
-        }
-
-        .quick-access-card h2 {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 900;
-        }
-
-        .quick-access-card p {
-            margin: .25rem 0 0;
-            color: var(--text-secondary);
-            font-size: .82rem;
-            line-height: 1.35;
-        }
-
-        .quick-access-card__arrow {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 14px;
-            background: #2563eb;
-            color: #fff;
-            font-weight: 900;
-            flex-shrink: 0;
-        }
-
         .legend-row {
             display: flex;
             justify-content: space-between;
@@ -440,18 +375,7 @@
             <div class="page-head">
                 <h1>Mapa de Processos - {{ company_name }}</h1>
 
-                <div class="quick-access" aria-label="Acesso Rápido">
-                    <a class="quick-access-card" href="{{ url_for('processes.strategic_management_panel_page', company_id=company.id) }}">
-                        <div>
-                            <span class="quick-access-card__eyebrow">Acesso Rápido</span>
-                            <h2>Painel de Gestão Estratégica</h2>
-                            <p>Indicadores estratégicos, processos, projetos, teias e próximas reuniões em visão executiva.</p>
-                        </div>
-                        <span class="quick-access-card__arrow">›</span>
-                    </a>
-                </div>
-
-                <div class="legend-row">
+<div class="legend-row">
                     <div class="legend-groups">
                         <div class="legend-group">
                             <span class="legend-title">Modelagem:</span>

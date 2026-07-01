@@ -70,9 +70,6 @@ def extract_id(code_or_id: str):
         return None
     if raw.isdigit():
         return int(raw)
-    parts = [p for p in raw.replace('[', '.').replace(']', '.').split('.') if p.isdigit()]
-    if parts:
-        return int(parts[-1])
     return None
 
 
@@ -158,12 +155,24 @@ def create_task(project_code: str, title: str, due_date_raw: str | None, respons
 
 
 def complete_task(identifier: str, completion_date_raw: str | None, evidence: str | None, dry_run: bool):
-    task_id = extract_id(identifier)
+    raw_identifier = str(identifier or "").strip()
+    task_id = extract_id(raw_identifier)
     task = None
     if task_id:
         task = ProjectTask.query.filter(ProjectTask.id == task_id).first()
     if task is None:
-        task = ProjectTask.query.filter(ProjectTask.what == identifier).order_by(ProjectTask.id.desc()).first()
+        # Se o identificador parece um código AA.J.1.1234, devemos comparar
+        # primeiro contra o code computado da task, e não contra o task_id.
+        if raw_identifier:
+            for candidate in ProjectTask.query.order_by(ProjectTask.id.desc()).all():
+                try:
+                    if candidate.code == raw_identifier:
+                        task = candidate
+                        break
+                except Exception:
+                    continue
+    if task is None:
+        task = ProjectTask.query.filter(ProjectTask.what == raw_identifier).order_by(ProjectTask.id.desc()).first()
     if not task:
         return {'ok': False, 'error': f'Atividade {identifier} não encontrada.'}
     final_date = parse_due_date(completion_date_raw) or date.today()

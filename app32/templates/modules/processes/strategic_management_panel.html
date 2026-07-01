@@ -50,66 +50,18 @@
 {% block workspace_content %}
 <div class="smp-page" id="strategicManagementPanel" data-panel='{{ panel|tojson }}'>
     <div class="smp-layout">
-        <aside class="smp-trail-column">
-            <section class="smp-card smp-trail-card">
-                <div class="smp-card__head smp-card__head--trail">
-                    <div>
-                        <span class="smp-dot smp-dot--blue"></span>
-                        <div>
-                            <h2>Trilha de Maturidade da Estruturação</h2>
-                            <p>{{ panel.structuring_trail.hero_title }}</p>
-                        </div>
-                    </div>
-                    <span class="smp-period-chip">{{ 'Cliente' if panel.audience == 'client' else 'Consultor' }}</span>
-                </div>
-                <div class="smp-trail-hero">
-                    <strong>{{ panel.structuring_trail.hero_title }}</strong>
-                    <p>{{ panel.structuring_trail.hero_subtitle }}</p>
-                </div>
-                <div class="smp-trail-list">
-                    {% for phase in panel.structuring_trail.phases %}
-                    <button
-                        type="button"
-                        class="smp-phase-card smp-phase-card--{{ phase.state }}"
-                        data-open-phase="{{ phase.key }}"
-                    >
-                        <div class="smp-phase-card__head">
-                            <span class="smp-phase-icon">
-                                {% if phase.state == 'completed' %}✓{% elif phase.state == 'current' %}▶{% else %}○{% endif %}
-                            </span>
-                            <div class="smp-phase-card__titles">
-                                <span class="smp-phase-code">{{ phase.code }}</span>
-                                <h3>{{ phase.label }}</h3>
-                            </div>
-                            {% if panel.audience == 'consultant' %}
-                            <strong class="smp-phase-pct">{{ phase.maturity_pct }}%</strong>
-                            {% endif %}
-                        </div>
-                        {% if phase.state == 'current' %}
-                        <div class="smp-phase-progress" title="{{ phase.maturity_pct }}% até o gate"><span style="width:{{ phase.maturity_pct }}%"></span></div>
-                        {% endif %}
-                        <p class="smp-phase-copy">
-                            {% if phase.state == 'future' or panel.audience == 'client' %}
-                                {{ phase.promise }}
-                            {% else %}
-                                {{ phase.next_missing_label }}
-                            {% endif %}
-                        </p>
-                        <div class="smp-phase-meta">
-                            <span>Gate: {{ phase.gate.name }}</span>
-                            {% if panel.audience == 'consultant' %}
-                            <span>{{ 'Pronta' if phase.gate.ready else 'Em evolução' }}</span>
-                            {% else %}
-                            <span>{{ 'Nível conquistado' if phase.gate.ready else 'Próximo nível em construção' }}</span>
-                            {% endif %}
-                        </div>
-                    </button>
-                    {% endfor %}
-                </div>
-            </section>
-        </aside>
-
         <div class="smp-main-column">
+    <section class="smp-card smp-cockpit-notice">
+        <div class="smp-card__head">
+            <div>
+                <span class="smp-dot smp-dot--blue"></span>
+                <h2>Maturidade metodológica</h2>
+            </div>
+            <a class="smp-btn smp-btn--secondary" href="/consultive/cockpit">Abrir Cockpit do Consultor</a>
+        </div>
+        <p>Fases, gates e leitura de maturidade da Estruturação Empresarial agora são conduzidos no Cockpit do Consultor. Este painel permanece focado na gestão estratégica operacional da empresa.</p>
+    </section>
+
     <section class="smp-card">
         <div class="smp-card__head">
             <div>
@@ -249,9 +201,11 @@
 
 <style>
     .smp-page { display:flex; flex-direction:column; gap:1rem; color:#0f172a; }
-    .smp-layout { display:grid; grid-template-columns:minmax(300px,360px) minmax(0,1fr); gap:1rem; align-items:start; }
+    .smp-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; }
     .smp-trail-column { position:relative; }
     .smp-main-column { display:flex; flex-direction:column; gap:1rem; min-width:0; }
+    .smp-cockpit-notice { border-color:#bfdbfe; background:linear-gradient(135deg,#eff6ff 0%,#ffffff 74%); }
+    .smp-cockpit-notice p { margin:.15rem 0 0; color:#475569; font-size:.86rem; line-height:1.45; }
     .smp-trail-card { position:sticky; top:1rem; overflow:visible; }
     .smp-card__head--trail h2 { margin-bottom:.15rem; }
     .smp-card__head--trail p { margin:0; color:#64748b; font-size:.78rem; }
@@ -468,7 +422,6 @@
     const mobileActionsToggle = document.getElementById('smpMobileActionsToggle');
     if (!root || !host || !stack) return;
     const panel = JSON.parse(root.dataset.panel || '{}');
-    const structuringTrail = panel.structuring_trail || { phases: [] };
     const allIndicators = (panel.groups || []).flatMap(group => (
         group.key === 'team_efficiency' ? [] : (group.items || []).filter(item => item.id !== 'web-health')
     ));
@@ -520,40 +473,6 @@
     }
     function badge(status) {
         return `<span class="smp-badge" style="--badge:${colorMap[status] || colorMap.gray};">${esc(status || 'gray')}</span>`;
-    }
-    function phaseStateLabel(phase) {
-        if (phase.is_completed) return 'Concluída';
-        if (phase.is_current) return 'Você está aqui';
-        return 'Próxima fase';
-    }
-    function openPhase(phaseKey) {
-        const phase = (structuringTrail.phases || []).find(item => item.key === phaseKey);
-        if (!phase) return;
-        const deliverables = (phase.deliverables || []).map(item => `
-            <article class="smp-row-btn">
-                <h4>${esc(item.label)} · ${item.ready ? 'Pronto' : item.dependency ? 'Dependência' : 'Pendente'}</h4>
-                <p>${esc(item.detail || '')}</p>
-                <div class="smp-mini">
-                    <span>${esc(item.maturity_pct || 0)}% concluído</span>
-                    <span>${esc(item.next_missing_label || 'Sem pendência')}</span>
-                </div>
-            </article>
-        `).join('');
-        const body = `
-            <div class="smp-detail-grid">
-                <div class="smp-detail-box"><span>Estado</span><strong>${esc(phaseStateLabel(phase))}</strong></div>
-                <div class="smp-detail-box"><span>Gate</span><strong>${esc(phase.gate?.name || '-')} · ${phase.gate?.ready ? 'Fechado' : 'Aberto'}</strong></div>
-                <div class="smp-detail-box"><span>Regra objetiva</span><strong>${esc(phase.gate?.rule || '-')}</strong></div>
-                <div class="smp-detail-box"><span>Progresso</span><strong>${esc(phase.maturity_pct || 0)}%</strong></div>
-            </div>
-            <div class="smp-detail-box"><span>Promessa de valor</span><strong>${esc(phase.promise || '')}</strong></div>
-            <div class="smp-detail-box"><span>Próximo item faltante</span><strong>${esc(phase.next_missing_label || 'Sem pendência')}</strong></div>
-            <section class="smp-team-section" style="--section-color:${phase.is_completed ? '#16a34a' : phase.is_current ? '#2563eb' : '#94a3b8'};">
-                <h4 class="smp-team-section__title">Entregáveis da fase</h4>
-                ${deliverables || '<div class="smp-empty">Sem entregáveis nesta fase.</div>'}
-            </section>
-        `;
-        layer(`Fase ${esc(phase.code)} — ${esc(phase.label)}`, panel.audience === 'client' ? 'Bússola de evolução da empresa' : 'Cockpit operacional da estruturação', body, 0);
     }
     function openGroup(groupKey) {
         const group = (panel.groups || []).find(g => g.key === groupKey);
@@ -767,7 +686,6 @@
         alert('Atividade criada e vinculada ao indicador. Ela aparecerá no card executivo para cobrança.');
         window.location.reload();
     });
-    root.querySelectorAll('[data-open-phase]').forEach(btn => btn.addEventListener('click', () => openPhase(btn.dataset.openPhase)));
     root.querySelectorAll('[data-open-group]').forEach(btn => btn.addEventListener('click', () => openGroup(btn.dataset.openGroup)));
     host.querySelector('[data-close-layer]').addEventListener('click', closeTopLayer);
     document.addEventListener('click', (event) => {

@@ -140,6 +140,11 @@ from .project_due_date_change import ProjectTaskDueDateChangeRequest
 from .app_compliance_report import AppComplianceReport, AppComplianceReportItem
 from .ui_catalog import UiCatalog
 from .user_log import UserLog
+from .urgent_business_review import (
+    BusinessReviewRecord,
+    StructuralLearningLink,
+    UrgentNeedOverlay,
+)
 
 # AI & Automation
 from .ai_agent import AIAgent
@@ -195,6 +200,7 @@ __all__ = [
     'CadastroSession', 'CompanyPerformanceSettings', 'CompanyRolePermissionPreset', 'AppComplianceReport', 'AppComplianceReportItem',
     'ProjectTaskDueDateChangeRequest',
     'UiCatalog', 'UserLog',
+    'UrgentNeedOverlay', 'BusinessReviewRecord', 'StructuralLearningLink',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog', 'IntegrationRequest',
     'AICapability', 'AICapabilityGrant', 'AICapabilityCompanySetting', 'AICapabilityAuditLog',
