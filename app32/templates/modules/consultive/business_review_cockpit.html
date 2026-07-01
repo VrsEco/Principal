@@ -465,6 +465,22 @@
         return (cockpitState?.structural_enterprise?.fronts || defaultStructuralFronts).find((item) => String(item.key) === String(frontKey));
     }
 
+    function structuralFrontUrl(frontKey) {
+        if (frontKey === 'identity' && companyId) {
+            return `/companies/${encodeURIComponent(companyId)}/identity`;
+        }
+        return null;
+    }
+
+    function openStructuralFront(frontKey) {
+        const url = structuralFrontUrl(frontKey);
+        if (url) {
+            window.location.href = url;
+            return;
+        }
+        openFrontAnalysis(frontKey);
+    }
+
     function analysisItemText(item) {
         return item.description || item.finding || item.summary || item.label || '--';
     }
@@ -597,6 +613,11 @@
         const registerButton = event.target.closest('[data-cc-register-br]');
         if (registerButton) {
             openBusinessReviewModal(registerButton.dataset.ccRegisterBr);
+            return;
+        }
+        const openFrontButton = event.target.closest('[data-cc-open-structural-front]');
+        if (openFrontButton) {
+            openStructuralFront(openFrontButton.dataset.ccOpenStructuralFront);
             return;
         }
         const analyzeButton = event.target.closest('[data-cc-analyze-structural-front]');

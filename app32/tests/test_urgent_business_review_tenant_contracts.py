@@ -495,6 +495,9 @@ def test_consultive_cockpit_structural_enterprise_contract():
     assert "4 - Teia · Pendente · 0%" in body
     assert "Abrir frente" in body
     assert "Analisar frente" in body
+    assert "data-cc-open-structural-front" in body
+    assert "function openStructuralFront" in body
+    assert "/companies/${encodeURIComponent(companyId)}/identity" in body
     assert "data-cc-analyze-structural-front" in body
     assert "cc-front-analysis-modal" in body
     assert "/api/consultive/cockpit/structural-fronts/${encodeURIComponent(frontKey)}/analysis" in body
