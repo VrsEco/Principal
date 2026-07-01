@@ -50,19 +50,7 @@
 {% block workspace_content %}
 <div class="smp-page" id="strategicManagementPanel" data-panel='{{ panel|tojson }}'>
     <div class="smp-layout">
-        <div class="smp-main-column">
-    <section class="smp-card smp-cockpit-notice">
-        <div class="smp-card__head">
-            <div>
-                <span class="smp-dot smp-dot--blue"></span>
-                <h2>Maturidade metodológica</h2>
-            </div>
-            <a class="smp-btn smp-btn--secondary" href="/consultive/cockpit">Abrir Cockpit do Consultor</a>
-        </div>
-        <p>Fases, gates e leitura de maturidade da Estruturação Empresarial agora são conduzidos no Cockpit do Consultor. Este painel permanece focado na gestão estratégica operacional da empresa.</p>
-    </section>
-
-    <section class="smp-card">
+        <div class="smp-main-column">    <section class="smp-card">
         <div class="smp-card__head">
             <div>
                 <span class="smp-dot smp-dot--blue"></span>
@@ -204,8 +192,6 @@
     .smp-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:start; }
     .smp-trail-column { position:relative; }
     .smp-main-column { display:flex; flex-direction:column; gap:1rem; min-width:0; }
-    .smp-cockpit-notice { border-color:#bfdbfe; background:linear-gradient(135deg,#eff6ff 0%,#ffffff 74%); }
-    .smp-cockpit-notice p { margin:.15rem 0 0; color:#475569; font-size:.86rem; line-height:1.45; }
     .smp-trail-card { position:sticky; top:1rem; overflow:visible; }
     .smp-card__head--trail h2 { margin-bottom:.15rem; }
     .smp-card__head--trail p { margin:0; color:#64748b; font-size:.78rem; }

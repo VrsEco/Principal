@@ -319,10 +319,9 @@ def test_strategic_management_panel_template_supports_five_cards_and_value_label
     assert "smp-mobile-actions-toggle" in content
     assert "smp-navbar-actions__menu" in content
     assert "setMobileActionsOpen" in content
-    assert "Maturidade metodológica" in content
-    assert "Abrir Cockpit do Consultor" in content
-    assert "/consultive/cockpit" in content
-    assert "Fases, gates e leitura de maturidade" in content
+    assert "Maturidade metodológica" not in content
+    assert "Abrir Cockpit do Consultor" not in content
+    assert "Fases, gates e leitura de maturidade" not in content
     assert "data-open-phase" not in content
     assert "openPhase" not in content
     assert "Trilha de Maturidade da Estruturação" not in content
