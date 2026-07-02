@@ -386,7 +386,7 @@ def export_my_work_pdf():
         get_filter_options_v2,
         get_user_activities_v2,
     )
-    from services.my_work_service import _calculate_stats_from_activities
+    from services.my_work_service import _apply_filters, _calculate_stats_from_activities
 
     scope = str(request.args.get("scope") or "me").strip().lower()
     if scope not in {"me", "company", "general"}:
@@ -394,8 +394,8 @@ def export_my_work_pdf():
 
     exported_filters = _parse_export_filters(request.args.get("filters"))
     query_filters = dict(exported_filters)
-    responsible_ids = query_filters.pop("responsible_ids", [])
-    executor_ids = query_filters.pop("executor_ids", [])
+    responsible_ids = exported_filters.get("responsible_ids") or []
+    executor_ids = exported_filters.get("executor_ids") or []
     if responsible_ids or executor_ids:
         query_filters["employee_ids"] = list(set(responsible_ids + executor_ids))
 
@@ -410,17 +410,7 @@ def export_my_work_pdf():
         active_company_id=active_company_id,
     )
 
-    if exported_filters.get("project_selection") == "none":
-        activities_raw = [
-            item for item in activities_raw
-            if (item.get("type") or "").lower() != "project"
-        ]
-
-    if exported_filters.get("process_selection") == "none":
-        activities_raw = [
-            item for item in activities_raw
-            if (item.get("type") or "").lower() != "process"
-        ]
+    activities_raw = _apply_filters(activities_raw, exported_filters)
 
     process_owner_ids = exported_filters.get("process_owner_ids") or []
     if process_owner_ids:
@@ -780,5 +770,6 @@ def my_work_company_overview():
     except Exception as e:
         logger.error(f"Company Overview Error: {e}")
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
 
 
