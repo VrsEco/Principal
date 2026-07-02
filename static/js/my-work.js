@@ -4038,28 +4038,30 @@ function buildReportFiltersPayload() {
     filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - incluir seleção parcial e também o caso "nenhum selecionado"
+  // Project IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (projectCtx.availableCount > 0 && projectCtx.selectedIds.length === 0) {
-    filters.project_selection = SELECTION_MODE_NONE;
-  } else if (
-    projectCtx.availableCount > 0 &&
-    projectCtx.selectedIds.length > 0 &&
-    projectCtx.selectedIds.length < projectCtx.availableCount
-  ) {
-    filters.project_ids = projectCtx.selectedIds;
+  if (projectCtx.availableCount > 0) {
+    if (projectCtx.selectedIds.length === 0) {
+      filters.project_selection = SELECTION_MODE_NONE;
+    } else if (projectCtx.selectedIds.length < projectCtx.availableCount) {
+      filters.project_selection = 'partial';
+      filters.project_ids = projectCtx.selectedIds;
+    } else {
+      filters.project_selection = 'all';
+    }
   }
 
-  // Process IDs - incluir seleção parcial e também o caso "nenhum selecionado"
+  // Process IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (processCtx.availableCount > 0 && processCtx.selectedIds.length === 0) {
-    filters.process_selection = SELECTION_MODE_NONE;
-  } else if (
-    processCtx.availableCount > 0 &&
-    processCtx.selectedIds.length > 0 &&
-    processCtx.selectedIds.length < processCtx.availableCount
-  ) {
-    filters.process_ids = processCtx.selectedIds;
+  if (processCtx.availableCount > 0) {
+    if (processCtx.selectedIds.length === 0) {
+      filters.process_selection = SELECTION_MODE_NONE;
+    } else if (processCtx.selectedIds.length < processCtx.availableCount) {
+      filters.process_selection = 'partial';
+      filters.process_ids = processCtx.selectedIds;
+    } else {
+      filters.process_selection = 'all';
+    }
   }
 
   // Process Owner IDs - incluir somente quando parcial no contexto atual
@@ -4228,4 +4230,5 @@ function initializeScopeSelector() {
 }
 
 console.log('✅ My Work page initialized');
+
 
