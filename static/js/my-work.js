@@ -782,19 +782,29 @@ function getProcessOwnerOptions() {
 }
 
 function updateProcessOwnersFromActivities() {
-  // Extrair donos únicos das atividades de processos
+  // Extrair donos únicos das atividades de processos usando owner_id numérico,
+  // mantendo compatibilidade com a exportação do relatório no backend.
   const ownersMap = new Map();
 
   (state.activities || []).forEach(activity => {
-    if (activity.type === 'process') {
-      const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
-      if (ownerName && !ownersMap.has(ownerName)) {
-        ownersMap.set(ownerName, {
-          id: ownerName, // Usar o nome como ID para simplificar
-          name: ownerName,
-          company_name: activity.company_name || ''
-        });
-      }
+    if (activity.type !== 'process') {
+      return;
+    }
+
+    const ownerId = Number(activity.owner_id);
+    const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
+
+    if (!Number.isInteger(ownerId) || ownerId <= 0 || !ownerName) {
+      return;
+    }
+
+    if (!ownersMap.has(ownerId)) {
+      ownersMap.set(ownerId, {
+        id: ownerId,
+        name: ownerName,
+        company_id: activity.company_id || null,
+        company_name: activity.company_name || ''
+      });
     }
   });
 
@@ -1935,11 +1945,14 @@ function getFilteredActivities() {
         if (activity.type !== 'process') {
           return true; // Não filtrar atividades de projeto por dono de processo
         }
-        const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
-        if (!ownerName) {
+        const ownerId = Number(activity.owner_id);
+        if (!Number.isInteger(ownerId) || ownerId <= 0) {
           return false; // Se não tem dono definido, excluir quando filtro está ativo
         }
-        return state.selectedProcessOwnerIds.includes(ownerName);
+        return (
+          state.selectedProcessOwnerIds.includes(ownerId) ||
+          state.selectedProcessOwnerIds.includes(String(ownerId))
+        );
       });
     }
     // Se todos os donos estão selecionados, não filtrar (mostrar todos os processos)
@@ -4025,9 +4038,11 @@ function buildReportFiltersPayload() {
     filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  // Project IDs - incluir seleção parcial e também o caso "nenhum selecionado"
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (
+  if (projectCtx.availableCount > 0 && projectCtx.selectedIds.length === 0) {
+    filters.project_selection = SELECTION_MODE_NONE;
+  } else if (
     projectCtx.availableCount > 0 &&
     projectCtx.selectedIds.length > 0 &&
     projectCtx.selectedIds.length < projectCtx.availableCount
@@ -4035,9 +4050,11 @@ function buildReportFiltersPayload() {
     filters.project_ids = projectCtx.selectedIds;
   }
 
-  // Process IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  // Process IDs - incluir seleção parcial e também o caso "nenhum selecionado"
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (
+  if (processCtx.availableCount > 0 && processCtx.selectedIds.length === 0) {
+    filters.process_selection = SELECTION_MODE_NONE;
+  } else if (
     processCtx.availableCount > 0 &&
     processCtx.selectedIds.length > 0 &&
     processCtx.selectedIds.length < processCtx.availableCount
@@ -4211,3 +4228,4 @@ function initializeScopeSelector() {
 }
 
 console.log('✅ My Work page initialized');
+
