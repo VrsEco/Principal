@@ -115,6 +115,21 @@ def _parse_export_filters(raw_filters: str):
     if process_selection == "none":
         normalized["process_selection"] = "none"
 
+    # Regra de inferência do relatório:
+    # se o usuário filtra projetos específicos e não explicita nenhum recorte de processos,
+    # o relatório deve assumir "somente projetos".
+    # O mesmo vale no sentido inverso para processos.
+    has_project_ids = bool(normalized.get("project_ids"))
+    has_process_ids = bool(normalized.get("process_ids"))
+    has_explicit_project_mode = "project_selection" in normalized
+    has_explicit_process_mode = "process_selection" in normalized
+
+    if has_project_ids and not has_process_ids and not has_explicit_process_mode:
+        normalized["process_selection"] = "none"
+
+    if has_process_ids and not has_project_ids and not has_explicit_project_mode:
+        normalized["project_selection"] = "none"
+
     return normalized
 
 
@@ -780,3 +795,4 @@ def my_work_company_overview():
     except Exception as e:
         logger.error(f"Company Overview Error: {e}")
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
