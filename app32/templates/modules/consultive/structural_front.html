@@ -1,0 +1,984 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ page_title or "Frente Consultiva" }}{% endblock %}
+
+{% block breadcrumb %}
+<a href="/">Início</a>
+<span class="sep">/</span>
+<a href="/consultive/cockpit">Consultivo</a>
+<span class="sep">/</span>
+<span class="current">{{ front_title }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<div class="consultive-front-page"
+     data-front-key="{{ front_key }}"
+     data-company-id="{{ company_id or '' }}">
+    <header class="cf-hero">
+        <div>
+            <p class="cf-eyebrow">Camada Consultiva · Estruturação Empresarial</p>
+            <h1>{{ front_title }}</h1>
+            <p>Leitura assistida da frente, com evidências internas, lacunas metodológicas, recomendações e próximos movimentos para o consultor conduzir com o cliente.</p>
+        </div>
+        <div class="cf-actions">
+            <a class="cf-btn cf-btn-secondary" href="/consultive/cockpit">Voltar ao Cockpit</a>
+            {% if operational_url %}
+                <a class="cf-btn cf-btn-primary" href="{{ operational_url }}">Abrir fonte operacional</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <section class="cf-summary-grid" aria-live="polite">
+        <article class="cf-summary-card"><span>Maturidade</span><strong id="cf-maturity">--%</strong></article>
+        <article class="cf-summary-card"><span>Evidências</span><strong id="cf-evidence-count">--</strong></article>
+        <article class="cf-summary-card"><span>Gaps</span><strong id="cf-gaps-count">--</strong></article>
+        <article class="cf-summary-card"><span>Recomendações</span><strong id="cf-recommendations-count">--</strong></article>
+    </section>
+
+    <section class="cf-next-panel">
+        <div>
+            <p class="cf-eyebrow">Próximo avanço</p>
+            <h2 id="cf-next-action-title">Carregando análise...</h2>
+            <p id="cf-next-action-copy">Aguarde enquanto o APP32 consolida a leitura da frente.</p>
+        </div>
+        <span class="cf-gate">Gate humano obrigatório</span>
+    </section>
+
+    <section id="cf-identity-subphases" class="cf-process-panel cf-identity-panel" hidden>
+        <div class="cf-panel-head">
+            <p class="cf-eyebrow">Identidade Organizacional</p>
+            <h2>Base organizacional da empresa</h2>
+            <p>Leitura consultiva da identidade mínima para a empresa estar “na mão”: missão, visão, valores, posicionamento e organograma precisam existir, ser coerentes e sustentar decisões, processos e estratégia.</p>
+        </div>
+        <div id="cf-identity-subphase-list" class="cf-subphase-grid"></div>
+    </section>
+
+    <section id="cf-process-subphases" class="cf-process-panel" hidden>
+        <div class="cf-panel-head">
+            <p class="cf-eyebrow">Maturação de Processos</p>
+            <h2>Subfases consultivas</h2>
+            <p>Leitura metodológica da frente Processos: a empresa não precisa estar 100% modelada para implantar, mas cada processo precisa ter clareza do estágio, do projeto de implantação e do caminho até estabilização/auditoria.</p>
+        </div>
+        <div id="cf-process-subphase-list" class="cf-subphase-grid"></div>
+    </section>
+
+    <section id="cf-growth-plan-subphases" class="cf-process-panel cf-growth-panel" hidden>
+        <div class="cf-panel-head">
+            <p class="cf-eyebrow">Planejamento Estratégico</p>
+            <h2>Evolução consultiva do plano de crescimento</h2>
+            <p>Leitura metodológica do planejamento: não basta existir um plano. Ele precisa estar estruturado, conectado aos objetos reais da empresa, desdobrado e vinculado ao Gerenciamento Estratégico.</p>
+        </div>
+        <div id="cf-growth-plan-subphase-list" class="cf-subphase-grid cf-growth-grid"></div>
+    </section>
+
+    <section id="cf-strategic-management-subphases" class="cf-process-panel cf-management-panel" hidden>
+        <div class="cf-panel-head">
+            <p class="cf-eyebrow">Gerenciamento Estratégico</p>
+            <h2>Gestão por fatos, incentivos e conexões</h2>
+            <p>A empresa acompanha sua estratégia, decide com base em fatos, alinha incentivos e entende as conexões entre estratégia, processos, projetos, pessoas e indicadores.</p>
+        </div>
+        <div id="cf-strategic-management-subphase-list" class="cf-subphase-grid cf-management-grid"></div>
+    </section>
+
+    <section class="cf-assisted-mcp-panel" aria-labelledby="cf-assisted-mcp-title">
+        <div class="cf-assisted-head">
+            <div>
+                <p class="cf-eyebrow">Análise Assistida via MCP</p>
+                <h2 id="cf-assisted-mcp-title">IA do cliente, método Versus e gate humano</h2>
+                <p>A análise começa fora do APP32, na IA/CLI conectada ao MCP do cliente. O APP32 orienta o roteiro, fornece contexto tenant-safe via MCP e registra o retorno, as validações dos squads e a decisão do consultor.</p>
+            </div>
+            <div class="cf-assisted-badges">
+                <span class="cf-assisted-cost">Custo/token do cliente</span>
+                <span id="cf-active-protocol" class="cf-protocol-badge">Protocolo: carregando...</span>
+            </div>
+        </div>
+        <div class="cf-assisted-steps">
+            <article>
+                <strong>1 · Contexto MCP</strong>
+                <span>Frente, subfases, evidências, gaps e objetos canônicos com `company_id`.</span>
+            </article>
+            <article>
+                <strong>2 · IA/CLI do cliente</strong>
+                <span>A IA consulta o MCP, pesquisa benchmarks e produz síntese usando capacidade autorizada pelo tenant.</span>
+            </article>
+            <article>
+                <strong>3 · Validação dos squads</strong>
+                <span>Squad Cliente valida operação; Squad Versus valida método; Engenharia valida base técnica.</span>
+            </article>
+            <article>
+                <strong>4 · Decisão do consultor</strong>
+                <span>Aprovar, ajustar ou rejeitar; depois converter em ação, projeto, maturação ou Business Review.</span>
+            </article>
+        </div>
+        <div class="cf-assisted-actions">
+            <button type="button" class="cf-btn cf-btn-secondary" data-cf-open-mcp-guide>Ver roteiro MCP para IA/CLI</button>
+            <button type="button" class="cf-btn cf-btn-primary" data-cf-open-analysis-register>Registrar análise recebida</button>
+            <button type="button" class="cf-btn cf-btn-secondary" data-cf-open-decision-register>Registrar decisão do consultor</button>
+            <small>O APP32 não dispara a IA: ele orienta o uso via MCP e registra o resultado trazido pela IA/CLI.</small>
+        </div>
+    </section>
+
+    <section class="cf-history-panel" aria-labelledby="cf-history-title">
+        <div class="cf-history-head">
+            <div>
+                <p class="cf-eyebrow">Memória consultiva</p>
+                <h2 id="cf-history-title">Histórico de análises assistidas</h2>
+                <p>Registro das análises que a IA/CLI trouxe pelo MCP, com protocolo usado, validações dos squads e decisão do consultor.</p>
+            </div>
+            <button type="button" class="cf-btn cf-btn-secondary" data-cf-refresh-history>Atualizar histórico</button>
+        </div>
+        <div id="cf-analysis-history" class="cf-history-list">
+            <p class="cf-empty">Carregando histórico...</p>
+        </div>
+    </section>
+
+    <div id="cf-mcp-guide-modal" class="cf-modal" hidden>
+        <div class="cf-modal-card" role="dialog" aria-modal="true" aria-labelledby="cf-mcp-guide-title">
+            <div class="cf-modal-head">
+                <div>
+                    <p class="cf-eyebrow">Roteiro MCP para IA/CLI</p>
+                    <h2 id="cf-mcp-guide-title">Como pedir a análise desta frente na IA conectada ao MCP</h2>
+                </div>
+                <button type="button" class="cf-modal-close" data-cf-close-mcp-guide aria-label="Fechar">×</button>
+            </div>
+            <div class="cf-guide-grid">
+                <section>
+                    <h3>1 · Instrução para a IA/CLI</h3>
+                    <pre id="cf-mcp-guide-prompt"></pre>
+                </section>
+                <section>
+                    <h3>2 · Tools MCP esperadas</h3>
+                    <ul>
+                        <li><code>consultive_get_front_context</code></li>
+                        <li><code>consultive_get_front_evidence</code></li>
+                        <li><code>consultive_get_front_gaps</code></li>
+                        <li><code>consultive_get_methodology_guidance</code></li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>3 · Resposta esperada da IA</h3>
+                    <ul>
+                        <li>diagnóstico da frente;</li>
+                        <li>benchmarks e boas práticas, se aplicável;</li>
+                        <li>riscos e limitações;</li>
+                        <li>recomendações priorizadas;</li>
+                        <li>próximos passos e fontes externas.</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>4 · Depois da análise</h3>
+                    <p>Traga o resultado para o APP32, valide com Squad Cliente e Squad Versus, registre a decisão do consultor e só então converta em ação.</p>
+                    <p><strong>Atenção:</strong> custo/token/capacidade são do cliente quando a análise for feita pela IA/CLI do tenant.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div id="cf-analysis-register-modal" class="cf-modal" hidden>
+        <div class="cf-modal-card" role="dialog" aria-modal="true" aria-labelledby="cf-analysis-register-title">
+            <div class="cf-modal-head">
+                <div>
+                    <p class="cf-eyebrow">Registrar análise recebida</p>
+                    <h2 id="cf-analysis-register-title">Resultado trazido pela IA/CLI via MCP</h2>
+                </div>
+                <button type="button" class="cf-modal-close" data-cf-close-analysis-register aria-label="Fechar">×</button>
+            </div>
+            <form class="cf-form-grid" data-cf-analysis-register-form>
+                <label>IA/CLI utilizada<input type="text" name="ai_origin" placeholder="Ex.: Claude Desktop, ChatGPT, Codex CLI, outro"></label>
+                <label>Responsável pelo registro<input type="text" name="responsible" placeholder="Nome do consultor ou responsável"></label>
+                <label class="cf-field-wide">Diagnóstico recebido<textarea name="diagnosis" rows="4" placeholder="Cole a síntese diagnóstica gerada pela IA/CLI"></textarea></label>
+                <label class="cf-field-wide">Benchmarks e fontes<textarea name="benchmarks" rows="3" placeholder="Fontes externas, boas práticas e referências utilizadas"></textarea></label>
+                <label class="cf-field-wide">Riscos e limitações<textarea name="risks" rows="3" placeholder="Limitações da análise, dados ausentes e riscos de interpretação"></textarea></label>
+                <label class="cf-field-wide">Recomendações e próximos passos<textarea name="recommendations" rows="4" placeholder="Recomendações priorizadas e próximos passos sugeridos"></textarea></label>
+                <label>Validação Squad Cliente<select name="client_squad_validation"><option value="">Aguardando validação</option><option value="Validada">Validada</option><option value="Ajustar">Ajustar</option><option value="Rejeitada">Rejeitada</option></select></label>
+                <label>Validação Squad Versus<select name="versus_squad_validation"><option value="">Aguardando validação</option><option value="Validada">Validada</option><option value="Ajustar">Ajustar</option><option value="Rejeitada">Rejeitada</option></select></label>
+                <label>Validação Engenharia<select name="engineering_squad_validation"><option value="">Não aplicável</option><option value="Aguardando validação">Aguardando validação</option><option value="Validada">Validada</option><option value="Ajustar">Ajustar</option><option value="Rejeitada">Rejeitada</option></select></label>
+                <label>Status da análise<select name="analysis_status"><option value="received">Recebida</option><option value="under_review">Em validação</option><option value="validated">Validada</option><option value="rejected">Rejeitada</option></select></label>
+                <div class="cf-form-actions cf-field-wide">
+                    <button type="button" class="cf-btn cf-btn-secondary" data-cf-close-analysis-register>Cancelar</button>
+                    <button type="submit" class="cf-btn cf-btn-primary">Salvar análise no APP32</button>
+                    <small data-cf-analysis-register-feedback>Será registrada no tenant ativo, sem disparar IA pelo APP32.</small>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="cf-decision-register-modal" class="cf-modal" hidden>
+        <div class="cf-modal-card" role="dialog" aria-modal="true" aria-labelledby="cf-decision-register-title">
+            <div class="cf-modal-head">
+                <div>
+                    <p class="cf-eyebrow">Registrar decisão do consultor</p>
+                    <h2 id="cf-decision-register-title">Gate humano antes de virar ação</h2>
+                </div>
+                <button type="button" class="cf-modal-close" data-cf-close-decision-register aria-label="Fechar">×</button>
+            </div>
+            <form class="cf-form-grid" data-cf-decision-register-form>
+                <label>Análise selecionada<input type="number" name="analysis_id" min="1" placeholder="Clique em Decidir no histórico ou informe o ID"></label>
+                <label>Decisão<select name="consultant_decision"><option value="accept">Aprovar recomendação</option><option value="adjust">Aprovar com ajustes</option><option value="hold">Solicitar nova análise</option><option value="reject">Rejeitar recomendação</option></select></label>
+                <label>Converter em<select name="conversion_target"><option value="none">Sem conversão imediata</option><option value="project">Projeto</option><option value="process">Revisão de processo</option><option value="indicator">Indicador</option><option value="routine">Rotina</option><option value="business_review">Business Review</option><option value="urgent_need">Necessidade Urgente</option><option value="structural_learning">Aprendizado estrutural</option></select></label>
+                <label class="cf-field-wide">Justificativa da decisão<textarea name="decision_reason" rows="4" placeholder="Explique por que a recomendação foi aprovada, ajustada ou rejeitada"></textarea></label>
+                <label class="cf-field-wide">Próxima ação<textarea name="next_action" rows="3" placeholder="Defina o próximo passo, responsável sugerido, prazo ou objeto canônico relacionado"></textarea></label>
+                <label class="cf-field-wide">Observações de governança<textarea name="governance_notes" rows="3" placeholder="Riscos, restrições, validações pendentes e necessidade de gate adicional"></textarea></label>
+                <div class="cf-form-actions cf-field-wide">
+                    <button type="button" class="cf-btn cf-btn-secondary" data-cf-close-decision-register>Cancelar</button>
+                    <button type="submit" class="cf-btn cf-btn-primary">Salvar decisão no APP32</button>
+                    <small data-cf-decision-register-feedback>Decisão humana obrigatória antes de qualquer conversão operacional. Use preferencialmente o botão Decidir no histórico para evitar escolher a análise errada.</small>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <main class="cf-grid">
+        <section class="cf-panel">
+            <div class="cf-panel-head">
+                <p class="cf-eyebrow">Diagnóstico</p>
+                <h2>Evidências internas</h2>
+            </div>
+            <div id="cf-evidence" class="cf-list"><p class="cf-empty">Carregando...</p></div>
+        </section>
+
+        <section class="cf-panel cf-panel-warn">
+            <div class="cf-panel-head">
+                <p class="cf-eyebrow">Maturação</p>
+                <h2>Gaps metodológicos</h2>
+            </div>
+            <div id="cf-gaps" class="cf-list"><p class="cf-empty">Carregando...</p></div>
+        </section>
+
+        <section class="cf-panel cf-panel-success">
+            <div class="cf-panel-head">
+                <p class="cf-eyebrow">Condução Versus</p>
+                <h2>Recomendações</h2>
+            </div>
+            <div id="cf-recommendations" class="cf-list"><p class="cf-empty">Carregando...</p></div>
+        </section>
+
+        <section class="cf-panel cf-panel-tech">
+            <div class="cf-panel-head">
+                <p class="cf-eyebrow">Squad Engenharia</p>
+                <h2>Gaps técnicos / automação</h2>
+            </div>
+            <div id="cf-engineering-gaps" class="cf-list"><p class="cf-empty">Carregando...</p></div>
+        </section>
+    </main>
+</div>
+
+<style>
+    .consultive-front-page { padding: 0 2rem 2rem; color: #102033; }
+    .cf-hero { display:flex; justify-content:space-between; gap:1.25rem; align-items:flex-start; background:#fff; border:1px solid #dbeafe; border-radius:1.5rem; padding:1.25rem 1.4rem; box-shadow:0 14px 40px rgba(15,23,42,.06); margin-bottom:1rem; }
+    .cf-eyebrow { margin:0 0 .35rem; text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; font-weight:900; color:#0f766e; }
+    .cf-hero h1 { margin:0; color:#0f172a; font-size:1.75rem; line-height:1.1; }
+    .cf-hero p:last-child { margin:.45rem 0 0; color:#64748b; max-width:820px; }
+    .cf-actions { display:flex; gap:.65rem; flex-wrap:wrap; justify-content:flex-end; }
+    .cf-btn { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:.68rem 1rem; font-weight:900; text-decoration:none; border:1px solid transparent; white-space:nowrap; }
+    .cf-btn-primary { background:#0f766e; color:#fff; }
+    .cf-btn-secondary { background:#fff; color:#0f172a; border-color:#cbd5e1; }
+    .cf-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.8rem; margin-bottom:1rem; }
+    .cf-summary-card { background:#fff; border:1px solid #e2e8f0; border-radius:1.2rem; padding:1rem; box-shadow:0 12px 30px rgba(15,23,42,.05); }
+    .cf-summary-card span { color:#64748b; font-weight:800; font-size:.82rem; }
+    .cf-summary-card strong { display:block; margin-top:.25rem; color:#0f172a; font-size:1.55rem; }
+    .cf-next-panel { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; background:linear-gradient(135deg,#ecfeff,#f0fdf4); border:1px solid #99f6e4; border-radius:1.5rem; padding:1.15rem; margin-bottom:1rem; }
+    .cf-next-panel h2 { margin:0 0 .25rem; color:#115e59; font-size:1.2rem; }
+    .cf-next-panel p:last-child { margin:0; color:#475569; }
+    .cf-gate { border-radius:999px; padding:.35rem .75rem; background:#fff7ed; color:#9a3412; border:1px solid #fed7aa; font-weight:900; font-size:.78rem; white-space:nowrap; }
+    .cf-process-panel { background:linear-gradient(135deg,#f0fdfa,#fff); border:1px solid #99f6e4; border-radius:1.5rem; padding:1rem; box-shadow:0 16px 42px rgba(15,23,42,.06); margin-bottom:1rem; }
+    .cf-identity-panel { background:linear-gradient(135deg,#ecfeff,#fff); border-color:#67e8f9; }
+    .cf-growth-panel { background:linear-gradient(135deg,#eff6ff,#fff); border-color:#bfdbfe; }
+    .cf-management-panel { background:linear-gradient(135deg,#f5f3ff,#fff); border-color:#c4b5fd; }
+    .cf-assisted-mcp-panel { background:linear-gradient(135deg,#f8fafc,#ffffff); border:1px solid #cbd5e1; border-radius:1.5rem; padding:1rem; box-shadow:0 16px 42px rgba(15,23,42,.06); margin-bottom:1rem; }
+    .cf-assisted-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.9rem; }
+    .cf-assisted-head h2 { margin:0 0 .35rem; color:#0f172a; font-size:1.15rem; }
+    .cf-assisted-head p:last-child { margin:0; color:#475569; line-height:1.35; max-width:980px; }
+    .cf-assisted-badges { display:flex; flex-direction:column; align-items:flex-end; gap:.45rem; min-width:12rem; }
+    .cf-assisted-cost { white-space:nowrap; border-radius:999px; padding:.35rem .7rem; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:900; font-size:.78rem; }
+    .cf-protocol-badge { max-width:18rem; text-align:right; border-radius:999px; padding:.35rem .7rem; background:#f0fdf4; color:#047857; border:1px solid #bbf7d0; font-weight:900; font-size:.74rem; line-height:1.2; }
+    .cf-assisted-steps { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.7rem; }
+    .cf-assisted-steps article { border:1px solid #e2e8f0; border-radius:1rem; padding:.8rem; background:#fff; }
+    .cf-assisted-steps strong { display:block; color:#0f172a; margin-bottom:.25rem; }
+    .cf-assisted-steps span { color:#64748b; font-size:.84rem; line-height:1.35; }
+    .cf-assisted-actions { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; margin-top:.9rem; }
+    .cf-assisted-actions .cf-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .cf-assisted-actions small { color:#64748b; font-weight:700; }
+    .cf-history-panel { background:linear-gradient(135deg,#fff7ed,#ffffff); border:1px solid #fed7aa; border-radius:1.5rem; padding:1rem; box-shadow:0 16px 42px rgba(15,23,42,.06); margin-bottom:1rem; }
+    .cf-history-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.9rem; }
+    .cf-history-head h2 { margin:0 0 .35rem; color:#0f172a; font-size:1.15rem; }
+    .cf-history-head p:last-child { margin:0; color:#64748b; line-height:1.35; max-width:900px; }
+    .cf-history-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+    .cf-history-card { border:1px solid #e2e8f0; border-radius:1.1rem; background:#fff; padding:.95rem; box-shadow:0 10px 24px rgba(15,23,42,.04); }
+    .cf-history-card-head { display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; margin-bottom:.65rem; }
+    .cf-history-card h3 { margin:0; color:#0f172a; font-size:1rem; line-height:1.2; }
+    .cf-history-status { border-radius:999px; padding:.25rem .55rem; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:900; font-size:.72rem; white-space:nowrap; }
+    .cf-history-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.45rem; margin:.65rem 0; }
+    .cf-history-meta span { border:1px solid #e2e8f0; border-radius:.8rem; padding:.45rem .55rem; color:#475569; background:#f8fafc; font-size:.78rem; font-weight:800; }
+    .cf-history-meta strong { display:block; color:#0f172a; font-size:.82rem; margin-bottom:.15rem; }
+    .cf-history-excerpt { margin:.55rem 0; color:#475569; line-height:1.35; font-size:.88rem; }
+    .cf-history-footer { display:flex; justify-content:space-between; gap:.5rem; align-items:center; flex-wrap:wrap; border-top:1px solid #f1f5f9; padding-top:.6rem; margin-top:.65rem; }
+    .cf-history-footer small { color:#64748b; font-weight:800; }
+    .cf-history-card .cf-btn { padding:.45rem .75rem; font-size:.82rem; }
+    .cf-modal { position:fixed; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; padding:1.25rem; background:rgba(15,23,42,.48); }
+    .cf-modal[hidden] { display:none; }
+    .cf-modal-card { width:min(980px,100%); max-height:88vh; overflow:auto; background:#fff; border:1px solid #dbeafe; border-radius:1.5rem; box-shadow:0 30px 90px rgba(15,23,42,.28); padding:1.1rem; }
+    .cf-modal-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
+    .cf-modal-head h2 { margin:0; color:#0f172a; font-size:1.25rem; }
+    .cf-modal-close { border:1px solid #cbd5e1; background:#fff; color:#0f172a; width:2.25rem; height:2.25rem; border-radius:999px; font-size:1.35rem; line-height:1; cursor:pointer; }
+    .cf-guide-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.85rem; }
+    .cf-guide-grid section { border:1px solid #e2e8f0; border-radius:1rem; padding:.9rem; background:#f8fafc; }
+    .cf-guide-grid h3 { margin:0 0 .55rem; color:#0f172a; font-size:.98rem; }
+    .cf-guide-grid ul { margin:.25rem 0 0; padding-left:1.1rem; color:#475569; }
+    .cf-guide-grid li { margin:.25rem 0; }
+    .cf-guide-grid p { color:#475569; margin:.35rem 0; line-height:1.35; }
+    .cf-guide-grid pre { white-space:pre-wrap; margin:0; background:#0f172a; color:#e0f2fe; border-radius:.85rem; padding:.85rem; font-size:.82rem; line-height:1.45; }
+    .cf-guide-grid code { background:#e0f2fe; color:#075985; border-radius:.4rem; padding:.1rem .28rem; font-weight:800; }
+    .cf-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+    .cf-form-grid label { display:grid; gap:.32rem; color:#334155; font-weight:900; font-size:.84rem; }
+    .cf-form-grid input,.cf-form-grid select,.cf-form-grid textarea { width:100%; border:1px solid #cbd5e1; border-radius:.85rem; padding:.7rem .8rem; color:#0f172a; background:#fff; font:inherit; font-weight:600; }
+    .cf-form-grid textarea { resize:vertical; min-height:6rem; }
+    .cf-field-wide { grid-column:1 / -1; }
+    .cf-form-actions { display:flex; align-items:center; gap:.65rem; flex-wrap:wrap; border-top:1px solid #e2e8f0; padding-top:.85rem; }
+    .cf-form-actions small { color:#64748b; font-weight:700; }
+    .cf-panel-head p:last-child { margin:.15rem 0 .85rem; color:#64748b; line-height:1.35; }
+    .cf-subphase-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.75rem; }
+    .cf-subphase-card { display:flex; flex-direction:column; gap:.55rem; min-height:12rem; border:1px solid #dbeafe; border-radius:1.2rem; padding:.9rem; background:rgba(255,255,255,.86); }
+    .cf-subphase-card h3 { margin:0; color:#0f172a; font-size:1rem; line-height:1.15; }
+    .cf-subphase-card p { margin:0; color:#475569; font-size:.84rem; line-height:1.35; }
+    .cf-subphase-meta { display:flex; justify-content:space-between; gap:.5rem; align-items:center; margin-top:auto; }
+    .cf-subphase-status { border-radius:999px; padding:.22rem .55rem; font-size:.72rem; font-weight:900; border:1px solid #e2e8f0; background:#f8fafc; color:#475569; }
+    .cf-subphase-status.ok { background:#dcfce7; border-color:#86efac; color:#166534; }
+    .cf-subphase-status.partial { background:#dbeafe; border-color:#93c5fd; color:#1d4ed8; }
+    .cf-subphase-status.review { background:#fef3c7; border-color:#fcd34d; color:#92400e; }
+    .cf-subphase-status.pending { background:#f8fafc; border-color:#cbd5e1; color:#475569; }
+    .cf-subphase-progress { font-weight:900; color:#0f172a; font-size:.82rem; }
+    .cf-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .cf-panel { background:#fff; border:1px solid #dbeafe; border-radius:1.4rem; padding:1rem; box-shadow:0 16px 42px rgba(15,23,42,.06); }
+    .cf-panel-warn { border-color:#fde68a; background:linear-gradient(135deg,#fff,#fffbeb); }
+    .cf-panel-success { border-color:#bbf7d0; background:linear-gradient(135deg,#fff,#f0fdf4); }
+    .cf-panel-tech { border-color:#c7d2fe; background:linear-gradient(135deg,#fff,#eef2ff); }
+    .cf-panel-head h2 { margin:0 0 .85rem; font-size:1.1rem; color:#0f172a; }
+    .cf-list { display:grid; gap:.65rem; }
+    .cf-row { border:1px solid #e2e8f0; border-radius:1rem; padding:.8rem; background:rgba(255,255,255,.82); }
+    .cf-row strong { display:block; color:#0f172a; margin-bottom:.2rem; }
+    .cf-row span { color:#475569; font-size:.9rem; line-height:1.35; }
+    .cf-row-meta { display:inline-flex; margin-top:.45rem; border-radius:999px; padding:.16rem .5rem; background:#f8fafc; border:1px solid #e2e8f0; color:#64748b; font-size:.72rem; font-weight:800; }
+    .cf-empty { color:#64748b; margin:0; }
+    @media (max-width: 1180px) { .cf-subphase-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 1120px) { .cf-summary-grid,.cf-grid,.cf-assisted-steps,.cf-history-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 760px) { .consultive-front-page { padding:0 1rem 1.5rem; } .cf-hero,.cf-next-panel,.cf-assisted-head,.cf-history-head,.cf-modal-head { flex-direction:column; } .cf-summary-grid,.cf-grid,.cf-subphase-grid,.cf-assisted-steps,.cf-history-list,.cf-history-meta,.cf-guide-grid,.cf-form-grid { grid-template-columns:1fr; } .cf-actions { justify-content:flex-start; } .cf-assisted-badges { align-items:flex-start; min-width:0; } .cf-assisted-cost,.cf-protocol-badge { white-space:normal; text-align:left; max-width:100%; } }
+</style>
+
+<script>
+(() => {
+    const root = document.querySelector('.consultive-front-page');
+    const frontKey = root?.dataset.frontKey;
+    const companyId = root?.dataset.companyId;
+    const frontTitle = document.querySelector('.cf-hero h1')?.textContent?.trim() || frontKey || 'frente consultiva';
+    let activeProtocol = null;
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    }
+    function itemTitle(item) {
+        return item.label || item.type || item.priority || item.severity || 'Item';
+    }
+    function itemText(item) {
+        return item.description || item.finding || item.summary || item.label || '--';
+    }
+    function renderRows(items, fallback) {
+        const rows = Array.isArray(items) ? items : [];
+        if (!rows.length) return `<p class="cf-empty">${escapeHtml(fallback)}</p>`;
+        return rows.map((item) => `
+            <article class="cf-row">
+                <strong>${escapeHtml(itemTitle(item))}</strong>
+                <span>${escapeHtml(itemText(item))}</span>
+                ${item.priority || item.severity || item.type ? `<em class="cf-row-meta">${escapeHtml(item.priority || item.severity || item.type)}</em>` : ''}
+            </article>
+        `).join('');
+    }
+    function mcpGuidePrompt() {
+        const protocolPrompt = activeProtocol?.prompt_markdown;
+        const protocolTitle = activeProtocol?.title;
+        const protocolVersion = activeProtocol?.protocol_version;
+        return [
+            `Atue como analista consultivo da Metodologia Versus para a frente "${frontTitle}".`,
+            protocolTitle ? `Protocolo ativo: ${protocolTitle} (${protocolVersion || 'sem versão'}).` : '',
+            '',
+            protocolPrompt ? 'Siga o protocolo consultivo ativo abaixo:' : '',
+            protocolPrompt || '',
+            protocolPrompt ? '' : '',
+            'Use o MCP do APP32 para buscar o contexto real da empresa antes de recomendar qualquer ação.',
+            `Empresa/company_id: ${companyId || '<empresa ativa no MCP>'}`,
+            `Frente/front_key: ${frontKey || '<front_key>'}`,
+            '',
+            'Use, quando disponíveis, as tools:',
+            '- consultive_get_front_context',
+            '- consultive_get_front_evidence',
+            '- consultive_get_front_gaps',
+            '- consultive_get_methodology_guidance',
+            '- consultive_resolve_protocol',
+            '',
+            'Entregue a resposta em português com:',
+            '1. diagnóstico objetivo da frente;',
+            '2. evidências internas consideradas;',
+            '3. lacunas e riscos;',
+            '4. benchmarks/boas práticas pesquisadas, com fontes, se a pergunta exigir;',
+            '5. recomendações priorizadas;',
+            '6. próximos passos para Squad Cliente, Squad Versus e consultor;',
+            '7. alertas de limitações da análise.',
+            '',
+            'Não tome decisão final. A decisão deve ser validada pelo consultor e registrada no APP32.'
+        ].filter((line) => line !== '').join('\\n');
+    }
+    function openMcpGuide() {
+        document.getElementById('cf-mcp-guide-prompt').textContent = mcpGuidePrompt();
+        document.getElementById('cf-mcp-guide-modal').hidden = false;
+    }
+    function closeMcpGuide() {
+        document.getElementById('cf-mcp-guide-modal').hidden = true;
+    }
+    function openModal(id) {
+        document.getElementById(id).hidden = false;
+    }
+    function closeModal(id) {
+        document.getElementById(id).hidden = true;
+    }
+    function formPayload(form) {
+        return Object.fromEntries(new FormData(form).entries());
+    }
+    function setFeedback(selector, text, isError = false) {
+        const el = document.querySelector(selector);
+        if (!el) return;
+        el.textContent = text;
+        el.style.color = isError ? '#b42318' : '#027a48';
+    }
+    async function postJson(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.error || `Falha HTTP ${response.status}`);
+        }
+        return data;
+    }
+    async function submitAssistedAnalysis(form) {
+        const payload = formPayload(form);
+        payload.protocol_id = activeProtocol?.id || null;
+        payload.protocol_version = activeProtocol?.protocol_version || null;
+        payload.protocol_source = activeProtocol?.source || (activeProtocol?.company_id ? 'tenant' : 'global');
+        payload.protocol_title = activeProtocol?.title || null;
+        payload.protocol_snapshot = activeProtocol || {};
+        const saved = await postJson(`/api/consultive/cockpit/fronts/${encodeURIComponent(frontKey)}/assisted-analyses`, payload);
+        const decisionAnalysisId = document.querySelector('[data-cf-decision-register-form] [name="analysis_id"]');
+        if (decisionAnalysisId && saved.id) {
+            decisionAnalysisId.value = saved.id;
+        }
+        form.reset();
+        setFeedback('[data-cf-analysis-register-feedback]', `Análise #${saved.id} registrada no APP32.`);
+        await loadAssistedAnalyses();
+        return saved;
+    }
+    async function submitConsultantDecision(form) {
+        const payload = formPayload(form);
+        const analysisId = Number(payload.analysis_id || 0);
+        if (!analysisId) {
+            throw new Error('Informe o ID da análise antes de registrar a decisão.');
+        }
+        delete payload.analysis_id;
+        const saved = await postJson(`/api/consultive/cockpit/assisted-analyses/${analysisId}/decision`, payload);
+        form.reset();
+        setFeedback('[data-cf-decision-register-feedback]', `Decisão #${saved.id} registrada para a análise #${analysisId}.`);
+        await loadAssistedAnalyses();
+        return saved;
+    }
+    function shortText(value, limit = 220) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+    }
+    function statusLabel(value) {
+        return ({
+            received: 'Recebida',
+            under_review: 'Em validação',
+            validated: 'Validada',
+            rejected: 'Rejeitada',
+            converted: 'Convertida',
+            archived: 'Arquivada',
+            pending: 'Pendente',
+            needs_adjustment: 'Ajustar'
+        })[value] || value || '--';
+    }
+    function decisionLabel(value) {
+        return ({
+            accept: 'Aprovada',
+            adjust: 'Aprovada com ajustes',
+            reject: 'Rejeitada',
+            hold: 'Nova análise'
+        })[value] || value || 'Sem decisão';
+    }
+    function updateActiveProtocolBadge() {
+        const target = document.getElementById('cf-active-protocol');
+        if (!target) return;
+        const title = activeProtocol?.title || 'protocolo ativo não identificado';
+        const version = activeProtocol?.protocol_version || 'sem versão';
+        const source = activeProtocol?.source || (activeProtocol?.company_id ? 'tenant' : 'global');
+        target.textContent = `Protocolo: ${title} · ${version} · ${source}`;
+    }
+    function renderAnalysisHistory(items) {
+        const target = document.getElementById('cf-analysis-history');
+        const rows = Array.isArray(items) ? items : [];
+        if (!rows.length) {
+            target.innerHTML = '<p class="cf-empty">Nenhuma análise assistida registrada para esta frente.</p>';
+            return;
+        }
+        target.innerHTML = rows.map((item) => {
+            const validations = item.validations || [];
+            const validated = validations.filter((validation) => validation.status === 'validated').length;
+            const decision = item.latest_decision || {};
+            const protocolTitle = item.protocol_title || item.protocol_snapshot?.title || 'Protocolo não identificado';
+            const protocolVersion = item.protocol_version || item.protocol_snapshot?.protocol_version || '--';
+            const createdAt = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '--';
+            return `
+                <article class="cf-history-card">
+                    <div class="cf-history-card-head">
+                        <h3>Análise #${escapeHtml(item.id)} · ${escapeHtml(protocolTitle)}</h3>
+                        <span class="cf-history-status">${escapeHtml(statusLabel(item.status))}</span>
+                    </div>
+                    <p class="cf-history-excerpt">${escapeHtml(shortText(item.diagnosis, 260))}</p>
+                    <div class="cf-history-meta">
+                        <span><strong>Protocolo</strong>${escapeHtml(protocolVersion)} · ${escapeHtml(item.protocol_source || 'ativo')}</span>
+                        <span><strong>IA/CLI</strong>${escapeHtml(item.ai_origin || '--')}</span>
+                        <span><strong>Squads</strong>${validated}/${validations.length || 3} validações</span>
+                        <span><strong>Decisão</strong>${escapeHtml(decisionLabel(decision.decision))}</span>
+                    </div>
+                    <div class="cf-history-footer">
+                        <small>${escapeHtml(createdAt)} · ${escapeHtml(item.responsible || 'sem responsável')}</small>
+                        <button type="button" class="cf-btn cf-btn-secondary" data-cf-use-analysis="${escapeHtml(item.id)}">Decidir</button>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+    async function loadAssistedAnalyses() {
+        const target = document.getElementById('cf-analysis-history');
+        if (!frontKey || !target) return;
+        try {
+            const response = await fetch(`/api/consultive/cockpit/fronts/${encodeURIComponent(frontKey)}/assisted-analyses?limit=20`, {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) throw new Error(`Falha HTTP ${response.status}`);
+            const payload = await response.json();
+            renderAnalysisHistory(payload.items || []);
+        } catch (error) {
+            target.innerHTML = `<p class="cf-empty">Não foi possível carregar o histórico: ${escapeHtml(error.message || 'tente novamente')}.</p>`;
+        }
+    }
+    function findEvidence(evidence, label) {
+        return (evidence || []).find((item) => String(item.label || '').toLowerCase() === String(label).toLowerCase()) || {};
+    }
+    function numbersFromText(text) {
+        return (String(text || '').match(/\d+/g) || []).map((value) => Number(value));
+    }
+    function ratioStatus(done, total) {
+        if (!total || !done) return { status: 'pending', label: 'Pendente', progress: '0%' };
+        if (done >= total) return { status: 'ok', label: 'OK', progress: '100%' };
+        return { status: 'partial', label: 'Parcial', progress: `${Math.round((done / total) * 100)}%` };
+    }
+    function evidenceStatus(evidence, label) {
+        const item = findEvidence(evidence, label);
+        const finding = String(item.finding || '');
+        if (!finding || /não encontrada|não encontrados|0\s/.test(finding.toLowerCase())) {
+            return { status: 'pending', label: 'Pendente', progress: '0%', finding };
+        }
+        if (/sem cargo|sem papel|sem responsável|sem respons/i.test(finding)) {
+            return { status: 'partial', label: 'Parcial', progress: '50%', finding };
+        }
+        return { status: 'ok', label: 'OK', progress: '100%', finding };
+    }
+    function renderIdentitySubphases(payload) {
+        const panel = document.getElementById('cf-identity-subphases');
+        if (frontKey !== 'identity') {
+            panel.hidden = true;
+            return;
+        }
+        panel.hidden = false;
+        const evidence = payload.internal_evidence || [];
+        const mission = evidenceStatus(evidence, 'Missão');
+        const vision = evidenceStatus(evidence, 'Visão');
+        const values = evidenceStatus(evidence, 'Valores');
+        const positioning = evidenceStatus(evidence, 'Posicionamento');
+        const organogram = evidenceStatus(evidence, 'Organograma');
+        const subphases = [
+            {
+                number: 1,
+                title: 'Missão',
+                ...mission,
+                description: 'Define a razão de existir da empresa e orienta priorização, cultura e decisões.'
+            },
+            {
+                number: 2,
+                title: 'Visão',
+                ...vision,
+                description: 'Expressa o futuro desejado e sustenta planejamento, metas e escolhas estratégicas.'
+            },
+            {
+                number: 3,
+                title: 'Valores',
+                ...values,
+                description: 'Explicita comportamentos esperados e critérios para decisões, pessoas e incentivos.'
+            },
+            {
+                number: 4,
+                title: 'Posicionamento',
+                ...positioning,
+                description: 'Clareia mercado, proposta de valor, diferenciais e foco competitivo da empresa.'
+            },
+            {
+                number: 5,
+                title: 'Organograma',
+                ...organogram,
+                description: 'Conecta papéis, responsabilidades e governança mínima para execução e gestão.'
+            }
+        ];
+        document.getElementById('cf-identity-subphase-list').innerHTML = subphases.map((item) => `
+            <article class="cf-subphase-card">
+                <h3>${item.number} - ${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                ${item.finding ? `<p>${escapeHtml(item.finding)}</p>` : ''}
+                <div class="cf-subphase-meta">
+                    <span class="cf-subphase-status ${escapeHtml(item.status)}">${escapeHtml(item.label)}</span>
+                    <strong class="cf-subphase-progress">${escapeHtml(item.progress)}</strong>
+                </div>
+            </article>
+        `).join('');
+    }
+    function renderProcessSubphases(payload) {
+        const panel = document.getElementById('cf-process-subphases');
+        if (frontKey !== 'processes') {
+            panel.hidden = true;
+            return;
+        }
+        panel.hidden = false;
+        const evidence = payload.internal_evidence || [];
+        const areas = numbersFromText(findEvidence(evidence, 'Áreas cadastradas').finding)[0] || 0;
+        const macroprocesses = numbersFromText(findEvidence(evidence, 'Macroprocessos cadastrados').finding)[0] || 0;
+        const processes = numbersFromText(findEvidence(evidence, 'Processos ativos').finding)[0] || 0;
+        const modelingNumbers = numbersFromText(findEvidence(evidence, 'Processos com fluxo/modelagem').finding);
+        const modeled = modelingNumbers[0] || 0;
+        const modelTotal = modelingNumbers[1] || processes;
+        const routineNumbers = numbersFromText(findEvidence(evidence, 'Rotinas e POPs').finding);
+        const routines = routineNumbers[0] || 0;
+        const contracts = numbersFromText(findEvidence(evidence, 'SPEC/contratos de execução').finding)[0] || 0;
+        const auditNumbers = numbersFromText(findEvidence(evidence, 'Auditoria interna').finding);
+        const auditChecklists = auditNumbers[0] || 0;
+        const auditSchedules = auditNumbers[1] || 0;
+        const architecture = ratioStatus([areas, macroprocesses, processes].filter(Boolean).length, 3);
+        const modeling = ratioStatus(modeled, modelTotal);
+        const implantation = routines || contracts
+            ? { status: 'partial', label: 'Em implantação', progress: routines && contracts ? '60%' : '30%' }
+            : { status: 'pending', label: 'Sem projeto', progress: '0%' };
+        const stabilization = { status: 'review', label: 'A estabilizar', progress: '0/3 ciclos' };
+        const audit = auditChecklists && auditSchedules
+            ? { status: 'ok', label: 'No ciclo', progress: '100%' }
+            : { status: 'pending', label: 'Pendente', progress: '0%' };
+        const subphases = [
+            {
+                number: 1,
+                title: 'Arquitetura',
+                ...architecture,
+                description: 'Áreas, macroprocessos, processos, donos de processos e indicadores potenciais.'
+            },
+            {
+                number: 2,
+                title: 'Modelagem',
+                ...modeling,
+                description: 'Estrutura/recursos, fluxo, POP, recursos, rotina, SPEC para IA e indicadores.'
+            },
+            {
+                number: 3,
+                title: 'Implantação',
+                ...implantation,
+                description: 'Cada implantação deve ter projeto associado, treinamento e responsáveis claros.'
+            },
+            {
+                number: 4,
+                title: 'Estabilização',
+                ...stabilization,
+                description: 'Exige 3 ciclos dentro das faixas de controle dos indicadores, auditados pela Versus.'
+            },
+            {
+                number: 5,
+                title: 'Auditoria',
+                ...audit,
+                description: 'Entrada do processo no rol de auditoria interna, com checklist e periodicidade.'
+            }
+        ];
+        document.getElementById('cf-process-subphase-list').innerHTML = subphases.map((item) => `
+            <article class="cf-subphase-card">
+                <h3>${item.number} - ${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                <div class="cf-subphase-meta">
+                    <span class="cf-subphase-status ${escapeHtml(item.status)}">${escapeHtml(item.label)}</span>
+                    <strong class="cf-subphase-progress">${escapeHtml(item.progress)}</strong>
+                </div>
+            </article>
+        `).join('');
+    }
+    function renderGrowthPlanSubphases(payload) {
+        const panel = document.getElementById('cf-growth-plan-subphases');
+        if (frontKey !== 'growth_plan') {
+            panel.hidden = true;
+            return;
+        }
+        panel.hidden = false;
+        const evidence = payload.internal_evidence || [];
+        const planNumbers = numbersFromText(findEvidence(evidence, 'Planejamento de crescimento').finding);
+        const plans = planNumbers[0] || 0;
+        const activePlans = planNumbers[1] || 0;
+        const driverNumbers = numbersFromText(findEvidence(evidence, 'Direcionadores estratégicos').finding);
+        const drivers = driverNumbers[0] || 0;
+        const completedSections = driverNumbers[1] || 0;
+        const okrNumbers = numbersFromText(findEvidence(evidence, 'OKRs globais').finding);
+        const globalOkrs = okrNumbers[0] || 0;
+        const globalKrs = okrNumbers[1] || 0;
+        const areaNumbers = numbersFromText(findEvidence(evidence, 'Desdobramento por área').finding);
+        const areaOkrs = areaNumbers[0] || 0;
+        const linkedAreaOkrs = areaNumbers[1] || 0;
+        const areaKrs = areaNumbers[2] || 0;
+        const strategicProjects = numbersFromText(findEvidence(evidence, 'Projetos vinculados').finding)[0] || 0;
+        const linkedProcesses = numbersFromText(findEvidence(evidence, 'Conexão com processos').finding)[0] || 0;
+        const structured = activePlans || plans
+            ? { status: 'ok', label: activePlans ? 'Ativo' : 'Estruturado', progress: activePlans ? '100%' : '75%' }
+            : { status: 'pending', label: 'Pendente', progress: '0%' };
+        const connectedScore = [drivers, linkedProcesses, strategicProjects].filter(Boolean).length;
+        const connected = ratioStatus(connectedScore, 3);
+        const unfoldedScore = [globalOkrs, globalKrs, areaOkrs || areaKrs || linkedAreaOkrs].filter(Boolean).length;
+        const unfolded = ratioStatus(unfoldedScore, 3);
+        const management = strategicProjects && (globalKrs || areaKrs)
+            ? { status: 'ok', label: 'Vinculado', progress: '100%' }
+            : strategicProjects || globalKrs || areaKrs
+                ? { status: 'partial', label: 'Parcial', progress: '50%' }
+                : { status: 'pending', label: 'Pendente', progress: '0%' };
+        const subphases = [
+            {
+                number: 1,
+                title: 'Estruturado',
+                ...structured,
+                description: 'Plano de crescimento existe, está ativo ou em condição de ser usado como referência consultiva.'
+            },
+            {
+                number: 2,
+                title: 'Conectado',
+                ...connected,
+                description: 'Direcionadores do plano conectados a processos, projetos e objetos reais da operação.'
+            },
+            {
+                number: 3,
+                title: 'Desdobrado',
+                ...unfolded,
+                description: 'Objetivos globais desdobrados em áreas, KRs e responsáveis executáveis.'
+            },
+            {
+                number: 4,
+                title: 'Vinculado à gestão',
+                ...management,
+                description: 'Planejamento conectado ao Gerenciamento Estratégico para decisão, acompanhamento e aprendizado.'
+            }
+        ];
+        document.getElementById('cf-growth-plan-subphase-list').innerHTML = subphases.map((item) => `
+            <article class="cf-subphase-card">
+                <h3>${item.number} - ${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                <div class="cf-subphase-meta">
+                    <span class="cf-subphase-status ${escapeHtml(item.status)}">${escapeHtml(item.label)}</span>
+                    <strong class="cf-subphase-progress">${escapeHtml(item.progress)}</strong>
+                </div>
+            </article>
+        `).join('');
+    }
+    function renderStrategicManagementSubphases(payload) {
+        const panel = document.getElementById('cf-strategic-management-subphases');
+        if (frontKey !== 'strategic_management') {
+            panel.hidden = true;
+            return;
+        }
+        panel.hidden = false;
+        const evidence = payload.internal_evidence || [];
+        const indicatorNumbers = numbersFromText(findEvidence(evidence, 'Indicadores').finding);
+        const activeIndicators = indicatorNumbers[0] || 0;
+        const indicatorsWithResponsible = indicatorNumbers[1] || 0;
+        const indicatorsWithGoals = indicatorNumbers[2] || 0;
+        const indicatorsWithData = indicatorNumbers[3] || 0;
+        const cycleNumbers = numbersFromText(findEvidence(evidence, 'Ciclos de gestão').finding);
+        const managementMeetings = cycleNumbers[0] || 0;
+        const measurements = cycleNumbers[1] || 0;
+        const incentiveNumbers = numbersFromText(findEvidence(evidence, 'Gestão de Incentivos').finding);
+        const incentiveSets = incentiveNumbers[0] || 0;
+        const incentiveRules = incentiveNumbers[1] || 0;
+        const governabilityLinks = incentiveNumbers[2] || 0;
+        const webNumbers = numbersFromText(findEvidence(evidence, 'Teia de Conexões').finding);
+        const entityLinks = webNumbers[0] || 0;
+        const lineOfSight = webNumbers[1] || 0;
+        const strategicProjects = webNumbers[2] || 0;
+        const indicators = ratioStatus(
+            [activeIndicators, indicatorsWithResponsible, indicatorsWithGoals, indicatorsWithData].filter(Boolean).length,
+            4
+        );
+        const cycles = managementMeetings || measurements
+            ? { status: 'ok', label: 'Em ciclo', progress: managementMeetings && measurements ? '100%' : '50%' }
+            : { status: 'pending', label: 'Pendente', progress: '0%' };
+        const incentives = incentiveSets && incentiveRules
+            ? { status: governabilityLinks ? 'ok' : 'partial', label: governabilityLinks ? 'Governável' : 'Parcial', progress: governabilityLinks ? '100%' : '70%' }
+            : { status: 'pending', label: 'Pendente', progress: '0%' };
+        const web = ratioStatus([entityLinks, lineOfSight, strategicProjects].filter(Boolean).length, 3);
+        const subphases = [
+            {
+                number: 1,
+                title: 'Indicadores',
+                ...indicators,
+                description: 'Indicadores ativos com responsável, meta, medição e leitura para decisão.'
+            },
+            {
+                number: 2,
+                title: 'Ciclos',
+                ...cycles,
+                description: 'Ritmo de reuniões, medições e rituais que transformam informação em decisão e ação.'
+            },
+            {
+                number: 3,
+                title: 'Incentivos',
+                ...incentives,
+                description: 'Gestão de Incentivos alinhada à estratégia, aos resultados desejados e à governabilidade.'
+            },
+            {
+                number: 4,
+                title: 'Teia de Conexões',
+                ...web,
+                description: 'Conexões entre estratégia, processos, projetos, pessoas e indicadores para explicar causa e efeito.'
+            }
+        ];
+        document.getElementById('cf-strategic-management-subphase-list').innerHTML = subphases.map((item) => `
+            <article class="cf-subphase-card">
+                <h3>${item.number} - ${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.description)}</p>
+                <div class="cf-subphase-meta">
+                    <span class="cf-subphase-status ${escapeHtml(item.status)}">${escapeHtml(item.label)}</span>
+                    <strong class="cf-subphase-progress">${escapeHtml(item.progress)}</strong>
+                </div>
+            </article>
+        `).join('');
+    }
+    function render(payload) {
+        const maturity = payload.maturity || {};
+        const score = Number(maturity.score ?? 0);
+        const evidence = payload.internal_evidence || [];
+        const gaps = payload.gaps || [];
+        const recommendations = payload.recommendations || [];
+        const engineeringGaps = payload.engineering_gaps || [];
+        document.getElementById('cf-maturity').textContent = `${score}%`;
+        document.getElementById('cf-evidence-count').textContent = evidence.length;
+        document.getElementById('cf-gaps-count').textContent = gaps.length;
+        document.getElementById('cf-recommendations-count').textContent = recommendations.length;
+        document.getElementById('cf-next-action-title').textContent = payload.next_action?.title || 'Validar frente com o consultor';
+        document.getElementById('cf-next-action-copy').textContent = payload.next_action?.description || 'Revisar evidências, lacunas e decidir a próxima ação com gate humano.';
+        document.getElementById('cf-evidence').innerHTML = renderRows(evidence, 'Nenhuma evidência interna encontrada.');
+        document.getElementById('cf-gaps').innerHTML = renderRows(gaps, 'Nenhum gap metodológico crítico identificado.');
+        document.getElementById('cf-recommendations').innerHTML = renderRows(recommendations, 'Nenhuma recomendação pendente.');
+        document.getElementById('cf-engineering-gaps').innerHTML = renderRows(engineeringGaps, 'Nenhum gap técnico mapeado.');
+        renderIdentitySubphases(payload);
+        renderProcessSubphases(payload);
+        renderGrowthPlanSubphases(payload);
+        renderStrategicManagementSubphases(payload);
+    }
+    async function loadFront() {
+        if (!frontKey) return;
+        try {
+            const [response, protocolResponse] = await Promise.all([
+                fetch(`/api/consultive/cockpit/structural-fronts/${encodeURIComponent(frontKey)}/analysis`, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' }
+                }),
+                fetch(`/api/consultive/cockpit/fronts/${encodeURIComponent(frontKey)}/protocol?audience=ai_cli`, {
+                    credentials: 'same-origin',
+                    headers: { Accept: 'application/json' }
+                })
+            ]);
+            if (protocolResponse.ok) {
+                activeProtocol = await protocolResponse.json();
+                updateActiveProtocolBadge();
+            }
+            if (!response.ok) throw new Error(`Falha ao carregar análise. HTTP ${response.status}.`);
+            render(await response.json());
+            await loadAssistedAnalyses();
+        } catch (error) {
+            document.getElementById('cf-next-action-title').textContent = 'Não foi possível carregar a frente';
+            document.getElementById('cf-next-action-copy').textContent = error.message || 'Tente novamente.';
+            await loadAssistedAnalyses();
+        }
+    }
+    document.addEventListener('click', (event) => {
+        const useAnalysisButton = event.target.closest('[data-cf-use-analysis]');
+        if (useAnalysisButton) {
+            const decisionAnalysisId = document.querySelector('[data-cf-decision-register-form] [name="analysis_id"]');
+            if (decisionAnalysisId) decisionAnalysisId.value = useAnalysisButton.dataset.cfUseAnalysis;
+            openModal('cf-decision-register-modal');
+            return;
+        }
+        if (event.target.closest('[data-cf-refresh-history]')) {
+            loadAssistedAnalyses();
+            return;
+        }
+        if (event.target.closest('[data-cf-open-mcp-guide]')) {
+            openMcpGuide();
+            return;
+        }
+        if (event.target.closest('[data-cf-open-analysis-register]')) {
+            openModal('cf-analysis-register-modal');
+            return;
+        }
+        if (event.target.closest('[data-cf-open-decision-register]')) {
+            openModal('cf-decision-register-modal');
+            return;
+        }
+        if (event.target.closest('[data-cf-close-mcp-guide]') || event.target.id === 'cf-mcp-guide-modal') {
+            closeMcpGuide();
+            return;
+        }
+        if (event.target.closest('[data-cf-close-analysis-register]') || event.target.id === 'cf-analysis-register-modal') {
+            closeModal('cf-analysis-register-modal');
+            return;
+        }
+        if (event.target.closest('[data-cf-close-decision-register]') || event.target.id === 'cf-decision-register-modal') {
+            closeModal('cf-decision-register-modal');
+        }
+    });
+    document.addEventListener('submit', async (event) => {
+        const analysisForm = event.target.closest('[data-cf-analysis-register-form]');
+        const decisionForm = event.target.closest('[data-cf-decision-register-form]');
+        if (!analysisForm && !decisionForm) return;
+        event.preventDefault();
+        try {
+            if (analysisForm) {
+                await submitAssistedAnalysis(analysisForm);
+                return;
+            }
+            await submitConsultantDecision(decisionForm);
+        } catch (error) {
+            const selector = analysisForm
+                ? '[data-cf-analysis-register-feedback]'
+                : '[data-cf-decision-register-feedback]';
+            setFeedback(selector, error.message || 'Falha ao salvar registro.', true);
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeMcpGuide();
+            closeModal('cf-analysis-register-modal');
+            closeModal('cf-decision-register-modal');
+        }
+    });
+    loadFront();
+})();
+</script>
+{% endblock %}

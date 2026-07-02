@@ -466,8 +466,8 @@
     }
 
     function structuralFrontUrl(frontKey) {
-        if (frontKey === 'identity' && companyId) {
-            return `/companies/${encodeURIComponent(companyId)}/identity`;
+        if (frontKey) {
+            return `/consultive/cockpit/fronts/${encodeURIComponent(frontKey)}`;
         }
         return null;
     }

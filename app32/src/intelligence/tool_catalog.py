@@ -20,6 +20,7 @@ from src.core.mcp_http_auth import get_http_request_context, get_http_request_id
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
 from src.core.mcp_commercial_tools import register_commercial_mcp_tools
+from src.core.mcp_consultive_assisted_analysis_tools import register_consultive_assisted_analysis_tools
 from src.core.mcp_runtime import wrap_mcp_callable
 from src.core.mcp_crud_contract_tools import register_crud_contract_tools
 from src.core.mcp_domain_example_tools import register_domain_example_tools
@@ -584,6 +585,17 @@ _supplemental_mcp_tools = (
             ("get_feature_guide", "Retorna o guia operacional de uma feature MCP autorizada."),
             ("get_feature_examples", "Retorna exemplos de uso de uma feature MCP autorizada."),
             ("get_feature_constraints", "Retorna restrições e contexto obrigatório de uma feature MCP autorizada."),
+            ("consultive_get_front_context", "Retorna o contexto consolidado da frente consultiva no tenant."),
+            ("consultive_get_front_evidence", "Lista evidências internas consideradas na frente consultiva."),
+            ("consultive_get_front_gaps", "Lista gaps metodológicos e técnicos da frente consultiva."),
+            ("consultive_get_methodology_guidance", "Retorna recomendações metodológicas Versus para análise assistida da frente."),
+            ("consultive_resolve_protocol", "Resolve protocolo consultivo ativo, versionado e modificável por frente/subfase/audiência."),
+            ("consultive_upsert_protocol", "Cria ou atualiza protocolo consultivo tenant-owned e versionado."),
+            ("consultive_register_assisted_analysis", "Registra no APP32 o resultado trazido pela IA/CLI via MCP."),
+            ("consultive_list_assisted_analyses", "Lista histórico tenant-safe de análises assistidas, protocolos, validações e decisões."),
+            ("consultive_register_squad_validation", "Registra validação do Squad Cliente, Squad Versus ou Squad Engenharia."),
+            ("consultive_register_consultant_decision", "Registra o gate humano do consultor antes da conversão operacional."),
+            ("consultive_create_recommended_action", "Registra intenção de conversão após decisão humana do consultor."),
             ("describe_app32_analysis_catalog_tool", "Descreve o catálogo analítico governado do APP32."),
             ("describe_app32_crud_contracts_tool", "Descreve contratos CRUD MCP por domínio canônico do APP32."),
             ("describe_app32_domain_examples_tool", "Descreve exemplos de uso por domínio MCP."),
@@ -725,6 +737,7 @@ catalog = ToolCatalog(
         for registrar in (
         register_analysis_catalog_tools,
         register_commercial_mcp_tools,
+        register_consultive_assisted_analysis_tools,
         register_crud_contract_tools,
         register_domain_example_tools,
         register_domain_playbook_tools,

@@ -114,6 +114,155 @@ def test_consultive_structural_front_analysis_uses_active_company(monkeypatch):
     assert response.get_json()["front"] == "processes"
 
 
+def test_register_assisted_analysis_uses_active_company_and_write_gate(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=42, name="Cliente A")
+    captured = {}
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+    monkeypatch.setattr(ubr_route, "has_company_full_access", lambda company_id: company_id == 42)
+
+    def _fake_register_assisted_analysis(**kwargs):
+        captured.update(kwargs)
+        return {"id": 77, "company_id": kwargs["company_id"], "front_key": kwargs["front_key"]}
+
+    monkeypatch.setattr(
+        ubr_route.ConsultiveAssistedAnalysisService,
+        "register_assisted_analysis",
+        _fake_register_assisted_analysis,
+    )
+
+    response = app.test_client().post(
+        "/api/consultive/cockpit/fronts/processes/assisted-analyses",
+        json={"company_id": 999, "diagnosis": "Processos sem estabilização"},
+    )
+
+    assert response.status_code == 201
+    assert captured["company_id"] == 42
+    assert captured["front_key"] == "processes"
+    assert captured["payload"]["company_id"] == 999
+    assert response.get_json()["company_id"] == 42
+
+
+def test_register_assisted_analysis_decision_uses_active_company_and_service(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=42, name="Cliente A")
+    captured = {}
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+    monkeypatch.setattr(ubr_route, "has_company_full_access", lambda company_id: company_id == 42)
+
+    def _fake_register_consultant_decision(**kwargs):
+        captured.update(kwargs)
+        return {"id": 88, "company_id": kwargs["company_id"], "analysis_id": kwargs["analysis_id"]}
+
+    monkeypatch.setattr(
+        ubr_route.ConsultiveAssistedAnalysisService,
+        "register_consultant_decision",
+        _fake_register_consultant_decision,
+    )
+
+    response = app.test_client().post(
+        "/api/consultive/cockpit/assisted-analyses/77/decision",
+        json={"company_id": 999, "consultant_decision": "accept", "decision_reason": "Aderente"},
+    )
+
+    assert response.status_code == 201
+    assert captured["company_id"] == 42
+    assert captured["analysis_id"] == 77
+    assert captured["payload"]["company_id"] == 999
+    assert response.get_json()["analysis_id"] == 77
+
+
+def test_consultive_protocol_route_resolves_active_company_protocol(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=42, name="Cliente A")
+    captured = {}
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    def _fake_resolve_protocol(**kwargs):
+        captured.update(kwargs)
+        return {"company_id": kwargs["company_id"], "front_key": kwargs["front_key"], "title": "Protocolo ativo"}
+
+    monkeypatch.setattr(ubr_route.ConsultiveProtocolService, "resolve_protocol", _fake_resolve_protocol)
+
+    response = app.test_client().get(
+        "/api/consultive/cockpit/fronts/identity/protocol?company_id=999&subphase_key=mission&audience=ai_cli"
+    )
+
+    assert response.status_code == 200
+    assert captured["company_id"] == 42
+    assert captured["front_key"] == "identity"
+    assert captured["subphase_key"] == "mission"
+    assert response.get_json()["title"] == "Protocolo ativo"
+
+
+def test_upsert_consultive_protocol_uses_active_company_and_write_gate(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=42, name="Cliente A")
+    captured = {}
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+    monkeypatch.setattr(ubr_route, "has_company_full_access", lambda company_id: company_id == 42)
+
+    def _fake_upsert_protocol(**kwargs):
+        captured.update(kwargs)
+        return {"id": 9, "company_id": kwargs["company_id"], "title": kwargs["payload"]["title"]}
+
+    monkeypatch.setattr(ubr_route.ConsultiveProtocolService, "upsert_protocol", _fake_upsert_protocol)
+
+    response = app.test_client().post(
+        "/api/consultive/protocols",
+        json={"company_id": 999, "front_key": "identity", "title": "Missão profunda", "prompt_markdown": "..."},
+    )
+
+    assert response.status_code == 201
+    assert captured["company_id"] == 42
+    assert captured["payload"]["company_id"] == 999
+    assert response.get_json()["company_id"] == 42
+
+
+def test_list_consultive_protocols_uses_active_company_catalog(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=42, name="Cliente A")
+    captured = {}
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    def _fake_list_protocol_catalog(**kwargs):
+        captured.update(kwargs)
+        return {"company_id": kwargs["company_id"], "audience": kwargs["audience"], "items": []}
+
+    monkeypatch.setattr(ubr_route.ConsultiveProtocolService, "list_protocol_catalog", _fake_list_protocol_catalog)
+
+    response = app.test_client().get("/api/consultive/protocols?company_id=999&audience=versus_squad")
+
+    assert response.status_code == 200
+    assert captured == {"company_id": 42, "audience": "versus_squad"}
+    assert response.get_json()["company_id"] == 42
+
+
+def test_consultive_protocols_page_renders_workspace(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(
+        id=42,
+        name="Cliente A",
+        to_dict=lambda: {"id": 42, "name": "Cliente A"},
+    )
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/protocols")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Protocolos Consultivos" in body
+    assert "Biblioteca versionada de instruções" in body
+    assert "/api/consultive/protocols" in body
+    assert "Criar/editar versão" in body
+
+
 def test_create_urgent_need_uses_active_company_and_write_gate(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=42, name="Cliente A")
@@ -179,6 +328,8 @@ def test_urgent_need_route_keeps_business_rules_in_services():
     assert "BusinessReviewService.create_review" in source
     assert "StructuralLearningService.create_learning_link" in source
     assert "BusinessReviewReadModelService.get_cockpit" in source
+    assert "ConsultiveAssistedAnalysisService.register_assisted_analysis" in source
+    assert "ConsultiveAssistedAnalysisService.register_consultant_decision" in source
     assert "db.session" not in source
 
 
@@ -239,6 +390,585 @@ def test_consultive_cockpit_page_renders_minimal_shell(monkeypatch):
     assert "Cockpit do Consultor" in body
     assert "cc-compact-header" in body
     assert "/api/consultive/cockpit?limit=12" in body
+
+
+def test_consultive_structural_front_page_renders_consultive_shell(monkeypatch):
+    app = _build_app()
+
+    class _Company:
+        id = 42
+        name = "Cliente A"
+        client_code = "CLA"
+
+        def to_dict(self):
+            return {"id": self.id, "name": self.name, "client_code": self.client_code}
+
+    active_company = _Company()
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/cockpit/fronts/identity")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Camada Consultiva · Estruturação Empresarial" in body
+    assert "Identidade Organizacional" in body
+    assert 'data-front-key="identity"' in body
+    assert "/api/consultive/cockpit/structural-fronts/${encodeURIComponent(frontKey)}/analysis" in body
+    assert "/companies/42/identity" in body
+    assert "Voltar ao Cockpit" in body
+
+
+def test_consultive_processes_front_page_renders_without_operational_redirect(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(
+        id=42,
+        name="Cliente A",
+        to_dict=lambda: {"id": 42, "name": "Cliente A"},
+    )
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/cockpit/fronts/processes")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'data-front-key="processes"' in body
+    assert "Processos" in body
+    assert "Abrir fonte operacional" not in body
+
+
+def test_consultive_growth_plan_front_page_renders_consultive_shell(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(
+        id=42,
+        name="Cliente A",
+        to_dict=lambda: {"id": 42, "name": "Cliente A"},
+    )
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/cockpit/fronts/growth_plan")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'data-front-key="growth_plan"' in body
+    assert "Planejamento Estratégico" in body
+    assert "Abrir fonte operacional" not in body
+
+
+def test_consultive_strategic_management_front_page_renders_consultive_shell(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(
+        id=42,
+        name="Cliente A",
+        to_dict=lambda: {"id": 42, "name": "Cliente A"},
+    )
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/cockpit/fronts/strategic_management")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert 'data-front-key="strategic_management"' in body
+    assert "Gerenciamento Estratégico" in body
+    assert "Abrir fonte operacional" not in body
+
+
+def test_consultive_structural_front_page_exposes_tenant_owned_mcp_assistance(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(
+        id=42,
+        name="Cliente A",
+        to_dict=lambda: {"id": 42, "name": "Cliente A"},
+    )
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/cockpit/fronts/processes")
+
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Análise Assistida via MCP" in body
+    assert "IA do cliente, método Versus e gate humano" in body
+    assert "Custo/token do cliente" in body
+    assert "Contexto MCP" in body
+    assert "IA/CLI do cliente" in body
+    assert "Validação dos squads" in body
+    assert "Decisão do consultor" in body
+    assert "Ver roteiro MCP para IA/CLI" in body
+    assert "Registrar análise recebida" in body
+    assert "Registrar decisão do consultor" in body
+    assert "O APP32 não dispara a IA" in body
+    assert "resultado trazido pela IA/CLI" in body
+    assert "cf-mcp-guide-modal" in body
+    assert "Roteiro MCP para IA/CLI" in body
+    assert "consultive_get_front_context" in body
+    assert "consultive_get_front_evidence" in body
+    assert "consultive_get_front_gaps" in body
+    assert "consultive_get_methodology_guidance" in body
+    assert "data-cf-open-mcp-guide" in body
+    assert "data-cf-open-analysis-register" in body
+    assert "data-cf-open-decision-register" in body
+    assert "mcpGuidePrompt" in body
+    assert "openMcpGuide" in body
+    assert "openModal('cf-analysis-register-modal')" in body
+    assert "openModal('cf-decision-register-modal')" in body
+    assert "company_id:" in body
+    assert "Não tome decisão final" in body
+    assert "company_id" in body
+    assert "cf-analysis-register-modal" in body
+    assert "data-cf-analysis-register-form" in body
+    assert "Resultado trazido pela IA/CLI via MCP" in body
+    assert "diagnosis" in body
+    assert "benchmarks" in body
+    assert "risks" in body
+    assert "recommendations" in body
+    assert "client_squad_validation" in body
+    assert "versus_squad_validation" in body
+    assert "engineering_squad_validation" in body
+    assert "analysis_status" in body
+    assert "Salvar análise no APP32" in body
+    assert "submitAssistedAnalysis" in body
+    assert "/assisted-analyses" in body
+    assert "Será registrada no tenant ativo" in body
+    assert "cf-decision-register-modal" in body
+    assert "data-cf-decision-register-form" in body
+    assert "Gate humano antes de virar ação" in body
+    assert "analysis_id" in body
+    assert "consultant_decision" in body
+    assert "conversion_target" in body
+    assert "decision_reason" in body
+    assert "next_action" in body
+    assert "governance_notes" in body
+    assert "Salvar decisão no APP32" in body
+    assert "submitConsultantDecision" in body
+    assert "/decision" in body
+    assert "Decisão humana obrigatória" in body
+
+
+def test_consultive_structural_front_page_rejects_unknown_front(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=42, name="Cliente A")
+
+    monkeypatch.setattr(ubr_route, "get_active_company", lambda: active_company)
+
+    response = app.test_client().get("/consultive/cockpit/fronts/unknown")
+
+    assert response.status_code == 404
+
+
+def test_consultive_assisted_analysis_mcp_technical_contract_spec_exists():
+    spec_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "docs",
+            "spec",
+            "contrato_tecnico_analise_assistida_mcp_v1.md",
+        )
+    )
+    with open(spec_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "AssistedAnalysis" in body
+    assert "AssistedAnalysisValidation" in body
+    assert "AssistedAnalysisDecision" in body
+    assert "consultive_register_assisted_analysis" in body
+    assert "consultive_register_squad_validation" in body
+    assert "consultive_register_consultant_decision" in body
+    assert "consultive_create_recommended_action" in body
+    assert "company_id" in body
+    assert "Registro de análise não cria objeto operacional automaticamente" in body
+    assert "Conversão em ação é tool própria e posterior" in body
+    assert "UI deixa claro que APP32 não dispara IA" in body
+
+
+def test_consultive_assisted_analysis_models_are_tenant_scoped_and_gate_safe():
+    model_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "models",
+            "consultive_assisted_analysis.py",
+        )
+    )
+    with open(model_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "__tablename__ = \"consultive_assisted_analyses\"" in body
+    assert "__tablename__ = \"consultive_assisted_analysis_validations\"" in body
+    assert "__tablename__ = \"consultive_assisted_analysis_decisions\"" in body
+    assert "company_id = db.Column" in body
+    assert "front_key IN" in body
+    assert "source_payload_json = db.Column(db.JSON" in body
+    assert "analysis_id = db.Column" in body
+    assert "conversion_target" in body
+    assert "sem executar IA dentro do APP32" in body
+
+
+def test_consultive_assisted_analysis_migration_is_idempotent_and_tenant_scoped():
+    migration_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "migrations",
+            "versions",
+            "20260701_1015_create_consultive_assisted_analysis.py",
+        )
+    )
+    with open(migration_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "CREATE TABLE IF NOT EXISTS public.consultive_assisted_analyses" in body
+    assert "company_id INTEGER NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE" in body
+    assert "consultive_assisted_analysis_validations" in body
+    assert "consultive_assisted_analysis_decisions" in body
+    assert "CREATE INDEX IF NOT EXISTS ix_consultive_assisted_analyses_company_front" in body
+    assert "DROP TABLE IF EXISTS public.consultive_assisted_analysis_decisions" in body
+
+
+def test_consultive_assisted_analysis_mcp_tools_are_registered_in_catalog():
+    catalog_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "src", "intelligence", "tool_catalog.py")
+    )
+    tools_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "src", "core", "mcp_consultive_assisted_analysis_tools.py")
+    )
+    with open(catalog_path, "r", encoding="utf-8") as handle:
+        catalog = handle.read()
+    with open(tools_path, "r", encoding="utf-8") as handle:
+        tools = handle.read()
+
+    assert "register_consultive_assisted_analysis_tools" in catalog
+    assert "consultive_get_front_context" in catalog
+    assert "consultive_register_assisted_analysis" in catalog
+    assert "consultive_register_consultant_decision" in catalog
+    assert "consultive_create_recommended_action" in catalog
+    assert "BusinessReviewReadModelService.get_structural_front_analysis" in tools
+    assert "ConsultiveAssistedAnalysisService.register_assisted_analysis" in tools
+    assert "human_gate_required=write" in tools
+
+
+def test_consultive_protocol_library_is_versioned_modifiable_and_mcp_first():
+    model_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "models", "consultive_protocol.py")
+    )
+    service_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "services", "consultive_protocol_service.py")
+    )
+    migration_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "migrations",
+            "versions",
+            "20260701_1030_create_consultive_protocols.py",
+        )
+    )
+    with open(model_path, "r", encoding="utf-8") as handle:
+        model = handle.read()
+    with open(service_path, "r", encoding="utf-8") as handle:
+        service = handle.read()
+    with open(migration_path, "r", encoding="utf-8") as handle:
+        migration = handle.read()
+
+    assert "__tablename__ = \"consultive_protocols\"" in model
+    assert "company_id = db.Column" in model
+    assert "protocol_version" in model
+    assert "prompt_markdown" in model
+    assert "protocol_json" in model
+    assert "CONSULTIVE_PROTOCOL_AUDIENCE_VALUES" in model
+    assert "CONSULTIVE_PROTOCOL_DEPTH_VALUES" in model
+    assert "resolve_protocol" in service
+    assert "upsert_protocol" in service
+    assert "DEFAULT_PROTOCOL_CATALOG" in service
+    assert "SUBPHASE_ALIASES" in service
+    assert "pesquisa profunda" in service
+    assert "simule aderência" in service
+    for key in (
+        "mission",
+        "vision",
+        "values",
+        "positioning",
+        "org_chart",
+        "architecture",
+        "modeling",
+        "implantation",
+        "stabilization",
+        "audit",
+        "structured",
+        "connected",
+        "deployed",
+        "linked_to_management",
+        "indicators",
+        "cycles",
+        "incentives",
+        "connection_web",
+    ):
+        assert key in service
+    assert "CREATE TABLE IF NOT EXISTS public.consultive_protocols" in migration
+    assert "ix_consultive_protocols_resolution" in migration
+
+
+def test_consultive_protocol_tools_and_ui_replace_static_prompt_contract():
+    catalog_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "src", "intelligence", "tool_catalog.py")
+    )
+    tools_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "src", "core", "mcp_consultive_assisted_analysis_tools.py")
+    )
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "structural_front.html",
+        )
+    )
+    with open(catalog_path, "r", encoding="utf-8") as handle:
+        catalog = handle.read()
+    with open(tools_path, "r", encoding="utf-8") as handle:
+        tools = handle.read()
+    with open(template_path, "r", encoding="utf-8") as handle:
+        template = handle.read()
+
+    assert "consultive_resolve_protocol" in catalog
+    assert "consultive_upsert_protocol" in catalog
+    assert "ConsultiveProtocolService.resolve_protocol" in tools
+    assert "ConsultiveProtocolService.upsert_protocol" in tools
+    assert "active_protocol" in tools
+    assert "let activeProtocol" in template
+    assert "/protocol?audience=ai_cli" in template
+    assert "Protocolo ativo:" in template
+    assert "consultive_resolve_protocol" in template
+
+
+def test_consultive_protocol_service_resolves_base_protocol_for_all_cockpit_subphases():
+    from services.consultive_protocol_service import ConsultiveProtocolService
+
+    expected = {
+        "identity": ["mission", "vision", "values", "positioning", "org_chart"],
+        "processes": ["architecture", "modeling", "implantation", "stabilization", "audit"],
+        "growth_plan": ["structured", "connected", "deployed", "linked_to_management"],
+        "strategic_management": ["indicators", "cycles", "incentives", "connection_web"],
+    }
+
+    resolved = []
+    for front_key, subphases in expected.items():
+        for subphase_key in subphases:
+            protocol = ConsultiveProtocolService.resolve_protocol(
+                company_id=42,
+                front_key=front_key,
+                subphase_key=subphase_key,
+                audience="ai_cli",
+            )
+            resolved.append((front_key, subphase_key))
+            assert protocol["source"] == "fallback"
+            assert protocol["front_key"] == front_key
+            assert protocol["subphase_key"] == subphase_key
+            assert protocol["status"] == "active"
+            assert protocol["protocol_version"] == "fallback-v1"
+            assert protocol["title"].startswith("Protocolo")
+            assert "MCP First" in protocol["prompt_markdown"]
+            assert "não tome decisão final" in protocol["prompt_markdown"].lower()
+            assert protocol["protocol"]["required_questions"]
+
+    assert len(resolved) == 18
+
+
+def test_consultive_protocol_catalog_lists_all_cockpit_subphases():
+    from services.consultive_protocol_service import ConsultiveProtocolService
+
+    catalog = ConsultiveProtocolService.list_protocol_catalog(company_id=42, audience="ai_cli")
+
+    assert catalog["company_id"] == 42
+    assert catalog["audience"] == "ai_cli"
+    assert catalog["total"] == 18
+    assert len(catalog["items"]) == 18
+    assert {item["front_key"] for item in catalog["items"]} == {
+        "identity",
+        "processes",
+        "growth_plan",
+        "strategic_management",
+    }
+    assert all(item["active_protocol"]["status"] == "active" for item in catalog["items"])
+
+
+def test_consultive_protocols_template_exposes_management_ui_contract():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "protocols.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert '{% extends "layouts/workspace.html" %}' in body
+    assert "Protocolos Consultivos" in body
+    assert "cp-audience" in body
+    assert "cp-search" in body
+    assert "cp-modal" in body
+    assert "tenant-owned" in body
+    assert "prompt_markdown" in body
+    assert "fetch(`/api/consultive/protocols?audience=" in body
+    assert "fetch('/api/consultive/protocols'" in body
+    assert "Criar/editar versão" in body
+
+
+def test_consultive_assisted_analysis_spec_documents_evolutive_protocols():
+    spec_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "docs",
+            "spec",
+            "contrato_tecnico_analise_assistida_mcp_v1.md",
+        )
+    )
+    with open(spec_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "Protocolos Consultivos Evolutivos" in body
+    assert "consultive_protocols" in body
+    assert "consultive_resolve_protocol" in body
+    assert "consultive_upsert_protocol" in body
+    assert "pesquisa profunda" in body
+    assert "evolução metodológica deve ocorrer preferencialmente por protocolo versionado" in body
+    assert "Protocolos-base obrigatórios do Cockpit" in body
+    assert "`mission`, `vision`, `values`, `positioning`, `org_chart`" in body
+    assert "`architecture`, `modeling`, `implantation`, `stabilization`, `audit`" in body
+    assert "`indicators`, `cycles`, `incentives`, `connection_web`" in body
+
+
+def test_consultive_structural_front_template_has_process_subphases_contract():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "structural_front.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "cf-process-subphases" in body
+    assert "Maturação de Processos" in body
+    assert "Arquitetura" in body
+    assert "Modelagem" in body
+    assert "Implantação" in body
+    assert "Estabilização" in body
+    assert "Auditoria" in body
+    assert "projeto associado" in body
+    assert "3 ciclos dentro das faixas de controle" in body
+    assert "rol de auditoria interna" in body
+    assert "findEvidence(evidence, 'Processos com fluxo/modelagem')" in body
+    assert "findEvidence(evidence, 'SPEC/contratos de execução')" in body
+    assert "frontKey !== 'processes'" in body
+
+
+def test_consultive_structural_front_template_has_identity_subphases_contract():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "structural_front.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "cf-identity-subphases" in body
+    assert "Base organizacional da empresa" in body
+    assert "empresa estar “na mão”" in body
+    assert "Missão" in body
+    assert "Visão" in body
+    assert "Valores" in body
+    assert "Posicionamento" in body
+    assert "Organograma" in body
+    assert "renderIdentitySubphases" in body
+    assert "evidenceStatus(evidence, 'Missão')" in body
+    assert "evidenceStatus(evidence, 'Visão')" in body
+    assert "evidenceStatus(evidence, 'Valores')" in body
+    assert "evidenceStatus(evidence, 'Posicionamento')" in body
+    assert "evidenceStatus(evidence, 'Organograma')" in body
+    assert "frontKey !== 'identity'" in body
+
+
+def test_consultive_structural_front_template_has_growth_plan_subphases_contract():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "structural_front.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "cf-growth-plan-subphases" in body
+    assert "Evolução consultiva do plano de crescimento" in body
+    assert "não basta existir um plano" in body
+    assert "Estruturado" in body
+    assert "Conectado" in body
+    assert "Desdobrado" in body
+    assert "Vinculado à gestão" in body
+    assert "Planejamento de crescimento" in body
+    assert "Direcionadores estratégicos" in body
+    assert "OKRs globais" in body
+    assert "Projetos vinculados" in body
+    assert "Conexão com processos" in body
+    assert "renderGrowthPlanSubphases" in body
+    assert "frontKey !== 'growth_plan'" in body
+    assert "Gerenciamento Estratégico para decisão, acompanhamento e aprendizado" in body
+
+
+def test_consultive_structural_front_template_has_strategic_management_subphases_contract():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "structural_front.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "cf-strategic-management-subphases" in body
+    assert "Gestão por fatos, incentivos e conexões" in body
+    assert "decide com base em fatos" in body
+    assert "Indicadores" in body
+    assert "Ciclos" in body
+    assert "Incentivos" in body
+    assert "Teia de Conexões" in body
+    assert "Responsável" not in body or "responsável" in body
+    assert "findEvidence(evidence, 'Indicadores')" in body
+    assert "findEvidence(evidence, 'Ciclos de gestão')" in body
+    assert "findEvidence(evidence, 'Gestão de Incentivos')" in body
+    assert "findEvidence(evidence, 'Teia de Conexões')" in body
+    assert "renderStrategicManagementSubphases" in body
+    assert "frontKey !== 'strategic_management'" in body
+    assert "estratégia, processos, projetos, pessoas e indicadores" in body
 
 
 def test_consultive_cockpit_template_has_responsive_contract():
@@ -497,7 +1227,7 @@ def test_consultive_cockpit_structural_enterprise_contract():
     assert "Analisar frente" in body
     assert "data-cc-open-structural-front" in body
     assert "function openStructuralFront" in body
-    assert "/companies/${encodeURIComponent(companyId)}/identity" in body
+    assert "/consultive/cockpit/fronts/${encodeURIComponent(frontKey)}" in body
     assert "data-cc-analyze-structural-front" in body
     assert "cc-front-analysis-modal" in body
     assert "/api/consultive/cockpit/structural-fronts/${encodeURIComponent(frontKey)}/analysis" in body
@@ -734,6 +1464,8 @@ def test_standard_sidebar_exposes_consultive_cockpit_entry():
     assert "Consultivo" in body
     assert "/consultive/cockpit" in body
     assert "Cockpit do Consultor" in body
+    assert "/consultive/protocols" in body
+    assert "Protocolos Consultivos" in body
     assert "request.path.startswith('/consultive')" in body
     assert body.index("Módulos") < body.index("Consultivo")
 
@@ -813,3 +1545,88 @@ def test_consultive_cockpit_renders_structuring_maturity_track_before_fronts():
     assert "Ver detalhe da trilha" in body
     assert "/structuring-journey/consultant" in body
     assert body.index('id="cc-maturity-track"') < body.index('id="cc-structural-list"')
+
+
+def test_assisted_analysis_persists_protocol_snapshot_contract():
+    model_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "models", "consultive_assisted_analysis.py")
+    )
+    service_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "services", "consultive_assisted_analysis_service.py")
+    )
+    migration_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "migrations",
+            "versions",
+            "20260701_1045_link_assisted_analysis_protocols.py",
+        )
+    )
+    with open(model_path, "r", encoding="utf-8") as handle:
+        model_body = handle.read()
+    with open(service_path, "r", encoding="utf-8") as handle:
+        service_body = handle.read()
+    with open(migration_path, "r", encoding="utf-8") as handle:
+        migration_body = handle.read()
+
+    assert "protocol_id" in model_body
+    assert "protocol_version" in model_body
+    assert "protocol_source" in model_body
+    assert "protocol_title" in model_body
+    assert "protocol_snapshot_json" in model_body
+    assert "ConsultiveProtocolService.resolve_protocol" in service_body
+    assert "protocol_snapshot" in service_body
+    assert "_serialize_analysis" in service_body
+    assert "latest_decision" in service_body
+    assert "ADD COLUMN IF NOT EXISTS protocol_snapshot_json" in migration_body
+    assert "fk_consultive_assisted_analyses_protocol_id" in migration_body
+
+
+def test_structural_front_has_consultant_friendly_analysis_history_ui():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "consultive",
+            "structural_front.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "Histórico de análises assistidas" in body
+    assert 'id="cf-analysis-history"' in body
+    assert "Memória consultiva" in body
+    assert "data-cf-refresh-history" in body
+    assert "data-cf-use-analysis" in body
+    assert "function renderAnalysisHistory" in body
+    assert "function loadAssistedAnalyses" in body
+    assert "payload.protocol_snapshot = activeProtocol" in body
+    assert 'id="cf-active-protocol"' in body
+    assert "function updateActiveProtocolBadge" in body
+    assert "Análise selecionada" in body
+    assert "Clique em Decidir no histórico" in body
+    assert "Protocolo" in body
+    assert "Squads" in body
+    assert "Decisão" in body
+
+
+def test_mcp_surface_exposes_assisted_analysis_history_tool():
+    mcp_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "src", "core", "mcp_consultive_assisted_analysis_tools.py")
+    )
+    catalog_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "src", "intelligence", "tool_catalog.py")
+    )
+    with open(mcp_path, "r", encoding="utf-8") as handle:
+        mcp_body = handle.read()
+    with open(catalog_path, "r", encoding="utf-8") as handle:
+        catalog_body = handle.read()
+
+    assert "def consultive_list_assisted_analyses" in mcp_body
+    assert "ConsultiveAssistedAnalysisService.list_analyses" in mcp_body
+    assert "assisted_analysis.list" in mcp_body
+    assert "consultive_list_assisted_analyses" in catalog_body

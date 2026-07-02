@@ -1,0 +1,261 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}{{ page_title or "Protocolos Consultivos" }}{% endblock %}
+{% block breadcrumb %}<a href="/consultive/cockpit">Consultivo</a> / Protocolos{% endblock %}
+
+{% block workspace_content %}
+<div class="cp-page" data-company-id="{{ company_id }}">
+    <header class="cp-hero">
+        <div>
+            <p class="cp-eyebrow">Camada Consultiva</p>
+            <h1>Protocolos Consultivos</h1>
+            <p>Biblioteca versionada de instruções para IA/CLI, Squad Cliente, Squad Versus e consultor.</p>
+        </div>
+        <div class="cp-actions">
+            <a class="cp-btn cp-btn-secondary" href="/consultive/cockpit">Voltar ao Cockpit</a>
+            <button class="cp-btn cp-btn-primary" type="button" data-cp-new>Novo protocolo</button>
+        </div>
+    </header>
+
+    <section class="cp-toolbar">
+        <label>
+            Audiência
+            <select id="cp-audience">
+                <option value="ai_cli">IA/CLI</option>
+                <option value="client_squad">Squad Cliente</option>
+                <option value="versus_squad">Squad Versus</option>
+                <option value="consultant">Consultor</option>
+            </select>
+        </label>
+        <label>
+            Buscar
+            <input id="cp-search" type="search" placeholder="Frente, subfase, título ou objetivo">
+        </label>
+    </section>
+
+    <main id="cp-list" class="cp-grid">
+        <p class="cp-empty">Carregando protocolos...</p>
+    </main>
+
+    <div id="cp-modal" class="cp-modal" hidden>
+        <div class="cp-modal-card" role="dialog" aria-modal="true" aria-labelledby="cp-modal-title">
+            <div class="cp-modal-head">
+                <div>
+                    <p class="cp-eyebrow">Versão tenant-owned</p>
+                    <h2 id="cp-modal-title">Editar protocolo consultivo</h2>
+                </div>
+                <button type="button" class="cp-close" data-cp-close aria-label="Fechar">×</button>
+            </div>
+            <form id="cp-form" class="cp-form">
+                <input type="hidden" name="front_key">
+                <input type="hidden" name="subphase_key">
+                <label>Frente<input name="front_title" type="text" disabled></label>
+                <label>Subfase<input name="subphase_title" type="text" disabled></label>
+                <label>Audiência
+                    <select name="audience">
+                        <option value="ai_cli">IA/CLI</option>
+                        <option value="client_squad">Squad Cliente</option>
+                        <option value="versus_squad">Squad Versus</option>
+                        <option value="consultant">Consultor</option>
+                    </select>
+                </label>
+                <label>Profundidade
+                    <select name="depth_level">
+                        <option value="basic">Básica</option>
+                        <option value="internal_diagnosis">Diagnóstico interno</option>
+                        <option value="deep_research">Pesquisa profunda</option>
+                        <option value="simulation">Simulação de aderência</option>
+                    </select>
+                </label>
+                <label>Status
+                    <select name="status">
+                        <option value="draft">Rascunho</option>
+                        <option value="active">Ativo</option>
+                        <option value="archived">Arquivado</option>
+                    </select>
+                </label>
+                <label>Versão<input name="protocol_version" type="text" placeholder="v1"></label>
+                <label class="cp-wide">Título<input name="title" type="text" required></label>
+                <label class="cp-wide">Objetivo<textarea name="objective" rows="2"></textarea></label>
+                <label class="cp-wide">Prompt / instrução principal<textarea name="prompt_markdown" rows="12" required></textarea></label>
+                <label class="cp-wide">Observações<textarea name="notes" rows="2"></textarea></label>
+                <div class="cp-form-actions cp-wide">
+                    <small id="cp-feedback">Salva como override da empresa ativa. O fallback global permanece preservado.</small>
+                    <button type="button" class="cp-btn cp-btn-secondary" data-cp-close>Cancelar</button>
+                    <button type="submit" class="cp-btn cp-btn-primary">Salvar protocolo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cp-page { display: flex; flex-direction: column; gap: 1rem; padding: 1.25rem; }
+    .cp-hero, .cp-toolbar, .cp-card, .cp-modal-card {
+        border: 1px solid #dbeafe; background: rgba(255,255,255,.94); border-radius: 20px;
+        box-shadow: 0 18px 45px rgba(15,23,42,.08);
+    }
+    .cp-hero { display:flex; justify-content:space-between; gap:1rem; align-items:center; padding:1.25rem 1.5rem; }
+    .cp-eyebrow { margin:0 0 .25rem; color:#0f766e; text-transform:uppercase; font-weight:800; font-size:.72rem; letter-spacing:.08em; }
+    .cp-hero h1 { margin:0; font-size:1.55rem; color:#0f172a; }
+    .cp-hero p { margin:.25rem 0 0; color:#64748b; }
+    .cp-actions { display:flex; gap:.6rem; flex-wrap:wrap; }
+    .cp-btn { border:0; border-radius:999px; padding:.65rem 1rem; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+    .cp-btn-primary { background:#0f766e; color:white; }
+    .cp-btn-secondary { background:#eef2ff; color:#1e3a8a; }
+    .cp-toolbar { display:grid; grid-template-columns: 220px 1fr; gap:1rem; padding:1rem; }
+    .cp-toolbar label, .cp-form label { display:flex; flex-direction:column; gap:.35rem; color:#334155; font-size:.82rem; font-weight:800; }
+    .cp-toolbar input, .cp-toolbar select, .cp-form input, .cp-form select, .cp-form textarea {
+        border:1px solid #cbd5e1; border-radius:12px; padding:.65rem .75rem; font:inherit; color:#0f172a; background:white;
+    }
+    .cp-grid { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:1rem; }
+    .cp-card { padding:1rem; display:flex; flex-direction:column; gap:.75rem; min-height:18rem; }
+    .cp-card-head { display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; }
+    .cp-card h2 { margin:0; font-size:1rem; color:#0f172a; }
+    .cp-card h3 { margin:.15rem 0 0; font-size:.9rem; color:#0f766e; }
+    .cp-pill { border-radius:999px; padding:.25rem .55rem; font-size:.72rem; font-weight:800; background:#ecfeff; color:#0e7490; white-space:nowrap; }
+    .cp-pill.tenant { background:#dcfce7; color:#166534; }
+    .cp-meta { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .cp-meta span { border:1px solid #e2e8f0; background:#f8fafc; color:#475569; border-radius:999px; padding:.25rem .5rem; font-size:.72rem; font-weight:700; }
+    .cp-objective { color:#475569; font-size:.84rem; line-height:1.45; }
+    .cp-prompt { background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:.75rem; color:#334155; font-size:.78rem; line-height:1.45; white-space:pre-wrap; max-height:8rem; overflow:auto; }
+    .cp-card-actions { margin-top:auto; display:flex; justify-content:flex-end; }
+    .cp-empty { grid-column:1 / -1; color:#64748b; font-weight:700; padding:2rem; }
+    .cp-modal { position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:50; display:flex; align-items:center; justify-content:center; padding:1rem; }
+    .cp-modal[hidden] { display:none; }
+    .cp-modal-card { width:min(980px, 96vw); max-height:92vh; overflow:auto; padding:1.25rem; }
+    .cp-modal-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
+    .cp-modal-head h2 { margin:0; }
+    .cp-close { border:0; background:#f1f5f9; border-radius:999px; width:2.2rem; height:2.2rem; font-size:1.4rem; cursor:pointer; }
+    .cp-form { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:1rem; }
+    .cp-wide { grid-column:1 / -1; }
+    .cp-form-actions { display:flex; align-items:center; justify-content:flex-end; gap:.75rem; }
+    .cp-form-actions small { margin-right:auto; color:#64748b; font-weight:700; }
+    @media (max-width: 1180px) { .cp-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 760px) {
+        .cp-hero, .cp-toolbar { grid-template-columns:1fr; flex-direction:column; align-items:stretch; }
+        .cp-grid, .cp-form { grid-template-columns:1fr; }
+    }
+</style>
+
+<script>
+(() => {
+    const list = document.getElementById('cp-list');
+    const audience = document.getElementById('cp-audience');
+    const search = document.getElementById('cp-search');
+    const modal = document.getElementById('cp-modal');
+    const form = document.getElementById('cp-form');
+    const feedback = document.getElementById('cp-feedback');
+    let items = [];
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+    const trimPrompt = (v) => String(v || '').slice(0, 900);
+    function render() {
+        const term = String(search.value || '').toLowerCase();
+        const filtered = items.filter((item) => {
+            const p = item.active_protocol || {};
+            return [item.front_title, item.subphase_title, p.title, p.objective, p.source].join(' ').toLowerCase().includes(term);
+        });
+        if (!filtered.length) {
+            list.innerHTML = '<p class="cp-empty">Nenhum protocolo encontrado.</p>';
+            return;
+        }
+        list.innerHTML = filtered.map((item) => {
+            const p = item.active_protocol || {};
+            const sourceClass = p.source === 'tenant' ? 'tenant' : '';
+            return `
+                <article class="cp-card" data-front="${esc(item.front_key)}" data-subphase="${esc(item.subphase_key)}">
+                    <div class="cp-card-head">
+                        <div>
+                            <h2>${esc(item.front_title)}</h2>
+                            <h3>${esc(item.subphase_title)}</h3>
+                        </div>
+                        <span class="cp-pill ${sourceClass}">${esc(p.source || 'fallback')}</span>
+                    </div>
+                    <div class="cp-meta">
+                        <span>${esc(p.audience || audience.value)}</span>
+                        <span>${esc(p.depth_level || '--')}</span>
+                        <span>${esc(p.protocol_version || '--')}</span>
+                        <span>${esc(p.status || '--')}</span>
+                    </div>
+                    <strong>${esc(p.title || 'Protocolo consultivo')}</strong>
+                    <p class="cp-objective">${esc(p.objective || '--')}</p>
+                    <pre class="cp-prompt">${esc(trimPrompt(p.prompt_markdown))}</pre>
+                    <div class="cp-card-actions">
+                        <button class="cp-btn cp-btn-primary" type="button" data-cp-edit="${esc(item.front_key)}|${esc(item.subphase_key)}">Criar/editar versão</button>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+    async function load() {
+        list.innerHTML = '<p class="cp-empty">Carregando protocolos...</p>';
+        const response = await fetch(`/api/consultive/protocols?audience=${encodeURIComponent(audience.value)}`, {
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' }
+        });
+        const data = await response.json();
+        items = data.items || [];
+        render();
+    }
+    function openEditor(item) {
+        const p = item.active_protocol || {};
+        form.front_key.value = item.front_key;
+        form.subphase_key.value = item.subphase_key;
+        form.front_title.value = item.front_title;
+        form.subphase_title.value = item.subphase_title;
+        form.audience.value = audience.value;
+        form.depth_level.value = p.depth_level || 'basic';
+        form.status.value = 'draft';
+        form.protocol_version.value = p.protocol_version === 'fallback-v1' ? 'v1' : (p.protocol_version || 'v1');
+        form.title.value = p.title || '';
+        form.objective.value = p.objective || '';
+        form.prompt_markdown.value = p.prompt_markdown || '';
+        form.notes.value = '';
+        feedback.textContent = 'Salva como override da empresa ativa. O fallback global permanece preservado.';
+        feedback.style.color = '#64748b';
+        modal.hidden = false;
+    }
+    document.addEventListener('click', (event) => {
+        const edit = event.target.closest('[data-cp-edit]');
+        if (edit) {
+            const [front, subphase] = edit.dataset.cpEdit.split('|');
+            const item = items.find(row => row.front_key === front && row.subphase_key === subphase);
+            if (item) openEditor(item);
+            return;
+        }
+        if (event.target.closest('[data-cp-new]')) {
+            openEditor(items[0] || { front_key: 'identity', front_title: 'Identidade Organizacional', subphase_key: 'mission', subphase_title: 'Missão', active_protocol: {} });
+            return;
+        }
+        if (event.target.closest('[data-cp-close]') || event.target.id === 'cp-modal') {
+            modal.hidden = true;
+        }
+    });
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const response = await fetch('/api/consultive/protocols', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            feedback.textContent = data.error || `Falha HTTP ${response.status}`;
+            feedback.style.color = '#b42318';
+            return;
+        }
+        feedback.textContent = `Protocolo #${data.id} salvo. Recarregando catálogo...`;
+        feedback.style.color = '#027a48';
+        await load();
+    });
+    audience.addEventListener('change', load);
+    search.addEventListener('input', render);
+    load().catch((error) => {
+        list.innerHTML = `<p class="cp-empty">${esc(error.message || 'Falha ao carregar protocolos.')}</p>`;
+    });
+})();
+</script>
+{% endblock %}

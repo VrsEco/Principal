@@ -8,6 +8,8 @@ from flask_login import current_user, login_required
 from api.routes.projects import get_active_company
 from services.business_review_read_model_service import BusinessReviewReadModelService
 from services.business_review_service import BusinessReviewService
+from services.consultive_assisted_analysis_service import ConsultiveAssistedAnalysisService
+from services.consultive_protocol_service import ConsultiveProtocolService
 from services.structural_learning_service import StructuralLearningService
 from services.urgent_business_review_common import UrgentBusinessReviewError
 from services.urgent_need_service import UrgentNeedService
@@ -70,6 +72,145 @@ def get_consultive_structural_front_analysis(front_key: str):
     return jsonify(result)
 
 
+@urgent_business_review_bp.route("/api/consultive/cockpit/fronts/<front_key>/assisted-analyses", methods=["GET"])
+@login_required
+def list_consultive_assisted_analyses(front_key: str):
+    company = _active_company_or_400()
+    try:
+        result = ConsultiveAssistedAnalysisService.list_analyses(
+            company_id=company.id,
+            front_key=front_key,
+            status=request.args.get("status") or None,
+            limit=request.args.get("limit", default=100, type=int) or 100,
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify({"items": result})
+
+
+@urgent_business_review_bp.route("/api/consultive/cockpit/fronts/<front_key>/assisted-analyses", methods=["POST"])
+@login_required
+def register_consultive_assisted_analysis(front_key: str):
+    company = _active_company_or_400()
+    _ensure_write_access(company.id)
+    try:
+        result = ConsultiveAssistedAnalysisService.register_assisted_analysis(
+            company_id=company.id,
+            front_key=front_key,
+            payload=_payload(),
+            user_id=getattr(current_user, "id", None),
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify(result), 201
+
+
+@urgent_business_review_bp.route(
+    "/api/consultive/cockpit/assisted-analyses/<int:analysis_id>/validations",
+    methods=["POST"],
+)
+@login_required
+def register_consultive_assisted_analysis_validation(analysis_id: int):
+    company = _active_company_or_400()
+    _ensure_write_access(company.id)
+    data = _payload()
+    try:
+        result = ConsultiveAssistedAnalysisService.register_squad_validation(
+            company_id=company.id,
+            analysis_id=analysis_id,
+            squad=data.get("squad") or "client",
+            status=data.get("status") or "pending",
+            notes=data.get("notes"),
+            user_id=getattr(current_user, "id", None),
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify(result), 201
+
+
+@urgent_business_review_bp.route(
+    "/api/consultive/cockpit/assisted-analyses/<int:analysis_id>/decision",
+    methods=["POST"],
+)
+@login_required
+def register_consultive_assisted_analysis_decision(analysis_id: int):
+    company = _active_company_or_400()
+    _ensure_write_access(company.id)
+    try:
+        result = ConsultiveAssistedAnalysisService.register_consultant_decision(
+            company_id=company.id,
+            analysis_id=analysis_id,
+            payload=_payload(),
+            user_id=getattr(current_user, "id", None),
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify(result), 201
+
+
+@urgent_business_review_bp.route("/api/consultive/cockpit/fronts/<front_key>/protocol", methods=["GET"])
+@login_required
+def get_consultive_protocol(front_key: str):
+    company = _active_company_or_400()
+    try:
+        result = ConsultiveProtocolService.resolve_protocol(
+            company_id=company.id,
+            front_key=front_key,
+            subphase_key=request.args.get("subphase_key") or None,
+            audience=request.args.get("audience") or "ai_cli",
+            depth_level=request.args.get("depth_level") or None,
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify(result)
+
+
+@urgent_business_review_bp.route("/api/consultive/protocols", methods=["GET"])
+@login_required
+def list_consultive_protocols():
+    company = _active_company_or_400()
+    try:
+        result = ConsultiveProtocolService.list_protocol_catalog(
+            company_id=company.id,
+            audience=request.args.get("audience") or "ai_cli",
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify(result)
+
+
+@urgent_business_review_bp.route("/api/consultive/protocols", methods=["POST"])
+@login_required
+def upsert_consultive_protocol():
+    company = _active_company_or_400()
+    _ensure_write_access(company.id)
+    data = _payload()
+    try:
+        result = ConsultiveProtocolService.upsert_protocol(
+            payload=data,
+            company_id=company.id if data.get("tenant_override", True) else None,
+            user_id=getattr(current_user, "id", None),
+        )
+    except UrgentBusinessReviewError as exc:
+        return _error_response(exc)
+    return jsonify(result), 201
+
+
+@urgent_business_review_bp.route("/consultive/protocols", methods=["GET"])
+@login_required
+def consultive_protocols_page():
+    company = get_active_company()
+    if company is None:
+        return redirect(url_for("auth.portal"))
+    return render_template(
+        "modules/consultive/protocols.html",
+        company=company,
+        active_company=company,
+        company_id=company.id,
+        page_title="Protocolos Consultivos",
+    )
+
+
 @urgent_business_review_bp.route("/consultive/cockpit", methods=["GET"])
 @login_required
 def consultive_cockpit_page():
@@ -82,6 +223,39 @@ def consultive_cockpit_page():
         active_company=company,
         company_id=company.id,
         page_title="Cockpit Consultivo",
+    )
+
+
+@urgent_business_review_bp.route("/consultive/cockpit/fronts/<front_key>", methods=["GET"])
+@login_required
+def consultive_structural_front_page(front_key: str):
+    company = get_active_company()
+    if company is None:
+        return redirect(url_for("auth.portal"))
+
+    front = next(
+        (
+            item
+            for item in BusinessReviewReadModelService.STRUCTURAL_FRONTS
+            if item.get("key") == str(front_key or "").strip()
+        ),
+        None,
+    )
+    if front is None:
+        abort(404, description="Frente consultiva não encontrada.")
+
+    operational_urls = {
+        "identity": f"/companies/{company.id}/identity",
+    }
+    return render_template(
+        "modules/consultive/structural_front.html",
+        company=company,
+        active_company=company,
+        company_id=company.id,
+        front_key=front["key"],
+        front_title=front["title"],
+        operational_url=operational_urls.get(front["key"]),
+        page_title=f"Frente Consultiva · {front['title']}",
     )
 
 

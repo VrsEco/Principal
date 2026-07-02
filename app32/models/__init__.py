@@ -145,6 +145,12 @@ from .urgent_business_review import (
     StructuralLearningLink,
     UrgentNeedOverlay,
 )
+from .consultive_assisted_analysis import (
+    AssistedAnalysis,
+    AssistedAnalysisDecision,
+    AssistedAnalysisValidation,
+)
+from .consultive_protocol import ConsultiveProtocol
 
 # AI & Automation
 from .ai_agent import AIAgent
@@ -201,6 +207,8 @@ __all__ = [
     'ProjectTaskDueDateChangeRequest',
     'UiCatalog', 'UserLog',
     'UrgentNeedOverlay', 'BusinessReviewRecord', 'StructuralLearningLink',
+    'AssistedAnalysis', 'AssistedAnalysisValidation', 'AssistedAnalysisDecision',
+    'ConsultiveProtocol',
     'AIAgent', 'AgentMessage', 'AgentAction', 'AgentActionBacklogLink', 'AgentMenuOption', 'AgentMenuSession',
     'WorkflowGapCandidate', 'WorkflowExecutionLog', 'IntegrationRequest',
     'AICapability', 'AICapabilityGrant', 'AICapabilityCompanySetting', 'AICapabilityAuditLog',
