@@ -2640,16 +2640,16 @@ class FinancialService:
                 FinancialEntry.company_id == company_id,
                 FinancialEntry.deleted_at.is_(None),
             ).first()
-            schedule = FinancialService._resolve_linked_schedule(entry, company_id)
-            schedule_metadata = dict(getattr(schedule, "metadata_json", None) or {}) if schedule is not None else {}
-            if schedule_metadata.get("managed_by_contract_billing"):
-                return None, "Baixa gerida pelo faturamento contratual. Faça o estorno/reprocessamento no módulo de Contratos."
             bordero_child_metadata = dict(getattr(settlement, "metadata_json", {}) or {})
             bordero_child_delete_allowed = bool(
                 allow_bordero_child_delete
                 and bordero_child_metadata.get("reconcile_via_bordero")
                 and bordero_child_metadata.get("bordero_settlement_id")
             )
+            schedule = FinancialService._resolve_linked_schedule(entry, company_id)
+            schedule_metadata = dict(getattr(schedule, "metadata_json", None) or {}) if schedule is not None else {}
+            if schedule_metadata.get("managed_by_contract_billing") and not bordero_child_delete_allowed:
+                return None, "Título gerido pelo faturamento contratual. Edite o título no módulo de Contratos; a baixa do borderô pode ser ajustada pelo próprio borderô."
             if FinancialService._requires_whole_entry_delete(entry, schedule) and not bordero_child_delete_allowed:
                 return None, (
                     "Lançamento rápido não permite excluir apenas a baixa. "
