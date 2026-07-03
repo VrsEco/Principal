@@ -4038,9 +4038,14 @@ function buildReportFiltersPayload() {
     filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela
+  // Project IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela.
+  // A tela usa o diretório global para decidir "nenhum projeto/processo";
+  // as opções visíveis podem ficar vazias por cache/empresa. Preserve o modo none.
+  const projectsDirectoryCount = state.projectsDirectory?.length || 0;
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (projectCtx.availableCount > 0) {
+  if (projectsDirectoryCount > 0 && state.selectedProjectIds.length === 0) {
+    filters.project_selection = SELECTION_MODE_NONE;
+  } else if (projectCtx.availableCount > 0) {
     if (projectCtx.selectedIds.length === 0) {
       filters.project_selection = SELECTION_MODE_NONE;
     } else if (projectCtx.selectedIds.length < projectCtx.availableCount) {
@@ -4051,9 +4056,12 @@ function buildReportFiltersPayload() {
     }
   }
 
-  // Process IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela
+  // Process IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela.
+  const processesDirectoryCount = state.processesDirectory?.length || 0;
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (processCtx.availableCount > 0) {
+  if (processesDirectoryCount > 0 && state.selectedProcessIds.length === 0) {
+    filters.process_selection = SELECTION_MODE_NONE;
+  } else if (processCtx.availableCount > 0) {
     if (processCtx.selectedIds.length === 0) {
       filters.process_selection = SELECTION_MODE_NONE;
     } else if (processCtx.selectedIds.length < processCtx.availableCount) {
