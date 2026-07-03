@@ -616,8 +616,16 @@ class FinancialAutomationService:
                 memory_payload["cost_center_id"] = memory_suggestion.get("cost_center_id")
             enriched = memory_payload
 
+        explicit_bank_account_reference = str(normalized_payload_json.get("bank_account_code") or "").strip()
+        spreadsheet_bank_account_id = updated.get("bank_account_id") if explicit_bank_account_reference else None
+
         updated["counterparty_id"] = enriched.get("counterparty_id") or updated.get("counterparty_id")
-        updated["bank_account_id"] = enriched.get("bank_account_id") or updated.get("bank_account_id")
+        if spreadsheet_bank_account_id:
+            updated["bank_account_id"] = spreadsheet_bank_account_id
+        elif explicit_bank_account_reference:
+            updated["bank_account_id"] = None
+        else:
+            updated["bank_account_id"] = enriched.get("bank_account_id") or updated.get("bank_account_id")
         updated["chart_account_id"] = enriched.get("chart_account_id") or updated.get("chart_account_id")
         updated["cost_center_id"] = enriched.get("cost_center_id") or updated.get("cost_center_id")
 
@@ -640,7 +648,16 @@ class FinancialAutomationService:
             },
             "bank_account": {
                 "suggested_id": updated.get("bank_account_id"),
-                "source": "catalog" if updated.get("bank_account_id") else None,
+                "source": (
+                    "spreadsheet"
+                    if explicit_bank_account_reference and updated.get("bank_account_id")
+                    else "unresolved_spreadsheet"
+                    if explicit_bank_account_reference
+                    else "catalog"
+                    if updated.get("bank_account_id")
+                    else None
+                ),
+                "explicit_reference": explicit_bank_account_reference or None,
             },
             "chart_account": {
                 "suggested_id": updated.get("chart_account_id"),
@@ -2136,7 +2153,7 @@ class FinancialAutomationService:
             company_id,
             normalized_payload.get("cost_center_code"),
         ) if normalized_payload.get("cost_center_code") else None
-        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_code(
+        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_reference(
             company_id,
             normalized_payload.get("bank_account_code"),
         ) if normalized_payload.get("bank_account_code") else None

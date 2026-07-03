@@ -261,6 +261,56 @@ class FinancialImportService:
         return item.id if item else None
 
     @staticmethod
+    def _resolve_bank_account_id_by_reference(company_id: int, value: Any) -> Optional[int]:
+        """Resolve explicit spreadsheet bank-account references without free-text inference.
+
+        The import template labels the field as "Conta Bancária", so users may fill
+        the internal code ("008"), the option label ("008 - Conta X"), the account
+        name, bank name, or account number. This resolver only accepts deterministic
+        exact matches inside the tenant; ambiguous names intentionally return None so
+        later catalog suggestions cannot silently pick another account.
+        """
+        code_match = FinancialImportService._resolve_bank_account_id_by_code(company_id, value)
+        if code_match:
+            return code_match
+
+        text = str(value or "").strip()
+        if not text:
+            return None
+        normalized_text = FinancialImportService._normalize_choice(text)
+        text_digits = FinancialImportService._normalize_digits(text)
+        if not normalized_text and not text_digits:
+            return None
+
+        accounts = FinancialBankAccount.query.filter(
+            FinancialBankAccount.company_id == company_id,
+            FinancialBankAccount.deleted_at.is_(None),
+        ).all()
+        matches: List[FinancialBankAccount] = []
+        for account in accounts:
+            comparable_texts = {
+                FinancialImportService._normalize_choice(getattr(account, "code", None)),
+                FinancialImportService._normalize_choice(getattr(account, "name", None)),
+                FinancialImportService._normalize_choice(getattr(account, "bank_name", None)),
+                FinancialImportService._normalize_choice(getattr(account, "account_number", None)),
+            }
+            comparable_texts.discard("")
+            comparable_digits = {
+                FinancialImportService._normalize_digits(getattr(account, "code", None)),
+                FinancialImportService._normalize_digits(getattr(account, "account_number", None)),
+            }
+            comparable_digits = {item for item in comparable_digits if item}
+            if (
+                normalized_text in comparable_texts
+                or (text_digits and text_digits in comparable_digits)
+                or (text_digits and text_digits.lstrip("0") in {item.lstrip("0") for item in comparable_digits})
+            ):
+                matches.append(account)
+
+        unique_ids = {int(account.id) for account in matches if getattr(account, "id", None)}
+        return next(iter(unique_ids)) if len(unique_ids) == 1 else None
+
+    @staticmethod
     def _sanitize_raw_payload(raw_payload: Dict[str, Any] | None) -> Dict[str, Any]:
         sanitized: Dict[str, Any] = {}
         for index, (key, value) in enumerate((raw_payload or {}).items(), start=1):
@@ -450,7 +500,7 @@ class FinancialImportService:
         ) if normalized.get("cost_center_code") else None
         if resolved_cost_center_id:
             normalized["cost_center_id"] = resolved_cost_center_id
-        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_code(
+        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_reference(
             company_id,
             normalized.get("bank_account_code"),
         ) if normalized.get("bank_account_code") else None
@@ -1208,7 +1258,7 @@ class FinancialImportService:
         ) if normalized.get("cost_center_code") else None
         if resolved_cost_center_id:
             normalized["cost_center_id"] = resolved_cost_center_id
-        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_code(
+        resolved_bank_account_id = FinancialImportService._resolve_bank_account_id_by_reference(
             batch.company_id,
             normalized.get("bank_account_code"),
         ) if normalized.get("bank_account_code") else None

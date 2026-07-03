@@ -191,6 +191,67 @@ def test_infer_document_source_type_preserves_xls_extension():
     assert source_type == "xls"
 
 
+def test_auto_suggestions_do_not_override_unresolved_spreadsheet_bank_account(monkeypatch):
+    monkeypatch.setattr(
+        automation_module.FinancialCatalogService,
+        "enrich_reference_payload",
+        lambda **kwargs: {**kwargs["payload"], "bank_account_id": 99},
+    )
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_find_classification_memory_suggestion",
+        lambda **kwargs: None,
+    )
+
+    result = FinancialAutomationService._apply_auto_suggestions_to_record_kwargs(
+        company_id=9,
+        source_document=None,
+        record_kwargs={
+            "entry_direction": "payable",
+            "description": "Histórico com texto de outra conta",
+            "amount": Decimal("100.00"),
+            "bank_account_id": None,
+            "normalized_payload_json": {"bank_account_code": "Conta Inexistente"},
+            "metadata_json": {},
+        },
+    )
+
+    assert result["bank_account_id"] is None
+    assert result["normalized_payload_json"]["bank_account_id"] is None
+    assert result["metadata_json"]["auto_suggestions"]["bank_account"]["source"] == "unresolved_spreadsheet"
+    assert result["metadata_json"]["auto_suggestions"]["bank_account"]["explicit_reference"] == "Conta Inexistente"
+
+
+def test_auto_suggestions_preserve_resolved_spreadsheet_bank_account(monkeypatch):
+    monkeypatch.setattr(
+        automation_module.FinancialCatalogService,
+        "enrich_reference_payload",
+        lambda **kwargs: {**kwargs["payload"], "bank_account_id": 99},
+    )
+    monkeypatch.setattr(
+        automation_module.FinancialAutomationService,
+        "_find_classification_memory_suggestion",
+        lambda **kwargs: None,
+    )
+
+    result = FinancialAutomationService._apply_auto_suggestions_to_record_kwargs(
+        company_id=9,
+        source_document=None,
+        record_kwargs={
+            "entry_direction": "payable",
+            "description": "Histórico com texto de outra conta",
+            "amount": Decimal("100.00"),
+            "bank_account_id": 8,
+            "normalized_payload_json": {"bank_account_code": "Conta Pagamentos"},
+            "metadata_json": {},
+        },
+    )
+
+    assert result["bank_account_id"] == 8
+    assert result["normalized_payload_json"]["bank_account_id"] == 8
+    assert result["metadata_json"]["auto_suggestions"]["bank_account"]["source"] == "spreadsheet"
+
+
 def test_parse_batch_documents_creates_fallback_record_for_unstructured_document(monkeypatch):
     document = SimpleNamespace(
         id=11,
