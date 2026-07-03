@@ -17,6 +17,7 @@ ASSISTED_ANALYSIS_STATUS_VALUES = (
     "under_review",
     "validated",
     "rejected",
+    "conversion_requested",
     "converted",
     "archived",
 )

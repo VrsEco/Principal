@@ -58,8 +58,11 @@ Status sugeridos:
 - `under_review`
 - `validated`
 - `rejected`
+- `conversion_requested`
 - `converted`
 - `archived`
+
+Regra oficial: `conversion_requested` significa que o consultor aprovou/ajustou a recomendação e solicitou intenção de ação para um objeto operacional. `converted` só deve ser usado quando a criação/vinculação do objeto operacional tiver ocorrido por ferramenta específica e com rastreabilidade.
 
 ### 2.2. AssistedAnalysisValidation
 
@@ -79,7 +82,7 @@ Campos mínimos:
 
 ### 2.3. AssistedAnalysisDecision
 
-Gate humano do consultor.
+Validação humana do consultor.
 
 Campos mínimos:
 
@@ -241,7 +244,7 @@ Regras:
 
 ---
 
-## 5. MCP tool — conversão em ação
+## 5. MCP tool — ação operacional
 
 ### 5.1. `consultive_create_recommended_action`
 
@@ -259,10 +262,12 @@ Entrada mínima:
 
 Regras:
 
-- só pode rodar após decisão aprovada;
+- só pode rodar após decisão aprovada ou ajustada;
 - deve respeitar permissões do objeto alvo;
 - deve criar vínculo entre análise, decisão e objeto gerado;
 - mutações críticas devem ter human gate.
+
+Na versão segura inicial, esta tool pode registrar apenas a intenção de ação e manter a análise em `conversion_requested`. A efetiva criação do projeto, processo, Business Review ou outro objeto canônico deve ser realizada por tool operacional específica, preservando validação humana e vínculo auditável.
 
 ---
 
@@ -282,7 +287,7 @@ Função:
 
 - registrar aprovação, ajuste, nova análise ou rejeição;
 - indicar destino possível da recomendação;
-- preparar conversão posterior em ação.
+- preparar a ação operacional posterior sem executá-la automaticamente.
 
 ---
 
@@ -291,7 +296,7 @@ Função:
 1. Toda operação tem `company_id` obrigatório.
 2. Registro de análise não cria objeto operacional automaticamente.
 3. Validação por squad é separada da decisão do consultor.
-4. Conversão em ação é tool própria e posterior.
+4. Ação operacional é tool própria e posterior.
 5. UI deixa claro que APP32 não dispara IA.
 6. MCP limita contexto por surface/permissão.
 7. Dados externos são fontes consultivas, não verdade operacional.
@@ -304,7 +309,7 @@ Função:
 - escolha de provedor de IA;
 - cobrança ou medição de tokens;
 - OAuth externo para provedores de IA;
-- automação de conversão sem gate humano;
+- automação de ação operacional sem validação humana;
 - deploy/ativação em produção.
 
 ---

@@ -93,8 +93,8 @@
         <div class="cc-modal-card cc-analysis-card" role="dialog" aria-modal="true" aria-labelledby="cc-front-analysis-title">
             <div class="cc-modal-head">
                 <div>
-                    <p>Maturação Assistida</p>
-                    <h2 id="cc-front-analysis-title">Analisar frente</h2>
+                    <p>Diagnóstico interno inicial</p>
+                    <h2 id="cc-front-analysis-title">Pré-análise da frente</h2>
                 </div>
                 <button type="button" class="cc-icon-button" data-cc-analysis-close aria-label="Fechar">×</button>
             </div>
@@ -211,14 +211,14 @@
     .cc-primary-button, .cc-secondary-button { border-radius: 999px; padding: .45rem .75rem; font-size: .78rem; font-weight: 850; cursor: pointer; }
     .cc-primary-button { border: 1px solid #0f766e; background: #0f766e; color: #fff; }
     .cc-secondary-button { border: 1px solid #e2e8f0; background: #fff; color: #475569; }
-    .cc-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: rgba(15, 23, 42, .42); }
+    .cc-modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1rem; background: rgba(15, 23, 42, .42); overflow: hidden; }
     .cc-modal[hidden] { display: none; }
     .cc-modal-card { width: min(680px, 100%); max-height: min(86vh, 760px); overflow: auto; border-radius: 1.1rem; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 24px 70px rgba(15, 23, 42, .28); padding: 1rem; }
-    .cc-analysis-card { width: min(920px, 100%); padding: 0; overflow: hidden; }
+    .cc-analysis-card { width: min(920px, 100%); height: min(92vh, 860px); max-height: calc(100vh - 2rem); padding: 0; overflow: hidden; display: flex; flex-direction: column; }
     .cc-analysis-card .cc-modal-head { position: sticky; top: 0; z-index: 1; margin: 0; padding: .95rem 1rem .8rem; background: rgba(255,255,255,.96); border-bottom: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
     .cc-analysis-card > .cc-modal-actions { position: sticky; bottom: 0; margin: 0; padding: .75rem 1rem; background: rgba(255,255,255,.96); border-top: 1px solid #e2e8f0; backdrop-filter: blur(8px); }
     .cc-analysis-body { display: grid; gap: .7rem; }
-    .cc-analysis-card .cc-analysis-body { padding: .9rem 1rem; }
+    .cc-analysis-card .cc-analysis-body { padding: .9rem 1rem 1rem; overflow: auto; flex: 1 1 auto; min-height: 0; align-content: start; }
     .cc-analysis-summary { border: 1px solid #99f6e4; background: #f0fdfa; border-radius: .9rem; padding: .75rem; color: #0f766e; font-weight: 800; line-height: 1.35; }
     .cc-analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
     .cc-analysis-section { border: 1px solid #e2e8f0; border-radius: .9rem; background: #f8fafc; padding: .75rem; min-width: 0; }
@@ -255,7 +255,7 @@
     const moneyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
     const label = {
         urgency: { low: 'baixa', medium: 'média', high: 'alta', critical: 'crítica' },
-        status: { inbox: 'entrada', triage: 'triagem', in_review: 'em review', decided: 'decidida', in_execution: 'em execução', closed: 'fechada', cancelled: 'cancelada', draft: 'rascunho', in_analysis: 'em análise', pending_decision: 'valor a consolidar', approved: 'aprovada', risk_accepted: 'risco aceito', rejected: 'rejeitada' },
+        status: { inbox: 'entrada', triage: 'triagem', in_review: 'em review', decided: 'decidida', in_execution: 'em execução', closed: 'fechada', cancelled: 'cancelada', draft: 'rascunho', in_analysis: 'em análise', pending_decision: 'valor a consolidar', approved: 'aprovada', risk_accepted: 'risco aceito', rejected: 'rejeitada', conversion_requested: 'ação solicitada', converted: 'ação registrada' },
         learning: { process_change: 'processo', routine_change: 'rotina', indicator_change: 'indicador', control_change: 'controle', policy_change: 'política', project_creation: 'projeto', task_creation: 'tarefa', risk_acceptance: 'risco aceito', no_structural_action: 'sem ação' }
     };
     function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch])); }
@@ -340,14 +340,14 @@
     }
 
     const defaultMaturityTrack = {
-        title: 'Trilha de Maturidade da Estruturação',
+        title: 'Fases da Estruturação Empresarial',
         current_phase: { number: '00', title: 'Base Organizacional / empresa na mão', label: 'Fase 00 — Base Organizacional / empresa na mão' },
         gate: { status: 'Em maturação', description: 'identidade mínima, organograma, responsabilidades, controle mínimo e visão inicial confiável' },
         maturity_pct: 0,
         next_advance: 'Validar identidade organizacional mínima antes de avançar.',
         missing_evidence: ['Validar missão, visão, valores, posicionamento e organograma.'],
         risks: ['Não avançar fase por cadastro preenchido sem funcionamento comprovado.'],
-        detail_url: '/structuring-journey/consultant',
+        detail_url: '/consultive/cockpit',
         phases: [
             { number: '00', title: 'Base Organizacional / empresa na mão', status: 'current', current: true },
             { number: '01', title: 'Processos finalísticos', status: 'pending' },
@@ -392,11 +392,11 @@
         const phases = Array.isArray(payload.phases) && payload.phases.length ? payload.phases : defaultMaturityTrack.phases;
         const missing = Array.isArray(payload.missing_evidence) ? payload.missing_evidence.slice(0, 4) : [];
         const maturity = Math.max(0, Math.min(Number(payload.maturity_pct || 0), 100));
-        const detailUrl = payload.detail_url || '/structuring-journey/consultant';
+        const detailUrl = payload.detail_url || '/consultive/cockpit';
         return `
             <article class="cc-track-card">
                 <div class="cc-track-main">
-                    <p class="cc-track-eyebrow">${escapeHtml(payload.title || 'Trilha de Maturidade da Estruturação')}</p>
+                    <p class="cc-track-eyebrow">${escapeHtml(payload.title || 'Fases da Estruturação Empresarial')}</p>
                     <div class="cc-track-title">
                         <h3><strong>Fase ${escapeHtml(phase.number || '--')}</strong> — ${escapeHtml(phase.title || '--')}</h3>
                         <span class="cc-status-tag">${escapeHtml(gate.status || 'Em maturação')}</span>
@@ -406,8 +406,8 @@
                         ${phases.map((item) => `<div class="cc-track-step ${escapeHtml(item.status || '')}"><strong>Fase ${escapeHtml(item.number)}</strong><span>${escapeHtml(item.title)}</span></div>`).join('')}
                     </div>
                     <div class="cc-track-actions">
-                        <span class="cc-tag status-partial">Maturidade da trilha: ${maturity}%</span>
-                        <a class="cc-open-link" href="${escapeHtml(detailUrl)}">Ver detalhe da trilha</a>
+                        <span class="cc-tag status-partial">Maturidade da estruturação: ${maturity}%</span>
+                        <a class="cc-open-link" href="${escapeHtml(detailUrl)}">Ver Cockpit</a>
                     </div>
                 </div>
                 <aside class="cc-track-side">
@@ -432,7 +432,7 @@
                 <div class="cc-structural-meta">
                     <span class="cc-tag">Maturidade: ${escapeHtml(front.maturity || '--')}</span>
                     <div class="cc-modal-actions">
-                        <button type="button" class="cc-secondary-button" data-cc-analyze-structural-front="${escapeHtml(front.key)}">Analisar frente</button>
+                        <button type="button" class="cc-secondary-button" data-cc-analyze-structural-front="${escapeHtml(front.key)}" aria-label="Analisar frente com pré-análise interna">Pré-analisar</button>
                         <button type="button" class="cc-secondary-button" data-cc-open-structural-front="${escapeHtml(front.key)}">Abrir frente</button>
                     </div>
                 </div>
@@ -440,7 +440,7 @@
         `;
     }
 
-    function renderLearningItem(item) { return `<article class="cc-item"><div class="cc-item-head"><h3>${escapeHtml(label.learning[item.learning_type] || item.learning_type)}</h3><span class="cc-chip">${escapeHtml(item.action_decision)}</span></div><p>${shortText(item.recommended_change, 'Converter aprendizado em ação estrutural ou aceitar risco conscientemente.')}</p>${itemTags([item.business_review_id ? { label: `BR #${item.business_review_id}` } : null, item.target_process_id ? { label: `Processo #${item.target_process_id}` } : null, item.target_indicator_id ? { label: `Indicador #${item.target_indicator_id}` } : null])}</article>`; }
+    function renderLearningItem(item) { return `<article class="cc-item"><div class="cc-item-head"><h3>${escapeHtml(label.learning[item.learning_type] || item.learning_type)}</h3><span class="cc-chip">${escapeHtml(item.action_decision)}</span></div><p>${shortText(item.recommended_change, 'Registrar intenção de ação estrutural ou aceitar risco conscientemente.')}</p>${itemTags([item.business_review_id ? { label: `BR #${item.business_review_id}` } : null, item.target_process_id ? { label: `Processo #${item.target_process_id}` } : null, item.target_indicator_id ? { label: `Indicador #${item.target_indicator_id}` } : null])}</article>`; }
     function renderList(selector, items, renderer, emptyText) { const el = document.querySelector(selector); el.innerHTML = items?.length ? items.map(renderer).join('') : `<div class="cc-empty">${emptyText}</div>`; }
     function render(data) {
         cockpitState = data;
@@ -510,7 +510,7 @@
         const nextActionLabel = {
             open_maturation_plan: 'Abrir plano de maturação',
             analyze_front: 'Revisar diagnóstico da frente',
-            convert_to_action: 'Converter em ação'
+            convert_to_action: 'Registrar intenção de ação'
         }[payload.suggested_next_action] || (payload.suggested_next_action || 'Validar com o consultor');
         return `
             <div class="cc-analysis-summary">
@@ -549,8 +549,8 @@
         const modal = document.getElementById('cc-front-analysis-modal');
         const title = document.getElementById('cc-front-analysis-title');
         const body = document.getElementById('cc-front-analysis-body');
-        title.textContent = front ? `Analisar frente · ${front.title}` : 'Analisar frente';
-        body.innerHTML = '<div class="cc-loading">Gerando diagnóstico determinístico da frente...</div>';
+        title.textContent = front ? `Pré-análise · ${front.title}` : 'Pré-análise da frente';
+        body.innerHTML = '<div class="cc-loading">Gerando diagnóstico interno determinístico da frente...</div>';
         modal.hidden = false;
         try {
             const response = await fetch(`/api/consultive/cockpit/structural-fronts/${encodeURIComponent(frontKey)}/analysis`, {

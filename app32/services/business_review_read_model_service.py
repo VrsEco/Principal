@@ -1391,13 +1391,13 @@ class BusinessReviewReadModelService:
             "action": "analyze_front",
             "company_id": company_id,
             "summary": (
-                "Processos analisados com base na Jornada de Estruturação, cadastros de processos, "
-                "modelagem, rotinas, contratos de execução e auditoria interna."
+                "Processos analisados como frente estrutural do Cockpit do Consultor, usando arquitetura de processos, "
+                "modelagem, rotinas, contratos de execução, auditoria interna e evidências auxiliares N1."
             ),
             "maturity": {
                 "status": BusinessReviewReadModelService._maturity_status(score),
                 "score": score,
-                "basis": "Jornada de Estruturação + evidências operacionais tenant-safe do APP32.",
+                "basis": "Cockpit do Consultor + evidências operacionais tenant-safe do APP32 + read models auxiliares N1.",
             },
             "internal_evidence": evidence,
             "gaps": gaps,
@@ -1526,9 +1526,9 @@ class BusinessReviewReadModelService:
 
     @staticmethod
     def _structuring_maturity_track_payload(company_id: int, warnings: list[str]) -> dict[str, Any]:
-        """Leitura macro da Trilha 00-03 subordinada ao Cockpit do Consultor.
+        """Leitura macro das fases 00-03 conduzidas pelo Cockpit do Consultor.
 
-        A Jornada de Estruturação é usada apenas como read model de detalhe. A
+        A Jornada de Estruturação permanece apenas como read model auxiliar. A
         decisão de avanço continua exigindo evidência e gate humano consultivo.
         """
         journey: dict[str, Any] = {}
@@ -1564,7 +1564,7 @@ class BusinessReviewReadModelService:
             phase_number = "01"
             phase_title = "Processos finalísticos"
             gate = "cadeia de valor principal estabilizada"
-            next_advance = "Concluir blocos essenciais da Jornada e priorizar processos críticos."
+            next_advance = "Concluir evidências essenciais da frente e priorizar processos críticos no Cockpit."
         elif maturity_pct < 80:
             phase_key = "phase_02"
             phase_number = "02"
@@ -1604,7 +1604,7 @@ class BusinessReviewReadModelService:
 
         return {
             "key": "structuring_maturity_track",
-            "title": "Trilha de Maturidade da Estruturação",
+            "title": "Fases da Estruturação Empresarial",
             "current_phase": {
                 "key": phase_key,
                 "number": phase_number,
@@ -1629,7 +1629,7 @@ class BusinessReviewReadModelService:
                 "Não avançar fase por cadastro preenchido sem funcionamento comprovado.",
                 "Validar o gate com evidências reais antes de comunicar maturidade ao cliente.",
             ],
-            "detail_url": "/structuring-journey/consultant",
+            "detail_url": "/consultive/cockpit",
             "phases": phases,
         }
 

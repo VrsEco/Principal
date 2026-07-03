@@ -285,7 +285,7 @@ class ConsultiveAssistedAnalysisService:
         if row.decision == "reject":
             analysis.status = "rejected"
         elif row.conversion_target != "none":
-            analysis.status = "converted"
+            analysis.status = "conversion_requested"
         else:
             analysis.status = "validated" if row.decision == "accept" else "under_review"
         analysis.updated_by_user_id = user_id
@@ -302,7 +302,7 @@ class ConsultiveAssistedAnalysisService:
         user_id: int | None = None,
     ) -> dict[str, Any]:
         """Gate reservado: registra intenção sem criar objeto operacional automaticamente."""
-        ConsultiveAssistedAnalysisService._require_analysis(company_id, analysis_id)
+        analysis = ConsultiveAssistedAnalysisService._require_analysis(company_id, analysis_id)
         target = _normalize_choice(
             conversion_target,
             ASSISTED_ANALYSIS_CONVERSION_TARGET_VALUES,
@@ -311,6 +311,9 @@ class ConsultiveAssistedAnalysisService:
         )
         if target == "none":
             raise UrgentBusinessReviewError("conversion_target deve indicar um objeto operacional para conversão.")
+        analysis.status = "conversion_requested"
+        analysis.updated_by_user_id = user_id
+        db.session.commit()
         return {
             "company_id": company_id,
             "analysis_id": analysis_id,

@@ -491,7 +491,7 @@ def test_consultive_structural_front_page_exposes_tenant_owned_mcp_assistance(mo
     assert response.status_code == 200
     body = response.get_data(as_text=True)
     assert "Análise Assistida via MCP" in body
-    assert "IA do cliente, método Versus e gate humano" in body
+    assert "IA do cliente, método Versus e validação humana" in body
     assert "Custo/token do cliente" in body
     assert "Contexto MCP" in body
     assert "IA/CLI do cliente" in body
@@ -535,7 +535,7 @@ def test_consultive_structural_front_page_exposes_tenant_owned_mcp_assistance(mo
     assert "Será registrada no tenant ativo" in body
     assert "cf-decision-register-modal" in body
     assert "data-cf-decision-register-form" in body
-    assert "Gate humano antes de virar ação" in body
+    assert "Validação humana antes da ação operacional" in body
     assert "analysis_id" in body
     assert "consultant_decision" in body
     assert "conversion_target" in body
@@ -581,7 +581,7 @@ def test_consultive_assisted_analysis_mcp_technical_contract_spec_exists():
     assert "consultive_create_recommended_action" in body
     assert "company_id" in body
     assert "Registro de análise não cria objeto operacional automaticamente" in body
-    assert "Conversão em ação é tool própria e posterior" in body
+    assert "Ação operacional é tool própria e posterior" in body
     assert "UI deixa claro que APP32 não dispara IA" in body
 
 
@@ -1520,7 +1520,7 @@ def test_business_review_read_model_exposes_structuring_maturity_track_contract(
     assert "Fase 01" in body
     assert "Fase 02" in body
     assert "Fase 03" in body
-    assert '"detail_url": "/structuring-journey/consultant"' in body
+    assert '"detail_url": "/consultive/cockpit"' in body
 
 
 def test_consultive_cockpit_renders_structuring_maturity_track_before_fronts():
@@ -1539,11 +1539,11 @@ def test_consultive_cockpit_renders_structuring_maturity_track_before_fronts():
 
     assert "cc-maturity-track" in body
     assert "renderMaturityTrack" in body
-    assert "Trilha de Maturidade da Estruturação" in body
+    assert "Fases da Estruturação Empresarial" in body
     assert "Base Organizacional / empresa na mão" in body
     assert "Validar missão, visão, valores, posicionamento e organograma" in body
-    assert "Ver detalhe da trilha" in body
-    assert "/structuring-journey/consultant" in body
+    assert "Ver Cockpit" in body
+    assert "/consultive/cockpit" in body
     assert body.index('id="cc-maturity-track"') < body.index('id="cc-structural-list"')
 
 

@@ -41,7 +41,7 @@
             <h2 id="cf-next-action-title">Carregando análise...</h2>
             <p id="cf-next-action-copy">Aguarde enquanto o APP32 consolida a leitura da frente.</p>
         </div>
-        <span class="cf-gate">Gate humano obrigatório</span>
+        <span class="cf-gate">Validação humana obrigatória</span>
     </section>
 
     <section id="cf-identity-subphases" class="cf-process-panel cf-identity-panel" hidden>
@@ -84,7 +84,7 @@
         <div class="cf-assisted-head">
             <div>
                 <p class="cf-eyebrow">Análise Assistida via MCP</p>
-                <h2 id="cf-assisted-mcp-title">IA do cliente, método Versus e gate humano</h2>
+                <h2 id="cf-assisted-mcp-title">IA do cliente, método Versus e validação humana</h2>
                 <p>A análise começa fora do APP32, na IA/CLI conectada ao MCP do cliente. O APP32 orienta o roteiro, fornece contexto tenant-safe via MCP e registra o retorno, as validações dos squads e a decisão do consultor.</p>
             </div>
             <div class="cf-assisted-badges">
@@ -107,7 +107,7 @@
             </article>
             <article>
                 <strong>4 · Decisão do consultor</strong>
-                <span>Aprovar, ajustar ou rejeitar; depois converter em ação, projeto, maturação ou Business Review.</span>
+                <span>Aprovar, ajustar ou rejeitar; depois registrar intenção de ação para projeto, maturação ou Business Review.</span>
             </article>
         </div>
         <div class="cf-assisted-actions">
@@ -115,6 +115,19 @@
             <button type="button" class="cf-btn cf-btn-primary" data-cf-open-analysis-register>Registrar análise recebida</button>
             <button type="button" class="cf-btn cf-btn-secondary" data-cf-open-decision-register>Registrar decisão do consultor</button>
             <small>O APP32 não dispara a IA: ele orienta o uso via MCP e registra o resultado trazido pela IA/CLI.</small>
+        </div>
+    </section>
+
+    <section class="cf-squad-panel" aria-labelledby="cf-squad-title">
+        <div class="cf-history-head">
+            <div>
+                <p class="cf-eyebrow">Validações dos Squads</p>
+                <h2 id="cf-squad-title">Validação de qualidade antes da decisão final</h2>
+                <p>Squad Cliente valida aderência operacional; Squad Versus valida método; Engenharia valida riscos técnicos, dados, API, MCP e UX.</p>
+            </div>
+        </div>
+        <div id="cf-squad-validation-summary" class="cf-squad-grid">
+            <p class="cf-empty">Carregando validações...</p>
         </div>
     </section>
 
@@ -167,7 +180,7 @@
                 </section>
                 <section>
                     <h3>4 · Depois da análise</h3>
-                    <p>Traga o resultado para o APP32, valide com Squad Cliente e Squad Versus, registre a decisão do consultor e só então converta em ação.</p>
+                    <p>Traga o resultado para o APP32, valide com Squad Cliente e Squad Versus, registre a decisão do consultor e só então solicite a criação operacional por ferramenta específica.</p>
                     <p><strong>Atenção:</strong> custo/token/capacidade são do cliente quando a análise for feita pela IA/CLI do tenant.</p>
                 </section>
             </div>
@@ -190,9 +203,9 @@
                 <label class="cf-field-wide">Benchmarks e fontes<textarea name="benchmarks" rows="3" placeholder="Fontes externas, boas práticas e referências utilizadas"></textarea></label>
                 <label class="cf-field-wide">Riscos e limitações<textarea name="risks" rows="3" placeholder="Limitações da análise, dados ausentes e riscos de interpretação"></textarea></label>
                 <label class="cf-field-wide">Recomendações e próximos passos<textarea name="recommendations" rows="4" placeholder="Recomendações priorizadas e próximos passos sugeridos"></textarea></label>
-                <label>Validação Squad Cliente<select name="client_squad_validation"><option value="">Aguardando validação</option><option value="Validada">Validada</option><option value="Ajustar">Ajustar</option><option value="Rejeitada">Rejeitada</option></select></label>
-                <label>Validação Squad Versus<select name="versus_squad_validation"><option value="">Aguardando validação</option><option value="Validada">Validada</option><option value="Ajustar">Ajustar</option><option value="Rejeitada">Rejeitada</option></select></label>
-                <label>Validação Engenharia<select name="engineering_squad_validation"><option value="">Não aplicável</option><option value="Aguardando validação">Aguardando validação</option><option value="Validada">Validada</option><option value="Ajustar">Ajustar</option><option value="Rejeitada">Rejeitada</option></select></label>
+                <label>Nota para Squad Cliente<input type="text" name="client_squad_validation" placeholder="Pendência, restrição operacional ou ponto a validar"></label>
+                <label>Nota para Squad Versus<input type="text" name="versus_squad_validation" placeholder="Ponto metodológico a validar"></label>
+                <label>Nota para Engenharia<input type="text" name="engineering_squad_validation" placeholder="Risco técnico, dado, API, MCP ou UX a validar"></label>
                 <label>Status da análise<select name="analysis_status"><option value="received">Recebida</option><option value="under_review">Em validação</option><option value="validated">Validada</option><option value="rejected">Rejeitada</option></select></label>
                 <div class="cf-form-actions cf-field-wide">
                     <button type="button" class="cf-btn cf-btn-secondary" data-cf-close-analysis-register>Cancelar</button>
@@ -208,21 +221,21 @@
             <div class="cf-modal-head">
                 <div>
                     <p class="cf-eyebrow">Registrar decisão do consultor</p>
-                    <h2 id="cf-decision-register-title">Gate humano antes de virar ação</h2>
+                    <h2 id="cf-decision-register-title" aria-label="Validação humana antes da ação operacional">Validação humana antes da ação operacional</h2>
                 </div>
                 <button type="button" class="cf-modal-close" data-cf-close-decision-register aria-label="Fechar">×</button>
             </div>
             <form class="cf-form-grid" data-cf-decision-register-form>
                 <label>Análise selecionada<input type="number" name="analysis_id" min="1" placeholder="Clique em Decidir no histórico ou informe o ID"></label>
                 <label>Decisão<select name="consultant_decision"><option value="accept">Aprovar recomendação</option><option value="adjust">Aprovar com ajustes</option><option value="hold">Solicitar nova análise</option><option value="reject">Rejeitar recomendação</option></select></label>
-                <label>Converter em<select name="conversion_target"><option value="none">Sem conversão imediata</option><option value="project">Projeto</option><option value="process">Revisão de processo</option><option value="indicator">Indicador</option><option value="routine">Rotina</option><option value="business_review">Business Review</option><option value="urgent_need">Necessidade Urgente</option><option value="structural_learning">Aprendizado estrutural</option></select></label>
+                <label>Solicitar ação para<select name="conversion_target"><option value="none">Sem ação solicitada</option><option value="project">Projeto</option><option value="process">Revisão de processo</option><option value="indicator">Indicador</option><option value="routine">Rotina</option><option value="business_review">Business Review</option><option value="urgent_need">Necessidade Urgente</option><option value="structural_learning">Aprendizado estrutural</option></select></label>
                 <label class="cf-field-wide">Justificativa da decisão<textarea name="decision_reason" rows="4" placeholder="Explique por que a recomendação foi aprovada, ajustada ou rejeitada"></textarea></label>
                 <label class="cf-field-wide">Próxima ação<textarea name="next_action" rows="3" placeholder="Defina o próximo passo, responsável sugerido, prazo ou objeto canônico relacionado"></textarea></label>
                 <label class="cf-field-wide">Observações de governança<textarea name="governance_notes" rows="3" placeholder="Riscos, restrições, validações pendentes e necessidade de gate adicional"></textarea></label>
                 <div class="cf-form-actions cf-field-wide">
                     <button type="button" class="cf-btn cf-btn-secondary" data-cf-close-decision-register>Cancelar</button>
                     <button type="submit" class="cf-btn cf-btn-primary">Salvar decisão no APP32</button>
-                    <small data-cf-decision-register-feedback>Decisão humana obrigatória antes de qualquer conversão operacional. Use preferencialmente o botão Decidir no histórico para evitar escolher a análise errada.</small>
+                    <small data-cf-decision-register-feedback>Decisão humana obrigatória. Esta decisão registra intenção de ação; a criação operacional do objeto deve ocorrer depois, por ferramenta específica e com validação humana.</small>
                 </div>
             </form>
         </div>
@@ -300,9 +313,19 @@
     .cf-assisted-actions .cf-btn:disabled { opacity:.55; cursor:not-allowed; }
     .cf-assisted-actions small { color:#64748b; font-weight:700; }
     .cf-history-panel { background:linear-gradient(135deg,#fff7ed,#ffffff); border:1px solid #fed7aa; border-radius:1.5rem; padding:1rem; box-shadow:0 16px 42px rgba(15,23,42,.06); margin-bottom:1rem; }
+    .cf-squad-panel { background:linear-gradient(135deg,#eef2ff,#ffffff); border:1px solid #c7d2fe; border-radius:1.5rem; padding:1rem; box-shadow:0 16px 42px rgba(15,23,42,.06); margin-bottom:1rem; }
     .cf-history-head { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:.9rem; }
     .cf-history-head h2 { margin:0 0 .35rem; color:#0f172a; font-size:1.15rem; }
     .cf-history-head p:last-child { margin:0; color:#64748b; line-height:1.35; max-width:900px; }
+    .cf-squad-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; }
+    .cf-squad-card { border:1px solid #e2e8f0; border-radius:1rem; background:#fff; padding:.85rem; display:grid; gap:.45rem; }
+    .cf-squad-card h3 { margin:0; color:#0f172a; font-size:.98rem; }
+    .cf-squad-card p { margin:0; color:#64748b; font-size:.82rem; line-height:1.32; }
+    .cf-squad-status { display:inline-flex; width:max-content; border-radius:999px; padding:.22rem .55rem; font-weight:900; font-size:.72rem; border:1px solid #e2e8f0; background:#f8fafc; color:#475569; }
+    .cf-squad-status.validated { border-color:#bbf7d0; background:#dcfce7; color:#166534; }
+    .cf-squad-status.needs_adjustment { border-color:#fde68a; background:#fffbeb; color:#92400e; }
+    .cf-squad-status.rejected { border-color:#fecaca; background:#fff1f2; color:#991b1b; }
+    .cf-squad-status.pending { border-color:#cbd5e1; background:#f8fafc; color:#475569; }
     .cf-history-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
     .cf-history-card { border:1px solid #e2e8f0; border-radius:1.1rem; background:#fff; padding:.95rem; box-shadow:0 10px 24px rgba(15,23,42,.04); }
     .cf-history-card-head { display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; margin-bottom:.65rem; }
@@ -361,8 +384,8 @@
     .cf-row-meta { display:inline-flex; margin-top:.45rem; border-radius:999px; padding:.16rem .5rem; background:#f8fafc; border:1px solid #e2e8f0; color:#64748b; font-size:.72rem; font-weight:800; }
     .cf-empty { color:#64748b; margin:0; }
     @media (max-width: 1180px) { .cf-subphase-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width: 1120px) { .cf-summary-grid,.cf-grid,.cf-assisted-steps,.cf-history-list { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width: 760px) { .consultive-front-page { padding:0 1rem 1.5rem; } .cf-hero,.cf-next-panel,.cf-assisted-head,.cf-history-head,.cf-modal-head { flex-direction:column; } .cf-summary-grid,.cf-grid,.cf-subphase-grid,.cf-assisted-steps,.cf-history-list,.cf-history-meta,.cf-guide-grid,.cf-form-grid { grid-template-columns:1fr; } .cf-actions { justify-content:flex-start; } .cf-assisted-badges { align-items:flex-start; min-width:0; } .cf-assisted-cost,.cf-protocol-badge { white-space:normal; text-align:left; max-width:100%; } }
+    @media (max-width: 1120px) { .cf-summary-grid,.cf-grid,.cf-assisted-steps,.cf-history-list { grid-template-columns:repeat(2,minmax(0,1fr)); } .cf-squad-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width: 760px) { .consultive-front-page { padding:0 1rem 1.5rem; } .cf-hero,.cf-next-panel,.cf-assisted-head,.cf-history-head,.cf-modal-head { flex-direction:column; } .cf-summary-grid,.cf-grid,.cf-subphase-grid,.cf-assisted-steps,.cf-history-list,.cf-history-meta,.cf-guide-grid,.cf-form-grid,.cf-squad-grid { grid-template-columns:1fr; } .cf-actions { justify-content:flex-start; } .cf-assisted-badges { align-items:flex-start; min-width:0; } .cf-assisted-cost,.cf-protocol-badge { white-space:normal; text-align:left; max-width:100%; } }
 </style>
 
 <script>
@@ -502,7 +525,8 @@
             under_review: 'Em validação',
             validated: 'Validada',
             rejected: 'Rejeitada',
-            converted: 'Convertida',
+            conversion_requested: 'Ação solicitada',
+            converted: 'Ação registrada',
             archived: 'Arquivada',
             pending: 'Pendente',
             needs_adjustment: 'Ajustar'
@@ -524,13 +548,40 @@
         const source = activeProtocol?.source || (activeProtocol?.company_id ? 'tenant' : 'global');
         target.textContent = `Protocolo: ${title} · ${version} · ${source}`;
     }
+    function renderSquadValidationSummary(items) {
+        const target = document.getElementById('cf-squad-validation-summary');
+        if (!target) return;
+        const latest = Array.isArray(items) && items.length ? items[0] : null;
+        const validations = latest?.validations || [];
+        const bySquad = Object.fromEntries(validations.map((validation) => [validation.squad, validation]));
+        const squads = [
+            { key: 'client', title: 'Squad Cliente', role: 'Valida aderência operacional, restrições reais e aplicabilidade com o gestor.' },
+            { key: 'versus', title: 'Squad Versus', role: 'Valida método, coerência com Paper/SPEC e qualidade consultiva da recomendação.' },
+            { key: 'engineering', title: 'Squad Engenharia', role: 'Valida dados, API, MCP, UX e riscos técnicos antes de operacionalizar.' }
+        ];
+        target.innerHTML = squads.map((squad) => {
+            const validation = bySquad[squad.key] || {};
+            const status = validation.status || 'pending';
+            const notes = validation.notes || (latest ? 'Validação pendente para a análise mais recente.' : 'Sem análise registrada para validar.');
+            return `
+                <article class="cf-squad-card">
+                    <h3>${escapeHtml(squad.title)}</h3>
+                    <span class="cf-squad-status ${escapeHtml(status)}">${escapeHtml(statusLabel(status))}</span>
+                    <p>${escapeHtml(squad.role)}</p>
+                    <p><strong>Nota:</strong> ${escapeHtml(shortText(notes, 160))}</p>
+                </article>
+            `;
+        }).join('');
+    }
     function renderAnalysisHistory(items) {
         const target = document.getElementById('cf-analysis-history');
         const rows = Array.isArray(items) ? items : [];
         if (!rows.length) {
             target.innerHTML = '<p class="cf-empty">Nenhuma análise assistida registrada para esta frente.</p>';
+            renderSquadValidationSummary([]);
             return;
         }
+        renderSquadValidationSummary(rows);
         target.innerHTML = rows.map((item) => {
             const validations = item.validations || [];
             const validated = validations.filter((validation) => validation.status === 'validated').length;
@@ -572,6 +623,7 @@
             renderAnalysisHistory(payload.items || []);
         } catch (error) {
             target.innerHTML = `<p class="cf-empty">Não foi possível carregar o histórico: ${escapeHtml(error.message || 'tente novamente')}.</p>`;
+            renderSquadValidationSummary([]);
         }
     }
     function findEvidence(evidence, label) {
@@ -881,7 +933,7 @@
         document.getElementById('cf-gaps-count').textContent = gaps.length;
         document.getElementById('cf-recommendations-count').textContent = recommendations.length;
         document.getElementById('cf-next-action-title').textContent = payload.next_action?.title || 'Validar frente com o consultor';
-        document.getElementById('cf-next-action-copy').textContent = payload.next_action?.description || 'Revisar evidências, lacunas e decidir a próxima ação com gate humano.';
+        document.getElementById('cf-next-action-copy').textContent = payload.next_action?.description || 'Revisar evidências, lacunas e decidir a próxima ação com validação humana.';
         document.getElementById('cf-evidence').innerHTML = renderRows(evidence, 'Nenhuma evidência interna encontrada.');
         document.getElementById('cf-gaps').innerHTML = renderRows(gaps, 'Nenhum gap metodológico crítico identificado.');
         document.getElementById('cf-recommendations').innerHTML = renderRows(recommendations, 'Nenhuma recomendação pendente.');

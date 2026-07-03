@@ -331,8 +331,48 @@ class StructuringJourneyService:
                     [],
                 ),
             },
+            "methodology_alignment": {
+                "canonical_driver": "consultive_cockpit",
+                "canonical_url": "/consultive/cockpit",
+                "layer": "camada_consultiva_evolutiva",
+                "legacy_blocks_are_auxiliary": True,
+                "note": (
+                    "A Jornada/Maturação N1 é evidência auxiliar. A condução consultiva oficial "
+                    "das frentes, fases e gates ocorre no Cockpit do Consultor."
+                ),
+            },
+            "method_phases": StructuringJourneyService._method_phases(),
             "blocks": blocks,
         }
+
+    @staticmethod
+    def _method_phases() -> list[dict[str, Any]]:
+        return [
+            {
+                "number": "00",
+                "title": "Base Organizacional",
+                "gate": "Base organizacional minimamente clara e empresa minimamente na mão.",
+                "fronts": ["identity", "processes", "strategic_management"],
+            },
+            {
+                "number": "01",
+                "title": "Processos Finalísticos",
+                "gate": "Cadeia de valor principal estabilizada por evidência operacional.",
+                "fronts": ["processes"],
+            },
+            {
+                "number": "02",
+                "title": "Todos os Processos",
+                "gate": "Operação inteira sob lógica de processo, indicador e formação progressiva de gestão.",
+                "fronts": ["processes", "strategic_management"],
+            },
+            {
+                "number": "03",
+                "title": "Estratégia Rodando",
+                "gate": "Estratégia em ciclo vivo de gestão, com planejamento, decisões, indicadores e projetos conectados.",
+                "fronts": ["identity", "growth_plan", "strategic_management"],
+            },
+        ]
 
     @staticmethod
     def _build_subblock(

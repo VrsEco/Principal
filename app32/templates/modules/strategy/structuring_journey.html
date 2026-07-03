@@ -1,13 +1,13 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}{{ page_title or "Jornada de Estruturação" }}{% endblock %}
+{% block title %}{{ page_title or "Evidências de Estruturação" }}{% endblock %}
 
 {% block breadcrumb %}
 <a href="/">Início</a>
 <span class="sep">/</span>
 <span>Estratégia</span>
 <span class="sep">/</span>
-<span class="current">{{ page_title or "Jornada de Estruturação" }}</span>
+<span class="current">{{ page_title or "Evidências de Estruturação" }}</span>
 {% endblock %}
 
 {% block workspace_content %}
@@ -16,39 +16,84 @@
      data-audience="{{ audience or 'client' }}">
     <header class="journey-hero">
         <div>
-            <p class="eyebrow">Sapiens · Jornada de Estruturação</p>
+            <p class="eyebrow">Leitura auxiliar · Estruturação Empresarial</p>
             {% if audience == 'consultant' %}
-                <h1>Cockpit funcional da jornada</h1>
-                <p class="subtitle">Gates, maturidade por sub-bloco e fila S1–S2 sobre o mesmo read model usado pelo cliente.</p>
+                <h1>Fases da Estruturação Empresarial</h1>
+                <p class="subtitle">Visão auxiliar de fases do Método Versus. A condução consultiva oficial das frentes estruturais acontece no Cockpit do Consultor.</p>
             {% else %}
                 <h1>Monte o DNA da sua empresa</h1>
-                <p class="subtitle">Avance por fases, complete missões e veja o que falta para destravar a próxima etapa.</p>
+                <p class="subtitle">Acompanhe evidências de estruturação e veja o que falta para apoiar a próxima etapa consultiva.</p>
             {% endif %}
         </div>
         <div class="hero-actions">
-            <a class="btn btn-secondary" href="/strategy/alignment-n1/maturation">Fila de maturação</a>
             {% if audience == 'consultant' %}
-                <a class="btn btn-primary" href="/structuring-journey/client">Ver experiência cliente</a>
+                <a class="btn btn-primary" href="/consultive/cockpit">Abrir Cockpit do Consultor</a>
             {% else %}
-                <a class="btn btn-primary" href="/structuring-journey/consultant">Ver cockpit consultor</a>
+                <a class="btn btn-primary" href="/consultive/cockpit">Abrir Cockpit do Consultor</a>
             {% endif %}
         </div>
     </header>
 
+    {% if audience == 'consultant' %}
+    <section class="method-alignment-panel" aria-label="Alinhamento metodológico">
+        <div class="alignment-copy">
+            <p class="eyebrow">Camada Consultiva/Evolutiva</p>
+            <h2>Esta tela não substitui o Cockpit</h2>
+            <p>Use esta jornada para ler a evolução macro por fases. Use o Cockpit do Consultor para atuar nas quatro frentes oficiais: Identidade Organizacional, Processos, Planejamento Estratégico e Gerenciamento Estratégico.</p>
+        </div>
+        <div class="front-links" aria-label="Frentes estruturais oficiais">
+            <a href="/consultive/cockpit/fronts/identity">Identidade Organizacional</a>
+            <a href="/consultive/cockpit/fronts/processes">Processos</a>
+            <a href="/consultive/cockpit/fronts/growth_plan">Planejamento Estratégico</a>
+            <a href="/consultive/cockpit/fronts/strategic_management">Gerenciamento Estratégico</a>
+        </div>
+    </section>
+
+    <section class="method-phases" aria-label="Fases oficiais do Método Versus">
+        <article>
+            <span>Fase 00</span>
+            <h3>Base Organizacional</h3>
+            <p>Empresa minimamente na mão: identidade leve, papéis, processos macro, indicadores básicos e projetos operando.</p>
+        </article>
+        <article>
+            <span>Fase 01</span>
+            <h3>Processos Finalísticos</h3>
+            <p>Estabilização da cadeia de valor: processos principais modelados, implantados e acompanhados por indicadores.</p>
+        </article>
+        <article>
+            <span>Fase 02</span>
+            <h3>Todos os Processos</h3>
+            <p>Expansão para gestão e apoio, com formação progressiva de gerentes de projetos e processos.</p>
+        </article>
+        <article>
+            <span>Fase 03</span>
+            <h3>Estratégia Rodando</h3>
+            <p>Planejamento e gerenciamento estratégicos vivos, com decisões, indicadores, projetos e prioridades conectados.</p>
+        </article>
+    </section>
+    {% endif %}
+
     <section class="summary-grid" aria-live="polite">
-        <div class="summary-card"><span>Maturidade geral</span><strong id="overall">--%</strong></div>
-        <div class="summary-card"><span>Fases prontas</span><strong id="blocks-ready">--</strong></div>
-        <div class="summary-card"><span>Fases destravadas</span><strong id="blocks-unlocked">--</strong></div>
+        <div class="summary-card"><span>{{ "Maturidade auxiliar" if audience == "consultant" else "Maturidade geral" }}</span><strong id="overall">--%</strong></div>
+        <div class="summary-card"><span>{{ "Blocos prontos" if audience == "consultant" else "Fases prontas" }}</span><strong id="blocks-ready">--</strong></div>
+        <div class="summary-card"><span>{{ "Blocos destravados" if audience == "consultant" else "Fases destravadas" }}</span><strong id="blocks-unlocked">--</strong></div>
         <div class="summary-card"><span>Itens em revisão</span><strong id="pending-items">--</strong></div>
     </section>
 
     <section class="next-panel" id="next-panel">
         <div>
-            <p class="eyebrow">Próximo avanço</p>
-            <h2 id="next-title">Carregando jornada...</h2>
-            <p id="next-copy">Aguarde enquanto calculamos gates e maturidade.</p>
+            <p class="eyebrow">{{ "Leitura auxiliar" if audience == "consultant" else "Próximo avanço" }}</p>
+            <h2 id="next-title">Carregando evidências...</h2>
+            <p id="next-copy">Aguarde enquanto consolidamos evidências e maturidade auxiliar.</p>
         </div>
     </section>
+
+    {% if audience == 'consultant' %}
+    <section class="legacy-readmodel-note">
+        <strong>Leitura operacional existente</strong>
+        <span>Os blocos abaixo vêm dos read models auxiliares e servem como evidência para o Cockpit. Eles não devem criar uma segunda metodologia paralela.</span>
+    </section>
+    {% endif %}
 
     <section id="blocks" class="journey-blocks">
         <div class="empty-state">Carregando blocos...</div>
@@ -65,6 +110,16 @@
     .btn { border-radius:999px; padding:.7rem 1rem; font-weight:800; text-decoration:none; border:1px solid transparent; display:inline-flex; align-items:center; }
     .btn-primary { background:#0f766e; color:#fff; }
     .btn-secondary { background:#fff; color:#0f172a; border-color:#cbd5e1; }
+    .method-alignment-panel { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr); gap:1rem; align-items:center; margin-bottom:1rem; padding:1.15rem; border:1px solid #99f6e4; border-radius:1.5rem; background:linear-gradient(135deg,#f0fdfa,#fff); box-shadow:0 14px 38px rgba(15,23,42,.05); }
+    .alignment-copy h2 { margin:.15rem 0 .35rem; color:#0f172a; font-size:1.2rem; }
+    .alignment-copy p:last-child { margin:0; color:#475569; line-height:1.4; }
+    .front-links { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
+    .front-links a { display:flex; align-items:center; justify-content:center; min-height:2.65rem; border-radius:999px; border:1px solid #ccfbf1; background:#fff; color:#0f766e; font-weight:850; text-decoration:none; text-align:center; padding:.45rem .7rem; }
+    .method-phases { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin-bottom:1rem; }
+    .method-phases article { border:1px solid #dbeafe; border-radius:1.25rem; background:#fff; padding:.95rem; box-shadow:0 12px 30px rgba(15,23,42,.05); }
+    .method-phases span { display:inline-flex; border-radius:999px; padding:.2rem .55rem; background:#eff6ff; color:#1d4ed8; font-weight:900; font-size:.72rem; }
+    .method-phases h3 { margin:.55rem 0 .35rem; color:#0f172a; font-size:1rem; }
+    .method-phases p { margin:0; color:#64748b; font-size:.84rem; line-height:1.35; }
     .summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1rem; margin-bottom:1rem; }
     .summary-card { background:#fff; border:1px solid #e2e8f0; border-radius:1.25rem; padding:1rem; box-shadow:0 12px 30px rgba(15,23,42,.06); }
     .summary-card span { display:block; color:#64748b; font-weight:700; font-size:.82rem; }
@@ -72,6 +127,9 @@
     .next-panel { background:linear-gradient(135deg,#ecfeff,#f0fdf4); border:1px solid #99f6e4; border-radius:1.5rem; padding:1.25rem; margin-bottom:1.25rem; }
     .next-panel h2 { margin:.2rem 0; font-size:1.25rem; color:#115e59; }
     .next-panel p:last-child { margin:0; color:#475569; }
+    .legacy-readmodel-note { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; padding:.85rem 1rem; border:1px dashed #cbd5e1; border-radius:1rem; background:#f8fafc; color:#475569; }
+    .legacy-readmodel-note strong { color:#0f172a; white-space:nowrap; }
+    .legacy-readmodel-note span { line-height:1.35; }
     .journey-blocks { display:grid; gap:1rem; }
     .block-card { background:#fff; border:1px solid #e2e8f0; border-radius:1.5rem; padding:1.1rem; box-shadow:0 16px 42px rgba(15,23,42,.07); position:relative; overflow:hidden; }
     .block-card.locked { opacity:.72; }
@@ -100,8 +158,8 @@
     .client-mode .status-confirmed h3::before { content:"🏆 "; }
     .consultant-mode .subblocks { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .empty-state { padding:1.5rem; border:1px dashed #cbd5e1; border-radius:1rem; background:#fff; color:#64748b; }
-    @media (max-width: 1100px) { .summary-grid,.subblocks,.consultant-mode .subblocks { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media (max-width: 720px) { .structuring-journey-page { padding:0 1rem 1.5rem; } .journey-hero { flex-direction:column; } .summary-grid,.subblocks,.consultant-mode .subblocks { grid-template-columns:1fr; } }
+    @media (max-width: 1100px) { .summary-grid,.subblocks,.consultant-mode .subblocks,.method-phases { grid-template-columns:repeat(2,minmax(0,1fr)); } .method-alignment-panel { grid-template-columns:1fr; } }
+    @media (max-width: 720px) { .structuring-journey-page { padding:0 1rem 1.5rem; } .journey-hero,.legacy-readmodel-note { flex-direction:column; align-items:flex-start; } .summary-grid,.subblocks,.consultant-mode .subblocks,.method-phases,.front-links { grid-template-columns:1fr; } }
 </style>
 
 <script>
@@ -143,11 +201,12 @@
     function renderBlock(block) {
         const gateClass = block.gate.ready ? 'ready' : (block.unlocked ? '' : 'locked');
         const gateText = block.gate.ready ? 'Gate pronto' : (block.unlocked ? 'Em construção' : 'Aguardando fase anterior');
+        const sequenceLabel = audience === 'consultant' ? 'Bloco auxiliar' : 'Fase';
         return `
             <article class="block-card ${block.unlocked ? '' : 'locked'}">
                 <div class="block-head">
                     <div>
-                        <span class="badge ${gateClass}">Fase ${escapeHtml(block.order)} · ${gateText}</span>
+                        <span class="badge ${gateClass}">${sequenceLabel} ${escapeHtml(block.order)} · ${gateText}</span>
                         <h2>${escapeHtml(audience === 'client' ? block.client_label : block.consultant_label)}</h2>
                         <p class="subtitle">${escapeHtml(block.gate.message)}</p>
                     </div>
@@ -165,8 +224,15 @@
         document.getElementById('pending-items').textContent = data.summary.pending_items;
         const current = (data.blocks || []).find((block) => block.key === data.current_block) || (data.blocks || [])[0];
         const missing = (data.summary.next_missing || []).map((item) => item.label).join(', ');
-        document.getElementById('next-title').textContent = current?.gate?.ready ? 'Todas as missões essenciais desta fase estão prontas.' : `Fase atual: ${audience === 'client' ? current?.client_label : current?.consultant_label}`;
-        document.getElementById('next-copy').textContent = missing ? `Falta para avançar: ${missing}.` : 'Nenhum bloqueio essencial identificado.';
+        if (audience === 'consultant') {
+            document.getElementById('next-title').textContent = current?.gate?.ready ? 'Bloco auxiliar sem bloqueio essencial.' : `Bloco auxiliar atual: ${current?.consultant_label}`;
+            document.getElementById('next-copy').textContent = missing
+                ? `Evidência auxiliar pendente para o Cockpit: ${missing}.`
+                : 'Use o Cockpit do Consultor para decidir a próxima ação metodológica.';
+        } else {
+            document.getElementById('next-title').textContent = current?.gate?.ready ? 'Todas as missões essenciais desta fase estão prontas.' : `Fase atual: ${current?.client_label}`;
+            document.getElementById('next-copy').textContent = missing ? `Falta para avançar: ${missing}.` : 'Nenhum bloqueio essencial identificado.';
+        }
         blocksEl.innerHTML = (data.blocks || []).map(renderBlock).join('');
     }
     async function loadJourney() {

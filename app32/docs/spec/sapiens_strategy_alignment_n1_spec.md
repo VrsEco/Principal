@@ -422,7 +422,19 @@ As tools MCP e APIs existentes continuam válidas para agentes, engenharia e int
 
 A mudança é de **surface e experiência de produto**, não de invalidação do motor N1.
 
-### 13.5 Papel do N1 na maturação assistida
+### 13.5 Surface da Maturação N1
+
+A rota `/strategy/alignment-n1/maturation` pode existir como **fila auxiliar de evidências**.
+
+Regras de produto:
+
+- deve apontar o **Cockpit do Consultor** como superfície oficial de condução;
+- não deve aparecer como item primário de menu quando sua função for apenas auxiliar;
+- deve evitar promessa de criação automática de frente, projeto ou dado canônico sem gate humano;
+- deve tratar itens confirmados como evidência auxiliar do read model N1;
+- não deve competir com os quatro cards oficiais de Estruturação Empresarial do Cockpit.
+
+### 13.6 Papel do N1 na maturação assistida
 
 No contexto do Cockpit do Consultor, o N1 deve operar como um dos motores técnicos da maturação assistida.
 
