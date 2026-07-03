@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import Any, Literal, Sequence
 
 from src.intelligence.tool_catalog import catalog
@@ -307,23 +308,23 @@ def build_ops_mcp_server(name: str = "GestaoVersus Ops MCP") -> Any:
 
 def run_user_mcp_server() -> None:
     mcp = build_user_mcp_server()
-    print("Iniciando MCP User Server via STDIO (AI-Readable Mode)...")
+    print("Iniciando MCP User Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()
 
 
 def run_analytics_mcp_server() -> None:
     mcp = build_analytics_mcp_server()
-    print("Iniciando MCP Analytics Server via STDIO (AI-Readable Mode)...")
+    print("Iniciando MCP Analytics Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()
 
 
 def run_ops_mcp_server() -> None:
     mcp = build_ops_mcp_server()
-    print("Iniciando MCP Ops Server via STDIO (AI-Readable Mode)...")
+    print("Iniciando MCP Ops Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()
 
 
 def run_admin_mcp_server() -> None:
     mcp = build_admin_mcp_server()
-    print("Iniciando MCP Admin Server via STDIO (AI-Readable Mode)...")
+    print("Iniciando MCP Admin Server via STDIO (AI-Readable Mode)...", file=sys.stderr)
     mcp.run()

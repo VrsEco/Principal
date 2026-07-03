@@ -59,6 +59,14 @@ class _FakeMCP:
         return decorator
 
 
+class _RunnableFakeMCP:
+    def __init__(self):
+        self.ran = False
+
+    def run(self):
+        self.ran = True
+
+
 class _FakeCatalog:
     def __init__(self):
         self.langchain_tools = (
@@ -349,3 +357,15 @@ def test_user_surface_manifest_exposes_strategy_maturation_tools_to_cliente_harn
     assert "get_structuring_journey_tool" in tool_names
     assert "list_strategy_maturation_backlog_tool" in tool_names
     assert "review_strategy_maturation_item_tool" in tool_names
+
+
+def test_stdio_surface_startup_banner_goes_to_stderr(monkeypatch, capsys):
+    fake_mcp = _RunnableFakeMCP()
+    monkeypatch.setattr(registry, "build_user_mcp_server", lambda: fake_mcp)
+
+    registry.run_user_mcp_server()
+
+    captured = capsys.readouterr()
+    assert fake_mcp.ran is True
+    assert captured.out == ""
+    assert "MCP User Server" in captured.err
