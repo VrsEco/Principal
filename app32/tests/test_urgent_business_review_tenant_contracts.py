@@ -1547,6 +1547,29 @@ def test_consultive_cockpit_renders_structuring_maturity_track_before_fronts():
     assert body.index('id="cc-maturity-track"') < body.index('id="cc-structural-list"')
 
 
+def test_structuring_journey_identity_block_uses_canonical_five_items():
+    service_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "services", "structuring_journey_service.py")
+    )
+    with open(service_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert '("mission", "Missão", "essential")' in body
+    assert '("vision", "Visão", "essential")' in body
+    assert '("values", "Valores", "essential")' in body
+    assert '("positioning", "Posicionamento", "essential")' in body
+    assert '("org_chart", "Organograma", "essential")' in body
+    assert '("value_propositions", "Proposta de Valor", "essential")' not in body
+    assert '("objectives_pillars", "Objetivos/Pilares", "essential")' not in body
+    assert '("purpose", "Propósito", "recommended")' not in body
+    assert '("differentials", "Diferenciais", "recommended")' not in body
+    assert '("essential_competencies", "Competências", "recommended")' not in body
+    assert '("segments_icp", "ICP/Segmentos", "recommended")' not in body
+    assert '("policies", "Políticas", "optional")' not in body
+    assert '("stakeholders", "Stakeholders", "optional")' not in body
+    assert '("swot", "SWOT", "optional")' not in body
+
+
 def test_assisted_analysis_persists_protocol_snapshot_contract():
     model_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "models", "consultive_assisted_analysis.py")

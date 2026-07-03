@@ -253,7 +253,7 @@ def _build_structuring_trail(
         _phase_deliverable(
             key="process_architecture",
             label="Arquitetura de processos",
-            source_block=blocks_by_key.get("process_architecture"),
+            source_block=blocks_by_key.get("processes"),
             detail="Mapa com áreas, macroprocessos, processos essenciais e donos.",
         ),
         _phase_deliverable(
@@ -283,7 +283,7 @@ def _build_structuring_trail(
         ),
     ]
 
-    modeling_block = blocks_by_key.get("modeling") or {}
+    modeling_block = blocks_by_key.get("processes") or {}
     phase_01_deliverables = [
         _phase_deliverable(
             key="finalistic_modeling",

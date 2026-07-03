@@ -5,7 +5,17 @@ from collections import Counter, defaultdict
 from typing import Any, Iterable
 
 from models import (
+    Employee,
+    IncentiveGovernabilityMatrix,
+    IncentiveRuleSet,
+    Indicator,
+    IndicatorData,
+    IndicatorEntityLink,
+    IndicatorGoal,
+    IndicatorLineOfSight,
     MacroProcess,
+    Plan,
+    PlanSectionStatus,
     Process,
     ProcessActivityExecutionContract,
     ProcessArea,
@@ -13,6 +23,7 @@ from models import (
     ProcessRoutine,
     ProcessStep,
     ProcessStrategyProfile,
+    Role,
     StrategyMaturationItem,
 )
 from services.strategy_alignment_n1_service import StrategyAlignmentN1Error, StrategyAlignmentN1Service
@@ -34,16 +45,8 @@ class StructuringJourneyService:
         "mission": ("mission",),
         "vision": ("vision",),
         "values": ("values",),
-        "value_propositions": ("value_propositions",),
-        "objectives_pillars": ("strategic_objectives", "pillars"),
-        "purpose": ("purpose",),
-        "differentials": ("differentials",),
-        "essential_competencies": ("essential_competencies",),
-        "segments_icp": ("segments_icp",),
-        "policies": ("policies",),
-        "stakeholders": ("stakeholders",),
-        "swot": ("swot",),
-        "corporate_indicators": ("corporate_indicators",),
+        "positioning": ("positioning", "value_propositions", "differentials", "segments_icp"),
+        "org_chart": ("org_chart", "_org_chart_present"),
     }
 
     PROCESS_PROFILE_FIELDS = {
@@ -72,51 +75,48 @@ class StructuringJourneyService:
                     ("mission", "Missão", "essential"),
                     ("vision", "Visão", "essential"),
                     ("values", "Valores", "essential"),
-                    ("value_propositions", "Proposta de Valor", "essential"),
-                    ("objectives_pillars", "Objetivos/Pilares", "essential"),
-                    ("purpose", "Propósito", "recommended"),
-                    ("differentials", "Diferenciais", "recommended"),
-                    ("essential_competencies", "Competências", "recommended"),
-                    ("segments_icp", "ICP/Segmentos", "recommended"),
-                    ("policies", "Políticas", "optional"),
-                    ("stakeholders", "Stakeholders", "optional"),
-                    ("swot", "SWOT", "optional"),
-                    ("corporate_indicators", "Indicadores corporativos", "optional"),
+                    ("positioning", "Posicionamento", "essential"),
+                    ("org_chart", "Organograma", "essential"),
                 ],
             },
             {
-                "key": "process_architecture",
+                "key": "processes",
                 "order": 2,
-                "label": "Arquitetura de Processos",
+                "label": "Processos",
                 "client_label": "Organize como a empresa funciona",
-                "consultant_label": "Arquitetura de Processos",
+                "consultant_label": "Processos",
                 "subblocks": [
-                    ("areas", "Áreas", "essential"),
-                    ("macroprocesses", "Macroprocessos", "essential"),
-                    ("processes", "Processos", "essential"),
-                    ("process_owner", "Dono", "essential"),
-                    ("process_objective", "Objetivo do processo", "essential"),
-                    ("criticality", "Criticidade", "recommended"),
-                    ("customer_served", "Cliente atendido", "recommended"),
-                    ("process_indicators", "Indicadores do processo", "recommended"),
-                    ("sipoc", "SIPOC", "optional"),
-                    ("regulatory_risk", "Risco/regulatório", "optional"),
-                    ("cost_volume", "Custo/volume", "optional"),
+                    ("architecture", "Arquitetura", "essential"),
+                    ("modeling", "Modelagem", "essential"),
+                    ("implementation", "Implantação", "essential"),
+                    ("stabilization", "Estabilização", "essential"),
+                    ("audit", "Auditoria", "essential"),
                 ],
             },
             {
-                "key": "modeling",
+                "key": "growth_plan",
                 "order": 3,
-                "label": "Modelagem",
-                "client_label": "Desenhe a rotina em movimento",
-                "consultant_label": "Modelagem BPMN/POP",
+                "label": "Planejamento Estratégico",
+                "client_label": "Direcione o crescimento",
+                "consultant_label": "Planejamento Estratégico",
                 "subblocks": [
-                    ("flow", "Fluxo (atividades + sequência)", "essential"),
-                    ("lanes", "Raias (executores)", "essential"),
-                    ("gateways", "Gateways/decisões", "recommended"),
-                    ("pops", "POPs", "recommended"),
-                    ("contracts_automation", "Contratos/automação", "optional"),
-                    ("flow_metrics", "Métricas de fluxo", "optional"),
+                    ("structured", "Estruturado", "essential"),
+                    ("connected", "Conectado", "essential"),
+                    ("deployed", "Desdobrado", "essential"),
+                    ("linked_to_management", "Vinculado à gestão", "essential"),
+                ],
+            },
+            {
+                "key": "strategic_management",
+                "order": 4,
+                "label": "Gerenciamento Estratégico",
+                "client_label": "Faça a estratégia rodar",
+                "consultant_label": "Gerenciamento Estratégico",
+                "subblocks": [
+                    ("indicators", "Indicadores", "essential"),
+                    ("cycles", "Ciclos", "essential"),
+                    ("incentives", "Incentivos", "essential"),
+                    ("connection_web", "Teia de Conexões", "essential"),
                 ],
             },
         ],
@@ -137,6 +137,7 @@ class StructuringJourneyService:
             raise StrategyAlignmentN1Error("scope inválido. Use company ou process.")
 
         identity = StrategyAlignmentN1Service.get_identity(company_id, status="confirmed")
+        identity = StructuringJourneyService._with_org_chart_evidence(company_id, dict(identity or {}))
         maturation_items = [row.to_dict() for row in StrategyMaturationItem.query.filter_by(company_id=company_id).all()]
 
         process_query = Process.query.filter_by(company_id=company_id)
@@ -176,6 +177,54 @@ class StructuringJourneyService:
             for row in ProcessActivityExecutionContract.query.filter_by(company_id=company_id).all()
             if (not process_ids or int(row.process_id) in process_ids) and bool(getattr(row, "is_active", True))
         ]
+        growth_plans = [row.to_dict() for row in Plan.query.filter_by(company_id=company_id, mode="growth").all()]
+        growth_plan_ids = [int(item["id"]) for item in growth_plans if item.get("id") is not None]
+        plan_section_statuses = [
+            row.to_dict()
+            for row in (
+                PlanSectionStatus.query.filter(PlanSectionStatus.plan_id.in_(growth_plan_ids)).all()
+                if growth_plan_ids
+                else []
+            )
+        ]
+        indicators = [
+            row.to_dict()
+            for row in Indicator.query.filter_by(company_id=company_id).all()
+            if bool(getattr(row, "is_active", True))
+        ]
+        indicator_ids = [int(item["id"]) for item in indicators if item.get("id") is not None]
+        indicator_data = [
+            row.to_dict()
+            for row in (
+                IndicatorData.query.filter(IndicatorData.company_id == company_id, IndicatorData.indicator_id.in_(indicator_ids)).all()
+                if indicator_ids
+                else []
+            )
+        ]
+        indicator_goals = [
+            row.to_dict()
+            for row in (
+                IndicatorGoal.query.filter(IndicatorGoal.company_id == company_id, IndicatorGoal.indicator_id.in_(indicator_ids)).all()
+                if indicator_ids
+                else []
+            )
+        ]
+        indicator_links = [row.to_dict() for row in IndicatorEntityLink.query.filter_by(company_id=company_id).all()]
+        line_of_sight = [row.to_dict() for row in IndicatorLineOfSight.query.filter_by(company_id=company_id).all()]
+        incentive_rule_sets = [
+            row.to_dict()
+            for row in IncentiveRuleSet.query.filter_by(company_id=company_id).all()
+            if bool(getattr(row, "is_active", True)) and not getattr(row, "deleted_at", None)
+        ]
+        incentive_governability = [
+            {
+                "id": row.id,
+                "role_id": row.role_id,
+                "indicator_id": row.indicator_id,
+                "governability_level": row.governability_level,
+            }
+            for row in IncentiveGovernabilityMatrix.query.filter_by(company_id=company_id).all()
+        ]
 
         if process_ids:
             macro_ids = {int(item["macro_id"]) for item in processes if item.get("macro_id") is not None}
@@ -209,6 +258,15 @@ class StructuringJourneyService:
             process_steps=process_steps,
             execution_contracts=contracts,
             maturation_items=maturation_items,
+            growth_plans=growth_plans,
+            plan_section_statuses=plan_section_statuses,
+            indicators=indicators,
+            indicator_data=indicator_data,
+            indicator_goals=indicator_goals,
+            indicator_links=indicator_links,
+            line_of_sight=line_of_sight,
+            incentive_rule_sets=incentive_rule_sets,
+            incentive_governability=incentive_governability,
         )
 
     @staticmethod
@@ -225,10 +283,28 @@ class StructuringJourneyService:
         process_steps: list[dict[str, Any]],
         execution_contracts: list[dict[str, Any]],
         maturation_items: list[dict[str, Any]],
+        growth_plans: list[dict[str, Any]] | None = None,
+        plan_section_statuses: list[dict[str, Any]] | None = None,
+        indicators: list[dict[str, Any]] | None = None,
+        indicator_data: list[dict[str, Any]] | None = None,
+        indicator_goals: list[dict[str, Any]] | None = None,
+        indicator_links: list[dict[str, Any]] | None = None,
+        line_of_sight: list[dict[str, Any]] | None = None,
+        incentive_rule_sets: list[dict[str, Any]] | None = None,
+        incentive_governability: list[dict[str, Any]] | None = None,
         audience: str | None = "client",
         scope: str | None = "company",
         process_id: int | None = None,
     ) -> dict[str, Any]:
+        growth_plans = growth_plans or []
+        plan_section_statuses = plan_section_statuses or []
+        indicators = indicators or []
+        indicator_data = indicator_data or []
+        indicator_goals = indicator_goals or []
+        indicator_links = indicator_links or []
+        line_of_sight = line_of_sight or []
+        incentive_rule_sets = incentive_rule_sets or []
+        incentive_governability = incentive_governability or []
         blocks: list[dict[str, Any]] = []
         previous_ready = True
         current_block_key: str | None = None
@@ -252,6 +328,15 @@ class StructuringJourneyService:
                     process_steps=process_steps,
                     execution_contracts=execution_contracts,
                     maturation_items=maturation_items,
+                    growth_plans=growth_plans,
+                    plan_section_statuses=plan_section_statuses,
+                    indicators=indicators,
+                    indicator_data=indicator_data,
+                    indicator_goals=indicator_goals,
+                    indicator_links=indicator_links,
+                    line_of_sight=line_of_sight,
+                    incentive_rule_sets=incentive_rule_sets,
+                    incentive_governability=incentive_governability,
                 )
                 for sub_key, label, criticality in block_def["subblocks"]
             ]
@@ -391,6 +476,15 @@ class StructuringJourneyService:
         process_steps: list[dict[str, Any]],
         execution_contracts: list[dict[str, Any]],
         maturation_items: list[dict[str, Any]],
+        growth_plans: list[dict[str, Any]],
+        plan_section_statuses: list[dict[str, Any]],
+        indicators: list[dict[str, Any]],
+        indicator_data: list[dict[str, Any]],
+        indicator_goals: list[dict[str, Any]],
+        indicator_links: list[dict[str, Any]],
+        line_of_sight: list[dict[str, Any]],
+        incentive_rule_sets: list[dict[str, Any]],
+        incentive_governability: list[dict[str, Any]],
     ) -> dict[str, Any]:
         required_count, confirmed_count, evidence = StructuringJourneyService._canonical_evidence(
             block_key=block_key,
@@ -404,9 +498,20 @@ class StructuringJourneyService:
             routines=routines,
             process_steps=process_steps,
             execution_contracts=execution_contracts,
+            growth_plans=growth_plans,
+            plan_section_statuses=plan_section_statuses,
+            indicators=indicators,
+            indicator_data=indicator_data,
+            indicator_goals=indicator_goals,
+            indicator_links=indicator_links,
+            line_of_sight=line_of_sight,
+            incentive_rule_sets=incentive_rule_sets,
+            incentive_governability=incentive_governability,
         )
-        maturity_pct = StructuringJourneyService._pct(confirmed_count, required_count)
         counts = StructuringJourneyService._maturation_counts(block_key, key, maturation_items)
+        if required_count > 0 and counts.get("confirmed", 0):
+            confirmed_count = max(confirmed_count, min(required_count, int(counts.get("confirmed", 0))))
+        maturity_pct = StructuringJourneyService._pct(confirmed_count, required_count)
         ready = bool(required_count > 0 and confirmed_count >= required_count)
         status = StructuringJourneyService._subblock_status(
             ready=ready,
@@ -449,6 +554,15 @@ class StructuringJourneyService:
         routines: list[dict[str, Any]],
         process_steps: list[dict[str, Any]],
         execution_contracts: list[dict[str, Any]],
+        growth_plans: list[dict[str, Any]],
+        plan_section_statuses: list[dict[str, Any]],
+        indicators: list[dict[str, Any]],
+        indicator_data: list[dict[str, Any]],
+        indicator_goals: list[dict[str, Any]],
+        indicator_links: list[dict[str, Any]],
+        line_of_sight: list[dict[str, Any]],
+        incentive_rule_sets: list[dict[str, Any]],
+        incentive_governability: list[dict[str, Any]],
     ) -> tuple[int, int, dict[str, Any]]:
         if block_key == "identity":
             fields = StructuringJourneyService.IDENTITY_SUBBLOCK_FIELDS[key]
@@ -456,27 +570,97 @@ class StructuringJourneyService:
             return 1, int(present), {"fields": list(fields)}
 
         process_count = len(processes)
-        if block_key == "process_architecture":
-            if key == "areas":
-                return 1, int(bool(process_areas)), {"count": len(process_areas)}
-            if key == "macroprocesses":
-                return 1, int(bool(macro_processes)), {"count": len(macro_processes)}
-            if key == "processes":
-                return 1, int(bool(processes)), {"count": process_count}
-            covered = StructuringJourneyService._covered_processes_for_profile_key(key, profiles, processes)
-            return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+        if block_key == "processes":
+            if key == "architecture":
+                owner_covered = StructuringJourneyService._covered_processes_for_profile_key("process_owner", profiles, processes)
+                checks = [
+                    bool(process_areas),
+                    bool(macro_processes),
+                    bool(processes),
+                    bool(process_count and len(owner_covered) >= process_count),
+                ]
+                return len(checks), sum(int(item) for item in checks), {
+                    "areas_count": len(process_areas),
+                    "macroprocesses_count": len(macro_processes),
+                    "process_count": process_count,
+                    "processes_with_owner": len(owner_covered),
+                }
+            if key == "modeling":
+                modeled = StructuringJourneyService._covered_processes_for_modeling_key(
+                    "flow",
+                    processes=processes,
+                    profiles=profiles,
+                    bpmn_diagrams=bpmn_diagrams,
+                    routines=routines,
+                    process_steps=process_steps,
+                    execution_contracts=execution_contracts,
+                )
+                pops = StructuringJourneyService._covered_processes_for_modeling_key(
+                    "pops",
+                    processes=processes,
+                    profiles=profiles,
+                    bpmn_diagrams=bpmn_diagrams,
+                    routines=routines,
+                    process_steps=process_steps,
+                    execution_contracts=execution_contracts,
+                )
+                covered = modeled.intersection(pops) if pops else modeled
+                return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+            if key == "implementation":
+                routine_process_ids = {int(item["process_id"]) for item in routines if item.get("process_id") is not None}
+                contract_process_ids = {int(item["process_id"]) for item in execution_contracts if item.get("process_id") is not None}
+                covered = routine_process_ids.union(contract_process_ids)
+                return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+            if key == "stabilization":
+                indicator_process_ids = StructuringJourneyService._process_ids_with_indicators(profiles, processes, indicators, indicator_links)
+                measured_indicator_ids = {int(item["indicator_id"]) for item in indicator_data if item.get("indicator_id") is not None}
+                covered = {
+                    process_id
+                    for process_id in indicator_process_ids
+                    if StructuringJourneyService._process_has_measured_indicator(process_id, indicators, indicator_links, measured_indicator_ids)
+                }
+                if not covered:
+                    covered = indicator_process_ids
+                return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+            if key == "audit":
+                return process_count, 0, {"process_count": process_count, "note": "Entrada no rol de auditoria interna ainda exige evidência específica."}
 
-        if block_key == "modeling":
-            covered = StructuringJourneyService._covered_processes_for_modeling_key(
-                key,
-                processes=processes,
-                profiles=profiles,
-                bpmn_diagrams=bpmn_diagrams,
-                routines=routines,
-                process_steps=process_steps,
-                execution_contracts=execution_contracts,
-            )
-            return process_count, len(covered), {"process_count": process_count, "covered_process_ids": sorted(covered)}
+        if block_key == "growth_plan":
+            active_growth_plans = [item for item in growth_plans if str(item.get("status") or "").lower() in {"active", "completed", "done"}]
+            any_growth_plan = bool(growth_plans)
+            completed_sections = [item for item in plan_section_statuses if str(item.get("status") or "").lower() in {"completed", "done"}]
+            strategic_refs = [
+                identity.get("strategic_objectives"),
+                identity.get("pillars"),
+                identity.get("objectives_pillars"),
+            ]
+            if key == "structured":
+                present = any_growth_plan or any(StructuringJourneyService._has_identity_value(item) for item in strategic_refs)
+                return 1, int(present), {"growth_plans": len(growth_plans), "completed_sections": len(completed_sections)}
+            if key == "connected":
+                present = bool(indicator_links or line_of_sight or completed_sections)
+                return 1, int(present), {"indicator_links": len(indicator_links), "line_of_sight": len(line_of_sight)}
+            if key == "deployed":
+                linked_indicators = [item for item in indicators if item.get("project_id") or item.get("process_id") or item.get("okr_reference")]
+                present = bool(linked_indicators or active_growth_plans)
+                return 1, int(present), {"linked_indicators": len(linked_indicators), "active_growth_plans": len(active_growth_plans)}
+            if key == "linked_to_management":
+                present = bool(indicators and (indicator_data or indicator_goals or line_of_sight))
+                return 1, int(present), {"indicators": len(indicators), "measurements": len(indicator_data), "goals": len(indicator_goals)}
+
+        if block_key == "strategic_management":
+            strategic_indicators = [item for item in indicators if str(item.get("source_scope") or "").lower() == "company" or item.get("okr_reference")]
+            if key == "indicators":
+                return 1, int(bool(indicators)), {"indicators": len(indicators), "strategic_indicators": len(strategic_indicators)}
+            if key == "cycles":
+                present = bool(indicator_data or indicator_goals)
+                return 1, int(present), {"measurements": len(indicator_data), "goals": len(indicator_goals)}
+            if key == "incentives":
+                present = bool(incentive_rule_sets or incentive_governability)
+                return 1, int(present), {"rule_sets": len(incentive_rule_sets), "governability_links": len(incentive_governability)}
+            if key == "connection_web":
+                present = bool(indicator_links or line_of_sight)
+                return 1, int(present), {"indicator_links": len(indicator_links), "line_of_sight": len(line_of_sight)}
 
         return 1, 0, {}
 
@@ -552,6 +736,47 @@ class StructuringJourneyService:
         return covered
 
     @staticmethod
+    def _process_ids_with_indicators(
+        profiles: list[dict[str, Any]],
+        processes: list[dict[str, Any]],
+        indicators: list[dict[str, Any]],
+        indicator_links: list[dict[str, Any]],
+    ) -> set[int]:
+        covered = StructuringJourneyService._covered_processes_for_profile_key("process_indicators", profiles, processes)
+        for indicator in indicators:
+            if indicator.get("process_id") is not None:
+                covered.add(int(indicator["process_id"]))
+        for link in indicator_links:
+            if str(link.get("target_type") or "").lower() == "process" and link.get("target_ref") is not None:
+                try:
+                    covered.add(int(link["target_ref"]))
+                except (TypeError, ValueError):
+                    continue
+        return covered
+
+    @staticmethod
+    def _process_has_measured_indicator(
+        process_id: int,
+        indicators: list[dict[str, Any]],
+        indicator_links: list[dict[str, Any]],
+        measured_indicator_ids: set[int],
+    ) -> bool:
+        linked_indicator_ids = {
+            int(item["id"])
+            for item in indicators
+            if item.get("id") is not None and item.get("process_id") is not None and int(item["process_id"]) == process_id
+        }
+        for link in indicator_links:
+            if str(link.get("target_type") or "").lower() != "process":
+                continue
+            try:
+                if int(link.get("target_ref")) == process_id and link.get("indicator_id") is not None:
+                    linked_indicator_ids.add(int(link["indicator_id"]))
+            except (TypeError, ValueError):
+                continue
+        return bool(linked_indicator_ids.intersection(measured_indicator_ids))
+
+    @staticmethod
     def _maturation_counts(block_key: str, subblock_key: str, maturation_items: Iterable[dict[str, Any]]) -> Counter:
         counts: Counter = Counter()
         for item in maturation_items:
@@ -573,6 +798,18 @@ class StructuringJourneyService:
                 return True
             return bool(fields.intersection(payload.keys()))
 
+        if block_key == "processes":
+            if item_block not in {"process_profile", "process_modeling", "processes"}:
+                return False
+            mapping = {
+                "architecture": {"areas", "macroprocesses", "processes", "process_owner", "owner", "owner_employee_id"},
+                "modeling": {"flow", "bpmn_xml", "activities", "sequence", "pops", "procedures", "steps"},
+                "implementation": {"implementation", "training", "project_id", "execution_contracts", "contracts"},
+                "stabilization": {"stabilization", "cycles", "indicators", "control_ranges"},
+                "audit": {"audit", "audit_periodicity", "internal_audit", "checklist"},
+            }
+            return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
+
         if block_key == "process_architecture":
             if item_block != "process_profile":
                 return False
@@ -589,6 +826,28 @@ class StructuringJourneyService:
                 "pops": {"pops", "procedures", "steps"},
                 "contracts_automation": {"contracts", "automation", "execution_contracts"},
                 "flow_metrics": {"flow_metrics", "indicators"},
+            }
+            return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
+
+        if block_key == "growth_plan":
+            if item_block not in {"growth_plan", "strategic_planning", "planning"}:
+                return False
+            mapping = {
+                "structured": {"structured", "plan", "growth_plan", "objectives", "pillars"},
+                "connected": {"connected", "links", "processes", "indicators", "projects"},
+                "deployed": {"deployed", "desdobrado", "initiatives", "projects", "owners"},
+                "linked_to_management": {"linked_to_management", "management", "cycles", "review"},
+            }
+            return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
+
+        if block_key == "strategic_management":
+            if item_block not in {"strategic_management", "management", "indicators"}:
+                return False
+            mapping = {
+                "indicators": {"indicators", "kpis", "metrics"},
+                "cycles": {"cycles", "meetings", "reviews", "cadence"},
+                "incentives": {"incentives", "rule_sets", "governability"},
+                "connection_web": {"connection_web", "teia", "line_of_sight", "links"},
             }
             return bool(mapping.get(subblock_key, set()).intersection(payload.keys()))
 
@@ -611,9 +870,43 @@ class StructuringJourneyService:
         if required_count <= 0:
             return "Cadastre a base anterior necessária para calcular este sub-bloco."
         missing = max(required_count - confirmed_count, 0)
-        if block_key in {"process_architecture", "modeling"} and required_count > 1:
+        if block_key in {"processes", "process_architecture", "modeling"} and required_count > 1:
             return f"Faltam {missing} de {required_count} processos para este sub-bloco."
         return "Confirmar este sub-bloco para avançar."
+
+    @staticmethod
+    def _with_org_chart_evidence(company_id: int, identity: dict[str, Any]) -> dict[str, Any]:
+        roles_total = Role.query.filter_by(company_id=company_id).count()
+        active_employees_total = Employee.query.filter_by(company_id=company_id, status="active").count()
+        employees_with_role = (
+            Employee.query.filter(
+                Employee.company_id == company_id,
+                Employee.status == "active",
+                Employee.role_id.isnot(None),
+            ).count()
+        )
+        has_role_hierarchy = (
+            Role.query.filter(
+                Role.company_id == company_id,
+                Role.parent_role_id.isnot(None),
+            ).count()
+            > 0
+        )
+        identity["_org_chart_present"] = bool(
+            roles_total
+            and (
+                active_employees_total == 0
+                or employees_with_role == active_employees_total
+                or has_role_hierarchy
+            )
+        )
+        identity["_org_chart_evidence"] = {
+            "roles_total": int(roles_total or 0),
+            "active_employees_total": int(active_employees_total or 0),
+            "employees_with_role": int(employees_with_role or 0),
+            "has_role_hierarchy": has_role_hierarchy,
+        }
+        return identity
 
     @staticmethod
     def _has_identity_value(value: Any) -> bool:

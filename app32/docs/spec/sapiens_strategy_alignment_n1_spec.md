@@ -434,7 +434,56 @@ Regras de produto:
 - deve tratar itens confirmados como evidência auxiliar do read model N1;
 - não deve competir com os quatro cards oficiais de Estruturação Empresarial do Cockpit.
 
-### 13.6 Papel do N1 na maturação assistida
+### 13.6 Jornada Cliente — Identidade Organizacional
+
+A superfície cliente da antiga Jornada de Estruturação deve expor a Identidade Organizacional conforme o Paper/SPEC canônico da Metodologia Versus:
+
+- Missão;
+- Visão;
+- Valores;
+- Posicionamento;
+- Organograma.
+
+Campos técnicos do N1, como proposta de valor, diferenciais, ICP/segmentos, propósito, objetivos/pilares, competências, políticas, stakeholders e SWOT, podem continuar existindo no motor técnico/read model, mas não devem aparecer como checklist principal da Identidade Organizacional para o cliente.
+
+Proposta de valor, diferenciais e ICP/segmentos podem ser usados como evidência auxiliar para **Posicionamento**.
+
+Objetivos/pilares pertencem à evolução de Planejamento/Gerenciamento Estratégico, não ao checklist principal de Identidade Organizacional do cliente.
+
+### 13.7 Jornada Cliente — frentes canônicas de Estruturação Empresarial
+
+A antiga Jornada de Estruturação deve usar as mesmas quatro frentes oficiais do Cockpit do Consultor:
+
+1. Identidade Organizacional;
+2. Processos;
+3. Planejamento Estratégico;
+4. Gerenciamento Estratégico.
+
+Os blocos legados `Arquitetura de Processos` e `Modelagem` deixam de ser fases autônomas da Jornada e passam a ser evidências internas da frente **Processos**.
+
+A frente **Processos** deve expor as subfases:
+
+- Arquitetura;
+- Modelagem;
+- Implantação;
+- Estabilização;
+- Auditoria.
+
+A frente **Planejamento Estratégico** deve expor:
+
+- Estruturado;
+- Conectado;
+- Desdobrado;
+- Vinculado à gestão.
+
+A frente **Gerenciamento Estratégico** deve expor:
+
+- Indicadores;
+- Ciclos;
+- Incentivos;
+- Teia de Conexões.
+
+### 13.8 Papel do N1 na maturação assistida
 
 No contexto do Cockpit do Consultor, o N1 deve operar como um dos motores técnicos da maturação assistida.
 

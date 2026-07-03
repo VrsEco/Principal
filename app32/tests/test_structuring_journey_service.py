@@ -6,6 +6,10 @@ def _subblock(journey, block_key, subblock_key):
     return next(item for item in block["subblocks"] if item["key"] == subblock_key)
 
 
+def _block(journey, block_key):
+    return next(item for item in journey["blocks"] if item["key"] == block_key)
+
+
 def test_structuring_journey_allows_parallel_identity_subblocks_and_soft_gate():
     journey = StructuringJourneyService.build_structuring_journey_from_records(
         company_id=9,
@@ -46,8 +50,8 @@ def test_structuring_journey_gates_blocks_and_rolls_up_modeling_by_process():
             "mission": "Economizar água",
             "vision": "Ser referência",
             "values": [{"key": "sustentabilidade"}],
-            "value_propositions": [{"key": "vp-industria"}],
-            "strategic_objectives": [{"key": "okr-crescer"}],
+            "positioning": "Solução de eficiência hídrica para indústrias intensivas em água.",
+            "org_chart": {"status": "defined"},
         },
         process_areas=[{"id": 1, "name": "Operações"}],
         macro_processes=[{"id": 10, "area_id": 1, "name": "Atendimento"}],
@@ -63,13 +67,65 @@ def test_structuring_journey_gates_blocks_and_rolls_up_modeling_by_process():
         routines=[{"id": 77, "process_id": 100, "name": "Instalar"}],
         process_steps=[{"id": 88, "routine_id": 77, "name": "Separar kit"}],
         execution_contracts=[{"id": 99, "process_id": 100, "is_active": True}],
-        maturation_items=[],
+        indicators=[{"id": 7, "process_id": 100, "source_scope": "process"}],
+        indicator_data=[{"id": 70, "indicator_id": 7}],
+        maturation_items=[
+            {
+                "block_type": "processes",
+                "status": "confirmed",
+                "payload": {"audit": True},
+            }
+        ],
     )
 
     assert journey["blocks"][0]["gate"]["ready"] is True
     assert journey["blocks"][1]["gate"]["ready"] is True
     assert journey["blocks"][2]["unlocked"] is True
-    assert _subblock(journey, "modeling", "flow")["maturity_pct"] == 100
-    assert _subblock(journey, "modeling", "lanes")["status"] == "confirmed"
-    assert _subblock(journey, "modeling", "pops")["status"] == "confirmed"
-    assert journey["summary"]["blocks_ready"] == 3
+    assert _subblock(journey, "processes", "architecture")["maturity_pct"] == 100
+    assert _subblock(journey, "processes", "modeling")["status"] == "confirmed"
+    assert _subblock(journey, "processes", "implementation")["status"] == "confirmed"
+    assert _subblock(journey, "processes", "stabilization")["status"] == "confirmed"
+    assert _subblock(journey, "processes", "audit")["status"] == "confirmed"
+    assert journey["summary"]["blocks_ready"] == 2
+
+
+def test_structuring_journey_uses_four_canonical_structuring_fronts():
+    journey = StructuringJourneyService.build_structuring_journey_from_records(
+        company_id=9,
+        identity={},
+        process_areas=[],
+        macro_processes=[],
+        processes=[],
+        profiles=[],
+        bpmn_diagrams=[],
+        routines=[],
+        process_steps=[],
+        execution_contracts=[],
+        maturation_items=[],
+    )
+
+    assert [block["key"] for block in journey["blocks"]] == [
+        "identity",
+        "processes",
+        "growth_plan",
+        "strategic_management",
+    ]
+    assert [item["key"] for item in _block(journey, "processes")["subblocks"]] == [
+        "architecture",
+        "modeling",
+        "implementation",
+        "stabilization",
+        "audit",
+    ]
+    assert [item["key"] for item in _block(journey, "growth_plan")["subblocks"]] == [
+        "structured",
+        "connected",
+        "deployed",
+        "linked_to_management",
+    ]
+    assert [item["key"] for item in _block(journey, "strategic_management")["subblocks"]] == [
+        "indicators",
+        "cycles",
+        "incentives",
+        "connection_web",
+    ]
