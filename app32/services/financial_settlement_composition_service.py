@@ -78,7 +78,13 @@ class FinancialSettlementCompositionService:
         return buckets
 
     @staticmethod
-    def _requested_amounts(payload: Dict[str, Any], *, balance: Dict[str, Any], open_by_type: Dict[str, Decimal]) -> Dict[str, Decimal]:
+    def _requested_amounts(
+        payload: Dict[str, Any],
+        *,
+        balance: Dict[str, Any],
+        open_by_type: Dict[str, Decimal],
+        suggestions: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Decimal]:
         composition = dict(payload.get("composition") or {})
         explicit = any(
             key in composition
@@ -110,8 +116,33 @@ class FinancialSettlementCompositionService:
         gross_amount = FinancialSettlementCompositionService._money(
             payload.get("gross_amount") or payload.get("net_amount") or payload.get("amount")
         )
-        remaining = gross_amount
         amounts = {component_type: Decimal("0.00") for component_type in FinancialSettlementCompositionService.SETTLEMENT_COMPONENTS}
+        if gross_amount <= 0:
+            principal_open = FinancialSettlementCompositionService._money(balance.get("principal_open"))
+            suggested = dict(suggestions or {})
+            open_positive_total = sum(
+                (
+                    open_by_type.get(component_type, Decimal("0.00"))
+                    for component_type in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS
+                ),
+                Decimal("0.00"),
+            )
+            correction_total = max(
+                FinancialSettlementCompositionService._money(open_positive_total),
+                FinancialSettlementCompositionService._money(suggested.get("financial_correction")),
+            )
+            discount_total = max(
+                FinancialSettlementCompositionService._money(open_by_type.get("discount")),
+                FinancialSettlementCompositionService._money(suggested.get("discount")),
+            )
+            amounts["principal"] = principal_open
+            if correction_total > 0:
+                amounts["manual_adjustment"] = correction_total
+            if discount_total > 0:
+                amounts["discount"] = discount_total
+            return amounts
+
+        remaining = gross_amount
         for component_type in ("monetary_correction", "interest", "fine", "manual_adjustment"):
             if remaining <= 0:
                 break
@@ -279,11 +310,30 @@ class FinancialSettlementCompositionService:
             settlement_date=settlement_date,
             balance=balance,
         )
-        amounts = FinancialSettlementCompositionService._requested_amounts(payload, balance=balance, open_by_type=open_by_type)
+        amounts = FinancialSettlementCompositionService._requested_amounts(
+            payload,
+            balance=balance,
+            open_by_type=open_by_type,
+            suggestions=suggestions,
+        )
         validation_errors = FinancialSettlementCompositionService._validate_amounts(amounts=amounts, balance=balance, open_by_type=open_by_type)
         gross_amount = FinancialSettlementCompositionService._gross_from_amounts(amounts)
         principal_after = max(FinancialSettlementCompositionService._money(balance.get("principal_open")) - amounts.get("principal", Decimal("0.00")), Decimal("0.00"))
-        adjustments_after = max(FinancialSettlementCompositionService._money(balance.get("adjustments_open")) - sum((amounts.get(item, Decimal("0.00")) for item in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS), Decimal("0.00")), Decimal("0.00"))
+        current_adjustments_open = max(
+            FinancialSettlementCompositionService._money(balance.get("adjustments_open")),
+            sum(
+                (
+                    open_by_type.get(component_type, Decimal("0.00"))
+                    for component_type in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS
+                ),
+                Decimal("0.00"),
+            ),
+        )
+        requested_positive_adjustments = sum(
+            (amounts.get(item, Decimal("0.00")) for item in FinancialSettlementCompositionService.POSITIVE_ADJUSTMENT_COMPONENTS),
+            Decimal("0.00"),
+        )
+        adjustments_after = max(current_adjustments_open - requested_positive_adjustments, Decimal("0.00"))
         discount = amounts.get("discount", Decimal("0.00"))
         total_after = max(principal_after + adjustments_after - discount, Decimal("0.00"))
         editable_before = dict(balance.get("editable_open") or {

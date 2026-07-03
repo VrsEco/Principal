@@ -1631,8 +1631,6 @@
     };
     if (explicit) {
       payload.composition = getSettlementCompositionFromForm();
-    } else {
-      payload.composition = getDefaultSettlementComposition();
     }
     return payload;
   }
