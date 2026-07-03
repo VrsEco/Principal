@@ -143,6 +143,52 @@ def test_simulate_settlement_accepts_free_financial_correction(monkeypatch):
     assert components[1]["metadata_json"]["free_value_adjustment"] is True
 
 
+def test_simulate_settlement_without_explicit_composition_uses_backend_suggestion(monkeypatch):
+    schedule = _Schedule()
+    monkeypatch.setattr(composition_module.FinancialSettlementCompositionService, "_fetch_schedule", lambda **kwargs: schedule)
+    monkeypatch.setattr(composition_module.FinancialSettlementCompositionService, "_list_open_adjustments", lambda **kwargs: [])
+    monkeypatch.setattr(
+        composition_module.FinancialTitleBalanceService,
+        "calculate_for_schedule",
+        lambda **kwargs: {"principal_open": 1000.0, "adjustments_open": 0.0, "total_open": 1000.0},
+    )
+    monkeypatch.setattr(
+        composition_module.FinancialSettlementCompositionService,
+        "_suggested_adjustments",
+        lambda **kwargs: {
+            "financial_correction": Decimal("75.00"),
+            "discount": Decimal("10.00"),
+            "base_amount": Decimal("1000.00"),
+            "calculation_date": "2026-04-20",
+            "due_date_reference": "2026-04-10",
+            "correction_period_start_date": "2026-04-10",
+            "totals": {"positive_adjustments": Decimal("75.00"), "discount": Decimal("10.00")},
+        },
+    )
+
+    result, error = FinancialSettlementCompositionService.simulate_settlement(
+        company_id=7,
+        schedule_id=34,
+        payload={"settlement_date": "2026-04-20"},
+        allowed_company_ids=[7],
+    )
+
+    assert error is None
+    assert result["valid"] is True
+    assert result["composition"]["principal"] == 1000.0
+    assert result["composition"]["financial_correction"] == 75.0
+    assert result["composition"]["discount"] == 10.0
+    assert result["composition"]["gross_amount"] == 1065.0
+    assert result["settlement_payload"]["principal_amount"] == 1000.0
+    assert result["settlement_payload"]["other_adjustments_amount"] == 75.0
+    assert result["settlement_payload"]["discount_amount"] == 10.0
+    assert [item["component_type"] for item in result["settlement_payload"]["settlement_components"]] == [
+        "principal",
+        "manual_adjustment",
+        "discount",
+    ]
+
+
 def test_create_assisted_settlement_forwards_component_payload_and_updates_adjustments(monkeypatch):
     captured = {}
     schedule = _Schedule()
