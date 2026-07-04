@@ -4025,24 +4025,38 @@ function buildReportFiltersPayload() {
     filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  // Project IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela.
+  // A tela usa o diretório global para decidir "nenhum projeto/processo";
+  // as opções visíveis podem ficar vazias por cache/empresa. Preserve o modo none.
+  const projectsDirectoryCount = state.projectsDirectory?.length || 0;
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (
-    projectCtx.availableCount > 0 &&
-    projectCtx.selectedIds.length > 0 &&
-    projectCtx.selectedIds.length < projectCtx.availableCount
-  ) {
-    filters.project_ids = projectCtx.selectedIds;
+  if (projectsDirectoryCount > 0 && state.selectedProjectIds.length === 0) {
+    filters.project_selection = SELECTION_MODE_NONE;
+  } else if (projectCtx.availableCount > 0) {
+    if (projectCtx.selectedIds.length === 0) {
+      filters.project_selection = SELECTION_MODE_NONE;
+    } else if (projectCtx.selectedIds.length < projectCtx.availableCount) {
+      filters.project_selection = 'partial';
+      filters.project_ids = projectCtx.selectedIds;
+    } else {
+      filters.project_selection = 'all';
+    }
   }
 
-  // Process IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
+  // Process IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela.
+  const processesDirectoryCount = state.processesDirectory?.length || 0;
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (
-    processCtx.availableCount > 0 &&
-    processCtx.selectedIds.length > 0 &&
-    processCtx.selectedIds.length < processCtx.availableCount
-  ) {
-    filters.process_ids = processCtx.selectedIds;
+  if (processesDirectoryCount > 0 && state.selectedProcessIds.length === 0) {
+    filters.process_selection = SELECTION_MODE_NONE;
+  } else if (processCtx.availableCount > 0) {
+    if (processCtx.selectedIds.length === 0) {
+      filters.process_selection = SELECTION_MODE_NONE;
+    } else if (processCtx.selectedIds.length < processCtx.availableCount) {
+      filters.process_selection = 'partial';
+      filters.process_ids = processCtx.selectedIds;
+    } else {
+      filters.process_selection = 'all';
+    }
   }
 
   // Process Owner IDs - incluir somente quando parcial no contexto atual
