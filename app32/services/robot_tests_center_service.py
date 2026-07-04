@@ -32,6 +32,13 @@ class RobotTestsCenterService:
             "highlight": False,
             "group": "advanced",
         },
+        "coverage_audit": {
+            "label": "Auditoria de cobertura total",
+            "suite_id": "ui_inventory_contract_scan",
+            "description": "Confere se telas, campos, botões, rotas, JS, tools e MCP estão contemplados nos contratos do robô.",
+            "highlight": True,
+            "group": "advanced",
+        },
         "smoke": {
             "label": "Teste rápido",
             "suite_id": "smoke_real_navigation",
@@ -88,6 +95,12 @@ class RobotTestsCenterService:
             "description": "Reavalia regressões e mudanças recentes detectadas pelo robô.",
             "highlight": False,
         },
+        "coverage_audit": {
+            "label": "Rodar auditoria de cobertura",
+            "suite_id": "ui_inventory_contract_scan",
+            "description": "Descobre lacunas entre sistema real e testes: telas, campos, ações, rotas, JS, tools e MCP.",
+            "highlight": False,
+        },
         "safe_environment": {
             "label": "Rodar modo seguro",
             "suite_id": "full_system_validation",
@@ -118,6 +131,21 @@ class RobotTestsCenterService:
                 "ação nova em tela existente",
                 "capability/permissão nova",
                 "jornada nova sem cleanup",
+            ],
+        },
+        {
+            "key": "total_coverage_matrix",
+            "label": "Matriz de Cobertura Total",
+            "summary": "Cruza superfície real versus contratos de teste para responder se tudo está contemplado.",
+            "suite_id": "ui_inventory_contract_scan",
+            "items": [
+                "rotas Flask",
+                "templates/telas",
+                "campos input/select/textarea",
+                "botões/links/actions",
+                "endpoints consumidos por JS",
+                "tools MCP e surfaces",
+                "cenários sem contrato ou apenas em backlog",
             ],
         },
         {

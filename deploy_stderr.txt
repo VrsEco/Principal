@@ -1,6 +1,33 @@
 From github.com:VrsEco/Principal
- * branch              main       -> FETCH_HEAD
-   fe07f45a..acc214a9  main       -> origin/main
+   bc6fe77a6..d636fa3ee  main       -> origin/main
 
-[notice] A new release of pip is available: 25.3 -> 26.0.1
+[notice] A new release of pip is available: 25.3 -> 26.1.2
 [notice] To update, run: /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/.virtualenv/3.12/bin/python -m pip install --upgrade pip
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5001 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5003 milliseconds with 0 bytes received
+curl: (28) Operation timed out after 5000 milliseconds with 0 bytes received
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 6 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused
+curl: (7) Failed to connect to 127.0.0.1 port 8101 after 0 ms: Connection refused

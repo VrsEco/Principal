@@ -406,7 +406,11 @@ def _build_process_details_payload(process: Process) -> dict:
     }
 
 @processes_bp.route('/api/processes/upload-flow', methods=['POST'])
+@permission_required('processes', 'edit')
 def upload_process_flow():
+    company_id = session.get('active_company_id')
+    if not company_id:
+        return jsonify({"error": "Empresa ativa obrigatória para upload de fluxo."}), 400
     if 'file' not in request.files:
         return jsonify({"error": "No file part"}), 400
     file = request.files['file']

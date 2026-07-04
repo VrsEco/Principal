@@ -782,29 +782,19 @@ function getProcessOwnerOptions() {
 }
 
 function updateProcessOwnersFromActivities() {
-  // Extrair donos únicos das atividades de processos usando owner_id numérico,
-  // mantendo compatibilidade com a exportação do relatório no backend.
+  // Extrair donos únicos das atividades de processos
   const ownersMap = new Map();
 
   (state.activities || []).forEach(activity => {
-    if (activity.type !== 'process') {
-      return;
-    }
-
-    const ownerId = Number(activity.owner_id);
-    const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
-
-    if (!Number.isInteger(ownerId) || ownerId <= 0 || !ownerName) {
-      return;
-    }
-
-    if (!ownersMap.has(ownerId)) {
-      ownersMap.set(ownerId, {
-        id: ownerId,
-        name: ownerName,
-        company_id: activity.company_id || null,
-        company_name: activity.company_name || ''
-      });
+    if (activity.type === 'process') {
+      const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
+      if (ownerName && !ownersMap.has(ownerName)) {
+        ownersMap.set(ownerName, {
+          id: ownerName, // Usar o nome como ID para simplificar
+          name: ownerName,
+          company_name: activity.company_name || ''
+        });
+      }
     }
   });
 
@@ -1945,14 +1935,11 @@ function getFilteredActivities() {
         if (activity.type !== 'process') {
           return true; // Não filtrar atividades de projeto por dono de processo
         }
-        const ownerId = Number(activity.owner_id);
-        if (!Number.isInteger(ownerId) || ownerId <= 0) {
+        const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
+        if (!ownerName) {
           return false; // Se não tem dono definido, excluir quando filtro está ativo
         }
-        return (
-          state.selectedProcessOwnerIds.includes(ownerId) ||
-          state.selectedProcessOwnerIds.includes(String(ownerId))
-        );
+        return state.selectedProcessOwnerIds.includes(ownerName);
       });
     }
     // Se todos os donos estão selecionados, não filtrar (mostrar todos os processos)
@@ -4038,30 +4025,24 @@ function buildReportFiltersPayload() {
     filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela
+  // Project IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (projectCtx.availableCount > 0) {
-    if (projectCtx.selectedIds.length === 0) {
-      filters.project_selection = SELECTION_MODE_NONE;
-    } else if (projectCtx.selectedIds.length < projectCtx.availableCount) {
-      filters.project_selection = 'partial';
-      filters.project_ids = projectCtx.selectedIds;
-    } else {
-      filters.project_selection = 'all';
-    }
+  if (
+    projectCtx.availableCount > 0 &&
+    projectCtx.selectedIds.length > 0 &&
+    projectCtx.selectedIds.length < projectCtx.availableCount
+  ) {
+    filters.project_ids = projectCtx.selectedIds;
   }
 
-  // Process IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela
+  // Process IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (processCtx.availableCount > 0) {
-    if (processCtx.selectedIds.length === 0) {
-      filters.process_selection = SELECTION_MODE_NONE;
-    } else if (processCtx.selectedIds.length < processCtx.availableCount) {
-      filters.process_selection = 'partial';
-      filters.process_ids = processCtx.selectedIds;
-    } else {
-      filters.process_selection = 'all';
-    }
+  if (
+    processCtx.availableCount > 0 &&
+    processCtx.selectedIds.length > 0 &&
+    processCtx.selectedIds.length < processCtx.availableCount
+  ) {
+    filters.process_ids = processCtx.selectedIds;
   }
 
   // Process Owner IDs - incluir somente quando parcial no contexto atual
@@ -4230,5 +4211,3 @@ function initializeScopeSelector() {
 }
 
 console.log('✅ My Work page initialized');
-
-

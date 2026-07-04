@@ -1,11 +1,13 @@
 from flask import Blueprint, current_app, jsonify
 from models import db, Company, Project, User, Employee, Indicator, IndicatorGroup, IndicatorGoal, IndicatorData, Process, ProcessInstance, OKRGlobal, KeyResult
 from datetime import datetime, timedelta
+from utils.permissions import admin_required
 
 dev_bp = Blueprint('dev', __name__)
 PUBLIC_ERROR_MESSAGE = 'Erro interno do servidor. Tente novamente ou contate o suporte.'
 
 @dev_bp.route('/debug/routes')
+@admin_required
 def debug_routes():
     """Debug: List all registered routes"""
     routes = []
@@ -186,6 +188,7 @@ def ping_dependencies():
         }), 500
 
 @dev_bp.route('/trigger-proactive')
+@admin_required
 def trigger_proactive():
     """Debug: Manually trigger the Sapiens morning summary"""
     from services.proactive_service import send_morning_summaries

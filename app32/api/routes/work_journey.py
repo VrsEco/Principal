@@ -98,7 +98,7 @@ def work_journey_page(company_id: int):
 @permission_required('processes', 'view')
 def api_get_work_journey_board(company_id: int):
     try:
-        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        employee_id = _resolve_read_employee_id(company_id)
         if not employee_id:
             return jsonify({'success': False, 'message': 'Selecione um colaborador.'}), 400
         if not _can_access_employee(company_id, employee_id):
@@ -117,7 +117,7 @@ def api_get_work_journey_board(company_id: int):
 @permission_required('processes', 'view')
 def api_list_blocks(company_id: int):
     try:
-        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        employee_id = _resolve_read_employee_id(company_id)
         if not employee_id or not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
         return jsonify({'success': True, 'blocks': list_employee_blocks(company_id, employee_id)})
@@ -160,7 +160,7 @@ def api_delete_block(company_id: int, block_id: int):
 @permission_required('processes', 'view')
 def api_list_rules(company_id: int):
     try:
-        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        employee_id = _resolve_read_employee_id(company_id)
         if not employee_id or not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
         return jsonify({'success': True, 'rules': list_employee_rules(company_id, employee_id)})
@@ -203,7 +203,7 @@ def api_delete_rule(company_id: int, rule_id: int):
 @permission_required('processes', 'view')
 def api_list_manual_tasks(company_id: int):
     try:
-        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        employee_id = _resolve_read_employee_id(company_id)
         if not employee_id or not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
         return jsonify({'success': True, 'data': list_manual_tasks(company_id, employee_id)})
@@ -217,7 +217,7 @@ def api_list_manual_tasks(company_id: int):
 @permission_required('processes', 'view')
 def api_list_process_routines_for_journey(company_id: int):
     try:
-        employee_id = request.args.get('employee_id', type=int) or _current_employee_id(company_id)
+        employee_id = _resolve_read_employee_id(company_id)
         if not employee_id or not _can_access_employee(company_id, employee_id):
             return jsonify({'success': False, 'message': 'Acesso negado ao colaborador informado.'}), 403
         payload = list_employee_process_routines(company_id, employee_id)
@@ -591,6 +591,26 @@ def _current_employee_id(company_id: int) -> int | None:
         return None
     employee = Employee.query.filter_by(company_id=company_id, user_id=current_user.id, status='active').first()
     return employee.id if employee else None
+
+
+def _resolve_read_employee_id(company_id: int) -> int | None:
+    requested_employee_id = request.args.get('employee_id', type=int)
+    if requested_employee_id:
+        return requested_employee_id
+
+    current_employee_id = _current_employee_id(company_id)
+    if current_employee_id:
+        return current_employee_id
+
+    actor_profile = _current_calendar_profile(company_id)
+    if actor_profile not in {'administrator', 'client'}:
+        return None
+
+    query = Employee.query.filter_by(company_id=company_id, status='active').order_by(Employee.name.asc())
+    for employee in query.all():
+        if _can_access_employee(company_id, employee.id, employee=employee):
+            return employee.id
+    return None
 
 
 

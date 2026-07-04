@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -38,6 +39,95 @@ class _QueryStub:
 
     def all(self):
         return list(self._items)
+
+
+class _RecordingQueryStub(_QueryStub):
+    def __init__(self, items):
+        super().__init__(items)
+        self.filters = []
+
+    def filter(self, *args, **kwargs):
+        self.filters.extend(args)
+        return self
+
+
+class _NamedColumn(_Column):
+    def __init__(self, name):
+        self.name = name
+
+    def __ne__(self, other):
+        return ("ne", self.name, other)
+
+    def __lt__(self, other):
+        return ("lt", self.name, other)
+
+    def in_(self, other):
+        return ("in", self.name, list(other))
+
+
+def test_bank_statement_opening_balance_uses_statement_filters_and_includes_transfers(monkeypatch):
+    history_settlement = SimpleNamespace(
+        id=1,
+        financial_entry_id=10,
+        settlement_date=date(2026, 5, 25),
+        bank_account_id=15,
+        net_amount=Decimal("28381.42"),
+    )
+    transfer_entry = SimpleNamespace(
+        id=10,
+        movement_nature="debit",
+        status="settled",
+        entry_type="transfer",
+        metadata_json={"is_transfer": True},
+    )
+    settlement_query = _RecordingQueryStub([history_settlement])
+    entry_query = _RecordingQueryStub([transfer_entry])
+    monkeypatch.setattr(
+        report_module,
+        "FinancialSettlement",
+        type(
+            "FinancialSettlementStub",
+            (),
+            {
+                "company_id": _NamedColumn("company_id"),
+                "deleted_at": _NamedColumn("deleted_at"),
+                "settlement_status": _NamedColumn("settlement_status"),
+                "settlement_date": _NamedColumn("settlement_date"),
+                "bank_account_id": _NamedColumn("bank_account_id"),
+                "query": settlement_query,
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        report_module,
+        "FinancialEntry",
+        type(
+            "FinancialEntryStub",
+            (),
+            {
+                "company_id": _NamedColumn("company_id"),
+                "id": _NamedColumn("id"),
+                "deleted_at": _NamedColumn("deleted_at"),
+                "query": entry_query,
+            },
+        ),
+    )
+    filters = SimpleNamespace(
+        report_type="bank_statement",
+        period_start=date(2026, 6, 1),
+        bank_account_id=None,
+        bank_account_ids=[15],
+        include_reconciled_only=False,
+        include_receivable=True,
+        include_payable=True,
+        include_partial=True,
+        include_settled=True,
+    )
+
+    balance = FinancialReportService._bank_statement_opening_balance(1, filters)
+
+    assert balance == Decimal("-28381.42")
+    assert ("in", "bank_account_id", [15]) in settlement_query.filters
 
 
 def test_build_bank_statement_exposes_component_allocations(monkeypatch):

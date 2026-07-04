@@ -144,6 +144,71 @@ def test_resolve_bank_account_by_code_accepts_numeric_code_without_leading_zeroe
     assert FinancialImportService._resolve_bank_account_id_by_code(1, "008") == 8
 
 
+def test_resolve_bank_account_by_reference_accepts_exact_name_without_guessing(monkeypatch):
+    class _Column:
+        def __eq__(self, other):
+            return ("eq", other)
+
+        def is_(self, other):
+            return ("is", other)
+
+    class _FakeAccountQuery:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return None
+
+        def all(self):
+            return [
+                type("Account", (), {"id": 3, "code": "003", "name": "Conta Principal", "bank_name": "Banco A", "account_number": "111"})(),
+                type("Account", (), {"id": 8, "code": "008", "name": "Conta Pagamentos", "bank_name": "Banco B", "account_number": "222"})(),
+            ]
+
+    class _FakeAccountModel:
+        company_id = _Column()
+        code = _Column()
+        deleted_at = _Column()
+        query = _FakeAccountQuery()
+
+    monkeypatch.setattr(import_module, "FinancialBankAccount", _FakeAccountModel)
+
+    assert FinancialImportService._resolve_bank_account_id_by_reference(1, "Conta Pagamentos") == 8
+    assert FinancialImportService._resolve_bank_account_id_by_reference(1, "Banco C") is None
+
+
+def test_resolve_bank_account_by_reference_rejects_ambiguous_bank_name(monkeypatch):
+    class _Column:
+        def __eq__(self, other):
+            return ("eq", other)
+
+        def is_(self, other):
+            return ("is", other)
+
+    class _FakeAccountQuery:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return None
+
+        def all(self):
+            return [
+                type("Account", (), {"id": 3, "code": "003", "name": "Conta 1", "bank_name": "Banco A", "account_number": "111"})(),
+                type("Account", (), {"id": 8, "code": "008", "name": "Conta 2", "bank_name": "Banco A", "account_number": "222"})(),
+            ]
+
+    class _FakeAccountModel:
+        company_id = _Column()
+        code = _Column()
+        deleted_at = _Column()
+        query = _FakeAccountQuery()
+
+    monkeypatch.setattr(import_module, "FinancialBankAccount", _FakeAccountModel)
+
+    assert FinancialImportService._resolve_bank_account_id_by_reference(1, "Banco A") is None
+
+
 def test_enrich_reference_payload_does_not_guess_bank_account_when_explicit_code_is_unresolved(monkeypatch):
     class _ForbiddenQuery:
         def filter(self, *args, **kwargs):

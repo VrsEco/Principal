@@ -2094,6 +2094,48 @@ class FinancialReportService:
         return (value is None, value, getattr(settlement, "id", 0) or 0)
 
     @staticmethod
+    def _bank_statement_opening_balance(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+    ) -> Decimal:
+        history_query = FinancialSettlement.query.filter(
+            FinancialSettlement.company_id == company_id,
+            FinancialSettlement.deleted_at.is_(None),
+            FinancialSettlement.settlement_status != "cancelled",
+            FinancialSettlement.settlement_date < filters.period_start,
+        )
+        bank_account_ids = FinancialReportService._selected_ids(
+            getattr(filters, "bank_account_id", None),
+            getattr(filters, "bank_account_ids", None),
+        )
+        if bank_account_ids:
+            history_query = history_query.filter(FinancialSettlement.bank_account_id.in_(bank_account_ids))
+        if filters.include_reconciled_only:
+            history_query = history_query.filter(FinancialSettlement.reconciliation_status == "reconciled")
+
+        history_settlements = history_query.all()
+        entry_ids = [item.financial_entry_id for item in history_settlements if item.financial_entry_id]
+        entries_by_id: Dict[int, Any] = {}
+        if entry_ids:
+            entries_by_id = {
+                entry.id: entry
+                for entry in FinancialEntry.query.filter(
+                    FinancialEntry.company_id == company_id,
+                    FinancialEntry.id.in_(entry_ids),
+                    FinancialEntry.deleted_at.is_(None),
+                ).all()
+            }
+
+        balance = Decimal("0")
+        for settlement in history_settlements:
+            entry = entries_by_id.get(settlement.financial_entry_id)
+            if not entry or not FinancialReportService._bank_statement_accepts_entry(entry, filters):
+                continue
+            amount = Decimal(settlement.net_amount or 0)
+            balance += amount if entry.movement_nature == "credit" else -amount
+        return balance
+
+    @staticmethod
     def _build_bank_statement(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
         definition = FinancialReportService.REPORT_DEFINITIONS[filters.report_type]
         bank_names = FinancialReportService._name_map(FinancialBankAccount, company_id)
@@ -2149,16 +2191,7 @@ class FinancialReportService:
             except Exception:
                 allocations_by_entry = defaultdict(list)
 
-        history_query = FinancialSettlement.query.filter(
-            FinancialSettlement.company_id == company_id,
-            FinancialSettlement.deleted_at.is_(None),
-            FinancialSettlement.settlement_status != "cancelled",
-            FinancialSettlement.settlement_date < filters.period_start,
-        )
-        if getattr(filters, "bank_account_id", None):
-            history_query = history_query.filter(FinancialSettlement.bank_account_id == filters.bank_account_id)
-        all_entries = {entry.id: entry for entry in FinancialEntry.query.filter(FinancialEntry.company_id == company_id, FinancialEntry.deleted_at.is_(None)).all()}
-        balance_base = FinancialDashboardAnalytics.calculate_current_balance(settlements=history_query.all(), entries_by_id=all_entries, as_of_date=filters.period_start)
+        balance_base = FinancialReportService._bank_statement_opening_balance(company_id, filters)
 
         running = Decimal(balance_base)
         inflow = Decimal("0")

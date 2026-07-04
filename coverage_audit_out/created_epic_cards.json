@@ -1,0 +1,338 @@
+[
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4212,
+      "task_code": "AA.J.1.2411",
+      "project_id": 31,
+      "title": "[Robô Testes P0 - finance - 68 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "high",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: finance\nPrioridade: P0\nItens: 68\nTipos: {'route': 33, 'template': 35}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/real-estate-auctions/properties/<int:property_id>/financial-sheet, /contracts/billing/done, /financial/automation-audit, /financial/borderos/<int:bordero_id>, /financial/budget"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4213,
+      "task_code": "AA.J.1.2412",
+      "project_id": 31,
+      "title": "[Robô Testes P0 - mcp_sapiens - 45 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "high",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: mcp_sapiens\nPrioridade: P0\nItens: 45\nTipos: {'mcp_tool': 37, 'route': 8}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: analyze_process_flow_copilot_tool, archive_real_estate_auction_property_tool, create_real_estate_auction_attachment_tool, create_real_estate_auction_event_tool, create_work_calendar_event_tool"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4214,
+      "task_code": "AA.J.1.2413",
+      "project_id": 31,
+      "title": "[Robô Testes P0 - identity_access - 32 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "high",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: identity_access\nPrioridade: P0\nItens: 32\nTipos: {'route': 30, 'template': 2}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /add-to-company, /api/companies/<int:company_id>/link-user, /api/companies/<int:company_id>/role-permission-presets, /api/companies/<int:company_id>/role-permission-presets/<int:preset_id>, /api/companies/<int:company_id>/role-permission-presets/<int:preset_id>"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4215,
+      "task_code": "AA.J.1.2414",
+      "project_id": 31,
+      "title": "[Robô Testes P0 - routine - 18 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "high",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: routine\nPrioridade: P0\nItens: 18\nTipos: {'route': 18}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/companies/<int:company_id>/work-journey/absences, /api/companies/<int:company_id>/work-journey/absences/<int:request_id>/approve, /api/companies/<int:company_id>/work-journey/agendas/<int:agenda_id>/lock, /api/companies/<int:company_id>/work-journey/agendas/<int:agenda_id>/unlock, /api/companies/<int:company_id>/work-journey/agendas/generate"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4216,
+      "task_code": "AA.J.1.2415",
+      "project_id": 31,
+      "title": "[Robô Testes P0 - api - 9 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "high",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: api\nPrioridade: P0\nItens: 9\nTipos: {'route': 9}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/companies/<int:company_id>/employees, /api/companies/<int:company_id>/employees/<int:employee_id>, /api/companies/<int:company_id>/employees/<int:employee_id>, /api/companies/<int:company_id>/employees/<int:employee_id>/access, /api/companies/<int:company_id>/logo"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4217,
+      "task_code": "AA.J.1.2416",
+      "project_id": 31,
+      "title": "[Robô Testes P0 - processes - 4 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "high",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: processes\nPrioridade: P0\nItens: 4\nTipos: {'route': 4}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/companies/<int:company_id>/process-routines, /api/companies/<int:company_id>/process-routines/<int:routine_id>, /api/companies/<int:company_id>/process-routines/<int:routine_id>, /companies/<int:company_id>/bpms-analysis/save"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4218,
+      "task_code": "AA.J.1.2417",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - strategy - 68 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: strategy\nPrioridade: P1\nItens: 68\nTipos: {'js_endpoint': 4, 'route': 20, 'template': 44}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/indicator-groups, /api/indicator-groups, /api/plans, /api/plans, /api/indicators/<int:indicator_id>"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4219,
+      "task_code": "AA.J.1.2418",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - processes - 49 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: processes\nPrioridade: P1\nItens: 49\nTipos: {'js_endpoint': 2, 'route': 25, 'template': 22}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/process-areas, /api/process-areas, /agents/processos, /api/cadastro-agent/empresa/processar, /api/companies/<int:company_id>/employees"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4220,
+      "task_code": "AA.J.1.2419",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - real_estate - 34 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: real_estate\nPrioridade: P1\nItens: 34\nTipos: {'route': 32, 'template': 2}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/real-estate-auctions/properties, /api/real-estate-auctions/properties, /api/real-estate-auctions/properties/<int:property_id>, /api/real-estate-auctions/properties/<int:property_id>, /api/real-estate-auctions/properties/<int:property_id>"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4221,
+      "task_code": "AA.J.1.2420",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - admin_config - 29 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: admin_config\nPrioridade: P1\nItens: 29\nTipos: {'route': 23, 'template': 6}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/ai-monitoring/report.pdf, /api/ai-monitoring/requests, /api/ai-monitoring/requests, /api/configs/ai/agents, /api/configs/ai/agents/<string:agent_id>"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4222,
+      "task_code": "AA.J.1.2421",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - routine - 26 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: routine\nPrioridade: P1\nItens: 26\nTipos: {'route': 24, 'template': 2}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/companies/<int:company_id>/work-journey/absences, /api/companies/<int:company_id>/work-journey/agendas, /api/companies/<int:company_id>/work-journey/agendas/<int:agenda_id>/pdf, /api/companies/<int:company_id>/work-journey/blocks, /api/companies/<int:company_id>/work-journey/calendar/events"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4223,
+      "task_code": "AA.J.1.2422",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - contracts - 21 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: contracts\nPrioridade: P1\nItens: 21\nTipos: {'route': 10, 'template': 11}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /contracts/<int:contract_id>, /contracts/catalogs/items, /contracts/customers, /contracts/customers/portfolio, /contracts/dashboard"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4224,
+      "task_code": "AA.J.1.2423",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - identity_access - 16 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: identity_access\nPrioridade: P1\nItens: 16\nTipos: {'route': 14, 'template': 2}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api/companies/<int:company_id>/permission-catalog, /api/companies/<int:company_id>/role-permission-presets, /api/companies/<int:company_id>/role-permission-presets/<int:preset_id>, /api/companies/<int:company_id>/roles, /api/companies/<int:company_id>/roles/tree"
+    }
+  },
+  {
+    "ok": true,
+    "project": {
+      "project_id": 31,
+      "project_code": "AA.J.1",
+      "project_name": "DEV APP Gestão Versus",
+      "company_id": 9,
+      "company_code": "AA",
+      "company_name": "Versus Gestao Corporativa"
+    },
+    "task": {
+      "task_id": 4225,
+      "task_code": "AA.J.1.2424",
+      "project_id": 31,
+      "title": "[Robô Testes P1 - mcp_sapiens - 15 gaps]",
+      "responsible": "Codex",
+      "status": "planned",
+      "stage": "inbox",
+      "priority": "normal",
+      "due_date": null,
+      "completion_date": null,
+      "notes": "Backlog priorizado da auditoria de cobertura total.\nDomínio: mcp_sapiens\nPrioridade: P1\nItens: 15\nTipos: {'route': 13, 'template': 2}\nCritério: Todos os itens P0/P1 do domínio possuem teste automatizado rastreável, com company_id/tenant quando aplicável, e aparecem na auditoria de cobertura como cobertos.\nEvidência: C:\\GestaoVersus\\app32\\coverage_audit_out\\prioritized_backlog.md\nAmostra: /api-mcp-legacy, /api/configs/ai/capabilities/audit-log, /api/configs/ai/capabilities/company-settings, /api/configs/ai/capabilities/frontend-state, /api/configs/ai/capabilities/grants"
+    }
+  }
+]

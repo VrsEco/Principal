@@ -178,6 +178,10 @@ def indicators_list():
 @permission_required('indicators', 'view')
 def indicator_details(indicator_id):
     """Indicator details page (dashboard/history)"""
+    company_id = session.get('active_company_id')
+    if not company_id:
+        return redirect(url_for('auth.portal'))
+    Indicator.query.filter_by(id=indicator_id, company_id=int(company_id)).first_or_404()
     return render_template('modules/indicators/indicator_details_v2.html', indicator_id=indicator_id)
 
 @indicators_bp.route('/indicators/new')

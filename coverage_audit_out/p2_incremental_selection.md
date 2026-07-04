@@ -1,0 +1,165 @@
+# Seleção incremental P2 - Robô de Testes
+
+Total P2 atual: 172
+
+## Domínios principais
+- api: 55 ({'js_endpoint': 2, 'route': 53})
+- app32: 42 ({'template': 42})
+- strategy: 31 ({'route': 10, 'template': 21})
+- incentives: 18 ({'route': 18})
+- agents: 7 ({'route': 7})
+- health: 2 ({'route': 2})
+- mcp_sapiens: 2 ({'template': 2})
+- <int:note_id> app32\api\notes.py delete: 1 ({'route': 1})
+- <int:note_id> app32\api\notes.py put: 1 ({'route': 1})
+- consultive: 1 ({'route': 1})
+- debug: 1 ({'route': 1})
+- email app32\api\webhooks\email_webhook.py post: 1 ({'route': 1})
+- health app32\api\routes\health.py get: 1 ({'route': 1})
+- incentives app32\api\routes\incentives.py get: 1 ({'route': 1})
+- internal_audit app32\api\routes\internal_audit.py get: 1 ({'route': 1})
+- main app32\api\routes\main.py get: 1 ({'route': 1})
+- okrs: 1 ({'route': 1})
+- okrs app32\api\routes\okr.py get: 1 ({'route': 1})
+- ping: 1 ({'route': 1})
+- seed_demo app32\api\routes\dev.py get: 1 ({'route': 1})
+
+## Fatia selecionada nesta etapa
+- Domínios: api, agents, strategy, app32
+- Itens selecionados: 135
+
+- route | agents | `/agents/board` | `app32\api\routes\agents.py`
+- route | agents | `/agents/cadastro` | `app32\api\routes\agents.py`
+- route | agents | `/agents/estrategico` | `app32\api\routes\agents.py`
+- route | agents | `/agents/factory` | `app32\api\routes\agents.py`
+- route | agents | `/agents/logs` | `app32\api\routes\agents.py`
+- route | agents | `/agents/performance` | `app32\api\routes\agents.py`
+- route | agents | `/agents/rotina` | `app32\api\routes\agents.py`
+- js_endpoint | api | `/api/companies?all=true` | `app32\static\js\companies.js`
+- js_endpoint | api | `/api/companies?all=true` | `static\js\companies.js`
+- route | api | `/api/agents` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/<string:agent_id>/test` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/actions/approve/<int:action_id>` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/actions/pending` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/actions/reject/<int:action_id>` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/actions/revalidate/<int:action_id>` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/actions/rollback/<int:action_id>` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/diagnostics` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/history` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/menu/options` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/menu/options` | `app32\api\routes\agents.py`
+- route | api | `/api/agents/menu/options/<int:option_id>` | `app32\api\routes\agents.py`
+- route | api | `/api/ai/board/resume` | `app32\api\routes\ai_board.py`
+- route | api | `/api/ai/board/start` | `app32\api\routes\ai_board.py`
+- route | api | `/api/cadastro-agent/empresa/finalizar` | `app32\api\routes\agents.py`
+- route | api | `/api/cadastro-agent/empresa/iniciar` | `app32\api\routes\agents.py`
+- route | api | `/api/consultive/business-reviews` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/business-reviews` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/business-reviews/<int:review_id>/decision` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit/assisted-analyses/<int:analysis_id>/decision` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit/assisted-analyses/<int:analysis_id>/validations` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit/fronts/<front_key>/assisted-analyses` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit/fronts/<front_key>/assisted-analyses` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit/fronts/<front_key>/protocol` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/cockpit/structural-fronts/<front_key>/analysis` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/structural-learning-links` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/structural-learning-links` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/structural-learning-links/<int:learning_link_id>/decision` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/urgent-needs/<int:urgent_need_id>/decision` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/consultive/urgent-needs/<int:urgent_need_id>/status` | `app32\api\routes\urgent_business_review.py`
+- route | api | `/api/dashboard/stats` | `app32\api\routes\main.py`
+- route | api | `/api/debug-session` | `app32\api\routes\diag.py`
+- route | api | `/api/diag/data-health` | `app32\api\routes\diag.py`
+- route | api | `/api/entity/<entity_type>/disable` | `app32\api\route_audit.py`
+- route | api | `/api/entity/<entity_type>/enable` | `app32\api\route_audit.py`
+- route | api | `/api/export-report` | `app32\api\route_audit.py`
+- route | api | `/api/incentive-rule-sets/<int:rule_set_id>` | `app32\api\routes\incentives.py`
+- route | api | `/api/incentive-rule-sets/<int:rule_set_id>/protected-delete` | `app32\api\routes\incentives.py`
+- route | api | `/api/incentives/closings/<int:calc_id>` | `app32\api\routes\incentives.py`
+- route | api | `/api/internal-audit/areas` | `app32\api\routes\internal_audit.py`
+- route | api | `/api/internal-audit/auditors` | `app32\api\routes\internal_audit.py`
+- route | api | `/api/internal-audit/checklists/<int:checklist_id>` | `app32\api\routes\internal_audit.py`
+- route | api | `/api/internal-audit/options` | `app32\api\routes\internal_audit.py`
+- route | api | `/api/internal-audit/summary` | `app32\api\routes\internal_audit.py`
+- route | api | `/api/onboarding/status` | `app32\api\routes\onboarding.py`
+- route | api | `/api/routes` | `app32\api\route_audit.py`
+- route | api | `/api/routes/<path:endpoint>/details` | `app32\api\route_audit.py`
+- route | api | `/api/routes/without-logging` | `app32\api\route_audit.py`
+- route | api | `/api/summary` | `app32\api\route_audit.py`
+- route | api | `/api/v1/incentives/facts/<int:fact_id>` | `app32\api\routes\incentives.py`
+- route | api | `/api/v1/incentives/facts/<int:fact_id>/verify` | `app32\api\routes\incentives.py`
+- route | api | `/api/v1/incentives/facts/webhook` | `app32\api\routes\incentives.py`
+- template | app32 | `app32/templates/404.html` | `app32/templates/404.html`
+- template | app32 | `app32/templates/agent_logs.html` | `app32/templates/agent_logs.html`
+- template | app32 | `app32/templates/ai_board.html` | `app32/templates/ai_board.html`
+- template | app32 | `app32/templates/board_interface.html` | `app32/templates/board_interface.html`
+- template | app32 | `app32/templates/cadastro_agent.html` | `app32/templates/cadastro_agent.html`
+- template | app32 | `app32/templates/cadastro_analise.html` | `app32/templates/cadastro_analise.html`
+- template | app32 | `app32/templates/cadastro_form.html` | `app32/templates/cadastro_form.html`
+- template | app32 | `app32/templates/cadastros_list.html` | `app32/templates/cadastros_list.html`
+- template | app32 | `app32/templates/company_logos_manager.html` | `app32/templates/company_logos_manager.html`
+- template | app32 | `app32/templates/components/global_activity_button.html` | `app32/templates/components/global_activity_button.html`
+- template | app32 | `app32/templates/efficiency_analysis.html` | `app32/templates/efficiency_analysis.html`
+- template | app32 | `app32/templates/engineering_board.html` | `app32/templates/engineering_board.html`
+- template | app32 | `app32/templates/identity_sidebar.html` | `app32/templates/identity_sidebar.html`
+- template | app32 | `app32/templates/legacy/agents_cadastro.html` | `app32/templates/legacy/agents_cadastro.html`
+- template | app32 | `app32/templates/legacy/agents_sidebar.html` | `app32/templates/legacy/agents_sidebar.html`
+- template | app32 | `app32/templates/legacy/grv_dashboard.html` | `app32/templates/legacy/grv_dashboard.html`
+- template | app32 | `app32/templates/legacy/grv_identity_mvv.html` | `app32/templates/legacy/grv_identity_mvv.html`
+- template | app32 | `app32/templates/legacy/grv_identity_mvv_redirect.html` | `app32/templates/legacy/grv_identity_mvv_redirect.html`
+- template | app32 | `app32/templates/legacy/grv_identity_org_chart.html` | `app32/templates/legacy/grv_identity_org_chart.html`
+- template | app32 | `app32/templates/legacy/grv_routine_activities.html` | `app32/templates/legacy/grv_routine_activities.html`
+- template | app32 | `app32/templates/legacy/grv_routine_capacity.html` | `app32/templates/legacy/grv_routine_capacity.html`
+- template | app32 | `app32/templates/legacy/grv_routine_efficiency.html` | `app32/templates/legacy/grv_routine_efficiency.html`
+- template | app32 | `app32/templates/legacy/grv_sidebar.html` | `app32/templates/legacy/grv_sidebar.html`
+- template | app32 | `app32/templates/legacy/routine_dashboard.html` | `app32/templates/legacy/routine_dashboard.html`
+- template | app32 | `app32/templates/legacy/routine_selector.html` | `app32/templates/legacy/routine_selector.html`
+- template | app32 | `app32/templates/legacy/routine_tasks.html` | `app32/templates/legacy/routine_tasks.html`
+- template | app32 | `app32/templates/modules/companies/companies_v2.html` | `app32/templates/modules/companies/companies_v2.html`
+- template | app32 | `app32/templates/modules/consultive/business_review_cockpit.html` | `app32/templates/modules/consultive/business_review_cockpit.html`
+- template | app32 | `app32/templates/modules/dashboard_v2.html` | `app32/templates/modules/dashboard_v2.html`
+- template | app32 | `app32/templates/modules/incentives/closings_list.html` | `app32/templates/modules/incentives/closings_list.html`
+- template | app32 | `app32/templates/modules/incentives/comparative_placeholder.html` | `app32/templates/modules/incentives/comparative_placeholder.html`
+- template | app32 | `app32/templates/modules/incentives/reports_selector.html` | `app32/templates/modules/incentives/reports_selector.html`
+- template | app32 | `app32/templates/modules/incentives/rules_manage.html` | `app32/templates/modules/incentives/rules_manage.html`
+- template | app32 | `app32/templates/modules/incentives/validation_panel.html` | `app32/templates/modules/incentives/validation_panel.html`
+- template | app32 | `app32/templates/modules/okrs/okr_form_v2.html` | `app32/templates/modules/okrs/okr_form_v2.html`
+- template | app32 | `app32/templates/modules/okrs/okrs_v2.html` | `app32/templates/modules/okrs/okrs_v2.html`
+- template | app32 | `app32/templates/notation.html` | `app32/templates/notation.html`
+- template | app32 | `app32/templates/report_pdf.html` | `app32/templates/report_pdf.html`
+- template | app32 | `app32/templates/reports/formal_report.html` | `app32/templates/reports/formal_report.html`
+- template | app32 | `app32/templates/routines_sidebar.html` | `app32/templates/routines_sidebar.html`
+- template | app32 | `app32/templates/styleguide.html` | `app32/templates/styleguide.html`
+- template | app32 | `app32/templates/test_routines_modal.html` | `app32/templates/test_routines_modal.html`
+- route | strategy | `/<int:plan_id>/delete` | `app32\api\routes\plans.py`
+- route | strategy | `/<int:plan_id>/growth` | `app32\api\routes\plans.py`
+- route | strategy | `/<int:plan_id>/growth/<section>` | `app32\api\routes\plans.py`
+- route | strategy | `/<int:plan_id>/implantation` | `app32\api\routes\plans.py`
+- route | strategy | `/<int:plan_id>/implantation/<section>` | `app32\api\routes\plans.py`
+- route | strategy | `/<int:plan_id>/sections/<section_key>/complete` | `app32\api\routes\plans.py`
+- route | strategy | `/<int:plan_id>/update` | `app32\api\routes\plans.py`
+- route | strategy | `/api/strategy-alignment-n1/maturation` | `app32\api\routes\strategy_alignment.py`
+- route | strategy | `/api/strategy-alignment-n1/maturation/<int:item_id>/review` | `app32\api\routes\strategy_alignment.py`
+- route | strategy | `/strategy/alignment-n1/maturation` | `app32\api\routes\strategy_alignment.py`
+- template | strategy | `app32/templates/implantacao/alinhamento_canvas_expectativas.html` | `app32/templates/implantacao/alinhamento_canvas_expectativas.html`
+- template | strategy | `app32/templates/implantacao/entrega_relatorio_final.html` | `app32/templates/implantacao/entrega_relatorio_final.html`
+- template | strategy | `app32/templates/implantacao/execution_intro.html` | `app32/templates/implantacao/execution_intro.html`
+- template | strategy | `app32/templates/implantacao/modelo_mapa_persona.html` | `app32/templates/implantacao/modelo_mapa_persona.html`
+- template | strategy | `app32/templates/implantacao/modelo_matriz_diferenciais.html` | `app32/templates/implantacao/modelo_matriz_diferenciais.html`
+- template | strategy | `app32/templates/implantacao/relatorios/relatorio_1_capa_resumo.html` | `app32/templates/implantacao/relatorios/relatorio_1_capa_resumo.html`
+- template | strategy | `app32/templates/legacy/plan_dashboard.html` | `app32/templates/legacy/plan_dashboard.html`
+- template | strategy | `app32/templates/legacy/plan_implantacao.html` | `app32/templates/legacy/plan_implantacao.html`
+- template | strategy | `app32/templates/legacy/plan_reports.html` | `app32/templates/legacy/plan_reports.html`
+- template | strategy | `app32/templates/legacy/plan_sidebar.html` | `app32/templates/legacy/plan_sidebar.html`
+- template | strategy | `app32/templates/modules/incentives/plan_new.html` | `app32/templates/modules/incentives/plan_new.html`
+- template | strategy | `app32/templates/modules/plans/base_planning.html` | `app32/templates/modules/plans/base_planning.html`
+- template | strategy | `app32/templates/modules/plans/growth_dashboard.html` | `app32/templates/modules/plans/growth_dashboard.html`
+- template | strategy | `app32/templates/modules/plans/growth_drivers.html` | `app32/templates/modules/plans/growth_drivers.html`
+- template | strategy | `app32/templates/modules/plans/growth_participants.html` | `app32/templates/modules/plans/growth_participants.html`
+- template | strategy | `app32/templates/modules/plans/growth_report.html` | `app32/templates/modules/plans/growth_report.html`
+- template | strategy | `app32/templates/modules/plans/implantation_dashboard.html` | `app32/templates/modules/plans/implantation_dashboard.html`
+- template | strategy | `app32/templates/modules/plans/implantation_market.html` | `app32/templates/modules/plans/implantation_market.html`
+- template | strategy | `app32/templates/modules/plans/implantation_report.html` | `app32/templates/modules/plans/implantation_report.html`
+- template | strategy | `app32/templates/modules/plans/plans_list.html` | `app32/templates/modules/plans/plans_list.html`
+- template | strategy | `app32/templates/modules/strategy/alignment_n1_maturation.html` | `app32/templates/modules/strategy/alignment_n1_maturation.html`

@@ -1,12 +1,20 @@
 ----------------------------------------------------
-🚀 INICIANDO ATUALIZAÇÃO: Wed Apr 15 06:33:10 PM -03 2026
+🚀 INICIANDO ATUALIZAÇÃO: Thu Jul  2 07:36:43 PM -03 2026
 ----------------------------------------------------
 📂 Sincronizando código com repositório central...
-HEAD is now at acc214a9 Fix public static sync for my-work layout
+HEAD is now at d636fa3ee fix(my-work): apply screen filters to report export
 ✅ Código atualizado com sucesso.
 📦 Atualizando dependências Python...
 ✅ Dependências em conformidade.
+🖼️  Sincronizando assets canônicos do portfólio de processos...
+SOURCE_DIR=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/static/assets/process_portfolios/m1_rh_portfolio
+TARGET_DIR=/srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32/uploads/pop/m1_rh_portfolio
+COPIED=
+SKIPPED=dashboard.jpg,documents.jpg,onboarding.jpg,planning.jpg,screening.jpg,signature.jpg,team.jpg,workstation.jpg
+MISSING_SOURCES=
+✅ Assets de portfólio sincronizados.
 🗃️  Verificando migrações de banco de dados...
+INFO:services.scheduler_service:📅 Scheduler Service inicializado
 INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
 INFO  [alembic.runtime.migration] Will assume transactional DDL.
 DEBUG: Registering Jinja filters...
@@ -20,12 +28,21 @@ DEBUG: DB bootstrap skipped for this runtime context.
 DEBUG: Runtime background bootstrap skipped for this context.
 DEBUG: create_app() finished successfully.
 ✅ Migrations aplicadas/verificadas com sucesso.
+🛡️  Garantindo parâmetros de resiliência do uWSGI...
+✅ parâmetros de resiliência do uWSGI configurados.
 🔄 Reiniciando servidor uWSGI (Configr)...
-   - Encerrando workers/vassal atuais: 822047
-824794
+   - Encerrando workers/vassal atuais: 617520
+634630
    - Aguardando Emperor recriar o vassal...
-   - uWSGI ativo novamente com PID(s): 822047
-824794
+   - uWSGI ativo novamente com PID(s): 617520
+634630
+🌐 Validando readiness HTTP do app web...
+✅ App web respondeu ao healthcheck em 13s.
+🧠 Reiniciando runtime MCP HTTP remoto para refletir o código recém-publicado...
+   - Encerrando listener MCP HTTP atual na porta 8101: 634645
+   - Listener MCP HTTP ativo na porta 8101 com PID(s): 635137
+✅ MCP HTTP remoto ativo em 127.0.0.1:8101 com código atualizado.
+✅ MCP HTTP remoto respondeu também no health público /mcp/healthz.
 ----------------------------------------------------
 ✨ DEPLOY CONCLUÍDO COM SUCESSO!
 ----------------------------------------------------

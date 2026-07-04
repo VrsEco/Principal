@@ -61,8 +61,11 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
     assert any(area["label"] == "Gestão Financeira" for area in state["areas"])
     assert state["errors"][0]["area_label"] == "Gestão Financeira"
     assert any(package["label"] == "Teste completo" for package in state["test_packages"])
+    assert any(package["label"] == "Auditoria de cobertura total" for package in state["test_packages"])
     assert any(package["label"] == "Rodar teste completo" for package in state["execution_packages"])
+    assert any(package["label"] == "Rodar auditoria de cobertura" for package in state["execution_packages"])
     assert any(category["label"] == "Saúde do Sistema" for category in state["test_categories"])
+    assert any(category["label"] == "Matriz de Cobertura Total" for category in state["test_categories"])
     assert any(category["label"] == "Cleanup / Reversão" for category in state["test_categories"])
     assert state["devfull_transactional"]["controlled_mutation"]["rollback_steps_total"] == 8
 
@@ -164,3 +167,20 @@ def test_robot_tests_center_start_run_accepts_canonical_category(monkeypatch):
 
     assert result["suite_id"] == "drift_detection"
     assert result["execution"]["execution_id"] == "exec-cat"
+
+
+def test_robot_tests_center_start_run_accepts_total_coverage_audit(monkeypatch):
+    monkeypatch.setattr(
+        "services.robot_tests_center_service.E2ESupervisedExecutionService.start_execution",
+        lambda suite_id, environment, **kwargs: {"execution_id": "exec-coverage", "suite_id": suite_id, "environment": environment},
+    )
+
+    result = RobotTestsCenterService.start_run(
+        package_key="coverage_audit",
+        suite_id=None,
+        environment="PROD_SAFE",
+        company_id=9,
+    )
+
+    assert result["suite_id"] == "ui_inventory_contract_scan"
+    assert result["execution"]["execution_id"] == "exec-coverage"

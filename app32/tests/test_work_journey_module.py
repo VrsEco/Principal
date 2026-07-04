@@ -290,6 +290,50 @@ def test_work_journey_page_renders_employee_payload(monkeypatch):
     assert response['selected_employee_name'] == 'Ana'
 
 
+def test_work_journey_board_api_defaults_to_first_accessible_employee_for_admin(monkeypatch):
+    app = Flask(__name__)
+    app.secret_key = 'test'
+    employees = [
+        SimpleNamespace(id=4, company_id=9, user_id=None, status='active', name='Bruno'),
+        SimpleNamespace(id=3, company_id=9, user_id=None, status='active', name='Ana'),
+    ]
+    captured = {}
+
+    monkeypatch.setattr(
+        work_journey_route,
+        'Employee',
+        SimpleNamespace(query=_FakeEmployeeQuery(employees), name=_Column()),
+    )
+    monkeypatch.setattr(
+        work_journey_route,
+        'current_user',
+        SimpleNamespace(id=19, role='admin', is_authenticated=True),
+    )
+    monkeypatch.setattr(work_journey_route, 'has_company_full_access', lambda company_id: True)
+    monkeypatch.setattr(
+        work_journey_route,
+        'get_work_journey_board',
+        lambda company_id, employee_id, anchor, scope: captured.update(
+            {
+                'company_id': company_id,
+                'employee_id': employee_id,
+                'anchor': anchor,
+                'scope': scope,
+            }
+        ) or {'employee': {'id': employee_id}, 'period_items': []},
+    )
+
+    with app.test_request_context('/api/companies/9/work-journey/board?date=2026-05-12'):
+        response = work_journey_route.api_get_work_journey_board.__wrapped__(9)
+
+    assert response.status_code == 200
+    assert response.get_json()['success'] is True
+    assert captured['company_id'] == 9
+    assert captured['employee_id'] == 4
+    assert captured['anchor'] == date(2026, 5, 12)
+    assert captured['scope'] == 'week'
+
+
 def test_work_journey_page_uses_source_suggested_employee_when_available(monkeypatch):
     app = Flask(__name__)
     app.secret_key = 'test'

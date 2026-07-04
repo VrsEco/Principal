@@ -45,11 +45,13 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                 {"key": "smoke", "label": "Teste rápido", "description": "Rápido", "highlight": False, "available": True, "group": "main"},
                 {"key": "financial", "label": "Gestão financeira", "description": "Financeiro", "highlight": False, "available": True, "group": "area"},
                 {"key": "drift", "label": "Deriva de cobertura", "description": "Avançado", "highlight": False, "available": True, "group": "advanced"},
+                {"key": "coverage_audit", "label": "Auditoria de cobertura total", "description": "Tudo mapeado", "highlight": True, "available": True, "group": "advanced"},
             ],
             "execution_packages": [
                 {"key": "complete", "label": "Rodar teste completo", "description": "Tudo", "highlight": True, "available": True},
                 {"key": "post_deploy", "label": "Rodar pós-deploy", "description": "Rápido", "highlight": False, "available": True},
                 {"key": "previous_failures", "label": "Rodar falhas anteriores", "description": "Falhas", "highlight": False, "available": True},
+                {"key": "coverage_audit", "label": "Rodar auditoria de cobertura", "description": "Lacunas", "highlight": False, "available": True},
             ],
             "test_categories": [
                 {
@@ -68,6 +70,15 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "suite_id": "drift_detection",
                     "items": ["tela nova sem contrato", "endpoint novo sem cobertura"],
                     "items_count": 2,
+                    "available": True,
+                },
+                {
+                    "key": "total_coverage_matrix",
+                    "label": "Matriz de Cobertura Total",
+                    "summary": "Cruza tudo.",
+                    "suite_id": "ui_inventory_contract_scan",
+                    "items": ["rotas Flask", "templates/telas", "tools MCP"],
+                    "items_count": 3,
                     "available": True,
                 },
                 {
@@ -117,9 +128,11 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     assert "Pacotes de execução" in html
     assert "Saúde do Sistema" in html
     assert "Deriva de Cobertura" in html
+    assert "Matriz de Cobertura Total" in html
     assert "Cleanup / Reversão" in html
     assert "Executar categoria" in html
     assert "Rodar teste completo" in html
+    assert "Rodar auditoria de cobertura" in html
     assert "Rodar pós-deploy" in html
     assert "Último teste por área" in html
     assert "Erros encontrados e ações" in html

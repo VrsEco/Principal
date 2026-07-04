@@ -600,6 +600,7 @@ def ai_automation_mesh_page():
 
 @configs_bp.route('/configs/system')
 @login_required
+@permission_required('configs', 'view')
 def system_settings():
     """System Configuration Page"""
     from models.user import User
