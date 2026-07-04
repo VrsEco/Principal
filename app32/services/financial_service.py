@@ -925,6 +925,8 @@ class FinancialService:
         document_number: Optional[str] = None,
         settlement_code: Optional[str] = None,
         description_query: Optional[str] = None,
+        general_query: Optional[str] = None,
+        amount_value: Optional[Decimal] = None,
     ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -971,6 +973,96 @@ class FinancialService:
                 or_(
                     FinancialEntry.description.ilike(description_pattern),
                     FinancialEntry.memo.ilike(description_pattern),
+                )
+            )
+        if general_query:
+            general_pattern = f"%{general_query.strip()}%"
+            counterparty_general_match = (
+                db.session.query(FinancialCounterparty.id)
+                .filter(
+                    FinancialCounterparty.company_id == company_id,
+                    FinancialCounterparty.id == FinancialEntry.counterparty_id,
+                    FinancialCounterparty.deleted_at.is_(None),
+                    or_(
+                        FinancialCounterparty.name.ilike(general_pattern),
+                        FinancialCounterparty.legal_name.ilike(general_pattern),
+                        FinancialCounterparty.document_number.ilike(general_pattern),
+                    ),
+                )
+                .exists()
+            )
+            entry_bank_general_match = (
+                db.session.query(FinancialBankAccount.id)
+                .filter(
+                    FinancialBankAccount.company_id == company_id,
+                    FinancialBankAccount.id == FinancialEntry.bank_account_id,
+                    FinancialBankAccount.deleted_at.is_(None),
+                    or_(
+                        FinancialBankAccount.name.ilike(general_pattern),
+                        FinancialBankAccount.bank_name.ilike(general_pattern),
+                        FinancialBankAccount.account_number.ilike(general_pattern),
+                        FinancialBankAccount.branch_number.ilike(general_pattern),
+                    ),
+                )
+                .exists()
+            )
+            settlement_general_match = (
+                db.session.query(FinancialSettlement.id)
+                .join(
+                    FinancialBankAccount,
+                    FinancialBankAccount.id == FinancialSettlement.bank_account_id,
+                    isouter=True,
+                )
+                .filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id == FinancialEntry.id,
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                    or_(
+                        FinancialSettlement.settlement_code.ilike(general_pattern),
+                        FinancialSettlement.notes.ilike(general_pattern),
+                        FinancialBankAccount.name.ilike(general_pattern),
+                        FinancialBankAccount.bank_name.ilike(general_pattern),
+                        FinancialBankAccount.account_number.ilike(general_pattern),
+                        FinancialBankAccount.branch_number.ilike(general_pattern),
+                    ),
+                )
+                .exists()
+            )
+            query = query.filter(
+                or_(
+                    FinancialEntry.entry_code.ilike(general_pattern),
+                    FinancialEntry.document_number.ilike(general_pattern),
+                    FinancialEntry.description.ilike(general_pattern),
+                    FinancialEntry.memo.ilike(general_pattern),
+                    FinancialEntry.origin_reference.ilike(general_pattern),
+                    FinancialEntry.external_reference.ilike(general_pattern),
+                    counterparty_general_match,
+                    entry_bank_general_match,
+                    settlement_general_match,
+                )
+            )
+        if amount_value is not None:
+            normalized_amount = Decimal(amount_value).copy_abs().quantize(Decimal("0.01"))
+            settlement_amount_match = (
+                db.session.query(FinancialSettlement.id)
+                .filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id == FinancialEntry.id,
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                    or_(
+                        db.func.abs(FinancialSettlement.principal_amount) == normalized_amount,
+                        db.func.abs(FinancialSettlement.gross_amount) == normalized_amount,
+                        db.func.abs(FinancialSettlement.net_amount) == normalized_amount,
+                    ),
+                )
+                .exists()
+            )
+            query = query.filter(
+                or_(
+                    db.func.abs(FinancialEntry.original_amount) == normalized_amount,
+                    settlement_amount_match,
                 )
             )
         if counterparty_query:

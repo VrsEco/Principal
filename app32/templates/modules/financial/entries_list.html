@@ -166,6 +166,8 @@
         const companyId = document.querySelector('.finance-page')?.dataset.companyId;
         const tableBody = document.getElementById('entries-table-body');
         const entryFilterConfig = [
+            ['general_query', 'filter-general-query'],
+            ['amount_value', 'filter-amount-value'],
             ['status', 'filter-status'],
             ['entry_type', 'filter-entry-type'],
             ['movement_nature', 'filter-movement-nature'],
@@ -202,6 +204,8 @@
 
         function updateEntriesFilterCount() {
             const count = [
+                ['filter-general-query'],
+                ['filter-amount-value'],
                 ['filter-status'],
                 ['filter-entry-type'],
                 ['filter-movement-nature'],
@@ -456,6 +460,17 @@
 </div>
 
 <div class="sidebar-content-ws entries-sidebar-filters">
+    <div class="filter-group">
+        <label class="filter-label">Busca geral</label>
+        <input id="filter-general-query" class="filter-select" type="text" placeholder="Histórico, favorecido, banco, título ou baixa">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label">Valor</label>
+        <input id="filter-amount-value" class="filter-select" type="text" inputmode="decimal" placeholder="Ex.: 1.250,00 ou -1.250,00">
+        <small class="cell-muted">Pesquisa pelo valor absoluto; o sinal não interfere.</small>
+    </div>
+
     <div class="filter-group">
         <label class="filter-label">Status</label>
         <select id="filter-status" class="filter-select">

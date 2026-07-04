@@ -184,6 +184,8 @@ class FinancialEntryListResource(Resource):
             document_number=(request.args.get("document_number") or "").strip() or None,
             settlement_code=(request.args.get("settlement_code") or "").strip() or None,
             description_query=(request.args.get("description_query") or "").strip() or None,
+            general_query=(request.args.get("general_query") or "").strip() or None,
+            amount_value=_get_optional_decimal_arg("amount_value"),
         )
         if error:
             return {"error": error}, 400
