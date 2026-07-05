@@ -1464,9 +1464,13 @@ def test_standard_sidebar_exposes_consultive_cockpit_entry():
     assert "Consultivo" in body
     assert "/consultive/cockpit" in body
     assert "Cockpit do Consultor" in body
+    assert "/structuring-journey/client" in body
+    assert "Jornada do Cliente" in body
+    assert "/structuring-journey/consultant" in body
+    assert "Jornada do Consultor" in body
     assert "/consultive/protocols" in body
     assert "Protocolos Consultivos" in body
-    assert "request.path.startswith('/consultive')" in body
+    assert "request.path.startswith('/consultive') or request.path.startswith('/structuring-journey')" in body
     assert body.index("Módulos") < body.index("Consultivo")
 
 
