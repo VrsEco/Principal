@@ -68,3 +68,39 @@ def test_contract_billing_requires_chart_account_and_cost_center_before_financia
     assert "conta contábil" in message
     assert "centro de resultado" in message
     assert "AA.B.008" in message
+
+
+def test_contract_billing_uses_item_allocation_as_accounting_dimension_default():
+    class _ItemsQuery:
+        def __init__(self, items):
+            self._items = items
+
+        def order_by(self, *_args, **_kwargs):
+            return self
+
+        def all(self):
+            return self._items
+
+    native_billing = SimpleNamespace(
+        items=_ItemsQuery(
+            [
+                SimpleNamespace(
+                    metadata_json={
+                        "allocation": {
+                            "chart_account_id": "14",
+                            "cost_center_id": "2",
+                        }
+                    }
+                )
+            ]
+        )
+    )
+
+    chart_account_id, cost_center_id = ContractFinancialService._resolve_item_accounting_dimension_defaults(
+        native_billing=native_billing,
+        chart_account_id=None,
+        cost_center_id=None,
+    )
+
+    assert chart_account_id == 14
+    assert cost_center_id == 2
