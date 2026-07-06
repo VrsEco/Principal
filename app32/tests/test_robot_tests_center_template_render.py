@@ -140,6 +140,8 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     assert "Disparar correção" in html
     assert "Avançado" in html
     assert "Central E2E técnica" in html
+    assert "robotTestsRunMonitor" in html
+    assert "O DEV_FULL continua rodando em segundo plano" in html
 
 
 def test_robot_tests_center_template_uses_robust_json_reader():
@@ -148,4 +150,7 @@ def test_robot_tests_center_template_uses_robust_json_reader():
     assert "function readRobotTestsJson(response)" in template_source
     assert "await response.text()" in template_source
     assert "'Accept': 'application/json'" in template_source
+    assert "function startRunMonitor(execution)" in template_source
+    assert "/api/configs/qa/e2e/executions/" in template_source
+    assert "window.localStorage.setItem(RUN_MONITOR_STORAGE_KEY" in template_source
     assert "response.json()" not in template_source

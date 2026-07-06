@@ -165,6 +165,23 @@
                     </select>
                 </label>
 
+                <div class="robot-tests-run-monitor" id="robotTestsRunMonitor" hidden>
+                    <div class="robot-tests-run-monitor__header">
+                        <span id="robotTestsRunMonitorBadge">Em andamento</span>
+                        <strong id="robotTestsRunMonitorTitle">Execução iniciada</strong>
+                    </div>
+                    <div class="robot-tests-run-monitor__body">
+                        <small>Run</small>
+                        <code id="robotTestsRunMonitorId">-</code>
+                        <small>Status</small>
+                        <strong id="robotTestsRunMonitorStatus">running</strong>
+                        <small>Tempo</small>
+                        <strong id="robotTestsRunMonitorElapsed">0s</strong>
+                    </div>
+                    <p id="robotTestsRunMonitorHint">O DEV_FULL continua rodando em segundo plano. Esta tela acompanhará até concluir.</p>
+                    <button type="button" class="robot-tests-btn robot-tests-btn--secondary" id="robotTestsRunMonitorRefresh" hidden>Atualizar resultado consolidado</button>
+                </div>
+
                 <div class="robot-tests-action-group">
                     <span class="robot-tests-group-title">Execução</span>
                     <div class="robot-tests-package-list">
@@ -294,6 +311,16 @@
     .robot-tests-package-btn.is-highlight { background:linear-gradient(135deg, var(--primary), #7c3aed); color:#fff; box-shadow:0 12px 28px rgba(37,99,235,.25); }
     .robot-tests-package-btn.is-highlight small { color:rgba(255,255,255,.84); }
     .robot-tests-package-btn:disabled { opacity:.55; cursor:not-allowed; }
+    .robot-tests-run-monitor { border:1px solid rgba(37,99,235,.24); background:linear-gradient(135deg, rgba(37,99,235,.10), rgba(124,58,237,.06)); border-radius:16px; padding:.9rem; display:flex; flex-direction:column; gap:.65rem; }
+    .robot-tests-run-monitor[hidden] { display:none; }
+    .robot-tests-run-monitor__header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+    .robot-tests-run-monitor__header span { border-radius:999px; padding:.28rem .55rem; background:rgba(37,99,235,.14); color:var(--primary); font-size:.72rem; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+    .robot-tests-run-monitor__header span.is-final-success { background:rgba(16,185,129,.14); color:#047857; }
+    .robot-tests-run-monitor__header span.is-final-error { background:rgba(239,68,68,.14); color:#b91c1c; }
+    .robot-tests-run-monitor__body { display:grid; grid-template-columns:auto minmax(0,1fr); gap:.28rem .55rem; align-items:center; }
+    .robot-tests-run-monitor__body small { color:var(--text-secondary); font-weight:800; }
+    .robot-tests-run-monitor__body code { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .robot-tests-run-monitor p { margin:0; color:var(--text-secondary); font-size:.86rem; line-height:1.35; }
     .robot-tests-empty, .robot-tests-empty-state { color:var(--text-secondary); padding:1rem; }
     .robot-tests-modal[hidden] { display:none; }
     .robot-tests-modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:1rem; }
@@ -322,6 +349,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const companyId = root?.dataset.companyId;
     const envSelect = document.getElementById('robotTestsEnvironment');
     const modal = document.getElementById('robotTestsAreaModal');
+    const runMonitor = document.getElementById('robotTestsRunMonitor');
+    const runMonitorBadge = document.getElementById('robotTestsRunMonitorBadge');
+    const runMonitorTitle = document.getElementById('robotTestsRunMonitorTitle');
+    const runMonitorId = document.getElementById('robotTestsRunMonitorId');
+    const runMonitorStatus = document.getElementById('robotTestsRunMonitorStatus');
+    const runMonitorElapsed = document.getElementById('robotTestsRunMonitorElapsed');
+    const runMonitorHint = document.getElementById('robotTestsRunMonitorHint');
+    const runMonitorRefresh = document.getElementById('robotTestsRunMonitorRefresh');
+    const RUN_MONITOR_STORAGE_KEY = 'gestaoVersus.robotTests.activeExecutionId';
+    let runMonitorTimer = null;
 
     async function readRobotTestsJson(response) {
         const contentType = response.headers.get('content-type') || 'sem content-type';
@@ -335,6 +372,78 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             throw new Error(`Resposta inesperada do servidor (${response.status}, ${contentType}). ${preview || 'Sem corpo de resposta.'}`);
         }
+    }
+
+    function formatElapsedSeconds(startedAt) {
+        const started = Date.parse(startedAt || '');
+        if (!Number.isFinite(started)) return '-';
+        const elapsed = Math.max(Math.floor((Date.now() - started) / 1000), 0);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        return minutes > 0 ? `${minutes}min ${seconds}s` : `${seconds}s`;
+    }
+
+    function updateRunMonitor(execution) {
+        if (!runMonitor || !execution) return;
+        const status = execution.status || 'running';
+        const isFinal = ['passed', 'failed', 'error', 'cancelled'].includes(status);
+        const isSuccess = status === 'passed';
+        runMonitor.hidden = false;
+        runMonitorId.textContent = execution.execution_id || '-';
+        runMonitorStatus.textContent = status;
+        runMonitorElapsed.textContent = formatElapsedSeconds(execution.started_at);
+        runMonitorTitle.textContent = `${execution.suite_id || 'Teste'} — ${execution.environment || '-'}`;
+        runMonitorBadge.textContent = isFinal ? (isSuccess ? 'Concluído' : 'Falhou') : 'Em andamento';
+        runMonitorBadge.classList.toggle('is-final-success', isSuccess);
+        runMonitorBadge.classList.toggle('is-final-error', isFinal && !isSuccess);
+        runMonitorHint.textContent = isFinal
+            ? 'Execução finalizada. Atualize o resultado consolidado para ver os cards e erros recalculados.'
+            : 'O DEV_FULL continua rodando em segundo plano. Esta tela acompanhará até concluir.';
+        runMonitorRefresh.hidden = !isFinal;
+    }
+
+    async function pollRunMonitor(executionId) {
+        if (!executionId) return;
+        try {
+            const response = await fetch(`/api/configs/qa/e2e/executions/${encodeURIComponent(executionId)}`, {
+                method: 'GET',
+                headers: {'Accept': 'application/json'},
+            });
+            const payload = await readRobotTestsJson(response);
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.error || 'Falha ao consultar execução.');
+            }
+            updateRunMonitor(payload.execution);
+            const status = payload.execution?.status || 'running';
+            if (['passed', 'failed', 'error', 'cancelled'].includes(status)) {
+                window.localStorage.removeItem(RUN_MONITOR_STORAGE_KEY);
+                if (runMonitorTimer) window.clearTimeout(runMonitorTimer);
+                return;
+            }
+            runMonitorTimer = window.setTimeout(() => pollRunMonitor(executionId), 5000);
+        } catch (error) {
+            if (runMonitorHint) runMonitorHint.textContent = error.message || 'Não foi possível consultar a execução agora.';
+            runMonitorTimer = window.setTimeout(() => pollRunMonitor(executionId), 10000);
+        }
+    }
+
+    function startRunMonitor(execution) {
+        if (!execution?.execution_id) return;
+        window.localStorage.setItem(RUN_MONITOR_STORAGE_KEY, execution.execution_id);
+        updateRunMonitor(execution);
+        if (runMonitorTimer) window.clearTimeout(runMonitorTimer);
+        runMonitorTimer = window.setTimeout(() => pollRunMonitor(execution.execution_id), 2500);
+    }
+
+    if (runMonitorRefresh) {
+        runMonitorRefresh.addEventListener('click', () => window.location.reload());
+    }
+
+    const activeExecutionId = window.localStorage.getItem(RUN_MONITOR_STORAGE_KEY);
+    if (activeExecutionId) {
+        runMonitorId.textContent = activeExecutionId;
+        if (runMonitor) runMonitor.hidden = false;
+        pollRunMonitor(activeExecutionId);
     }
 
     function openAreaModal(area) {
@@ -383,7 +492,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok || !payload.success) {
                     throw new Error(payload.error || 'Falha ao iniciar o teste.');
                 }
-                window.location.reload();
+                startRunMonitor(payload.result?.execution);
+                button.disabled = false;
+                button.innerHTML = defaultHtml;
             } catch (error) {
                 const message = error?.message || '';
                 if (message.includes('NetworkError') || message.includes('Failed to fetch') || message.includes('fetch')) {
