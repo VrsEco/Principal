@@ -16,10 +16,10 @@
      data-audience="{{ audience or 'client' }}">
     <header class="journey-hero">
         <div>
-            <p class="eyebrow">Leitura auxiliar · Estruturação Empresarial</p>
+            <p class="eyebrow">{{ "Camada Consultiva · Estruturação Empresarial" if audience == 'consultant' else "Leitura auxiliar · Estruturação Empresarial" }}</p>
             {% if audience == 'consultant' %}
-                <h1>Fases da Estruturação Empresarial</h1>
-                <p class="subtitle">Visão auxiliar de fases do Método Versus. A condução consultiva oficial das frentes estruturais acontece no Cockpit do Consultor.</p>
+                <h1>Trilha de Estruturação</h1>
+                <p class="subtitle">Analise as fases 00-03, valide gates e acione a evolução metodológica sem substituir o Cockpit do Consultor.</p>
             {% else %}
                 <h1>Monte o DNA da sua empresa</h1>
                 <p class="subtitle">Acompanhe evidências de estruturação e veja o que falta para apoiar a próxima etapa consultiva.</p>
@@ -27,7 +27,7 @@
         </div>
         <div class="hero-actions">
             {% if audience == 'consultant' %}
-                <a class="btn btn-primary" href="/consultive/cockpit">Abrir Cockpit do Consultor</a>
+                <a class="btn btn-primary" href="/consultive/cockpit">Voltar ao Cockpit</a>
             {% else %}
                 <a class="btn btn-primary" href="/consultive/cockpit">Abrir Cockpit do Consultor</a>
             {% endif %}
@@ -38,8 +38,8 @@
     <section class="method-alignment-panel" aria-label="Alinhamento metodológico">
         <div class="alignment-copy">
             <p class="eyebrow">Camada Consultiva/Evolutiva</p>
-            <h2>Esta tela não substitui o Cockpit</h2>
-            <p>Use esta jornada para ler a evolução macro por fases. Use o Cockpit do Consultor para atuar nas quatro frentes oficiais: Identidade Organizacional, Processos, Planejamento Estratégico e Gerenciamento Estratégico.</p>
+            <h2>Trilha metodológica acionada pelo Cockpit</h2>
+            <p>Use esta tela para pré-analisar fases, abrir etapas e validar evidências de avanço. O Cockpit permanece como mesa de comando operacional do consultor.</p>
         </div>
         <div class="front-links" aria-label="Frentes estruturais oficiais">
             <a href="/consultive/cockpit/fronts/identity">Identidade Organizacional</a>
@@ -144,6 +144,9 @@
     .subblock { border:1px solid #e2e8f0; border-radius:1rem; padding:.85rem; background:#f8fafc; }
     .subblock h3 { margin:0 0 .4rem; font-size:.95rem; color:#0f172a; }
     .sub-meta { display:flex; flex-wrap:wrap; gap:.35rem; color:#64748b; font-size:.78rem; }
+    .block-actions { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem; }
+    .block-actions a { text-decoration:none; border:1px solid #dbe7f3; border-radius:999px; padding:.55rem .8rem; font-weight:800; color:#17406f; background:#fff; }
+    .block-actions a.primary { background:#0f766e; border-color:#0f766e; color:white; }
     .pill { border-radius:999px; padding:.18rem .48rem; background:#fff; border:1px solid #e2e8f0; font-weight:700; }
     .pill.essential { color:#991b1b; border-color:#fecaca; background:#fff1f2; }
     .pill.recommended { color:#92400e; border-color:#fed7aa; background:#fff7ed; }
@@ -201,7 +204,13 @@
     function renderBlock(block) {
         const gateClass = block.gate.ready ? 'ready' : (block.unlocked ? '' : 'locked');
         const gateText = block.gate.ready ? 'Gate pronto' : (block.unlocked ? 'Em construção' : 'Aguardando fase anterior');
-        const sequenceLabel = audience === 'consultant' ? 'Bloco auxiliar' : 'Fase';
+        const sequenceLabel = audience === 'consultant' ? 'Etapa da trilha' : 'Fase';
+        const consultantActions = audience === 'consultant' ? `
+            <div class="block-actions">
+                <a href="/consultive/cockpit/fronts/${escapeHtml(block.key)}">Pré-analisar</a>
+                <a class="primary" href="/consultive/cockpit/fronts/${escapeHtml(block.key)}">Abrir etapa</a>
+            </div>
+        ` : '';
         return `
             <article class="block-card ${block.unlocked ? '' : 'locked'}">
                 <div class="block-head">
@@ -214,6 +223,7 @@
                 </div>
                 <div class="progress"><span style="width:${Number(block.maturity_pct || 0)}%"></span></div>
                 <div class="subblocks">${block.subblocks.map(renderSubblock).join('')}</div>
+                ${consultantActions}
             </article>
         `;
     }
@@ -225,10 +235,10 @@
         const current = (data.blocks || []).find((block) => block.key === data.current_block) || (data.blocks || [])[0];
         const missing = (data.summary.next_missing || []).map((item) => item.label).join(', ');
         if (audience === 'consultant') {
-            document.getElementById('next-title').textContent = current?.gate?.ready ? 'Bloco auxiliar sem bloqueio essencial.' : `Bloco auxiliar atual: ${current?.consultant_label}`;
+            document.getElementById('next-title').textContent = current?.gate?.ready ? 'Etapa sem bloqueio essencial.' : `Etapa atual: ${current?.consultant_label}`;
             document.getElementById('next-copy').textContent = missing
-                ? `Evidência auxiliar pendente para o Cockpit: ${missing}.`
-                : 'Use o Cockpit do Consultor para decidir a próxima ação metodológica.';
+                ? `Evidência pendente para validação metodológica: ${missing}.`
+                : 'Pré-analise a etapa ou abra a frente estrutural correspondente.';
         } else {
             document.getElementById('next-title').textContent = current?.gate?.ready ? 'Todas as missões essenciais desta fase estão prontas.' : `Fase atual: ${current?.client_label}`;
             document.getElementById('next-copy').textContent = missing ? `Falta para avançar: ${missing}.` : 'Nenhum bloqueio essencial identificado.';

@@ -69,7 +69,7 @@ def structuring_journey_consultant_page():
         company=company,
         company_id=company.id,
         audience="consultant",
-        page_title="Cockpit da Jornada de Estruturação",
+        page_title="Trilha de Estruturação",
     )
 
 

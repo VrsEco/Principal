@@ -1629,7 +1629,7 @@ class BusinessReviewReadModelService:
                 "Não avançar fase por cadastro preenchido sem funcionamento comprovado.",
                 "Validar o gate com evidências reais antes de comunicar maturidade ao cliente.",
             ],
-            "detail_url": "/consultive/cockpit",
+            "detail_url": "/structuring-journey/consultant",
             "phases": phases,
         }
 

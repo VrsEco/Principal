@@ -1466,12 +1466,11 @@ def test_standard_sidebar_exposes_consultive_cockpit_entry():
     assert "Cockpit do Consultor" in body
     assert "/structuring-journey/client" in body
     assert "Jornada do Cliente" in body
-    assert "/structuring-journey/consultant" in body
-    assert "Jornada do Consultor" in body
     assert "/consultive/protocols" in body
     assert "Protocolos Consultivos" in body
     assert "request.path.startswith('/consultive') or request.path.startswith('/structuring-journey')" in body
     assert body.index("Módulos") < body.index("Consultivo")
+    assert "Jornada do Consultor" not in body
 
 
 def test_business_review_read_model_is_resilient_to_missing_rollout_tables():
@@ -1524,7 +1523,7 @@ def test_business_review_read_model_exposes_structuring_maturity_track_contract(
     assert "Fase 01" in body
     assert "Fase 02" in body
     assert "Fase 03" in body
-    assert '"detail_url": "/consultive/cockpit"' in body
+    assert '"detail_url": "/structuring-journey/consultant"' in body
 
 
 def test_consultive_cockpit_renders_structuring_maturity_track_before_fronts():
@@ -1546,9 +1545,31 @@ def test_consultive_cockpit_renders_structuring_maturity_track_before_fronts():
     assert "Fases da Estruturação Empresarial" in body
     assert "Base Organizacional / empresa na mão" in body
     assert "Validar missão, visão, valores, posicionamento e organograma" in body
-    assert "Ver Cockpit" in body
-    assert "/consultive/cockpit" in body
+    assert "Trilha de Estruturação" in body
+    assert "/structuring-journey/consultant" in body
     assert body.index('id="cc-maturity-track"') < body.index('id="cc-structural-list"')
+
+
+def test_structuring_journey_consultant_is_positioned_as_structuring_track():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "modules",
+            "strategy",
+            "structuring_journey.html",
+        )
+    )
+    with open(template_path, "r", encoding="utf-8") as handle:
+        body = handle.read()
+
+    assert "Trilha de Estruturação" in body
+    assert "Trilha metodológica acionada pelo Cockpit" in body
+    assert "Pré-analisar" in body
+    assert "Abrir etapa" in body
+    assert "Etapa da trilha" in body
+    assert "Voltar ao Cockpit" in body
 
 
 def test_structuring_journey_identity_block_uses_canonical_five_items():

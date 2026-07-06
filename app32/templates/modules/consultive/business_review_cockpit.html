@@ -347,7 +347,7 @@
         next_advance: 'Validar identidade organizacional mínima antes de avançar.',
         missing_evidence: ['Validar missão, visão, valores, posicionamento e organograma.'],
         risks: ['Não avançar fase por cadastro preenchido sem funcionamento comprovado.'],
-        detail_url: '/consultive/cockpit',
+        detail_url: '/structuring-journey/consultant',
         phases: [
             { number: '00', title: 'Base Organizacional / empresa na mão', status: 'current', current: true },
             { number: '01', title: 'Processos finalísticos', status: 'pending' },
@@ -392,7 +392,7 @@
         const phases = Array.isArray(payload.phases) && payload.phases.length ? payload.phases : defaultMaturityTrack.phases;
         const missing = Array.isArray(payload.missing_evidence) ? payload.missing_evidence.slice(0, 4) : [];
         const maturity = Math.max(0, Math.min(Number(payload.maturity_pct || 0), 100));
-        const detailUrl = payload.detail_url || '/consultive/cockpit';
+        const detailUrl = payload.detail_url || '/structuring-journey/consultant';
         return `
             <article class="cc-track-card">
                 <div class="cc-track-main">
@@ -407,7 +407,7 @@
                     </div>
                     <div class="cc-track-actions">
                         <span class="cc-tag status-partial">Maturidade da estruturação: ${maturity}%</span>
-                        <a class="cc-open-link" href="${escapeHtml(detailUrl)}">Ver Cockpit</a>
+                        <a class="cc-open-link" href="${escapeHtml(detailUrl)}">Trilha de Estruturação</a>
                     </div>
                 </div>
                 <aside class="cc-track-side">
