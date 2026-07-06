@@ -53,6 +53,22 @@ AGGREGATE_DEPENDENCIES = {
 }
 
 
+def _max_captured_output_chars() -> int:
+    return int(os.environ.get("E2E_RESULT_OUTPUT_MAX_CHARS") or 20000)
+
+
+def _clip_output(text: str, *, max_chars: int | None = None) -> str:
+    limit = max_chars if max_chars is not None else _max_captured_output_chars()
+    value = str(text or "")
+    if limit <= 0 or len(value) <= limit:
+        return value
+    return (
+        f"[stdout/stderr truncado: {len(value)} caracteres originais; "
+        f"mantendo os últimos {limit}]\n"
+        f"{value[-limit:]}"
+    )
+
+
 def _decode_stdout_json(stdout: str) -> object | None:
     text = str(stdout or "").strip()
     if not text:
@@ -288,8 +304,10 @@ def main() -> int:
                 "returncode": effective_returncode,
                 "process_returncode": completed.returncode,
                 "internal_failures": internal_failures,
-                "stdout": completed.stdout,
-                "stderr": completed.stderr,
+                "stdout": _clip_output(completed.stdout),
+                "stderr": _clip_output(completed.stderr),
+                "stdout_original_chars": len(completed.stdout or ""),
+                "stderr_original_chars": len(completed.stderr or ""),
             }
         )
         results_by_suite_id[suite.suite_id] = results[-1]

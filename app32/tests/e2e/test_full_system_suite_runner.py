@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app32.tests.e2e.scripts.run_full_system_suite import _build_manifest, _internal_failures_from_stdout
+from app32.tests.e2e.scripts.run_full_system_suite import _build_manifest, _clip_output, _internal_failures_from_stdout
 
 
 def test_full_system_runner_detects_internal_success_false_checks():
@@ -34,6 +34,13 @@ def test_full_system_runner_ignores_non_json_stdout():
     stdout = ". [100%]\n1 passed in 2.31s\n"
 
     assert _internal_failures_from_stdout(stdout) == []
+
+
+def test_full_system_runner_clips_large_child_output():
+    clipped = _clip_output("abcdef", max_chars=3)
+
+    assert "truncado" in clipped
+    assert clipped.endswith("def")
 
 
 def test_full_system_runner_builds_manifest_for_robot_center():
