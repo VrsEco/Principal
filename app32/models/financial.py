@@ -348,6 +348,13 @@ class FinancialCounterparty(db.Model):
         return bool((self.metadata_json or {}).get("is_supplier"))
 
     def to_dict(self):
+        metadata = self.metadata_json or {}
+        zip_code = (
+            metadata.get("zip_code")
+            or metadata.get("Endereco_Cep")
+            or metadata.get("endereco_cep")
+            or metadata.get("cep")
+        )
         return {
             "id": self.id,
             "company_id": self.company_id,
@@ -360,6 +367,7 @@ class FinancialCounterparty(db.Model):
             "document_number": self.document_number,
             "email": self.email,
             "phone": self.phone,
+            "zip_code": zip_code,
             "pix_key": self.pix_key,
             "notes": self.notes,
             "is_active": self.is_active,
@@ -367,7 +375,7 @@ class FinancialCounterparty(db.Model):
             "is_supplier": self.is_supplier,
             "customer_portfolio_name": self.customer_portfolio.name if self.customer_portfolio else None,
             "customer_portfolio_code": self.customer_portfolio.code if self.customer_portfolio else None,
-            "metadata_json": self.metadata_json or {},
+            "metadata_json": metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

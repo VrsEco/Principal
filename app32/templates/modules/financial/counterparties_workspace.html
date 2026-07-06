@@ -115,6 +115,11 @@
                         <div class="form-grid">
                             <label><span>E-mail</span><input name="email" type="email"></label>
                             <label><span>Telefone</span><input name="phone"></label>
+                            <label>
+                                <span>CEP do cliente/tomador</span>
+                                <input name="zip_code" inputmode="numeric" maxlength="9" placeholder="00000-000">
+                                <small class="field-hint">Usado no campo Endereco_Cep da exportação fiscal/NFS-e.</small>
+                            </label>
                             <label class="col-span-2"><span>PIX</span><input name="pix_key"></label>
                         </div>
                     </section>
@@ -606,6 +611,12 @@
         updateDocumentTypeLabel(type);
     }
 
+    function formatZipCodeValue(value) {
+        const digits = digitsOnly(value).slice(0, 8);
+        if (digits.length <= 5) return digits;
+        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    }
+
     function updateStatusDisplay(isActive = true) {
         const field = document.getElementById('cp-status-display');
         if (!field) return;
@@ -639,6 +650,7 @@
         if (value === '') return null;
         if (['customer_portfolio_id', 'default_chart_account_id', 'default_cost_center_id'].includes(field)) return Number(value);
         if (['is_customer', 'is_supplier'].includes(field)) return value === 'on';
+        if (field === 'zip_code') return digitsOnly(value).slice(0, 8) || null;
         return value;
     }
 
@@ -740,6 +752,8 @@
         });
         hydrateDefaultSelects(item);
         handleDocumentInput(form.querySelector('[name="document_number"]'));
+        const zipField = form.querySelector('[name="zip_code"]');
+        if (zipField) zipField.value = formatZipCodeValue(zipField.value);
         updateStatusDisplay(item.is_active !== false);
         activateSection('main');
         renderList(allItems);
@@ -880,6 +894,9 @@
     document.addEventListener('DOMContentLoaded', () => {
         renderSectionNav();
         document.getElementById('cp-form').addEventListener('submit', saveCounterparty);
+        document.querySelector('#cp-form [name="zip_code"]')?.addEventListener('input', event => {
+            event.currentTarget.value = formatZipCodeValue(event.currentTarget.value);
+        });
         document.getElementById('cp-search-input').addEventListener('input', filterItems);
         loadAuxiliaryData().then(loadItems);
     });

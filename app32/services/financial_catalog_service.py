@@ -282,6 +282,11 @@ class FinancialCatalogService:
             "document_number": counterparty.document_number,
             "email": counterparty.email,
             "phone": counterparty.phone,
+            "metadata_json": {
+                key: metadata.get(key)
+                for key in ("zip_code", "Endereco_Cep", "endereco_cep", "cep")
+                if metadata.get(key)
+            },
             "is_customer": is_customer,
             "is_supplier": is_supplier,
             "status": "active" if counterparty.is_active else "inactive",
@@ -445,6 +450,12 @@ class FinancialCatalogService:
                     metadata[field_name] = prepared.pop(field_name)
 
         if catalog_type == "counterparties":
+            if "zip_code" in prepared:
+                zip_code = "".join(ch for ch in str(prepared.pop("zip_code") or "") if ch.isdigit())
+                metadata["zip_code"] = zip_code or None
+                metadata["Endereco_Cep"] = zip_code or None
+                metadata["endereco_cep"] = zip_code or None
+                metadata["cep"] = zip_code or None
             for field_name in ("is_customer", "is_supplier"):
                 if field_name in prepared:
                     metadata[field_name] = bool(prepared.pop(field_name))

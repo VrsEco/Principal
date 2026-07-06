@@ -538,6 +538,11 @@ class ContractService:
                 "document_number": counterparty.document_number,
                 "email": counterparty.email,
                 "phone": counterparty.phone,
+                "metadata_json": {
+                    key: metadata.get(key)
+                    for key in ("zip_code", "Endereco_Cep", "endereco_cep", "cep")
+                    if metadata.get(key)
+                },
                 "is_customer": is_customer,
                 "is_supplier": is_supplier,
                 "status": "active" if counterparty.is_active else "inactive",
@@ -565,6 +570,7 @@ class ContractService:
                 party.status,
                 party.notes,
                 party.financial_counterparty_id,
+                dict(party.metadata_json or {}),
             )
             ContractService.update_party(party=party, payload=payload, user_id=None, is_new=True)
             after = (
@@ -579,6 +585,7 @@ class ContractService:
                 party.status,
                 party.notes,
                 party.financial_counterparty_id,
+                dict(party.metadata_json or {}),
             )
             if before != after:
                 changed = True
@@ -1751,6 +1758,11 @@ class ContractService:
         party.status = ContractService._normalize_text(payload.get("status")) or "active"
         party.notes = ContractService._normalize_text(payload.get("notes")) or None
         party.financial_counterparty_id = ContractService._normalize_int(payload.get("financial_counterparty_id"))
+        if isinstance(payload.get("metadata_json"), dict):
+            party.metadata_json = {
+                **dict(party.metadata_json or {}),
+                **payload["metadata_json"],
+            }
         party.updated_by_user_id = user_id
         if not party.is_customer and not party.is_supplier:
             raise ValueError("Selecione ao menos uma classificação: Cliente, Fornecedor ou ambos.")

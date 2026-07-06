@@ -35,6 +35,13 @@ class ContractParty(db.Model):
     deleted_at = db.Column(db.DateTime)
 
     def to_dict(self):
+        metadata = self.metadata_json or {}
+        zip_code = (
+            metadata.get("zip_code")
+            or metadata.get("Endereco_Cep")
+            or metadata.get("endereco_cep")
+            or metadata.get("cep")
+        )
         return {
             "id": self.id,
             "company_id": self.company_id,
@@ -46,11 +53,12 @@ class ContractParty(db.Model):
             "document_number": self.document_number,
             "email": self.email,
             "phone": self.phone,
+            "zip_code": zip_code,
             "is_customer": bool(self.is_customer),
             "is_supplier": bool(self.is_supplier),
             "status": self.status,
             "notes": self.notes,
-            "metadata_json": self.metadata_json or {},
+            "metadata_json": metadata,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

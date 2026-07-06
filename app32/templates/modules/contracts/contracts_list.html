@@ -463,6 +463,8 @@
 
                 {% elif active_list_tab == 'fiscal' %}
                 {% set fiscal_metadata = fiscal_terms.metadata_json if fiscal_terms and fiscal_terms.metadata_json else {} %}
+                {% set party_metadata = selected_contract.party.metadata_json if selected_contract and selected_contract.party and selected_contract.party.metadata_json else {} %}
+                {% set customer_zip_code = party_metadata.get('Endereco_Cep') or party_metadata.get('endereco_cep') or party_metadata.get('zip_code') or party_metadata.get('cep') %}
                 <form method="post" class="panel form-panel">
                     <input type="hidden" name="section" value="fiscal">
                     <input type="hidden" name="return_tab" value="fiscal">
@@ -489,6 +491,16 @@
                         <label><span>Série RPS</span><input type="text" name="default_rps_series" value="{{ fiscal_terms.default_rps_series if fiscal_terms else '' }}"></label>
                         <label><span>Cidade da prestação</span><input type="text" name="service_city" value="{{ fiscal_terms.service_city if fiscal_terms else '' }}"></label>
                         <label><span>Cidade ISS</span><input type="text" name="iss_city" value="{{ fiscal_terms.iss_city if fiscal_terms else '' }}"></label>
+                        <label>
+                            <span>CEP do cliente/tomador</span>
+                            <input type="text" value="{{ customer_zip_code or '' }}" readonly>
+                            <small class="field-hint">
+                                Vem do cadastro do cliente e alimenta o Endereco_Cep da exportação fiscal.
+                                {% if selected_contract.party and selected_contract.party.financial_counterparty_id %}
+                                <a href="/financial/catalogs/counterparties?company_id={{ company_id }}&counterparty_id={{ selected_contract.party.financial_counterparty_id }}">Alterar CEP do cliente</a>
+                                {% endif %}
+                            </small>
+                        </label>
                         <label><span>UF da prestação</span><input type="text" name="service_state" value="{{ fiscal_metadata.get('service_state', '') }}" maxlength="2" placeholder="BA"></label>
                         <label><span>Código IBGE da prestação</span><input type="text" name="service_city_code_ibge" value="{{ fiscal_metadata.get('service_city_code_ibge', '') }}" placeholder="Ex.: 2930709"></label>
                         <label class="checkbox-card full-width">

@@ -813,6 +813,7 @@ class FinancialCounterpartyInput(BaseModel):
     document_number: Optional[str] = Field(None, max_length=50)
     email: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=50)
+    zip_code: Optional[str] = Field(None, max_length=20)
     pix_key: Optional[str] = Field(None, max_length=120)
     notes: Optional[str] = None
     is_active: bool = True
@@ -846,6 +847,7 @@ class FinancialCounterpartyUpdateInput(BaseModel):
     document_number: Optional[str] = Field(None, max_length=50)
     email: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=50)
+    zip_code: Optional[str] = Field(None, max_length=20)
     pix_key: Optional[str] = Field(None, max_length=120)
     notes: Optional[str] = None
     is_active: Optional[bool] = None

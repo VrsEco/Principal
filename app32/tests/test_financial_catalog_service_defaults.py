@@ -5,6 +5,7 @@ from decimal import Decimal
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import services.financial_catalog_service as catalog_module
+from models.financial import FinancialCounterparty
 from services.financial_catalog_service import FinancialCatalogService
 
 
@@ -164,6 +165,42 @@ def test_prepare_counterparty_payload_maps_roles_to_metadata():
     assert payload["metadata_json"]["is_customer"] is True
     assert payload["metadata_json"]["is_supplier"] is False
     assert payload["metadata_json"]["origin"] == "manual"
+
+
+def test_prepare_counterparty_payload_maps_customer_zip_code_to_fiscal_aliases():
+    payload = FinancialCatalogService._prepare_catalog_payload(
+        catalog_type="counterparties",
+        company_id=9,
+        data={
+            "company_id": 9,
+            "code": "001",
+            "name": "Cliente Teste",
+            "zip_code": "41.820-021",
+            "is_customer": True,
+            "metadata_json": {"origin": "manual"},
+        },
+    )
+
+    assert "zip_code" not in payload
+    assert payload["metadata_json"]["zip_code"] == "41820021"
+    assert payload["metadata_json"]["Endereco_Cep"] == "41820021"
+    assert payload["metadata_json"]["endereco_cep"] == "41820021"
+    assert payload["metadata_json"]["cep"] == "41820021"
+    assert payload["metadata_json"]["origin"] == "manual"
+
+
+def test_financial_counterparty_to_dict_exposes_zip_code_from_metadata():
+    counterparty = FinancialCounterparty(
+        company_id=9,
+        code="001",
+        name="Cliente Teste",
+        metadata_json={"Endereco_Cep": "41820021", "is_customer": True},
+    )
+
+    payload = counterparty.to_dict()
+
+    assert payload["zip_code"] == "41820021"
+    assert payload["metadata_json"]["Endereco_Cep"] == "41820021"
 
 
 def test_validate_related_scope_requires_counterparty_role_flag():
