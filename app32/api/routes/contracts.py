@@ -1113,6 +1113,11 @@ def contracts_billing_review():
                 flash(f"{len(result['created'])} faturamento(s) gerado(s) com sucesso.", "success")
             for error in result["errors"]:
                 flash(error, "error")
+            if not result["created"] and not result["errors"]:
+                flash(
+                    "Nenhum faturamento foi gerado. Revise se os contratos continuam aptos e se há itens selecionados para faturar.",
+                    "error",
+                )
             if result["created"] and not result["errors"]:
                 return redirect(url_for("contracts.contracts_billing_done", company_id=company.id))
         overrides = _build_billing_review_overrides(contract_ids)

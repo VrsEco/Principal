@@ -2,7 +2,7 @@ from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
-from flask import Blueprint, Flask, render_template
+from flask import Blueprint, Flask, flash, render_template, render_template_string
 from jinja2 import ChoiceLoader, DictLoader, FileSystemLoader
 
 
@@ -79,3 +79,43 @@ def test_contract_billing_review_template_iterates_preview_items_key():
 
     assert "Tratamento de Água" in html
     assert 'name="item_ids_39" value="37"' in html
+
+
+def test_workspace_layout_renders_flash_messages_for_billing_review_feedback():
+    app = Flask(__name__)
+    app.secret_key = "test"
+    app.jinja_loader = ChoiceLoader(
+        [
+            DictLoader(
+                {
+                    "components/sapiens_widget.html": "",
+                    "modules/contracts/_styles.html": "",
+                }
+            ),
+            FileSystemLoader(str(Path(__file__).resolve().parents[1] / "templates")),
+        ]
+    )
+    app.jinja_env.globals["static_asset_version"] = lambda _path: "test"
+    app.jinja_env.filters["format_currency_br"] = _format_currency_br
+
+    contracts_bp = Blueprint("contracts", __name__)
+
+    @contracts_bp.route("/contracts/billing/review")
+    def contracts_billing_review():
+        return ""
+
+    app.register_blueprint(contracts_bp)
+
+    with app.test_request_context("/contracts/billing/review?company_id=9"):
+        flash("Nenhum faturamento foi gerado.", "error")
+        html = render_template_string(
+            """
+            {% extends "layouts/workspace.html" %}
+            {% block sidebar_left %}{% endblock %}
+            {% block workspace_content %}<div>Conferência de Faturamento</div>{% endblock %}
+            """,
+            company_id=9,
+        )
+
+    assert "workspace-flash-messages" in html
+    assert "Nenhum faturamento foi gerado." in html
