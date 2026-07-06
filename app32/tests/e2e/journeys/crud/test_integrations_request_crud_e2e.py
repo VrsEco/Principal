@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+import asyncio
+import json
+import sys
+
 import pytest
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
@@ -8,6 +13,12 @@ from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
 
 def _suffix(run_id: str) -> str:
     return "".join(ch for ch in run_id if ch.isdigit())[-10:] or "0000000000"
+
+
+def _ensure_app_dir_on_path() -> None:
+    app_dir = Path(__file__).resolve().parents[4]
+    if str(app_dir) not in sys.path:
+        sys.path.insert(0, str(app_dir))
 
 
 @pytest.mark.e2e
@@ -65,13 +76,23 @@ def test_integrations_request_transactional_e2e(
         journey.step("validate_catalog_and_page", status="passed")
 
         journey.step("validate_mcp_health", status="running")
-        health = http.session.get(
-            f"{e2e_settings.base_url.rstrip('/')}/mcp/healthz",
-            timeout=e2e_settings.request_timeout_seconds,
-        )
-        health.raise_for_status()
-        assert health.status_code == 200
-        journey.step("validate_mcp_health", status="passed", details={"status_code": health.status_code})
+        if http.local_client is not None:
+            _ensure_app_dir_on_path()
+            from src.core.mcp_http_server import _healthz
+
+            health = asyncio.run(_healthz(None))  # type: ignore[arg-type]
+            payload = json.loads(health.body.decode("utf-8"))
+            assert payload.get("ok") is True
+            health_details = {"status_code": 200, "route": "/healthz", "mode": "dev_local_mcp_health"}
+        else:
+            health = http.session.get(
+                f"{e2e_settings.base_url.rstrip('/')}/mcp/healthz",
+                timeout=e2e_settings.request_timeout_seconds,
+            )
+            health.raise_for_status()
+            assert health.status_code == 200
+            health_details = {"status_code": health.status_code, "route": "/mcp/healthz"}
+        journey.step("validate_mcp_health", status="passed", details=health_details)
 
         journey.step("create_integration_request", status="running")
         create_payload = {

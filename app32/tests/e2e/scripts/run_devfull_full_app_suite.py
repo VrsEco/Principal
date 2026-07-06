@@ -44,6 +44,53 @@ FULL_APP_SUITE_IDS = [
 TRANSACTIONAL_DOMAINS_IMPLEMENTED = {"admin", "financial", "integrations", "meetings", "processes", "work_journey"}
 
 
+def _suite_timeout_seconds() -> int:
+    return int(os.environ.get("E2E_SUITE_TIMEOUT_SECONDS") or 300)
+
+
+def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return
+    process.kill()
+
+
+def _run_command_with_timeout(command: list[str], *, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    timeout_seconds = _suite_timeout_seconds()
+    process = subprocess.Popen(
+        command,
+        cwd=str(ROOT_DIR),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=int(process.returncode or 0),
+            stdout=stdout or "",
+            stderr=stderr or "",
+        )
+    except subprocess.TimeoutExpired as exc:
+        _terminate_process_tree(process)
+        stdout, stderr = process.communicate()
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=124,
+            stdout=(exc.stdout or stdout or ""),
+            stderr=(exc.stderr or stderr or "") + f"\nTimeoutExpired: suíte excedeu {timeout_seconds}s.\n",
+        )
+
+
 def _run_suite(suite_id: str, env: dict[str, str]) -> dict[str, Any]:
     suite = get_suite_definition(suite_id)
     if "DEV_FULL" not in suite.environments:
@@ -65,14 +112,7 @@ def _run_suite(suite_id: str, env: dict[str, str]) -> dict[str, Any]:
     else:
         raise RuntimeError(f"command_kind não suportado: {suite.command_kind}")
 
-    completed = subprocess.run(
-        command,
-        cwd=str(ROOT_DIR),
-        env=child_env,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    completed = _run_command_with_timeout(command, env=child_env)
     return {
         "suite_id": suite.suite_id,
         "label": suite.label,

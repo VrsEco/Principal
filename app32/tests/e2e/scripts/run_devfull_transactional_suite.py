@@ -96,6 +96,53 @@ TRANSACTIONAL_COMMANDS: list[dict[str, Any]] = [
 ]
 
 
+def _suite_timeout_seconds() -> int:
+    return int(os.environ.get("E2E_SUITE_TIMEOUT_SECONDS") or 300)
+
+
+def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return
+    process.kill()
+
+
+def _run_command_with_timeout(command: list[str], *, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    timeout_seconds = _suite_timeout_seconds()
+    process = subprocess.Popen(
+        command,
+        cwd=str(ROOT_DIR),
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=int(process.returncode or 0),
+            stdout=stdout or "",
+            stderr=stderr or "",
+        )
+    except subprocess.TimeoutExpired as exc:
+        _terminate_process_tree(process)
+        stdout, stderr = process.communicate()
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=124,
+            stdout=(exc.stdout or stdout or ""),
+            stderr=(exc.stderr or stderr or "") + f"\nTimeoutExpired: suíte excedeu {timeout_seconds}s.\n",
+        )
+
+
 def _load_manifests(outputs_dir: Path) -> list[dict[str, Any]]:
     manifests: list[dict[str, Any]] = []
     for path in sorted(outputs_dir.glob("run_*/reports/manifest.json")):
@@ -221,14 +268,7 @@ def main() -> int:
 
     results: list[dict[str, Any]] = []
     for item in TRANSACTIONAL_COMMANDS:
-        completed = subprocess.run(
-            item["command"],
-            cwd=str(ROOT_DIR),
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        completed = _run_command_with_timeout(item["command"], env=env)
         results.append(
             {
                 "suite_id": item["suite_id"],

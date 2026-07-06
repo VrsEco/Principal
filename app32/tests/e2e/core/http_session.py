@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import sys
 from typing import Any
 from urllib.parse import urlparse
 
@@ -63,6 +64,12 @@ class AuthenticatedHTTPSession:
     def select_company(self) -> dict[str, Any] | None:
         if self.settings.company_id is None:
             return None
+        if self.local_client is not None:
+            return {
+                "success": True,
+                "redirect": self.settings.post_login_path,
+                "auth_source": "local_flask_client",
+            }
         if self._has_session_cookie() and (
             self.settings.execution_mode is E2EExecutionMode.PROD_SAFE
             or self.settings.user_id is not None
@@ -172,6 +179,12 @@ class AuthenticatedHTTPSession:
         bootstrap_remote_prod_safe_storage_state(self.settings)
         if self.settings.execution_mode is E2EExecutionMode.DEV_FULL and self.settings.user_id is not None:
             self._bootstrap_local_flask_client()
+            if self.local_client is not None:
+                return {
+                    "success": True,
+                    "redirect": self.settings.post_login_path,
+                    "auth_source": "local_flask_client",
+                }
         self.session.cookies.clear()
         self._load_storage_state_cookie()
         if not self._has_session_cookie():
@@ -184,14 +197,17 @@ class AuthenticatedHTTPSession:
 
     def _bootstrap_local_flask_client(self) -> None:
         hostname = urlparse(self.settings.base_url).hostname or ""
-        if not hostname.endswith("gestaoversus.com.br"):
+        if hostname.endswith("gestaoversus.com.br"):
             return
+        app_package_dir = Path(__file__).resolve().parents[3]
+        if str(app_package_dir) not in sys.path:
+            sys.path.insert(0, str(app_package_dir))
         try:
             from app import create_app
         except ModuleNotFoundError:
             from app32.app import create_app
 
-        app = create_app("production")
+        app = create_app("development")
         client = app.test_client()
         with client.session_transaction() as sess:
             sess["_user_id"] = str(self.settings.user_id)

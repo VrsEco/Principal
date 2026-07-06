@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -44,7 +45,8 @@ def scan_marker_residue(*, company_id: int, markers: list[str]) -> list[ResidueH
         from app32.app import create_app
         from app32.models import db
 
-    app = create_app("production")
+    config_name = "development" if str(os.environ.get("E2E_ENV_NAME") or "").upper() == "DEV_FULL" else "production"
+    app = create_app(config_name)
     hits: list[ResidueHit] = []
     with app.app_context():
         bind = db.session.get_bind()

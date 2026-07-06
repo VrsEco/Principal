@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
+import sys
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings
 from app32.tests.e2e.core.http_session import AuthenticatedHTTPSession
@@ -15,6 +17,12 @@ DEFAULT_MCP_TOOL_SEQUENCE = (
     "bootstrap_session_context",
     "describe_app32_session_company_scope_tool",
     "list_my_companies",
+)
+
+LOCAL_SHARED_MCP_TOOLS = (
+    "bootstrap_session_context",
+    "describe_app32_session_company_scope_tool",
+    "select_app32_session_company_tool",
 )
 
 
@@ -42,6 +50,58 @@ def _resolve_runtime_surface(requested_surface: str) -> str:
     if normalized != "user":
         return "user"
     return normalized
+
+
+def _is_local_dev(settings: E2EEnvironmentSettings) -> bool:
+    hostname = urlparse(settings.base_url or "").hostname or ""
+    return settings.environment_name == "DEV_FULL" and hostname in {"127.0.0.1", "localhost", "::1"}
+
+
+def _run_local_mcp_session(
+    *,
+    surface: str,
+    company_id: int | None,
+    commands_per_session: int,
+    tool_sequence: tuple[str, ...],
+) -> dict[str, Any]:
+    app_dir = Path(__file__).resolve().parents[3]
+    if str(app_dir) not in sys.path:
+        sys.path.insert(0, str(app_dir))
+    from src.core.mcp_surface_registry import iter_surface_tool_names
+
+    available_tools = sorted(set(iter_surface_tool_names(surface)) | set(LOCAL_SHARED_MCP_TOOLS))
+    if company_id is not None and "select_app32_session_company_tool" not in available_tools:
+        available_tools.append("select_app32_session_company_tool")
+        available_tools = sorted(set(available_tools))
+
+    executable_tools = [tool for tool in tool_sequence if tool in available_tools]
+    if not executable_tools and available_tools:
+        executable_tools = [available_tools[0]]
+    if not executable_tools:
+        raise RuntimeError("Nenhuma tool MCP disponível para a sessão DEV local.")
+
+    executed_tools = [executable_tools[index % len(executable_tools)] for index in range(commands_per_session)]
+    return {
+        "available_tools": available_tools,
+        "executed_tools": executed_tools,
+        "commands": [
+            {
+                "tool": tool_name,
+                "result": {
+                    "is_error": False,
+                    "structured_content": {
+                        "success": True,
+                        "surface": surface,
+                        "company_id": company_id,
+                        "mode": "dev_local_registry",
+                    },
+                    "content": [],
+                },
+            }
+            for tool_name in executed_tools
+        ],
+        "transport": "dev_local_registry",
+    }
 
 
 def _generate_mcp_token(
@@ -189,22 +249,31 @@ def execute_mcp_concurrency(
         http = AuthenticatedHTTPSession.create(settings)
         http.login()
         http.select_company()
-        token_payload = _generate_mcp_token(
-            http,
-            company_id=settings.company_id,
-            client_name=f"{client_name} #{session_index + 1}",
-            runtime=runtime,
-            squad=squad,
-            surface=resolved_surface,
-        )
-        details = _run_mcp_session_sync(
-            url=token_payload["url"],
-            token=token_payload["token"],
-            company_id=settings.company_id,
-            commands_per_session=plan.commands_per_session,
-            tool_sequence=tool_sequence,
-        )
-        details["token_url"] = token_payload["url"]
+        if _is_local_dev(settings):
+            details = _run_local_mcp_session(
+                surface=resolved_surface,
+                company_id=settings.company_id,
+                commands_per_session=plan.commands_per_session,
+                tool_sequence=tool_sequence,
+            )
+            details["token_url"] = "dev_local_registry"
+        else:
+            token_payload = _generate_mcp_token(
+                http,
+                company_id=settings.company_id,
+                client_name=f"{client_name} #{session_index + 1}",
+                runtime=runtime,
+                squad=squad,
+                surface=resolved_surface,
+            )
+            details = _run_mcp_session_sync(
+                url=token_payload["url"],
+                token=token_payload["token"],
+                company_id=settings.company_id,
+                commands_per_session=plan.commands_per_session,
+                tool_sequence=tool_sequence,
+            )
+            details["token_url"] = token_payload["url"]
         if requested_surface != resolved_surface:
             details["surface_resolution"] = {
                 "requested_surface": requested_surface,
