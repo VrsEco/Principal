@@ -147,6 +147,7 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
     limit = int(limit if limit is not None else (raw_limit if raw_limit is not None else 0))
     contracts = _mutation_contracts(limit)
     allow_human_gate = _env_bool("E2E_ALLOW_HUMAN_GATE_MUTATION", default=False)
+    defer_adapter_execution = _env_bool("E2E_UI_MUTATION_DEFER_ADAPTER_EXECUTION", default=False)
     results: list[UIMutationExecutionResult] = []
 
     destructive_gate_ok = (
@@ -256,9 +257,21 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
                 maintenance_reason = "mutation_adapter_not_implemented_for_route"
             elif runtime_ok and selector_ok and adapter_id is not None:
                 execution_id = _adapter_execution_id(adapter_id)
-                if execution_id not in adapter_cache:
+                if defer_adapter_execution:
+                    adapter_result = {
+                        "adapter_id": adapter_id,
+                        "execution_id": execution_id,
+                        "returncode": 0,
+                        "mutation_performed": False,
+                        "rollback_performed": False,
+                        "deferred_to_root_transactional_suite": True,
+                        "mode": "root_orchestrator_contract_adapter_validation",
+                    }
+                elif execution_id not in adapter_cache:
                     adapter_cache[execution_id] = _run_domain_adapter(adapter_id, adapter_env)
-                adapter_result = {**adapter_cache[execution_id], "adapter_id": adapter_id}
+                    adapter_result = {**adapter_cache[execution_id], "adapter_id": adapter_id}
+                else:
+                    adapter_result = {**adapter_cache[execution_id], "adapter_id": adapter_id}
                 if int(adapter_result.get("returncode") or 0) != 0:
                     maintenance_reason = None
             failed_runtime = (not runtime_ok and maintenance_reason is None) or (adapter_result is not None and int(adapter_result.get("returncode") or 0) != 0)
@@ -298,6 +311,7 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
     mutation_performed = [item for item in results if item.details.get("mutation_performed")]
     rollback_performed = [item for item in results if item.details.get("rollback_performed")]
     adapter_ids = sorted({str(item.details.get("adapter_id")) for item in mutation_performed if item.details.get("adapter_id")})
+    adapter_ids_validated = sorted({str(item.details.get("adapter_id")) for item in results if item.details.get("adapter_id")})
     return {
         "generated_at": datetime.now().isoformat(),
         "environment": settings.environment_name,
@@ -314,6 +328,8 @@ def execute_ui_mutation_contracts(*, limit: int | None = None) -> dict[str, Any]
         "mutation_performed_total": len(mutation_performed),
         "rollback_performed_total": len(rollback_performed),
         "adapter_ids_executed": adapter_ids,
+        "adapter_ids_validated": adapter_ids_validated,
+        "adapter_execution_deferred": defer_adapter_execution,
         "status_counts": dict(sorted(status_counts.items())),
         "results": [asdict(item) for item in results],
         "failed_results": [asdict(item) for item in failed[:100]],
@@ -355,6 +371,8 @@ def write_ui_mutation_execution_report(base_dir: Path) -> Path:
         "mutation_performed_total": report["mutation_performed_total"],
         "rollback_performed_total": report["rollback_performed_total"],
         "adapter_ids_executed": report.get("adapter_ids_executed", []),
+        "adapter_ids_validated": report.get("adapter_ids_validated", []),
+        "adapter_execution_deferred": report.get("adapter_execution_deferred", False),
         "json_path": str(json_path),
         "yaml_path": str(yaml_path),
     }

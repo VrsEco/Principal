@@ -338,7 +338,16 @@ def main() -> int:
         else:
             raise RuntimeError(f"command_kind não suportado: {suite.command_kind}")
 
-        completed = _run_command_with_timeout(command, env=env, suite_id=suite.suite_id)
+        suite_env = env.copy()
+        if suite.suite_id == "ui_mutation_contract_execution":
+            # No orquestrador raiz, a cobertura mutacional real vem das suítes
+            # transacionais DEV_FULL atômicas executadas no mesmo ciclo. A suíte
+            # de contratos UI deve validar rotas/selectors/adapters sem
+            # reexecutar todo o pacote transacional como subprocesso aninhado,
+            # evitando pico de memória/OOM no host Configr.
+            suite_env["E2E_UI_MUTATION_DEFER_ADAPTER_EXECUTION"] = "1"
+
+        completed = _run_command_with_timeout(command, env=suite_env, suite_id=suite.suite_id)
         internal_failures = _internal_failures_from_stdout(completed.stdout)
         effective_returncode = completed.returncode if completed.returncode != 0 or not internal_failures else 1
         results.append(
