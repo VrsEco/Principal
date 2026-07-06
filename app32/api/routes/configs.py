@@ -223,14 +223,20 @@ def e2e_supervised_execution_list():
 @login_required
 def e2e_supervised_execution_create():
     active_company = _resolve_active_company()
-    _require_ai_admin_access(getattr(active_company, "id", None))
+    active_company_id = getattr(active_company, "id", None)
+    _require_ai_admin_access(active_company_id)
     payload = request.get_json(silent=True) or {}
     suite_id = str(payload.get('suite_id') or '').strip()
     environment = str(payload.get('environment') or '').strip().upper()
     if not suite_id or not environment:
         return jsonify({"success": False, "error": "suite_id e environment são obrigatórios."}), 400
     try:
-        execution = E2ESupervisedExecutionService.start_execution(suite_id=suite_id, environment=environment)
+        execution = E2ESupervisedExecutionService.start_execution(
+            suite_id=suite_id,
+            environment=environment,
+            company_id=int(active_company_id) if active_company_id is not None else None,
+            user_id=getattr(current_user, "id", None),
+        )
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
     return jsonify({"success": True, "execution": execution}), 201

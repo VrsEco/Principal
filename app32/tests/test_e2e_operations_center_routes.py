@@ -53,15 +53,26 @@ def test_e2e_operations_center_frontend_state_route(monkeypatch):
 def test_e2e_operations_center_execution_create_route(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=9, name="Versus", client_code="VRS")
+    active_user = SimpleNamespace(id=19)
     fake_execution = {"execution_id": "exec-1", "status": "running"}
+    captured = {}
 
     monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
     monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
-    monkeypatch.setattr(
-        configs_route.E2ESupervisedExecutionService,
-        "start_execution",
-        lambda suite_id, environment: {**fake_execution, "suite_id": suite_id, "environment": environment},
-    )
+    monkeypatch.setattr(configs_route, "current_user", active_user)
+
+    def _start_execution(*, suite_id, environment, company_id=None, user_id=None):
+        captured.update(
+            {
+                "suite_id": suite_id,
+                "environment": environment,
+                "company_id": company_id,
+                "user_id": user_id,
+            }
+        )
+        return {**fake_execution, **captured}
+
+    monkeypatch.setattr(configs_route.E2ESupervisedExecutionService, "start_execution", _start_execution)
 
     response = app.test_client().post(
         "/api/configs/qa/e2e/executions",
@@ -72,6 +83,8 @@ def test_e2e_operations_center_execution_create_route(monkeypatch):
     payload = response.get_json()
     assert payload["success"] is True
     assert payload["execution"]["environment"] == "DEV_FULL"
+    assert captured["company_id"] == 9
+    assert captured["user_id"] == 19
 
 
 def test_e2e_operations_center_execution_list_route(monkeypatch):
