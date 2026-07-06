@@ -337,6 +337,27 @@ class ContractFinancialService:
             raise ValueError("Centro de resultado inválido para a empresa ativa.")
 
     @staticmethod
+    def _resolve_item_accounting_dimension_defaults(
+        *,
+        native_billing: ContractNativeBilling,
+        chart_account_id: Optional[int],
+        cost_center_id: Optional[int],
+    ) -> tuple[Optional[int], Optional[int]]:
+        if chart_account_id and cost_center_id:
+            return chart_account_id, cost_center_id
+
+        for billing_item in native_billing.items.order_by(ContractNativeBillingItem.id.asc()).all():
+            item_metadata = dict(billing_item.metadata_json or {})
+            allocation = dict(item_metadata.get("allocation") or {})
+            if not chart_account_id:
+                chart_account_id = ContractFinancialService._normalize_int(allocation.get("chart_account_id"))
+            if not cost_center_id:
+                cost_center_id = ContractFinancialService._normalize_int(allocation.get("cost_center_id"))
+            if chart_account_id and cost_center_id:
+                break
+        return chart_account_id, cost_center_id
+
+    @staticmethod
     def _resolve_main_schedule_payload(*, contract: Contract, native_billing: ContractNativeBilling, financial_terms: Optional[ContractFinancialTerm]) -> dict:
         counterparty = ContractFinancialService._resolve_counterparty(contract)
         competence_date = native_billing.competence_start or native_billing.issue_date or date.today()
@@ -351,6 +372,11 @@ class ContractFinancialService:
         cost_center_id = (
             getattr(financial_terms, "default_cost_center_id", None)
             or getattr(counterparty, "default_cost_center_id", None)
+        )
+        chart_account_id, cost_center_id = ContractFinancialService._resolve_item_accounting_dimension_defaults(
+            native_billing=native_billing,
+            chart_account_id=chart_account_id,
+            cost_center_id=cost_center_id,
         )
         ContractFinancialService._ensure_billing_accounting_dimensions(
             contract=contract,
