@@ -323,6 +323,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const envSelect = document.getElementById('robotTestsEnvironment');
     const modal = document.getElementById('robotTestsAreaModal');
 
+    async function readRobotTestsJson(response) {
+        const contentType = response.headers.get('content-type') || 'sem content-type';
+        const rawText = await response.text();
+        try {
+            return JSON.parse(rawText);
+        } catch (_error) {
+            const preview = rawText.replace(/\s+/g, ' ').trim().slice(0, 180);
+            if (response.status === 401 || response.redirected || preview.toLowerCase().includes('<!doctype html')) {
+                throw new Error('A sessão expirou ou o servidor retornou uma página HTML em vez de JSON. Atualize a tela, faça login novamente e rode o teste completo.');
+            }
+            throw new Error(`Resposta inesperada do servidor (${response.status}, ${contentType}). ${preview || 'Sem corpo de resposta.'}`);
+        }
+    }
+
     function openAreaModal(area) {
         if (!modal || !area) return;
         document.getElementById('robotTestsModalTitle').textContent = area.label || 'Área';
@@ -358,14 +372,14 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch('/api/qa/robot-tests/runs', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
                     body: JSON.stringify({
                         company_id: companyId,
                         package_key: button.dataset.packageKey,
                         environment: envSelect?.value || 'PROD_SAFE',
                     }),
                 });
-                const payload = await response.json();
+                const payload = await readRobotTestsJson(response);
                 if (!response.ok || !payload.success) {
                     throw new Error(payload.error || 'Falha ao iniciar o teste.');
                 }
@@ -392,10 +406,10 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch(`/api/qa/robot-tests/errors/${button.dataset.errorId}/actions`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
                     body: JSON.stringify({company_id: companyId, action: button.dataset.action}),
                 });
-                const payload = await response.json();
+                const payload = await readRobotTestsJson(response);
                 if (!response.ok || !payload.success) {
                     throw new Error(payload.error || 'Falha ao disparar correção.');
                 }

@@ -99,6 +99,25 @@ def test_robot_tests_run_create_api(monkeypatch):
     assert payload["result"]["suite_id"] == "full_system_validation"
 
 
+def test_robot_tests_run_create_permission_denied_returns_json(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=9, name="M1 - Empresa de Testes Versus", client_code="M1")
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
+    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: False)
+
+    response = app.test_client().post(
+        "/api/qa/robot-tests/runs",
+        json={"company_id": 9, "package_key": "complete", "environment": "DEV_FULL"},
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload["success"] is False
+    assert payload["status_code"] == 403
+
+
 def test_robot_tests_error_action_api(monkeypatch):
     app = _build_app()
     active_company = SimpleNamespace(id=9, name="M1 - Empresa de Testes Versus", client_code="M1")
@@ -126,3 +145,22 @@ def test_robot_tests_error_action_api(monkeypatch):
     payload = response.get_json()
     assert payload["success"] is True
     assert payload["result"]["company_id"] == 9
+
+
+def test_robot_tests_error_action_permission_denied_returns_json(monkeypatch):
+    app = _build_app()
+    active_company = SimpleNamespace(id=9, name="M1 - Empresa de Testes Versus", client_code="M1")
+
+    monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
+    monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: False)
+
+    response = app.test_client().post(
+        "/api/qa/robot-tests/errors/run-1-0/actions",
+        json={"company_id": 9, "action": "details"},
+        headers={"Accept": "application/json"},
+    )
+
+    assert response.status_code == 403
+    payload = response.get_json()
+    assert payload["success"] is False
+    assert payload["status_code"] == 403

@@ -27,6 +27,7 @@ def test_robot_tests_center_template_renders_new_functional_layout():
         request=_DummyRequest(),
         session={},
         static_asset_version=lambda *_args, **_kwargs: "test",
+        get_flashed_messages=lambda **_kwargs: [],
     )
 
     template = env.get_template("modules/operations/robot_tests_center.html")
@@ -139,3 +140,12 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     assert "Disparar correção" in html
     assert "Avançado" in html
     assert "Central E2E técnica" in html
+
+
+def test_robot_tests_center_template_uses_robust_json_reader():
+    template_source = (TEMPLATES_DIR / "modules" / "operations" / "robot_tests_center.html").read_text(encoding="utf-8")
+
+    assert "function readRobotTestsJson(response)" in template_source
+    assert "await response.text()" in template_source
+    assert "'Accept': 'application/json'" in template_source
+    assert "response.json()" not in template_source

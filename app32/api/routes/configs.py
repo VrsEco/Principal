@@ -3,6 +3,7 @@ from io import BytesIO
 from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for, send_file
 from flask_login import login_required, current_user
 from pydantic import ValidationError
+from werkzeug.exceptions import HTTPException
 from models import db, AIAgent, AgentMessage
 from services.ai_configuration_pages_service import AIConfigurationPagesService
 from services.ai_capability_backlog_service import AICapabilityBacklogService
@@ -389,11 +390,11 @@ def robot_tests_errors():
 @configs_bp.route('/api/qa/robot-tests/runs', methods=['POST'])
 @login_required
 def robot_tests_runs_create():
-    active_company = _resolve_active_company()
-    company_id = _resolve_robot_tests_company_id(active_company)
-    _require_ai_admin_access(company_id)
-    payload = request.get_json(silent=True) or {}
     try:
+        active_company = _resolve_active_company()
+        company_id = _resolve_robot_tests_company_id(active_company)
+        _require_ai_admin_access(company_id)
+        payload = request.get_json(silent=True) or {}
         result = RobotTestsCenterService.start_run(
             package_key=payload.get("package_key"),
             suite_id=payload.get("suite_id"),
@@ -403,6 +404,8 @@ def robot_tests_runs_create():
         )
     except ValueError as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
+    except HTTPException as exc:
+        return jsonify({"success": False, "error": exc.description or exc.name, "status_code": exc.code}), exc.code or 500
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
     return jsonify({"success": True, "result": result}), 201
@@ -411,11 +414,11 @@ def robot_tests_runs_create():
 @configs_bp.route('/api/qa/robot-tests/errors/<string:error_id>/actions', methods=['POST'])
 @login_required
 def robot_tests_error_action(error_id: str):
-    active_company = _resolve_active_company()
-    company_id = _resolve_robot_tests_company_id(active_company)
-    _require_ai_admin_access(company_id)
-    payload = request.get_json(silent=True) or {}
     try:
+        active_company = _resolve_active_company()
+        company_id = _resolve_robot_tests_company_id(active_company)
+        _require_ai_admin_access(company_id)
+        payload = request.get_json(silent=True) or {}
         result = RobotTestsCenterService.handle_error_action(
             error_id=error_id,
             action=str(payload.get("action") or "details"),
@@ -427,6 +430,8 @@ def robot_tests_error_action(error_id: str):
         return jsonify({"success": False, "error": "Erro de teste não encontrado."}), 404
     except ValueError as exc:
         return jsonify({"success": False, "error": str(exc)}), 400
+    except HTTPException as exc:
+        return jsonify({"success": False, "error": exc.description or exc.name, "status_code": exc.code}), exc.code or 500
     return jsonify({"success": True, "result": result})
 
 @configs_bp.route('/ai')
