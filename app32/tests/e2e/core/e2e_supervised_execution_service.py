@@ -79,15 +79,12 @@ class E2ESupervisedExecutionService:
         stderr_path = execution_dir / "stderr.log"
 
         command = cls._build_command(suite.command_kind, suite.command_args)
-        env = os.environ.copy()
-        env["E2E_ENV_NAME"] = environment
-        env.setdefault("E2E_BASE_URL", env.get("EXTERNAL_URL") or "https://app.gestaoversus.com.br")
-        if company_id is not None:
-            env["E2E_COMPANY_ID"] = str(company_id)
-        if user_id is not None:
-            env["E2E_USER_ID"] = str(user_id)
-        if suite.command_kind == "pytest":
-            env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        env = cls._build_execution_environment(
+            environment=environment,
+            command_kind=suite.command_kind,
+            company_id=company_id,
+            user_id=user_id,
+        )
         cls._inject_browser_native_library_path(env)
 
         record = SupervisedExecutionRecord(
@@ -232,6 +229,52 @@ class E2ESupervisedExecutionService:
         if command_kind == "python":
             return [python_executable, *command_args]
         raise ValueError(f"command_kind não suportado: {command_kind}")
+
+    @staticmethod
+    def _set_env_default(env: dict[str, str], key: str, value: str) -> None:
+        if not str(env.get(key) or "").strip():
+            env[key] = value
+
+    @classmethod
+    def _build_execution_environment(
+        cls,
+        *,
+        environment: str,
+        command_kind: str,
+        company_id: int | None,
+        user_id: int | None,
+    ) -> dict[str, str]:
+        """Monta o ambiente operacional que a Central deve entregar ao worker.
+
+        A execução pelo botão da Central precisa ser equivalente à execução por
+        código/SSH: tenant explícito, usuário explícito, bootstrap controlado e
+        saída UTF-8. Sem isso o DEV_FULL supervisionado falha antes de chegar às
+        suítes reais por falta de `E2E_COMPANY_ID`/credenciais ou por ruído de
+        bootstrap do runtime web.
+        """
+        env = os.environ.copy()
+        normalized_environment = str(environment or "").strip().upper()
+        env["E2E_ENV_NAME"] = normalized_environment
+        cls._set_env_default(env, "PYTHONIOENCODING", "utf-8")
+        cls._set_env_default(env, "PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+        cls._set_env_default(env, "E2E_BASE_URL", env.get("EXTERNAL_URL") or "https://app.gestaoversus.com.br")
+        cls._set_env_default(env, "E2E_LOGIN_PATH", "/login")
+        cls._set_env_default(env, "E2E_POST_LOGIN_PATH", "/my-work")
+        cls._set_env_default(env, "APP_BOOTSTRAP_DB_SCHEMA", "0")
+        cls._set_env_default(env, "APP_BOOTSTRAP_RUNTIME_SERVICES", "0")
+        cls._set_env_default(env, "E2E_SUITE_TIMEOUT_SECONDS", "600")
+        cls._set_env_default(env, "E2E_HEADLESS", "true")
+        cls._set_env_default(env, "E2E_REQUIRES_ISOLATED_TENANT", "true")
+        cls._set_env_default(env, "E2E_REQUIRE_EXPLICIT_COMPANY", "true")
+        if normalized_environment == "DEV_FULL":
+            cls._set_env_default(env, "E2E_DESTRUCTIVE_ACTIONS_ALLOWED", "true")
+        if company_id is not None:
+            env["E2E_COMPANY_ID"] = str(company_id)
+        if user_id is not None:
+            env["E2E_USER_ID"] = str(user_id)
+        if command_kind == "pytest":
+            env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+        return env
 
     @staticmethod
     def _resolve_python_executable() -> str:

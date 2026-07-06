@@ -158,3 +158,25 @@ def test_supervised_execution_service_resolves_python_without_uwsgi(monkeypatch)
 
     assert Path(command[0]).name.lower().startswith("python")
     assert "uwsgi" not in command[0].lower()
+
+
+def test_supervised_execution_service_builds_devfull_environment(monkeypatch):
+    monkeypatch.delenv("E2E_COMPANY_ID", raising=False)
+    monkeypatch.delenv("E2E_USER_ID", raising=False)
+    monkeypatch.delenv("E2E_DESTRUCTIVE_ACTIONS_ALLOWED", raising=False)
+    monkeypatch.delenv("APP_BOOTSTRAP_RUNTIME_SERVICES", raising=False)
+
+    env = E2ESupervisedExecutionService._build_execution_environment(
+        environment="DEV_FULL",
+        command_kind="python",
+        company_id=9,
+        user_id=19,
+    )
+
+    assert env["E2E_ENV_NAME"] == "DEV_FULL"
+    assert env["E2E_COMPANY_ID"] == "9"
+    assert env["E2E_USER_ID"] == "19"
+    assert env["E2E_DESTRUCTIVE_ACTIONS_ALLOWED"] == "true"
+    assert env["E2E_REQUIRE_EXPLICIT_COMPANY"] == "true"
+    assert env["APP_BOOTSTRAP_RUNTIME_SERVICES"] == "0"
+    assert env["PYTHONIOENCODING"] == "utf-8"
