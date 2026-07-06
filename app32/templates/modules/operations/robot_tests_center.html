@@ -178,6 +178,10 @@
                         <small>Tempo</small>
                         <strong id="robotTestsRunMonitorElapsed">0s</strong>
                     </div>
+                    <div class="robot-tests-run-progress" aria-label="Progresso estimado da execução">
+                        <div class="robot-tests-run-progress__bar" id="robotTestsRunProgressBar"></div>
+                    </div>
+                    <small class="robot-tests-run-progress__label" id="robotTestsRunProgressLabel">0% estimado</small>
                     <p id="robotTestsRunMonitorHint">O DEV_FULL continua rodando em segundo plano. Esta tela acompanhará até concluir.</p>
                     <button type="button" class="robot-tests-btn robot-tests-btn--secondary" id="robotTestsRunMonitorRefresh" hidden>Atualizar resultado consolidado</button>
                 </div>
@@ -321,6 +325,9 @@
     .robot-tests-run-monitor__body small { color:var(--text-secondary); font-weight:800; }
     .robot-tests-run-monitor__body code { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .robot-tests-run-monitor p { margin:0; color:var(--text-secondary); font-size:.86rem; line-height:1.35; }
+    .robot-tests-run-progress { height:10px; overflow:hidden; border-radius:999px; background:rgba(15,23,42,.10); border:1px solid rgba(15,23,42,.08); }
+    .robot-tests-run-progress__bar { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg, var(--primary), #7c3aed); transition:width .35s ease; }
+    .robot-tests-run-progress__label { color:var(--text-secondary); font-weight:800; }
     .robot-tests-empty, .robot-tests-empty-state { color:var(--text-secondary); padding:1rem; }
     .robot-tests-modal[hidden] { display:none; }
     .robot-tests-modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:1rem; }
@@ -357,7 +364,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const runMonitorElapsed = document.getElementById('robotTestsRunMonitorElapsed');
     const runMonitorHint = document.getElementById('robotTestsRunMonitorHint');
     const runMonitorRefresh = document.getElementById('robotTestsRunMonitorRefresh');
+    const runProgressBar = document.getElementById('robotTestsRunProgressBar');
+    const runProgressLabel = document.getElementById('robotTestsRunProgressLabel');
     const RUN_MONITOR_STORAGE_KEY = 'gestaoVersus.robotTests.activeExecutionId';
+    const RUN_MONITOR_EXPECTED_SECONDS = 600;
     let runMonitorTimer = null;
 
     async function readRobotTestsJson(response) {
@@ -383,15 +393,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return minutes > 0 ? `${minutes}min ${seconds}s` : `${seconds}s`;
     }
 
+    function estimateRunProgress(execution) {
+        const status = execution?.status || 'running';
+        if (status === 'passed') return 100;
+        if (['failed', 'error', 'cancelled'].includes(status)) return 100;
+        const started = Date.parse(execution?.started_at || '');
+        if (!Number.isFinite(started)) return 1;
+        const elapsed = Math.max(Math.floor((Date.now() - started) / 1000), 0);
+        return Math.max(1, Math.min(95, Math.round((elapsed / RUN_MONITOR_EXPECTED_SECONDS) * 100)));
+    }
+
     function updateRunMonitor(execution) {
         if (!runMonitor || !execution) return;
         const status = execution.status || 'running';
         const isFinal = ['passed', 'failed', 'error', 'cancelled'].includes(status);
         const isSuccess = status === 'passed';
+        const progress = estimateRunProgress(execution);
         runMonitor.hidden = false;
         runMonitorId.textContent = execution.execution_id || '-';
         runMonitorStatus.textContent = status;
         runMonitorElapsed.textContent = formatElapsedSeconds(execution.started_at);
+        if (runProgressBar) runProgressBar.style.width = `${progress}%`;
+        if (runProgressLabel) runProgressLabel.textContent = isFinal ? `${progress}% finalizado` : `${progress}% estimado`;
         runMonitorTitle.textContent = `${execution.suite_id || 'Teste'} — ${execution.environment || '-'}`;
         runMonitorBadge.textContent = isFinal ? (isSuccess ? 'Concluído' : 'Falhou') : 'Em andamento';
         runMonitorBadge.classList.toggle('is-final-success', isSuccess);
