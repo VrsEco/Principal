@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from app32.tests.e2e.scripts.run_full_system_suite import _build_manifest, _clip_output, _internal_failures_from_stdout
+from app32.tests.e2e.scripts.run_full_system_suite import (
+    _apply_root_execution_env_defaults,
+    _build_manifest,
+    _clip_output,
+    _internal_failures_from_stdout,
+)
 
 
 def test_full_system_runner_detects_internal_success_false_checks():
@@ -65,3 +70,17 @@ def test_full_system_runner_builds_manifest_for_robot_center():
     assert manifest["journeys"][1]["journey"] == "financial::financial_functional_probe"
     assert manifest["journeys"][1]["status"] == "failed"
     assert manifest["journeys"][1]["failed_step"] == "suite_command"
+
+
+def test_full_system_runner_injects_devfull_contract_defaults(monkeypatch):
+    monkeypatch.setenv("APP32_E2E_DEV_USER_ID", "19")
+    env = {}
+
+    _apply_root_execution_env_defaults("DEV_FULL", env)
+
+    assert env["E2E_BASE_URL"] == "http://localhost"
+    assert env["E2E_COMPANY_ID"] == "10"
+    assert env["E2E_USER_ID"] == "19"
+    assert env["E2E_DESTRUCTIVE_ACTIONS_ALLOWED"] == "true"
+    assert env["E2E_REQUIRE_EXPLICIT_COMPANY"] == "true"
+    assert env["PYTHONIOENCODING"] == "utf-8"

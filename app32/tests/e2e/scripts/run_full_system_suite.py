@@ -70,6 +70,63 @@ AGGREGATE_DEPENDENCIES = {
 }
 
 
+def _set_env_default(env: dict[str, str], key: str, value: str | None) -> None:
+    if value is not None and not str(env.get(key) or "").strip():
+        env[key] = str(value)
+
+
+def _resolve_devfull_default_user_id() -> str | None:
+    configured = str(os.environ.get("APP32_E2E_DEV_USER_ID") or "").strip()
+    if configured.isdigit():
+        return configured
+    try:
+        from app import create_app
+        from models.user import User
+
+        app = create_app(os.environ.get("FLASK_CONFIG") or "development")
+        with app.app_context():
+            preferred = (
+                User.query.filter(
+                    User.email.in_(
+                        (
+                            "admin@gestaoversus.com.br",
+                            "teste@gestaoversus.com.br",
+                            "mff2000@gmail.com",
+                        )
+                    ),
+                    User.role == "admin",
+                    User.is_active.is_(True),
+                )
+                .order_by(User.id.asc())
+                .first()
+            )
+            if preferred:
+                return str(int(preferred.id))
+            active_admin = User.query.filter_by(role="admin", is_active=True).order_by(User.id.asc()).first()
+            return str(int(active_admin.id)) if active_admin else None
+    except Exception:
+        return None
+
+
+def _apply_root_execution_env_defaults(environment: str, env: dict[str, str]) -> None:
+    normalized = str(environment or "").strip().upper()
+    _set_env_default(env, "PYTHONIOENCODING", "utf-8")
+    _set_env_default(env, "PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    _set_env_default(env, "E2E_LOGIN_PATH", "/login")
+    _set_env_default(env, "E2E_POST_LOGIN_PATH", "/my-work")
+    _set_env_default(env, "APP_BOOTSTRAP_DB_SCHEMA", "0")
+    _set_env_default(env, "APP_BOOTSTRAP_RUNTIME_SERVICES", "0")
+    _set_env_default(env, "E2E_HEADLESS", "true")
+    _set_env_default(env, "E2E_REQUIRES_ISOLATED_TENANT", "true")
+    _set_env_default(env, "E2E_REQUIRE_EXPLICIT_COMPANY", "true")
+    _set_env_default(env, "E2E_SUITE_TIMEOUT_SECONDS", "600")
+    if normalized == "DEV_FULL":
+        _set_env_default(env, "E2E_BASE_URL", "http://localhost")
+        _set_env_default(env, "E2E_COMPANY_ID", os.environ.get("APP32_E2E_DEV_COMPANY_ID") or "10")
+        _set_env_default(env, "E2E_USER_ID", _resolve_devfull_default_user_id())
+        _set_env_default(env, "E2E_DESTRUCTIVE_ACTIONS_ALLOWED", "true")
+
+
 def _max_captured_output_chars() -> int:
     return int(os.environ.get("E2E_RESULT_OUTPUT_MAX_CHARS") or 20000)
 
@@ -335,6 +392,7 @@ def main() -> int:
     ])
 
     env = os.environ.copy()
+    _apply_root_execution_env_defaults(environment, env)
     results: list[dict[str, object]] = []
     results_by_suite_id: dict[str, dict[str, object]] = {}
     for suite in suites:
