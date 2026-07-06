@@ -32,9 +32,14 @@ FULL_APP_SUITE_IDS = [
     "processes_functional_probe",
     "financial_functional_probe",
     "contracts_functional_probe",
+    "contracts_tenant_contract_probe",
+    "workspace_tenant_contract_probe",
+    "consultive_tenant_contract_probe",
+    "real_estate_tenant_contract_probe",
     "reports_functional_probe",
     "admin_functional_probe",
     "mcp_http_health_probe",
+    "full_coverage_autocorrect_audit",
     "user_concurrency_probe",
     "mcp_concurrency_probe",
     "devfull_transactional_validation",
@@ -89,6 +94,15 @@ def _run_command_with_timeout(command: list[str], *, env: dict[str, str]) -> sub
             stdout=(exc.stdout or stdout or ""),
             stderr=(exc.stderr or stderr or "") + f"\nTimeoutExpired: suíte excedeu {timeout_seconds}s.\n",
         )
+
+
+def _print_json_utf8(payload: object) -> None:
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    try:
+        sys.stdout.write(text + "\n")
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write((text + "\n").encode("utf-8", errors="replace"))
+        sys.stdout.buffer.flush()
 
 
 def _run_suite(suite_id: str, env: dict[str, str]) -> dict[str, Any]:
@@ -226,7 +240,7 @@ def main() -> int:
     }
     (reports_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     (reports_dir / "manifest.json").write_text(json.dumps(_build_manifest(summary), ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    _print_json_utf8(summary)
     return 0 if not failed else 1
 
 

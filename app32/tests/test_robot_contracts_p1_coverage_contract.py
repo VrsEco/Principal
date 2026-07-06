@@ -118,3 +118,39 @@ def test_contracts_p1_templates_have_parseable_ui_contracts():
     assert missing == []
     assert invalid == []
     assert without_controls == []
+
+
+def test_contracts_p1_human_gate_controls_are_structurally_covered():
+    critical_controls = {
+        "app32/templates/modules/contracts/_contract_tab_content.html": [
+            'name="delete_retention_id"',
+            'type="submit"',
+        ],
+        "app32/templates/modules/contracts/contracts_items_catalog.html": [
+            "<form",
+            'method="post"',
+        ],
+        "app32/templates/modules/contracts/contracts_items_catalog_items.html": [
+            "<form",
+            'method="post"',
+        ],
+        "app32/templates/modules/contracts/contracts_items_catalog_structure.html": [
+            "<form",
+            'method="post"',
+        ],
+        "app32/templates/modules/contracts/contracts_list.html": [
+            'name="form_action"',
+            'value="activate_contract"',
+            'value="suspend_contract"',
+            'value="close_contract"',
+            'value="delete_contract"',
+            "confirm(",
+        ],
+    }
+    missing = []
+    for relative_template, markers in critical_controls.items():
+        source = (REPO_ROOT / relative_template).read_text(encoding="utf-8", errors="ignore")
+        for marker in markers:
+            if marker not in source:
+                missing.append(f"{relative_template}:{marker}")
+    assert missing == []

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from services.e2e_operations_center_service import E2EOperationsCenterService
@@ -34,8 +35,8 @@ class RobotTestsCenterService:
         },
         "coverage_audit": {
             "label": "Auditoria de cobertura total",
-            "suite_id": "ui_inventory_contract_scan",
-            "description": "Confere se telas, campos, botões, rotas, JS, tools e MCP estão contemplados nos contratos do robô.",
+            "suite_id": "full_coverage_autocorrect_audit",
+            "description": "Confere rotas, telas, campos, botões, operações e tools; gera log de correções em AA.J.1.",
             "highlight": True,
             "group": "advanced",
         },
@@ -96,10 +97,11 @@ class RobotTestsCenterService:
             "highlight": False,
         },
         "coverage_audit": {
-            "label": "Rodar auditoria de cobertura",
-            "suite_id": "ui_inventory_contract_scan",
-            "description": "Descobre lacunas entre sistema real e testes: telas, campos, ações, rotas, JS, tools e MCP.",
-            "highlight": False,
+            "label": "Cobrir tudo + AA.J.1",
+            "suite_id": "full_coverage_autocorrect_audit",
+            "description": "Um botão para auditar cobertura total e criar log/cards de correção automática em AA.J.1.",
+            "highlight": True,
+            "forced_environment": "DEV_FULL",
         },
         "safe_environment": {
             "label": "Rodar modo seguro",
@@ -501,11 +503,16 @@ class RobotTestsCenterService:
         environment = str(package.get("forced_environment") or environment).upper()
         if environment not in {"DEV_FULL", "PROD_SAFE"}:
             raise ValueError("Ambiente inválido. Use DEV_FULL ou PROD_SAFE.")
+        execution_user_id = cls._resolve_dev_full_robot_user_id(
+            environment=environment,
+            suite_id=str(selected_suite),
+            fallback_user_id=user_id,
+        )
         execution = E2ESupervisedExecutionService.start_execution(
             suite_id=selected_suite,
             environment=environment,
             company_id=company_id,
-            user_id=user_id,
+            user_id=execution_user_id,
         )
         return {
             "company_id": company_id,
@@ -514,6 +521,54 @@ class RobotTestsCenterService:
             "environment": environment,
             "execution": execution,
         }
+
+    @classmethod
+    def _resolve_dev_full_robot_user_id(
+        cls,
+        *,
+        environment: str,
+        suite_id: str,
+        fallback_user_id: int | None,
+    ) -> int | None:
+        """Usa ator admin/robô para DEV_FULL de cobertura total.
+
+        O botão da Central pode ser acionado por usuário com acesso à tela, mas
+        sem permissão em todas as superfícies que o DEV_FULL precisa percorrer.
+        Para evitar falsos 403, o robô executa os pacotes globais de DEV com um
+        usuário técnico/admin ativo. PROD_SAFE preserva o usuário chamador.
+        """
+        if str(environment or "").upper() != "DEV_FULL":
+            return fallback_user_id
+        if suite_id not in {"full_system_validation", "full_coverage_autocorrect_audit", "devfull_full_app_validation"}:
+            return fallback_user_id
+
+        configured = str(os.environ.get("APP32_E2E_DEV_USER_ID") or "").strip()
+        if configured.isdigit():
+            return int(configured)
+
+        try:
+            from models.user import User
+        except Exception:
+            return fallback_user_id
+
+        preferred_emails = (
+            "admin@gestaoversus.com.br",
+            "teste@gestaoversus.com.br",
+            "mff2000@gmail.com",
+        )
+        preferred = (
+            User.query.filter(
+                User.email.in_(preferred_emails),
+                User.role == "admin",
+                User.is_active.is_(True),
+            )
+            .order_by(User.id.asc())
+            .first()
+        )
+        if preferred:
+            return int(preferred.id)
+        active_admin = User.query.filter_by(role="admin", is_active=True).order_by(User.id.asc()).first()
+        return int(active_admin.id) if active_admin else fallback_user_id
 
     @classmethod
     def handle_error_action(cls, *, error_id: str, action: str, company_id: int, user_id: int | None, create_task_fn) -> dict[str, Any]:

@@ -50,9 +50,14 @@ FULL_APP_DEPENDENCIES = {
     "processes_functional_probe",
     "financial_functional_probe",
     "contracts_functional_probe",
+    "contracts_tenant_contract_probe",
+    "workspace_tenant_contract_probe",
+    "consultive_tenant_contract_probe",
+    "real_estate_tenant_contract_probe",
     "reports_functional_probe",
     "admin_functional_probe",
     "mcp_http_health_probe",
+    "full_coverage_autocorrect_audit",
     "user_concurrency_probe",
     "mcp_concurrency_probe",
     "devfull_transactional_validation",
@@ -151,6 +156,15 @@ def _internal_failures_from_stdout(stdout: str) -> list[dict[str, object]]:
     if payload is None:
         return []
     return _collect_failed_success_checks(payload)
+
+
+def _print_json_utf8(payload: object) -> None:
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    try:
+        sys.stdout.write(text + "\n")
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write((text + "\n").encode("utf-8", errors="replace"))
+        sys.stdout.buffer.flush()
 
 
 def _build_manifest(summary: dict[str, object]) -> dict[str, object]:
@@ -383,7 +397,7 @@ def main() -> int:
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     manifest_path = target_dir / "manifest.json"
     manifest_path.write_text(json.dumps(_build_manifest(summary), ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    _print_json_utf8(summary)
     return 0 if summary["failed_suites"] == 0 else 1
 
 

@@ -58,17 +58,12 @@ def _infer_artifact_paths(payload: Any, workdir: Path, environment: str) -> tupl
     run_id = payload.get("run_id") if isinstance(payload, dict) else None
     if not run_id:
         return None, None
-    reports_dir = (
-        workdir
-        / "app32"
-        / "tests"
-        / "e2e"
-        / "outputs"
-        / "full_system"
-        / environment.lower()
-        / str(run_id)
-        / "reports"
-    )
+    outputs_dir = workdir / "app32" / "tests" / "e2e" / "outputs"
+    suite_id = str(payload.get("suite_id") or "") if isinstance(payload, dict) else ""
+    if suite_id == "full_coverage_autocorrect_audit" or payload.get("coverage_gaps_total") is not None:
+        reports_dir = outputs_dir / "full_coverage_autocorrect" / str(run_id) / "reports"
+    else:
+        reports_dir = outputs_dir / "full_system" / environment.lower() / str(run_id) / "reports"
     summary_path = reports_dir / "summary.json"
     manifest_path = reports_dir / "manifest.json"
     return (

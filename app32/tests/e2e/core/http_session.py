@@ -4,10 +4,14 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import sys
+from threading import Lock
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
+
+_LOCAL_FLASK_APP_LOCK = Lock()
+_LOCAL_FLASK_APP_CACHE: Any | None = None
 
 from app32.tests.e2e.config.environments import E2EEnvironmentSettings, E2EExecutionMode
 from app32.tests.e2e.core.auth import AuthPage
@@ -202,12 +206,16 @@ class AuthenticatedHTTPSession:
         app_package_dir = Path(__file__).resolve().parents[3]
         if str(app_package_dir) not in sys.path:
             sys.path.insert(0, str(app_package_dir))
-        try:
-            from app import create_app
-        except ModuleNotFoundError:
-            from app32.app import create_app
+        global _LOCAL_FLASK_APP_CACHE
+        with _LOCAL_FLASK_APP_LOCK:
+            if _LOCAL_FLASK_APP_CACHE is None:
+                try:
+                    from app import create_app
+                except ModuleNotFoundError:
+                    from app32.app import create_app
+                _LOCAL_FLASK_APP_CACHE = create_app("development")
+            app = _LOCAL_FLASK_APP_CACHE
 
-        app = create_app("development")
         client = app.test_client()
         with client.session_transaction() as sess:
             sess["_user_id"] = str(self.settings.user_id)

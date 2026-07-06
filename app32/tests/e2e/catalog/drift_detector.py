@@ -18,7 +18,7 @@ RESOURCE_CALL_PATTERN = re.compile(r'add_resource\((.*?)\)', re.DOTALL)
 STRING_LITERAL_PATTERN = re.compile(r'[\'\"]([^\'\"]+)[\'\"]')
 BLUEPRINT_PREFIX_PATTERN = re.compile(r'Blueprint\([^\n]+?url_prefix\s*=\s*[\'\"]([^\'\"]+)')
 PARAM_PATTERN = re.compile(r"<(?:(?:int|string|float|uuid|path):)?([^>]+)>")
-IGNORED_PARTS = {"archive", "docs", "tests", "__pycache__", ".agent"}
+IGNORED_PARTS = {"archive", "docs", "tests", "scripts", "__pycache__", ".agent"}
 GOVERNED_PREFIXES = (
     "/portal",
     "/my-work",

@@ -194,7 +194,7 @@ class _TemplateElementParser(HTMLParser):
 
 def _iter_python_sources() -> list[Path]:
     app_root = repo_root() / "app32"
-    ignored = {"archive", "docs", "tests", "__pycache__", ".agent"}
+    ignored = {"archive", "docs", "tests", "scripts", "__pycache__", ".agent"}
     return [
         path
         for path in app_root.rglob("*.py")
@@ -273,6 +273,55 @@ def discover_template_routes() -> dict[str, list[str]]:
     return {template: sorted(routes) for template, routes in mapping.items()}
 
 
+INCLUDE_PATTERN = re.compile(
+    r"{%\s*(?:include|import|from)\s+['\"]([^'\"]+\.html)['\"]",
+    re.IGNORECASE,
+)
+
+
+def _template_references(path: Path, *, template_root: Path) -> list[str]:
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    references: list[str] = []
+    for match in INCLUDE_PATTERN.finditer(text):
+        referenced = str(match.group(1) or "").strip().replace("\\", "/")
+        if referenced and not referenced.startswith(("../", "./")):
+            references.append(referenced)
+    return sorted(set(references))
+
+
+def discover_template_route_contexts() -> dict[str, list[str]]:
+    """Mapeia rotas diretas e herdadas por includes/macros.
+
+    Muitas telas reais são compostas por partials/components. Sem propagar a
+    rota do template pai para o partial incluído, o robô classifica campos e
+    botões de componentes como "sem contexto de rota" e não consegue executá-los
+    automaticamente. A propagação é conservadora: apenas `{% include %}`,
+    `{% import %}` e `{% from %}` com literal `.html`; não atribui contexto por
+    herança global de layout (`extends`) para evitar supercobertura artificial.
+    """
+    root = templates_root()
+    route_map = {template: set(routes) for template, routes in discover_template_routes().items()}
+    include_graph: dict[str, set[str]] = {}
+    for path in sorted(root.rglob("*.html")):
+        template = path.relative_to(root).as_posix()
+        include_graph[template] = set(_template_references(path, template_root=root))
+
+    changed = True
+    while changed:
+        changed = False
+        for parent, children in include_graph.items():
+            parent_routes = route_map.get(parent) or set()
+            if not parent_routes:
+                continue
+            for child in children:
+                child_routes = route_map.setdefault(child, set())
+                before = len(child_routes)
+                child_routes.update(parent_routes)
+                if len(child_routes) != before:
+                    changed = True
+    return {template: sorted(routes) for template, routes in sorted(route_map.items())}
+
+
 def _is_partial_template(template: str, routes: list[str]) -> bool:
     parts = set(Path(template).parts)
     filename = Path(template).name
@@ -287,7 +336,7 @@ def _scan_template(path: Path, *, template: str, routes: list[str], contracted_r
 
 def discover_ui_inventory() -> dict[str, Any]:
     root = templates_root()
-    route_map = discover_template_routes()
+    route_map = discover_template_route_contexts()
     contracted_routes = {normalize_route(item["route"]) for item in iter_inventory_items() if item.get("route")}
 
     screens: list[UIScreenCandidate] = []

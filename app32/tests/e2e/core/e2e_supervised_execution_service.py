@@ -86,6 +86,9 @@ class E2ESupervisedExecutionService:
             company_id=company_id,
             user_id=user_id,
         )
+        if suite_id == "full_coverage_autocorrect_audit":
+            env["E2E_AUTOCORRECT_CREATE_AAJ1"] = "true"
+            env["AGENT_BACKLOG_PROJECT_CODE"] = "AA.J.1"
         cls._inject_browser_native_library_path(env)
 
         record = SupervisedExecutionRecord(
@@ -327,6 +330,9 @@ class E2ESupervisedExecutionService:
         """
         if os.name == "nt":
             with open(os.devnull, "rb") as devnull_in, open(os.devnull, "wb") as devnull_out:
+                creationflags = 0
+                for flag_name in ("CREATE_NEW_PROCESS_GROUP", "DETACHED_PROCESS"):
+                    creationflags |= int(getattr(subprocess, flag_name, 0))
                 process = subprocess.Popen(
                     worker_command,
                     cwd=str(repo_root()),
@@ -335,6 +341,7 @@ class E2ESupervisedExecutionService:
                     stdout=devnull_out,
                     stderr=devnull_out,
                     close_fds=True,
+                    creationflags=creationflags,
                 )
             cls._process_registry[str(process.pid)] = process
             return int(process.pid)
