@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -107,21 +108,10 @@ class E2ESupervisedExecutionService:
             stdout_path=stdout_path,
             stderr_path=stderr_path,
         )
-        with open(os.devnull, "rb") as devnull_in, open(os.devnull, "wb") as devnull_out:
-            process = subprocess.Popen(
-                worker_command,
-                cwd=str(repo_root()),
-                env=env,
-                stdin=devnull_in,
-                stdout=devnull_out,
-                stderr=devnull_out,
-                close_fds=True,
-                start_new_session=(os.name != "nt"),
-            )
-        cls._process_registry[execution_id] = process
         payload = record.to_dict()
-        payload["pid"] = process.pid
-        payload["worker_pid"] = process.pid
+        worker_pid = cls._spawn_worker(worker_command, env=env)
+        payload["pid"] = worker_pid
+        payload["worker_pid"] = worker_pid
         cls._write_payload(execution_id, payload)
         return payload
 
@@ -325,6 +315,48 @@ class E2ESupervisedExecutionService:
             "--meta-path",
             str(E2ESupervisedExecutionService._meta_path(execution_id)),
         ]
+
+    @classmethod
+    def _spawn_worker(cls, worker_command: list[str], *, env: dict[str, str]) -> int:
+        """Inicia o worker fora do ciclo de vida da requisição web.
+
+        Em produção Configr/uWSGI, subprocessos longos ligados diretamente ao
+        worker web podem ficar órfãos ou serem encerrados antes de escrever o
+        `summary.json`. O launcher POSIX abaixo retorna imediatamente, deixa o
+        worker sob `nohup` em sessão própria e persiste o PID no meta.json.
+        """
+        if os.name == "nt":
+            with open(os.devnull, "rb") as devnull_in, open(os.devnull, "wb") as devnull_out:
+                process = subprocess.Popen(
+                    worker_command,
+                    cwd=str(repo_root()),
+                    env=env,
+                    stdin=devnull_in,
+                    stdout=devnull_out,
+                    stderr=devnull_out,
+                    close_fds=True,
+                )
+            cls._process_registry[str(process.pid)] = process
+            return int(process.pid)
+
+        command_line = " ".join(shlex.quote(str(part)) for part in worker_command)
+        launcher = subprocess.run(
+            [
+                "/bin/sh",
+                "-c",
+                f"cd {shlex.quote(str(repo_root()))} && nohup {command_line} >/dev/null 2>&1 < /dev/null & echo $!",
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        raw_pid = str(launcher.stdout or "").strip().splitlines()[-1:] or [""]
+        try:
+            pid = int(raw_pid[0])
+        except ValueError as exc:
+            raise RuntimeError(f"Falha ao iniciar worker supervisionado: {launcher.stderr or launcher.stdout}") from exc
+        return pid
 
     @staticmethod
     def _inject_browser_native_library_path(env: dict[str, str]) -> None:
