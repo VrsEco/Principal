@@ -4,6 +4,8 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -15,6 +17,16 @@ from app32.tests.e2e.catalog.suite_catalog import E2ESuiteDefinition, list_suite
 
 EXCLUDED_FULL_RUN_SUITES = {"inventory_system_scan", "full_system_validation"}
 VIRTUAL_AGGREGATE_SUITES = {"devfull_transactional_validation", "devfull_full_app_validation"}
+
+
+@dataclass
+class CommandResult:
+    args: list[str]
+    returncode: int
+    stdout: str
+    stderr: str
+    stdout_original_chars: int
+    stderr_original_chars: int
 
 TRANSACTIONAL_DEPENDENCIES = {
     "meetings_crud_devfull",
@@ -67,6 +79,34 @@ def _clip_output(text: str, *, max_chars: int | None = None) -> str:
         f"mantendo os últimos {limit}]\n"
         f"{value[-limit:]}"
     )
+
+
+def _read_limited_process_output(path: Path, *, max_chars: int | None = None) -> tuple[str, int]:
+    """Lê saída de subprocesso sem carregar arquivos gigantes em memória.
+
+    O DEV_FULL pode produzir stdout/stderr muito grandes em suítes de UI. Na
+    Central em produção, manter esses buffers em memória junto do uWSGI elevou
+    risco de OOM. Para preservar o diagnóstico, mantemos a saída completa só
+    quando ela já está dentro do limite operacional; acima disso, lemos apenas
+    a cauda e anotamos o tamanho original aproximado em caracteres.
+    """
+    limit = max_chars if max_chars is not None else _max_captured_output_chars()
+    if not path.exists():
+        return "", 0
+    size_bytes = path.stat().st_size
+    if limit <= 0 or size_bytes <= limit:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        return text, len(text)
+
+    read_bytes = max(limit * 4, 4096)
+    with path.open("rb") as handle:
+        handle.seek(max(size_bytes - read_bytes, 0))
+        raw = handle.read()
+    text = raw.decode("utf-8", errors="replace")
+    if len(text) > limit:
+        text = text[-limit:]
+    approx_original_chars = size_bytes
+    return _clip_output(text, max_chars=limit), approx_original_chars
 
 
 def _decode_stdout_json(stdout: str) -> object | None:
@@ -237,34 +277,39 @@ def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
     process.kill()
 
 
-def _run_command_with_timeout(command: list[str], *, env: dict[str, str], suite_id: str | None = None) -> subprocess.CompletedProcess[str]:
+def _run_command_with_timeout(command: list[str], *, env: dict[str, str], suite_id: str | None = None) -> CommandResult:
     timeout_seconds = _suite_timeout_seconds(suite_id)
-    process = subprocess.Popen(
-        command,
-        cwd=str(ROOT_DIR),
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-    )
-    try:
-        stdout, stderr = process.communicate(timeout=timeout_seconds)
-        return subprocess.CompletedProcess(
+    with tempfile.TemporaryDirectory(prefix="gv-e2e-suite-") as temp_dir:
+        stdout_path = Path(temp_dir) / "stdout.log"
+        stderr_path = Path(temp_dir) / "stderr.log"
+        with stdout_path.open("wb") as stdout_handle, stderr_path.open("wb") as stderr_handle:
+            process = subprocess.Popen(
+                command,
+                cwd=str(ROOT_DIR),
+                env=env,
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+                stdin=subprocess.DEVNULL,
+                close_fds=True,
+            )
+            try:
+                process.wait(timeout=timeout_seconds)
+                returncode = int(process.returncode or 0)
+            except subprocess.TimeoutExpired:
+                _terminate_process_tree(process)
+                process.wait()
+                returncode = 124
+                stderr_handle.write(f"\nTimeoutExpired: suíte excedeu {timeout_seconds}s.\n".encode("utf-8"))
+
+        stdout, stdout_original_chars = _read_limited_process_output(stdout_path)
+        stderr, stderr_original_chars = _read_limited_process_output(stderr_path)
+        return CommandResult(
             args=command,
-            returncode=int(process.returncode or 0),
-            stdout=stdout or "",
-            stderr=stderr or "",
-        )
-    except subprocess.TimeoutExpired as exc:
-        _terminate_process_tree(process)
-        stdout, stderr = process.communicate()
-        return subprocess.CompletedProcess(
-            args=command,
-            returncode=124,
-            stdout=(exc.stdout or stdout or ""),
-            stderr=(exc.stderr or stderr or "") + f"\nTimeoutExpired: suíte excedeu {timeout_seconds}s.\n",
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
+            stdout_original_chars=stdout_original_chars,
+            stderr_original_chars=stderr_original_chars,
         )
 
 
@@ -304,10 +349,10 @@ def main() -> int:
                 "returncode": effective_returncode,
                 "process_returncode": completed.returncode,
                 "internal_failures": internal_failures,
-                "stdout": _clip_output(completed.stdout),
-                "stderr": _clip_output(completed.stderr),
-                "stdout_original_chars": len(completed.stdout or ""),
-                "stderr_original_chars": len(completed.stderr or ""),
+                "stdout": completed.stdout,
+                "stderr": completed.stderr,
+                "stdout_original_chars": completed.stdout_original_chars,
+                "stderr_original_chars": completed.stderr_original_chars,
             }
         )
         results_by_suite_id[suite.suite_id] = results[-1]
