@@ -10,7 +10,6 @@
 
 {% block navbar_actions %}
 <div class="robot-tests-navbar-actions">
-    <a href="/qa/e2e" class="robot-tests-btn robot-tests-btn--secondary">Detalhes técnicos</a>
     <a href="/qa/robot-tests" class="robot-tests-btn robot-tests-btn--primary">Atualizar</a>
 </div>
 {% endblock %}
@@ -22,8 +21,8 @@
             <span class="robot-tests-eyebrow">QA Automation</span>
             <h1>Central do Robô de Testes</h1>
             <p>
-                Acompanhe, em linguagem simples, se as telas e funcionalidades estão funcionando como o usuário espera.
-                A central técnica E2E continua disponível em detalhes técnicos.
+                Rode o teste completo DEV_FULL e acompanhe se as telas, campos, operações, tools e MCP continuam funcionando.
+                Os detalhes técnicos ficam reservados para suporte.
             </p>
         </div>
         <div class="robot-tests-company-pill">
@@ -49,56 +48,8 @@
                 <summary class="robot-tests-collapse__summary">
                 <div class="robot-tests-panel__header">
                     <div>
-                        <h2>Biblioteca de testes</h2>
-                        <p>Esta é a árvore canônica do robô. Clique em uma categoria para ver o que ela valida ou execute diretamente.</p>
-                    </div>
-                    <span class="robot-tests-badge">{{ state.test_categories | length }} categorias</span>
-                </div>
-                </summary>
-                <div class="robot-tests-category-grid">
-                    {% for category in state.test_categories %}
-                    <article class="robot-tests-category-card">
-                        <button type="button"
-                                class="robot-tests-category-card__body"
-                                data-area='{{ {
-                                    "label": category.label,
-                                    "status_label": "Categoria de teste",
-                                    "last_checked_at": category.items_count ~ " verificação(ões) previstas",
-                                    "environment": "Conforme execução",
-                                    "run_id": category.suite_id,
-                                    "summary": category.summary ~ " Itens: " ~ (category["items"] | join(", "))
-                                } | tojson }}'>
-                            <span>{{ category.label }}</span>
-                            <strong>{{ category.summary }}</strong>
-                            <small>{{ category.items_count }} verificação(ões) previstas</small>
-                        </button>
-                        <ul>
-                            {% for item in category["items"][:4] %}
-                            <li>{{ item }}</li>
-                            {% endfor %}
-                            {% if category["items"] | length > 4 %}
-                            <li>+ {{ (category["items"] | length) - 4 }} item(ns)</li>
-                            {% endif %}
-                        </ul>
-                        <button type="button"
-                                class="robot-tests-link-btn robot-tests-category-run"
-                                data-package-key="{{ category.key }}"
-                                {% if not category.available %}disabled{% endif %}>
-                            Executar categoria
-                        </button>
-                    </article>
-                    {% else %}
-                    <p class="robot-tests-empty">Nenhuma categoria canônica mapeada ainda.</p>
-                    {% endfor %}
-                </div>
-            </details>
-
-            <details class="robot-tests-panel robot-tests-collapse">
-                <summary class="robot-tests-collapse__summary">
-                <div class="robot-tests-panel__header">
-                    <div>
-                        <h2>Último teste por área</h2>
-                        <p>Resultado mais recente consolidado pelo motor técnico atual.</p>
+                        <h2>Resultado por área</h2>
+                        <p>Resumo consolidado do último teste completo.</p>
                     </div>
                     <span class="robot-tests-badge">Resultado</span>
                 </div>
@@ -155,15 +106,12 @@
 
         <aside class="robot-tests-action-column">
             <section class="robot-tests-panel robot-tests-panel--sticky">
-                <h2>Pacotes de execução</h2>
-                <p class="robot-tests-help-text">Escolha como o robô deve rodar. A biblioteca de testes ao lado mostra o que será coberto.</p>
-                <label class="robot-tests-field">
-                    <span>Ambiente</span>
-                    <select id="robotTestsEnvironment">
-                        <option value="PROD_SAFE">PROD_SAFE — seguro</option>
-                        <option value="DEV_FULL">DEV_FULL — laboratório</option>
-                    </select>
-                </label>
+                <h2>Teste completo</h2>
+                <p class="robot-tests-help-text">Use este botão para validar tudo que está coberto pelo robô no ambiente DEV_FULL.</p>
+                <div class="robot-tests-field robot-tests-field--readonly">
+                    <span>Modo padrão</span>
+                    <strong>DEV_FULL — teste completo</strong>
+                </div>
 
                 <div class="robot-tests-run-monitor" id="robotTestsRunMonitor" hidden>
                     <div class="robot-tests-run-monitor__header">
@@ -187,9 +135,10 @@
                 </div>
 
                 <div class="robot-tests-action-group">
-                    <span class="robot-tests-group-title">Execução</span>
+                    <span class="robot-tests-group-title">Ação principal</span>
                     <div class="robot-tests-package-list">
                     {% for package in state.execution_packages %}
+                    {% if package.key == 'complete' %}
                     <button type="button"
                             class="robot-tests-package-btn {{ 'is-highlight' if package.highlight else '' }}"
                             data-package-key="{{ package.key }}"
@@ -197,25 +146,21 @@
                         <strong>{{ package.label }}</strong>
                         <small>{{ package.description }}</small>
                     </button>
+                    {% endif %}
                     {% endfor %}
                     </div>
                 </div>
 
                 <details class="robot-tests-area-picker robot-tests-area-picker--advanced">
-                    <summary>Avançado</summary>
-                    <p class="robot-tests-help-text">Use para ver evidências técnicas e acessar a Central E2E antiga.</p>
+                    <summary>Suporte técnico</summary>
+                    <p class="robot-tests-help-text">Área para diagnóstico avançado. Não é necessária para o uso normal do robô.</p>
                     <div class="robot-tests-side-links">
-                        <a href="{{ state.technical_center_url }}" class="robot-tests-btn robot-tests-btn--secondary">Central E2E técnica</a>
+                        <a href="{{ state.technical_center_url }}" class="robot-tests-btn robot-tests-btn--secondary">Abrir tela técnica</a>
                         {% if state.evidence_url %}
                         <a href="{{ state.evidence_url }}" class="robot-tests-btn robot-tests-btn--secondary">Última evidência</a>
                         {% endif %}
                     </div>
                 </details>
-
-                <div class="robot-tests-side-links robot-tests-side-links--primary">
-                    <a href="{{ state.history_url }}" class="robot-tests-btn robot-tests-btn--secondary">Histórico</a>
-                    <a href="{{ state.reports_url }}" class="robot-tests-btn robot-tests-btn--secondary">Relatórios</a>
-                </div>
             </section>
         </aside>
     </div>
@@ -310,6 +255,8 @@
     .robot-tests-link-btn:disabled { color:var(--text-secondary); cursor:not-allowed; opacity:.6; }
     .robot-tests-field { display:flex; flex-direction:column; gap:.4rem; color:var(--text-secondary); }
     .robot-tests-field select { border:1px solid var(--border); background:var(--surface-secondary); color:var(--text-primary); border-radius:12px; padding:.8rem .9rem; }
+    .robot-tests-field--readonly { border:1px solid var(--border); background:var(--surface-secondary); border-radius:12px; padding:.8rem .9rem; }
+    .robot-tests-field--readonly strong { color:var(--text-primary); }
     .robot-tests-package-btn { background:var(--surface-secondary); color:var(--text-primary); border-color:var(--border); padding:1rem; text-align:left; display:flex; flex-direction:column; gap:.3rem; }
     .robot-tests-package-btn small { color:var(--text-secondary); font-weight:600; }
     .robot-tests-package-btn.is-highlight { background:linear-gradient(135deg, var(--primary), #7c3aed); color:#fff; box-shadow:0 12px 28px rgba(37,99,235,.25); }
@@ -508,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({
                         company_id: companyId,
                         package_key: button.dataset.packageKey,
-                        environment: envSelect?.value || 'PROD_SAFE',
+                        environment: envSelect?.value || 'DEV_FULL',
                     }),
                 });
                 const payload = await readRobotTestsJson(response);

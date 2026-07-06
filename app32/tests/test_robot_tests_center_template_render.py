@@ -125,24 +125,22 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     )
 
     assert "Central do Robô de Testes" in html
-    assert "Biblioteca de testes" in html
-    assert "Pacotes de execução" in html
-    assert "Saúde do Sistema" in html
-    assert "Deriva de Cobertura" in html
-    assert "Matriz de Cobertura Total" in html
-    assert "Cleanup / Reversão" in html
-    assert "Executar categoria" in html
+    assert "Teste completo" in html
+    assert "Modo padrão" in html
+    assert "DEV_FULL — teste completo" in html
     assert "Rodar teste completo" in html
-    assert "Rodar auditoria de cobertura" in html
-    assert "Rodar pós-deploy" in html
-    assert "Último teste por área" in html
+    assert "Resultado por área" in html
     assert "Erros encontrados e ações" in html
     assert "Disparar correção" in html
-    assert "Avançado" in html
-    assert "Central E2E técnica" in html
+    assert "Suporte técnico" in html
+    assert "Abrir tela técnica" in html
     assert "robotTestsRunMonitor" in html
     assert "O DEV_FULL continua rodando em segundo plano" in html
     assert "0% estimado" in html
+    assert "Biblioteca de testes" not in html
+    assert "Executar categoria" not in html
+    assert "Rodar auditoria de cobertura" not in html
+    assert "Rodar pós-deploy" not in html
 
 
 def test_robot_tests_center_template_uses_robust_json_reader():
