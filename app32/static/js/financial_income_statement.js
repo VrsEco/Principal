@@ -37,13 +37,36 @@ document.addEventListener('DOMContentLoaded', function () {
         .filter(Boolean);
     };
 
+    var visibleRowIds = function () {
+      return rows
+        .filter(function (row) {
+          return !row.classList.contains('is-hidden');
+        })
+        .map(function (row) {
+          return row.dataset.rowId;
+        })
+        .filter(Boolean);
+    };
+
+    var buildExportPdfUrl = function (link) {
+      var url = new URL(link.getAttribute('href') || window.location.href, window.location.origin);
+      var collapsedIds = collapsedRowIds();
+      url.searchParams.delete('collapsed_row_ids');
+      url.searchParams.delete('visible_row_ids');
+      collapsedIds.forEach(function (rowId) {
+        url.searchParams.append('collapsed_row_ids', rowId);
+      });
+      if (collapsedIds.length) {
+        visibleRowIds().forEach(function (rowId) {
+          url.searchParams.append('visible_row_ids', rowId);
+        });
+      }
+      return url;
+    };
+
     var syncExportPdfLinks = function () {
       document.querySelectorAll('[data-dre-export-pdf]').forEach(function (link) {
-        var url = new URL(link.getAttribute('href') || window.location.href, window.location.origin);
-        url.searchParams.delete('collapsed_row_ids');
-        collapsedRowIds().forEach(function (rowId) {
-          url.searchParams.append('collapsed_row_ids', rowId);
-        });
+        var url = buildExportPdfUrl(link);
         link.setAttribute('href', url.pathname + url.search + url.hash);
       });
     };
@@ -98,8 +121,14 @@ document.addEventListener('DOMContentLoaded', function () {
     syncExportPdfLinks();
 
     document.addEventListener('click', function (event) {
-      if (event.target.closest('[data-dre-export-pdf]')) {
-        syncExportPdfLinks();
+      var exportLink = event.target.closest('[data-dre-export-pdf]');
+      if (exportLink) {
+        var exportUrl = buildExportPdfUrl(exportLink);
+        exportLink.setAttribute('href', exportUrl.pathname + exportUrl.search + exportUrl.hash);
+        if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+          event.preventDefault();
+          window.open(exportUrl.toString(), exportLink.getAttribute('target') || '_blank', 'noopener');
+        }
       }
     });
   }

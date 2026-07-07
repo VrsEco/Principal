@@ -51,6 +51,7 @@ _LIST_FILTER_KEYS = {
     "excluded_entry_ids",
     "excluded_projected_refs",
     "collapsed_row_ids",
+    "visible_row_ids",
 }
 
 _SINGLE_VALUE_FILTER_KEYS = {

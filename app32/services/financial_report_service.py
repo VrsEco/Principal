@@ -3215,6 +3215,7 @@ class FinancialReportService:
                 "orientation": filters.orientation,
                 "hierarchy_rows": hierarchy_rows,
                 "collapsed_row_ids": filters.collapsed_row_ids,
+                "visible_row_ids": filters.visible_row_ids,
                 "show_status_columns": not consolidated_by_period,
                 "show_budget_column": filters.show_budget_column,
                 "show_competence_column": filters.show_competence_column,
@@ -7361,12 +7362,19 @@ class FinancialReportService:
         elements: List[Any] = [hero, Spacer(1, 7)]
 
         rows = list(report_payload.get("hierarchy_rows") or report_payload.get("rows") or [])
+        visible_row_ids = {
+            str(row_id)
+            for row_id in (report_payload.get("visible_row_ids") or [])
+            if str(row_id or "").strip()
+        }
+        if visible_row_ids:
+            rows = [row for row in rows if str(row.get("id") or "") in visible_row_ids]
         collapsed_row_ids = {
             str(row_id)
             for row_id in (report_payload.get("collapsed_row_ids") or [])
             if str(row_id or "").strip()
         }
-        if collapsed_row_ids:
+        if collapsed_row_ids and not visible_row_ids:
             parent_by_row_id = {
                 str(row.get("id") or ""): str(row.get("parent_id") or "")
                 for row in rows
