@@ -64,8 +64,36 @@ document.addEventListener('DOMContentLoaded', function () {
       return url;
     };
 
+    var appendHiddenField = function (container, name, value) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      container.appendChild(input);
+    };
+
+    var populateExportPdfForm = function (form) {
+      var container = form && form.querySelector('[data-dre-export-state-fields]');
+      if (!container) {
+        return;
+      }
+      var collapsedIds = collapsedRowIds();
+      container.innerHTML = '';
+      collapsedIds.forEach(function (rowId) {
+        appendHiddenField(container, 'collapsed_row_ids', rowId);
+      });
+      if (collapsedIds.length) {
+        visibleRowIds().forEach(function (rowId) {
+          appendHiddenField(container, 'visible_row_ids', rowId);
+        });
+      }
+    };
+
     var syncExportPdfLinks = function () {
       document.querySelectorAll('[data-dre-export-pdf]').forEach(function (link) {
+        if (!link.matches('a')) {
+          return;
+        }
         var url = buildExportPdfUrl(link);
         link.setAttribute('href', url.pathname + url.search + url.hash);
       });
@@ -122,13 +150,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.addEventListener('click', function (event) {
       var exportLink = event.target.closest('[data-dre-export-pdf]');
-      if (exportLink) {
+      if (exportLink && exportLink.matches('a')) {
         var exportUrl = buildExportPdfUrl(exportLink);
         exportLink.setAttribute('href', exportUrl.pathname + exportUrl.search + exportUrl.hash);
         if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
           event.preventDefault();
           window.open(exportUrl.toString(), exportLink.getAttribute('target') || '_blank', 'noopener');
         }
+      }
+    });
+
+    document.addEventListener('submit', function (event) {
+      var form = event.target.closest('[data-dre-export-pdf-form]');
+      if (form) {
+        populateExportPdfForm(form);
       }
     });
   }

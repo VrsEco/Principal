@@ -24,6 +24,10 @@
   color: #fff;
 }
 
+.dre-report-header-actions form {
+  margin: 0;
+}
+
 .dre-report-viewer {
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),

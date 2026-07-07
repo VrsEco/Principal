@@ -32,7 +32,13 @@
         <div class="report-workspace-header-actions dre-report-header-actions no-print">
             <a class="btn btn-secondary" href="/financial/reports/{{ report.report_slug }}{% if report_query %}?{{ report_query }}{% endif %}">Filtros</a>
             <a class="btn btn-secondary" href="/financial/reports/{{ report.report_slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
-            <a class="btn btn-secondary" data-dre-export-pdf href="/financial/reports/{{ report.report_slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+            <form method="post"
+                  action="/financial/reports/{{ report.report_slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}"
+                  target="_blank"
+                  data-dre-export-pdf-form>
+                <span data-dre-export-state-fields hidden></span>
+                <button type="submit" class="btn btn-secondary" data-dre-export-pdf>Exportar PDF</button>
+            </form>
             <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
         </div>
     </header>

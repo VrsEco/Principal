@@ -83,12 +83,13 @@ def _request_filters_payload(*, excluded_keys=None):
     excluded = set(_IGNORED_FILTER_QUERY_KEYS)
     if excluded_keys:
         excluded.update({str(key) for key in excluded_keys if key})
+    source = request.values
     payload = {}
     manual_values = {}
-    for key in request.args.keys():
+    for key in source.keys():
         if key in excluded:
             continue
-        values = _normalize_list_filter_values(request.args.getlist(key))
+        values = _normalize_list_filter_values(source.getlist(key))
         if not values:
             continue
         manual_match = re.match(r'^manual_value_(\d+)$', key)
@@ -336,8 +337,8 @@ def financial_report_export_xlsx(report_slug: str):
     )
 
 
-@financial_bp.route('/financial/reports/<report_slug>/export.pdf')
-@financial_bp.route('/financial/reports/<report_slug>/export-pdf')
+@financial_bp.route('/financial/reports/<report_slug>/export.pdf', methods=['GET', 'POST'])
+@financial_bp.route('/financial/reports/<report_slug>/export-pdf', methods=['GET', 'POST'])
 @permission_required('financial', 'view')
 def financial_report_export_pdf(report_slug: str):
     company, report = _build_financial_report_or_abort(report_slug)
