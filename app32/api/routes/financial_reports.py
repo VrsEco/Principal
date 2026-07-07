@@ -50,6 +50,7 @@ _LIST_FILTER_KEYS = {
     "counterparty_ids",
     "excluded_entry_ids",
     "excluded_projected_refs",
+    "collapsed_row_ids",
 }
 
 _SINGLE_VALUE_FILTER_KEYS = {

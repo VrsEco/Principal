@@ -3214,6 +3214,7 @@ class FinancialReportService:
             extra={
                 "orientation": filters.orientation,
                 "hierarchy_rows": hierarchy_rows,
+                "collapsed_row_ids": filters.collapsed_row_ids,
                 "show_status_columns": not consolidated_by_period,
                 "show_budget_column": filters.show_budget_column,
                 "show_competence_column": filters.show_competence_column,
@@ -7360,6 +7361,31 @@ class FinancialReportService:
         elements: List[Any] = [hero, Spacer(1, 7)]
 
         rows = list(report_payload.get("hierarchy_rows") or report_payload.get("rows") or [])
+        collapsed_row_ids = {
+            str(row_id)
+            for row_id in (report_payload.get("collapsed_row_ids") or [])
+            if str(row_id or "").strip()
+        }
+        if collapsed_row_ids:
+            parent_by_row_id = {
+                str(row.get("id") or ""): str(row.get("parent_id") or "")
+                for row in rows
+                if row.get("id")
+            }
+
+            def _is_hidden_by_collapsed_parent(row: Dict[str, Any]) -> bool:
+                parent_id = str(row.get("parent_id") or "")
+                visited: set[str] = set()
+                while parent_id:
+                    if parent_id in collapsed_row_ids:
+                        return True
+                    if parent_id in visited:
+                        break
+                    visited.add(parent_id)
+                    parent_id = parent_by_row_id.get(parent_id, "")
+                return False
+
+            rows = [row for row in rows if not _is_hidden_by_collapsed_parent(row)]
         if not rows:
             elements.append(Paragraph("Nenhuma conta encontrada para os filtros informados.", empty_style))
             return elements

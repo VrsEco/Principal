@@ -26,6 +26,28 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     };
 
+    var collapsedRowIds = function () {
+      return rows
+        .filter(function (row) {
+          return row.dataset.hasChildren === 'true' && row.dataset.collapsed === 'true';
+        })
+        .map(function (row) {
+          return row.dataset.rowId;
+        })
+        .filter(Boolean);
+    };
+
+    var syncExportPdfLinks = function () {
+      document.querySelectorAll('[data-dre-export-pdf]').forEach(function (link) {
+        var url = new URL(link.getAttribute('href') || window.location.href, window.location.origin);
+        url.searchParams.delete('collapsed_row_ids');
+        collapsedRowIds().forEach(function (rowId) {
+          url.searchParams.append('collapsed_row_ids', rowId);
+        });
+        link.setAttribute('href', url.pathname + url.search + url.hash);
+      });
+    };
+
     var setCollapsedState = function (row, collapsed) {
       if (row && row.dataset.hasChildren === 'true') {
         row.dataset.collapsed = collapsed ? 'true' : 'false';
@@ -40,6 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         setCollapsedState(row, row.dataset.collapsed !== 'true');
         applyVisibility();
+        syncExportPdfLinks();
       });
     });
 
@@ -53,6 +76,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
       applyVisibility();
+      syncExportPdfLinks();
     };
 
     var expandAll = function () {
@@ -60,6 +84,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setCollapsedState(row, false);
       });
       applyVisibility();
+      syncExportPdfLinks();
     };
 
     if (collapseAllButton) {
@@ -70,6 +95,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     applyVisibility();
+    syncExportPdfLinks();
+
+    document.addEventListener('click', function (event) {
+      if (event.target.closest('[data-dre-export-pdf]')) {
+        syncExportPdfLinks();
+      }
+    });
   }
 
   var drilldownUrl = root && root.dataset ? root.dataset.dreDrilldownUrl : '';

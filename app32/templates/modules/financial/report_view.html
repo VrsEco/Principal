@@ -187,8 +187,8 @@
 
 {% block scripts %}
 {{ super() }}
-{% if report.report_type == 'income_statement' %}
-<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260421d') }}"></script>
+{% if report.report_type in ['income_statement', 'income_statement_2'] %}
+<script src="{{ url_for('static', filename='js/financial_income_statement.js', v='20260706b') }}"></script>
 {% endif %}
 {% endblock %}
 
