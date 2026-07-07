@@ -5841,6 +5841,256 @@ class FinancialReportService:
         return FinancialReportService._merge_pdf_bytes([portrait_pdf, documents_pdf])
 
     @staticmethod
+    def _pdf_text(value: Any) -> str:
+        return (
+            str(value if value is not None else "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    @staticmethod
+    def _ledger_amount_color(value: Any) -> colors.Color:
+        amount = FinancialReportService._parse_currency_label(value)
+        if amount > 0:
+            return colors.HexColor("#2563eb")
+        if amount < 0:
+            return colors.HexColor("#dc2626")
+        return colors.HexColor("#334155")
+
+    @staticmethod
+    def _build_ledger_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "LedgerTitle",
+            parent=styles["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=17,
+            leading=20,
+            textColor=colors.white,
+            spaceAfter=4,
+        )
+        subtitle_style = ParagraphStyle(
+            "LedgerSubtitle",
+            parent=styles["BodyText"],
+            fontSize=8.5,
+            leading=11,
+            textColor=colors.HexColor("#dbeafe"),
+        )
+        section_label_style = ParagraphStyle(
+            "LedgerSectionLabel",
+            parent=styles["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=6.2,
+            leading=7.2,
+            textColor=colors.HexColor("#2563eb"),
+            uppercase=True,
+        )
+        card_value_style = ParagraphStyle(
+            "LedgerCardValue",
+            parent=styles["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=8.2,
+            leading=10,
+            textColor=colors.HexColor("#0f172a"),
+        )
+        group_title_style = ParagraphStyle(
+            "LedgerGroupTitle",
+            parent=styles["Heading3"],
+            fontName="Helvetica-Bold",
+            fontSize=9.8,
+            leading=12,
+            textColor=colors.white,
+        )
+        group_meta_style = ParagraphStyle(
+            "LedgerGroupMeta",
+            parent=styles["BodyText"],
+            fontSize=7.2,
+            leading=9,
+            alignment=TA_RIGHT,
+            textColor=colors.HexColor("#dbeafe"),
+        )
+        cell_style = ParagraphStyle(
+            "LedgerCell",
+            parent=styles["BodyText"],
+            fontSize=6.1,
+            leading=7.4,
+            textColor=colors.HexColor("#334155"),
+        )
+        small_cell_style = ParagraphStyle(
+            "LedgerSmallCell",
+            parent=cell_style,
+            fontSize=5.6,
+            leading=6.8,
+        )
+        money_style = ParagraphStyle(
+            "LedgerMoney",
+            parent=cell_style,
+            fontName="Helvetica-Bold",
+            alignment=TA_RIGHT,
+        )
+        header_style = ParagraphStyle(
+            "LedgerHeaderCell",
+            parent=styles["BodyText"],
+            fontName="Helvetica-Bold",
+            fontSize=5.8,
+            leading=7,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#0f172a"),
+        )
+
+        def p(value: Any, style: ParagraphStyle = cell_style) -> Paragraph:
+            return Paragraph(FinancialReportService._pdf_text(value), style)
+
+        def section_cards(items: Sequence[Dict[str, Any]], *, columns: int = 4) -> Optional[Table]:
+            normalized = list(items or [])
+            if not normalized:
+                return None
+            rows: List[List[Any]] = []
+            for start in range(0, len(normalized), columns):
+                current = normalized[start:start + columns]
+                row = []
+                for item in current:
+                    row.append([
+                        p(str(item.get("label", "")).upper(), section_label_style),
+                        p(item.get("value", ""), card_value_style),
+                    ])
+                while len(row) < columns:
+                    row.append("")
+                rows.append(row)
+            table = Table(rows, colWidths=[available_width / columns] * columns, hAlign="LEFT")
+            table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#bfdbfe")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#dbeafe")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            return table
+
+        elements: List[Any] = []
+        hero_data = [[
+            [p("GESTÃO FINANCEIRA · RAZÃO ANALÍTICO", subtitle_style), p(report_payload.get("title", "Razão"), title_style)],
+            p(
+                f"{report_payload.get('company_name') or 'Empresa ativa'} · {report_payload.get('subtitle') or ''}",
+                subtitle_style,
+            ),
+        ]]
+        hero = Table(hero_data, colWidths=[available_width * 0.62, available_width * 0.38])
+        hero.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0f172a")),
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0f172a")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 14),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+            ("TOPPADDING", (0, 0), (-1, -1), 12),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+        ]))
+        elements.extend([hero, Spacer(1, 8)])
+
+        insight_table = section_cards([
+            {"label": "Agrupado por", "value": report_payload.get("grouped_by_label", "-")},
+            {"label": "Competência", "value": next((item.get("value") for item in report_payload.get("general_info", []) if item.get("label") == "Competência"), "-")},
+            {"label": "Status", "value": next((item.get("value") for item in report_payload.get("filters", []) if item.get("label") == "Status considerados"), "-")},
+        ], columns=3)
+        if insight_table:
+            elements.extend([insight_table, Spacer(1, 7)])
+        stats_table = section_cards(report_payload.get("summary_cards", []), columns=4)
+        if stats_table:
+            elements.extend([stats_table, Spacer(1, 9)])
+
+        table_headers = ["ID", "Histórico", "Favorecido", "Tipo", "Plano de Contas", "Centro", "Projeto/Processo", "Compet.", "Venc.", "Liq.", "Valor", "Nº/Rateio"]
+        col_widths = [
+            available_width * 0.045,
+            available_width * 0.15,
+            available_width * 0.125,
+            available_width * 0.055,
+            available_width * 0.13,
+            available_width * 0.095,
+            available_width * 0.12,
+            available_width * 0.055,
+            available_width * 0.055,
+            available_width * 0.055,
+            available_width * 0.07,
+            available_width * 0.045,
+        ]
+
+        for group in report_payload.get("groups", []) or []:
+            group_header = Table(
+                [[
+                    [p("AGRUPADOR", subtitle_style), p(group.get("label", "-"), group_title_style)],
+                    Paragraph(
+                        f"{FinancialReportService._pdf_text(group.get('item_count', 0))} lançamento(s)<br/><b>{FinancialReportService._pdf_text(group.get('total', ''))}</b>",
+                        group_meta_style,
+                    ),
+                ]],
+                colWidths=[available_width * 0.72, available_width * 0.28],
+            )
+            group_header.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#111827")),
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#111827")),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+            ]))
+
+            data: List[List[Any]] = [[p(label, header_style) for label in table_headers]]
+            row_styles: List[Tuple[Any, ...]] = []
+            for idx, row in enumerate(group.get("rows", []) or [], start=1):
+                amount = row.get("valor", "")
+                amount_style = ParagraphStyle(
+                    f"LedgerMoney{idx}_{abs(hash(str(amount))) % 99999}",
+                    parent=money_style,
+                    textColor=FinancialReportService._ledger_amount_color(amount),
+                )
+                type_style = ParagraphStyle(
+                    f"LedgerType{idx}",
+                    parent=small_cell_style,
+                    fontName="Helvetica-Bold",
+                    alignment=TA_CENTER,
+                    textColor=colors.HexColor("#166534") if row.get("tipo") == "Entrada" else colors.HexColor("#991b1b"),
+                )
+                data.append([
+                    p(row.get("id", ""), small_cell_style),
+                    p(row.get("historico", ""), cell_style),
+                    p(row.get("favorecido", ""), small_cell_style),
+                    p(row.get("tipo", ""), type_style),
+                    p(row.get("plano_contas", ""), small_cell_style),
+                    p(row.get("centro_resultado", ""), small_cell_style),
+                    p(row.get("projeto_processo", ""), small_cell_style),
+                    p(row.get("competencia", ""), small_cell_style),
+                    p(row.get("vencimento", ""), small_cell_style),
+                    p(row.get("liquidacao", ""), small_cell_style),
+                    p(amount, amount_style),
+                    p(row.get("numero_qtd_rateio", ""), small_cell_style),
+                ])
+                if idx % 2 == 0:
+                    row_styles.append(("BACKGROUND", (0, idx), (-1, idx), colors.HexColor("#f8fbff")))
+
+            ledger_table = Table(data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+            ledger_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+                ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#dbeafe")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                *row_styles,
+            ]))
+            elements.extend([group_header, ledger_table, Spacer(1, 8)])
+
+        if not report_payload.get("groups"):
+            empty_style = ParagraphStyle("LedgerEmpty", parent=styles["BodyText"], alignment=TA_CENTER, textColor=colors.HexColor("#64748b"), fontSize=10)
+            elements.append(Paragraph("Nenhum lançamento encontrado para os filtros informados.", empty_style))
+
+        return elements
+
+    @staticmethod
     def export_pdf(report_payload: Dict[str, Any]) -> bytes:
         if report_payload.get("report_type") == "bank_statement_dossier":
             return FinancialReportService._export_bank_statement_dossier_pdf(report_payload)
@@ -5914,6 +6164,24 @@ class FinancialReportService:
             doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=22, rightMargin=22, topMargin=24, bottomMargin=36)
             available_width = pagesize[0] - doc.leftMargin - doc.rightMargin
             elements = FinancialReportService._build_income_statement_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
+        if report_payload.get("report_type") == "ledger":
+            pagesize = landscape(A4) if report_payload.get("orientation", "landscape") == "landscape" else A4
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=18, rightMargin=18, topMargin=20, bottomMargin=34)
+            available_width = pagesize[0] - doc.leftMargin - doc.rightMargin
+            elements = FinancialReportService._build_ledger_pdf_elements(
                 report_payload=report_payload,
                 styles=styles,
                 available_width=available_width,
