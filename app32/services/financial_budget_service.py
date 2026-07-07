@@ -456,8 +456,29 @@ class FinancialBudgetService:
         )
 
         return {
-            "chart_accounts": [{"id": item.id, "name": item.name, "code": item.code} for item in chart_accounts],
-            "cost_centers": [{"id": item.id, "name": item.name, "code": item.code} for item in cost_centers],
+            "chart_accounts": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "code": item.code,
+                    "parent_id": item.parent_id,
+                    "movement_nature": item.movement_nature,
+                    "accepts_posting": item.accepts_posting,
+                    "is_active": item.is_active,
+                }
+                for item in chart_accounts
+            ],
+            "cost_centers": [
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "code": item.code,
+                    "parent_id": item.parent_id,
+                    "accepts_posting": item.accepts_posting,
+                    "is_active": item.is_active,
+                }
+                for item in cost_centers
+            ],
             "employees": [
                 {
                     "id": item.id,

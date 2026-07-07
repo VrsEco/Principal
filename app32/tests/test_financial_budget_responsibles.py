@@ -150,8 +150,31 @@ def test_create_version_rejects_responsible_employee_outside_company(monkeypatch
 
 
 def test_budget_service_list_options_includes_company_employees(monkeypatch):
-    chart_query = _QueryStub(items=[_SimpleObj(id=1, name="Receita", code="1.1.01")])
-    center_query = _QueryStub(items=[_SimpleObj(id=2, name="Operações", code="CC01")])
+    chart_query = _QueryStub(
+        items=[
+            _SimpleObj(
+                id=1,
+                name="Receita",
+                code="1.1.01",
+                parent_id=None,
+                movement_nature="credit",
+                accepts_posting=True,
+                is_active=True,
+            )
+        ]
+    )
+    center_query = _QueryStub(
+        items=[
+            _SimpleObj(
+                id=2,
+                name="Operações",
+                code="CC01",
+                parent_id=None,
+                accepts_posting=True,
+                is_active=True,
+            )
+        ]
+    )
     employee_query = _QueryStub(items=[_SimpleObj(id=7, name="Ana", email="ana@versus.com", department="Financeiro", status="active")])
 
     monkeypatch.setattr(budget_service_module.FinancialService, "_ensure_company_scope", lambda *args, **kwargs: None)
@@ -174,6 +197,27 @@ def test_budget_service_list_options_includes_company_employees(monkeypatch):
     result, error = FinancialBudgetService.list_options(company_id=9, allowed_company_ids=[9])
 
     assert error is None
+    assert result["chart_accounts"] == [
+        {
+            "id": 1,
+            "name": "Receita",
+            "code": "1.1.01",
+            "parent_id": None,
+            "movement_nature": "credit",
+            "accepts_posting": True,
+            "is_active": True,
+        }
+    ]
+    assert result["cost_centers"] == [
+        {
+            "id": 2,
+            "name": "Operações",
+            "code": "CC01",
+            "parent_id": None,
+            "accepts_posting": True,
+            "is_active": True,
+        }
+    ]
     assert result["employees"] == [
         {
             "id": 7,
