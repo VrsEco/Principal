@@ -239,6 +239,25 @@
   white-space: nowrap;
 }
 
+.bordero-select-all-cell {
+  width: 1%;
+}
+
+.bordero-select-all-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bordero-select-all-label input,
+.bordero-schedule-selector {
+  width: auto !important;
+  min-width: 0 !important;
+  cursor: pointer;
+}
+
 .bordero-table tbody tr:hover {
   background: rgba(148, 163, 184, 0.08);
 }

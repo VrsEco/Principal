@@ -13,7 +13,22 @@
 {% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260420f') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_borderos.css', v='20260707-bordero-filters') }}">
+{% endblock %}
+
+{% block navbar_actions %}
+{% if not bordero_id %}
+<div style="display: flex; align-items: center; gap: 0.75rem;">
+    <button class="btn-icon filter-toggle" onclick="toggleSidebar('right')" title="Filtros">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span class="btn-text">Filtros</span>
+        <span class="finance-filter-count" id="bordero-schedule-filters-count">0</span>
+    </button>
+    <div class="user-avatar-mini" title="Meu Perfil">MV</div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block workspace_content %}
@@ -68,12 +83,18 @@
                     <div class="bordero-selection-toolbar">
                         <input id="bordero-schedule-search" type="search" placeholder="Buscar por histórico, código ou favorecido">
                         <button type="button" class="btn btn-secondary" id="bordero-refresh-schedules">Atualizar lista</button>
+                        <span class="panel-chip" id="bordero-visible-selection-chip">0 títulos visíveis</span>
                     </div>
                     <div class="bordero-table-wrap">
                         <table class="bordero-table">
                             <thead>
                                 <tr>
-                                    <th>Selecionar</th>
+                                    <th class="bordero-select-all-cell">
+                                        <label class="bordero-select-all-label" title="Selecionar ou deselecionar todos os títulos visíveis">
+                                            <input id="bordero-select-all-schedules" type="checkbox">
+                                            <span>Selecionar</span>
+                                        </label>
+                                    </th>
                                     <th>Título Financeiro</th>
                                     <th>Favorecido</th>
                                     <th>Vencimento</th>
@@ -180,5 +201,46 @@
     </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260601-bordero-title-settlement') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_borderos.js', v='20260707-bordero-filters-selection') }}"></script>
+{% endblock %}
+
+{% block sidebar_right %}
+{% if not bordero_id %}
+<div class="sidebar-header-ws">
+    <h3>Filtros de Títulos</h3>
+    <p class="borderos-sidebar-subtitle">Refine os títulos elegíveis sem perder as seleções já marcadas.</p>
+</div>
+
+<div class="borderos-sidebar-filters">
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-counterparty">Favorecido</label>
+        <input id="bordero-filter-counterparty" type="search" placeholder="Nome do cliente/fornecedor">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-due-from">Vencimento inicial</label>
+        <input id="bordero-filter-due-from" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-due-to">Vencimento final</label>
+        <input id="bordero-filter-due-to" type="date">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-min-amount">Saldo mínimo</label>
+        <input id="bordero-filter-min-amount" inputmode="numeric" placeholder="0,00">
+    </div>
+
+    <div class="filter-group">
+        <label class="filter-label" for="bordero-filter-max-amount">Saldo máximo</label>
+        <input id="bordero-filter-max-amount" inputmode="numeric" placeholder="0,00">
+    </div>
+
+    <div class="borderos-sidebar-actions">
+        <button type="button" class="btn btn-primary w-100" id="bordero-apply-schedule-filters">Aplicar filtros</button>
+        <button type="button" class="btn btn-secondary w-100 mt-2" id="bordero-clear-schedule-filters">Limpar filtros</button>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
