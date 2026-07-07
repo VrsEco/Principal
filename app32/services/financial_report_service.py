@@ -2437,7 +2437,7 @@ class FinancialReportService:
             allowed_entry_types.append("receivable")
         if filters.include_payable:
             allowed_entry_types.append("payable")
-        if filters.include_budget_vs_actual:
+        if filters.include_budget_vs_actual or filters.show_budget_column:
             allowed_entry_types.append("forecast")
 
         grouped: Dict[int, Dict[str, Any]] = {}
@@ -2452,6 +2452,7 @@ class FinancialReportService:
                     "parent_id": account["parent_id"],
                     "codigo": account["code"],
                     "descricao": account["name"],
+                    "orcamento": Decimal("0"),
                     "competencia": Decimal("0"),
                     "vencimento": Decimal("0"),
                     "liquidacao": Decimal("0"),
@@ -2469,7 +2470,7 @@ class FinancialReportService:
             if normalized_status in {"draft", "cancelled"}:
                 return False, False
             if normalized_status == "forecast":
-                return bool(filters.include_budget_vs_actual), True
+                return bool(filters.include_budget_vs_actual or filters.show_budget_column), True
             is_settled = normalized_status in {"settled", "completed"} or (total_amount > Decimal("0") and settled_amount >= total_amount)
             is_partial = not is_settled and settled_amount > Decimal("0")
             is_open = not is_settled
@@ -2762,6 +2763,16 @@ class FinancialReportService:
 
                 signed_title = Decimal(str(FinancialService.get_signed_amount(title_amount, schedule.movement_nature)))
                 slot = _account_slot(schedule.chart_account_id)
+                if schedule.entry_type == "forecast" and in_competence:
+                    slot["orcamento"] += signed_title
+                if schedule.entry_type == "forecast" and not filters.include_budget_vs_actual:
+                    if schedule.cost_center_id:
+                        slot["centros"].add(center_names.get(schedule.cost_center_id, str(schedule.cost_center_id)))
+                    for project_id in FinancialReportService._schedule_project_ids(schedule):
+                        if not filters.project_ids or project_id in filters.project_ids:
+                            slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                    _add_type(slot, schedule.entry_type)
+                    continue
                 if in_competence:
                     slot["competencia"] += signed_title
                 if in_due:
@@ -2833,6 +2844,16 @@ class FinancialReportService:
                     continue
                 signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
                 slot = _account_slot(entry.chart_account_id)
+                if entry.entry_type == "forecast" and in_competence:
+                    slot["orcamento"] += signed_original
+                if entry.entry_type == "forecast" and not filters.include_budget_vs_actual:
+                    if entry.cost_center_id:
+                        slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
+                    for project_id in FinancialReportService._entry_project_ids(entry):
+                        if not filters.project_ids or project_id in filters.project_ids:
+                            slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                    _add_type(slot, entry.entry_type)
+                    continue
                 if in_competence:
                     slot["competencia"] += signed_original
                 if in_due:
@@ -2932,6 +2953,16 @@ class FinancialReportService:
 
                 signed_original = original_amount if entry.movement_nature == "credit" else -original_amount
                 slot = _account_slot(entry.chart_account_id)
+                if entry.entry_type == "forecast" and in_competence:
+                    slot["orcamento"] += signed_original
+                if entry.entry_type == "forecast" and not filters.include_budget_vs_actual:
+                    if entry.cost_center_id:
+                        slot["centros"].add(center_names.get(entry.cost_center_id, str(entry.cost_center_id)))
+                    for project_id in FinancialReportService._entry_project_ids(entry):
+                        if not filters.project_ids or project_id in filters.project_ids:
+                            slot["projetos"].add(project_names.get(project_id, str(project_id)))
+                    _add_type(slot, entry.entry_type)
+                    continue
                 if in_competence:
                     slot["competencia"] += signed_original
                 if in_due:
@@ -2955,6 +2986,7 @@ class FinancialReportService:
                 "parent_id": account.parent_id,
                 "codigo": getattr(account, "code", None) or f"CTA-{account.id}",
                 "descricao": account.name,
+                "orcamento": Decimal(data.get("orcamento", Decimal("0"))),
                 "competencia": Decimal(data.get("competencia", Decimal("0"))),
                 "vencimento": Decimal(data.get("vencimento", Decimal("0"))),
                 "liquidacao": Decimal(data.get("liquidacao", Decimal("0"))),
@@ -2975,6 +3007,7 @@ class FinancialReportService:
                 "parent_id": data.get("parent_id"),
                 "codigo": data.get("codigo") or f"CTA-{account_id}",
                 "descricao": data.get("descricao") or "Sem conta contábil",
+                "orcamento": Decimal(data.get("orcamento", Decimal("0"))),
                 "competencia": Decimal(data.get("competencia", Decimal("0"))),
                 "vencimento": Decimal(data.get("vencimento", Decimal("0"))),
                 "liquidacao": Decimal(data.get("liquidacao", Decimal("0"))),
@@ -2993,6 +3026,7 @@ class FinancialReportService:
                 if child_id not in hierarchy_nodes:
                     continue
                 child = _aggregate_node(child_id)
+                node["orcamento"] += child["orcamento"]
                 node["competencia"] += child["competencia"]
                 node["vencimento"] += child["vencimento"]
                 node["liquidacao"] += child["liquidacao"]
@@ -3014,7 +3048,7 @@ class FinancialReportService:
         def _node_has_value(node: Dict[str, Any]) -> bool:
             return any(
                 Decimal(node[key] or 0) != Decimal("0")
-                for key in ("competencia", "vencimento", "liquidacao", "aberto", "baixado")
+                for key in ("orcamento", "competencia", "vencimento", "liquidacao", "aberto", "baixado")
             )
 
         hierarchy_rows: List[Dict[str, Any]] = []
@@ -3047,6 +3081,8 @@ class FinancialReportService:
                     "row_type": row_type,
                     "is_leaf": not has_children,
                     "has_children": has_children,
+                    "orcamento": FinancialReportService._serialize_money(node["orcamento"]),
+                    "orcamento_label": FinancialReportService._format_currency(node["orcamento"]),
                     "competencia": FinancialReportService._serialize_money(node["competencia"]),
                     "competencia_label": FinancialReportService._format_currency(node["competencia"]),
                     "vencimento": FinancialReportService._serialize_money(node["vencimento"]),
@@ -3069,6 +3105,7 @@ class FinancialReportService:
             _append_node(root_id)
 
         rows = []
+        total_budget = Decimal("0")
         total_comp = Decimal("0")
         total_due = Decimal("0")
         total_set = Decimal("0")
@@ -3078,6 +3115,7 @@ class FinancialReportService:
             node = hierarchy_nodes.get(root_id)
             if not node or not _node_has_value(node):
                 continue
+            total_budget += node["orcamento"]
             total_comp += node["competencia"]
             total_due += node["vencimento"]
             total_set += node["liquidacao"]
@@ -3091,6 +3129,7 @@ class FinancialReportService:
                 "level": item["level"],
                 "row_type": item["row_type"],
                 "has_children": item["has_children"],
+                "orcamento": item["orcamento_label"],
                 "competencia": item["competencia_label"],
                 "vencimento": item["vencimento_label"],
                 "liquidacao": item["liquidacao_label"],
@@ -3108,6 +3147,8 @@ class FinancialReportService:
             columns.append({"key": "codigo", "label": "Código"})
         if filters.show_description:
             columns.append({"key": "descricao", "label": "Descrição"})
+        if filters.show_budget_column:
+            columns.append({"key": "orcamento", "label": "Orçamento"})
         if filters.show_competence_column:
             columns.append({"key": "competencia", "label": "Competência"})
         if filters.show_due_column:
@@ -3157,11 +3198,13 @@ class FinancialReportService:
             columns=columns,
             rows=rows,
             totals={
+                "budget": FinancialReportService._serialize_money(total_budget),
                 "competence": FinancialReportService._serialize_money(total_comp),
                 "due": FinancialReportService._serialize_money(total_due),
                 "liquidation": FinancialReportService._serialize_money(total_set),
                 "open": FinancialReportService._serialize_money(total_open),
                 "settled": FinancialReportService._serialize_money(total_settled),
+                "budget_label": FinancialReportService._format_currency(total_budget),
                 "competence_label": FinancialReportService._format_currency(total_comp),
                 "due_label": FinancialReportService._format_currency(total_due),
                 "liquidation_label": FinancialReportService._format_currency(total_set),
@@ -3172,6 +3215,7 @@ class FinancialReportService:
                 "orientation": filters.orientation,
                 "hierarchy_rows": hierarchy_rows,
                 "show_status_columns": not consolidated_by_period,
+                "show_budget_column": filters.show_budget_column,
                 "show_competence_column": filters.show_competence_column,
                 "show_due_column": filters.show_due_column,
                 "show_liquidation_column": filters.show_liquidation_column,
@@ -5862,6 +5906,24 @@ class FinancialReportService:
             buffer.seek(0)
             return buffer.getvalue()
 
+        if report_payload.get("report_type") in {"income_statement", "income_statement_2"}:
+            pagesize = A4
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=22, rightMargin=22, topMargin=24, bottomMargin=36)
+            available_width = pagesize[0] - doc.leftMargin - doc.rightMargin
+            elements = FinancialReportService._build_income_statement_pdf_elements(
+                report_payload=report_payload,
+                styles=styles,
+                available_width=available_width,
+            )
+            doc.build(
+                elements,
+                onFirstPage=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+                onLaterPages=lambda canvas, current_doc: FinancialReportService._draw_default_pdf_footer(canvas, current_doc, report_payload),
+            )
+            buffer.seek(0)
+            return buffer.getvalue()
+
         title_style = ParagraphStyle("FinancialReportTitle", parent=styles["Heading1"], fontSize=18, textColor=colors.HexColor("#0f172a"), spaceAfter=10)
         subtitle_style = ParagraphStyle("FinancialReportSubtitle", parent=styles["BodyText"], fontSize=9, textColor=colors.HexColor("#475569"), spaceAfter=8)
 
@@ -7046,6 +7108,355 @@ class FinancialReportService:
             f"<b>{name}</b><br/>Prévia indisponível para este anexo. Consulte o arquivo original no sistema.",
             placeholder_style,
         )
+
+    @staticmethod
+    def _build_income_statement_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:
+        title_style = ParagraphStyle(
+            "IncomeStatementTitle",
+            parent=styles["Heading1"],
+            fontSize=15,
+            leading=18,
+            textColor=colors.white,
+            spaceAfter=2,
+        )
+        subtitle_style = ParagraphStyle(
+            "IncomeStatementSubtitle",
+            parent=styles["BodyText"],
+            fontSize=7.2,
+            leading=8.5,
+            textColor=colors.HexColor("#E2E8F0"),
+        )
+        section_title_style = ParagraphStyle(
+            "IncomeStatementSectionTitle",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=5,
+        )
+        filter_style = ParagraphStyle(
+            "IncomeStatementFilter",
+            parent=styles["BodyText"],
+            fontSize=7.1,
+            leading=8.4,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        card_label_style = ParagraphStyle(
+            "IncomeStatementCardLabel",
+            parent=styles["BodyText"],
+            fontSize=6.8,
+            leading=8,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#64748B"),
+        )
+        card_value_style = ParagraphStyle(
+            "IncomeStatementCardValue",
+            parent=styles["BodyText"],
+            fontSize=9.2,
+            leading=11,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+        )
+        header_style = ParagraphStyle(
+            "IncomeStatementTableHeader",
+            parent=styles["BodyText"],
+            fontSize=7.4,
+            leading=8.4,
+            alignment=TA_CENTER,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+        )
+        account_style = ParagraphStyle(
+            "IncomeStatementAccountCell",
+            parent=styles["BodyText"],
+            fontSize=7.4,
+            leading=8.7,
+            textColor=colors.HexColor("#0F172A"),
+        )
+        account_group_style = ParagraphStyle(
+            "IncomeStatementAccountGroupCell",
+            parent=account_style,
+            fontSize=8.4,
+            leading=9.8,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+        )
+        account_subgroup_style = ParagraphStyle(
+            "IncomeStatementAccountSubgroupCell",
+            parent=account_style,
+            fontSize=8,
+            leading=9.3,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#1E293B"),
+        )
+        account_leaf_style = ParagraphStyle(
+            "IncomeStatementAccountLeafCell",
+            parent=account_style,
+            fontSize=7.6,
+            leading=8.9,
+            textColor=colors.HexColor("#334155"),
+        )
+        amount_base_style = ParagraphStyle(
+            "IncomeStatementAmountCell",
+            parent=styles["BodyText"],
+            fontSize=7.4,
+            leading=8.6,
+            alignment=TA_RIGHT,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#0F172A"),
+        )
+        amount_positive_style = ParagraphStyle("IncomeStatementAmountPositive", parent=amount_base_style, textColor=colors.HexColor("#2563EB"))
+        amount_negative_style = ParagraphStyle("IncomeStatementAmountNegative", parent=amount_base_style, textColor=colors.HexColor("#DC2626"))
+        amount_neutral_style = ParagraphStyle("IncomeStatementAmountNeutral", parent=amount_base_style, textColor=colors.HexColor("#0F172A"))
+        amount_group_base_style = ParagraphStyle(
+            "IncomeStatementAmountGroupBase",
+            parent=amount_base_style,
+            fontSize=8.4,
+            leading=9.8,
+            fontName="Helvetica-Bold",
+        )
+        amount_subgroup_base_style = ParagraphStyle(
+            "IncomeStatementAmountSubgroupBase",
+            parent=amount_base_style,
+            fontSize=8,
+            leading=9.3,
+            fontName="Helvetica-Bold",
+        )
+        amount_leaf_base_style = ParagraphStyle(
+            "IncomeStatementAmountLeafBase",
+            parent=amount_base_style,
+            fontSize=7.6,
+            leading=8.9,
+            fontName="Helvetica-Bold",
+        )
+        amount_group_positive_style = ParagraphStyle("IncomeStatementAmountGroupPositive", parent=amount_group_base_style, textColor=colors.HexColor("#2563EB"))
+        amount_group_negative_style = ParagraphStyle("IncomeStatementAmountGroupNegative", parent=amount_group_base_style, textColor=colors.HexColor("#DC2626"))
+        amount_group_neutral_style = ParagraphStyle("IncomeStatementAmountGroupNeutral", parent=amount_group_base_style, textColor=colors.HexColor("#0F172A"))
+        amount_subgroup_positive_style = ParagraphStyle("IncomeStatementAmountSubgroupPositive", parent=amount_subgroup_base_style, textColor=colors.HexColor("#2563EB"))
+        amount_subgroup_negative_style = ParagraphStyle("IncomeStatementAmountSubgroupNegative", parent=amount_subgroup_base_style, textColor=colors.HexColor("#DC2626"))
+        amount_subgroup_neutral_style = ParagraphStyle("IncomeStatementAmountSubgroupNeutral", parent=amount_subgroup_base_style, textColor=colors.HexColor("#0F172A"))
+        amount_leaf_positive_style = ParagraphStyle("IncomeStatementAmountLeafPositive", parent=amount_leaf_base_style, textColor=colors.HexColor("#2563EB"))
+        amount_leaf_negative_style = ParagraphStyle("IncomeStatementAmountLeafNegative", parent=amount_leaf_base_style, textColor=colors.HexColor("#DC2626"))
+        amount_leaf_neutral_style = ParagraphStyle("IncomeStatementAmountLeafNeutral", parent=amount_leaf_base_style, textColor=colors.HexColor("#0F172A"))
+        total_positive_style = ParagraphStyle("IncomeStatementTotalPositive", parent=amount_base_style, textColor=colors.HexColor("#93C5FD"))
+        total_negative_style = ParagraphStyle("IncomeStatementTotalNegative", parent=amount_base_style, textColor=colors.HexColor("#FCA5A5"))
+        total_neutral_style = ParagraphStyle("IncomeStatementTotalNeutral", parent=amount_base_style, textColor=colors.white)
+        empty_style = ParagraphStyle(
+            "IncomeStatementEmpty",
+            parent=styles["BodyText"],
+            fontSize=9,
+            leading=11,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor("#475569"),
+        )
+
+        def _as_decimal(raw_value: Any, fallback_label: Any = None) -> Decimal:
+            if isinstance(raw_value, Decimal):
+                return raw_value
+            if isinstance(raw_value, (int, float)):
+                return Decimal(str(raw_value or 0))
+            raw_label = str(fallback_label if fallback_label is not None else raw_value if raw_value is not None else "0").strip()
+            is_negative = raw_label.startswith("-") or raw_label.startswith("−") or "R$-" in raw_label.replace(" ", "")
+            normalized = (
+                raw_label.replace("R$", "")
+                .replace(" ", "")
+                .replace("−", "-")
+                .replace(".", "")
+                .replace(",", ".")
+            )
+            try:
+                amount = Decimal(normalized or "0")
+            except Exception:
+                amount = Decimal("0")
+            if is_negative and amount > 0:
+                return -amount
+            return amount
+
+        def _amount_style(amount: Decimal):
+            if amount < 0:
+                return amount_negative_style
+            if amount > 0:
+                return amount_positive_style
+            return amount_neutral_style
+
+        def _amount_style_for_row(amount: Decimal, row_type: str, level: int):
+            if row_type == "group" or level == 0:
+                if amount < 0:
+                    return amount_group_negative_style
+                if amount > 0:
+                    return amount_group_positive_style
+                return amount_group_neutral_style
+            if row_type in {"subgroup", "account-group"}:
+                if amount < 0:
+                    return amount_subgroup_negative_style
+                if amount > 0:
+                    return amount_subgroup_positive_style
+                return amount_subgroup_neutral_style
+            if amount < 0:
+                return amount_leaf_negative_style
+            if amount > 0:
+                return amount_leaf_positive_style
+            return amount_leaf_neutral_style
+
+        def _total_amount_style(amount: Decimal):
+            if amount < 0:
+                return total_negative_style
+            if amount > 0:
+                return total_positive_style
+            return total_neutral_style
+
+        def _account_style_for_row(row_type: str, level: int):
+            if row_type == "group" or level == 0:
+                return account_group_style
+            if row_type in {"subgroup", "account-group"}:
+                return account_subgroup_style
+            return account_leaf_style
+
+        def _compact_filter_summary() -> str:
+            fragments: List[str] = []
+            subtitle_text = str(report_payload.get("subtitle") or "").strip().lower()
+            for item in list(report_payload.get("filters") or []):
+                label = str(item.get("label") or "").strip()
+                value = str(item.get("value") or "").strip()
+                if not label or not value:
+                    continue
+                if "emiss" in label.lower() or "gerado" in label.lower():
+                    continue
+                if label.lower() == "período" and value.lower() in subtitle_text:
+                    continue
+                fragments.append(f"{label}: {value}")
+            return " · ".join(fragments[:4])
+
+        company_name = str(report_payload.get("company_name") or "Empresa ativa").strip()
+        title = report_payload.get("title") or "Demonstração de Resultados"
+        subtitle = report_payload.get("subtitle") or "DRE contábil hierárquica por conta contábil."
+        header_meta = " · ".join(part for part in [company_name, str(subtitle), _compact_filter_summary()] if part)
+        hero = Table(
+            [[
+                [
+                    Paragraph("Gestão Financeira · DRE Contábil", subtitle_style),
+                    Paragraph(str(title), title_style),
+                    Paragraph(header_meta, subtitle_style),
+                ]
+            ]],
+            colWidths=[available_width],
+            hAlign="LEFT",
+        )
+        hero.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("BOX", (0, 0), (-1, -1), 0.9, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 16),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 16),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ]
+            )
+        )
+
+        elements: List[Any] = [hero, Spacer(1, 7)]
+
+        rows = list(report_payload.get("hierarchy_rows") or report_payload.get("rows") or [])
+        if not rows:
+            elements.append(Paragraph("Nenhuma conta encontrada para os filtros informados.", empty_style))
+            return elements
+
+        value_columns: List[Tuple[str, str, str]] = []
+        if report_payload.get("show_budget_column", True):
+            value_columns.append(("orcamento", "orcamento_label", "Orçamento"))
+        value_columns.extend(
+            [
+                ("competencia", "competencia_label", "Competência"),
+                ("vencimento", "vencimento_label", "Vencimento"),
+                ("liquidacao", "liquidacao_label", "Liquidação"),
+            ]
+        )
+
+        table_data: List[List[Any]] = [[Paragraph("Conta contábil", header_style)] + [Paragraph(label, header_style) for _, _, label in value_columns]]
+        for row in rows:
+            level = min(max(int(row.get("level") or 0), 0), 6)
+            row_type = str(row.get("row_type") or "")
+            code = str(row.get("codigo") or row.get("code") or "").strip()
+            description = str(row.get("descricao") or row.get("description") or row.get("account_label") or "-").strip()
+            indent = "&nbsp;" * (level * 4)
+            account_label = f"{indent}<b>{code}</b> - {description}" if code else f"{indent}{description}"
+            line: List[Any] = [Paragraph(account_label, _account_style_for_row(row_type, level))]
+            for value_key, label_key, _ in value_columns:
+                raw_value = row.get(value_key)
+                label_value = row.get(label_key) or row.get(value_key) or row.get("budget_label" if value_key == "orcamento" else "") or "R$ 0,00"
+                amount = _as_decimal(raw_value, label_value)
+                line.append(Paragraph(str(label_value), _amount_style_for_row(amount, row_type, level)))
+            table_data.append(line)
+
+        account_width = available_width * 0.44
+        amount_width = (available_width - account_width) / len(value_columns)
+        table = Table(
+            table_data,
+            colWidths=[account_width] + [amount_width for _ in value_columns],
+            repeatRows=1,
+            hAlign="LEFT",
+        )
+        table_styles = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#D6E3F8")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]
+        for row_index, row in enumerate(rows, start=1):
+            row_type = str(row.get("row_type") or "")
+            if row_type == "group":
+                background = colors.HexColor("#EAF2FF")
+                table_styles.append(("FONTNAME", (0, row_index), (-1, row_index), "Helvetica-Bold"))
+            elif row_type == "subgroup":
+                background = colors.HexColor("#F4F8FF")
+            elif row_index % 2 == 0:
+                background = colors.HexColor("#F8FAFC")
+            else:
+                background = colors.white
+            table_styles.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
+        table.setStyle(TableStyle(table_styles))
+
+        elements.append(table)
+
+        totals = dict(report_payload.get("totals") or {})
+        total_cells = [Paragraph("Total consolidado", header_style)]
+        for value_key, label_key, label in value_columns:
+            total_value_key = {
+                "orcamento": "budget",
+                "competencia": "competence",
+                "vencimento": "due",
+                "liquidacao": "liquidation",
+                "aberto": "open",
+                "baixado": "settled",
+            }.get(value_key, value_key)
+            total_label_key = f"{total_value_key}_label"
+            label_value = totals.get(total_label_key) or totals.get(label_key) or "-"
+            amount = _as_decimal(totals.get(total_value_key), label_value)
+            total_cells.append(Paragraph(str(label_value), _total_amount_style(amount)))
+        total_table = Table([total_cells], colWidths=[account_width] + [amount_width for _ in value_columns], hAlign="LEFT")
+        total_table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
+                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                    ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        elements.extend([Spacer(1, 7), total_table])
+        return elements
 
     @staticmethod
     def _build_income_statement_liquidation_pdf_elements(*, report_payload: Dict[str, Any], styles, available_width: float) -> List[Any]:

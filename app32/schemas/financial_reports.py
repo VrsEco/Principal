@@ -57,6 +57,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
 
     show_code: bool = True
     show_description: bool = True
+    show_budget_column: bool = True
     show_competence_column: bool = True
     show_due_column: bool = True
     show_liquidation_column: bool = True

@@ -1,5 +1,6 @@
 {% set report_query = request.query_string.decode('utf-8') if request.query_string else ('company_id=' ~ company_id if company_id else '') %}
 {% set hierarchy_rows = report.hierarchy_rows or [] %}
+{% set show_budget_column = report.show_budget_column if report.show_budget_column is defined else true %}
 {% set show_competence_column = report.show_competence_column if report.show_competence_column is defined else true %}
 {% set show_due_column = report.show_due_column if report.show_due_column is defined else true %}
 {% set show_liquidation_column = report.show_liquidation_column if report.show_liquidation_column is defined else true %}
@@ -90,6 +91,9 @@
                         <thead>
                             <tr>
                                 <th class="col-account">Conta contábil</th>
+                                {% if show_budget_column %}
+                                <th class="col-value">Orçamento</th>
+                                {% endif %}
                                 {% if show_competence_column %}
                                 <th class="col-value">Competência</th>
                                 {% endif %}
@@ -100,8 +104,8 @@
                                 <th class="col-value">Liquidação</th>
                                 {% endif %}
                                 {% if report.show_status_columns %}
-                                <th class="col-value">Em aberto</th>
-                                <th class="col-value">Liquidado</th>
+                                <th class="col-value col-status">Em aberto</th>
+                                <th class="col-value col-status">Liquidado</th>
                                 {% endif %}
                             </tr>
                         </thead>
@@ -129,6 +133,14 @@
                                         </div>
                                     </div>
                                 </td>
+                                {% if show_budget_column %}
+                                <td class="col-value dre-value">
+                                    {{ dre_value_cell(
+                                        row.orcamento_label if row.orcamento_label is defined else (row.budget_label if row.budget_label is defined else 'R$ 0,00'),
+                                        'dre-value-button--negative' if row.orcamento is defined and row.orcamento < 0 else ('dre-value-button--positive' if row.orcamento is defined and row.orcamento > 0 else 'dre-value-button--neutral')
+                                    ) }}
+                                </td>
+                                {% endif %}
                                 {% if show_competence_column %}
                                 <td class="col-value dre-value">
                                     {{ dre_value_cell(
@@ -169,7 +181,7 @@
                                 </td>
                                 {% endif %}
                                 {% if report.show_status_columns %}
-                                <td class="col-value dre-value">
+                                <td class="col-value dre-value col-status">
                                     {{ dre_value_cell(
                                         row.aberto_label,
                                         'dre-value-button--negative' if row.aberto < 0 else ('dre-value-button--positive' if row.aberto > 0 else 'dre-value-button--neutral'),
@@ -180,7 +192,7 @@
                                         'Em aberto'
                                     ) }}
                                 </td>
-                                <td class="col-value dre-value">
+                                <td class="col-value dre-value col-status">
                                     {{ dre_value_cell(
                                         row.baixado_label,
                                         'dre-value-button--negative' if row.baixado < 0 else ('dre-value-button--positive' if row.baixado > 0 else 'dre-value-button--neutral'),
@@ -198,6 +210,11 @@
                         <tfoot>
                             <tr>
                                 <th>Total consolidado</th>
+                                {% if show_budget_column %}
+                                <th>
+                                    <span class="dre-value-button dre-value-static dre-value-button--footer {% if report.totals and report.totals.budget is defined and report.totals.budget < 0 %}dre-value-button--negative{% elif report.totals and report.totals.budget is defined and report.totals.budget > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}">{{ report.totals.budget_label if report.totals and report.totals.budget_label is defined else 'R$ 0,00' }}</span>
+                                </th>
+                                {% endif %}
                                 {% if show_competence_column %}
                                 <th>
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.competence < 0 %}dre-value-button--negative{% elif report.totals and report.totals.competence > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="competence" data-bucket-label="Competência" data-account-label="Total consolidado">{{ report.totals.competence_label if report.totals else '-' }}</button>
@@ -214,10 +231,10 @@
                                 </th>
                                 {% endif %}
                                 {% if report.show_status_columns %}
-                                <th>
+                                <th class="col-status">
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.open < 0 %}dre-value-button--negative{% elif report.totals and report.totals.open > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="open" data-bucket-label="Em aberto" data-account-label="Total consolidado">{{ report.totals.open_label if report.totals else '-' }}</button>
                                 </th>
-                                <th>
+                                <th class="col-status">
                                     <button type="button" class="dre-value-button dre-value-button--footer {% if report.totals and report.totals.settled < 0 %}dre-value-button--negative{% elif report.totals and report.totals.settled > 0 %}dre-value-button--positive{% else %}dre-value-button--neutral{% endif %}" data-dre-detail-trigger data-bucket="settled" data-bucket-label="Liquidado" data-account-label="Total consolidado">{{ report.totals.settled_label if report.totals else '-' }}</button>
                                 </th>
                                 {% endif %}

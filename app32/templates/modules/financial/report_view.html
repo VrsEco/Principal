@@ -5,9 +5,9 @@
 
 {% block head %}
 {{ super() }}
-{% if report.report_type == 'income_statement' %}
+{% if report.report_type in ['income_statement', 'income_statement_2'] %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419c') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260421e') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financial_income_statement.css', v='20260706a') }}">
 {% elif report.report_type == 'cash_flow' %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_report_workspace.css', v='20260419c') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/financial_cash_flow_report.css', v='20260518d') }}">
@@ -27,7 +27,7 @@
 {% block sidebar_right %}{% endblock %}
 
 {% block workspace_content %}
-{% if report.report_type == 'income_statement' %}
+{% if report.report_type in ['income_statement', 'income_statement_2'] %}
     {% include 'modules/financial/partials/report_view_income_statement.html' %}
 {% elif report.report_type == 'cash_flow' %}
     {% include 'modules/financial/partials/report_view_cash_flow.html' %}

@@ -7,6 +7,7 @@
 {% set include_open = 'include_open' not in filters or (filters.get('include_open', ['true']) | first) == 'true' %}
 {% set include_receivable = 'include_receivable' not in filters or (filters.get('include_receivable', ['true']) | first) == 'true' %}
 {% set include_payable = 'include_payable' not in filters or (filters.get('include_payable', ['true']) | first) == 'true' %}
+{% set show_budget_column = 'show_budget_column' not in filters or (filters.get('show_budget_column', ['true']) | first) == 'true' %}
 {% set show_competence_column = 'show_competence_column' not in filters or (filters.get('show_competence_column', ['true']) | first) == 'true' %}
 {% set show_due_column = 'show_due_column' not in filters or (filters.get('show_due_column', ['true']) | first) == 'true' %}
 {% set show_liquidation_column = 'show_liquidation_column' not in filters or (filters.get('show_liquidation_column', ['true']) | first) == 'true' %}
@@ -120,6 +121,11 @@
         <section class="report-workspace-sidebar__section dre-sidebar-section">
             <p class="filter-label">Colunas principais</p>
             <div class="report-workspace-choice-grid">
+                <label class="report-workspace-choice-card">
+                    <input type="hidden" name="show_budget_column" value="false">
+                    <input type="checkbox" name="show_budget_column" value="true" {% if show_budget_column %}checked{% endif %} data-filter-input data-default-value="true">
+                    <span>Orçamento</span>
+                </label>
                 <label class="report-workspace-choice-card">
                     <input type="hidden" name="show_competence_column" value="false">
                     <input type="checkbox" name="show_competence_column" value="true" {% if show_competence_column %}checked{% endif %} data-filter-input data-default-value="true">

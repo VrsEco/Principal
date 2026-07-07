@@ -24,6 +24,7 @@ _BOOLEAN_FILTER_KEYS = {
     "include_budget_vs_actual",
     "show_code",
     "show_description",
+    "show_budget_column",
     "show_competence_column",
     "show_due_column",
     "show_liquidation_column",
