@@ -38,7 +38,13 @@
         <div class="report-workspace-header-actions dre-report-header-actions">
             <a class="btn btn-secondary" href="/financial/catalogs/chart-accounts{% if company_id %}?company_id={{ company_id }}{% endif %}">Plano de contas</a>
             <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-xlsx{% if report_query %}?{{ report_query }}{% endif %}">Exportar XLSX</a>
-            <a class="btn btn-secondary" href="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}" target="_blank" rel="noopener">Exportar PDF</a>
+            <form method="post"
+                  action="/financial/reports/{{ report_definition.slug }}/export-pdf{% if report_query %}?{{ report_query }}{% endif %}"
+                  target="_blank"
+                  data-dre-export-pdf-form>
+                <span data-dre-export-state-fields hidden></span>
+                <button type="submit" class="btn btn-secondary" data-dre-export-pdf>Exportar PDF</button>
+            </form>
             <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir</button>
         </div>
     </header>
