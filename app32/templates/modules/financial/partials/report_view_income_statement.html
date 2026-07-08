@@ -4,6 +4,9 @@
 {% set show_competence_column = report.show_competence_column if report.show_competence_column is defined else true %}
 {% set show_due_column = report.show_due_column if report.show_due_column is defined else true %}
 {% set show_liquidation_column = report.show_liquidation_column if report.show_liquidation_column is defined else true %}
+{% set is_management_dre = report.income_statement_layout is defined and report.income_statement_layout == 'management' %}
+{% set monthly_columns = report.monthly_columns if report.monthly_columns is defined else [] %}
+{% set show_forecast_column = report.show_forecast_column if report.show_forecast_column is defined else false %}
 {% macro dre_value_cell(label, tone_class, can_drilldown=false, bucket='', chart_account_id='', account_label='', bucket_label='') -%}
     {% if can_drilldown %}
     <button type="button"
@@ -93,6 +96,58 @@
 
                 {% if hierarchy_rows %}
                 <div class="report-workspace-table-wrap dre-table-wrap">
+                    {% if is_management_dre %}
+                    <table class="report-workspace-table dre-table dre-table--management">
+                        <thead>
+                            <tr>
+                                <th class="col-account">Conta contábil</th>
+                                {% if show_budget_column %}<th class="col-value">Orçado</th>{% endif %}
+                                {% if show_forecast_column %}<th class="col-value">Previsto {{ report.forecast_month[5:7] }}/{{ report.forecast_month[0:4] if report.forecast_month is defined else "" }}</th>{% endif %}
+                                {% for column in monthly_columns %}<th class="col-value">{{ column.label }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in hierarchy_rows %}
+                            <tr class="dre-row dre-row--{{ row.row_type }}{% if row.level > 0 %} is-child{% endif %}"
+                                data-row-id="{{ row.id }}"
+                                data-parent-id="{{ row.parent_id or '' }}"
+                                data-level="{{ row.level }}"
+                                {% if row.has_children %}data-has-children="true" data-collapsed="false"{% endif %}>
+                                <td class="col-account">
+                                    <div class="dre-account-cell level-{{ row.level }}">
+                                        {% if row.has_children %}
+                                        <button type="button" class="dre-toggle no-print" data-dre-toggle="{{ row.id }}" aria-label="Alternar grupo"><span class="dre-toggle__icon">▾</span></button>
+                                        {% else %}
+                                        <span class="dre-toggle dre-toggle--ghost"></span>
+                                        {% endif %}
+                                        <div class="dre-account-content">
+                                            <span class="dre-account-code">{{ row.codigo }}</span><span class="dre-account-sep"> - </span><span class="dre-account-name">{{ row.descricao }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                {% if show_budget_column %}
+                                <td class="col-value dre-value">{{ dre_value_cell(row.budget_label, 'dre-value-button--negative' if row.budget_value < 0 else ('dre-value-button--positive' if row.budget_value > 0 else 'dre-value-button--neutral')) }}</td>
+                                {% endif %}
+                                {% if show_forecast_column %}
+                                <td class="col-value dre-value">{{ dre_value_cell(row.forecast_label, 'dre-value-button--negative' if row.forecast_value < 0 else ('dre-value-button--positive' if row.forecast_value > 0 else 'dre-value-button--neutral')) }}</td>
+                                {% endif %}
+                                {% for column in monthly_columns %}
+                                {% set item = row.management_values[column.key] if row.management_values is defined and column.key in row.management_values else {'value': 0, 'label': 'R$ 0,00'} %}
+                                <td class="col-value dre-value">{{ dre_value_cell(item.label, 'dre-value-button--negative' if item.value < 0 else ('dre-value-button--positive' if item.value > 0 else 'dre-value-button--neutral')) }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>Total consolidado</th>
+                                {% if show_budget_column %}<th><span class="dre-value-button dre-value-static dre-value-button--footer">{{ report.totals.budget_label }}</span></th>{% endif %}
+                                {% if show_forecast_column %}<th><span class="dre-value-button dre-value-static dre-value-button--footer">{{ report.totals.forecast_label }}</span></th>{% endif %}
+                                {% for column in monthly_columns %}<th><span class="dre-value-button dre-value-static dre-value-button--footer">{{ report.totals.realized_labels[column.key] }}</span></th>{% endfor %}
+                            </tr>
+                        </tfoot>
+                    </table>
+                    {% else %}
                     <table class="report-workspace-table dre-table">
                         <thead>
                             <tr>
@@ -247,11 +302,60 @@
                             </tr>
                         </tfoot>
                     </table>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="report-workspace-empty dre-empty">Nenhuma conta encontrada para os filtros informados.</div>
                 {% endif %}
             </section>
+
+
+
+            {% if is_management_dre and report.revenue_liquidation_breakdown is defined and report.revenue_liquidation_breakdown %}
+            <section class="report-workspace-section dre-section dre-section--table">
+                <h2 class="dre-section-title">Notas explicativas da liquidação</h2>
+                <div class="report-workspace-table-wrap dre-table-wrap">
+                    <table class="report-workspace-table dre-table dre-table--management">
+                        <thead>
+                            <tr>
+                                <th class="col-account">Critério de recebimento</th>
+                                {% for column in monthly_columns %}<th class="col-value">{{ column.label }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report.revenue_liquidation_breakdown %}
+                            <tr class="dre-row dre-row--account">
+                                <td class="col-account">{{ item.label }}</td>
+                                {% for column in monthly_columns %}
+                                {% set bucket_values = item['values'] if item['values'] is defined else {} %}
+                                {% set value = bucket_values[column.key] if column.key in bucket_values else {'value': 0, 'label': 'R$ 0,00'} %}
+                                <td class="col-value dre-value">{{ dre_value_cell(value.label, 'dre-value-button--positive' if value.value > 0 else 'dre-value-button--neutral') }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
+
+            {% if is_management_dre and report.liquidation_projection is defined and report.liquidation_projection.rows is defined and report.liquidation_projection.rows %}
+            <section class="report-workspace-section dre-section dre-section--table">
+                <h2 class="dre-section-title">Resultado Líquido / Projeção</h2>
+                <div class="report-workspace-table-wrap dre-table-wrap">
+                    <table class="report-workspace-table dre-table dre-table--management">
+                        <tbody>
+                            {% for item in report.liquidation_projection.rows %}
+                            <tr class="dre-row {% if item.is_total is defined and item.is_total %}dre-row--total{% else %}dre-row--account{% endif %}">
+                                <td class="col-account">{{ item.label }}</td>
+                                <td class="col-value dre-value">{{ dre_value_cell(item.label_value, 'dre-value-button--negative' if item.value < 0 else ('dre-value-button--positive' if item.value > 0 else 'dre-value-button--neutral')) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
 
             {{ report_macros.workspace_footer(report.generated_at if report else None, 'dre-footer') }}
         </article>

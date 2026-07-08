@@ -34,6 +34,11 @@ from models.financial import (
     FinancialSchedule,
     FinancialSettlement,
 )
+from models.financial_budget import (
+    FinancialBudgetAmount,
+    FinancialBudgetLine,
+    FinancialBudgetVersion,
+)
 from models.process import Process
 from models.project import Project
 from schemas.financial_reports import FinancialManagementReportFiltersInput
@@ -314,6 +319,13 @@ class FinancialReportService:
         return f"R$ {inteiro.replace(',', '.')},{decimal}"
 
     @staticmethod
+    def _format_currency_compact(value: Decimal | float | int) -> str:
+        amount = FinancialReportService._serialize_money(value)
+        inteiro, decimal = f"{abs(amount):,.2f}".split(".")
+        label = f"{inteiro.replace(',', '.')},{decimal}"
+        return f"- {label}" if amount < 0 else label
+
+    @staticmethod
     def _format_signed_currency(value: Decimal | float | int, *, positive_sign: bool = False) -> str:
         amount = Decimal(value or 0)
         signal = ""
@@ -576,8 +588,22 @@ class FinancialReportService:
                 if int(item.id) in enabled_ids
             ]
 
+        budget_versions = FinancialBudgetVersion.query.filter(
+            FinancialBudgetVersion.company_id == company_id,
+            FinancialBudgetVersion.deleted_at.is_(None),
+        ).order_by(FinancialBudgetVersion.status.desc(), FinancialBudgetVersion.period_start.desc(), FinancialBudgetVersion.id.desc()).all()
+
         return {
             "bank_accounts": _flat_list(FinancialBankAccount),
+            "budget_versions": [
+                {
+                    "id": item.id,
+                    "label": f"{item.name} ({item.scenario_type} · {item.period_start:%m/%Y}–{item.period_end:%m/%Y})",
+                    "status": item.status,
+                    "scenario_type": item.scenario_type,
+                }
+                for item in budget_versions
+            ],
             "chart_accounts": _hierarchical_list(FinancialChartAccount),
             "cost_centers": _hierarchical_list(FinancialCostCenter),
             "projects": _flat_list_from_enabled(Project, enabled_project_ids),
@@ -2389,7 +2415,415 @@ class FinancialReportService:
 
     @staticmethod
     def _build_income_statement_2(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
+        if getattr(filters, "income_statement_layout", "standard") == "management":
+            return FinancialReportService._build_income_statement_2_management(company_id, filters)
         return FinancialReportService._build_income_statement_base(company_id, filters, consolidated_by_period=False)
+
+    @staticmethod
+    def _month_start_from_token(value: Optional[str]) -> Optional[date]:
+        token = str(value or "").strip()
+        if not token:
+            return None
+        try:
+            if len(token) == 7:
+                return date.fromisoformat(f"{token}-01")
+            parsed = date.fromisoformat(token)
+            return parsed.replace(day=1)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _month_bounds(month_start: date) -> Tuple[date, date]:
+        return month_start, month_start.replace(day=monthrange(month_start.year, month_start.month)[1])
+
+    @staticmethod
+    def _add_months(month_start: date, delta: int) -> date:
+        index = (month_start.year * 12 + (month_start.month - 1)) + delta
+        return date(index // 12, (index % 12) + 1, 1)
+
+    @staticmethod
+    def _month_label(month_start: date) -> str:
+        return month_start.strftime("%m/%Y")
+
+    @staticmethod
+    def _selected_realized_months(filters: FinancialManagementReportFiltersInput) -> List[date]:
+        months: List[date] = []
+        for item in list(getattr(filters, "realized_months", None) or []):
+            parsed = FinancialReportService._month_start_from_token(item)
+            if parsed and parsed not in months:
+                months.append(parsed)
+        if months:
+            return sorted(months, reverse=True)[:24]
+        anchor = filters.settlement_end or filters.due_end or filters.competence_end or filters.period_end or date.today()
+        anchor_month = anchor.replace(day=1)
+        count = max(1, min(int(getattr(filters, "realized_month_count", 3) or 3), 24))
+        return [FinancialReportService._add_months(anchor_month, -offset) for offset in range(count)]
+
+    @staticmethod
+    def _with_income_statement_month_filter(
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        month_start: date,
+        view: str,
+        forecast_mode: bool = False,
+    ) -> FinancialManagementReportFiltersInput:
+        start, end = FinancialReportService._month_bounds(month_start)
+        updates = {
+            "income_statement_layout": "standard",
+            "period_start": start,
+            "period_end": end,
+            "show_budget_column": False,
+            "show_competence_column": view == "competence",
+            "show_due_column": view == "due",
+            "show_liquidation_column": view == "liquidation",
+            "include_budget_vs_actual": False,
+        }
+        if view == "competence":
+            updates.update({"competence_start": start, "competence_end": end, "due_start": None, "due_end": None, "settlement_start": None, "settlement_end": None})
+        elif view == "due":
+            updates.update({"competence_start": None, "competence_end": None, "due_start": start, "due_end": end, "settlement_start": None, "settlement_end": None})
+        else:
+            updates.update({"competence_start": None, "competence_end": None, "due_start": None, "due_end": None, "settlement_start": start, "settlement_end": end})
+        if forecast_mode:
+            updates.update({
+                "show_competence_column": False,
+                "show_due_column": True,
+                "show_liquidation_column": False,
+                "include_open": True,
+                "include_settled": False,
+                "include_partial": False,
+            })
+        return filters.model_copy(update=updates)
+
+    @staticmethod
+    def _budget_values_by_account(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        month_start: date,
+    ) -> Dict[int, Decimal]:
+        version_query = FinancialBudgetVersion.query.filter(
+            FinancialBudgetVersion.company_id == company_id,
+            FinancialBudgetVersion.deleted_at.is_(None),
+            FinancialBudgetVersion.period_start <= month_start,
+            FinancialBudgetVersion.period_end >= month_start,
+        )
+        if filters.budget_version_id:
+            version_query = version_query.filter(FinancialBudgetVersion.id == filters.budget_version_id)
+        else:
+            version_query = version_query.filter(FinancialBudgetVersion.status == "active")
+        versions = version_query.order_by(FinancialBudgetVersion.scenario_type.asc(), FinancialBudgetVersion.id.desc()).all()
+        if not versions:
+            return {}
+        version_ids = [item.id for item in versions[:1]]
+        query = (
+            db.session.query(FinancialBudgetLine.chart_account_id, FinancialBudgetLine.movement_nature, FinancialBudgetAmount.budget_amount)
+            .join(FinancialBudgetAmount, FinancialBudgetAmount.budget_line_id == FinancialBudgetLine.id)
+            .filter(
+                FinancialBudgetLine.company_id == company_id,
+                FinancialBudgetAmount.company_id == company_id,
+                FinancialBudgetLine.deleted_at.is_(None),
+                FinancialBudgetAmount.deleted_at.is_(None),
+                FinancialBudgetLine.is_active.is_(True),
+                FinancialBudgetLine.budget_version_id.in_(version_ids),
+                FinancialBudgetAmount.period_month == month_start,
+            )
+        )
+        if filters.chart_account_ids:
+            query = query.filter(FinancialBudgetLine.chart_account_id.in_(filters.chart_account_ids))
+        if filters.cost_center_ids:
+            query = query.filter(FinancialBudgetLine.cost_center_id.in_(filters.cost_center_ids))
+        values: Dict[int, Decimal] = defaultdict(Decimal)
+        for account_id, movement_nature, amount in query.all():
+            if not account_id:
+                continue
+            signed = Decimal(str(amount or 0))
+            if movement_nature == "debit":
+                signed = -signed
+            values[int(account_id)] += signed
+        return values
+
+    @staticmethod
+    def _liquidation_revenue_breakdown(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        months: Sequence[date],
+    ) -> List[Dict[str, Any]]:
+        if not months:
+            return []
+        starts_ends = [FinancialReportService._month_bounds(month_start) for month_start in months]
+        window_start = min(start for start, _ in starts_ends)
+        window_end = max(end for _, end in starts_ends)
+        query = (
+            db.session.query(FinancialSettlement, FinancialEntry)
+            .join(FinancialEntry, FinancialEntry.id == FinancialSettlement.financial_entry_id)
+            .filter(
+                FinancialSettlement.company_id == company_id,
+                FinancialEntry.company_id == company_id,
+                FinancialSettlement.deleted_at.is_(None),
+                FinancialEntry.deleted_at.is_(None),
+                FinancialSettlement.settlement_status != "cancelled",
+                FinancialSettlement.settlement_date >= window_start,
+                FinancialSettlement.settlement_date <= window_end,
+                FinancialEntry.entry_type == "receivable",
+                FinancialEntry.movement_nature == "credit",
+            )
+        )
+        if filters.chart_account_ids:
+            query = query.filter(FinancialEntry.chart_account_id.in_(filters.chart_account_ids))
+        if filters.cost_center_ids:
+            query = query.filter(FinancialEntry.cost_center_id.in_(filters.cost_center_ids))
+        items = query.all()
+        if filters.project_ids:
+            items = [(settlement, entry) for settlement, entry in items if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
+
+        month_keys = {month_start: f"realized_{month_start:%Y_%m}" for month_start in months}
+        buckets = {
+            "current": {"label": "Recebido no mês de vencimento", "values": defaultdict(Decimal)},
+            "prior": {"label": "Recebido de meses anteriores", "values": defaultdict(Decimal)},
+            "future": {"label": "Recebido de meses posteriores", "values": defaultdict(Decimal)},
+        }
+        for settlement, entry in items:
+            settlement_date = getattr(settlement, "settlement_date", None)
+            if not settlement_date:
+                continue
+            settlement_month = settlement_date.replace(day=1)
+            if settlement_month not in month_keys:
+                continue
+            due_date = getattr(entry, "due_date", None) or settlement_date
+            due_month = due_date.replace(day=1)
+            if due_month == settlement_month:
+                bucket_key = "current"
+            elif due_month < settlement_month:
+                bucket_key = "prior"
+            else:
+                bucket_key = "future"
+            amount = Decimal(str(getattr(settlement, "principal_amount", None) or getattr(settlement, "net_amount", None) or 0))
+            buckets[bucket_key]["values"][month_keys[settlement_month]] += amount
+
+        result: List[Dict[str, Any]] = []
+        for key in ("current", "prior", "future"):
+            values = {}
+            for month_start, column_key in month_keys.items():
+                amount = Decimal(buckets[key]["values"].get(column_key, Decimal("0")))
+                values[column_key] = {
+                    "value": FinancialReportService._serialize_money(amount),
+                    "label": FinancialReportService._format_currency_compact(amount),
+                }
+            result.append({"key": key, "label": buckets[key]["label"], "values": values})
+        return result
+
+    @staticmethod
+    def _liquidation_projected_result(
+        company_id: int,
+        filters: FinancialManagementReportFiltersInput,
+        *,
+        months: Sequence[date],
+    ) -> Dict[str, Any]:
+        if not months:
+            zero = Decimal("0")
+            return {"rows": [], "result": FinancialReportService._serialize_money(zero), "result_label": FinancialReportService._format_currency_compact(zero)}
+        reference_month = max(months)
+        _, window_end = FinancialReportService._month_bounds(reference_month)
+        query = FinancialEntry.query.filter(
+            FinancialEntry.company_id == company_id,
+            FinancialEntry.deleted_at.is_(None),
+            FinancialEntry.due_date.isnot(None),
+            FinancialEntry.due_date <= window_end,
+            FinancialEntry.entry_type.in_(["receivable", "payable"]),
+        )
+        if filters.chart_account_ids:
+            query = query.filter(FinancialEntry.chart_account_id.in_(filters.chart_account_ids))
+        if filters.cost_center_ids:
+            query = query.filter(FinancialEntry.cost_center_id.in_(filters.cost_center_ids))
+        entries = query.all()
+        if filters.project_ids:
+            entries = [entry for entry in entries if FinancialReportService._entry_matches_projects(entry, filters.project_ids)]
+        if filters.process_ids:
+            entries = [entry for entry in entries if FinancialReportService._entry_matches_processes(entry, filters.process_ids)]
+        settlement_totals = FinancialReportService._entry_settlement_totals(company_id, entry_ids=[entry.id for entry in entries])
+        receivable_open = Decimal("0")
+        payable_open = Decimal("0")
+        for entry in entries:
+            open_amount = FinancialReportService._entry_outstanding_amount(entry, settlement_totals.get(int(entry.id), Decimal("0")))
+            if open_amount <= Decimal("0"):
+                continue
+            if str(entry.entry_type or "").lower() == "receivable":
+                receivable_open += open_amount
+            elif str(entry.entry_type or "").lower() == "payable":
+                payable_open += open_amount
+        projected = receivable_open - payable_open
+        rows = [
+            {
+                "key": "receivable_open",
+                "label": "( + ) Total de contas a receber em aberto",
+                "value": FinancialReportService._serialize_money(receivable_open),
+                "label_value": FinancialReportService._format_currency_compact(receivable_open),
+            },
+            {
+                "key": "payable_open",
+                "label": "( - ) Total de contas a pagar em aberto",
+                "value": FinancialReportService._serialize_money(payable_open),
+                "label_value": FinancialReportService._format_currency_compact(payable_open),
+            },
+            {
+                "key": "projected_result",
+                "label": "( = ) Resultado Projetado do Período",
+                "value": FinancialReportService._serialize_money(projected),
+                "label_value": FinancialReportService._format_currency_compact(projected),
+                "is_total": True,
+            },
+        ]
+        return {
+            "period_start": None,
+            "period_end": window_end.isoformat(),
+            "reference_month": reference_month.isoformat(),
+            "rows": rows,
+            "result": FinancialReportService._serialize_money(projected),
+            "result_label": FinancialReportService._format_currency_compact(projected),
+        }
+
+    @staticmethod
+    def _build_income_statement_2_management(company_id: int, filters: FinancialManagementReportFiltersInput) -> Dict[str, Any]:
+        view = getattr(filters, "dre_view", "competence") or "competence"
+        realized_months = FinancialReportService._selected_realized_months(filters)
+        most_recent = max(realized_months) if realized_months else date.today().replace(day=1)
+        forecast_month = FinancialReportService._month_start_from_token(filters.forecast_month) or FinancialReportService._add_months(most_recent, 1)
+        budget_month = FinancialReportService._month_start_from_token(filters.budget_month) or forecast_month
+
+        value_key_by_view = {"competence": "competencia", "due": "vencimento", "liquidation": "liquidacao"}
+        total_key_by_view = {"competence": "competence", "due": "due", "liquidation": "liquidation"}
+        value_key = value_key_by_view.get(view, "competencia")
+        total_key = total_key_by_view.get(view, "competence")
+
+        row_order: List[str] = []
+        rows_by_id: Dict[str, Dict[str, Any]] = {}
+        monthly_columns: List[Dict[str, Any]] = []
+        totals = {"budget": Decimal("0"), "forecast": Decimal("0"), "realized": {}}
+
+        for month_start in realized_months:
+            month_filter = FinancialReportService._with_income_statement_month_filter(filters, month_start=month_start, view=view)
+            payload = FinancialReportService._build_income_statement_base(company_id, month_filter, consolidated_by_period=False)
+            column_key = f"realized_{month_start:%Y_%m}"
+            monthly_columns.append({"key": column_key, "label": FinancialReportService._month_label(month_start), "month": month_start.isoformat()})
+            totals["realized"][column_key] = Decimal(str((payload.get("totals") or {}).get(total_key) or 0))
+            for source_row in payload.get("hierarchy_rows") or []:
+                row_id = str(source_row.get("id"))
+                if row_id not in rows_by_id:
+                    base = dict(source_row)
+                    base["management_values"] = {}
+                    rows_by_id[row_id] = base
+                    row_order.append(row_id)
+                amount = Decimal(str(source_row.get(value_key) or 0))
+                rows_by_id[row_id]["management_values"][column_key] = {
+                    "value": FinancialReportService._serialize_money(amount),
+                    "label": FinancialReportService._format_currency_compact(amount),
+                }
+
+        if filters.show_forecast_column:
+            forecast_filter = FinancialReportService._with_income_statement_month_filter(filters, month_start=forecast_month, view="due", forecast_mode=True)
+            forecast_payload = FinancialReportService._build_income_statement_base(company_id, forecast_filter, consolidated_by_period=False)
+            totals["forecast"] = Decimal(str((forecast_payload.get("totals") or {}).get("due") or 0))
+            for source_row in forecast_payload.get("hierarchy_rows") or []:
+                row_id = str(source_row.get("id"))
+                if row_id not in rows_by_id:
+                    base = dict(source_row)
+                    base["management_values"] = {}
+                    rows_by_id[row_id] = base
+                    row_order.append(row_id)
+                amount = Decimal(str(source_row.get("vencimento") or 0))
+                rows_by_id[row_id]["forecast_value"] = FinancialReportService._serialize_money(amount)
+                rows_by_id[row_id]["forecast_label"] = FinancialReportService._format_currency_compact(amount)
+
+        if filters.show_budget_column:
+            budget_values = FinancialReportService._budget_values_by_account(company_id, filters, month_start=budget_month)
+            totals["budget"] = sum(budget_values.values(), Decimal("0"))
+            row_by_chart_account_id = {
+                int(row.get("chart_account_id")): row
+                for row in rows_by_id.values()
+                if row.get("chart_account_id") is not None
+            }
+            for account_id, amount in budget_values.items():
+                row = row_by_chart_account_id.get(int(account_id))
+                if row is not None:
+                    row["budget_value"] = FinancialReportService._serialize_money(amount)
+                    row["budget_label"] = FinancialReportService._format_currency_compact(amount)
+
+        for row in rows_by_id.values():
+            row.setdefault("budget_value", Decimal("0"))
+            row.setdefault("budget_label", FinancialReportService._format_currency_compact(Decimal("0")))
+            row.setdefault("forecast_value", Decimal("0"))
+            row.setdefault("forecast_label", FinancialReportService._format_currency_compact(Decimal("0")))
+            for column in monthly_columns:
+                row["management_values"].setdefault(column["key"], {"value": Decimal("0"), "label": FinancialReportService._format_currency_compact(Decimal("0"))})
+
+        revenue_liquidation_breakdown = (
+            FinancialReportService._liquidation_revenue_breakdown(company_id, filters, months=realized_months)
+            if view == "liquidation"
+            else []
+        )
+        liquidation_projection = (
+            FinancialReportService._liquidation_projected_result(company_id, filters, months=realized_months)
+            if view == "liquidation"
+            else {}
+        )
+        base_filter_payload = FinancialReportService._build_filter_labels(filters, company_id, raw_filters={})
+        view_label = {"competence": "Competência", "due": "Vencimento", "liquidation": "Liquidação"}.get(view, "Competência")
+        rows = [rows_by_id[item] for item in row_order]
+        export_columns = [{"key": "account_label", "label": "Conta contábil"}]
+        if filters.show_budget_column:
+            export_columns.append({"key": "budget_label", "label": "Orçado"})
+        if filters.show_forecast_column:
+            export_columns.append({"key": "forecast_label", "label": f"Previsto {FinancialReportService._month_label(forecast_month)}"})
+        export_columns.extend({"key": column["key"], "label": column["label"]} for column in monthly_columns)
+        export_rows: List[Dict[str, Any]] = []
+        for row in rows:
+            export_row = {"account_label": row.get("account_label") or f"{row.get('codigo')} - {row.get('descricao')}"}
+            if filters.show_budget_column:
+                export_row["budget_label"] = row.get("budget_label")
+            if filters.show_forecast_column:
+                export_row["forecast_label"] = row.get("forecast_label")
+            for column in monthly_columns:
+                export_row[column["key"]] = (row.get("management_values") or {}).get(column["key"], {}).get("label", "0,00")
+            export_rows.append(export_row)
+        return FinancialReportService._report_payload(
+            definition=FinancialReportService.REPORT_DEFINITIONS[filters.report_type],
+            rows=export_rows,
+            columns=export_columns,
+            summary_cards=[
+                {"label": "Ótica", "value": view_label},
+                {"label": "Meses realizados", "value": str(len(monthly_columns))},
+                {"label": "Previsto", "value": FinancialReportService._month_label(forecast_month) if filters.show_forecast_column else "Oculto"},
+                {"label": "Orçamento", "value": FinancialReportService._month_label(budget_month) if filters.show_budget_column else "Oculto"},
+            ],
+            general_info=[
+                {"label": "Modo", "value": "DRE Gerencial 02"},
+                {"label": "Meses comparados", "value": ", ".join(column["label"] for column in monthly_columns) or "Nenhum"},
+            ],
+            totals={
+                "budget": FinancialReportService._serialize_money(totals["budget"]),
+                "budget_label": FinancialReportService._format_currency_compact(totals["budget"]),
+                "forecast": FinancialReportService._serialize_money(totals["forecast"]),
+                "forecast_label": FinancialReportService._format_currency_compact(totals["forecast"]),
+                "realized": {key: FinancialReportService._serialize_money(value) for key, value in totals["realized"].items()},
+                "realized_labels": {key: FinancialReportService._format_currency_compact(value) for key, value in totals["realized"].items()},
+            },
+            extra={
+                "filters": base_filter_payload,
+                "hierarchy_rows": rows,
+                "income_statement_layout": "management",
+                "dre_view": view,
+                "monthly_columns": monthly_columns,
+                "show_budget_column": filters.show_budget_column,
+                "show_forecast_column": filters.show_forecast_column,
+                "forecast_month": forecast_month.isoformat(),
+                "budget_month": budget_month.isoformat(),
+                "show_status_columns": False,
+                "revenue_liquidation_breakdown": revenue_liquidation_breakdown,
+                "liquidation_projection": liquidation_projection,
+            },
+        )
 
     @staticmethod
     def _build_income_statement_base(
@@ -7544,6 +7978,9 @@ class FinancialReportService:
                 return -amount
             return amount
 
+        def _compact_amount_label(raw_label: Any) -> str:
+            return str(raw_label if raw_label is not None else "0,00").replace("R$", "").strip()
+
         def _amount_style(amount: Decimal):
             if amount < 0:
                 return amount_negative_style
@@ -7667,15 +8104,28 @@ class FinancialReportService:
             return elements
 
         value_columns: List[Tuple[str, str, str]] = []
-        if report_payload.get("show_budget_column", True):
-            value_columns.append(("orcamento", "orcamento_label", "Orçamento"))
-        value_columns.extend(
-            [
-                ("competencia", "competencia_label", "Competência"),
-                ("vencimento", "vencimento_label", "Vencimento"),
-                ("liquidacao", "liquidacao_label", "Liquidação"),
-            ]
-        )
+        is_management = report_payload.get("income_statement_layout") == "management"
+        if is_management:
+            if report_payload.get("show_budget_column", True):
+                value_columns.append(("budget_value", "budget_label", "Orçado"))
+            if report_payload.get("show_forecast_column"):
+                forecast_label = "Previsto"
+                forecast_month = FinancialReportService._month_start_from_token(report_payload.get("forecast_month"))
+                if forecast_month:
+                    forecast_label = f"Previsto {FinancialReportService._month_label(forecast_month)}"
+                value_columns.append(("forecast_value", "forecast_label", forecast_label))
+            for column in report_payload.get("monthly_columns") or []:
+                value_columns.append((f"management:{column.get('key')}", str(column.get("key") or ""), str(column.get("label") or "")))
+        else:
+            if report_payload.get("show_budget_column", True):
+                value_columns.append(("orcamento", "orcamento_label", "Orçamento"))
+            value_columns.extend(
+                [
+                    ("competencia", "competencia_label", "Competência"),
+                    ("vencimento", "vencimento_label", "Vencimento"),
+                    ("liquidacao", "liquidacao_label", "Liquidação"),
+                ]
+            )
 
         table_data: List[List[Any]] = [[Paragraph("Conta contábil", header_style)] + [Paragraph(label, header_style) for _, _, label in value_columns]]
         for row in rows:
@@ -7687,10 +8137,17 @@ class FinancialReportService:
             account_label = f"{indent}<b>{code}</b> - {description}" if code else f"{indent}{description}"
             line: List[Any] = [Paragraph(account_label, _account_style_for_row(row_type, level))]
             for value_key, label_key, _ in value_columns:
-                raw_value = row.get(value_key)
-                label_value = row.get(label_key) or row.get(value_key) or row.get("budget_label" if value_key == "orcamento" else "") or "R$ 0,00"
+                if value_key.startswith("management:"):
+                    month_key = value_key.split(":", 1)[1]
+                    item = dict((row.get("management_values") or {}).get(month_key) or {})
+                    raw_value = item.get("value")
+                    label_value = item.get("label") or "0,00"
+                else:
+                    raw_value = row.get(value_key)
+                    label_value = row.get(label_key) or row.get(value_key) or row.get("budget_label" if value_key == "orcamento" else "") or "0,00"
                 amount = _as_decimal(raw_value, label_value)
-                line.append(Paragraph(str(label_value), _amount_style_for_row(amount, row_type, level)))
+                display_label = _compact_amount_label(label_value) if is_management else str(label_value)
+                line.append(Paragraph(display_label, _amount_style_for_row(amount, row_type, level)))
             table_data.append(line)
 
         account_width = available_width * 0.44
@@ -7730,18 +8187,26 @@ class FinancialReportService:
         totals = dict(report_payload.get("totals") or {})
         total_cells = [Paragraph("Total consolidado", header_style)]
         for value_key, label_key, label in value_columns:
-            total_value_key = {
-                "orcamento": "budget",
-                "competencia": "competence",
-                "vencimento": "due",
-                "liquidacao": "liquidation",
-                "aberto": "open",
-                "baixado": "settled",
-            }.get(value_key, value_key)
-            total_label_key = f"{total_value_key}_label"
-            label_value = totals.get(total_label_key) or totals.get(label_key) or "-"
-            amount = _as_decimal(totals.get(total_value_key), label_value)
-            total_cells.append(Paragraph(str(label_value), _total_amount_style(amount)))
+            if value_key.startswith("management:"):
+                month_key = value_key.split(":", 1)[1]
+                label_value = (totals.get("realized_labels") or {}).get(month_key) or "-"
+                amount = _as_decimal((totals.get("realized") or {}).get(month_key), label_value)
+            else:
+                total_value_key = {
+                    "orcamento": "budget",
+                    "budget_value": "budget",
+                    "forecast_value": "forecast",
+                    "competencia": "competence",
+                    "vencimento": "due",
+                    "liquidacao": "liquidation",
+                    "aberto": "open",
+                    "baixado": "settled",
+                }.get(value_key, value_key)
+                total_label_key = f"{total_value_key}_label"
+                label_value = totals.get(total_label_key) or totals.get(label_key) or "-"
+                amount = _as_decimal(totals.get(total_value_key), label_value)
+            display_label = _compact_amount_label(label_value) if is_management else str(label_value)
+            total_cells.append(Paragraph(display_label, _total_amount_style(amount)))
         total_table = Table([total_cells], colWidths=[account_width] + [amount_width for _ in value_columns], hAlign="LEFT")
         total_table.setStyle(
             TableStyle(
@@ -7758,6 +8223,95 @@ class FinancialReportService:
             )
         )
         elements.extend([Spacer(1, 7), total_table])
+
+        if is_management and report_payload.get("dre_view") == "liquidation":
+            note_header_style = ParagraphStyle(
+                "IncomeStatementManagementNoteHeader",
+                parent=header_style,
+                fontSize=7,
+                leading=8,
+            )
+            note_label_style = ParagraphStyle(
+                "IncomeStatementManagementNoteLabel",
+                parent=account_leaf_style,
+                fontSize=7.2,
+                leading=8.5,
+            )
+            note_amount_style = ParagraphStyle(
+                "IncomeStatementManagementNoteAmount",
+                parent=amount_base_style,
+                fontSize=7.2,
+                leading=8.5,
+            )
+
+            monthly_columns = list(report_payload.get("monthly_columns") or [])
+            breakdown_rows = list(report_payload.get("revenue_liquidation_breakdown") or [])
+            if monthly_columns and breakdown_rows:
+                notes_data: List[List[Any]] = [
+                    [Paragraph("Notas explicativas da liquidação", note_header_style)]
+                    + [Paragraph(str(column.get("label") or ""), note_header_style) for column in monthly_columns]
+                ]
+                for item in breakdown_rows:
+                    values = dict(item.get("values") or {})
+                    line = [Paragraph(str(item.get("label") or "-"), note_label_style)]
+                    for column in monthly_columns:
+                        month_key = str(column.get("key") or "")
+                        value_item = dict(values.get(month_key) or {})
+                        label_value = value_item.get("label") or "0,00"
+                        amount = _as_decimal(value_item.get("value"), label_value)
+                        line.append(Paragraph(_compact_amount_label(label_value), _amount_style(amount)))
+                    notes_data.append(line)
+                notes_table = Table(
+                    notes_data,
+                    colWidths=[account_width] + [amount_width for _ in monthly_columns],
+                    repeatRows=1,
+                    hAlign="LEFT",
+                )
+                notes_style = [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1E293B")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]
+                for row_index in range(1, len(notes_data)):
+                    notes_style.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#F8FAFC") if row_index % 2 == 0 else colors.white))
+                notes_table.setStyle(TableStyle(notes_style))
+                elements.extend([Spacer(1, 10), Paragraph("Notas explicativas", section_title_style), notes_table])
+
+            projection = dict(report_payload.get("liquidation_projection") or {})
+            projection_rows = list(projection.get("rows") or [])
+            if projection_rows:
+                projection_data: List[List[Any]] = [[Paragraph("Resultado Líquido / Projeção", note_header_style), Paragraph("Valor", note_header_style)]]
+                for row in projection_rows:
+                    label_value = row.get("label_value") or row.get("value") or "0,00"
+                    amount = _as_decimal(row.get("value"), label_value)
+                    projection_data.append([
+                        Paragraph(str(row.get("label") or "-"), note_label_style),
+                        Paragraph(_compact_amount_label(label_value), _amount_style(amount)),
+                    ])
+                projection_table = Table(projection_data, colWidths=[available_width * 0.68, available_width * 0.32], hAlign="LEFT")
+                projection_style = [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0F172A")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#CBD5E1")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]
+                for row_index, row in enumerate(projection_rows, start=1):
+                    projection_style.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#F8FAFC") if row_index % 2 == 0 else colors.white))
+                    if str(row.get("key") or "") == "projected_result":
+                        projection_style.append(("FONTNAME", (0, row_index), (-1, row_index), "Helvetica-Bold"))
+                        projection_style.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#EAF2FF")))
+                projection_table.setStyle(TableStyle(projection_style))
+                elements.extend([Spacer(1, 10), Paragraph("Resultado Líquido", section_title_style), projection_table])
+
         return elements
 
     @staticmethod
@@ -8930,3 +9484,4 @@ class FinancialReportService:
             table_styles.append(("BACKGROUND", (0, row_index), (-1, row_index), background))
         table.setStyle(TableStyle(table_styles))
         return table
+

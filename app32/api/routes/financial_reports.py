@@ -25,6 +25,7 @@ _BOOLEAN_FILTER_KEYS = {
     "show_code",
     "show_description",
     "show_budget_column",
+    "show_forecast_column",
     "show_competence_column",
     "show_due_column",
     "show_liquidation_column",
@@ -52,6 +53,7 @@ _LIST_FILTER_KEYS = {
     "excluded_projected_refs",
     "collapsed_row_ids",
     "visible_row_ids",
+    "realized_months",
 }
 
 _SINGLE_VALUE_FILTER_KEYS = {

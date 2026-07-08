@@ -374,8 +374,11 @@
                     <a href="/financial/reports/dossie-extrato-bancario" class="sub-nav-link {{ 'active' if '/financial/reports/dossie-extrato-bancario' in request.path }}">
                         <span>Dossiê do Extrato</span>
                     </a>
-                    <a href="/financial/reports/demonstrativo-resultados" class="sub-nav-link {{ 'active' if '/financial/reports/demonstrativo-resultados' in request.path }}">
+                    <a href="/financial/reports/demonstrativo-resultados" class="sub-nav-link {{ 'active' if '/financial/reports/demonstrativo-resultados' in request.path and '/financial/reports/demonstrativo-resultados-02' not in request.path }}">
                         <span>Demonstrativo de Resultados</span>
+                    </a>
+                    <a href="/financial/reports/demonstrativo-resultados-02?income_statement_layout=management" class="sub-nav-link {{ 'active' if '/financial/reports/demonstrativo-resultados-02' in request.path }}">
+                        <span>Demonstrativos de Resultados 02</span>
                     </a>
                     <a href="/financial/reports/fluxo-caixa" class="sub-nav-link {{ 'active' if '/financial/reports/fluxo-caixa' in request.path }}">
                         <span>Fluxo de Caixa</span>

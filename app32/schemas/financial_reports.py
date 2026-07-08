@@ -39,6 +39,14 @@ class FinancialManagementReportFiltersInput(BaseModel):
     collapsed_row_ids: list[str] = Field(default_factory=list)
     visible_row_ids: list[str] = Field(default_factory=list)
 
+    income_statement_layout: Literal['standard', 'management'] = 'standard'
+    dre_view: Literal['competence', 'due', 'liquidation'] = 'competence'
+    realized_months: list[str] = Field(default_factory=list)
+    realized_month_count: int = Field(default=3, ge=1, le=24)
+    forecast_month: Optional[str] = None
+    budget_month: Optional[str] = None
+    budget_version_id: Optional[int] = Field(default=None, ge=1)
+
     movement_nature: Optional[str] = None
     schedule_status: Optional[str] = None
     frequency: Optional[str] = None
@@ -60,6 +68,7 @@ class FinancialManagementReportFiltersInput(BaseModel):
     show_code: bool = True
     show_description: bool = True
     show_budget_column: bool = True
+    show_forecast_column: bool = False
     show_competence_column: bool = True
     show_due_column: bool = True
     show_liquidation_column: bool = True

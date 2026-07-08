@@ -15,6 +15,13 @@
 {% set show_competence_column = 'show_competence_column' not in filters or (filters.get('show_competence_column', ['true']) | first) == 'true' %}
 {% set show_due_column = 'show_due_column' not in filters or (filters.get('show_due_column', ['true']) | first) == 'true' %}
 {% set show_liquidation_column = 'show_liquidation_column' not in filters or (filters.get('show_liquidation_column', ['true']) | first) == 'true' %}
+{% set show_forecast_column = (filters.get('show_forecast_column', ['false']) | first) == 'true' %}
+{% set dre_view = (filters.get('dre_view', ['competence']) | first) %}
+{% set realized_month_count = (filters.get('realized_month_count', ['3']) | first) %}
+{% set realized_months = filters.get('realized_months', []) %}
+{% set forecast_month = (filters.get('forecast_month', ['']) | first) %}
+{% set budget_month = (filters.get('budget_month', ['']) | first) %}
+{% set selected_budget_version_id = (filters.get('budget_version_id', ['']) | first) %}
 
 <div class="sidebar-header-ws">
     <h3 class="text-h3">Filtros</h3>
@@ -35,6 +42,33 @@
         <input type="hidden" name="show_description" value="true">
         <input type="hidden" name="order_by" value="code">
         <input type="hidden" name="order_direction" value="asc">
+        <input type="hidden" name="income_statement_layout" value="management">
+
+        <section class="report-workspace-sidebar__section dre-sidebar-section">
+            <p class="filter-label">DRE Gerencial 02</p>
+            <div class="filter-group">
+                <label class="filter-label" for="dre2-view">Ótica principal</label>
+                <select id="dre2-view" name="dre_view" data-filter-input data-default-value="competence">
+                    <option value="competence" {% if dre_view == 'competence' %}selected{% endif %}>Competência</option>
+                    <option value="due" {% if dre_view == 'due' %}selected{% endif %}>Vencimento</option>
+                    <option value="liquidation" {% if dre_view == 'liquidation' %}selected{% endif %}>Liquidação</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="dre2-realized-count">Quantidade sugerida de meses realizados</label>
+                <input id="dre2-realized-count" type="number" min="1" max="24" name="realized_month_count" value="{{ realized_month_count }}" data-filter-input data-default-value="3">
+                <small class="report-workspace-field-help">Usado quando nenhum mês específico abaixo for informado.</small>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Meses realizados específicos</label>
+                <div class="dre-month-grid">
+                    {% for idx in range(0, 12) %}
+                    <input type="month" name="realized_months" value="{{ realized_months[idx] if realized_months|length > idx else '' }}" data-filter-input data-default-value="">
+                    {% endfor %}
+                </div>
+                <small class="report-workspace-field-help">Permite comparar meses aleatórios; a ordem informada será preservada.</small>
+            </div>
+        </section>
 
         <section class="report-workspace-sidebar__section dre-sidebar-section">
             <p class="filter-label">Data Competência</p>
@@ -147,7 +181,7 @@
         </section>
 
         <section class="report-workspace-sidebar__section dre-sidebar-section">
-            <p class="filter-label">Colunas principais</p>
+            <p class="filter-label">Colunas opcionais</p>
             <div class="report-workspace-choice-grid">
                 <label class="report-workspace-choice-card">
                     <input type="hidden" name="show_budget_column" value="false">
@@ -155,19 +189,28 @@
                     <span>Orçamento</span>
                 </label>
                 <label class="report-workspace-choice-card">
-                    <input type="hidden" name="show_competence_column" value="false">
-                    <input type="checkbox" name="show_competence_column" value="true" {% if show_competence_column %}checked{% endif %} data-filter-input data-default-value="true">
-                    <span>Competência</span>
+                    <input type="hidden" name="show_forecast_column" value="false">
+                    <input type="checkbox" name="show_forecast_column" value="true" {% if show_forecast_column %}checked{% endif %} data-filter-input data-default-value="false">
+                    <span>Previsto</span>
                 </label>
-                <label class="report-workspace-choice-card">
-                    <input type="hidden" name="show_due_column" value="false">
-                    <input type="checkbox" name="show_due_column" value="true" {% if show_due_column %}checked{% endif %} data-filter-input data-default-value="true">
-                    <span>Vencimento</span>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label" for="dre2-budget-version">Orçamento</label>
+                <select id="dre2-budget-version" name="budget_version_id" data-filter-input data-default-value="">
+                    <option value="">Orçamento ativo padrão</option>
+                    {% for item in options.budget_versions %}
+                    <option value="{{ item.id }}" {% if selected_budget_version_id == (item.id|string) %}selected{% endif %}>{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="report-workspace-date-pair">
+                <label>
+                    <span>Mês orçamento</span>
+                    <input type="month" name="budget_month" value="{{ budget_month[:7] if budget_month else '' }}" data-filter-input data-default-value="">
                 </label>
-                <label class="report-workspace-choice-card">
-                    <input type="hidden" name="show_liquidation_column" value="false">
-                    <input type="checkbox" name="show_liquidation_column" value="true" {% if show_liquidation_column %}checked{% endif %} data-filter-input data-default-value="true">
-                    <span>Liquidação</span>
+                <label>
+                    <span>Mês previsto</span>
+                    <input type="month" name="forecast_month" value="{{ forecast_month[:7] if forecast_month else '' }}" data-filter-input data-default-value="">
                 </label>
             </div>
         </section>
@@ -178,3 +221,4 @@
         </div>
     </form>
 </div>
+
