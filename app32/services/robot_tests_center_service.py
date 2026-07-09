@@ -368,6 +368,19 @@ class RobotTestsCenterService:
         "mcp": "MCP Runtime",
     }
 
+    REVIEW_SUITE_BY_AREA = {
+        "admin": "admin_functional_probe",
+        "contracts": "contracts_functional_probe",
+        "financial": "financial_functional_probe",
+        "governance": "full_coverage_autocorrect_audit",
+        "integrations": "integrations_functional_probe",
+        "mcp": "mcp_concurrency_probe",
+        "reports": "reports_functional_probe",
+        "smoke": "smoke_real_navigation",
+        "system": "full_system_validation",
+        "workspace": "workspace_functional_probe",
+    }
+
     STATUS_LABELS = {
         "passed": "Tudo certo",
         "failed": "Atenção necessária",
@@ -382,10 +395,21 @@ class RobotTestsCenterService:
         errors = cls.list_open_errors(company_id=company_id, e2e_state=e2e_state)
         latest_run = (e2e_state.get("latest_runs") or [None])[0]
         history = cls.list_recent_history(e2e_state=e2e_state)
+        history_diff = cls.build_history_diff(e2e_state=e2e_state)
+        coverage_summary = cls.build_coverage_summary(e2e_state=e2e_state)
+        executive_summary = cls.build_executive_summary(
+            latest_run=latest_run,
+            errors=errors,
+            history_diff=history_diff,
+            coverage_summary=coverage_summary,
+        )
         areas_with_error = sum(1 for area in areas if area.get("status") == "failed")
 
         return {
             "company": cls._serialize_company(active_company, company_id),
+            "executive_summary": executive_summary,
+            "coverage_summary": coverage_summary,
+            "history_diff": history_diff,
             "summary_cards": [
                 {
                     "label": "Último teste",
@@ -428,6 +452,96 @@ class RobotTestsCenterService:
             "history_url": "/qa/robot-tests",
             "reports_url": "/qa/robot-tests",
             "evidence_url": (latest_run or {}).get("manifest_download_url"),
+        }
+
+    @classmethod
+    def build_executive_summary(
+        cls,
+        *,
+        latest_run: dict[str, Any] | None,
+        errors: list[dict[str, Any]],
+        history_diff: dict[str, Any],
+        coverage_summary: dict[str, Any],
+    ) -> dict[str, Any]:
+        pending_total = len(errors)
+        regressions_total = int(history_diff.get("regressions_total") or 0)
+        recovered_total = int(history_diff.get("recovered_total") or 0)
+        gaps_total = int(coverage_summary.get("coverage_gaps_total") or 0)
+        latest_status = str((latest_run or {}).get("status") or "observed")
+        if not latest_run:
+            tone = "neutral"
+            title = "Aguardando primeira verificação"
+        elif pending_total or regressions_total or gaps_total:
+            tone = "danger" if pending_total or regressions_total else "warning"
+            title = "Requer atenção"
+        elif latest_status == "passed":
+            tone = "success"
+            title = "Tudo certo"
+        else:
+            tone = cls._tone(latest_status)
+            title = cls.STATUS_LABELS.get(latest_status, "Em análise")
+        message = (
+            f"{pending_total} pendência(s) aberta(s); "
+            f"{regressions_total} regressão(ões) nova(s); "
+            f"{recovered_total} correção(ões) detectada(s); "
+            f"{gaps_total} gap(s) de cobertura."
+        )
+        return {
+            "title": title,
+            "message": message,
+            "tone": tone,
+            "latest_status": latest_status,
+            "pending_total": pending_total,
+            "regressions_total": regressions_total,
+            "recovered_total": recovered_total,
+            "coverage_gaps_total": gaps_total,
+        }
+
+    @classmethod
+    def build_history_diff(cls, *, e2e_state: dict[str, Any] | None = None) -> dict[str, Any]:
+        e2e_state = e2e_state or {}
+        diff = e2e_state.get("latest_diff") or e2e_state.get("execution_diff") or {}
+        regressions_total = cls._count_collection(diff, "regressions", "new_failures", "new_errors")
+        recovered_total = cls._count_collection(diff, "recovered", "fixed", "resolved")
+        new_journeys_total = cls._count_collection(diff, "new_journeys", "added_journeys")
+        if regressions_total:
+            summary = "Há regressões novas em relação à verificação anterior."
+            tone = "danger"
+        elif recovered_total:
+            summary = "Há correções detectadas desde a última verificação."
+            tone = "success"
+        else:
+            summary = "Sem regressões novas detectadas no comparativo disponível."
+            tone = "neutral"
+        return {
+            "regressions_total": regressions_total,
+            "recovered_total": recovered_total,
+            "new_journeys_total": new_journeys_total,
+            "summary": summary,
+            "tone": tone,
+        }
+
+    @classmethod
+    def build_coverage_summary(cls, *, e2e_state: dict[str, Any] | None = None) -> dict[str, Any]:
+        e2e_state = e2e_state or {}
+        inventory = e2e_state.get("ui_inventory") or {}
+        screens_total = cls._first_int(inventory, "screens_total", "templates_total", "routes_rendered_total")
+        fields_total = cls._first_int(inventory, "fields_total", "inputs_total", "form_fields_total")
+        buttons_total = cls._first_int(inventory, "buttons_total", "actions_total")
+        links_total = cls._first_int(inventory, "links_total")
+        coverage_gaps_total = cls._first_int(inventory, "coverage_gaps_total", "gaps_total", "missing_contracts_total")
+        covered_total = cls._first_int(inventory, "automatic_items_covered_total", "covered_items_total", "covered_total")
+        return {
+            "label": "Inventário de cobertura",
+            "status": "updated" if inventory else "missing",
+            "generated_at": inventory.get("generated_at") or inventory.get("run_id") or "Sem inventário",
+            "screens_total": screens_total,
+            "fields_total": fields_total,
+            "buttons_total": buttons_total,
+            "links_total": links_total,
+            "coverage_gaps_total": coverage_gaps_total,
+            "automatic_items_covered_total": covered_total,
+            "tone": "success" if inventory and coverage_gaps_total == 0 else ("warning" if inventory else "neutral"),
         }
 
     @classmethod
@@ -491,12 +605,14 @@ class RobotTestsCenterService:
             if candidate_company_id and int(candidate_company_id) != int(company_id):
                 continue
             error_id = cls._build_error_id(candidate, index)
+            area_id = cls._infer_area_from_candidate(candidate)
             errors.append(
                 {
                     "error_id": error_id,
                     "title": candidate.get("title") or "Falha detectada pelo robô",
-                    "area_id": cls._infer_area_from_candidate(candidate),
-                    "area_label": cls.AREA_LABELS.get(cls._infer_area_from_candidate(candidate), "Área não classificada"),
+                    "area_id": area_id,
+                    "area_label": cls.AREA_LABELS.get(area_id, "Área não classificada"),
+                    "review_suite_id": cls.REVIEW_SUITE_BY_AREA.get(area_id, "execution_diff"),
                     "severity": "Alta" if candidate.get("environment") == "PROD_SAFE" else "Média",
                     "message": E2EOperationsCenterService._humanize_failure(
                         str(candidate.get("failure_type") or "unknown"),
@@ -528,6 +644,9 @@ class RobotTestsCenterService:
     ) -> dict[str, Any]:
         package = cls._find_execution_target(str(package_key or ""))
         selected_suite = suite_id or package.get("suite_id")
+        review_scope: dict[str, Any] | None = None
+        if str(package_key or "") == "previous_failures" and not suite_id:
+            selected_suite, review_scope = cls._select_pending_review_suite(company_id=company_id)
         if not selected_suite:
             raise ValueError("Selecione um teste válido.")
         environment = str(package.get("forced_environment") or environment).upper()
@@ -544,12 +663,39 @@ class RobotTestsCenterService:
             company_id=company_id,
             user_id=execution_user_id,
         )
-        return {
+        payload = {
             "company_id": company_id,
             "package_key": package_key,
             "suite_id": selected_suite,
             "environment": environment,
             "execution": execution,
+        }
+        if review_scope:
+            payload["review_scope"] = review_scope
+        return payload
+
+    @classmethod
+    def _select_pending_review_suite(cls, *, company_id: int) -> tuple[str, dict[str, Any]]:
+        errors = cls.list_open_errors(company_id=company_id)
+        if not errors:
+            return "execution_diff", {
+                "mode": "no_open_errors",
+                "areas": [],
+                "message": "Sem pendências abertas; usando comparativo geral.",
+            }
+        areas = sorted({str(error.get("area_id") or "system") for error in errors})
+        if len(areas) == 1:
+            area_id = areas[0]
+            suite_id = cls.REVIEW_SUITE_BY_AREA.get(area_id, "execution_diff")
+            return suite_id, {
+                "mode": "single_area",
+                "areas": areas,
+                "message": f"Revisão focada em {cls.AREA_LABELS.get(area_id, area_id)}.",
+            }
+        return "full_system_validation", {
+            "mode": "multi_area",
+            "areas": areas,
+            "message": "Pendências em múltiplas áreas; usando DEV_FULL completo.",
         }
 
     @classmethod
@@ -760,9 +906,48 @@ class RobotTestsCenterService:
         return f"{candidate.get('run_id') or 'run'}-{index}"
 
     @staticmethod
+    def _count_collection(payload: dict[str, Any], *keys: str) -> int:
+        for key in keys:
+            value = payload.get(key)
+            if value is None:
+                continue
+            if isinstance(value, int):
+                return value
+            if isinstance(value, (list, tuple, set, dict)):
+                return len(value)
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                continue
+        return 0
+
+    @classmethod
+    def _first_int(cls, payload: dict[str, Any], *keys: str) -> int:
+        candidates = [payload]
+        summary = payload.get("summary")
+        if isinstance(summary, dict):
+            candidates.append(summary)
+        metrics = payload.get("metrics")
+        if isinstance(metrics, dict):
+            candidates.append(metrics)
+        for candidate in candidates:
+            for key in keys:
+                value = candidate.get(key)
+                if value is None:
+                    continue
+                try:
+                    return int(value)
+                except (TypeError, ValueError):
+                    continue
+        return 0
+
+    @staticmethod
     def _infer_area_from_candidate(candidate: dict[str, Any]) -> str:
-        haystack = f"{candidate.get('title') or ''} {candidate.get('failed_step') or ''}".lower()
-        for area in ("financial", "reports", "integrations", "workspace", "meetings", "processes", "contracts", "admin", "smoke"):
+        haystack = " ".join(
+            str(candidate.get(key) or "")
+            for key in ("title", "failed_step", "journey_name", "suite_id", "domain", "area_id")
+        ).lower()
+        for area in ("financial", "reports", "integrations", "mcp", "workspace", "meetings", "processes", "contracts", "admin", "smoke"):
             if area in haystack:
                 return area
         return "system"

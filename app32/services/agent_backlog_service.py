@@ -11,6 +11,7 @@ from services.project_task_service import ProjectTaskService
 logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_BACKLOG_PROJECT_CODE = os.environ.get("AGENT_BACKLOG_PROJECT_CODE", "AA.J.31")
+DEFAULT_ROBOT_FAILURE_PROJECT_CODE = os.environ.get("ROBOT_TEST_FAILURE_PROJECT_CODE", "AA.J.19")
 DEFAULT_AGENT_BACKLOG_TASK_STAGE = os.environ.get("AGENT_BACKLOG_TASK_STAGE", "inbox")
 DEFAULT_AGENT_BACKLOG_TASK_STATUS = os.environ.get("AGENT_BACKLOG_TASK_STATUS", "planned")
 DEFAULT_AGENT_BACKLOG_TASK_PRIORITY = os.environ.get("AGENT_BACKLOG_TASK_PRIORITY", "high")
@@ -24,6 +25,15 @@ def _append_block(parts: list[str], label: str, value: Any) -> None:
     normalized = _normalize_text(value)
     if normalized:
         parts.append(f"{label}: {normalized}")
+
+
+def _resolve_project_code(source_type: str, metadata: Optional[dict[str, Any]]) -> str:
+    metadata_project_code = _normalize_text((metadata or {}).get("project_code"))
+    if metadata_project_code:
+        return metadata_project_code
+    if _normalize_text(source_type) == "e2e_failure":
+        return DEFAULT_ROBOT_FAILURE_PROJECT_CODE
+    return DEFAULT_AGENT_BACKLOG_PROJECT_CODE
 
 
 def _build_description(*, source_type: str, description: str, metadata: Optional[dict[str, Any]]) -> str:
@@ -69,8 +79,9 @@ def create_backlog_task(
     priority: Optional[str] = None,
 ) -> tuple[Optional[ProjectTask], Optional[str]]:
     normalized_title = _normalize_text(title) or "Item de backlog do agente"
+    project_code = _resolve_project_code(source_type, metadata)
     result, error = ProjectTaskService.create_project_task(
-        project_code=DEFAULT_AGENT_BACKLOG_PROJECT_CODE,
+        project_code=project_code,
         task_name=normalized_title,
         user_id=int(user_id or 0),
         allowed_company_ids=None,
@@ -93,7 +104,7 @@ def create_backlog_task(
         ),
     )
     if error:
-        logger.warning("Nao foi possivel criar item de backlog %s no projeto %s: %s", source_type, DEFAULT_AGENT_BACKLOG_PROJECT_CODE, error)
+        logger.warning("Nao foi possivel criar item de backlog %s no projeto %s: %s", source_type, project_code, error)
         return None, error
     if not result or not isinstance(result, dict):
         return None, "Resultado inválido ao criar item de backlog."

@@ -31,6 +31,48 @@
         </div>
     </section>
 
+    <section class="robot-tests-executive-card is-{{ state.executive_summary.tone }}">
+        <div>
+            <span class="robot-tests-eyebrow">Resumo executivo</span>
+            <h2>{{ state.executive_summary.title }}</h2>
+            <p>{{ state.executive_summary.message }}</p>
+        </div>
+        <div class="robot-tests-executive-metrics">
+            <div><strong>{{ state.executive_summary.pending_total }}</strong><small>Pendências</small></div>
+            <div><strong>{{ state.executive_summary.regressions_total }}</strong><small>Regressões</small></div>
+            <div><strong>{{ state.executive_summary.recovered_total }}</strong><small>Corrigidas</small></div>
+            <div><strong>{{ state.executive_summary.coverage_gaps_total }}</strong><small>Gaps</small></div>
+        </div>
+    </section>
+
+    <section class="robot-tests-insight-grid">
+        <article class="robot-tests-insight-card is-{{ state.coverage_summary.tone }}">
+            <div>
+                <span>Inventário de cobertura</span>
+                <strong>{{ state.coverage_summary.generated_at }}</strong>
+                <p>Telas, campos, botões e links conhecidos pelo robô.</p>
+            </div>
+            <div class="robot-tests-insight-metrics">
+                <div><strong>{{ state.coverage_summary.screens_total }}</strong><small>Telas</small></div>
+                <div><strong>{{ state.coverage_summary.fields_total }}</strong><small>Campos</small></div>
+                <div><strong>{{ state.coverage_summary.buttons_total }}</strong><small>Botões</small></div>
+                <div><strong>{{ state.coverage_summary.coverage_gaps_total }}</strong><small>Gaps</small></div>
+            </div>
+        </article>
+        <article class="robot-tests-insight-card is-{{ state.history_diff.tone }}">
+            <div>
+                <span>Comparativo</span>
+                <strong>Última vs. anterior</strong>
+                <p>{{ state.history_diff.summary }}</p>
+            </div>
+            <div class="robot-tests-insight-metrics">
+                <div><strong>{{ state.history_diff.regressions_total }}</strong><small>Novas falhas</small></div>
+                <div><strong>{{ state.history_diff.recovered_total }}</strong><small>Corrigidas</small></div>
+                <div><strong>{{ state.history_diff.new_journeys_total }}</strong><small>Jornadas novas</small></div>
+            </div>
+        </article>
+    </section>
+
     <section class="robot-tests-summary-grid">
         {% for card in state.summary_cards %}
         <article class="robot-tests-summary-card is-{{ card.tone }}">
@@ -116,6 +158,7 @@
                             <strong>{{ error.title }}</strong>
                             <p>{{ error.message }}</p>
                             <small>{{ error.expected_action }}</small>
+                            <small class="robot-tests-suggested-suite">Suite sugerida: {{ error.review_suite_id }}</small>
                         </div>
                         <div class="robot-tests-error-card__actions">
                             <button type="button" class="robot-tests-btn robot-tests-btn--primary robot-tests-error-action" data-action="create_backlog" data-error-id="{{ error.error_id }}">Criar card de correção</button>
@@ -212,6 +255,24 @@
     .robot-tests-header h1, .robot-tests-panel h2 { margin:0; }
     .robot-tests-header p, .robot-tests-panel__header p { color:var(--text-secondary); max-width:78ch; margin:.45rem 0 0; }
     .robot-tests-company-pill { min-width:220px; align-self:flex-start; background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:1rem; display:flex; flex-direction:column; gap:.25rem; }
+    .robot-tests-executive-card { display:flex; justify-content:space-between; align-items:center; gap:1.25rem; background:var(--surface); border:1px solid var(--border); border-left:6px solid var(--primary); border-radius:22px; padding:1.2rem; box-shadow:var(--shadow-sm); }
+    .robot-tests-executive-card h2 { margin:0; font-size:1.35rem; }
+    .robot-tests-executive-card p { margin:.35rem 0 0; color:var(--text-secondary); }
+    .robot-tests-executive-card.is-success { border-left-color:#10b981; }
+    .robot-tests-executive-card.is-danger { border-left-color:#ef4444; }
+    .robot-tests-executive-card.is-warning { border-left-color:#f59e0b; }
+    .robot-tests-executive-metrics, .robot-tests-insight-metrics { display:grid; grid-template-columns:repeat(4, minmax(72px,1fr)); gap:.65rem; }
+    .robot-tests-executive-metrics div, .robot-tests-insight-metrics div { background:var(--surface-secondary); border:1px solid var(--border); border-radius:14px; padding:.75rem; text-align:center; }
+    .robot-tests-executive-metrics strong, .robot-tests-insight-metrics strong { display:block; font-size:1.2rem; }
+    .robot-tests-executive-metrics small, .robot-tests-insight-metrics small { color:var(--text-secondary); font-weight:800; }
+    .robot-tests-insight-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:.85rem; }
+    .robot-tests-insight-card { display:flex; justify-content:space-between; gap:1rem; background:var(--surface); border:1px solid var(--border); border-left:5px solid var(--primary); border-radius:18px; padding:1rem; box-shadow:var(--shadow-sm); }
+    .robot-tests-insight-card.is-success { border-left-color:#10b981; }
+    .robot-tests-insight-card.is-danger { border-left-color:#ef4444; }
+    .robot-tests-insight-card.is-warning { border-left-color:#f59e0b; }
+    .robot-tests-insight-card span { color:var(--primary); font-size:.78rem; font-weight:900; text-transform:uppercase; letter-spacing:.05em; }
+    .robot-tests-insight-card strong { display:block; margin:.25rem 0; }
+    .robot-tests-insight-card p { margin:.25rem 0 0; color:var(--text-secondary); line-height:1.35; }
     .robot-tests-company-pill span, .robot-tests-company-pill small { color:var(--text-secondary); }
     .robot-tests-summary-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:.85rem; }
     .robot-tests-summary-card, .robot-tests-panel, .robot-tests-area-card, .robot-tests-category-card, .robot-tests-error-card, .robot-tests-empty-state { background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-sm); }
@@ -271,6 +332,7 @@
     .robot-tests-side-links--primary { display:grid; grid-template-columns:1fr 1fr; }
     .robot-tests-error-card { padding:1rem; display:grid; grid-template-columns:minmax(0,1fr) 190px; gap:1rem; align-items:center; border-left:5px solid #ef4444; }
     .robot-tests-error-card__content span, .robot-tests-error-card__content small { color:var(--text-secondary); }
+    .robot-tests-suggested-suite { display:inline-flex; margin-top:.35rem; padding:.24rem .5rem; border-radius:999px; background:rgba(37,99,235,.08); color:var(--primary) !important; font-weight:800; }
     .robot-tests-error-card__content strong { display:block; margin:.25rem 0; }
     .robot-tests-error-card__content p { margin:.25rem 0 .4rem; color:var(--text-primary); }
     .robot-tests-error-card__actions { display:flex; flex-direction:column; gap:.55rem; }
@@ -312,14 +374,15 @@
     .robot-tests-kv div { background:var(--surface-secondary); border-radius:12px; padding:.75rem; }
     .robot-tests-kv span { display:block; color:var(--text-secondary); font-size:.8rem; }
     @media (max-width: 1180px) {
-        .robot-tests-main-grid, .robot-tests-summary-grid { grid-template-columns:1fr 1fr; }
+        .robot-tests-main-grid, .robot-tests-summary-grid, .robot-tests-insight-grid { grid-template-columns:1fr 1fr; }
+        .robot-tests-executive-card, .robot-tests-insight-card { flex-direction:column; align-items:stretch; }
         .robot-tests-action-column { grid-column:1 / -1; }
         .robot-tests-panel--sticky { position:static; }
     }
     @media (max-width: 760px) {
         .robot-tests-center { padding:0 1rem 1.5rem; }
         .robot-tests-header, .robot-tests-panel__header, .robot-tests-navbar-actions { flex-direction:column; }
-        .robot-tests-main-grid, .robot-tests-summary-grid, .robot-tests-area-grid, .robot-tests-category-grid, .robot-tests-error-card, .robot-tests-history-card, .robot-tests-kv { grid-template-columns:1fr; }
+        .robot-tests-main-grid, .robot-tests-summary-grid, .robot-tests-insight-grid, .robot-tests-area-grid, .robot-tests-category-grid, .robot-tests-error-card, .robot-tests-history-card, .robot-tests-kv, .robot-tests-executive-metrics, .robot-tests-insight-metrics { grid-template-columns:1fr; }
         .robot-tests-company-pill { width:100%; }
     }
 </style>

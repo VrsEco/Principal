@@ -35,6 +35,31 @@ def test_robot_tests_center_template_renders_new_functional_layout():
         active_company=SimpleNamespace(name="M1 - Empresa de Testes Versus"),
         state={
             "company": {"id": 9, "name": "M1 - Empresa de Testes Versus", "client_code": "M1"},
+            "executive_summary": {
+                "title": "Requer atenção",
+                "message": "1 pendência(s) aberta(s); 1 regressão(ões) nova(s); 0 correção(ões) detectada(s); 0 gap(s) de cobertura.",
+                "tone": "danger",
+                "pending_total": 1,
+                "regressions_total": 1,
+                "recovered_total": 0,
+                "coverage_gaps_total": 0,
+            },
+            "coverage_summary": {
+                "tone": "success",
+                "generated_at": "2026-06-14T09:55:00",
+                "screens_total": 321,
+                "fields_total": 2952,
+                "buttons_total": 2126,
+                "links_total": 410,
+                "coverage_gaps_total": 0,
+            },
+            "history_diff": {
+                "tone": "danger",
+                "summary": "Há regressões novas em relação à verificação anterior.",
+                "regressions_total": 1,
+                "recovered_total": 0,
+                "new_journeys_total": 2,
+            },
             "summary_cards": [
                 {"label": "Último teste", "value": "2026-06-14", "hint": "Tudo certo", "tone": "success"},
                 {"label": "Áreas verificadas", "value": 4, "hint": "Por área", "tone": "neutral"},
@@ -119,6 +144,7 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "message": "Resultado diferente do esperado.",
                     "expected_action": "Revisar regra funcional.",
                     "manifest_download_url": "/manifest",
+                    "review_suite_id": "financial_functional_probe",
                 }
             ],
             "technical_center_url": "/qa/robot-tests",
@@ -130,6 +156,10 @@ def test_robot_tests_center_template_renders_new_functional_layout():
 
     assert "Central do Robô de Testes" in html
     assert "Ações" in html
+    assert "Resumo executivo" in html
+    assert "Inventário de cobertura" in html
+    assert "Comparativo" in html
+    assert "Suite sugerida: financial_functional_probe" in html
     assert "Modo padrão" in html
     assert "DEV_FULL" in html
     assert "Fazer teste completo DEV_FULL" in html

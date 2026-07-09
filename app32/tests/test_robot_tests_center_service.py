@@ -26,6 +26,16 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
                 "manifest_download_url": "/manifest",
             }
         ],
+        "latest_diff": {"regressions": ["financial_functional_probe"], "recovered": [], "new_journeys": ["reports_functional_probe"]},
+        "ui_inventory": {
+            "generated_at": "2026-06-14T09:55:00",
+            "screens_total": 321,
+            "fields_total": 2952,
+            "buttons_total": 2126,
+            "links_total": 410,
+            "coverage_gaps_total": 0,
+            "automatic_items_covered_total": 3746,
+        },
         "backlog_candidates": [
             {
                 "title": "Falha E2E: financial_functional_probe",
@@ -70,6 +80,12 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
     assert any(category["label"] == "Cleanup / Reversão" for category in state["test_categories"])
     assert state["devfull_transactional"]["controlled_mutation"]["rollback_steps_total"] == 8
     assert state["history"][0]["run_id"] == "run-1"
+    assert state["executive_summary"]["title"] == "Requer atenção"
+    assert state["coverage_summary"]["screens_total"] == 321
+    assert state["coverage_summary"]["coverage_gaps_total"] == 0
+    assert state["history_diff"]["regressions_total"] == 1
+    assert state["history_diff"]["new_journeys_total"] == 1
+    assert state["errors"][0]["review_suite_id"] == "financial_functional_probe"
 
 
 def test_robot_tests_center_filters_errors_by_company(monkeypatch):
@@ -198,3 +214,46 @@ def test_robot_tests_center_start_run_accepts_inventory_update(monkeypatch):
     assert result["suite_id"] == "ui_inventory_contract_scan"
     assert result["environment"] == "DEV_FULL"
     assert result["execution"]["execution_id"] == "exec-coverage"
+
+
+def test_robot_tests_center_previous_failures_selects_focused_suite(monkeypatch):
+    fake_e2e_state = {
+        "suite_catalog": [],
+        "latest_runs": [],
+        "backlog_candidates": [
+            {
+                "title": "Falha E2E: financial_functional_probe",
+                "failure_type": "assertion",
+                "failed_step": "financial save",
+                "run_id": "run-fin",
+                "company_id": 9,
+                "environment": "DEV_FULL",
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        "services.robot_tests_center_service.E2EOperationsCenterService.build_frontend_state",
+        lambda active_company: fake_e2e_state,
+    )
+    monkeypatch.setattr(
+        RobotTestsCenterService,
+        "_resolve_dev_full_robot_user_id",
+        lambda **kwargs: kwargs.get("fallback_user_id"),
+    )
+    monkeypatch.setattr(
+        "services.robot_tests_center_service.E2ESupervisedExecutionService.start_execution",
+        lambda suite_id, environment, **kwargs: {"execution_id": "exec-review", "suite_id": suite_id, "environment": environment},
+    )
+
+    result = RobotTestsCenterService.start_run(
+        package_key="previous_failures",
+        suite_id=None,
+        environment="PROD_SAFE",
+        company_id=9,
+        user_id=7,
+    )
+
+    assert result["suite_id"] == "financial_functional_probe"
+    assert result["environment"] == "DEV_FULL"
+    assert result["review_scope"]["mode"] == "single_area"
+    assert result["execution"]["execution_id"] == "exec-review"
