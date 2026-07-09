@@ -10,6 +10,11 @@ from services import agent_backlog_service
 
 class _Task:
     id = 123
+    project_id = 144
+
+    @property
+    def code(self):
+        return "AA.J.19.1"
 
 
 def test_agent_backlog_routes_e2e_failure_to_robot_failure_project(monkeypatch):
@@ -33,6 +38,8 @@ def test_agent_backlog_routes_e2e_failure_to_robot_failure_project(monkeypatch):
     assert error is None
     assert task is not None
     assert captured["project_code"] == "AA.J.19"
+    assert "Prompt pronto para o Squad de Engenharia" in captured["notes"]
+    assert "robot_error_id: " not in captured["notes"] or "Prompt pronto" in captured["notes"]
 
 
 def test_agent_backlog_accepts_project_code_override(monkeypatch):

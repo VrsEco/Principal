@@ -145,6 +145,19 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "expected_action": "Revisar regra funcional.",
                     "manifest_download_url": "/manifest",
                     "review_suite_id": "financial_functional_probe",
+                },
+                {
+                    "error_id": "run-1-1",
+                    "title": "Falha E2E: reports_functional_probe",
+                    "area_id": "reports",
+                    "area_label": "Relatórios",
+                    "severity": "Média",
+                    "message": "Resultado diferente do esperado.",
+                    "expected_action": "Revisar relatório.",
+                    "manifest_download_url": "/manifest",
+                    "review_suite_id": "reports_functional_probe",
+                    "task_url": "/projects/144/manage?task_id=456",
+                    "task_code": "AA.J.19.7",
                 }
             ],
             "technical_center_url": "/qa/robot-tests",
@@ -169,6 +182,8 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     assert "Resultado por área" in html
     assert "Pendências abertas" in html
     assert "Criar card de correção" in html
+    assert "Abrir card AA.J.19.7" in html
+    assert "/projects/144/manage?task_id=456" in html
     assert "Revisar pendências" in html
     assert "Suporte técnico" not in html
     assert "Abrir tela técnica" not in html

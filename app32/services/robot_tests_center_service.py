@@ -624,12 +624,15 @@ class RobotTestsCenterService:
                     ),
                     "run_id": candidate.get("run_id"),
                     "environment": candidate.get("environment"),
+                    "failure_type": candidate.get("failure_type"),
+                    "failed_step": candidate.get("failed_step"),
                     "manifest_download_url": candidate.get("manifest_download_url"),
                     "backlog_sync_url": candidate.get("backlog_sync_url"),
                     "status": "open",
                     "company_id": company_id,
                 }
             )
+        cls._attach_existing_error_cards(errors)
         return errors
 
     @classmethod
@@ -759,18 +762,105 @@ class RobotTestsCenterService:
         if not error:
             raise KeyError(error_id)
         if action == "create_backlog":
-            run_id = error.get("run_id")
-            if not run_id:
-                raise ValueError("Erro sem run_id para sincronização com backlog.")
-            return E2EOperationsCenterService.sync_backlog_candidates(
-                str(run_id),
+            if error.get("task_id"):
+                return {
+                    "created": [],
+                    "existing": [cls._serialize_error_task(error)],
+                    "requested": 1,
+                    "error": error,
+                }
+            task, task_error = create_task_fn(
+                source_type="e2e_failure",
+                title=error["title"],
+                description=cls._build_error_backlog_description(error),
                 user_id=user_id,
                 company_id=company_id,
-                create_task_fn=create_task_fn,
+                metadata=cls._build_error_backlog_metadata(error),
+                priority="high",
             )
+            if task_error:
+                raise ValueError(str(task_error))
+            linked = cls._serialize_task_link(task)
+            return {"created": [linked], "existing": [], "requested": 1, "error": {**error, **linked}}
         if action == "details":
             return {"error": error, "technical_center_url": "/qa/e2e"}
         raise ValueError("Ação inválida para o erro.")
+
+    @classmethod
+    def _build_error_backlog_description(cls, error: dict[str, Any]) -> str:
+        return (
+            "Falha detectada pela Central do Robô de Testes.\n"
+            f"Erro do robô: {error.get('error_id')}\n"
+            f"Área: {error.get('area_label')} ({error.get('area_id')})\n"
+            f"Run: {error.get('run_id')}\n"
+            f"Ambiente: {error.get('environment')}\n"
+            f"Mensagem: {error.get('message')}\n"
+            f"Ação esperada: {error.get('expected_action')}\n"
+            f"Suite sugerida: {error.get('review_suite_id')}\n"
+            f"Evidência: {error.get('manifest_download_url') or 'Não informada'}"
+        )
+
+    @classmethod
+    def _build_error_backlog_metadata(cls, error: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "robot_error_id": error.get("error_id"),
+            "run_id": error.get("run_id"),
+            "environment": error.get("environment"),
+            "area_id": error.get("area_id"),
+            "area_label": error.get("area_label"),
+            "review_suite_id": error.get("review_suite_id"),
+            "failure_type": error.get("failure_type"),
+            "failed_step": error.get("failed_step"),
+            "manifest_download_url": error.get("manifest_download_url"),
+        }
+
+    @classmethod
+    def _attach_existing_error_cards(cls, errors: list[dict[str, Any]]) -> None:
+        if not errors:
+            return
+        try:
+            from models.project import Project, ProjectTask
+        except Exception:
+            return
+        try:
+            from services.agent_backlog_service import DEFAULT_ROBOT_FAILURE_PROJECT_CODE
+
+            project = Project.query.filter_by(code=DEFAULT_ROBOT_FAILURE_PROJECT_CODE).first()
+            if not project:
+                return
+            tasks = (
+                ProjectTask.query.filter_by(project_id=project.id, is_deleted=False)
+                .order_by(ProjectTask.created_at.desc())
+                .limit(200)
+                .all()
+            )
+        except Exception:
+            return
+        for error in errors:
+            marker = f"robot_error_id: {error.get('error_id')}"
+            fallback = f"Run: {error.get('run_id')}"
+            matched = None
+            for task in tasks:
+                notes = str(getattr(task, "notes", None) or "")
+                how = str(getattr(task, "how", None) or "")
+                haystack = f"{notes}\n{how}"
+                if marker in haystack or (error.get("run_id") and fallback in haystack and str(error.get("title") or "") in haystack):
+                    matched = task
+                    break
+            if matched:
+                error.update(cls._serialize_task_link(matched))
+
+    @staticmethod
+    def _serialize_task_link(task: Any) -> dict[str, Any]:
+        task_id = getattr(task, "id", None)
+        project_id = getattr(task, "project_id", None)
+        task_code = getattr(task, "code", None) or getattr(task, "task_code", None)
+        task_url = f"/projects/{project_id}/manage?task_id={task_id}" if project_id and task_id else None
+        return {"task_id": task_id, "task_code": task_code, "task_url": task_url}
+
+    @staticmethod
+    def _serialize_error_task(error: dict[str, Any]) -> dict[str, Any]:
+        return {"task_id": error.get("task_id"), "task_code": error.get("task_code"), "task_url": error.get("task_url")}
 
     @classmethod
     def list_test_packages(cls, *, e2e_state: dict[str, Any] | None = None) -> list[dict[str, Any]]:

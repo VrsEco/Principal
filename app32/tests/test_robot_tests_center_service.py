@@ -257,3 +257,53 @@ def test_robot_tests_center_previous_failures_selects_focused_suite(monkeypatch)
     assert result["environment"] == "DEV_FULL"
     assert result["review_scope"]["mode"] == "single_area"
     assert result["execution"]["execution_id"] == "exec-review"
+
+
+def test_robot_tests_center_create_backlog_links_selected_error(monkeypatch):
+    fake_e2e_state = {
+        "suite_catalog": [],
+        "latest_runs": [],
+        "backlog_candidates": [
+            {
+                "title": "Falha E2E: financial_functional_probe",
+                "failure_type": "assertion",
+                "failed_step": "financial save",
+                "run_id": "run-fin",
+                "company_id": 9,
+                "environment": "DEV_FULL",
+                "manifest_download_url": "/manifest",
+            }
+        ],
+    }
+    monkeypatch.setattr(
+        "services.robot_tests_center_service.E2EOperationsCenterService.build_frontend_state",
+        lambda active_company: fake_e2e_state,
+    )
+
+    class Task:
+        id = 456
+        project_id = 144
+
+        @property
+        def code(self):
+            return "AA.J.19.7"
+
+    captured = {}
+
+    def fake_create_task(**kwargs):
+        captured.update(kwargs)
+        return Task(), None
+
+    result = RobotTestsCenterService.handle_error_action(
+        error_id="run-fin-0",
+        action="create_backlog",
+        company_id=9,
+        user_id=5,
+        create_task_fn=fake_create_task,
+    )
+
+    assert result["created"][0]["task_code"] == "AA.J.19.7"
+    assert result["created"][0]["task_url"] == "/projects/144/manage?task_id=456"
+    assert captured["metadata"]["robot_error_id"] == "run-fin-0"
+    assert captured["metadata"]["review_suite_id"] == "financial_functional_probe"
+    assert "Prompt pronto" not in captured["description"]  # prompt é montado pelo agent_backlog_service

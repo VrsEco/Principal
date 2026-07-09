@@ -161,7 +161,11 @@
                             <small class="robot-tests-suggested-suite">Suite sugerida: {{ error.review_suite_id }}</small>
                         </div>
                         <div class="robot-tests-error-card__actions">
+                            {% if error.task_url %}
+                            <a href="{{ error.task_url }}" class="robot-tests-btn robot-tests-btn--primary robot-tests-open-card" data-error-id="{{ error.error_id }}">Abrir card {{ error.task_code or '' }}</a>
+                            {% else %}
                             <button type="button" class="robot-tests-btn robot-tests-btn--primary robot-tests-error-action" data-action="create_backlog" data-error-id="{{ error.error_id }}">Criar card de correção</button>
+                            {% endif %}
                             {% if error.manifest_download_url %}
                             <a href="{{ error.manifest_download_url }}" class="robot-tests-btn robot-tests-btn--secondary">Evidência</a>
                             {% endif %}
@@ -583,6 +587,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const payload = await readRobotTestsJson(response);
                 if (!response.ok || !payload.success) {
                     throw new Error(payload.error || 'Falha ao disparar correção.');
+                }
+                const created = payload.result?.created?.[0] || payload.result?.existing?.[0] || payload.result?.error || null;
+                const taskUrl = created?.task_url;
+                const taskCode = created?.task_code || 'card';
+                if (taskUrl) {
+                    const actions = button.closest('.robot-tests-error-card__actions');
+                    const openLink = document.createElement('a');
+                    openLink.href = taskUrl;
+                    openLink.className = 'robot-tests-btn robot-tests-btn--primary robot-tests-open-card';
+                    openLink.textContent = `Abrir card ${taskCode}`;
+                    button.replaceWith(openLink);
+                    window.alert('Card de correção criado e vinculado ao erro. As observações já contêm o prompt pronto para o Squad.');
+                    return;
                 }
                 window.alert('Correção enviada ao backlog. O erro sairá da lista quando a nova execução passar ou quando for decidido como falso positivo.');
             } catch (error) {

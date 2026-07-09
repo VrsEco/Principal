@@ -36,11 +36,54 @@ def _resolve_project_code(source_type: str, metadata: Optional[dict[str, Any]]) 
     return DEFAULT_AGENT_BACKLOG_PROJECT_CODE
 
 
-def _build_description(*, source_type: str, description: str, metadata: Optional[dict[str, Any]]) -> str:
+def _build_robot_failure_prompt(*, title: str, description: str, metadata: Optional[dict[str, Any]]) -> str:
+    if _normalize_text((metadata or {}).get("squad_prompt")):
+        return _normalize_text((metadata or {}).get("squad_prompt"))
+    extra = dict(metadata or {})
+    lines = [
+        "Prompt pronto para o Squad de Engenharia:",
+        "",
+        "Atue como Squad de Engenharia de Elite do Gestão Versus (@ARQUITETO, @BACKEND_SERVICE, @BACKEND_API, @FRONTEND e @QA_AUTOMATION).",
+        "Analise e corrija a falha abaixo mantendo multi-tenancy por company_id, lógica de negócio em service e validação por testes automatizados.",
+        "",
+        f"Falha: {title}",
+    ]
+    for label, key in (
+        ("Erro do robô", "robot_error_id"),
+        ("Run", "run_id"),
+        ("Ambiente", "environment"),
+        ("Área", "area_id"),
+        ("Suite sugerida", "review_suite_id"),
+        ("Jornada", "journey"),
+        ("Passo", "failed_step"),
+        ("Tipo", "failure_type"),
+        ("Manifesto/Evidência", "manifest_download_url"),
+    ):
+        value = _normalize_text(extra.get(key))
+        if value:
+            lines.append(f"{label}: {value}")
+    if description:
+        lines.extend(["", "Contexto técnico:", description.strip()])
+    lines.extend([
+        "",
+        "Entregáveis esperados:",
+        "1. Reproduzir a falha com o robô/teste relacionado.",
+        "2. Corrigir a causa raiz sem atalhos e sem quebrar tenant-safety.",
+        "3. Adicionar ou ajustar teste automatizado que previna regressão.",
+        "4. Rodar a suíte indicada e o DEV_FULL quando aplicável.",
+        "5. Registrar evidência objetiva da correção no card.",
+    ])
+    return "\n".join(lines).strip()
+
+
+def _build_description(*, source_type: str, description: str, metadata: Optional[dict[str, Any]], title: str = "") -> str:
     lines = [f"Origem do backlog: {source_type}"]
     if description:
         lines.append("")
         lines.append(description.strip())
+    if _normalize_text(source_type) == "e2e_failure":
+        lines.append("")
+        lines.append(_build_robot_failure_prompt(title=title, description=description, metadata=metadata))
     extra = dict(metadata or {})
     if extra:
         lines.append("")
@@ -52,7 +95,7 @@ def _build_description(*, source_type: str, description: str, metadata: Optional
     return "\n".join(lines).strip()
 
 
-def _build_notes(*, source_type: str, company_id: Optional[int], user_id: Optional[int], metadata: Optional[dict[str, Any]]) -> str:
+def _build_notes(*, source_type: str, company_id: Optional[int], user_id: Optional[int], metadata: Optional[dict[str, Any]], title: str = "", description: str = "") -> str:
     parts: list[str] = [
         f"Criado automaticamente em {datetime.utcnow().isoformat()}Z",
         f"Tipo de origem: {source_type}",
@@ -62,9 +105,11 @@ def _build_notes(*, source_type: str, company_id: Optional[int], user_id: Option
     for key, value in dict(metadata or {}).items():
         if value is None:
             continue
-        if key in {"traceback"}:
+        if key in {"traceback", "squad_prompt"}:
             continue
         _append_block(parts, key, value)
+    if _normalize_text(source_type) == "e2e_failure":
+        parts.extend(["", _build_robot_failure_prompt(title=title, description=description, metadata=metadata)])
     return "\n".join(parts).strip()
 
 
@@ -91,6 +136,7 @@ def create_backlog_task(
             source_type=source_type,
             description=description,
             metadata=metadata,
+            title=normalized_title,
         ),
         amount=None,
         status=DEFAULT_AGENT_BACKLOG_TASK_STATUS,
@@ -101,6 +147,8 @@ def create_backlog_task(
             company_id=company_id,
             user_id=user_id,
             metadata=metadata,
+            title=normalized_title,
+            description=description,
         ),
     )
     if error:

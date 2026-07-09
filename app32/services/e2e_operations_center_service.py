@@ -177,7 +177,8 @@ class E2EOperationsCenterService:
         detail = cls.get_run_detail(run_id)
         created: list[dict[str, Any]] = []
         errors: list[str] = []
-        for candidate in detail.get("backlog_candidates") or []:
+        for index, candidate in enumerate(detail.get("backlog_candidates") or []):
+            robot_error_id = f"{detail.get('run_id') or 'run'}-{index}"
             task, error = create_task_fn(
                 source_type="e2e_failure",
                 title=candidate["title"],
@@ -185,10 +186,13 @@ class E2EOperationsCenterService:
                 user_id=user_id,
                 company_id=company_id or candidate.get("company_id"),
                 metadata={
+                    "robot_error_id": robot_error_id,
                     "run_id": detail.get("run_id"),
                     "environment": detail.get("environment"),
                     "failed_step": candidate.get("failed_step"),
                     "failure_type": candidate.get("failure_type"),
+                    "journey": candidate.get("journey"),
+                    "manifest_download_url": detail.get("manifest_download_url"),
                 },
                 priority="high",
             )
@@ -199,10 +203,19 @@ class E2EOperationsCenterService:
                 {
                     "title": candidate["title"],
                     "task_id": getattr(task, "id", None),
-                    "task_code": getattr(task, "task_code", None),
+                    "task_code": getattr(task, "code", None) or getattr(task, "task_code", None),
+                    "task_url": cls._build_task_url(task),
                 }
             )
         return {"created": created, "errors": errors, "requested": len(detail.get("backlog_candidates") or [])}
+
+    @staticmethod
+    def _build_task_url(task: Any) -> str | None:
+        task_id = getattr(task, "id", None)
+        project_id = getattr(task, "project_id", None)
+        if not task_id or not project_id:
+            return None
+        return f"/projects/{project_id}/manage?task_id={task_id}"
 
     @staticmethod
     def _build_backlog_description(*, detail: dict[str, Any], candidate: dict[str, Any]) -> str:
