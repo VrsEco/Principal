@@ -84,6 +84,13 @@ class RobotTestsCenterService:
             "description": "Executa tudo que o robô já consegue validar hoje.",
             "highlight": True,
         },
+        "inventory_update": {
+            "label": "Atualizar inventário",
+            "suite_id": "ui_inventory_contract_scan",
+            "description": "Atualiza telas, campos, botões, links e rotas que o robô conhece.",
+            "highlight": False,
+            "forced_environment": "DEV_FULL",
+        },
         "post_deploy": {
             "label": "Rodar pós-deploy",
             "suite_id": "smoke_real_navigation",
@@ -539,7 +546,13 @@ class RobotTestsCenterService:
         """
         if str(environment or "").upper() != "DEV_FULL":
             return fallback_user_id
-        if suite_id not in {"full_system_validation", "full_coverage_autocorrect_audit", "devfull_full_app_validation"}:
+        if suite_id not in {
+            "full_system_validation",
+            "full_coverage_autocorrect_audit",
+            "devfull_full_app_validation",
+            "ui_inventory_contract_scan",
+            "inventory_system_scan",
+        }:
             return fallback_user_id
 
         configured = str(os.environ.get("APP32_E2E_DEV_USER_ID") or "").strip()

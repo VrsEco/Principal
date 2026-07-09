@@ -50,6 +50,7 @@ def test_robot_tests_center_template_renders_new_functional_layout():
             ],
             "execution_packages": [
                 {"key": "complete", "label": "Rodar teste completo", "description": "Tudo", "highlight": True, "available": True},
+                {"key": "inventory_update", "label": "Atualizar inventário", "description": "Telas, campos, botões, links e rotas", "highlight": False, "available": True},
                 {"key": "post_deploy", "label": "Rodar pós-deploy", "description": "Rápido", "highlight": False, "available": True},
                 {"key": "previous_failures", "label": "Rodar falhas anteriores", "description": "Falhas", "highlight": False, "available": True},
                 {"key": "coverage_audit", "label": "Rodar auditoria de cobertura", "description": "Lacunas", "highlight": False, "available": True},
@@ -125,10 +126,12 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     )
 
     assert "Central do Robô de Testes" in html
-    assert "Teste completo" in html
+    assert "Teste e inventário" in html
     assert "Modo padrão" in html
-    assert "DEV_FULL — teste completo" in html
+    assert "DEV_FULL — teste completo e inventário" in html
     assert "Rodar teste completo" in html
+    assert "Atualizar inventário" in html
+    assert "telas, campos, botões, links e rotas" in html
     assert "Resultado por área" in html
     assert "Erros encontrados e ações" in html
     assert "Disparar correção" in html

@@ -106,11 +106,11 @@
 
         <aside class="robot-tests-action-column">
             <section class="robot-tests-panel robot-tests-panel--sticky">
-                <h2>Teste completo</h2>
-                <p class="robot-tests-help-text">Use este botão para validar tudo que está coberto pelo robô no ambiente DEV_FULL.</p>
+                <h2>Teste e inventário</h2>
+                <p class="robot-tests-help-text">Rode o teste completo ou atualize o inventário de telas, campos, botões, links e rotas no ambiente DEV_FULL.</p>
                 <div class="robot-tests-field robot-tests-field--readonly">
                     <span>Modo padrão</span>
-                    <strong>DEV_FULL — teste completo</strong>
+                    <strong>DEV_FULL — teste completo e inventário</strong>
                 </div>
 
                 <div class="robot-tests-run-monitor" id="robotTestsRunMonitor" hidden>
@@ -135,10 +135,10 @@
                 </div>
 
                 <div class="robot-tests-action-group">
-                    <span class="robot-tests-group-title">Ação principal</span>
+                    <span class="robot-tests-group-title">Ações principais</span>
                     <div class="robot-tests-package-list">
                     {% for package in state.execution_packages %}
-                    {% if package.key == 'complete' %}
+                    {% if package.key in ['complete', 'inventory_update'] %}
                     <button type="button"
                             class="robot-tests-package-btn {{ 'is-highlight' if package.highlight else '' }}"
                             data-package-key="{{ package.key }}"
