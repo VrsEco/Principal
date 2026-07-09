@@ -366,6 +366,24 @@ def test_tool_policy_allows_strategy_maturation_review_for_estrategico_cliente_o
     assert decision.allowed is True
 
 
+def test_tool_policy_allows_identity_self_service_without_selected_company_even_with_accessible_companies() -> None:
+    decision = evaluate_tool_policy(
+        {"user_id": 5, "company_id": None, "role": "cliente"},
+        ToolPolicyRequest(
+            tool_name="list_my_companies",
+            surface="user",
+            domain="identity_self_service",
+            action="read",
+            accessible_company_ids=(7, 8),
+            required_context=("user",),
+        ),
+    )
+
+    assert decision.allowed is True
+    assert decision.resolved_company_id is None
+    assert "tenant_scope_not_required" in decision.checks
+
+
 def test_tool_policy_blocks_strategy_maturation_review_without_selected_company() -> None:
     decision = evaluate_tool_policy(
         {

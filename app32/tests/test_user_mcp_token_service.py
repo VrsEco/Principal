@@ -34,6 +34,69 @@ def test_build_notification_body_for_d3_contains_renewal_instruction():
     assert "renove o token" in whatsapp_message.lower()
 
 
+def test_issue_token_revokes_only_same_runtime_connector(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    fake_user = SimpleNamespace(id=7)
+    now = datetime(2026, 7, 9, 12, 0, 0)
+
+    existing_claude = SimpleNamespace(
+        user_id=7,
+        status="active",
+        last_client_name="claude:squad_cliente",
+        revoked_at=None,
+        updated_at=None,
+    )
+    existing_codex = SimpleNamespace(
+        user_id=7,
+        status="active",
+        last_client_name="codex:squad_cliente",
+        revoked_at=None,
+        updated_at=None,
+    )
+    created_records = []
+
+    class FakeQuery:
+        def filter_by(self, **kwargs):
+            assert kwargs == {"user_id": 7, "status": "active"}
+            return self
+
+        def all(self):
+            return [existing_claude, existing_codex]
+
+    class FakeUserMcpToken:
+        query = FakeQuery()
+
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
+            created_records.append(self)
+
+    class FakeSession:
+        def add(self, record):
+            created_records.append(record)
+
+        def commit(self):
+            pass
+
+    monkeypatch.setattr(token_service_module, "UserMcpToken", FakeUserMcpToken)
+    monkeypatch.setattr(token_service_module.db, "session", FakeSession())
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_utcnow", staticmethod(lambda: now))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_generate_plaintext_token", staticmethod(lambda: "mcpu_new"))
+
+    record, plaintext = service._issue_token(
+        fake_user,
+        created_by_user_id=7,
+        runtime="claude",
+        squad="squad_cliente",
+    )
+
+    assert plaintext == "mcpu_new"
+    assert record.last_client_name == "claude:squad_cliente"
+    assert existing_claude.status == "revoked"
+    assert existing_claude.revoked_at == now
+    assert existing_codex.status == "active"
+    assert existing_codex.revoked_at is None
+
+
 def test_ensure_app_context_disables_bootstrap_when_creating_mcp_token_app(monkeypatch):
     service = token_service_module.user_mcp_token_service
     captured = {}

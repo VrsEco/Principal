@@ -1137,8 +1137,27 @@ class UserMcpTokenService:
             )
             if record:
                 cls._expire_if_needed(record)
-                db.session.commit()
+            db.session.commit()
             return record if record and record.status == "active" else None
+
+    @classmethod
+    def _normalize_connector_name(
+        cls,
+        *,
+        client_name: str | None = None,
+        runtime: str | None = None,
+        squad: str | None = None,
+    ) -> str:
+        explicit = str(client_name or "").strip()
+        if explicit:
+            return explicit[:120]
+        runtime_key = str(runtime or "mcp").strip().lower() or "mcp"
+        squad_key = str(squad or "default").strip().lower() or "default"
+        return f"{runtime_key}:{squad_key}"[:120]
+
+    @classmethod
+    def _connector_identity(cls, value: str | None) -> str:
+        return str(value or "").strip().lower()
 
     @classmethod
     def _serialize_company(cls, company: Company, *, selected: bool = False) -> dict[str, Any]:
@@ -1493,10 +1512,19 @@ class UserMcpTokenService:
         *,
         created_by_user_id: int | None = None,
         client_name: str | None = None,
+        runtime: str | None = None,
+        squad: str | None = None,
     ) -> tuple[UserMcpToken, str]:
-        active = cls.get_active_token_record(user.id)
-        if active:
-            cls._revoke_record(active)
+        connector_name = cls._normalize_connector_name(
+            client_name=client_name,
+            runtime=runtime,
+            squad=squad,
+        )
+        connector_identity = cls._connector_identity(connector_name)
+        active_records = UserMcpToken.query.filter_by(user_id=user.id, status="active").all()
+        for active in active_records:
+            if cls._connector_identity(getattr(active, "last_client_name", None)) == connector_identity:
+                cls._revoke_record(active)
 
         plaintext = cls._generate_plaintext_token()
         expires_at = cls._utcnow() + timedelta(days=TOKEN_EXPIRATION_DAYS)
@@ -1507,7 +1535,7 @@ class UserMcpTokenService:
             status="active",
             created_by_user_id=created_by_user_id or user.id,
             expires_at=expires_at,
-            last_client_name=(client_name or "").strip() or None,
+            last_client_name=connector_name,
             last_company_id=None,
         )
         db.session.add(record)
@@ -1536,6 +1564,8 @@ class UserMcpTokenService:
                 user,
                 created_by_user_id=created_by_user_id,
                 client_name=client_name,
+                runtime=runtime,
+                squad=squad,
             )
             log_service.log_create(
                 entity_type="user_mcp_token",

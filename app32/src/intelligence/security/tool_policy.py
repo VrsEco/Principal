@@ -272,7 +272,6 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
     should_validate_tenant = bool(
         TOOL_CONTEXT_COMPANY in normalized_required_context
         or _coerce_optional_company_id(request.requested_company_id, principal.company_id) is not None
-        or tuple(request.accessible_company_ids or ())
     )
 
     if should_validate_tenant:
