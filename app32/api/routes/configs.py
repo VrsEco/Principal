@@ -195,12 +195,7 @@ def _render_ai_config_page(page_key: str, active_company):
 def e2e_operations_center():
     active_company = _resolve_active_company()
     _require_ai_admin_access(getattr(active_company, "id", None))
-    state = E2EOperationsCenterService.build_frontend_state(active_company)
-    return render_template(
-        'modules/operations/e2e_center.html',
-        active_company=active_company,
-        state=state,
-    )
+    return redirect(url_for("configs.robot_tests_center"))
 
 
 @configs_bp.route('/api/configs/qa/e2e/frontend-state')

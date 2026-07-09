@@ -49,10 +49,10 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                 {"key": "coverage_audit", "label": "Auditoria de cobertura total", "description": "Tudo mapeado", "highlight": True, "available": True, "group": "advanced"},
             ],
             "execution_packages": [
-                {"key": "complete", "label": "Rodar teste completo", "description": "Tudo", "highlight": True, "available": True},
+                {"key": "complete", "label": "Fazer teste completo DEV_FULL", "description": "Tudo", "highlight": True, "available": True},
                 {"key": "inventory_update", "label": "Atualizar inventário", "description": "Telas, campos, botões, links e rotas", "highlight": False, "available": True},
                 {"key": "post_deploy", "label": "Rodar pós-deploy", "description": "Rápido", "highlight": False, "available": True},
-                {"key": "previous_failures", "label": "Rodar falhas anteriores", "description": "Falhas", "highlight": False, "available": True},
+                {"key": "previous_failures", "label": "Revisar pendências", "description": "Falhas", "highlight": False, "available": True},
                 {"key": "coverage_audit", "label": "Rodar auditoria de cobertura", "description": "Lacunas", "highlight": False, "available": True},
             ],
             "test_categories": [
@@ -93,6 +93,9 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "available": True,
                 },
             ],
+            "history": [
+                {"run_id": "run-1", "generated_at": "2026-06-14T10:00:00", "environment": "DEV_FULL", "status": "failed", "status_label": "Atenção necessária", "journeys_total": 4, "journeys_failed": 1, "manifest_download_url": "/manifest"},
+            ],
             "areas": [
                 {
                     "area_id": "financial",
@@ -118,25 +121,27 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "manifest_download_url": "/manifest",
                 }
             ],
-            "technical_center_url": "/qa/e2e",
-            "history_url": "/qa/e2e",
-            "reports_url": "/qa/e2e",
+            "technical_center_url": "/qa/robot-tests",
+            "history_url": "/qa/robot-tests",
+            "reports_url": "/qa/robot-tests",
             "evidence_url": "/manifest",
         },
     )
 
     assert "Central do Robô de Testes" in html
-    assert "Teste e inventário" in html
+    assert "Ações" in html
     assert "Modo padrão" in html
-    assert "DEV_FULL — teste completo e inventário" in html
-    assert "Rodar teste completo" in html
+    assert "DEV_FULL" in html
+    assert "Fazer teste completo DEV_FULL" in html
     assert "Atualizar inventário" in html
-    assert "telas, campos, botões, links e rotas" in html
+    assert "Telas, campos, botões, links e rotas" in html
+    assert "Últimas verificações" in html
     assert "Resultado por área" in html
-    assert "Erros encontrados e ações" in html
-    assert "Disparar correção" in html
-    assert "Suporte técnico" in html
-    assert "Abrir tela técnica" in html
+    assert "Pendências abertas" in html
+    assert "Criar card de correção" in html
+    assert "Revisar pendências" in html
+    assert "Suporte técnico" not in html
+    assert "Abrir tela técnica" not in html
     assert "robotTestsRunMonitor" in html
     assert "O DEV_FULL continua rodando em segundo plano" in html
     assert "0% estimado" in html

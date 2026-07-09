@@ -62,13 +62,14 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
     assert state["errors"][0]["area_label"] == "Gestão Financeira"
     assert any(package["label"] == "Teste completo" for package in state["test_packages"])
     assert any(package["label"] == "Auditoria de cobertura total" for package in state["test_packages"])
-    assert any(package["label"] == "Rodar teste completo" for package in state["execution_packages"])
+    assert any(package["label"] == "Fazer teste completo DEV_FULL" for package in state["execution_packages"])
     assert any(package["label"] == "Atualizar inventário" for package in state["execution_packages"])
     assert any(package["label"] == "Cobrir tudo + AA.J.1" for package in state["execution_packages"])
     assert any(category["label"] == "Saúde do Sistema" for category in state["test_categories"])
     assert any(category["label"] == "Matriz de Cobertura Total" for category in state["test_categories"])
     assert any(category["label"] == "Cleanup / Reversão" for category in state["test_categories"])
     assert state["devfull_transactional"]["controlled_mutation"]["rollback_steps_total"] == 8
+    assert state["history"][0]["run_id"] == "run-1"
 
 
 def test_robot_tests_center_filters_errors_by_company(monkeypatch):
@@ -138,6 +139,11 @@ def test_robot_tests_center_uses_clear_label_for_not_tested_cycle():
 
 def test_robot_tests_center_start_run_uses_supervised_e2e(monkeypatch):
     monkeypatch.setattr(
+        RobotTestsCenterService,
+        "_resolve_dev_full_robot_user_id",
+        lambda **kwargs: kwargs.get("fallback_user_id"),
+    )
+    monkeypatch.setattr(
         "services.robot_tests_center_service.E2ESupervisedExecutionService.start_execution",
         lambda suite_id, environment, **kwargs: {"execution_id": "exec-1", "suite_id": suite_id, "environment": environment},
     )
@@ -150,6 +156,7 @@ def test_robot_tests_center_start_run_uses_supervised_e2e(monkeypatch):
     )
 
     assert result["suite_id"] == "full_system_validation"
+    assert result["environment"] == "DEV_FULL"
     assert result["execution"]["execution_id"] == "exec-1"
 
 

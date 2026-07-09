@@ -175,16 +175,8 @@ def test_e2e_operations_center_template_route(monkeypatch):
     monkeypatch.setattr(configs_route, "_resolve_active_company", lambda: active_company)
     monkeypatch.setattr(configs_route, "_can_access_ai_mcp_console", lambda company_id=None: True)
     monkeypatch.setattr(configs_route.E2EOperationsCenterService, "build_frontend_state", lambda company=None: fake_state)
-    monkeypatch.setattr(
-        configs_route,
-        "render_template",
-        lambda template_name, **context: f"{template_name}|{context['state']['execution_modes'][0]['label']}|Central de Testes E2E|{context['state']['summary']['backlog_candidates']}",
-    )
 
     response = app.test_client().get("/qa/e2e")
 
-    assert response.status_code == 200
-    html = response.get_data(as_text=True)
-    assert "Central de Testes E2E" in html
-    assert "DEV_FULL" in html
-    assert "2" in html
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/qa/robot-tests")

@@ -79,10 +79,11 @@ class RobotTestsCenterService:
 
     EXECUTION_PACKAGES = {
         "complete": {
-            "label": "Rodar teste completo",
+            "label": "Fazer teste completo DEV_FULL",
             "suite_id": "full_system_validation",
             "description": "Executa tudo que o robô já consegue validar hoje.",
             "highlight": True,
+            "forced_environment": "DEV_FULL",
         },
         "inventory_update": {
             "label": "Atualizar inventário",
@@ -98,10 +99,11 @@ class RobotTestsCenterService:
             "highlight": False,
         },
         "previous_failures": {
-            "label": "Rodar falhas anteriores",
+            "label": "Revisar pendências",
             "suite_id": "execution_diff",
-            "description": "Reavalia regressões e mudanças recentes detectadas pelo robô.",
+            "description": "Reexecuta a revisão em cima das pendências e regressões encontradas.",
             "highlight": False,
+            "forced_environment": "DEV_FULL",
         },
         "coverage_audit": {
             "label": "Cobrir tudo + AA.J.1",
@@ -379,6 +381,7 @@ class RobotTestsCenterService:
         areas = cls.list_area_latest(company_id=company_id, e2e_state=e2e_state)
         errors = cls.list_open_errors(company_id=company_id, e2e_state=e2e_state)
         latest_run = (e2e_state.get("latest_runs") or [None])[0]
+        history = cls.list_recent_history(e2e_state=e2e_state)
         areas_with_error = sum(1 for area in areas if area.get("status") == "failed")
 
         return {
@@ -414,17 +417,37 @@ class RobotTestsCenterService:
             "test_packages": cls.list_test_packages(e2e_state=e2e_state),
             "areas": areas,
             "errors": errors,
+            "history": history,
             "operational_view": e2e_state.get("operational_view") or {},
             "ui_inventory": e2e_state.get("ui_inventory"),
             "ui_contracts": e2e_state.get("ui_contracts"),
             "ui_safe_execution": e2e_state.get("ui_safe_execution"),
             "devfull_transactional": e2e_state.get("devfull_transactional"),
             "latest_run": latest_run,
-            "technical_center_url": "/qa/e2e",
-            "history_url": "/qa/e2e",
-            "reports_url": "/qa/e2e",
+            "technical_center_url": "/qa/robot-tests",
+            "history_url": "/qa/robot-tests",
+            "reports_url": "/qa/robot-tests",
             "evidence_url": (latest_run or {}).get("manifest_download_url"),
         }
+
+    @classmethod
+    def list_recent_history(cls, *, e2e_state: dict[str, Any] | None = None, limit: int = 8) -> list[dict[str, Any]]:
+        e2e_state = e2e_state or E2EOperationsCenterService.build_frontend_state(None)
+        history: list[dict[str, Any]] = []
+        for run in (e2e_state.get("latest_runs") or [])[:limit]:
+            history.append(
+                {
+                    "run_id": run.get("run_id"),
+                    "generated_at": run.get("generated_at") or "Sem data",
+                    "environment": run.get("environment") or "-",
+                    "status": run.get("status") or "observed",
+                    "status_label": cls.STATUS_LABELS.get(run.get("status"), "Em análise"),
+                    "journeys_total": int(run.get("journeys_total") or 0),
+                    "journeys_failed": int(run.get("journeys_failed") or 0),
+                    "manifest_download_url": run.get("manifest_download_url"),
+                }
+            )
+        return history
 
     @classmethod
     def list_area_latest(cls, *, company_id: int, e2e_state: dict[str, Any] | None = None) -> list[dict[str, Any]]:

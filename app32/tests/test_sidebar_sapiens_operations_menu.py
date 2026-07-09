@@ -46,7 +46,7 @@ def test_ai_configuration_items_move_from_finance_base_to_sapiens_ia():
     assert "Monitoramento e Auditoria" in system_block
     assert "Testes" in system_block
     assert "Robô de Testes" in system_block
-    assert "Central E2E Técnica" in system_block
+    assert "Central E2E Técnica" not in system_block
 
 
 
@@ -64,6 +64,6 @@ def test_integrations_and_ai_settings_live_under_sapiens_not_system():
     assert '/ai-capabilities' in system_block
     assert '/ai-monitoring' in system_block
     assert '/qa/robot-tests' in system_block
-    assert '/qa/e2e' in system_block
+    assert '/qa/e2e' not in system_block
     assert 'Configurações de Canais' in system_block
     assert 'API / MCP' in system_block
