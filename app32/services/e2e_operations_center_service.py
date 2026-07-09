@@ -179,6 +179,7 @@ class E2EOperationsCenterService:
         errors: list[str] = []
         for index, candidate in enumerate(detail.get("backlog_candidates") or []):
             robot_error_id = f"{detail.get('run_id') or 'run'}-{index}"
+            robot_error_signature = cls._build_backlog_error_signature(candidate)
             task, error = create_task_fn(
                 source_type="e2e_failure",
                 title=candidate["title"],
@@ -186,6 +187,7 @@ class E2EOperationsCenterService:
                 user_id=user_id,
                 company_id=company_id or candidate.get("company_id"),
                 metadata={
+                    "robot_error_signature": robot_error_signature,
                     "robot_error_id": robot_error_id,
                     "run_id": detail.get("run_id"),
                     "environment": detail.get("environment"),
@@ -216,6 +218,13 @@ class E2EOperationsCenterService:
         if not task_id or not project_id:
             return None
         return f"/projects/{project_id}/manage?task_id={task_id}"
+
+    @staticmethod
+    def _build_backlog_error_signature(candidate: dict[str, Any]) -> str:
+        return "|".join(
+            str(candidate.get(key) or "").strip().lower()
+            for key in ("title", "failure_type", "failed_step", "journey", "suite_id")
+        )
 
     @staticmethod
     def _build_backlog_description(*, detail: dict[str, Any], candidate: dict[str, Any]) -> str:

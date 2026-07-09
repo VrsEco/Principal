@@ -86,6 +86,8 @@ def test_robot_tests_center_builds_functional_overview(monkeypatch):
     assert state["history_diff"]["regressions_total"] == 1
     assert state["history_diff"]["new_journeys_total"] == 1
     assert state["errors"][0]["review_suite_id"] == "financial_functional_probe"
+    assert state["errors"][0]["error_signature"]
+    assert "Prompt pronto para o Squad de Engenharia" in state["errors"][0]["squad_prompt"]
 
 
 def test_robot_tests_center_filters_errors_by_company(monkeypatch):
@@ -305,5 +307,6 @@ def test_robot_tests_center_create_backlog_links_selected_error(monkeypatch):
     assert result["created"][0]["task_code"] == "AA.J.19.7"
     assert result["created"][0]["task_url"] == "/projects/144/manage?task_id=456"
     assert captured["metadata"]["robot_error_id"] == "run-fin-0"
+    assert captured["metadata"]["robot_error_signature"]
     assert captured["metadata"]["review_suite_id"] == "financial_functional_probe"
     assert "Prompt pronto" not in captured["description"]  # prompt é montado pelo agent_backlog_service

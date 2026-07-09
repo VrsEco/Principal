@@ -145,6 +145,7 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "expected_action": "Revisar regra funcional.",
                     "manifest_download_url": "/manifest",
                     "review_suite_id": "financial_functional_probe",
+                    "squad_prompt": "Prompt pronto para o Squad de Engenharia:\nCorrija a falha financeira.",
                 },
                 {
                     "error_id": "run-1-1",
@@ -158,6 +159,9 @@ def test_robot_tests_center_template_renders_new_functional_layout():
                     "review_suite_id": "reports_functional_probe",
                     "task_url": "/projects/144/manage?task_id=456",
                     "task_code": "AA.J.19.7",
+                    "card_treatment_status": "treated_pending_revalidation",
+                    "card_treatment_label": "Tratada aguardando revalidação",
+                    "squad_prompt": "Prompt pronto para o Squad de Engenharia:\nCorrija a falha.",
                 }
             ],
             "technical_center_url": "/qa/robot-tests",
@@ -183,6 +187,9 @@ def test_robot_tests_center_template_renders_new_functional_layout():
     assert "Pendências abertas" in html
     assert "Criar card de correção" in html
     assert "Abrir card AA.J.19.7" in html
+    assert "Copiar prompt" in html
+    assert "Tratada aguardando revalidação" in html
+    assert "navigator.clipboard.writeText" in html
     assert "/projects/144/manage?task_id=456" in html
     assert "Revisar pendências" in html
     assert "Suporte técnico" not in html

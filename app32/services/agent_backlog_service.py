@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from typing import Any, Optional
 
+from models import db
 from models.project import ProjectTask
 from services.project_task_service import ProjectTaskService
 
@@ -76,6 +77,42 @@ def _build_robot_failure_prompt(*, title: str, description: str, metadata: Optio
     return "\n".join(lines).strip()
 
 
+def build_robot_failure_prompt(*, title: str, description: str, metadata: Optional[dict[str, Any]]) -> str:
+    return _build_robot_failure_prompt(title=title, description=description, metadata=metadata)
+
+
+def _find_existing_robot_failure_task(project_code: str, metadata: Optional[dict[str, Any]]) -> Optional[ProjectTask]:
+    signature = _normalize_text((metadata or {}).get("robot_error_signature"))
+    if not signature:
+        return None
+    project, error = ProjectTaskService.resolve_project_by_code(project_code, allowed_company_ids=None)
+    if error or not project:
+        return None
+    marker = f"robot_error_signature: {signature}"
+    return (
+        ProjectTask.query.filter_by(project_id=project.id, is_deleted=False)
+        .filter((ProjectTask.notes.ilike(f"%{marker}%")) | (ProjectTask.how.ilike(f"%{marker}%")))
+        .order_by(ProjectTask.created_at.desc())
+        .first()
+    )
+
+
+def _touch_existing_robot_failure_task(task: ProjectTask, *, source_type: str, metadata: Optional[dict[str, Any]]) -> None:
+    now = datetime.utcnow().isoformat()
+    recurrence = (
+        f"\n\nReincidência detectada automaticamente em {now}Z"
+        f"\nTipo de origem: {source_type}"
+        f"\nRun: {_normalize_text((metadata or {}).get('run_id')) or '-'}"
+        f"\nAmbiente: {_normalize_text((metadata or {}).get('environment')) or '-'}"
+    )
+    task.notes = f"{task.notes or ''}{recurrence}".strip()
+    if str(task.status or "").lower() in {"completed", "cancelled"}:
+        task.status = DEFAULT_AGENT_BACKLOG_TASK_STATUS
+        task.stage = DEFAULT_AGENT_BACKLOG_TASK_STAGE
+        task.completion_date = None
+    db.session.commit()
+
+
 def _build_description(*, source_type: str, description: str, metadata: Optional[dict[str, Any]], title: str = "") -> str:
     lines = [f"Origem do backlog: {source_type}"]
     if description:
@@ -125,6 +162,10 @@ def create_backlog_task(
 ) -> tuple[Optional[ProjectTask], Optional[str]]:
     normalized_title = _normalize_text(title) or "Item de backlog do agente"
     project_code = _resolve_project_code(source_type, metadata)
+    existing_task = _find_existing_robot_failure_task(project_code, metadata) if _normalize_text(source_type) == "e2e_failure" else None
+    if existing_task:
+        _touch_existing_robot_failure_task(existing_task, source_type=source_type, metadata=metadata)
+        return existing_task, None
     result, error = ProjectTaskService.create_project_task(
         project_code=project_code,
         task_name=normalized_title,

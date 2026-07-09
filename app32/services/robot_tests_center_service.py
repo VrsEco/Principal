@@ -610,6 +610,7 @@ class RobotTestsCenterService:
                 {
                     "error_id": error_id,
                     "title": candidate.get("title") or "Falha detectada pelo robô",
+                    "error_signature": cls._build_error_signature(candidate),
                     "area_id": area_id,
                     "area_label": cls.AREA_LABELS.get(area_id, "Área não classificada"),
                     "review_suite_id": cls.REVIEW_SUITE_BY_AREA.get(area_id, "execution_diff"),
@@ -632,6 +633,8 @@ class RobotTestsCenterService:
                     "company_id": company_id,
                 }
             )
+        for error in errors:
+            error["squad_prompt"] = cls._build_error_squad_prompt(error)
         cls._attach_existing_error_cards(errors)
         return errors
 
@@ -803,6 +806,7 @@ class RobotTestsCenterService:
     @classmethod
     def _build_error_backlog_metadata(cls, error: dict[str, Any]) -> dict[str, Any]:
         return {
+            "robot_error_signature": error.get("error_signature"),
             "robot_error_id": error.get("error_id"),
             "run_id": error.get("run_id"),
             "environment": error.get("environment"),
@@ -812,6 +816,7 @@ class RobotTestsCenterService:
             "failure_type": error.get("failure_type"),
             "failed_step": error.get("failed_step"),
             "manifest_download_url": error.get("manifest_download_url"),
+            "squad_prompt": error.get("squad_prompt"),
         }
 
     @classmethod
@@ -837,6 +842,7 @@ class RobotTestsCenterService:
         except Exception:
             return
         for error in errors:
+            signature_marker = f"robot_error_signature: {error.get('error_signature')}"
             marker = f"robot_error_id: {error.get('error_id')}"
             fallback = f"Run: {error.get('run_id')}"
             matched = None
@@ -844,7 +850,7 @@ class RobotTestsCenterService:
                 notes = str(getattr(task, "notes", None) or "")
                 how = str(getattr(task, "how", None) or "")
                 haystack = f"{notes}\n{how}"
-                if marker in haystack or (error.get("run_id") and fallback in haystack and str(error.get("title") or "") in haystack):
+                if signature_marker in haystack or marker in haystack or (error.get("run_id") and fallback in haystack and str(error.get("title") or "") in haystack):
                     matched = task
                     break
             if matched:
@@ -856,11 +862,50 @@ class RobotTestsCenterService:
         project_id = getattr(task, "project_id", None)
         task_code = getattr(task, "code", None) or getattr(task, "task_code", None)
         task_url = f"/projects/{project_id}/manage?task_id={task_id}" if project_id and task_id else None
-        return {"task_id": task_id, "task_code": task_code, "task_url": task_url}
+        task_status = getattr(task, "status", None)
+        task_stage = getattr(task, "stage", None)
+        is_completed = str(task_status or "").lower() == "completed" or str(task_stage or "").lower() == "completed"
+        return {
+            "task_id": task_id,
+            "task_code": task_code,
+            "task_url": task_url,
+            "task_status": task_status,
+            "task_stage": task_stage,
+            "card_treatment_status": "treated_pending_revalidation" if is_completed else "open_card",
+            "card_treatment_label": "Tratada aguardando revalidação" if is_completed else "Card aberto",
+        }
 
     @staticmethod
     def _serialize_error_task(error: dict[str, Any]) -> dict[str, Any]:
-        return {"task_id": error.get("task_id"), "task_code": error.get("task_code"), "task_url": error.get("task_url")}
+        return {
+            "task_id": error.get("task_id"),
+            "task_code": error.get("task_code"),
+            "task_url": error.get("task_url"),
+            "task_status": error.get("task_status"),
+            "task_stage": error.get("task_stage"),
+            "card_treatment_status": error.get("card_treatment_status"),
+            "card_treatment_label": error.get("card_treatment_label"),
+        }
+
+    @classmethod
+    def _build_error_squad_prompt(cls, error: dict[str, Any]) -> str:
+        try:
+            from services.agent_backlog_service import build_robot_failure_prompt
+        except Exception:
+            return cls._build_error_backlog_description(error)
+        return build_robot_failure_prompt(
+            title=str(error.get("title") or "Falha detectada pelo robô"),
+            description=cls._build_error_backlog_description(error),
+            metadata=cls._build_error_backlog_metadata({**error, "squad_prompt": None}),
+        )
+
+    @classmethod
+    def _build_error_signature(cls, candidate: dict[str, Any]) -> str:
+        raw = "|".join(
+            str(candidate.get(key) or "").strip().lower()
+            for key in ("title", "failure_type", "failed_step", "journey", "suite_id")
+        )
+        return raw or cls._build_error_id(candidate, 0)
 
     @classmethod
     def list_test_packages(cls, *, e2e_state: dict[str, Any] | None = None) -> list[dict[str, Any]]:
