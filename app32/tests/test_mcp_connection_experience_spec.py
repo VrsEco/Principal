@@ -53,3 +53,4 @@ def test_connections_page_contains_mcp_unified_entrypoint():
     assert "/profile/mcp-token/status" in template
     assert "/profile/mcp-token/config" in template
     assert "/mcp/healthz" in template
+

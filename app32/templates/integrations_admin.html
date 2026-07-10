@@ -44,6 +44,14 @@
                 <option value="instagram">📸 Instagram Business</option>
                 <option value="mcp">🧠 CLI/IA via MCP (Sapiens)</option>
               </select>
+              <div class="connection-type-grid" aria-label="Atalhos de conexão">
+                <button type="button" class="connection-type-card is-active" data-channel-card="ai" onclick="showConfigSection('ai')"><span>🤖</span><strong>IA</strong><small>LLM e provedores</small></button>
+                <button type="button" class="connection-type-card" data-channel-card="email" onclick="showConfigSection('email')"><span>📧</span><strong>E-mail</strong><small>SMTP e inbound</small></button>
+                <button type="button" class="connection-type-card" data-channel-card="whatsapp" onclick="showConfigSection('whatsapp')"><span>💬</span><strong>WhatsApp</strong><small>Z-API / Twilio</small></button>
+                <button type="button" class="connection-type-card" data-channel-card="telegram" onclick="showConfigSection('telegram')"><span>✈️</span><strong>Telegram</strong><small>Bot API</small></button>
+                <button type="button" class="connection-type-card" data-channel-card="instagram" onclick="showConfigSection('instagram')"><span>📸</span><strong>Instagram</strong><small>Meta</small></button>
+                <button type="button" class="connection-type-card" data-channel-card="mcp" onclick="showConfigSection('mcp')"><span>🧠</span><strong>CLI/IA MCP</strong><small>Sapiens</small></button>
+              </div>
             </div>
 
             <div id="config-form-container">
@@ -992,6 +1000,196 @@
       overflow-y: auto;
     }
 
+
+    /* connections-refinement-v2 */
+    .arch-container {
+      padding: 1.25rem 1.5rem 3rem;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(45, 212, 191, .08), transparent 34%),
+        linear-gradient(180deg, #f8fbff 0%, #eef4f9 100%);
+    }
+
+    .workspace-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 1rem;
+      padding: 1rem 1.15rem;
+      border: 1px solid rgba(148, 163, 184, .26);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .82);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, .055);
+      backdrop-filter: blur(10px);
+    }
+
+    .workspace-header .text-h1 { margin: 0; font-size: clamp(1.35rem, 1.8vw, 2rem); letter-spacing: -.04em; }
+    .workspace-header .text-secondary { margin: .25rem 0 0; max-width: 860px; color: #64748b; }
+
+    .grid-management-layout {
+      grid-template-columns: minmax(420px, .95fr) minmax(520px, 1.05fr) !important;
+      gap: 1rem !important;
+      align-items: start;
+    }
+
+    .management-sidebar,
+    .management-content { min-width: 0; }
+
+    .card {
+      border: 1px solid rgba(148, 163, 184, .25) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 18px 44px rgba(15, 23, 42, .06) !important;
+      overflow: hidden;
+    }
+
+    .card-neon-blue { background: rgba(255, 255, 255, .93) !important; }
+    .card-neon-blue .card-body { padding: 1rem !important; }
+
+    .card-neon-blue .text-h3,
+    .card-header-v2 .text-h3,
+    .monitor-header .text-h4 {
+      font-size: .98rem;
+      letter-spacing: -.02em;
+    }
+
+    .form-label {
+      margin-bottom: .35rem;
+      color: #334155;
+      font-size: .76rem;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .form-control {
+      min-height: 42px;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 12px !important;
+      background: #fff !important;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .02);
+    }
+
+    .form-control:focus {
+      border-color: #14b8a6 !important;
+      box-shadow: 0 0 0 3px rgba(20, 184, 166, .14) !important;
+    }
+
+    .provider-config {
+      margin-top: .85rem;
+      padding: .9rem;
+      border: 1px dashed rgba(59, 130, 246, .24);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    .connection-type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .55rem;
+      margin-top: .75rem;
+    }
+
+    .connection-type-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      grid-template-areas: 'icon title' 'icon desc';
+      align-items: center;
+      gap: .05rem .5rem;
+      min-width: 0;
+      padding: .68rem .72rem;
+      border: 1px solid rgba(148, 163, 184, .28);
+      border-radius: 15px;
+      background: #fff;
+      color: #334155;
+      text-align: left;
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    .connection-type-card:hover { transform: translateY(-1px); border-color: rgba(20, 184, 166, .45); box-shadow: 0 12px 22px rgba(15, 23, 42, .07); }
+    .connection-type-card.is-active { border-color: rgba(20, 184, 166, .72); background: linear-gradient(135deg, #ecfeff, #ffffff); box-shadow: inset 0 0 0 1px rgba(20, 184, 166, .2), 0 12px 24px rgba(20, 184, 166, .10); }
+    .connection-type-card span { grid-area: icon; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 12px; background: #f1f5f9; }
+    .connection-type-card strong { grid-area: title; color: #0f172a; font-size: .8rem; line-height: 1.1; }
+    .connection-type-card small { grid-area: desc; color: #64748b; font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .card-header-v2 {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .75rem;
+      padding: .95rem 1rem !important;
+      background: linear-gradient(135deg, #f8fafc, #eaf3ff) !important;
+      border-bottom: 1px solid rgba(148, 163, 184, .22) !important;
+    }
+
+    .arch-table-premium {
+      border-collapse: separate !important;
+      border-spacing: 0 .55rem !important;
+      padding: .6rem .75rem .75rem;
+    }
+
+    .arch-table-premium thead th {
+      padding: .65rem .8rem !important;
+      background: transparent !important;
+      border: 0 !important;
+      color: #64748b !important;
+      font-size: .68rem !important;
+    }
+
+    .connection-service-row td {
+      padding: .82rem .85rem !important;
+      background: #fff !important;
+      border-top: 1px solid rgba(148, 163, 184, .20) !important;
+      border-bottom: 1px solid rgba(148, 163, 184, .20) !important;
+    }
+
+    .connection-service-row td:first-child { border-left: 1px solid rgba(148, 163, 184, .20) !important; border-radius: 16px 0 0 16px; }
+    .connection-service-row td:last-child { border-right: 1px solid rgba(148, 163, 184, .20) !important; border-radius: 0 16px 16px 0; }
+
+    .connection-service-cell { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+    .service-icon-bg { flex: 0 0 auto; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 14px; background: linear-gradient(135deg, #eef2ff, #ecfeff); font-size: 1rem; }
+    .connection-service-title { color: #0f172a; font-weight: 800; line-height: 1.15; }
+    .connection-service-subtitle { margin-top: .2rem; color: #64748b; font-size: .72rem; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .provider-pill { display: inline-flex; padding: .35rem .6rem; border-radius: 999px; background: #f1f5f9; color: #334155; font-size: .72rem; font-weight: 800; text-transform: capitalize; }
+    .status-pill { display: inline-flex; align-items: center; padding: .34rem .6rem; border-radius: 999px; font-size: .72rem; font-weight: 900; white-space: nowrap; }
+    .status-pill.is-online { background: #dcfce7; color: #047857; }
+    .status-pill.is-offline { background: #fee2e2; color: #b91c1c; }
+    .status-pill.is-neutral { background: #e2e8f0; color: #475569; }
+    .connection-actions { display: flex; justify-content: center; gap: .35rem; }
+    .connection-action-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 1px solid #e2e8f0; border-radius: 11px; background: #fff; color: #475569; cursor: pointer; }
+    .connection-action-btn:hover { border-color: #14b8a6; color: #0f766e; background: #f0fdfa; }
+    .connection-action-btn.is-primary { color: #2563eb; }
+    .connection-action-btn.is-danger { color: #ef4444; }
+
+    #agents-list-v2 { padding: .85rem !important; }
+    .agent-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .65rem; }
+    .agent-connection-card { display: flex; align-items: center; gap: .75rem; padding: .85rem; border: 1px solid rgba(148, 163, 184, .24); border-radius: 16px; background: #fff; }
+    .agent-avatar-bg { flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 13px; background: #eff6ff; }
+    .agent-card-body { flex: 1; min-width: 0; }
+    .agent-card-topline { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
+    .agent-card-topline strong { color: #0f172a; font-size: .82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .agent-card-desc { margin-top: .25rem; color: #64748b; font-size: .72rem; line-height: 1.3; }
+
+    .console-theme { min-height: 160px !important; height: 190px !important; border-radius: 0 0 18px 18px !important; }
+    .monitor-header { background: #111827; color: #e5e7eb; border-radius: 18px 18px 0 0; }
+
+    #testModal:not(.show) { display: none !important; }
+    #testModal.show { position: fixed; inset: 0; display: flex !important; align-items: center; justify-content: center; background: rgba(15, 23, 42, .42); padding: 1rem; z-index: 25000; }
+    #testModal .modal-dialog { width: min(720px, 96vw); margin: 0 !important; }
+    #testModal .test-modal-content { border-radius: 22px !important; max-height: min(80vh, 720px); overflow: auto; }
+    .test-details { white-space: pre-wrap; padding: .9rem; border-radius: 14px; background: #0f172a; color: #dbeafe; font-family: 'JetBrains Mono', Consolas, monospace; font-size: .78rem; }
+
+    .empty-state-row,
+    .empty-agent-state { padding: 1.4rem; text-align: center; color: #64748b; }
+
+    @media (max-width: 1180px) {
+      .grid-management-layout { grid-template-columns: 1fr !important; }
+    }
+
+    @media (max-width: 760px) {
+      .arch-container { padding: .85rem; }
+      .workspace-header { align-items: flex-start; }
+      .connection-type-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .arch-table-premium { min-width: 720px; }
+    }
     /* connections-mcp-ui-marker */
     .mcp-connection-panel {
       display: grid;
@@ -1050,20 +1248,24 @@
 
     // --- Lógica de Seleção de Configuração (Dropdown) ---
     function showConfigSection(service) {
-      // Ocultar todas as seções
       document.querySelectorAll('.config-section').forEach(s => s.style.display = 'none');
 
-      // Mostrar a selecionada
       const section = document.getElementById(`section-${service}`);
       if (section) section.style.display = 'block';
 
-      // Sincronizar dropdown se a chamada vier de outro lugar (ex: carregar config)
       const dropdown = document.getElementById('channel-selector-dropdown');
-      if (dropdown && dropdown.value !== service) {
-        dropdown.value = service;
+      if (dropdown && dropdown.value !== service) dropdown.value = service;
+
+      document.querySelectorAll('[data-channel-card]').forEach((button) => {
+        button.classList.toggle('is-active', button.getAttribute('data-channel-card') === service);
+      });
+
+      if (service === 'mcp') {
+        loadConnectionsMcpStatus(false).catch(() => null);
+        testConnectionsMcpHealth(false).catch(() => null);
       }
 
-      addLog(`Configurando canal: ${service}`, 'info');
+      addLog(`Configurando conexão: ${service}`, 'info');
     }
 
     // --- Carregamento de Requisitos (Simplificado) ---
@@ -1707,6 +1909,17 @@
       });
     }
 
+
+    function getServiceIcon(key) {
+      const icons = { ai: '🤖', email: '📧', whatsapp: '💬', telegram: '✈️', instagram: '📸', mcp: '🧠' };
+      return icons[key] || '🔌';
+    }
+
+    function getProviderLabel(value) {
+      const provider = String(value || 'Não configurado');
+      return provider.replace(/_/g, ' ').replace(/-/g, ' ');
+    }
+
     function getServiceName(key) {
       const names = {
         'ai': 'Inteligência Artificial (LLM)',
@@ -1722,33 +1935,36 @@
       const container = document.getElementById('services-list-v2');
 
       if (!services || services.length === 0) {
-        container.innerHTML = '<tr><td colspan="4" class="text-center p-4 text-muted">Nenhum serviço mapeado.</td></tr>';
+        container.innerHTML = '<tr><td colspan="4" class="empty-state-row">Nenhuma conexão mapeada.</td></tr>';
         return;
       }
 
-      container.innerHTML = services.map(service => `
-          <tr class="animate-fade-in">
+      container.innerHTML = services.map(service => {
+        const active = service.status === 'active';
+        const type = inferServiceKey(service.id, service.type) || service.type || 'custom';
+        const safeName = service.name || getServiceName(type) || service.id;
+        return `
+          <tr class="connection-service-row animate-fade-in">
              <td>
-                <div class="d-flex align-items-center">
-                   <div class="service-icon-bg mr-3">${service.type === 'ai' ? '🤖' : '📧'}</div>
-                   <div class="font-weight-bold">${service.name || service.id}</div>
+                <div class="connection-service-cell">
+                   <div class="service-icon-bg">${getServiceIcon(type)}</div>
+                   <div>
+                      <div class="connection-service-title">${safeName}</div>
+                      <div class="connection-service-subtitle">${service.source || service.id || 'APP32'}</div>
+                   </div>
                 </div>
              </td>
-             <td><span class="text-tertiary">${service.provider || 'N/A'}</span></td>
-             <td>
-                <span class="badge ${service.status === 'active' ? 'badge-success' : 'badge-danger'}">
-                   ${service.status === 'active' ? '● ONLINE' : '○ OFFLINE'}
-                </span>
-             </td>
+             <td><span class="provider-pill">${getProviderLabel(service.provider)}</span></td>
+             <td><span class="status-pill ${active ? 'is-online' : 'is-offline'}">${active ? '● Online' : '○ Offline'}</span></td>
              <td class="text-center">
-                <div class="d-flex justify-content-center gap-2">
-                   <button class="btn btn-icon btn-sm" onclick="editService('${service.id}')" title="Editar"><i class="fas fa-edit"></i></button>
-                   <button class="btn btn-icon btn-sm text-primary" onclick="testService('${service.id}', '${service.name || service.id}')" title="Testar"><i class="fas fa-play"></i></button>
-                   <button class="btn btn-icon btn-sm text-danger" onclick="deleteService('${service.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                <div class="connection-actions">
+                   <button class="connection-action-btn" onclick="editService('${service.id}')" title="Editar"><i class="fas fa-edit"></i></button>
+                   <button class="connection-action-btn is-primary" onclick="testService('${service.id}', '${safeName}')" title="Testar"><i class="fas fa-play"></i></button>
+                   <button class="connection-action-btn is-danger" onclick="deleteService('${service.id}')" title="Excluir"><i class="fas fa-trash"></i></button>
                 </div>
              </td>
-          </tr>
-        `).join('');
+          </tr>`;
+      }).join('');
     }
 
     // Funções para gerenciar agentes
@@ -1794,25 +2010,23 @@
       const container = document.getElementById('agents-list-v2');
 
       if (!agents || agents.length === 0) {
-        container.innerHTML = '<div class="text-muted text-center p-3">Nenhum agente orquestrado.</div>';
+        container.innerHTML = '<div class="empty-agent-state">Nenhum agente orquestrado.</div>';
         return;
       }
 
-      container.innerHTML = agents.map(agent => `
-          <div class="d-flex align-items-center p-3 border rounded-lg mb-2 shadow-sm bg-surface animate-fade-in">
-             <div class="agent-avatar-bg bg-primary-light mr-3">${agent.type === 'system' ? '🛡️' : '🤖'}</div>
-             <div class="flex-grow-1">
-                <div class="d-flex justify-content-between">
-                   <strong class="text-h4">${agent.name}</strong>
-                   <span class="badge ${agent.status === 'active' ? 'badge-success' : 'badge-light'}">${agent.status}</span>
+      container.innerHTML = `<div class="agent-card-grid">${agents.map(agent => `
+          <div class="agent-connection-card animate-fade-in">
+             <div class="agent-avatar-bg">${agent.type === 'system' ? '🛡️' : '🤖'}</div>
+             <div class="agent-card-body">
+                <div class="agent-card-topline">
+                   <strong>${agent.name}</strong>
+                   <span class="status-pill ${agent.status === 'active' ? 'is-online' : 'is-neutral'}">${agent.status || 'ativo'}</span>
                 </div>
-                <div class="text-xs text-secondary mt-1">${agent.description || 'Especialista de Resolução'}</div>
+                <div class="agent-card-desc">${agent.description || 'Especialista de Resolução'}</div>
              </div>
-             <div class="ml-3">
-                <button class="btn btn-sm btn-icon" onclick="testAgent('${agent.id}', '${agent.name}')"><i class="fas fa-microchip"></i></button>
-             </div>
+             <button class="connection-action-btn is-primary" onclick="testAgent('${agent.id}', '${agent.name}')" title="Testar agente"><i class="fas fa-microchip"></i></button>
           </div>
-        `).join('');
+        `).join('')}</div>`;
     }
 
     // Função para testar serviço individual
@@ -1907,7 +2121,7 @@
     window.onclick = function (event) {
       const modal = document.getElementById('testModal');
       if (event.target === modal) {
-        modal.style.display = 'none';
+        closeTestModal();
       }
     }
 
@@ -2282,6 +2496,7 @@
     }
   </script>
   {% endblock %}
+
 
 
 
