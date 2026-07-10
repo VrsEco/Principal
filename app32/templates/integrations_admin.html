@@ -1,6 +1,6 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Configurações de Canais | Versus{% endblock %}
+{% block title %}Conexões | Versus{% endblock %}
 
 {% block breadcrumb %}
 <a href="/portal">Portal</a>
@@ -9,15 +9,18 @@
 <span class="sep">/</span>
 <a href="/ai">IA Corporativa</a>
 <span class="sep">/</span>
-<span class="current">Configurações de Canais</span>
+<span class="current">Conexões</span>
 {% endblock %}
 
 {% block workspace_content %}
+{% set role_key = (current_user.role if current_user else '') %}
+{% set can_install_all_squads = role_key in ['admin', 'administrator'] %}
+{% set can_install_versus = can_install_all_squads or role_key == 'consultant' %}
 <div class="arch-container animate-fade-in" id="integrationsContainer">
   <!-- Header -->
   <div class="workspace-header mb-4">
-    <h1 class="text-h1">🔧 Configurações de Canais</h1>
-    <p class="text-secondary">Gerencie providers, credenciais, webhooks e testes operacionais dos canais de comunicação e IA.</p>
+    <h1 class="text-h1">🔗 Conexões</h1>
+    <p class="text-secondary">Gerencie em um só lugar os canais de comunicação, provedores de IA e conexões CLI/IA via MCP.</p>
   </div>
 
   
@@ -29,16 +32,17 @@
       <div class="management-sidebar">
         <div class="card card-neon-blue mb-4">
           <div class="card-body">
-            <h3 class="text-h3 mb-4"><i class="fas fa-cog mr-2"></i> Configurar Canal</h3>
+            <h3 class="text-h3 mb-4"><i class="fas fa-cog mr-2"></i> Configurar Conexão</h3>
 
             <div class="form-group mb-4">
-              <label class="form-label">Selecione o Canal de Integração</label>
+              <label class="form-label">Selecione o tipo de conexão</label>
               <select class="form-control" id="channel-selector-dropdown" onchange="showConfigSection(this.value)">
                 <option value="ai">🤖 Inteligência Artificial (AI)</option>
                 <option value="email">📧 E-mail (SMTP/Inbound)</option>
                 <option value="whatsapp">💬 WhatsApp (Z-API/Twilio)</option>
                 <option value="telegram">✈️ Telegram Bot</option>
                 <option value="instagram">📸 Instagram Business</option>
+                <option value="mcp">🧠 CLI/IA via MCP (Sapiens)</option>
               </select>
             </div>
 
@@ -196,6 +200,77 @@
                 <button class="btn btn-special w-100 mt-3" onclick="saveInstagramConfig()"><i
                     class="fas fa-save mr-2"></i> Salvar Instagram</button>
               </div>
+
+              <!-- MCP / CLI IA Section -->
+              <div id="section-mcp" class="config-section" style="display: none;">
+                <div class="mcp-connection-panel">
+                  <div class="mcp-connection-intro">
+                    <span class="badge badge-info">MCP First</span>
+                    <h4>Conectar CLI/IA ao APP32</h4>
+                    <p>Configure Codex, Claude, Antigravity/Gemini ou outro runtime para acessar o APP32 com contexto da empresa, squad e surface corretos.</p>
+                  </div>
+
+                  <div class="mcp-status-strip" id="connectionsMcpStatusStrip">
+                    <div><span>Status</span><strong id="connectionsMcpTokenStatus">Carregando...</strong></div>
+                    <div><span>Último uso</span><strong id="connectionsMcpLastUsage">--</strong></div>
+                    <div><span>Health MCP</span><strong id="connectionsMcpHealth">Não testado</strong></div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label class="form-label">Runtime / CLI</label>
+                        <select class="form-control" id="connectionsMcpRuntime" onchange="buildConnectionsMcpConfig(false)">
+                          <option value="claude">Claude</option>
+                          <option value="codex">Codex</option>
+                          <option value="antigravity">Antigravity / Gemini</option>
+                          <option value="other">Genérico</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="form-group">
+                        <label class="form-label">Squad</label>
+                        <select class="form-control" id="connectionsMcpSquad" onchange="buildConnectionsMcpConfig(false)">
+                          <option value="squad_cliente">Squad Cliente</option>
+                          {% if can_install_versus %}<option value="squad_versus">Squad Versus</option>{% endif %}
+                          {% if can_install_all_squads %}<option value="engineering">Squad Engenharia</option>{% endif %}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Empresa padrão</label>
+                    <select class="form-control" id="connectionsMcpCompany" onchange="buildConnectionsMcpConfig(false)"></select>
+                    <small class="text-muted">Usada para manter isolamento por tenant quando a tool exigir company_id.</small>
+                  </div>
+
+                  <div class="mcp-action-grid">
+                    <button type="button" class="btn btn-primary" onclick="runConnectionsMcpTokenAction('/profile/mcp-token/generate', 'Token MCP criado. Copie o token e atualize o runtime.')">Criar token</button>
+                    <button type="button" class="btn btn-secondary" onclick="runConnectionsMcpTokenAction('/profile/mcp-token/renew', 'Token MCP renovado. Atualize o runtime com o novo token.')">Renovar</button>
+                    <button type="button" class="btn btn-outline-danger" onclick="revokeConnectionsMcpToken()">Revogar</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="testConnectionsMcpHealth()">Testar health</button>
+                  </div>
+
+                  <div class="mcp-token-reveal" id="connectionsMcpTokenReveal" style="display:none;">
+                    <label class="form-label">Token gerado agora</label>
+                    <textarea class="form-control" id="connectionsMcpPlainToken" rows="3" readonly></textarea>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="copyConnectionsMcpToken()">Copiar token</button>
+                    <small>O token aparece apenas neste momento. Não cole em prints, prompts ou documentação.</small>
+                  </div>
+
+                  <div class="form-group mt-3">
+                    <label class="form-label">Comando / configuração para copiar</label>
+                    <textarea class="form-control mcp-config-output" id="connectionsMcpConfigOutput" rows="8" readonly placeholder="Gere ou atualize a configuração para o runtime selecionado."></textarea>
+                  </div>
+                  <div class="mcp-action-grid compact">
+                    <button type="button" class="btn btn-special" onclick="buildConnectionsMcpConfig(true)">Atualizar configuração</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="copyConnectionsMcpConfig()">Copiar configuração</button>
+                    <a href="/profile#mcp-token" class="btn btn-link">Abrir modo detalhado</a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -219,7 +294,7 @@
       <div class="management-content">
         <div class="card h-100">
           <div class="card-header-v2">
-            <h3 class="text-h3 mb-0">📡 Serviços Ativos & Conexões</h3>
+            <h3 class="text-h3 mb-0">📡 Serviços, Canais & Conexões</h3>
             <div class="d-flex gap-2">
               <button class="btn btn-sm btn-outline-primary" onclick="refreshServices()"><i class="fas fa-sync-alt"></i>
                 Atualizar</button>
@@ -916,6 +991,48 @@
       max-height: 200px;
       overflow-y: auto;
     }
+
+    /* connections-mcp-ui-marker */
+    .mcp-connection-panel {
+      display: grid;
+      gap: 1rem;
+      padding: 1rem;
+      border: 1px solid rgba(20, 184, 166, .28);
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(240, 253, 250, .96), rgba(255,255,255,.98));
+    }
+
+    .mcp-connection-intro h4 { margin: .5rem 0 .25rem; color: #0f766e; font-weight: 800; }
+    .mcp-connection-intro p { margin: 0; color: var(--text-secondary); line-height: 1.45; }
+
+    .mcp-status-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: .75rem;
+    }
+
+    .mcp-status-strip > div {
+      min-width: 0;
+      padding: .8rem;
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .mcp-status-strip span { display: block; color: var(--text-tertiary); font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .mcp-status-strip strong { display: block; margin-top: .2rem; color: var(--text-main); font-size: .86rem; overflow-wrap: anywhere; }
+
+    .mcp-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+    .mcp-action-grid.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; }
+    .mcp-token-reveal { padding: .85rem; border: 1px dashed rgba(37, 99, 235, .35); border-radius: 14px; background: rgba(239, 246, 255, .8); }
+    .mcp-token-reveal small { display: block; margin-top: .4rem; color: var(--text-tertiary); }
+    .mcp-config-output { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: .78rem; }
+
+    @media (max-width: 768px) {
+      .mcp-status-strip,
+      .mcp-action-grid,
+      .mcp-action-grid.compact { grid-template-columns: 1fr; }
+    }
   </style>
 
   <script>
@@ -925,6 +1042,8 @@
       refreshAgents();
       loadCurrentConfig();
       loadSavedServiceConfigs(); // Garante o preenchimento dos formulários
+      loadConnectionsMcpStatus();
+      testConnectionsMcpHealth(false);
     });
 
     // Navegação simplificada (Somente Gestão)
@@ -1959,5 +2078,214 @@
       }
     }
 
+
+    // connections-mcp-js-marker
+    let connectionsLatestMcpToken = null;
+
+    function connectionsMcpPayload() {
+      const companyValue = document.getElementById('connectionsMcpCompany')?.value || '';
+      return {
+        company_id: companyValue ? Number(companyValue) : null,
+        surface: 'user',
+        client_name: null,
+        runtime: document.getElementById('connectionsMcpRuntime')?.value || 'claude',
+        squad: document.getElementById('connectionsMcpSquad')?.value || 'squad_cliente'
+      };
+    }
+
+    function connectionsFormatDateTime(value) {
+      if (!value) return '--';
+      try { return new Date(value).toLocaleString('pt-BR'); } catch (_) { return String(value); }
+    }
+
+    function setConnectionsCompanyOptions(companies, selectedId) {
+      const select = document.getElementById('connectionsMcpCompany');
+      if (!select) return;
+      const current = select.value;
+      const items = Array.isArray(companies) ? companies : [];
+      if (!items.length) {
+        select.innerHTML = '<option value="">Nenhuma empresa disponível</option>';
+        return;
+      }
+      select.innerHTML = items.map((company) => {
+        const id = String(company.id || '');
+        const label = String(company.label || company.name || `Empresa ${id}`);
+        const selected = String(selectedId || current || '') === id ? 'selected' : '';
+        return `<option value="${id}" ${selected}>${label}</option>`;
+      }).join('');
+    }
+
+    function renderConnectionsMcpStatus(status) {
+      const active = Boolean(status && status.has_active_token);
+      const statusEl = document.getElementById('connectionsMcpTokenStatus');
+      const usageEl = document.getElementById('connectionsMcpLastUsage');
+      if (statusEl) statusEl.textContent = active ? `Ativo • vence em ${connectionsFormatDateTime(status.expires_at)}` : 'Sem token ativo';
+      if (usageEl) usageEl.textContent = active ? `${status.token_masked || '-'} • ${connectionsFormatDateTime(status.last_used_at)} • ${status.last_client_name || 'sem cliente'}` : 'Nenhum uso registrado';
+      setConnectionsCompanyOptions(status ? status.companies : [], status ? (status.last_company_id || status.default_company_id) : null);
+    }
+
+    async function loadConnectionsMcpStatus(showError = false) {
+      try {
+        const response = await fetch('/profile/mcp-token/status');
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao consultar status MCP.');
+        renderConnectionsMcpStatus(data.data);
+        await buildConnectionsMcpConfig(false);
+      } catch (error) {
+        if (showError) addLog(`❌ MCP: ${error.message}`, 'error');
+        const statusEl = document.getElementById('connectionsMcpTokenStatus');
+        if (statusEl) statusEl.textContent = 'Erro ao carregar';
+      }
+    }
+
+    function injectConnectionsToken(config) {
+      if (!config || !connectionsLatestMcpToken) return config;
+      const replace = (value) => String(value || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', connectionsLatestMcpToken);
+      return {
+        ...config,
+        text: replace(config.text),
+        install_command: replace(config.install_command),
+        normal_install_text: replace(config.normal_install_text),
+        advanced_install_text: replace(config.advanced_install_text),
+        technical_config_text: replace(config.technical_config_text),
+        activation_prompt: replace(config.activation_prompt),
+        guided_install_text: replace(config.guided_install_text),
+        copy_install_command_text: replace(config.copy_install_command_text)
+      };
+    }
+
+    function connectionsOutputForConfig(config) {
+      const resolved = injectConnectionsToken(config);
+      if (!resolved) return '';
+      return resolved.normal_install_text
+        || resolved.copy_install_command_text
+        || resolved.guided_install_text
+        || resolved.activation_prompt
+        || resolved.install_command
+        || resolved.text
+        || JSON.stringify(resolved.json || {}, null, 2);
+    }
+
+    async function buildConnectionsMcpConfig(showLog = false) {
+      const output = document.getElementById('connectionsMcpConfigOutput');
+      if (!output) return null;
+      try {
+        const response = await fetch('/profile/mcp-token/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(connectionsMcpPayload())
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao montar configuração MCP.');
+        output.value = connectionsOutputForConfig(data.data);
+        if (showLog) addLog('✅ Configuração MCP atualizada.', 'success');
+        return data.data;
+      } catch (error) {
+        if (showLog) addLog(`❌ MCP: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+
+    async function runConnectionsMcpTokenAction(url, successMessage) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(connectionsMcpPayload())
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha na operação do token MCP.');
+        connectionsLatestMcpToken = data.data && data.data.token ? data.data.token : connectionsLatestMcpToken;
+        if (connectionsLatestMcpToken) {
+          const reveal = document.getElementById('connectionsMcpTokenReveal');
+          const tokenField = document.getElementById('connectionsMcpPlainToken');
+          if (tokenField) tokenField.value = connectionsLatestMcpToken;
+          if (reveal) reveal.style.display = 'block';
+        }
+        if (data.data && data.data.status) renderConnectionsMcpStatus(data.data.status);
+        if (data.data && data.data.config) {
+          const output = document.getElementById('connectionsMcpConfigOutput');
+          if (output) output.value = connectionsOutputForConfig(data.data.config);
+        } else {
+          await buildConnectionsMcpConfig(false).catch(() => null);
+        }
+        addLog(`✅ ${successMessage || data.message || 'Operação MCP concluída.'}`, 'success');
+      } catch (error) {
+        addLog(`❌ MCP: ${error.message}`, 'error');
+      }
+    }
+
+    async function revokeConnectionsMcpToken() {
+      if (!confirm('Revogar o token MCP ativo deste usuário?')) return;
+      try {
+        const response = await fetch('/profile/mcp-token/revoke', { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao revogar token MCP.');
+        connectionsLatestMcpToken = null;
+        const reveal = document.getElementById('connectionsMcpTokenReveal');
+        if (reveal) reveal.style.display = 'none';
+        renderConnectionsMcpStatus(data.data);
+        await buildConnectionsMcpConfig(false).catch(() => null);
+        addLog('✅ Token MCP revogado.', 'success');
+      } catch (error) {
+        addLog(`❌ MCP: ${error.message}`, 'error');
+      }
+    }
+
+    async function testConnectionsMcpHealth(showLog = true) {
+      const healthEl = document.getElementById('connectionsMcpHealth');
+      try {
+        if (healthEl) healthEl.textContent = 'Testando...';
+        const response = await fetch('/mcp/healthz', { method: 'GET' });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error('Health MCP não respondeu OK.');
+        if (healthEl) healthEl.textContent = 'OK';
+        if (showLog) addLog('✅ Health MCP público OK.', 'success');
+      } catch (error) {
+        if (healthEl) healthEl.textContent = 'Falhou';
+        if (showLog) addLog(`❌ Health MCP: ${error.message}`, 'error');
+      }
+    }
+
+    async function copyConnectionsText(value) {
+      const text = String(value || '');
+      if (!text.trim()) throw new Error('Nada para copiar.');
+      if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      temp.style.position = 'fixed';
+      temp.style.left = '-9999px';
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+    }
+
+    async function copyConnectionsMcpConfig() {
+      try {
+        const output = document.getElementById('connectionsMcpConfigOutput');
+        if (!output || !output.value.trim()) await buildConnectionsMcpConfig(false);
+        await copyConnectionsText(document.getElementById('connectionsMcpConfigOutput')?.value || '');
+        addLog('✅ Configuração MCP copiada.', 'success');
+      } catch (error) {
+        addLog(`❌ MCP: ${error.message}`, 'error');
+      }
+    }
+
+    async function copyConnectionsMcpToken() {
+      try {
+        await copyConnectionsText(document.getElementById('connectionsMcpPlainToken')?.value || '');
+        addLog('✅ Token MCP copiado.', 'success');
+      } catch (error) {
+        addLog(`❌ MCP: ${error.message}`, 'error');
+      }
+    }
   </script>
   {% endblock %}
+
+
+
+
+
+
+

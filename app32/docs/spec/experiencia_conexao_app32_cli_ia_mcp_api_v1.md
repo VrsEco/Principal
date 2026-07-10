@@ -10,7 +10,7 @@
 
 ## 1. Decisão
 
-A experiência de comunicação entre APP32 e CLI/IA deve ser organizada como uma **jornada única de conexão e reconexão**, preservando as telas existentes, mas com responsabilidades explícitas.
+A experiência de comunicação entre APP32 e CLI/IA deve ser organizada em uma **tela única de Conexões**, preservando as funcionalidades existentes, mas reduzindo a dispersão operacional.
 
 A decisão oficial é:
 
@@ -95,9 +95,24 @@ O APP32 fornece contexto governado, instruções, tools, registro e rastreabilid
 
 ## 5. Responsabilidade das telas existentes
 
-### 5.1. `/profile` — Instalar/Conectar IA pessoal
+### 5.1. `/channels` — Conexões unificadas
 
-É a entrada principal do usuário para conexão MCP pessoal.
+É a entrada principal do usuário para conexões operacionais.
+
+Deve concentrar em um só lugar:
+
+- e-mail;
+- WhatsApp;
+- Telegram;
+- Instagram;
+- provedores de IA;
+- CLI/IA via MCP;
+- testes de conexão;
+- health e diagnóstico básico.
+
+### 5.2. `/profile` — Modo detalhado de instalação MCP
+
+Deixa de ser a entrada principal da conexão MCP e passa a funcionar como modo detalhado, fallback seguro e autoatendimento avançado do usuário.
 
 Deve concentrar:
 
@@ -110,7 +125,7 @@ Deve concentrar:
 - status do token;
 - instrução curta de reconexão.
 
-### 5.2. `/api-mcp` — Contratos e catálogo API/MCP
+### 5.3. `/api-mcp` — Contratos e catálogo API/MCP
 
 É a superfície de interoperabilidade.
 
@@ -125,24 +140,13 @@ Deve concentrar:
 
 Não deve ser a tela principal de reconexão do usuário final.
 
-### 5.3. `/channels` — Canais operacionais externos
+### 5.4. Tela única, sem duplicar lógica
 
-É a superfície de configuração de canais.
+A tela `/channels` deve chamar os endpoints já existentes de canais e de MCP, sem duplicar regra de negócio no frontend.
 
-Deve concentrar:
+O objetivo é unir a experiência de operação, não criar uma segunda implementação de token/canal.
 
-- e-mail;
-- WhatsApp;
-- Telegram;
-- Instagram;
-- provedores de IA/canal;
-- webhooks;
-- testes de envio/recebimento;
-- status operacional dos canais.
-
-Não deve substituir o perfil MCP pessoal.
-
-### 5.4. Console técnico MCP/API
+### 5.5. Console técnico MCP/API
 
 É a superfície de Engenharia/governança.
 
@@ -189,7 +193,7 @@ Campos mínimos:
 
 ### 7.1. Consultor
 
-1. Acessa `/profile`.
+1. Acessa `/channels`.
 2. Escolhe empresa, runtime e Squad Versus ou Engenharia.
 3. Gera ou renova token/conexão.
 4. Copia snippet específico do runtime.
@@ -201,7 +205,7 @@ Campos mínimos:
 
 ### 7.2. Cliente
 
-1. Acessa `/profile` com orientação do consultor.
+1. Acessa `/channels` com orientação do consultor.
 2. Escolhe empresa e Squad Cliente.
 3. Gera conexão do runtime escolhido.
 4. Instala no CLI/IA do cliente.
@@ -302,7 +306,7 @@ Sem conexão saudável, a análise assistida deve entrar em estado:
 ## 12. Anti-padrões proibidos
 
 1. Criar nova tela de conexão sem antes organizar `/profile`, `/api-mcp`, `/channels` e console técnico.
-2. Misturar configuração de WhatsApp/e-mail com token MCP pessoal.
+2. Misturar regras internas de WhatsApp/e-mail com regras de token MCP; a tela pode ser única, mas os contratos continuam separados.
 3. Exigir `company_id` em tool de descoberta de empresas do usuário.
 4. Renovar token de um runtime e derrubar outro runtime sem aviso explícito.
 5. Colocar segredo em documentação, print ou prompt.
@@ -316,9 +320,9 @@ Sem conexão saudável, a análise assistida deve entrar em estado:
 
 A experiência estará aderente quando:
 
-1. `/profile` for a entrada principal para instalar/conectar CLI/IA pessoal;
-2. `/api-mcp` estiver claro como catálogo/contrato, não reconexão final;
-3. `/channels` estiver claro como canais externos;
+1. `/channels` for a entrada principal para canais, provedores e CLI/IA via MCP;
+2. `/profile` permanecer disponível como modo detalhado/fallback;
+3. `/api-mcp` estiver claro como catálogo/contrato, não reconexão final;
 4. console técnico estiver claro como superfície de Engenharia;
 5. cada conexão tiver runtime, squad, surface, empresa e status;
 6. token Bearer for isolado por runtime/conector;
@@ -335,6 +339,8 @@ O APP32 não deve tratar MCP/API/canais como telas soltas.
 
 A arquitetura oficial passa a ser uma **jornada de conexão governada**:
 
-> `/profile` conecta o usuário e seu CLI/IA; `/api-mcp` publica contratos; `/channels` configura canais externos; o console técnico governa saúde e diagnóstico; o MCP preserva contexto, segurança e rastreabilidade.
+> `/channels` conecta canais externos, provedores e CLI/IA via MCP; `/profile` permanece como modo detalhado/fallback de instalação pessoal; `/api-mcp` publica contratos; o console técnico governa saúde e diagnóstico; o MCP preserva contexto, segurança e rastreabilidade.
 
 Essa organização reduz instabilidade percebida, facilita reconexão e prepara a base para análise assistida, squads e OAuth.
+
+

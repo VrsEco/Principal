@@ -129,3 +129,13 @@ Responsabilidades oficiais:
 - console técnico MCP/API: readiness, release, diagnóstico, observabilidade e Engenharia.
 
 Essa decisão evita criar nova tela antes de organizar a experiência existente e prepara a base para a análise assistida MCP-first, tenant-owned e human-gated.
+
+### 18.1. Ajuste de decisão — tela única de Conexões
+
+Após alinhamento metodológico, a entrada principal não deve ficar dispersa entre Perfil, API/MCP e Canais.
+
+Decisão complementar:
+
+> A tela `/channels` passa a ser a tela única de Conexões, reunindo WhatsApp, e-mail, Telegram, Instagram, provedores de IA e CLI/IA via MCP. A tela `/profile` permanece como modo detalhado/fallback seguro de instalação pessoal MCP.
+
+Essa mudança preserva o que já funciona e reduz atrito para consultor e cliente.

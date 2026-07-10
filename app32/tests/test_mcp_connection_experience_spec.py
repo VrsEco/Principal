@@ -8,9 +8,11 @@ def test_mcp_connection_experience_spec_contract():
     spec = (ROOT / "docs" / "spec" / "experiencia_conexao_app32_cli_ia_mcp_api_v1.md").read_text(encoding="utf-8")
 
     assert "Connection Profile" in spec
-    assert "`/profile`" in spec
-    assert "`/api-mcp`" in spec
+    assert "tela única de Conexões" in spec
     assert "`/channels`" in spec
+    assert "`/profile`" in spec
+    assert "modo detalhado" in spec
+    assert "`/api-mcp`" in spec
     assert "console técnico" in spec.lower()
     assert "Bearer Token MVP" in spec
     assert "OAuth" in spec
@@ -27,6 +29,7 @@ def test_mcp_connection_experience_paper_links_spec():
     assert "MCP-02" in paper
     assert "experiencia_conexao_app32_cli_ia_mcp_api_v1.md" in paper
     assert "Connection Profile" in paper
+    assert "tela única de Conexões" in paper
 
 
 def test_external_ai_onboarding_manual_links_mcp02_journey():
@@ -34,4 +37,19 @@ def test_external_ai_onboarding_manual_links_mcp02_journey():
 
     assert "Complemento MCP-02" in manual
     assert "experiencia_conexao_app32_cli_ia_mcp_api_v1.md" in manual
-    assert "`/profile`: conexão pessoal CLI/IA" in manual
+    assert "`/channels`: tela única de Conexões" in manual
+    assert "`/profile`: modo detalhado/fallback" in manual
+
+
+def test_connections_page_contains_mcp_unified_entrypoint():
+    template = (ROOT / "templates" / "integrations_admin.html").read_text(encoding="utf-8")
+
+    assert "Conexões | Versus" in template
+    assert "CLI/IA via MCP" in template
+    assert "section-mcp" in template
+    assert "connectionsMcpRuntime" in template
+    assert "connectionsMcpSquad" in template
+    assert "connectionsMcpCompany" in template
+    assert "/profile/mcp-token/status" in template
+    assert "/profile/mcp-token/config" in template
+    assert "/mcp/healthz" in template

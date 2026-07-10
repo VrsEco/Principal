@@ -109,7 +109,7 @@ Fonte oficial: `app32/docs/spec/experiencia_conexao_app32_cli_ia_mcp_api_v1.md`.
 
 A partir da SPEC MCP-02, o onboarding de IA externa deve seguir a jornada:
 
-1. usuário acessa `/profile`;
+1. usuário acessa `/channels`;
 2. escolhe runtime, empresa padrão, squad/perfil e surface;
 3. gera ou renova credencial;
 4. copia snippet específico do runtime;
@@ -121,9 +121,10 @@ A partir da SPEC MCP-02, o onboarding de IA externa deve seguir a jornada:
 
 Separação obrigatória:
 
-- `/profile`: conexão pessoal CLI/IA;
+- `/channels`: tela única de Conexões para canais externos, provedores e CLI/IA via MCP;
+- `/profile`: modo detalhado/fallback de instalação pessoal MCP;
 - `/api-mcp`: catálogo e contratos;
-- `/channels`: canais externos;
 - console técnico: diagnóstico, readiness e operação de Engenharia.
 
-Anti-padrão: usar `/api-mcp` ou `/channels` como substituto do perfil MCP pessoal do usuário.
+Anti-padrão: duplicar regra de token/canal no frontend ou forçar o usuário a alternar entre várias telas para uma conexão simples.
+
