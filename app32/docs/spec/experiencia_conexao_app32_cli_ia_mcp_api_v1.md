@@ -344,3 +344,33 @@ A arquitetura oficial passa a ser uma **jornada de conexão governada**:
 Essa organização reduz instabilidade percebida, facilita reconexão e prepara a base para análise assistida, squads e OAuth.
 
 
+
+---
+
+## 15. MCP-03 — Diagnóstico e reconexão guiada
+
+A tela única de Conexões deve conter um bloco de diagnóstico para CLI/IA via MCP.
+
+### 15.1. Diagnóstico mínimo
+
+O bloco deve exibir:
+
+- status do token;
+- empresa padrão;
+- runtime selecionado;
+- último uso;
+- health público do MCP;
+- estado consolidado: OK, atenção, falha ou aguardando;
+- recomendação orientada à ação.
+
+### 15.2. Recomendações padrão
+
+- MCP público falhou: acionar Engenharia antes de alterar token.
+- Token ausente/revogado: criar ou renovar token e atualizar runtime.
+- Empresa não definida: selecionar empresa padrão.
+- Sem último uso: copiar configuração e executar teste no CLI/IA.
+- Tudo OK: conexão pronta para operação.
+
+### 15.3. Regra de implementação
+
+O diagnóstico deve reaproveitar os endpoints existentes de status/configuração/health e não deve criar lógica paralela de autenticação ou canais.

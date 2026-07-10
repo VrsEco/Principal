@@ -224,6 +224,35 @@
                     <div><span>Health MCP</span><strong id="connectionsMcpHealth">Não testado</strong></div>
                   </div>
 
+                  <div class="mcp-diagnostic-panel" id="connectionsMcpDiagnosticPanel">
+                    <div class="mcp-diagnostic-head">
+                      <div>
+                        <span class="mcp-diagnostic-eyebrow">Diagnóstico da Conexão</span>
+                        <h5 id="connectionsMcpDiagnosticTitle">Verificando conexão MCP...</h5>
+                      </div>
+                      <span class="mcp-diagnostic-state is-neutral" id="connectionsMcpDiagnosticState">Aguardando</span>
+                    </div>
+                    <div class="mcp-diagnostic-grid">
+                      <div><span>Token</span><strong id="connectionsMcpDiagToken">--</strong></div>
+                      <div><span>Empresa</span><strong id="connectionsMcpDiagCompany">--</strong></div>
+                      <div><span>Runtime</span><strong id="connectionsMcpDiagRuntime">--</strong></div>
+                      <div><span>Último uso</span><strong id="connectionsMcpDiagLastUse">--</strong></div>
+                    </div>
+                    <div class="mcp-diagnostic-recommendation" id="connectionsMcpRecommendation">
+                      Aguardando leitura do status da conexão.
+                    </div>
+                    <details class="mcp-reconnect-steps" id="connectionsMcpReconnectSteps">
+                      <summary>Ver passo a passo de reconexão</summary>
+                      <ol>
+                        <li>Confirme se o Health MCP está OK.</li>
+                        <li>Se não houver token ativo, clique em <strong>Criar token</strong> ou <strong>Renovar</strong>.</li>
+                        <li>Copie a configuração gerada para o runtime selecionado.</li>
+                        <li>Atualize o Claude/Codex/Antigravity com o novo token/configuração.</li>
+                        <li>Execute um teste simples no CLI/IA e volte para conferir o último uso.</li>
+                      </ol>
+                    </details>
+                  </div>
+
                   <div class="row">
                     <div class="col-md-6">
                       <div class="form-group">
@@ -1228,6 +1257,7 @@
 
     @media (max-width: 768px) {
       .mcp-status-strip,
+      .mcp-diagnostic-grid,
       .mcp-action-grid,
       .mcp-action-grid.compact { grid-template-columns: 1fr; }
     }
@@ -1242,6 +1272,10 @@
       loadSavedServiceConfigs(); // Garante o preenchimento dos formulários
       loadConnectionsMcpStatus();
       testConnectionsMcpHealth(false);
+      ['connectionsMcpRuntime', 'connectionsMcpSquad', 'connectionsMcpCompany'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', updateConnectionsMcpDiagnostic);
+      });
     });
 
     // Navegação simplificada (Somente Gestão)
@@ -2295,6 +2329,7 @@
 
     // connections-mcp-js-marker
     let connectionsLatestMcpToken = null;
+    let connectionsMcpRuntimeState = { status: null, healthOk: null };
 
     function connectionsMcpPayload() {
       const companyValue = document.getElementById('connectionsMcpCompany')?.value || '';
@@ -2330,12 +2365,76 @@
     }
 
     function renderConnectionsMcpStatus(status) {
+      connectionsMcpRuntimeState.status = status || null;
       const active = Boolean(status && status.has_active_token);
       const statusEl = document.getElementById('connectionsMcpTokenStatus');
       const usageEl = document.getElementById('connectionsMcpLastUsage');
       if (statusEl) statusEl.textContent = active ? `Ativo • vence em ${connectionsFormatDateTime(status.expires_at)}` : 'Sem token ativo';
       if (usageEl) usageEl.textContent = active ? `${status.token_masked || '-'} • ${connectionsFormatDateTime(status.last_used_at)} • ${status.last_client_name || 'sem cliente'}` : 'Nenhum uso registrado';
       setConnectionsCompanyOptions(status ? status.companies : [], status ? (status.last_company_id || status.default_company_id) : null);
+      updateConnectionsMcpDiagnostic();
+    }
+
+    function selectedConnectionsCompanyLabel() {
+      const select = document.getElementById('connectionsMcpCompany');
+      if (!select || !select.value) return 'Não definida';
+      return select.options[select.selectedIndex]?.text || `Empresa ${select.value}`;
+    }
+
+    function selectedConnectionsRuntimeLabel() {
+      const select = document.getElementById('connectionsMcpRuntime');
+      return select?.options[select.selectedIndex]?.text || 'Claude';
+    }
+
+    function setDiagnosticState(kind, label, title, recommendation) {
+      const stateEl = document.getElementById('connectionsMcpDiagnosticState');
+      const titleEl = document.getElementById('connectionsMcpDiagnosticTitle');
+      const recEl = document.getElementById('connectionsMcpRecommendation');
+      if (stateEl) {
+        stateEl.className = `mcp-diagnostic-state is-${kind}`;
+        stateEl.textContent = label;
+      }
+      if (titleEl) titleEl.textContent = title;
+      if (recEl) recEl.textContent = recommendation;
+    }
+
+    function updateConnectionsMcpDiagnostic() {
+      const status = connectionsMcpRuntimeState.status || {};
+      const hasToken = Boolean(status.has_active_token);
+      const healthOk = connectionsMcpRuntimeState.healthOk;
+      const companyValue = document.getElementById('connectionsMcpCompany')?.value || '';
+      const lastUse = status.last_used_at ? connectionsFormatDateTime(status.last_used_at) : 'Nenhum uso registrado';
+
+      const tokenDiag = document.getElementById('connectionsMcpDiagToken');
+      const companyDiag = document.getElementById('connectionsMcpDiagCompany');
+      const runtimeDiag = document.getElementById('connectionsMcpDiagRuntime');
+      const lastUseDiag = document.getElementById('connectionsMcpDiagLastUse');
+      if (tokenDiag) tokenDiag.textContent = hasToken ? 'Ativo' : 'Ausente';
+      if (companyDiag) companyDiag.textContent = selectedConnectionsCompanyLabel();
+      if (runtimeDiag) runtimeDiag.textContent = selectedConnectionsRuntimeLabel();
+      if (lastUseDiag) lastUseDiag.textContent = lastUse;
+
+      if (healthOk === false) {
+        setDiagnosticState('error', 'Falha', 'MCP público não respondeu', 'A conexão externa do MCP está indisponível. Acione Engenharia antes de renovar token ou alterar runtime.');
+        return;
+      }
+      if (!hasToken) {
+        setDiagnosticState('warning', 'Ação necessária', 'Token MCP ausente ou revogado', 'Crie ou renove o token, copie a configuração gerada e atualize seu Claude/Codex/Antigravity.');
+        return;
+      }
+      if (!companyValue) {
+        setDiagnosticState('warning', 'Atenção', 'Empresa padrão não definida', 'Selecione uma empresa padrão para reduzir erros de contexto e garantir isolamento por tenant.');
+        return;
+      }
+      if (!status.last_used_at) {
+        setDiagnosticState('warning', 'Pendente', 'Conexão configurada, mas sem uso recente', 'Copie a configuração, atualize o runtime e execute uma chamada simples no CLI/IA para confirmar o último uso.');
+        return;
+      }
+      if (healthOk === true) {
+        setDiagnosticState('ok', 'OK', 'Conexão MCP pronta para operação', 'MCP saudável, token ativo, empresa definida e último uso identificado.');
+        return;
+      }
+      setDiagnosticState('neutral', 'Aguardando', 'Aguardando teste de health MCP', 'Clique em Testar health para concluir o diagnóstico.');
     }
 
     async function loadConnectionsMcpStatus(showError = false) {
@@ -2449,14 +2548,20 @@
     async function testConnectionsMcpHealth(showLog = true) {
       const healthEl = document.getElementById('connectionsMcpHealth');
       try {
+        connectionsMcpRuntimeState.healthOk = null;
+        updateConnectionsMcpDiagnostic();
         if (healthEl) healthEl.textContent = 'Testando...';
         const response = await fetch('/mcp/healthz', { method: 'GET' });
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error('Health MCP não respondeu OK.');
+        connectionsMcpRuntimeState.healthOk = true;
         if (healthEl) healthEl.textContent = 'OK';
+        updateConnectionsMcpDiagnostic();
         if (showLog) addLog('✅ Health MCP público OK.', 'success');
       } catch (error) {
+        connectionsMcpRuntimeState.healthOk = false;
         if (healthEl) healthEl.textContent = 'Falhou';
+        updateConnectionsMcpDiagnostic();
         if (showLog) addLog(`❌ Health MCP: ${error.message}`, 'error');
       }
     }

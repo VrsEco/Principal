@@ -139,3 +139,25 @@ Decisão complementar:
 > A tela `/channels` passa a ser a tela única de Conexões, reunindo WhatsApp, e-mail, Telegram, Instagram, provedores de IA e CLI/IA via MCP. A tela `/profile` permanece como modo detalhado/fallback seguro de instalação pessoal MCP.
 
 Essa mudança preserva o que já funciona e reduz atrito para consultor e cliente.
+
+---
+
+## 19. MCP-03 — Diagnóstico e reconexão guiada
+
+Após centralizar canais e MCP na tela `/channels`, a próxima evolução é reduzir o atrito de suporte quando a conexão CLI/IA falhar.
+
+Decisão:
+
+> A tela de Conexões deve mostrar diagnóstico operacional da conexão MCP e orientar a ação correta para o consultor/cliente sem exigir conhecimento técnico da arquitetura.
+
+Sinais mínimos:
+
+- health público do MCP;
+- token ativo, ausente, revogado ou expirado;
+- empresa padrão selecionada;
+- runtime selecionado;
+- último uso registrado;
+- recomendação objetiva;
+- passo a passo de reconexão.
+
+O objetivo é transformar falhas comuns em ações guiadas: testar health, renovar token, copiar configuração, atualizar runtime e confirmar último uso.
