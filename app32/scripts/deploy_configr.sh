@@ -188,36 +188,26 @@ MCP_STDERR_LOG="$APP/logs/mcp_http_stderr.log"
 if [ -f "$APP/scripts/start_mcp_http.sh" ]; then
     mkdir -p "$APP/logs"
     chmod +x "$APP/scripts/start_mcp_http.sh"
-
-    set +e
-    MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
-    if [ -n "$MCP_OLD_PIDS" ]; then
-        echo "   - Encerrando listener MCP HTTP atual na porta 8101: $MCP_OLD_PIDS"
-        kill -TERM $MCP_OLD_PIDS
-        for i in {1..10}; do
-            sleep 1
-            MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
-            if [ -z "$MCP_OLD_PIDS" ]; then
-                break
-            fi
-        done
-    fi
-
-    MCP_OLD_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null)
-    if [ -n "$MCP_OLD_PIDS" ]; then
-        echo "   - Listener MCP HTTP ainda ativo após SIGTERM; forçando parada: $MCP_OLD_PIDS"
-        kill -KILL $MCP_OLD_PIDS
-        sleep 1
-    fi
-
-    pkill -TERM -f "start_mcp_http.sh|src.core.mcp_http_server" >/dev/null 2>&1
-    set -e
-
-    nohup env \
+    if [ -f "$APP/scripts/manage_mcp_http.sh" ]; then
+        echo "   - Usando gerenciador MCP idempotente: scripts/manage_mcp_http.sh restart"
+        chmod +x "$APP/scripts/manage_mcp_http.sh"
         APP32_MCP_PUBLIC_BASE_URL="https://app.gestaoversus.com.br" \
         APP32_MCP_HTTP_PORT="8101" \
-        "$APP/scripts/start_mcp_http.sh" \
-        >> "$MCP_STDOUT_LOG" 2>> "$MCP_STDERR_LOG" < /dev/null &
+        bash "$APP/scripts/manage_mcp_http.sh" restart
+    else
+        echo "⚠️  Aviso: manage_mcp_http.sh não encontrado; usando start direto legado."
+        MCP_LEGACY_PIDS=$(lsof -tiTCP:8101 -sTCP:LISTEN 2>/dev/null || true)
+        if [ -n "$MCP_LEGACY_PIDS" ]; then
+            echo "   - Encerrando listener MCP legado na porta 8101: $MCP_LEGACY_PIDS"
+            kill -TERM $MCP_LEGACY_PIDS 2>/dev/null || true
+            sleep 3
+        fi
+        nohup env \
+            APP32_MCP_PUBLIC_BASE_URL="https://app.gestaoversus.com.br" \
+            APP32_MCP_HTTP_PORT="8101" \
+            "$APP/scripts/start_mcp_http.sh" \
+            >> "$MCP_STDOUT_LOG" 2>> "$MCP_STDERR_LOG" < /dev/null &
+    fi
 
     MCP_LOCAL_OK=0
     for i in {1..30}; do

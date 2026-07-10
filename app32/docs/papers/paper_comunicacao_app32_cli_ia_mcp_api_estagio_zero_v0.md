@@ -67,3 +67,40 @@ Sequência recomendada:
 2. corrigir bootstrap sem tenant;
 3. implantar health/restart do MCP;
 4. evoluir para OAuth.
+
+---
+
+## 17. MCP-01 — Supervisor idempotente do runtime MCP HTTP
+
+Após a estabilização inicial do Bearer Token por conector, ficou registrado um risco operacional remanescente: durante deploy/restart, o MCP podia tentar subir mais de um processo na porta `8101`, gerando erro `address already in use`.
+
+Decisão:
+
+> O runtime MCP HTTP deve ser gerenciado por script idempotente, com lock, PID, health local e health público.
+
+Script canônico:
+
+```text
+app32/scripts/manage_mcp_http.sh
+```
+
+Comandos:
+
+```bash
+scripts/manage_mcp_http.sh status
+scripts/manage_mcp_http.sh health
+scripts/manage_mcp_http.sh restart
+scripts/manage_mcp_http.sh stop
+scripts/manage_mcp_http.sh start
+```
+
+Regras:
+
+- o deploy deve chamar `manage_mcp_http.sh restart`;
+- o script deve adquirir lock antes de start/stop/restart;
+- o script deve encerrar listener existente na porta `8101` antes de subir novo processo;
+- o script deve validar `/healthz` local antes de declarar sucesso;
+- o script deve manter logs e PID em paths previsíveis;
+- o health público `/mcp/healthz` continua sendo a validação externa mínima.
+
+Esta decisão reduz a chance de restart duplicado e prepara a base para monitoramento automático e botão futuro de reparo de conexão.

@@ -50,7 +50,15 @@ Interpretação:
 
 Reiniciar apenas o serviço MCP, sem deploy completo.
 
-Comando operacional atual:
+Comando operacional canônico:
+
+```powershell
+ssh app@servidor
+cd /srv/appgestaoversuscombr.45a4cd4b.configr.cloud/www/app32
+scripts/manage_mcp_http.sh restart
+```
+
+Atalho operacional legado, quando disponível na estação de engenharia:
 
 ```powershell
 python C:\tmp\gv_restart_mcp_consultive.py
@@ -76,6 +84,35 @@ Resposta esperada:
   }
 }
 ```
+
+---
+
+## 3.1 Comandos do gerenciador MCP
+
+O script canônico é:
+
+```text
+app32/scripts/manage_mcp_http.sh
+```
+
+Comandos:
+
+```bash
+scripts/manage_mcp_http.sh status
+scripts/manage_mcp_http.sh health
+scripts/manage_mcp_http.sh restart
+scripts/manage_mcp_http.sh stop
+scripts/manage_mcp_http.sh start
+```
+
+Propriedades esperadas:
+
+- restart idempotente;
+- lock em `tmp/mcp_http.lock`;
+- PID em `tmp/mcp_http.pid`;
+- health local em `http://127.0.0.1:8101/healthz`;
+- health público em `https://app.gestaoversus.com.br/mcp/healthz`;
+- logs em `logs/mcp_http_stdout.log` e `logs/mcp_http_stderr.log`.
 
 ---
 
@@ -132,4 +169,3 @@ Regra:
 > Tool de descoberta pessoal deve exigir `user_id`, não `company_id`.
 
 O `company_id` continua obrigatório para tools operacionais de empresa.
-
