@@ -104,3 +104,28 @@ Regras:
 - o health público `/mcp/healthz` continua sendo a validação externa mínima.
 
 Esta decisão reduz a chance de restart duplicado e prepara a base para monitoramento automático e botão futuro de reparo de conexão.
+
+---
+
+## 18. MCP-02 — Contrato operacional de conexão CLI/IA ↔ APP32
+
+Após estabilizar token por conector, bootstrap sem `company_id` e supervisor idempotente do MCP HTTP, a próxima decisão é transformar as telas existentes em uma jornada operacional coerente de conexão.
+
+SPEC oficial criada:
+
+```text
+app32/docs/spec/experiencia_conexao_app32_cli_ia_mcp_api_v1.md
+```
+
+Decisão:
+
+> O APP32 deve tratar a conexão CLI/IA como um `Connection Profile` governado, com runtime, usuário, empresa, squad/perfil, surface, modo de autenticação, status de token, último uso, health e snippet específico por runtime.
+
+Responsabilidades oficiais:
+
+- `/profile`: entrada principal para instalar/conectar CLI/IA pessoal;
+- `/api-mcp`: contratos, catálogo e interoperabilidade API/MCP;
+- `/channels`: canais externos como e-mail, WhatsApp, Telegram, Instagram e provedores;
+- console técnico MCP/API: readiness, release, diagnóstico, observabilidade e Engenharia.
+
+Essa decisão evita criar nova tela antes de organizar a experiência existente e prepara a base para a análise assistida MCP-first, tenant-owned e human-gated.

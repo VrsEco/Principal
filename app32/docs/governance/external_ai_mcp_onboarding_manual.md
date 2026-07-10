@@ -100,3 +100,30 @@ Resultado esperado:
 ```text
 AI_MCP_EXTERNAL_ONBOARDING_OK 4 5
 ```
+
+---
+
+## Complemento MCP-02 — Jornada oficial de conexão
+
+Fonte oficial: `app32/docs/spec/experiencia_conexao_app32_cli_ia_mcp_api_v1.md`.
+
+A partir da SPEC MCP-02, o onboarding de IA externa deve seguir a jornada:
+
+1. usuário acessa `/profile`;
+2. escolhe runtime, empresa padrão, squad/perfil e surface;
+3. gera ou renova credencial;
+4. copia snippet específico do runtime;
+5. instala no CLI/IA;
+6. executa teste de conexão;
+7. confirma empresa ativa e último uso;
+8. usa MCP com contexto tenant-safe;
+9. registra resultado/validação no APP32 quando aplicável.
+
+Separação obrigatória:
+
+- `/profile`: conexão pessoal CLI/IA;
+- `/api-mcp`: catálogo e contratos;
+- `/channels`: canais externos;
+- console técnico: diagnóstico, readiness e operação de Engenharia.
+
+Anti-padrão: usar `/api-mcp` ou `/channels` como substituto do perfil MCP pessoal do usuário.
