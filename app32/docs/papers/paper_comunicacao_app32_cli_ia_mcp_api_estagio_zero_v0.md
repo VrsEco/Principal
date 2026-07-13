@@ -161,3 +161,34 @@ Sinais mínimos:
 - passo a passo de reconexão.
 
 O objetivo é transformar falhas comuns em ações guiadas: testar health, renovar token, copiar configuração, atualizar runtime e confirmar último uso.
+
+---
+
+## 20. MCP-04 — Transporte canônico `streamable-http` e erro explícito para SSE legado
+
+Após teste externo com Claude, foi identificado que a instabilidade observada não estava em auth, tenant, RBAC ou tool específica.
+
+Achado:
+
+- conexão por `streamable-http` inicializa e autentica normalmente;
+- tentativa por SSE legado contra `/mcp/user/` pode ficar pendurada antes de `initialize()`;
+- portanto, o problema está no handshake de transporte quando o cliente usa SSE em vez de `streamable-http`.
+
+Decisão:
+
+> O transporte canônico do MCP remoto APP32 é `streamable-http`. SSE legado não deve ser recomendado em snippets novos e deve receber erro explícito quando detectado em handshake inicial sem sessão.
+
+Implicações:
+
+- `/mcp/healthz` deve expor `transport=streamable-http` e `sse_supported=false`;
+- clientes MCP devem ser configurados em HTTP/streamable-http sempre que suportado;
+- tentativa SSE sem sessão não deve ficar em `connecting...` indefinidamente;
+- a mensagem de erro deve orientar o usuário a trocar o transporte.
+
+Achado secundário:
+
+- em `session_company`, `active_company_id` estava correto, mas `companies[].selected` podia refletir a empresa padrão em vez da empresa ativa persistida.
+
+Decisão:
+
+> `companies[].selected` deve refletir exatamente `active_company_id`; quando não houver empresa ativa, nenhuma empresa deve vir marcada como selecionada.

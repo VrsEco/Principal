@@ -308,6 +308,68 @@ def test_get_http_request_identity_rehydrates_from_current_mcp_request(monkeypat
     assert identity.company_id == 10
 
 
+def test_middleware_rejects_legacy_sse_handshake_without_hanging(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="10",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+    )
+
+    async def endpoint(_):
+        return JSONResponse({"reached": True})
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user")
+    client = TestClient(app)
+
+    response = client.get(
+        "/",
+        headers={
+            "Authorization": "Bearer token-123",
+            "Accept": "text/event-stream",
+        },
+    )
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["error"] == "sse_transport_not_supported"
+    assert payload["transport"] == "streamable-http"
+    assert payload["sse_supported"] is False
+
+
+def test_middleware_allows_streamable_http_get_when_session_header_exists(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="10",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+    )
+
+    async def endpoint(_):
+        return JSONResponse({"reached": True})
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user")
+    client = TestClient(app)
+
+    response = client.get(
+        "/",
+        headers={
+            "Authorization": "Bearer token-123",
+            "Accept": "text/event-stream",
+            "Mcp-Session-Id": "session-1",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"reached": True}
+
+
 def test_get_http_request_context_rehydrates_even_without_surface_in_scope(monkeypatch):
     module = _reload_auth(
         monkeypatch,

@@ -498,6 +498,26 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
         if identity is None:
             return JSONResponse({"error": "unauthorized", "detail": "Bearer token inválido ou ausente."}, status_code=401)
 
+        accept_header = request.headers.get("accept", "")
+        mcp_session_id = request.headers.get("mcp-session-id")
+        if (
+            request.method.upper() == "GET"
+            and "text/event-stream" in accept_header.lower()
+            and not mcp_session_id
+        ):
+            return JSONResponse(
+                {
+                    "error": "sse_transport_not_supported",
+                    "detail": (
+                        "O MCP remoto do APP32 usa streamable-http. "
+                        "Configure o cliente para transporte streamable-http em vez de SSE."
+                    ),
+                    "transport": "streamable-http",
+                    "sse_supported": False,
+                },
+                status_code=400,
+            )
+
         if identity.user_id is None or (identity.company_id is None and self.surface != "user"):
             return JSONResponse(
                 {

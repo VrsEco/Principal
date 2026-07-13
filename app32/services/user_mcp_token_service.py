@@ -1358,6 +1358,10 @@ class UserMcpTokenService:
         )
         company_lookup = {item["id"]: item for item in companies if isinstance(item.get("id"), int)}
         active_company = company_lookup.get(resolved_company_id) if resolved_company_id is not None else None
+        for company in companies:
+            company["selected"] = bool(
+                resolved_company_id is not None and company.get("id") == resolved_company_id
+            )
         multi_company = len(accessible_company_ids) > 1
         return {
             "user_id": getattr(user, "id", None),
@@ -1521,6 +1525,17 @@ class UserMcpTokenService:
             squad=squad,
         )
         connector_identity = cls._connector_identity(connector_name)
+        # Serializa a emissão por usuário. Sem o bloqueio, requisições
+        # simultâneas leem a mesma lista de tokens ativos e todas criam um
+        # novo registro antes que qualquer uma consiga revogar as demais.
+        locked_user = (
+            User.query.filter_by(id=user.id)
+            .with_for_update()
+            .first()
+        )
+        if not locked_user:
+            raise ValueError("Usuário inválido para geração do token MCP.")
+        user = locked_user
         active_records = UserMcpToken.query.filter_by(user_id=user.id, status="active").all()
         for active in active_records:
             if cls._connector_identity(getattr(active, "last_client_name", None)) == connector_identity:
@@ -2126,7 +2141,18 @@ class UserMcpTokenService:
             )
             processed = 0
             notified = 0
-            for record in tokens:
+            for candidate in tokens:
+                # Each scheduler execution must claim the row before checking
+                # the notification marker. PostgreSQL SKIP LOCKED makes a
+                # concurrent execution skip a token already being processed.
+                record = (
+                    UserMcpToken.query.filter_by(id=candidate.id)
+                    .with_for_update(skip_locked=True)
+                    .populate_existing()
+                    .first()
+                )
+                if not record:
+                    continue
                 cls._expire_if_needed(record)
                 if record.status != "active" or not record.expires_at:
                     continue

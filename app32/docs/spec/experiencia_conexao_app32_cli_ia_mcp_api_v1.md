@@ -313,6 +313,8 @@ Sem conexão saudável, a análise assistida deve entrar em estado:
 6. Tratar `/healthz` web como prova de que MCP está saudável.
 7. Permitir mutação crítica via MCP sem surface, permissão e gate humano.
 8. Deixar consultor/cliente sem mensagem de reconexão orientada à ação.
+9. Configurar clientes MCP novos em SSE quando `streamable-http` estiver disponível.
+10. Deixar handshake SSE legado pendurado sem resposta explícita.
 
 ---
 
@@ -329,7 +331,10 @@ A experiência estará aderente quando:
 7. health MCP for separado do health web;
 8. reconexão tiver instrução curta e testável;
 9. Claude, Codex, Gemini/Antigravity e VS Code tiverem snippets próprios;
-10. OAuth estiver desenhado como evolução sem bloquear o MVP.
+10. OAuth estiver desenhado como evolução sem bloquear o MVP;
+11. `/mcp/healthz` declarar `streamable-http` como transporte canônico e `sse_supported=false`;
+12. tentativa SSE legada sem sessão retornar erro objetivo, sem travar o cliente;
+13. payloads de escopo MCP manterem `active_company_id` e `companies[].selected` consistentes.
 
 ---
 
@@ -374,3 +379,42 @@ O bloco deve exibir:
 ### 15.3. Regra de implementação
 
 O diagnóstico deve reaproveitar os endpoints existentes de status/configuração/health e não deve criar lógica paralela de autenticação ou canais.
+
+---
+
+## 16. MCP-04 — Transporte canônico e consistência de empresa ativa
+
+Após validação real em cliente externo, ficou confirmado que:
+
+- `streamable-http` conecta, inicializa e autentica normalmente;
+- SSE legado contra `/mcp/user/` pode ficar pendurado antes de `initialize()`;
+- o problema não é auth, tenant ou RBAC;
+- o payload de `session_company` precisa manter consistência entre `active_company_id` e `companies[].selected`.
+
+### 16.1. Decisão oficial de transporte
+
+O transporte canônico do MCP remoto APP32 é:
+
+```text
+streamable-http
+```
+
+SSE legado não deve ser recomendado em snippets novos.
+
+Quando um cliente tentar handshake SSE inicial sem `Mcp-Session-Id`, o APP32 deve retornar erro explícito:
+
+```text
+sse_transport_not_supported
+```
+
+O objetivo é evitar conexão infinita em `connecting...` e orientar o usuário para `streamable-http`.
+
+### 16.2. Consistência multiempresa
+
+Em tools de sessão/empresa:
+
+- `data.active_company_id` é a fonte canônica da empresa ativa;
+- `data.companies[].selected` deve refletir exatamente a mesma empresa;
+- quando não houver empresa ativa, nenhuma empresa deve vir como `selected=true`.
+
+Esse contrato evita que clientes externos renderizem empresa incorreta quando usam a lista em vez do campo top-level.

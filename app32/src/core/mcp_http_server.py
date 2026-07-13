@@ -115,6 +115,7 @@ async def _healthz(_: Request) -> JSONResponse:
         {
             "ok": True,
             "transport": "streamable-http",
+            "sse_supported": False,
             "public_base_url": DEFAULT_PUBLIC_BASE_URL.rstrip("/"),
             "surfaces": {
                 "user": _surface_mount_path("user"),
@@ -148,6 +149,7 @@ async def _index(_: Request) -> JSONResponse:
             "requirements": {
                 "authorization": "Bearer token (MVP interno) / OAuth (preparação de arquitetura).",
                 "tenant_isolation": "company_id resolvido por token/contexto autenticado.",
+                "transport": "Use streamable-http; SSE legado não é o transporte canônico do APP32.",
             },
         }
     )

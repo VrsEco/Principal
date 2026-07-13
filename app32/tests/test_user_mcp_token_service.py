@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from types import SimpleNamespace
 import base64
 import contextlib
@@ -77,6 +77,18 @@ def test_issue_token_revokes_only_same_runtime_connector(monkeypatch):
         def commit(self):
             pass
 
+    class FakeUserQuery:
+        def filter_by(self, **kwargs):
+            assert kwargs == {"id": 7}
+            return self
+
+        def with_for_update(self):
+            return self
+
+        def first(self):
+            return fake_user
+
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=FakeUserQuery()))
     monkeypatch.setattr(token_service_module, "UserMcpToken", FakeUserMcpToken)
     monkeypatch.setattr(token_service_module.db, "session", FakeSession())
     monkeypatch.setattr(token_service_module.UserMcpTokenService, "_utcnow", staticmethod(lambda: now))
@@ -390,6 +402,32 @@ def test_build_runtime_company_scope_requires_explicit_selection_for_multi_compa
     assert scope["accessible_company_ids"] == [10, 12]
 
 
+def test_build_runtime_company_scope_marks_selected_company_from_persisted_context(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    user = SimpleNamespace(id=7, is_active=True)
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "list_accessible_companies",
+        staticmethod(
+            lambda current_user: [
+                {"id": 1, "label": "Save Water", "selected": True},
+                {"id": 6, "label": "Ventana", "selected": False},
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        token_service_module.UserMcpTokenService,
+        "_resolve_explicit_company_id_for_user",
+        staticmethod(lambda current_user, company_id: int(company_id) if company_id in {1, 6} else None),
+    )
+
+    scope = service.build_runtime_company_scope(user, persisted_company_id=6)
+
+    assert scope["active_company_id"] == 6
+    assert scope["active_company_label"] == "Ventana"
+    assert [item["selected"] for item in scope["companies"]] == [False, True]
+
+
 def test_build_client_config_exposes_squad_cliente_harness_catalog(monkeypatch):
     service = token_service_module.user_mcp_token_service
     monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
@@ -498,3 +536,44 @@ def test_build_client_config_requires_company_for_antigravity_privileged_surface
     assert config["install_mode"] == "selection_required"
     assert config["install_command"] is None
     assert "company_id explícito" in config["instruction_text"]
+
+
+def test_expiration_notification_skips_token_locked_by_another_worker(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    candidate = SimpleNamespace(id=91, status="active", expires_at=datetime(2026, 7, 16), notice_d3_sent_at=None, notice_d0_sent_at=None, user_id=7)
+    calls = []
+
+    class FakeTokenQuery:
+        def filter(self, *args):
+            return self
+
+        def order_by(self, *args):
+            return self
+
+        def all(self):
+            return [candidate]
+
+        def filter_by(self, **kwargs):
+            assert kwargs == {"id": 91}
+            return self
+
+        def with_for_update(self, **kwargs):
+            calls.append(kwargs)
+            return self
+
+        def populate_existing(self):
+            return self
+
+        def first(self):
+            return None
+
+    fake_columns = SimpleNamespace(expires_at=SimpleNamespace(asc=lambda: "expires_at"))
+    monkeypatch.setattr(token_service_module, "UserMcpToken", SimpleNamespace(query=FakeTokenQuery(), status="status", **fake_columns.__dict__))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: contextlib.nullcontext()))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: (_ for _ in ()).throw(AssertionError("não deve enviar")))))
+    monkeypatch.setattr(token_service_module.db, "session", SimpleNamespace(commit=lambda: None))
+
+    result = service.send_expiration_notifications(reference_date=date(2026, 7, 13))
+
+    assert result == {"processed": 0, "notified": 0}
+    assert calls == [{"skip_locked": True}]
