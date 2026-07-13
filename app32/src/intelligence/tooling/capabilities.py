@@ -84,6 +84,11 @@ class ToolCapability:
 
 
 _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
+    "create_process_bpmn_activity_tool": {
+        "domain": "processes", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("processes.ai_assistant.execute",),
+        "tags": ("bpmn", "activity", "data_object", "create"), "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "consult_rules": {
         "domain": "governance",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

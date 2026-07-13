@@ -252,6 +252,7 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(name="create_process_bpmn_activity_tool", description="Cria uma atividade BPMN, conexões e Data Object Reference no diagrama draft."),
     SimpleNamespace(
         name="analyze_process_flow_copilot_tool",
         description="Analisa o fluxo BPMN do processo e aponta gaps de lane, POP, gateways e oportunidades de automação/conexão.",
