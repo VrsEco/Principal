@@ -18,6 +18,7 @@ from services.email_service import EmailService
 from services.integration_catalog_service import IntegrationCatalogService
 from services.integration_request_service import IntegrationRequestService
 from services.instagram_service import InstagramService
+from services.mcp_runtime_health_service import McpRuntimeHealthService
 from services.telegram_service import TelegramService
 from services.tool_backlog_service import ToolBacklogService
 from services.tool_first_catalog_service import ToolFirstCatalogService
@@ -944,6 +945,28 @@ def integrations_admin_page():
 @login_required
 def integrations_admin_legacy_redirect():
     return redirect(url_for("integrations.integrations_admin_page"))
+
+
+@integrations_bp.route("/api/integrations/mcp-runtime/status", methods=["GET"])
+@login_required
+def mcp_runtime_status():
+    active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
+    payload = McpRuntimeHealthService.status()
+    return jsonify({"success": bool(payload.get("ok")), "data": payload}), (200 if payload.get("ok") else 503)
+
+
+@integrations_bp.route("/api/integrations/mcp-runtime/repair", methods=["POST"])
+@login_required
+def mcp_runtime_repair():
+    active_company = _safe_active_company()
+    _require_integration_admin(getattr(active_company, "id", None))
+    try:
+        payload = McpRuntimeHealthService.repair()
+    except Exception:
+        current_app.logger.exception("Falha ao reparar runtime MCP.")
+        return jsonify({"success": False, "message": "Falha técnica ao reparar runtime MCP."}), 500
+    return jsonify(payload), (200 if payload.get("success") else 503)
 
 
 @integrations_bp.route("/tools")

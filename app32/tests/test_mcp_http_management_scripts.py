@@ -22,3 +22,12 @@ def test_mcp_manager_has_lock_pid_and_health_contract():
     assert "PUBLIC_HEALTH_URL=\"$PUBLIC_BASE/mcp/healthz\"" in manager
     assert "acquire_lock" in manager
     assert "start|stop|restart|status|health" in manager
+
+
+def test_mcp_monitor_restarts_only_after_consecutive_failures():
+    monitor = (ROOT / "scripts" / "monitor_mcp_http.sh").read_text(encoding="utf-8")
+
+    assert "APP32_MCP_MONITOR_FAIL_THRESHOLD" in monitor
+    assert "mcp_http_monitor.failures" in monitor
+    assert "bash \"$MANAGER\" restart" in monitor
+    assert "Aguardando nova falha antes de reiniciar" in monitor

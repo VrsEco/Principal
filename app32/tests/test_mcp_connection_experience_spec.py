@@ -21,6 +21,8 @@ def test_mcp_connection_experience_spec_contract():
     assert "Claude" in spec
     assert "Gemini/Antigravity" in spec
     assert "VS Code/Copilot" in spec
+    assert "MCP-05" in spec
+    assert "runbook_mcp_runtime_resiliencia_v1.md" in spec
 
 
 def test_mcp_connection_experience_paper_links_spec():
@@ -30,6 +32,17 @@ def test_mcp_connection_experience_paper_links_spec():
     assert "experiencia_conexao_app32_cli_ia_mcp_api_v1.md" in paper
     assert "Connection Profile" in paper
     assert "tela única de Conexões" in paper
+    assert "MCP-05" in paper
+    assert "monitor_mcp_http.sh" in paper
+
+
+def test_mcp_runtime_resilience_runbook_contract():
+    runbook = (ROOT / "docs" / "runbooks" / "runbook_mcp_runtime_resiliencia_v1.md").read_text(encoding="utf-8")
+
+    assert "scripts/manage_mcp_http.sh" in runbook
+    assert "scripts/monitor_mcp_http.sh" in runbook
+    assert "/api/integrations/mcp-runtime/repair" in runbook
+    assert "streamable-http" in runbook
 
 
 def test_external_ai_onboarding_manual_links_mcp02_journey():
@@ -53,5 +66,8 @@ def test_connections_page_contains_mcp_unified_entrypoint():
     assert "/profile/mcp-token/status" in template
     assert "/profile/mcp-token/config" in template
     assert "/mcp/healthz" in template
+    assert "Reparar runtime MCP" in template
+    assert "/api/integrations/mcp-runtime/repair" in template
+    assert "repairConnectionsMcpRuntime" in template
 
 

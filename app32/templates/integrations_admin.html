@@ -288,6 +288,7 @@
                     <button type="button" class="btn btn-secondary" onclick="runConnectionsMcpTokenAction('/profile/mcp-token/renew', 'Token MCP renovado. Atualize o runtime com o novo token.')">Renovar</button>
                     <button type="button" class="btn btn-outline-danger" onclick="revokeConnectionsMcpToken()">Revogar</button>
                     <button type="button" class="btn btn-outline-primary" onclick="testConnectionsMcpHealth()">Testar health</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="repairConnectionsMcpRuntime()">Reparar runtime MCP</button>
                   </div>
 
                   <div class="mcp-token-reveal" id="connectionsMcpTokenReveal" style="display:none;">
@@ -2563,6 +2564,29 @@
         if (healthEl) healthEl.textContent = 'Falhou';
         updateConnectionsMcpDiagnostic();
         if (showLog) addLog(`❌ Health MCP: ${error.message}`, 'error');
+      }
+    }
+
+    async function repairConnectionsMcpRuntime() {
+      if (!confirm('Reparar o runtime MCP agora? Use esta ação quando o health MCP estiver falhando.')) return;
+      const healthEl = document.getElementById('connectionsMcpHealth');
+      try {
+        connectionsMcpRuntimeState.healthOk = null;
+        updateConnectionsMcpDiagnostic();
+        if (healthEl) healthEl.textContent = 'Reparando...';
+        addLog('🛠️ MCP: iniciando reparo controlado do runtime...', 'info');
+        const response = await fetch('/api/integrations/mcp-runtime/repair', { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao reparar runtime MCP.');
+        connectionsMcpRuntimeState.healthOk = true;
+        if (healthEl) healthEl.textContent = data.repaired ? 'Reparado' : 'OK';
+        updateConnectionsMcpDiagnostic();
+        addLog(`✅ MCP: ${data.message || 'Runtime saudável.'}`, 'success');
+      } catch (error) {
+        connectionsMcpRuntimeState.healthOk = false;
+        if (healthEl) healthEl.textContent = 'Falhou';
+        updateConnectionsMcpDiagnostic();
+        addLog(`❌ MCP: ${error.message}`, 'error');
       }
     }
 

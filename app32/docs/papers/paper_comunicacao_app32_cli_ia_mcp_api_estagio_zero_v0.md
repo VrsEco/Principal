@@ -192,3 +192,27 @@ Achado secundário:
 Decisão:
 
 > `companies[].selected` deve refletir exatamente `active_company_id`; quando não houver empresa ativa, nenhuma empresa deve vir marcada como selecionada.
+
+---
+
+## 21. MCP-05 — Resiliência operacional do runtime MCP
+
+Após nova validação operacional, ficou confirmado que a aplicação web pode permanecer saudável enquanto o runtime MCP HTTP cai e `/mcp/healthz` passa a retornar `502`.
+
+Decisão:
+
+> O MCP HTTP deve ser operado como serviço separado, com health próprio, monitor automático, restart idempotente e reparo administrativo seguro.
+
+Componentes:
+
+- `scripts/manage_mcp_http.sh`: manager idempotente já oficial para start, stop, restart, status e health;
+- `scripts/monitor_mcp_http.sh`: monitor leve para reiniciar apenas após falhas consecutivas;
+- `GET /api/integrations/mcp-runtime/status`: status administrativo;
+- `POST /api/integrations/mcp-runtime/repair`: reparo controlado pela tela de Conexões;
+- `docs/runbooks/runbook_mcp_runtime_resiliencia_v1.md`: runbook oficial.
+
+Regra:
+
+- o monitor não deve reiniciar em toda falha isolada;
+- a ação administrativa não deve renovar token nem alterar tenant;
+- o reparo deve apenas restaurar o processo MCP HTTP e validar health local/público.

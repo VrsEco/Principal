@@ -334,7 +334,8 @@ A experiência estará aderente quando:
 10. OAuth estiver desenhado como evolução sem bloquear o MVP;
 11. `/mcp/healthz` declarar `streamable-http` como transporte canônico e `sse_supported=false`;
 12. tentativa SSE legada sem sessão retornar erro objetivo, sem travar o cliente;
-13. payloads de escopo MCP manterem `active_company_id` e `companies[].selected` consistentes.
+13. payloads de escopo MCP manterem `active_company_id` e `companies[].selected` consistentes;
+14. runtime MCP possuir monitor automático e ação administrativa de reparo seguro.
 
 ---
 
@@ -418,3 +419,47 @@ Em tools de sessão/empresa:
 - quando não houver empresa ativa, nenhuma empresa deve vir como `selected=true`.
 
 Esse contrato evita que clientes externos renderizem empresa incorreta quando usam a lista em vez do campo top-level.
+
+---
+
+## 17. MCP-05 — Resiliência operacional do runtime MCP
+
+Após queda real do `/mcp/healthz` com a aplicação web saudável, a decisão oficial é tratar o runtime MCP HTTP como serviço operacional separado.
+
+### 17.1. Decisão
+
+O APP32 deve ter três mecanismos complementares:
+
+1. **manager idempotente** para start/stop/restart/status/health;
+2. **monitor automático leve** para detectar falhas consecutivas e reiniciar com segurança;
+3. **ação administrativa no APP32** para reparar o runtime quando o consultor/engenharia identificar falha.
+
+### 17.2. Contrato operacional
+
+Scripts oficiais:
+
+```text
+scripts/manage_mcp_http.sh
+scripts/monitor_mcp_http.sh
+```
+
+Runbook oficial:
+
+```text
+docs/runbooks/runbook_mcp_runtime_resiliencia_v1.md
+```
+
+Rotas administrativas:
+
+```text
+GET  /api/integrations/mcp-runtime/status
+POST /api/integrations/mcp-runtime/repair
+```
+
+### 17.3. Regras de segurança
+
+- Reparar runtime MCP não renova token.
+- Reparar runtime MCP não altera empresa ativa.
+- Reparar runtime MCP não executa tool MCP.
+- Ação administrativa exige permissão de administração de integrações.
+- O monitor só reinicia após falhas consecutivas para evitar falso positivo.

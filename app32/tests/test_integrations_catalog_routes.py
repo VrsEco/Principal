@@ -166,6 +166,51 @@ def test_channels_page_requires_integration_admin(monkeypatch):
     assert response.status_code == 403
 
 
+def test_mcp_runtime_status_requires_admin_and_returns_payload(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: None)
+    monkeypatch.setattr(
+        integrations_route.McpRuntimeHealthService,
+        "status",
+        lambda: {
+            "ok": True,
+            "healthy": True,
+            "status": {"local_health": "ok", "public_health": "ok"},
+        },
+    )
+
+    response = app.test_client().get("/api/integrations/mcp-runtime/status")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["data"]["healthy"] is True
+
+
+def test_mcp_runtime_repair_returns_controlled_result(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
+    monkeypatch.setattr(integrations_route, "_require_integration_admin", lambda company_id=None: None)
+    monkeypatch.setattr(
+        integrations_route.McpRuntimeHealthService,
+        "repair",
+        lambda: {
+            "success": True,
+            "repaired": True,
+            "message": "Runtime MCP reiniciado com sucesso.",
+            "after": {"healthy": True},
+        },
+    )
+
+    response = app.test_client().post("/api/integrations/mcp-runtime/repair")
+    payload = response.get_json()
+
+    assert response.status_code == 200
+    assert payload["success"] is True
+    assert payload["repaired"] is True
+
+
 def test_list_integration_requests_uses_current_user_context(monkeypatch):
     app = _build_app()
     monkeypatch.setattr(integrations_route, "_resolve_active_company", lambda: SimpleNamespace(id=31))
