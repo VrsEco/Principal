@@ -255,6 +255,22 @@ Cada roteiro deve conter:
 - instrução explícita de pesquisa profunda/benchmarking quando aplicável;
 - saída esperada e gate humano obrigatório.
 
+### 7.1.2. Domínio MCP e perfil cliente
+
+As tools `consultive_*` pertencem ao domínio canônico `consultive`.
+
+Na surface `user`, o perfil `cliente` e o overlay `coordenador_cliente` devem poder executar apenas leitura/análise/revisão human-gated da camada consultiva:
+
+- permitido: `discover`, `read`, `analyze`, `review`;
+- bloqueado para cliente: `create`, `update`, `delete`, `audit`;
+- tools de registro, validação, decisão ou conversão exigem perfil apropriado, permissão `consultive.write` e gate humano.
+
+Isso evita que o runtime externo do cliente fique bloqueado por domínio genérico (`general`) e preserva a separação entre:
+
+- IA/CLI do cliente lendo contexto e produzindo diagnóstico;
+- APP32 registrando retorno e decisão por fluxo governado;
+- consultor validando a decisão final.
+
 ### 7.2. Registro
 
 - `consultive_register_assisted_analysis`

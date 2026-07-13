@@ -359,6 +359,41 @@ def test_user_surface_manifest_exposes_strategy_maturation_tools_to_cliente_harn
     assert "review_strategy_maturation_item_tool" in tool_names
 
 
+
+def test_user_surface_manifest_exposes_consultive_read_tools_to_cliente_harness(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=22,
+            company_id=1,
+            employee_id=None,
+            role="cliente",
+            channel="claude_remote",
+            thread_id=None,
+            accessible_company_ids=(1,),
+            permissions=(),
+            metadata={
+                "surface": "user",
+                "transport": "streamable_http",
+                "client": "claude_remote_connector",
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+    )
+
+    manifest = registry.get_surface_manifest("user", domain="consultive", include_tools=True)
+    tools = {tool["name"]: tool for tool in manifest["tools"]}
+
+    assert tools["consultive_get_front_context"]["domain"] == "consultive"
+    assert tools["consultive_get_front_context"]["permissions"] == ["consultive.read"]
+    assert "consultive_resolve_protocol" in tools
+    assert "consultive_register_assisted_analysis" not in tools
+
 def test_stdio_surface_startup_banner_goes_to_stderr(monkeypatch, capsys):
     fake_mcp = _RunnableFakeMCP()
     monkeypatch.setattr(registry, "build_user_mcp_server", lambda: fake_mcp)

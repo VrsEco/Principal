@@ -60,6 +60,7 @@ def test_cliente_is_restricted_to_user_read_or_limited_actions():
     assert "workload" in cliente.forbidden_domains
     assert "identity_self_service" in cliente.allowed_domains
     assert "processes" in cliente.allowed_domains
+    assert "consultive" in cliente.allowed_domains
     assert "identity_admin" in cliente.forbidden_domains
 
 

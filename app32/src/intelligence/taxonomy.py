@@ -8,6 +8,7 @@ CANONICAL_TOOL_DOMAINS: tuple[str, ...] = (
     "processes",
     "meetings",
     "strategy",
+    "consultive",
     "real_estate_auctions",
     "finance",
     "analytics",

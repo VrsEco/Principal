@@ -101,6 +101,19 @@ def test_validate_permission_enforces_role_matrix_by_domain_and_action():
     assert admin_delete.allowed is True
 
 
+
+def test_validate_permission_allows_cliente_consultive_read_and_blocks_mutation():
+    client = PrincipalContext(user_id=3, company_id=12, role="cliente")
+
+    read_decision = validate_permission(client, domain="consultive", action="read")
+    analyze_decision = validate_permission(client, domain="consultive", action="analyze")
+    create_decision = validate_permission(client, domain="consultive", action="create")
+
+    assert read_decision.allowed is True
+    assert analyze_decision.allowed is True
+    assert create_decision.allowed is False
+    assert "action_not_allowed" in create_decision.checks
+
 def test_validate_permission_blocks_finance_for_non_admin_profiles_by_profile_contract():
     collaborator = PrincipalContext(user_id=2, company_id=12, role="colaborador")
     client = PrincipalContext(user_id=3, company_id=12, role="cliente")

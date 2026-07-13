@@ -1364,6 +1364,42 @@ for _tool_name in (
         tags=("mutation", "session"),
     )
 
+
+
+def _register_consultive_capability(tool_name: str, *, action: str = "read", write: bool = False) -> None:
+    _register_mcp_support_capability(
+        tool_name,
+        domain="consultive",
+        action=action,
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+        risk=ToolRiskLevel.MEDIUM if write else ToolRiskLevel.LOW,
+        permissions=("consultive.write",) if write else ("consultive.read",),
+        human_gate=write,
+        human_gate_reason="Registro ou conversão consultiva exige validação humana e trilha auditável." if write else None,
+        required_context=(TOOL_CONTEXT_COMPANY,),
+        tags=("consultive", "assisted_analysis", "mcp_first"),
+    )
+
+
+for _tool_name in (
+    "consultive_get_front_context",
+    "consultive_get_front_evidence",
+    "consultive_get_front_gaps",
+    "consultive_get_methodology_guidance",
+    "consultive_resolve_protocol",
+    "consultive_list_assisted_analyses",
+):
+    _register_consultive_capability(_tool_name, action="read", write=False)
+
+for _tool_name in (
+    "consultive_upsert_protocol",
+    "consultive_register_assisted_analysis",
+    "consultive_register_squad_validation",
+    "consultive_register_consultant_decision",
+    "consultive_create_recommended_action",
+):
+    _register_consultive_capability(_tool_name, action="create", write=True)
+
 _register_mcp_support_capability(
     "request_new_app32_integration",
     domain="operations",
@@ -1462,6 +1498,9 @@ for _tool_name in (
     )
 
 _DOMAIN_KEYWORDS: tuple[tuple[str, str], ...] = (
+    ("consultive", "consultive"),
+    ("consultivo", "consultive"),
+    ("assisted_analysis", "consultive"),
     ("billing", "finance"),
     ("fiscal", "finance"),
     ("process", "processes"),
@@ -1548,6 +1587,17 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
 
     if lowered == "review_strategy_maturation_item_tool":
         return "review"
+
+    if normalized_domain == "consultive":
+        if lowered.startswith(("consultive_get_", "consultive_list_")):
+            return "read"
+        if lowered.startswith("consultive_resolve_"):
+            return "read"
+        if lowered.startswith("consultive_upsert_"):
+            return "update"
+        if lowered.startswith(("consultive_register_", "consultive_create_")):
+            return "create"
+        return "analyze"
 
     if normalized_domain == "finance":
         if lowered.startswith(_FINANCE_READ_PREFIXES):
