@@ -268,6 +268,8 @@ _supplemental_mcp_tools = (
         name="draft_process_pop_step_description_tool",
         description="Gera um rascunho inicial da descrição de um passo POP usando narração, vídeo curto, print e contexto da atividade.",
     ),
+    SimpleNamespace(name="create_process_pop_step_for_bpmn_tool", description="Cria um passo POP vinculado a uma atividade BPMN do processo."),
+    SimpleNamespace(name="attach_process_pop_step_static_image_tool", description="Anexa uma evidência estática JPG/PNG a um passo POP."),
     SimpleNamespace(
         name="get_strategy_identity_tool",
         description="Lê a identidade organizacional estruturada do tenant, com fallback MVV legado.",

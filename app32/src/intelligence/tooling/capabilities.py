@@ -216,6 +216,16 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("pop", "copilot", "draft", "ai"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    "create_process_pop_step_for_bpmn_tool": {
+        "domain": "processes", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("processes.ai_assistant.execute",),
+        "tags": ("pop", "bpmn", "create"), "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "attach_process_pop_step_static_image_tool": {
+        "domain": "processes", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("processes.ai_assistant.execute",),
+        "tags": ("pop", "media", "image", "upload"), "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "list_plans": {
         "domain": "strategy",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
