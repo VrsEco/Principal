@@ -8,6 +8,7 @@ from flask_login import LoginManager
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from api.routes import urgent_business_review as ubr_route
+from services.consultive_protocol_service import ConsultiveProtocolService
 
 
 class _Row:
@@ -173,6 +174,47 @@ def test_register_assisted_analysis_decision_uses_active_company_and_service(mon
     assert captured["payload"]["company_id"] == 999
     assert response.get_json()["analysis_id"] == 77
 
+
+
+def test_front_level_mcp_protocol_covers_all_structural_fronts():
+    expected_subphases = {
+        "identity": ["mission", "vision", "values", "positioning", "org_chart"],
+        "processes": ["architecture", "modeling", "implantation", "stabilization", "audit"],
+        "growth_plan": ["structured", "connected", "deployed", "linked_to_management"],
+        "strategic_management": ["indicators", "cycles", "incentives", "connection_web"],
+    }
+
+    for front_key, subphases in expected_subphases.items():
+        protocol = ConsultiveProtocolService.resolve_protocol(
+            company_id=42,
+            front_key=front_key,
+            audience="ai_cli",
+        )
+
+        assert protocol["subphase_key"] is None
+        assert protocol["protocol_version"] == "front-guide-v1"
+        assert protocol["protocol"]["subphases"] == subphases
+        assert "consultive_get_front_context" in protocol["protocol"]["mcp_tools"]
+        assert "consultive_resolve_protocol" in protocol["protocol"]["mcp_tools"]
+        assert "pesquisa profunda" in protocol["prompt_markdown"]
+        assert "Squad Cliente" in protocol["prompt_markdown"]
+        assert "Squad Versus" in protocol["prompt_markdown"]
+        assert "Squad Engenharia" in protocol["prompt_markdown"]
+        assert "não execute mutação operacional" in protocol["prompt_markdown"]
+
+
+def test_subphase_mcp_protocol_remains_available_for_deepening():
+    protocol = ConsultiveProtocolService.resolve_protocol(
+        company_id=42,
+        front_key="identity",
+        subphase_key="mission",
+        audience="ai_cli",
+    )
+
+    assert protocol["subphase_key"] == "mission"
+    assert "Missão" in protocol["title"]
+    assert "Perguntas obrigatórias" in protocol["prompt_markdown"]
+    assert "pesquise boas práticas" in protocol["prompt_markdown"]
 
 def test_consultive_protocol_route_resolves_active_company_protocol(monkeypatch):
     app = _build_app()
@@ -508,6 +550,8 @@ def test_consultive_structural_front_page_exposes_tenant_owned_mcp_assistance(mo
     assert "consultive_get_front_evidence" in body
     assert "consultive_get_front_gaps" in body
     assert "consultive_get_methodology_guidance" in body
+    assert "consultive_resolve_protocol" in body
+    assert "perguntas pendentes ao gestor/consultor" in body
     assert "data-cf-open-mcp-guide" in body
     assert "data-cf-open-analysis-register" in body
     assert "data-cf-open-decision-register" in body

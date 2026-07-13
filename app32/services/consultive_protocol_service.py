@@ -30,6 +30,73 @@ def _choice(value: Any, allowed: tuple[str, ...], *, default: str, field: str) -
 class ConsultiveProtocolService:
     """Biblioteca evolutiva de protocolos consultivos versionados."""
 
+    FRONT_GUIDE_CATALOG: dict[str, dict[str, Any]] = {
+        "identity": {
+            "title": "Roteiro MCP da Frente Identidade Organizacional",
+            "objective": "Amadurecer missão, visão, valores, posicionamento e organograma como base mínima da empresa na mão.",
+            "subphases": ["mission", "vision", "values", "positioning", "org_chart"],
+            "investigation_layers": [
+                "leitura de MVV e identidade canônica",
+                "entrevista/perguntas aos gestores",
+                "benchmark externo de empresas comparáveis",
+                "aderência entre promessa, processos, pessoas e percepção de mercado",
+            ],
+            "squad_focus": {
+                "Squad Cliente": "coletar contexto real, linguagem dos gestores, evidências de operação e restrições locais",
+                "Squad Versus": "validar coerência metodológica, maturidade e recomendações consultivas",
+                "Squad Engenharia": "validar lacunas de dados, read models, MCP, permissões e rastreabilidade",
+            },
+        },
+        "processes": {
+            "title": "Roteiro MCP da Frente Processos",
+            "objective": "Amadurecer arquitetura, modelagem, implantação, estabilização e entrada em auditoria dos processos.",
+            "subphases": ["architecture", "modeling", "implantation", "stabilization", "audit"],
+            "investigation_layers": [
+                "inventário de áreas, macroprocessos, processos e donos",
+                "modelagem, POP, recursos, rotina, SPEC para IA e indicadores",
+                "projetos de implantação e treinamento associados",
+                "evidências de 3 ciclos em faixa de controle e preparação para auditoria",
+            ],
+            "squad_focus": {
+                "Squad Cliente": "confirmar execução real, responsáveis, treinamentos e barreiras operacionais",
+                "Squad Versus": "validar maturidade do processo e prioridade de estruturação",
+                "Squad Engenharia": "validar contratos técnicos, automações, dados de processo e gaps de portal/read model",
+            },
+        },
+        "growth_plan": {
+            "title": "Roteiro MCP da Frente Planejamento Estratégico",
+            "objective": "Avaliar se o planejamento de crescimento está estruturado, conectado, desdobrado e vinculado ao Gerenciamento Estratégico.",
+            "subphases": ["structured", "connected", "deployed", "linked_to_management"],
+            "investigation_layers": [
+                "objetivos de crescimento, escolhas estratégicas e restrições",
+                "conexão com identidade, processos, projetos, pessoas e indicadores",
+                "desdobramento em responsáveis, metas, OKRs/KRs e projetos",
+                "uso do plano em ciclos de decisão e aprendizado",
+            ],
+            "squad_focus": {
+                "Squad Cliente": "trazer contexto de mercado, restrições internas e compromissos assumidos",
+                "Squad Versus": "avaliar coerência estratégica, trade-offs e próximos movimentos",
+                "Squad Engenharia": "validar conexões com objetos de estratégia, projetos, indicadores e processos",
+            },
+        },
+        "strategic_management": {
+            "title": "Roteiro MCP da Frente Gerenciamento Estratégico",
+            "objective": "Avaliar se a empresa acompanha a estratégia, decide por fatos, alinha incentivos e entende conexões entre estratégia, processos, projetos, pessoas e indicadores.",
+            "subphases": ["indicators", "cycles", "incentives", "connection_web"],
+            "investigation_layers": [
+                "indicadores com responsáveis, metas, frequência e fonte confiável",
+                "ciclos de gestão, decisões, ações e follow-up",
+                "gestão de incentivos e riscos de comportamento indesejado",
+                "teia de conexões e relações de causa e efeito",
+            ],
+            "squad_focus": {
+                "Squad Cliente": "confirmar rotina de gestão, dores, decisões e efeitos práticos dos incentivos",
+                "Squad Versus": "validar qualidade da gestão estratégica, governabilidade e aprendizados",
+                "Squad Engenharia": "validar vínculos de dados, indicadores, incentivos, line of sight e dashboards",
+            },
+        },
+    }
+
     DEFAULT_PROTOCOL_CATALOG: dict[tuple[str, str], dict[str, Any]] = {
         ("identity", "mission"): {
             "title": "Protocolo de amadurecimento da Missão Organizacional",
@@ -233,7 +300,6 @@ class ConsultiveProtocolService:
     }
 
     SUBPHASE_ALIASES = {
-        None: "mission",
         "missao": "mission",
         "visao": "vision",
         "valores": "values",
@@ -266,6 +332,8 @@ class ConsultiveProtocolService:
     @staticmethod
     def _normalize_subphase(subphase_key: str | None) -> str | None:
         normalized = _clean(subphase_key)
+        if normalized is None:
+            return None
         return ConsultiveProtocolService.SUBPHASE_ALIASES.get(normalized, normalized)
 
     @classmethod
@@ -452,7 +520,13 @@ class ConsultiveProtocolService:
         subphase_key: str | None,
         audience: str,
     ) -> dict[str, Any]:
-        normalized_subphase = cls._normalize_subphase(subphase_key) or cls._default_subphase_for_front(front_key)
+        normalized_subphase = cls._normalize_subphase(subphase_key)
+        if normalized_subphase is None:
+            return cls._front_level_protocol(
+                company_id=company_id,
+                front_key=front_key,
+                audience=audience,
+            )
         payload = cls.DEFAULT_PROTOCOL_CATALOG.get((front_key, normalized_subphase))
         if payload:
             return cls._format_default_protocol(
@@ -475,8 +549,111 @@ class ConsultiveProtocolService:
             "title": "Protocolo consultivo padrão",
             "objective": "Orientar análise da frente consultiva com MCP First e gate humano.",
             "prompt_markdown": "Use o MCP para ler contexto, evidências e gaps. Faça perguntas quando faltarem dados. Não tome decisão final.",
-            "protocol": {"output_format": ["diagnóstico", "gaps", "recomendações", "próximos passos"]},
+            "protocol": {"output_format": cls._default_output_format()},
         }
+
+
+    @classmethod
+    def _front_level_protocol(
+        cls,
+        *,
+        company_id: int | None,
+        front_key: str,
+        audience: str,
+    ) -> dict[str, Any]:
+        payload = cls.FRONT_GUIDE_CATALOG.get(front_key) or {}
+        if not payload:
+            return {
+                "id": None,
+                "company_id": company_id,
+                "front_key": front_key,
+                "subphase_key": None,
+                "audience": audience,
+                "depth_level": "deep_research",
+                "status": "active",
+                "protocol_version": "front-guide-v1",
+                "source": "fallback",
+                "title": "Roteiro MCP da frente consultiva",
+                "objective": "Orientar análise MCP First, tenant-owned e human-gated da frente consultiva.",
+                "prompt_markdown": cls._build_front_prompt_markdown(front_key, {}),
+                "protocol": {"output_format": cls._default_output_format()},
+            }
+        protocol = {
+            "subphases": list(payload.get("subphases") or []),
+            "investigation_layers": list(payload.get("investigation_layers") or []),
+            "squad_focus": dict(payload.get("squad_focus") or {}),
+            "mcp_tools": [
+                "consultive_get_front_context",
+                "consultive_get_front_evidence",
+                "consultive_get_front_gaps",
+                "consultive_get_methodology_guidance",
+                "consultive_resolve_protocol",
+            ],
+            "output_format": cls._default_output_format(),
+            "human_gate": "consultor_versus_obrigatorio",
+        }
+        return {
+            "id": None,
+            "company_id": company_id,
+            "front_key": front_key,
+            "subphase_key": None,
+            "audience": audience,
+            "depth_level": "deep_research",
+            "status": "active",
+            "protocol_version": "front-guide-v1",
+            "source": "fallback",
+            "title": payload["title"],
+            "objective": payload["objective"],
+            "prompt_markdown": cls._build_front_prompt_markdown(front_key, payload),
+            "protocol": protocol,
+        }
+
+    @staticmethod
+    def _default_output_format() -> list[str]:
+        return [
+            "diagnóstico objetivo da frente",
+            "evidências internas via MCP",
+            "perguntas pendentes ao gestor/consultor",
+            "benchmarks e boas práticas pesquisadas quando aplicável",
+            "riscos, incoerências e limitações",
+            "recomendações priorizadas",
+            "próximos passos para Squad Cliente, Squad Versus, Engenharia e consultor",
+        ]
+
+    @classmethod
+    def _build_front_prompt_markdown(cls, front_key: str, payload: dict[str, Any]) -> str:
+        title = payload.get("title") or "Roteiro MCP da frente consultiva"
+        objective = payload.get("objective") or "Analisar a frente consultiva com MCP First e validação humana."
+        subphases = "\n".join(
+            f"- {cls._subphase_title(item)} (`{item}`)" for item in payload.get("subphases", [])
+        ) or "- frente consultiva completa"
+        layers = "\n".join(f"- {item}" for item in payload.get("investigation_layers", [])) or "- contexto interno via MCP\n- lacunas metodológicas\n- benchmark externo quando necessário"
+        squad_focus = "\n".join(
+            f"- {squad}: {focus}" for squad, focus in dict(payload.get("squad_focus") or {}).items()
+        ) or "- Squad Cliente: validar operação local\n- Squad Versus: validar método\n- Squad Engenharia: validar base técnica"
+        return f"""{title}
+
+Objetivo da frente:
+{objective}
+
+Subfases que precisam ser consideradas:
+{subphases}
+
+Conduza a investigação pelas camadas:
+{layers}
+
+Papéis dos squads na validação:
+{squad_focus}
+
+Regras obrigatórias:
+- use MCP First para buscar contexto, evidências, gaps e orientação metodológica da empresa com company_id;
+- use consultive_resolve_protocol para aprofundar cada subfase relevante antes de concluir;
+- faça pesquisa profunda e vasta na internet quando houver pergunta de boas práticas, benchmarking, mercado ou referência externa;
+- compare o benchmark externo com a realidade operacional do APP32, sem tratar benchmark como verdade absoluta;
+- registre fontes, premissas, limitações e perguntas que ainda precisam ser feitas ao gestor;
+- não execute mutação operacional nem tome decisão final;
+- entregue recomendação para validação do Squad Cliente, Squad Versus, Squad Engenharia e consultor.
+"""
 
     @classmethod
     def _default_subphase_for_front(cls, front_key: str) -> str | None:
@@ -524,14 +701,7 @@ class ConsultiveProtocolService:
         protocol = {
             "investigation_layers": list(payload.get("investigation_layers") or []),
             "required_questions": list(payload.get("required_questions") or []),
-            "output_format": [
-                "diagnóstico",
-                "perguntas ao gestor",
-                "evidências internas via MCP",
-                "benchmarks e referências quando aplicável",
-                "riscos e incoerências",
-                "recomendações e próximos passos",
-            ],
+            "output_format": cls._default_output_format(),
         }
         return {
             "id": None,

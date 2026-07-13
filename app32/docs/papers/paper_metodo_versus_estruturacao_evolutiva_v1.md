@@ -1079,6 +1079,29 @@ A regra fundamental é:
 
 > **A IA recomenda, o MCP ancora na verdade operacional, os Squads qualificam a análise e o consultor valida a decisão.**
 
+### 12.5.1 Roteiros MCP por frente
+
+Com o MCP estabilizado, cada frente da Estruturação Empresarial deve ter um **roteiro MCP de frente completa**, não apenas prompts soltos por subfase.
+
+Esse roteiro deve orientar a IA/CLI externa do cliente ou da Versus a:
+
+- ler contexto, evidências, gaps e orientação metodológica via MCP com `company_id`;
+- considerar todas as subfases da frente antes de concluir;
+- aprofundar subfases específicas pelo protocolo ativo quando necessário;
+- fazer pesquisa profunda e benchmarking quando a pergunta exigir boas práticas, mercado ou referência externa;
+- comparar qualquer benchmark com a realidade operacional registrada no APP32;
+- devolver diagnóstico, perguntas pendentes, riscos, recomendações e próximos passos por Squad;
+- preservar o gate humano do consultor.
+
+Os quatro roteiros de frente são:
+
+1. **Identidade Organizacional** — missão, visão, valores, posicionamento e organograma.
+2. **Processos** — arquitetura, modelagem, implantação, estabilização e auditoria.
+3. **Planejamento Estratégico** — estruturado, conectado, desdobrado e vinculado ao Gerenciamento Estratégico.
+4. **Gerenciamento Estratégico** — indicadores, ciclos, incentivos e teia de conexões.
+
+O roteiro é modificável: nasce como fallback canônico da Versus, mas pode ser evoluído por protocolo tenant/global versionado quando o método amadurecer.
+
 Essa camada assistida deve atuar dentro das quatro frentes do cockpit:
 
 1. Identidade Organizacional;

@@ -83,7 +83,7 @@ Cada linha da matriz deve responder:
 |---|---|---|---|---|---|---|---|
 | Operating Model da Versus | Direção correta definida, mas ainda precisa maior decomposição em fases, ritos, entregáveis e handoffs | APP32 e MCP já posicionados como suporte estrutural | Squads já conceituados em alto nível | Coordenação geral definida, mas ainda sem regra operacional completa por rito | Parcial | Alto | Detalhar o operating model oficial da Versus |
 | APP32 como núcleo operacional | Alinhado ao método como base operacional | Bem definido conceitualmente como domínio + dados + services + governança | Squads dependem desse desenho | Orquestração já pressupõe APP32 como espaço comum | Consistente | Médio | Confirmar isso capability a capability |
-| MCP como contrato canônico | Coerente com a metodologia | Definido como interface oficial dos squads | Coerente com runtime externo | Orquestração depende do MCP para governança real | Consistente | Médio | Construir o mapa formal de capabilities APP32/MCP |
+| MCP como contrato canônico | Coerente com a metodologia | Definido como interface oficial dos squads | Coerente com runtime externo | Orquestração depende do MCP para governança real | Consistente | Baixo | Manter monitoramento e evoluir OAuth/roteiros por frente |
 | Runtime externo dos squads | Alinhado à estratégia | Ainda convive com runtime interno legado no APP32 | Premissa definida para Squad Versus e Squad Cliente | Orquestração futura assume reasoning externo | Parcial | Alto | Separar principal, fallback e legado no plano técnico |
 | Squad Versus | Papel consultivo e governante bem definido | Ferramenta ainda precisa capability map adequado | Arquitetura-base já definida | Ainda faltam regras operacionais detalhadas de acionamento | Parcial | Médio | Derivar a arquitetura operacional do Squad Versus |
 | Squad Cliente | Papel contextual e operacional bem definido | Depende de surfaces, identidade e capabilities mais maduras | Arquitetura-base já definida | Ainda faltam regras claras de entrada, precedência e handoff | Parcial | Alto | Derivar a arquitetura operacional do Squad Cliente |
@@ -92,7 +92,7 @@ Cada linha da matriz deve responder:
 | Identidade e autorização por ator | Conceito reconhecido | Ainda não detalhado em contratos e políticas suficientes | Fundamental para humano/agente Versus, humano/agente Cliente e Engenharia | Base de toda orquestração segura | Inicial | Crítico | Executar o passo de identidade, autenticação, papéis e surfaces |
 | Objetos colaborativos | Conceito bem amadurecido | Ainda precisa modelo operacional e possivelmente modelo de dados | Essencial para colaboração real entre squads e humanos | Handoffs e revisões dependem disso | Inicial | Alto | Modelar objetos colaborativos mínimos no APP32 |
 | Utilização assistida | Bem tratada no papel | APP32 e experiência ainda precisam materialização | Impacta sobretudo Squad Cliente e entrada do sistema | Exige despacho e postura dinâmica | Parcial | Médio | Implementar o modo assistido no fluxo inicial |
-| Maturidade assistida | Boa definição conceitual | Ainda não materializada em sinais, métricas e UX | Afeta comportamento dos squads | Exige regra de transição de postura | Inicial | Médio | Definir sinais mínimos do MVP de maturidade assistida |
+| Maturidade assistida | Roteiros MCP das quatro frentes definidos e versionáveis | Cockpit já expõe seção de Análise Assistida, registro, validações e decisão | Squads têm papel explícito por frente | Orquestração começa pela IA/CLI via MCP, registra retorno no APP32 e exige gate do consultor | Parcial | Médio | Validar uso real dos roteiros nas quatro frentes e evoluir protocolos tenant/global |
 | Canal inicial de uso | Ainda em aberto | Pode ser APP32, chat, experiência guiada ou híbrido | Afeta diretamente a adoção dos squads | Define o front door real | Inicial | Alto | Decidir canal inicial do Modelo B híbrido assistido |
 | Primeiro fluxo MVP | Intuição boa para começar pelo operacional assistido | Capabilities ainda não inventariadas | Squads já sugerem foco operacional inicial | Orquestração ainda precisa recorte mínimo | Inicial | Alto | Confirmar o fluxo MVP após o inventário de capabilities |
 | Governança de mudança entre pilares | Problema reconhecido | Ainda não institucionalizada | Ainda sem disciplina formal por squad | Ainda sem change control cruzado | Não iniciado | Crítico | Definir rito formal de revisão cruzada entre os pilares |
@@ -151,6 +151,16 @@ Esta matriz aponta que os itens corretos para abrir a execução agora são:
 Essa sequência está aderente ao backlog já aberto no projeto `AA.J.15`.
 
 ---
+
+## 9.1 Aplicação imediata após estabilização do MCP
+
+Com a conexão MCP estável, o avanço recomendado passa a ser:
+
+1. consolidar os roteiros MCP das quatro frentes no Cockpit do Consultor;
+2. testar a IA/CLI do cliente usando o MCP para ler contexto, evidências e gaps;
+3. registrar a análise recebida, validações dos squads e decisão do consultor no APP32;
+4. evoluir protocolos versionados por tenant/global conforme o método amadurecer;
+5. usar Business Review apenas para registrar valor agregado quando a frente gerar resultado mensurável.
 
 ## 10. Governança de atualização da matriz
 A matriz deve ser revista sempre que houver:

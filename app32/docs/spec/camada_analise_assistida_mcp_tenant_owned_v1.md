@@ -231,6 +231,30 @@ A camada deve nascer com tools conceituais equivalentes a:
   - Entrada: `front_key`, `subphase_key` opcional.
   - Saída: orientação oficial do Método Versus para a frente/subfase.
 
+- `consultive_resolve_protocol`
+  - Entrada: `front_key`, `subphase_key` opcional, `audience`, `depth_level` opcional.
+  - Saída: protocolo ativo tenant/global/fallback para orientar a IA/CLI.
+  - Regra: quando `subphase_key` não for informado, deve retornar o **roteiro MCP da frente completa**; quando informado, deve retornar o protocolo específico da subfase.
+
+### 7.1.1. Roteiros MCP obrigatórios das quatro frentes
+
+A camada assistida deve expor roteiros de frente completa para:
+
+1. `identity` — Missão, Visão, Valores, Posicionamento e Organograma.
+2. `processes` — Arquitetura, Modelagem, Implantação, Estabilização e Auditoria.
+3. `growth_plan` — Estruturado, Conectado, Desdobrado e Vinculado à gestão.
+4. `strategic_management` — Indicadores, Ciclos, Incentivos e Teia de Conexões.
+
+Cada roteiro deve conter:
+
+- objetivo da frente;
+- subfases consideradas;
+- camadas de investigação;
+- tools MCP esperadas;
+- papel do Squad Cliente, Squad Versus e Squad Engenharia;
+- instrução explícita de pesquisa profunda/benchmarking quando aplicável;
+- saída esperada e gate humano obrigatório.
+
 ### 7.2. Registro
 
 - `consultive_register_assisted_analysis`
@@ -345,6 +369,7 @@ Cada análise registrada deve conter:
 A arquitetura estará aderente quando:
 
 1. as quatro frentes do Cockpit tiverem seção de Análise Assistida via MCP;
+1.1. cada frente expuser roteiro MCP de frente completa e protocolos específicos por subfase;
 2. o contrato de tools separar leitura, registro e conversão em ação;
 3. o cliente puder usar sua própria IA/token/conector;
 4. o APP32 registrar análise, validações, decisão e próximos passos;
@@ -352,6 +377,7 @@ A arquitetura estará aderente quando:
 6. Squad Cliente, Squad Versus e Squad de Engenharia tiverem papéis explícitos;
 7. a decisão final depender de consultor ou responsável autorizado;
 8. custos e limites de IA estiverem transparentes para o cliente;
+8.1. pesquisa profunda e benchmarking estiverem orientados por protocolo e registrados com fontes/limitações;
 9. benchmarks externos forem tratados como subsídio consultivo;
 10. não houver duplicidade entre Objeto Canônico e Camada Consultiva/Evolutiva.
 
