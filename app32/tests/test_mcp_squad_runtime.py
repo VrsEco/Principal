@@ -27,6 +27,7 @@ def test_squad_runtime_tool_returns_official_squad_cliente_bootstrap():
     assert payload["data"]["official_phase_label"] == "Fase 1 oficial"
     assert payload["data"]["entry_agent"]["key"] == "SC-COORD"
     assert payload["data"]["startup_tools"][0] == "describe_app32_squad_runtime_tool"
+    assert payload["data"]["startup_tools"].count("describe_app32_squad_runtime_tool") == 1
     assert [item["key"] for item in payload["data"]["agents"]] == [
         "SC-COORD",
         "SC-COM",

@@ -4,7 +4,7 @@ from typing import Any, Optional
 
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.squad_runtime_bootstrap_service import SquadRuntimeBootstrapService
-from src.core.mcp_http_auth import get_http_request_context
+from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
@@ -24,6 +24,7 @@ def _meta(operation: str, *, runtime_profile: str | None = None, surface: str | 
         domain="mcp_squad_runtime",
         operation=operation,
         scope=f"mcp_{surface or 'user'}",
+        actor_role=get_http_actor_role(),
         capability=f"mcp_squad_runtime.{operation}",
         permissions=["mcp.squad_runtime.read"],
         tags=tags,
@@ -63,10 +64,14 @@ def register_squad_runtime_tools(mcp: Any) -> None:
         surface = str(http_context.get("surface") or "user").strip().lower()
 
         if normalized_runtime == "squad_cliente":
-            startup_tools = [
-                "describe_app32_squad_runtime_tool",
-                *MCPConnectionSnippetService.RUNTIME_PROFILES["squad_cliente"]["startup_tools"],
-            ]
+            startup_tools = list(
+                dict.fromkeys(
+                    [
+                        "describe_app32_squad_runtime_tool",
+                        *MCPConnectionSnippetService.RUNTIME_PROFILES["squad_cliente"]["startup_tools"],
+                    ]
+                )
+            )
             data = SquadRuntimeBootstrapService.build_squad_cliente_bootstrap(
                 startup_tools=startup_tools,
             )

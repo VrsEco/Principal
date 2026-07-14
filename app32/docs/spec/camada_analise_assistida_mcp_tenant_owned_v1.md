@@ -290,6 +290,10 @@ Na surface `user`, o perfil `cliente` e o overlay `coordenador_cliente` devem po
 - bloqueado para cliente: `create`, `update`, `delete`, `audit`;
 - tools de registro, validação, decisão ou conversão exigem perfil apropriado, permissão `consultive.write` e gate humano.
 
+A autorização efetiva deve ser calculada pela interseção de **papel-base autenticado ∩ surface ∩ runtime_profile ∩ overlay/harness ∩ capability/RBAC ∩ company_id ∩ human gate**. O mesmo contrato deve filtrar o catálogo (`tools/list`) e proteger a execução (`tools/call`). Um papel-base amplo, como `administrador`, não pode ampliar o `Squad Cliente` além da matriz do overlay ativo.
+
+O campo `meta.actor_role` informa o papel-base autenticado; `runtime_profile` e `harness_key` são dimensões separadas do contexto e nunca devem ser apresentados como papel. A quantidade de empresas acessíveis representa as autorizações atuais do usuário, não um total histórico ou global de tenants.
+
 Isso evita que o runtime externo do cliente fique bloqueado por domínio genérico (`general`) e preserva a separação entre:
 
 - IA/CLI do cliente lendo contexto e produzindo diagnóstico;

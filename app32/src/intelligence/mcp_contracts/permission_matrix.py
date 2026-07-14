@@ -499,7 +499,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("processes", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Pode estruturar execução de processos na surface user."]),
                     _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordena tarefas e projetos do cliente."]),
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordena reuniões e follow-up do cliente."]),
-                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Estratégia em leitura/análise guiada."]),
+                    _rule("strategy", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], notes=["Estratégia em leitura/análise guiada; review registra validação assistida, não decisão final."]),
                     _rule("consultive", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], human_gate_for_actions=["review"], notes=["Roteiros e diagnósticos do Cockpit em modo leitura/análise para o Squad Cliente."]),
                     _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Self-service só para contexto do próprio usuário."]),
                 ],
@@ -566,7 +566,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 harness_keys=["harness_estrategico_cliente_v1"],
                 default_scope="active_company",
                 domains=[
-                    _rule("strategy", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Diagnóstico e síntese estratégica assistida."]),
+                    _rule("strategy", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], notes=["Diagnóstico, síntese e validação assistida sem decisão metodológica final."]),
                     _rule("consultive", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], human_gate_for_actions=["review"], notes=["Análise assistida do Cockpit via MCP em modo leitura e validação humana."]),
                     _rule("projects", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Projetos como evidência de execução."]),
                     _rule("meetings", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Reuniões estratégicas em leitura."]),

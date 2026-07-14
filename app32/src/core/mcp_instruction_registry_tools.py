@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from services.instruction_registry_service import InstructionRegistryService
-from src.core.mcp_http_auth import get_http_request_context
+from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
 from src.intelligence.mcp_contracts import MCPErrorDetail, MCPErrorEnvelope, MCPResponseMeta, MCPSuccessEnvelope
 
 
@@ -23,6 +23,7 @@ def _meta(
         scope="mcp_user",
         company_id=company_id,
         user_id=user_id,
+        actor_role=get_http_actor_role(),
         capability=f"mcp_instruction_registry.{operation}",
         permissions=["mcp.instructions.read"],
         tags=tags,

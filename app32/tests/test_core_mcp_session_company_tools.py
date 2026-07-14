@@ -25,6 +25,7 @@ def test_session_company_tools_describe_and_select(monkeypatch):
         "get_http_request_identity",
         lambda: SimpleNamespace(token="mcpu_token", metadata={"client_name": "Claude"}),
     )
+    monkeypatch.setattr(module, "get_http_actor_role", lambda: "administrador")
     monkeypatch.setattr(
         module,
         "user_mcp_token_service",
@@ -59,6 +60,7 @@ def test_session_company_tools_describe_and_select(monkeypatch):
     cleared = mcp.registered["clear_app32_session_company_tool"]()
 
     assert described["success"] is True
+    assert described["meta"]["actor_role"] == "administrador"
     assert described["data"]["selection_required_for_mutations"] is True
     assert selected["success"] is True
     assert selected["data"]["active_company_id"] == 10

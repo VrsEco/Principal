@@ -305,6 +305,58 @@ def test_tool_policy_blocks_action_outside_squad_cliente_overlay() -> None:
     assert "runtime_overlay_action_blocked" in decision.checks
 
 
+
+def test_tool_policy_intersects_admin_role_with_squad_cliente_consultive_matrix() -> None:
+    source = {
+        "user_id": 90,
+        "company_id": 9,
+        "role": "administrador",
+        "permissions": ("consultive.read", "consultive.write"),
+        "metadata": {
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_coordenador_cliente_v1",
+        },
+    }
+
+    read_decision = evaluate_tool_policy(
+        source,
+        ToolPolicyRequest(
+            tool_name="consultive_get_front_context",
+            surface="user",
+            domain="consultive",
+            action="read",
+            requested_company_id=9,
+            required_permissions=("consultive.read",),
+            required_context=("company",),
+            metadata=source["metadata"],
+        ),
+    )
+    write_decision = evaluate_tool_policy(
+        source,
+        ToolPolicyRequest(
+            tool_name="consultive_register_assisted_analysis",
+            surface="user",
+            domain="consultive",
+            action="create",
+            risk="medium",
+            requested_company_id=9,
+            required_permissions=("consultive.write",),
+            confirmed_mutation=True,
+            required_context=("company",),
+            metadata=source["metadata"],
+        ),
+    )
+
+    assert read_decision.allowed is True
+    assert "runtime_overlay_permission_matrix" in read_decision.checks
+    assert write_decision.allowed is False
+    assert write_decision.reason == (
+        "matriz do overlay coordenador_cliente não permite create em consultive"
+    )
+    assert "runtime_overlay_matrix_action_blocked" in write_decision.checks
+
+
 def test_tool_policy_allows_strategy_maturation_review_for_cliente_harness() -> None:
     action = infer_tool_action("review_strategy_maturation_item_tool", "strategy")
 

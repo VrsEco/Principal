@@ -6,6 +6,7 @@ from services.business_review_read_model_service import BusinessReviewReadModelS
 from services.consultive_assisted_analysis_service import ConsultiveAssistedAnalysisService
 from services.consultive_protocol_service import ConsultiveProtocolService
 from services.urgent_business_review_common import UrgentBusinessReviewError
+from src.core.mcp_http_auth import get_http_actor_role
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
@@ -20,6 +21,7 @@ def _meta(operation: str, *, company_id: int | None = None, write: bool = False)
         operation=operation,
         scope="mcp_user",
         company_id=company_id,
+        actor_role=get_http_actor_role(),
         capability=f"consultive_assisted_analysis.{operation}",
         human_gate_required=write,
         permissions=["consultive.read"] if not write else ["consultive.write"],

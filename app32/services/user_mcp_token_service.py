@@ -1366,6 +1366,8 @@ class UserMcpTokenService:
         return {
             "user_id": getattr(user, "id", None),
             "accessible_company_ids": list(accessible_company_ids),
+            "accessible_company_count": len(accessible_company_ids),
+            "company_scope_basis": "current_user_authorizations",
             "companies": companies,
             "active_company_id": resolved_company_id,
             "active_company_label": active_company.get("label") if active_company else None,

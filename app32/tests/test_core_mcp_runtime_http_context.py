@@ -30,6 +30,12 @@ def test_runtime_prefers_http_request_context(monkeypatch):
             "surface": "user",
             "transport": "streamable_http",
             "client": "claude_remote_connector",
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "harness_label": "Harness Coordenador do Squad Cliente",
+            "mcp_enabled": True,
+            "training_completed": True,
         },
     )
 
@@ -56,6 +62,12 @@ def test_runtime_prefers_http_request_context(monkeypatch):
     assert context.permissions == ("approve",)
     assert context.metadata["surface"] == "user"
     assert context.metadata["transport"] == "streamable_http"
+    assert context.metadata["runtime_profile"] == "squad_cliente"
+    assert context.metadata["actor_type"] == "client_agent"
+    assert context.metadata["harness_key"] == "harness_coordenador_cliente_v1"
+    assert context.metadata["harness_label"] == "Harness Coordenador do Squad Cliente"
+    assert context.metadata["mcp_enabled"] is True
+    assert context.metadata["training_completed"] is True
 
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.user_mcp_token_service import user_mcp_token_service
-from src.core.mcp_http_auth import get_http_request_identity
+from src.core.mcp_http_auth import get_http_actor_role, get_http_request_identity
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
@@ -19,7 +19,7 @@ def _meta(operation: str, *, company_id: int | None = None, user_id: int | None 
         scope="mcp_user",
         company_id=company_id,
         user_id=user_id,
-        actor_role="cliente",
+        actor_role=get_http_actor_role(),
         capability=f"session_company.{operation}",
         permissions=["mcp.session_company.manage"],
         tags=["session", "company", "mcp:user"],

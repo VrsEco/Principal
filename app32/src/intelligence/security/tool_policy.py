@@ -5,7 +5,7 @@ from typing import Any, Mapping, Optional, Sequence
 
 from src.intelligence.tooling.capabilities import TOOL_CONTEXT_COMPANY, TOOL_CONTEXT_USER
 
-from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
+from src.intelligence.mcp_contracts import APP32_PERMISSION_MATRIX_MANIFEST, APP32_PROFILE_CONTRACTS_MANIFEST
 from .mcp_channel_gate import McpChannelGateRequest, evaluate_mcp_channel_gate
 from .tenant_rbac import (
     ADMIN_ROLES,
@@ -263,6 +263,69 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
                 f"overlay {overlay_contract.overlay} não permite a ação {action}",
                 (*checks, "runtime_overlay_action_blocked"),
             )
+
+        overlay_matrices = [
+            item
+            for item in APP32_PERMISSION_MATRIX_MANIFEST.get_overlay(overlay_key)
+            if item.surface == surface
+        ]
+        if not overlay_matrices:
+            return _deny(
+                request,
+                principal,
+                surface,
+                risk,
+                None,
+                f"matriz de permissão ausente para o overlay {overlay_contract.overlay}",
+                (*checks, "runtime_overlay_matrix_missing"),
+            )
+        overlay_matrix = overlay_matrices[0]
+        domain_rule = next(
+            (item for item in overlay_matrix.domains if item.domain == domain),
+            None,
+        )
+        if domain and domain_rule is None:
+            return _deny(
+                request,
+                principal,
+                surface,
+                risk,
+                None,
+                f"matriz do overlay {overlay_contract.overlay} não permite o domínio {domain}",
+                (*checks, "runtime_overlay_matrix_domain_blocked"),
+            )
+        if domain_rule is not None and action:
+            if action in set(domain_rule.denied_actions) or action not in set(domain_rule.allowed_actions):
+                return _deny(
+                    request,
+                    principal,
+                    surface,
+                    risk,
+                    None,
+                    f"matriz do overlay {overlay_contract.overlay} não permite {action} em {domain}",
+                    (*checks, "runtime_overlay_matrix_action_blocked"),
+                )
+            if action in set(domain_rule.human_gate_for_actions) and not request.confirmed_mutation:
+                return _deny(
+                    request,
+                    principal,
+                    surface,
+                    risk,
+                    None,
+                    f"matriz do overlay {overlay_contract.overlay} exige human gate para {action} em {domain}",
+                    (*checks, "runtime_overlay_matrix_human_gate_required"),
+                )
+            if domain_rule.requires_explicit_company_id and request.requested_company_id is None:
+                return _deny(
+                    request,
+                    principal,
+                    surface,
+                    risk,
+                    None,
+                    f"matriz do overlay {overlay_contract.overlay} exige company_id explícito para {domain}",
+                    (*checks, "runtime_overlay_matrix_company_required"),
+                )
+        checks.append("runtime_overlay_permission_matrix")
 
     context_decision = _validate_required_context(principal, request, checks=(*checks, "required_context"))
     if context_decision is not None:

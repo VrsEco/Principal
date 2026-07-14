@@ -223,6 +223,13 @@ def get_http_request_context() -> dict[str, Any] | None:
     return resolved or payload
 
 
+def get_http_actor_role(default: str | None = None) -> str | None:
+    """Retorna o papel-base autenticado sem confundi-lo com runtime ou harness."""
+    context = dict(get_http_request_context() or {})
+    role = _coerce_str(context.get("fallback_role")) or _coerce_str(default)
+    return role.lower() if role else None
+
+
 def _single_token_config() -> dict[str, Any]:
     token = _coerce_str(os.environ.get("APP32_MCP_HTTP_TOKEN"))
     if not token:

@@ -394,6 +394,45 @@ def test_user_surface_manifest_exposes_consultive_read_tools_to_cliente_harness(
     assert "consultive_resolve_protocol" in tools
     assert "consultive_register_assisted_analysis" not in tools
 
+
+
+def test_user_surface_manifest_hides_consultive_writes_for_admin_in_squad_cliente(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=90,
+            company_id=9,
+            employee_id=None,
+            role="administrador",
+            channel="claude_remote",
+            thread_id=None,
+            accessible_company_ids=(9,),
+            permissions=("consultive.read", "consultive.write"),
+            metadata={
+                "surface": "user",
+                "transport": "streamable_http",
+                "client": "claude_remote_connector",
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+    )
+
+    manifest = registry.get_surface_manifest("user", domain="consultive", include_tools=True)
+    tool_names = {tool["name"] for tool in manifest["tools"]}
+
+    assert "consultive_get_front_context" in tool_names
+    assert "consultive_resolve_protocol" in tool_names
+    assert "consultive_register_assisted_analysis" not in tool_names
+    assert "consultive_register_squad_validation" not in tool_names
+    assert "consultive_register_consultant_decision" not in tool_names
+    assert "consultive_upsert_protocol" not in tool_names
+
+
 def test_stdio_surface_startup_banner_goes_to_stderr(monkeypatch, capsys):
     fake_mcp = _RunnableFakeMCP()
     monkeypatch.setattr(registry, "build_user_mcp_server", lambda: fake_mcp)

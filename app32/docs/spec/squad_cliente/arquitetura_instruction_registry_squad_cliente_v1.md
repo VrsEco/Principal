@@ -201,6 +201,8 @@ O bundle resolvido para **runtime_profile=squad_cliente** deve expor **journey_g
 
 Os estados oficiais são: **collecting_evidence**, **awaiting_client_validation**, **awaiting_versus_validation**, **awaiting_consultant_decision**, **approved_for_execution**, **executed_verified** e **blocked**.
 
-O guia não concede permissão. A autorização efetiva continua sendo determinada por token/OAuth, perfil, surface, capability, RBAC, **company_id** e human gate.
+O guia não concede permissão. A autorização efetiva é a interseção de **papel-base autenticado ∩ surface ∩ runtime_profile ∩ overlay/harness ∩ capability/RBAC ∩ company_id ∩ human gate**. Essa interseção deve valer tanto para `tools/list` quanto para `tools/call`; prompt, bundle e override de tenant nunca elevam privilégio.
+
+`meta.actor_role` deve expor o papel-base autenticado. Runtime e harness permanecem metadados próprios, evitando que a interface confunda identidade de segurança com persona operacional.
 
 O **journey_guide** pertence à camada global/runtime: override por tenant pode complementar contexto e linguagem, mas não pode substituir estados, elevar autonomia nem relaxar ações **cannot/gated**.
