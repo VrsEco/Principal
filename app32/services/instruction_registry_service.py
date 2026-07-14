@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-05-17.2"
+    CURRENT_BUNDLE_VERSION = "2026-07-13.1"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -184,6 +184,10 @@ class InstructionRegistryService:
             source_scope.append(f"db:{entry.scope_type}:{entry.id}")
             invalidation_parts.append(entry.invalidation_token)
 
+        # A política da jornada pertence à camada runtime/global e não pode ser
+        # relaxada por override tenant ou prompt textual.
+        merged["journey_guide"] = cls.build_journey_guide(normalized_runtime)
+
         canonical_payload = {
             key: merged[key]
             for key in (
@@ -204,6 +208,7 @@ class InstructionRegistryService:
                 "forbidden_actions",
                 "layer_matrix",
                 "doc_refs",
+                "journey_guide",
             )
         }
         checksum = hashlib.sha256(json.dumps(canonical_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
@@ -232,6 +237,7 @@ class InstructionRegistryService:
             forbidden_actions=list(merged["forbidden_actions"]),
             layer_matrix=list(APP32_INSTRUCTION_REGISTRY_MANIFEST.layer_matrix),
             doc_refs=[InstructionDocumentRef.model_validate(item) for item in merged["doc_refs"]],
+            journey_guide=merged.get("journey_guide"),
         )
         return bundle.model_dump(mode="json")
 
@@ -521,6 +527,108 @@ class InstructionRegistryService:
             "forbidden_actions": cls._forbidden_actions(runtime_profile, agent_key),
             "layer_matrix": [item.model_dump(mode="json") for item in APP32_INSTRUCTION_REGISTRY_MANIFEST.layer_matrix],
             "doc_refs": [item.model_dump(mode="json") for item in cls._doc_refs()],
+            "journey_guide": cls.build_journey_guide(runtime_profile),
+        }
+
+    @classmethod
+    def build_journey_guide(cls, runtime_profile: str) -> dict[str, Any] | None:
+        if runtime_profile != "squad_cliente":
+            return None
+        return {
+            "version": "structuring-journey-v1",
+            "scope": "Condução MCP First das quatro frentes da Estruturação Empresarial pelo Squad Cliente.",
+            "entry_state": "collecting_evidence",
+            "states": [
+                {
+                    "key": "collecting_evidence",
+                    "responsible": "Squad Cliente / cliente",
+                    "required_output": "Perguntas mínimas, evidências internas lidas e lacunas objetivas.",
+                },
+                {
+                    "key": "awaiting_client_validation",
+                    "responsible": "Gestor / Squad Cliente",
+                    "required_output": "Conteúdo humano confirmado, corrigido ou explicitamente mantido como hipótese.",
+                },
+                {
+                    "key": "awaiting_versus_validation",
+                    "responsible": "Squad Versus",
+                    "required_output": "Diagnóstico, método utilizado, riscos, fontes e opções de encaminhamento.",
+                },
+                {
+                    "key": "awaiting_consultant_decision",
+                    "responsible": "Consultor Versus",
+                    "required_output": "Recomendação rastreável e escopo exato da decisão solicitada.",
+                },
+                {
+                    "key": "approved_for_execution",
+                    "responsible": "Executor autorizado",
+                    "required_output": "Objetos, campos e valores expressamente autorizados para execução.",
+                },
+                {
+                    "key": "executed_verified",
+                    "responsible": "Executor autorizado / consultor",
+                    "required_output": "Leitura pós-execução, resultado persistido e divergências remanescentes.",
+                },
+                {
+                    "key": "blocked",
+                    "responsible": "Squad Versus ou Engenharia",
+                    "required_output": "Motivo do bloqueio, evidência ou capability faltante e rota de escalonamento.",
+                },
+            ],
+            "action_policy": [
+                {
+                    "action": "read_consultive_context",
+                    "autonomy": "may",
+                    "rule": "Ler contexto, evidências, gaps e protocolos permitidos para o company_id ativo.",
+                },
+                {
+                    "action": "collect_human_evidence",
+                    "autonomy": "must",
+                    "rule": "Fazer perguntas mínimas e separar fala humana de hipótese produzida pela IA.",
+                },
+                {
+                    "action": "research_benchmark",
+                    "autonomy": "may",
+                    "rule": "Pesquisar quando o protocolo exigir e registrar fontes, recorte e limitações.",
+                },
+                {
+                    "action": "register_canonical_data",
+                    "autonomy": "cannot",
+                    "rule": "Não gravar nem confirmar dado canônico sem decisão do consultor e executor autorizado.",
+                },
+                {
+                    "action": "validate_for_another_squad",
+                    "autonomy": "cannot",
+                    "rule": "Não registrar validação em nome de outro squad nem usar validação como notificação.",
+                },
+                {
+                    "action": "approve_method_or_maturity",
+                    "autonomy": "cannot",
+                    "rule": "Escalar decisões de método e maturidade ao Squad Versus e ao Consultor Versus.",
+                },
+                {
+                    "action": "execute_ui_only_action",
+                    "autonomy": "cannot",
+                    "rule": "Registrar pendência e não declarar execução de ação exclusiva da UI ou capability ausente.",
+                },
+                {
+                    "action": "execute_authorized_mutation",
+                    "autonomy": "gated",
+                    "rule": "Somente perfil autorizado, após decisão explícita, com releitura equivalente para verificação.",
+                },
+            ],
+            "read_tool_sequence": [
+                "select_app32_session_company_tool",
+                "consultive_get_front_context",
+                "consultive_get_front_evidence",
+                "consultive_get_front_gaps",
+                "consultive_get_methodology_guidance",
+                "consultive_resolve_protocol",
+            ],
+            "escalation_rules": [
+                "Escalar ao Squad Versus quando o caso exigir método, estratégia, maturidade ou redesenho estrutural.",
+                "Escalar à Engenharia quando houver erro técnico, capability ausente, problema de MCP ou dado indisponível.",
+            ],
         }
 
     @classmethod

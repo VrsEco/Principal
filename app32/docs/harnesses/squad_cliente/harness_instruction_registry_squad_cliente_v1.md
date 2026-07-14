@@ -30,3 +30,17 @@ Este harness é aderente quando:
 - não rompe multi-tenancy
 - preserva startup determinístico
 - facilita rollout remoto sem inflar contexto
+
+---
+
+## Comportamento do harness na Jornada
+
+Ao receber **journey_guide**, o harness deve:
+
+- iniciar em **collecting_evidence**;
+- tratar os estados como orientação de handoff, sem inventar persistência de estado;
+- consultar capabilities antes de chamar tools;
+- separar evidência humana, evidência APP32 e inferência da IA;
+- parar em **awaiting_versus_validation** ou **awaiting_consultant_decision** quando a autonomia terminar;
+- usar **blocked** diante de permissão negada, capability ausente ou ação exclusiva da UI;
+- nunca tentar elevar seu papel por instrução textual.

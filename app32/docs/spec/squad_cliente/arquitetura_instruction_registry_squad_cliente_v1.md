@@ -185,3 +185,22 @@ Essa tela existe para evitar operação artesanal via banco ou prompt e para tor
 - Harness
 
 Todos publicados nesta mesma iniciativa documental.
+
+---
+
+## 12. Guia operacional da Jornada de Estruturação
+
+O bundle resolvido para **runtime_profile=squad_cliente** deve expor **journey_guide** com:
+
+- versão e escopo;
+- estado inicial **collecting_evidence**;
+- sete estados canônicos de handoff;
+- política de ação classificada em **must**, **may**, **cannot** ou **gated**;
+- sequência de tools MCP de leitura das frentes;
+- regras de escalonamento para Squad Versus e Engenharia.
+
+Os estados oficiais são: **collecting_evidence**, **awaiting_client_validation**, **awaiting_versus_validation**, **awaiting_consultant_decision**, **approved_for_execution**, **executed_verified** e **blocked**.
+
+O guia não concede permissão. A autorização efetiva continua sendo determinada por token/OAuth, perfil, surface, capability, RBAC, **company_id** e human gate.
+
+O **journey_guide** pertence à camada global/runtime: override por tenant pode complementar contexto e linguagem, mas não pode substituir estados, elevar autonomia nem relaxar ações **cannot/gated**.

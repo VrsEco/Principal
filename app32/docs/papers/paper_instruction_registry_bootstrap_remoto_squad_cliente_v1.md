@@ -84,3 +84,11 @@ O bundle mínimo aumenta levemente o custo do bootstrap, mas tende a reduzir o c
 Esta tese evolui para a SPEC:
 
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\arquitetura_instruction_registry_squad_cliente_v1.md`
+
+---
+
+## Evolução: condução assistida da Jornada de Estruturação
+
+O bundle remoto deixa de orientar apenas o bootstrap técnico e passa a entregar um guia operacional curto para a Jornada de Estruturação. A intenção não é transformar o prompt em workflow autônomo, mas permitir que o CLI saiba o que deve fazer, o que pode fazer, o que depende de gate e quando precisa escalar.
+
+A jornada é conduzida por estados explícitos, preservando continuidade entre APP32, cliente, Squad Cliente, Squad Versus, Engenharia e Consultor. O prompt não eleva permissões: capabilities e surface continuam sendo a autoridade real.

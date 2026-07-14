@@ -177,6 +177,31 @@ Responsável por:
 
 ---
 
+
+### 5.1. Contrato de condução e handoff da Jornada
+
+A IA/CLI conectada ao APP32 deve conduzir a jornada por estado explícito, e não converter uma análise em escrita por inferência. O estado é sempre tenant-safe e deve ser apresentado ao consultor em linguagem operacional.
+
+| Estado | Saída obrigatória da IA/CLI | Próximo responsável |
+|---|---|---|
+| **collecting_evidence** | Perguntas mínimas, evidências já lidas e lacunas objetivas. | Cliente / Squad Cliente |
+| **awaiting_client_validation** | Conteúdo a confirmar, sem rotulá-lo como fato. | Gestor / Squad Cliente |
+| **awaiting_versus_validation** | Diagnóstico, método aplicado, riscos e opções. | Squad Versus |
+| **awaiting_consultant_decision** | Recomendação rastreável e escopo proposto de decisão. | Consultor Versus |
+| **approved_for_execution** | Ações autorizadas, objeto canônico alvo e executor permitido. | Perfil autorizado |
+| **executed_verified** | Leitura pós-execução e divergências remanescentes. | Consultor Versus |
+| **blocked** | Razão do bloqueio, evidência necessária e rota de escalonamento. | Squad Versus ou Engenharia |
+
+Regras obrigatórias:
+
+1. A IA/CLI chama **resolve_app32_instruction_bundle_tool** e consulta as capabilities reais antes de executar uma tool; o prompt não concede privilégio.
+2. Conteúdo inferido, benchmark ou pesquisa externa permanece hipótese até confirmação humana explícita e registro da fonte/limitação.
+3. **consultive_register_squad_validation** registra validação efetiva; não é mecanismo de notificação e não pode ser usado para validar em nome de outro squad.
+4. Mudança em objeto canônico exige decisão explícita do Consultor Versus e executor que possua a capability autorizada.
+5. Atividade exclusiva de UI, ou capability inexistente, deve virar pendência/ação recomendada; a IA não pode declarar que a executou.
+
+---
+
 ## 6. Frentes atendidas
 
 A análise assistida deve atuar dentro das quatro frentes oficiais do Cockpit:

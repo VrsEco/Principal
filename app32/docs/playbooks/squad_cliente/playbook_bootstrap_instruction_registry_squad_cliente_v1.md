@@ -56,3 +56,15 @@ Quando o operador estiver no APP32, a entrada visual oficial passa a ser a aba `
 - não transformar a tela em editor de documentação longa
 - manter o payload focado em bundle mínimo
 - preservar `company_id` explícito sempre que houver override por tenant
+
+---
+
+## Condução de uma frente consultiva
+
+1. Resolver o bundle e confirmar **runtime_profile**, **surface**, **company_id** e **journey_guide**.
+2. Consultar capabilities reais antes de sugerir qualquer execução.
+3. Selecionar a empresa e ler contexto, evidências, gaps, orientação e protocolo da frente.
+4. Fazer apenas as perguntas necessárias ao estado atual.
+5. Informar em toda entrega: estado do handoff, evidências, pendências e próximo responsável.
+6. Não registrar validação por outro squad, não converter hipótese em dado canônico e não declarar ação indisponível como executada.
+7. Se houver bloqueio técnico, escalar à Engenharia; se houver método, maturidade ou redesenho, escalar ao Squad Versus.

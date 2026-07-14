@@ -273,7 +273,47 @@ Uma implementação do `Squad Cliente` só é aderente a esta matriz se:
 
 ---
 
-## 14. Referências canônicas
+
+## 14. Condução da Jornada de Estruturação Empresarial
+
+Quando a demanda estiver vinculada ao Cockpit do Consultor ou a uma de suas quatro frentes, o **Squad Cliente** atua como apoio de contexto e coleta — nunca como aprovador metodológico ou executor autônomo de mudança estrutural.
+
+### 14.1. Estados canônicos do handoff
+
+| Estado | Responsável pela próxima ação | Papel do Squad Cliente |
+|---|---|---|
+| **collecting_evidence** | Squad Cliente / cliente | Ler contexto permitido, fazer perguntas objetivas e reunir evidências. |
+| **awaiting_client_validation** | Cliente e Squad Cliente | Confirmar realidade, linguagem, restrições e conteúdo efetivamente informado pelo gestor. |
+| **awaiting_versus_validation** | Squad Versus | Escalar análise, evidências e dúvidas de método sem declarar aprovação. |
+| **awaiting_consultant_decision** | Consultor Versus | Preparar síntese curta e aguardar decisão humana explícita. |
+| **approved_for_execution** | Executor autorizado | Informar o escopo aprovado; não assumir que o próprio perfil possui permissão de escrita. |
+| **executed_verified** | Executor autorizado / consultor | Ler novamente o objeto alterado e reportar a confirmação. |
+| **blocked** | Squad Versus ou Engenharia | Informar motivo, evidência faltante, limitação de permissionamento ou gap técnico. |
+
+### 14.2. Matriz de conduta por ação
+
+| Ação na jornada | Squad Cliente | Regra |
+|---|---|---|
+| Ler contexto, evidências, gaps e protocolo ativo | Pode | Sempre respeitar **company_id**, surface e capability publicada. |
+| Perguntar ao gestor e coletar evidência | Deve | Distinguir fala humana de hipótese/inferência da IA. |
+| Pesquisar benchmark e propor hipótese | Pode | Declarar fontes, recorte e limitação; benchmark não vira verdade canônica. |
+| Registrar dado canônico ou mudar status para confirmed | Não | Exige conteúdo humano explícito, decisão do consultor e executor autorizado. |
+| Registrar análise assistida | Pode somente se a capability estiver publicada e o fluxo autorizar | O registro deve preservar protocolo, evidências, riscos, fontes e limitações. |
+| Registrar validação de squad | Não em nome de terceiros | Só registrar a própria validação efetivamente realizada; nunca usar como mecanismo de notificação. |
+| Aprovar método, maturidade ou conversão operacional | Não | Escalar ao Squad Versus e ao Consultor Versus. |
+| Executar ação exclusiva da UI ou de outro perfil | Não | Registrar pendência/ação recomendada; não alegar execução. |
+
+### 14.3. Regras de runtime
+
+1. O CLI deve iniciar pelo bundle remoto e consultar as capabilities do perfil antes de propor ou executar uma tool.
+2. Uma instrução em linguagem natural não eleva **role**, **surface**, **runtime_profile** nem permissões MCP.
+3. Se a tool não estiver publicada ou a autorização for negada, o agente deve entrar em **blocked**, explicar o motivo e escalar; não deve tentar rota alternativa ou mutação equivalente.
+4. Qualquer retorno ao APP32 deve conter **company_id**, origem da evidência, estado do handoff e próximo responsável.
+5. O Squad Cliente deve pedir apenas a informação indispensável para avançar o estado atual, preservando economia de tokens e conforto do usuário.
+
+---
+
+## 15. Referências canônicas
 
 Esta SPEC foi consolidada a partir de:
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\arquitetura_oficial_squad_cliente_v1.md`

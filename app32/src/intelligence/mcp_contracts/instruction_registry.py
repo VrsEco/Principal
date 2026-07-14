@@ -34,6 +34,31 @@ class InstructionRule(_StrictModel):
     rationale: str = Field(min_length=8, max_length=320)
 
 
+InstructionJourneyAutonomy = Literal["must", "may", "cannot", "gated"]
+
+
+class InstructionJourneyState(_StrictModel):
+    key: str = Field(min_length=3, max_length=80)
+    responsible: str = Field(min_length=3, max_length=120)
+    required_output: str = Field(min_length=8, max_length=320)
+
+
+class InstructionJourneyActionPolicy(_StrictModel):
+    action: str = Field(min_length=3, max_length=120)
+    autonomy: InstructionJourneyAutonomy
+    rule: str = Field(min_length=8, max_length=320)
+
+
+class InstructionJourneyGuide(_StrictModel):
+    version: str = Field(min_length=3, max_length=40)
+    scope: str = Field(min_length=8, max_length=240)
+    entry_state: str = Field(min_length=3, max_length=80)
+    states: list[InstructionJourneyState] = Field(default_factory=list, min_length=7)
+    action_policy: list[InstructionJourneyActionPolicy] = Field(default_factory=list, min_length=6)
+    read_tool_sequence: list[str] = Field(default_factory=list, min_length=5)
+    escalation_rules: list[str] = Field(default_factory=list, min_length=2)
+
+
 class InstructionRuntimeGuide(_StrictModel):
     runtime_profile: str = Field(min_length=3, max_length=80)
     entry_agent: str = Field(min_length=3, max_length=80)
@@ -65,6 +90,7 @@ class InstructionBootstrapBundle(_StrictModel):
     forbidden_actions: list[str] = Field(default_factory=list, min_length=2)
     layer_matrix: list[InstructionLayerDefinition] = Field(default_factory=list, min_length=3)
     doc_refs: list[InstructionDocumentRef] = Field(default_factory=list, min_length=3)
+    journey_guide: InstructionJourneyGuide | None = None
 
 
 class InstructionRegistryManifest(_StrictModel):
@@ -216,6 +242,10 @@ __all__ = [
     "InstructionDocumentClass",
     "InstructionDocumentRef",
     "InstructionLayerDefinition",
+    "InstructionJourneyActionPolicy",
+    "InstructionJourneyAutonomy",
+    "InstructionJourneyGuide",
+    "InstructionJourneyState",
     "InstructionRegistryManifest",
     "InstructionRule",
     "InstructionRuntimeGuide",

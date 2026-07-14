@@ -39,3 +39,17 @@ Se houver anomalia:
 2. manter apenas `describe_app32_squad_runtime_tool`
 3. pausar canal `stable`
 4. revisar bundle e testes
+
+---
+
+## Smoke da Jornada Assistida
+
+Após publicar uma nova versão do bundle:
+
+1. resolver o bundle como **squad_cliente** com **company_id** válido;
+2. confirmar **journey_guide.version**, sete estados e estado inicial;
+3. confirmar que a sequência do guia contém somente tools de seleção/leitura consultiva;
+4. confirmar que **register_canonical_data=cannot** e **execute_authorized_mutation=gated**;
+5. confirmar que um runtime **squad_versus** não recebe o guia específico do Squad Cliente;
+6. testar uma frente e uma subfase via **consultive_resolve_protocol**;
+7. falhar o rollout se prompt, profile e capability divergirem.

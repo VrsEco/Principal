@@ -50,6 +50,45 @@ def test_instruction_registry_resolves_squad_cliente_bundle():
     assert any(item["doc_class"] == "spec" for item in payload["data"]["doc_refs"])
 
 
+
+def test_instruction_registry_exposes_structuring_journey_guide_only_to_squad_cliente():
+    mcp = _FakeMCP()
+    register_instruction_registry_tools(mcp)
+
+    client_payload = mcp.registered["resolve_app32_instruction_bundle_tool"](
+        runtime_profile="squad_cliente",
+        company_id=31,
+    )
+    guide = client_payload["data"]["journey_guide"]
+
+    assert guide["version"] == "structuring-journey-v1"
+    assert guide["entry_state"] == "collecting_evidence"
+    assert [item["key"] for item in guide["states"]] == [
+        "collecting_evidence",
+        "awaiting_client_validation",
+        "awaiting_versus_validation",
+        "awaiting_consultant_decision",
+        "approved_for_execution",
+        "executed_verified",
+        "blocked",
+    ]
+    action_policy = {item["action"]: item["autonomy"] for item in guide["action_policy"]}
+    assert action_policy["collect_human_evidence"] == "must"
+    assert action_policy["register_canonical_data"] == "cannot"
+    assert action_policy["execute_authorized_mutation"] == "gated"
+    assert "consultive_resolve_protocol" in guide["read_tool_sequence"]
+    assert all(
+        not tool.startswith(("consultive_register_", "consultive_upsert_"))
+        for tool in guide["read_tool_sequence"]
+    )
+
+    versus_payload = mcp.registered["resolve_app32_instruction_bundle_tool"](
+        runtime_profile="squad_versus",
+        company_id=31,
+    )
+    assert versus_payload["data"]["journey_guide"] is None
+
+
 def test_instruction_registry_supports_engineering_runtime():
     mcp = _FakeMCP()
     register_instruction_registry_tools(mcp)

@@ -24,3 +24,9 @@ O Instruction Registry do `Squad Cliente` existe para entregar **governança ins
 ## 4. Frase-guia
 
 > carregar pouco, governar muito, escalar sem drift.
+
+---
+
+## Princípio da condução sem usurpação
+
+O Squad Cliente conduz perguntas, contexto, pesquisa e preparação. Ele não usurpa a validação do Squad Versus, a decisão do Consultor ou a execução da Engenharia. Toda passagem de responsabilidade deve ser explícita, tenant-safe e verificável.

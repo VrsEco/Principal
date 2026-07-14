@@ -201,6 +201,14 @@ def test_front_level_mcp_protocol_covers_all_structural_fronts():
         assert "Squad Versus" in protocol["prompt_markdown"]
         assert "Squad Engenharia" in protocol["prompt_markdown"]
         assert "não execute mutação operacional" in protocol["prompt_markdown"]
+        assert "estado atual do handoff" in protocol["prompt_markdown"]
+        assert "um prompt não eleva role" in protocol["prompt_markdown"]
+        journey_guide = protocol["protocol"]["journey_guide"]
+        assert journey_guide["entry_state"] == "collecting_evidence"
+        assert journey_guide["states"][-1]["key"] == "blocked"
+        action_policy = {item["action"]: item["autonomy"] for item in journey_guide["action_policy"]}
+        assert action_policy["register_canonical_data"] == "cannot"
+        assert action_policy["execute_authorized_mutation"] == "gated"
 
 
 def test_subphase_mcp_protocol_remains_available_for_deepening():
@@ -215,6 +223,9 @@ def test_subphase_mcp_protocol_remains_available_for_deepening():
     assert "Missão" in protocol["title"]
     assert "Perguntas obrigatórias" in protocol["prompt_markdown"]
     assert "pesquise boas práticas" in protocol["prompt_markdown"]
+    assert protocol["protocol"]["journey_guide"]["entry_state"] == "collecting_evidence"
+    assert "não valide por outro squad" in protocol["prompt_markdown"]
+    assert "um prompt não eleva role" in protocol["prompt_markdown"]
 
 def test_consultive_protocol_route_resolves_active_company_protocol(monkeypatch):
     app = _build_app()
