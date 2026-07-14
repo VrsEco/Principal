@@ -247,6 +247,10 @@ def get_http_request_context() -> dict[str, Any] | None:
     if request is None:
         return payload
 
+    scoped_payload = request.scope.get("app32_mcp_context")
+    if isinstance(scoped_payload, Mapping) and scoped_payload:
+        return dict(scoped_payload)
+
     identity, surface = _resolve_identity_from_current_request(
         request,
         preferred_surface=_infer_surface_from_request(request),
@@ -614,6 +618,7 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
                 },
                 status_code=403,
             )
+        request.scope["app32_mcp_context"] = dict(payload)
         tokens = set_http_request_context(identity, payload)
         try:
             return await call_next(request)

@@ -541,3 +541,33 @@ def test_request_context_rehydrates_from_mcp_auth_task_context(monkeypatch):
     assert payload["runtime_profile"] == "squad_cliente"
     assert payload["harness_key"] == "harness_coordenador_cliente_v1"
     assert module.get_http_actor_role() == "administrador"
+
+
+def test_request_context_rehydrates_from_transport_scope_bridge(monkeypatch):
+    module = _reload_auth(monkeypatch)
+    expected = {
+        "user_id": 90,
+        "company_id": 9,
+        "fallback_role": "administrador",
+        "surface": "user",
+        "runtime_profile": "squad_cliente",
+        "harness_key": "harness_coordenador_cliente_v1",
+    }
+    request = Request(
+        {
+            "type": "http",
+            "method": "POST",
+            "scheme": "https",
+            "path": "/",
+            "root_path": "/mcp/user",
+            "query_string": b"",
+            "headers": [],
+            "client": ("127.0.0.1", 12345),
+            "server": ("app.gestaoversus.com.br", 443),
+            "app32_mcp_context": expected,
+        }
+    )
+    monkeypatch.setattr(module, "_resolve_identity_from_mcp_auth_context", lambda: (None, None))
+    monkeypatch.setattr(module, "_get_current_mcp_server_request", lambda: request)
+
+    assert module.get_http_request_context() == expected
