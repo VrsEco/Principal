@@ -184,10 +184,44 @@ def reset_http_request_context(tokens: tuple[Any, Any]) -> None:
     _http_request_ctx.reset(request_token)
 
 
+def _resolve_identity_from_mcp_auth_context() -> tuple[App32McpHttpIdentity | None, str | None]:
+    """Recupera identidade no task context do SDK MCP (inclusive streamable-http)."""
+    try:
+        from mcp.server.auth.middleware.auth_context import get_access_token
+
+        access_token = get_access_token()
+    except Exception:
+        access_token = None
+    if access_token is None:
+        return None, None
+
+    token = _coerce_str(getattr(access_token, "token", None))
+    resource = _coerce_str(getattr(access_token, "resource", None)) or ""
+    if not token:
+        return None, None
+    resource_surface = resource.rsplit(":", 1)[-1].strip().lower() if ":" in resource else "user"
+    try:
+        surface = normalize_surface(resource_surface)
+    except ValueError:
+        surface = "user"
+    identity = load_http_token_registry().get(token) or _resolve_db_backed_identity(
+        None,
+        token=token,
+        surface=surface,
+    )
+    if identity is None or not identity.allows_surface(surface):
+        return None, None
+    return identity, surface
+
+
 def get_http_request_identity() -> App32McpHttpIdentity | None:
     identity = _http_identity_ctx.get()
     if identity is not None:
         return identity
+
+    auth_identity, _ = _resolve_identity_from_mcp_auth_context()
+    if auth_identity is not None:
+        return auth_identity
 
     request = _get_current_mcp_server_request()
     if request is None:
@@ -204,6 +238,10 @@ def get_http_request_context() -> dict[str, Any] | None:
     payload = _http_request_ctx.get()
     if payload:
         return payload
+
+    auth_identity, auth_surface = _resolve_identity_from_mcp_auth_context()
+    if auth_identity is not None and auth_surface is not None:
+        return _build_identity_context_payload(auth_identity, surface=auth_surface)
 
     request = _get_current_mcp_server_request()
     if request is None:
@@ -444,29 +482,29 @@ def resolve_request_identity(request: Request, *, surface: McpSurface | str) -> 
     )
 
 
-def resolve_request_context_payload(request: Request, *, surface: McpSurface | str) -> dict[str, Any]:
-    identity = resolve_request_identity(request, surface=surface)
-    if identity is None:
-        return {}
-
-    thread_id = _coerce_str(
-        _resolve_override_value(request, query_param="thread_id", header_name=HTTP_CONTEXT_HEADER_MAP["thread_id"])
+def _build_identity_context_payload(
+    identity: App32McpHttpIdentity,
+    *,
+    surface: McpSurface | str,
+    thread_id: str | None = None,
+    runtime_profile: str | None = None,
+    actor_type: str | None = None,
+) -> dict[str, Any]:
+    normalized_runtime_profile = normalize_runtime_profile(
+        runtime_profile or _coerce_str(identity.metadata.get("runtime_profile"))
     )
-    runtime_profile = _coerce_str(
-        _resolve_override_value(request, query_param="runtime_profile", header_name=HTTP_CONTEXT_HEADER_MAP["runtime_profile"])
-    )
-    actor_type = _coerce_str(
-        _resolve_override_value(request, query_param="actor_type", header_name=HTTP_CONTEXT_HEADER_MAP["actor_type"])
-    )
-    if runtime_profile is None:
-        runtime_profile = _coerce_str(identity.metadata.get("runtime_profile"))
-    normalized_runtime_profile = normalize_runtime_profile(runtime_profile)
     runtime_spec = get_runtime_profile_spec(normalized_runtime_profile)
-    if actor_type is None:
-        actor_type = _coerce_str(identity.metadata.get("actor_type")) or (runtime_spec.actor_type if runtime_spec else None)
-    harness_key = _coerce_str(identity.metadata.get("harness_key")) or (runtime_spec.default_harness_key if runtime_spec else None)
-    harness_label = _coerce_str(identity.metadata.get("harness_label")) or (runtime_spec.default_harness_label if runtime_spec else None)
-
+    resolved_actor_type = (
+        actor_type
+        or _coerce_str(identity.metadata.get("actor_type"))
+        or (runtime_spec.actor_type if runtime_spec else None)
+    )
+    harness_key = _coerce_str(identity.metadata.get("harness_key")) or (
+        runtime_spec.default_harness_key if runtime_spec else None
+    )
+    harness_label = _coerce_str(identity.metadata.get("harness_label")) or (
+        runtime_spec.default_harness_label if runtime_spec else None
+    )
     return {
         "user_id": identity.user_id,
         "company_id": identity.company_id,
@@ -476,7 +514,7 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
         "client": "claude_remote_connector",
         "thread_id": thread_id,
         "runtime_profile": normalized_runtime_profile,
-        "actor_type": actor_type,
+        "actor_type": resolved_actor_type,
         "runtime_family": runtime_spec.family_key if runtime_spec else normalized_runtime_profile,
         "runtime_family_label": runtime_spec.family_label if runtime_spec else normalized_runtime_profile,
         "harness_key": harness_key,
@@ -493,6 +531,29 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
         "mcp_enabled": bool(identity.metadata.get("mcp_enabled", True)),
         "training_completed": bool(identity.metadata.get("training_completed", True)),
     }
+
+
+def resolve_request_context_payload(request: Request, *, surface: McpSurface | str) -> dict[str, Any]:
+    identity = resolve_request_identity(request, surface=surface)
+    if identity is None:
+        return {}
+
+    thread_id = _coerce_str(
+        _resolve_override_value(request, query_param="thread_id", header_name=HTTP_CONTEXT_HEADER_MAP["thread_id"])
+    )
+    runtime_profile = _coerce_str(
+        _resolve_override_value(request, query_param="runtime_profile", header_name=HTTP_CONTEXT_HEADER_MAP["runtime_profile"])
+    )
+    actor_type = _coerce_str(
+        _resolve_override_value(request, query_param="actor_type", header_name=HTTP_CONTEXT_HEADER_MAP["actor_type"])
+    )
+    return _build_identity_context_payload(
+        identity,
+        surface=surface,
+        thread_id=thread_id,
+        runtime_profile=runtime_profile,
+        actor_type=actor_type,
+    )
 
 
 class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):

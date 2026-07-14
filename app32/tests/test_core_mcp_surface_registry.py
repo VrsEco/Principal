@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import asyncio
 from types import SimpleNamespace
 
 import src.core.mcp_surface_registry as registry
@@ -443,3 +444,28 @@ def test_stdio_surface_startup_banner_goes_to_stderr(monkeypatch, capsys):
     assert fake_mcp.ran is True
     assert captured.out == ""
     assert "MCP User Server" in captured.err
+
+
+def test_policy_fast_mcp_filters_real_tools_list_per_request(monkeypatch):
+    if registry.FastMCP is None or not hasattr(registry.FastMCP, "list_tools"):
+        return
+    monkeypatch.setattr(
+        registry,
+        "iter_surface_tool_names",
+        lambda surface: ["consultive_get_front_context"],
+    )
+    mcp = registry._build_policy_fast_mcp("Policy test", "user")
+
+    @mcp.tool(name="consultive_get_front_context")
+    def allowed_tool():
+        return "ok"
+
+    @mcp.tool(name="consultive_register_assisted_analysis")
+    def blocked_tool():
+        return "not ok"
+
+    listed = asyncio.run(mcp.list_tools())
+    names = {tool.name for tool in listed}
+
+    assert "consultive_get_front_context" in names
+    assert "consultive_register_assisted_analysis" not in names

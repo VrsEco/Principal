@@ -98,6 +98,24 @@ def iter_surface_tool_names(surface: McpSurface | str) -> list[str]:
     return [tool["name"] for tool in manifest.get("tools", [])]
 
 
+def _build_policy_fast_mcp(name: str, surface: McpSurface | str) -> Any:
+    """Cria servidor cujo tools/list reflete a policy efetiva da requisição."""
+    if FastMCP is None:  # pragma: no cover
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    normalized_surface = normalize_surface(surface)
+    if not hasattr(FastMCP, "list_tools"):
+        return FastMCP(name)
+
+    class _PolicyFastMCP(FastMCP):
+        async def list_tools(self):
+            tools = await super().list_tools()
+            allowed_names = set(iter_surface_tool_names(normalized_surface))
+            allowed_names.add(f"list_{normalized_surface}_app32_capabilities")
+            return [tool for tool in tools if tool.name in allowed_names]
+
+    return _PolicyFastMCP(name)
+
+
 def _tool_map() -> dict[str, Any]:
     return {getattr(tool, "name", str(tool)): tool for tool in catalog.get_langchain_tools()}
 
@@ -277,7 +295,7 @@ def register_ops_mcp_tools(
 def build_user_mcp_server(name: str = "GestaoVersus User MCP") -> Any:
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
-    mcp = FastMCP(name)
+    mcp = _build_policy_fast_mcp(name, "user")
     register_user_mcp_tools(mcp)
     return mcp
 
@@ -285,7 +303,7 @@ def build_user_mcp_server(name: str = "GestaoVersus User MCP") -> Any:
 def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
-    mcp = FastMCP(name)
+    mcp = _build_policy_fast_mcp(name, "admin")
     register_admin_mcp_tools(mcp)
     return mcp
 
@@ -293,7 +311,7 @@ def build_admin_mcp_server(name: str = "GestaoVersus Admin MCP") -> Any:
 def build_analytics_mcp_server(name: str = "GestaoVersus Analytics MCP") -> Any:
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
-    mcp = FastMCP(name)
+    mcp = _build_policy_fast_mcp(name, "analytics")
     register_analytics_mcp_tools(mcp)
     return mcp
 
@@ -301,7 +319,7 @@ def build_analytics_mcp_server(name: str = "GestaoVersus Analytics MCP") -> Any:
 def build_ops_mcp_server(name: str = "GestaoVersus Ops MCP") -> Any:
     if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
-    mcp = FastMCP(name)
+    mcp = _build_policy_fast_mcp(name, "ops")
     register_ops_mcp_tools(mcp)
     return mcp
 

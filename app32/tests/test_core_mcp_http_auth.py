@@ -509,3 +509,35 @@ def test_request_context_middleware_allows_user_surface_without_active_company(m
     assert response.status_code == 200
     assert response.json() == {"ok": True}
 
+
+
+def test_request_context_rehydrates_from_mcp_auth_task_context(monkeypatch):
+    module = _reload_auth(monkeypatch)
+    identity = module.App32McpHttpIdentity(
+        token="token-db",
+        user_id=90,
+        company_id=9,
+        fallback_role="administrador",
+        allowed_surfaces=("user",),
+        metadata={
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "accessible_company_ids": [9, 12],
+            "multi_company": True,
+        },
+    )
+    monkeypatch.setattr(
+        module,
+        "_resolve_identity_from_mcp_auth_context",
+        lambda: (identity, "user"),
+    )
+
+    payload = module.get_http_request_context()
+
+    assert payload["user_id"] == 90
+    assert payload["company_id"] == 9
+    assert payload["fallback_role"] == "administrador"
+    assert payload["runtime_profile"] == "squad_cliente"
+    assert payload["harness_key"] == "harness_coordenador_cliente_v1"
+    assert module.get_http_actor_role() == "administrador"
