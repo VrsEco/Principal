@@ -109,7 +109,11 @@ def _build_policy_fast_mcp(name: str, surface: McpSurface | str) -> Any:
     class _PolicyFastMCP(FastMCP):
         async def list_tools(self):
             tools = await super().list_tools()
-            allowed_names = set(iter_surface_tool_names(normalized_surface))
+            from app import create_app
+
+            app = create_app()
+            with app.app_context():
+                allowed_names = set(iter_surface_tool_names(normalized_surface))
             allowed_names.add(f"list_{normalized_surface}_app32_capabilities")
             return [tool for tool in tools if tool.name in allowed_names]
 

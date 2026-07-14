@@ -1587,6 +1587,8 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
 
     if lowered == "review_strategy_maturation_item_tool":
         return "review"
+    if lowered == "resolve_app32_instruction_bundle_tool":
+        return "read"
 
     if normalized_domain == "consultive":
         if lowered.startswith(("consultive_get_", "consultive_list_")):
