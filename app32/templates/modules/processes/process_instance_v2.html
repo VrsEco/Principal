@@ -5,1301 +5,612 @@
 {% block breadcrumb %}
 <a href="/my-work">Meu Trabalho</a>
 <span class="sep">/</span>
-<a href="/my-work">Meu Trabalho</a>
+<a href="/my-work">Instâncias</a>
 <span class="sep">/</span>
-<span class="current">{{ instance.instance_code }} - {{ instance.title }}</span>
+<span class="current">{{ instance.instance_code or ('IP.' ~ instance.id) }} - {{ instance.title }}</span>
 {% endblock %}
 
-{% block navbar_actions %}
-{% endblock %}
-
+{% block navbar_actions %}{% endblock %}
 
 {% block workspace_content %}
 <link rel="stylesheet" href="/static/css/process_bpmn_modeler.css">
 <link rel="stylesheet" href="/static/css/process_instance_runtime.css">
+
 <div class="workspace-wrapper">
-    <!-- Header -->
-    <div class="workspace-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div class="header-content">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                <span class="badge"
-                    style="background: var(--surface-tertiary); color: var(--text-secondary); font-weight: 700;">
-                    {{ instance.instance_code or 'SEM CÓDIGO' }}
-                </span>
-                <span class="badge status-{{ instance.status }}">{{ instance.status }}</span>
-                <span class="badge priority-{{ instance.priority or 'normal' }}">{{ instance.priority or 'Normal'
-                    }}</span>
+    <section class="bpms-runtime-page">
+        <header class="bpms-runtime-header">
+            <div class="bpms-runtime-header__content">
+                <div class="bpms-runtime-header__badges">
+                    <span class="badge bpms-runtime-code">{{ instance.instance_code or ('IP.' ~ instance.id) }}</span>
+                    <span class="badge status-{{ instance.status }}" id="runtimeStatusLabel">{{ instance.status }}</span>
+                    <span class="badge priority-{{ instance.priority or 'normal' }}">{{ instance.priority or 'Normal' }}</span>
+                </div>
+                <h1 class="text-h1">{{ instance.instance_code or ('IP.' ~ instance.id) }} · {{ instance.title }}</h1>
+                <p class="text-secondary">{{ instance.description or 'Controle operacional da instância BPMS.' }}</p>
             </div>
-            <h1 class="text-h1"><span style="color: var(--text-tertiary); font-weight: 500; font-size: 0.875em;">{{
-                    instance.instance_code or '' }}</span> {{ instance.title }}</h1>
-            <p class="text-secondary">{{ instance.description or 'Gerenciamento e execução do processo.' }}</p>
-        </div>
-        <div class="header-actions" id="mainHeaderActions">
-            <button type="button" class="btn btn-outline btn-sm" id="btnPauseRuntime">
-                ⏸️ Pausar
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btnResumeRuntime" hidden>
-                ▶️ Retomar
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" id="btnRefreshRuntime">
-                🔄 Atualizar Fluxo
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="showFinalizarModal()">
-                🏁 Finalizar Execução
-            </button>
-        </div>
-    </div>
+            <div class="bpms-runtime-header__actions">
+                <button type="button" class="btn btn-outline btn-sm" id="btnPauseRuntime">Pausar</button>
+                <button type="button" class="btn btn-outline btn-sm" id="btnResumeRuntime" hidden>Retomar</button>
+                <button type="button" class="btn btn-outline btn-sm" id="btnRefreshRuntime">Atualizar</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="showFinalizarModal()">Finalizar execução</button>
+            </div>
+        </header>
 
-    <!-- Content Grid -->
-    <div class="instance-content mt-4">
         <div id="processRuntimeShell"
-            class="runtime-shell"
-            data-instance-id="{{ instance.id }}"
-            data-process-id="{{ instance.process_id }}">
-            <div class="runtime-shell-hero">
-                <div class="surface-card runtime-panel">
-                    <span class="bpmn-eyebrow">Runtime BPMN/BPMS</span>
-                    <h2 class="text-h2" style="margin: 0.35rem 0 0.6rem;">Fluxo vivo da execução</h2>
-                    <p class="text-secondary" id="runtimeFlowMeta">
-                        Carregando contexto visual do fluxo...
-                    </p>
-                    <div class="runtime-legend">
-                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-completed"></i>Concluído</span>
-                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-active"></i>Em execução</span>
-                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-pending"></i>Pendente</span>
-                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-paused"></i>Pausado</span>
-                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-waiting"></i>Aguardando externo</span>
-                        <span class="runtime-legend-item"><i class="runtime-legend-swatch runtime-swatch-failed"></i>Falha</span>
-                    </div>
-                </div>
-                <div class="surface-card runtime-panel">
-                    <h3 class="text-h3">Resumo da instância</h3>
-                    <div class="runtime-meta-grid">
-                        <div class="runtime-metric">
-                            <span>Status</span>
-                            <strong id="runtimeStatusLabel">{{ instance.status }}</strong>
-                        </div>
-                        <div class="runtime-metric">
-                            <span>Início</span>
-                            <strong id="runtimeStartedAt">{{ instance.started_at or '—' }}</strong>
-                        </div>
-                        <div class="runtime-metric">
-                            <span>Conclusão</span>
-                            <strong id="runtimeCompletedAt">{{ instance.completed_at or '—' }}</strong>
-                        </div>
-                        <div class="runtime-metric" style="grid-column: 1 / -1;">
-                            <span>Elemento atual</span>
-                            <strong id="runtimeCurrentElement">{{ instance.current_bpmn_element_id or 'Sem ponteiro BPMN' }}</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="runtime-grid">
-                <div class="surface-card runtime-panel">
-                    <div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:flex-start;flex-wrap:wrap;">
+             class="runtime-shell"
+             data-instance-id="{{ instance.id }}"
+             data-process-id="{{ instance.process_id }}">
+            <section class="bpms-runtime-grid">
+                <article class="surface-card bpms-card bpms-card--flow">
+                    <div class="bpms-card__head">
                         <div>
-                            <h3 class="text-h3">Mapa BPMN da execução</h3>
-                            <p class="text-secondary" style="margin-bottom:0;">A instância continua operando mesmo sem fluxo publicado; neste caso o APP32 mantém o controle manual.</p>
+                            <span class="bpms-card__eyebrow">Fluxo do processo</span>
+                            <h2 class="text-h3">Diagrama BPMN</h2>
+                            <p class="text-secondary" id="runtimeFlowMeta">Carregando contexto visual do fluxo...</p>
                         </div>
                         <div class="runtime-actions">
                             <button type="button" class="btn btn-outline btn-sm" id="btnRefreshRuntimeSecondary">Atualizar</button>
                         </div>
                     </div>
-                    <div class="runtime-flow-shell mt-4">
+                    <div class="runtime-flow-shell">
                         <div id="runtimeBpmnCanvas" class="runtime-flow-canvas"></div>
                         <div id="runtimeFlowEmpty" class="runtime-flow-empty" hidden>
                             <div>
                                 <strong>Processo sem BPMN publicado</strong>
-                                <p class="text-secondary">O controle da execução continua ativo via rotina, checklist, horários e diário de bordo.</p>
+                                <p class="text-secondary">A execução continua disponível em modo manual pela shell BPMS.</p>
                             </div>
                         </div>
                     </div>
-                </div>
+                </article>
 
-                <div class="runtime-stack">
-                    <div class="surface-card runtime-panel">
-                        <h3 class="text-h3">Atividade atual e ação BPMS</h3>
-                        <div id="runtimeCurrentActivity"></div>
+                <aside class="surface-card bpms-card bpms-card--activity">
+                    <div class="bpms-card__head bpms-card__head--compact">
+                        <div>
+                            <span class="bpms-card__eyebrow">BPMS operacional</span>
+                            <h2 class="text-h3">Atividade selecionada</h2>
+                        </div>
                     </div>
+                    <div id="runtimeCurrentActivity"></div>
+                </aside>
+            </section>
 
-                    <div class="surface-card runtime-panel">
-                        <h3 class="text-h3">Timeline da execução</h3>
+            <section class="bpms-runtime-bottom">
+                <article class="surface-card bpms-card bpms-card--summary">
+                    <div class="bpms-card__head bpms-card__head--compact">
+                        <div>
+                            <span class="bpms-card__eyebrow">Instância atual</span>
+                            <h2 class="text-h3">Resumo da instância</h2>
+                        </div>
+                    </div>
+                    <div class="bpms-summary-grid">
+                        <div class="bpms-summary-row"><span>Instância</span><strong>{{ instance.instance_code or ('IP.' ~ instance.id) }}</strong></div>
+                        <div class="bpms-summary-row"><span>Processo</span><strong>{{ instance.title }}</strong></div>
+                        <div class="bpms-summary-row"><span>Iniciada em</span><strong id="runtimeStartedAt">{{ instance.started_at or '—' }}</strong></div>
+                        <div class="bpms-summary-row"><span>Concluída em</span><strong id="runtimeCompletedAt">{{ instance.completed_at or '—' }}</strong></div>
+                        <div class="bpms-summary-row"><span>Elemento atual</span><strong id="runtimeCurrentElement">{{ instance.current_bpmn_element_id or '—' }}</strong></div>
+                    </div>
+                    <div class="bpms-summary-timeline">
+                        <h3 class="bpms-summary-timeline__title">Últimos eventos</h3>
                         <div id="runtimeTimeline" class="runtime-timeline-list"></div>
                     </div>
-                </div>
-            </div>
-        </div>
+                </article>
 
-        <!-- 1. Lançamento de Horas (Card) -->
-        <div class="surface-card mb-4">
-            <div class="card-header mb-4">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h2 class="text-h3">⏱️ Registro de Horas</h2>
-                        <p class="text-secondary">Controle de apontamentos e esforço.</p>
+                <article class="surface-card bpms-card bpms-card--indicators">
+                    <div class="bpms-card__head bpms-card__head--compact">
+                        <div>
+                            <span class="bpms-card__eyebrow">KPIs vinculados a este processo</span>
+                            <h2 class="text-h3">Indicadores do processo</h2>
+                        </div>
                     </div>
-                    <div class="collaborators-avatars" id="collaboratorsGrid" style="display: flex; gap: 0.5rem;">
-                        <!-- Small avatars/summary will go here or keep the grid? 
-                              Let's keep the summary simple or move it. 
-                              For now, let's keep the input form and the table. -->
+                    <div id="runtimeProcessIndicators" class="bpms-indicators-list"></div>
+                </article>
+
+                <article class="surface-card bpms-card bpms-card--launchers">
+                    <div class="bpms-card__head bpms-card__head--compact">
+                        <div>
+                            <span class="bpms-card__eyebrow">Ações operacionais</span>
+                            <h2 class="text-h3">Lançamentos rápidos</h2>
+                            <p class="text-secondary">Horas/Info operacional da instância.</p>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- List of Inputs per Collaborator -->
-            <div id="collaboratorsInputList" class="mb-4" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <!-- JS Populated -->
-            </div>
-
-            <!-- Hidden Edit Form (Only visible when editing) -->
-            <div id="editLogForm" class="log-input-box mb-4"
-                style="background: var(--surface-secondary); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--warning); display: none;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                    <h4 class="text-h4" style="color: var(--warning-dark);">✏️ Editando Lançamento</h4>
-                    <button class="btn-icon-small" onclick="cancelEditLog()">&times;</button>
-                </div>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    <input type="hidden" id="editLogId">
-                    <input type="hidden" id="editLogEmployeeId">
-
-                    <div style="flex: 2; min-width: 200px;">
-                        <label class="form-label small text-tertiary mb-1">Colaborador</label>
-                        <input type="text" class="form-control" id="editLogEmployeeName" readonly
-                            style="background: var(--surface);">
-                    </div>
-
-                    <div style="flex: 1.5; min-width: 140px;">
-                        <label class="form-label small text-tertiary mb-1">Data</label>
-                        <input type="date" class="form-control" id="editLogDate">
-                    </div>
-
-                    <div style="flex: 1; min-width: 100px;">
-                        <label class="form-label small text-tertiary mb-1">Horas</label>
-                        <input type="text" data-format="hours-decimal" class="form-control" id="editLogHours">
-                    </div>
-
-                    <div style="flex: 3; min-width: 250px;">
-                        <label class="form-label small text-tertiary mb-1">Descrição</label>
-                        <input type="text" class="form-control" id="editLogDesc">
-                    </div>
-
-                    <div>
-                        <button class="btn btn-warning" onclick="saveEditedLog()"
-                            style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">
-                            Salvar
+                    <div class="bpms-launchers">
+                        <button type="button" class="bpms-launcher" onclick="openHoursModal()">
+                            <span class="bpms-launcher__icon">⏱️</span>
+                            <strong>Registrar horas</strong>
+                            <small>Abre um pop-up para lançamento</small>
+                        </button>
+                        <button type="button" class="bpms-launcher" onclick="openDiaryModal()">
+                            <span class="bpms-launcher__icon">📝</span>
+                            <strong>Diário de bordo</strong>
+                            <small>Abre um pop-up para registro</small>
                         </button>
                     </div>
-                </div>
-            </div>
-
-            <!-- History Table (Replaces List) -->
-            <div class="table-responsive">
-                <table class="simple-table w-100">
-                    <thead>
-                        <tr>
-                            <th>Colaborador</th>
-                            <th>Data</th>
-                            <th>Horas</th>
-                            <th>Descrição</th>
-                            <th style="text-align: right;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="workLogsHistoryTable">
-                        <!-- JS Populated -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="logsEmptyState" class="text-center py-4 text-tertiary" style="display: none;">
-                Nenhum lançamento registrado.
-            </div>
+                </article>
+            </section>
         </div>
+    </section>
+</div>
 
-        <!-- 2. Diário de Bordo (Card) -->
-        <div class="surface-card mb-4">
-            <div class="card-header mb-4">
-                <h2 class="text-h3">📖 Diário de Bordo</h2>
-                <p class="text-secondary">Histórico de observações e ocorrências.</p>
+<div id="resourceContentModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content surface-card bpms-modal bpms-modal--wide">
+        <div class="bpms-modal__header">
+            <div>
+                <h2 class="text-h3" id="resourceModalTitle">Conteúdo da atividade</h2>
+                <p class="text-secondary" id="resourceModalSubtitle">Material de apoio da etapa atual.</p>
             </div>
-
-            <div class="log-input-box mb-4" style="position: relative;">
-                <textarea class="form-control" id="logEntryText" rows="2" placeholder="Digite uma observação..."
-                    style="padding-right: 120px;"></textarea>
-                <button class="btn btn-secondary btn-sm" onclick="addLogEntry()"
-                    style="position: absolute; bottom: 10px; right: 10px;">
-                    Adicionar
-                </button>
-            </div>
-
-            <div id="logsHistory" class="logs-history-list">
-                <!-- JS Populated -->
-            </div>
+            <button type="button" class="btn-icon-small" onclick="closeResourceModal()">&times;</button>
         </div>
-
-        <div
-            class="surface-card mb-4"
-            data-calendar-source-panel
-            data-company-id="{{ company.id if company else 0 }}"
-            data-employee-id="{{ instance.executor_id or instance.responsible_id or instance.owner_employee_id or 0 }}"
-            data-source-type="process_instance"
-            data-source-id="{{ instance.id }}">
-            <div class="card-header mb-4">
-                <h2 class="text-h3">📅 Calendário</h2>
-                <p class="text-secondary">Eventos desta instância para planejamento, acompanhamento e reforço do registro operacional, incluindo leitura de ocupação e apoio ao Horas/Info.</p>
-            </div>
-            <form data-calendar-source-form class="hours-form-panel mb-4" style="background: var(--surface-secondary); padding: 1rem; border-radius: 12px; border: 1px solid var(--border);">
-                <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex: 2; min-width: 220px;">
-                        <label class="form-label small text-tertiary mb-1">Título</label>
-                        <input data-calendar-source-title class="form-control form-control-sm" value="Executar {{ instance.instance_code or ('IP.%s' % instance.id) }} - {{ instance.title }}" />
-                    </div>
-                    <div style="flex: 1.2; min-width: 130px;">
-                        <label class="form-label small text-tertiary mb-1">Data</label>
-                        <input data-calendar-source-date type="date" class="form-control form-control-sm" />
-                    </div>
-                    <div style="flex: 1; min-width: 110px;">
-                        <label class="form-label small text-tertiary mb-1">Início</label>
-                        <input data-calendar-source-start type="time" class="form-control form-control-sm" />
-                    </div>
-                    <div style="flex: 1; min-width: 110px;">
-                        <label class="form-label small text-tertiary mb-1">Fim</label>
-                        <input data-calendar-source-end type="time" class="form-control form-control-sm" />
-                    </div>
-                </div>
-                <div class="mt-3" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex: 1.3; min-width: 160px;">
-                        <label class="form-label small text-tertiary mb-1">Status</label>
-                        <select data-calendar-source-status class="form-control form-control-sm">
-                            <option value="planned" selected>Planejado</option>
-                            <option value="confirmed">Confirmado</option>
-                            <option value="in_progress">Em execução</option>
-                        </select>
-                    </div>
-                    <div style="flex: 1.3; min-width: 160px;">
-                        <label class="form-label small text-tertiary mb-1">Prioridade</label>
-                        <select data-calendar-source-priority class="form-control form-control-sm">
-                            <option value="low">Baixa</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="high">Alta</option>
-                            <option value="urgent">Urgente</option>
-                        </select>
-                    </div>
-                    <div style="flex: 3; min-width: 220px;">
-                        <label class="form-label small text-tertiary mb-1">Descrição</label>
-                        <input data-calendar-source-description class="form-control form-control-sm" placeholder="Observação do compromisso ou execução" />
-                    </div>
-                    <div>
-                        <button class="btn btn-primary btn-sm" type="submit" style="height: 42px; padding: 0 1.5rem; white-space: nowrap;">Adicionar evento</button>
-                    </div>
-                </div>
-            </form>
-            <div data-calendar-source-list class="dependency-list"></div>
-        </div>
-
-        <!-- 3. Checklist (Card) -->
-        <div class="surface-card">
-            <div class="card-header mb-4">
-                <h2 class="text-h3">✅ Checklist de Execução</h2>
-                <p class="text-secondary">Etapas obrigatórias do processo.</p>
-            </div>
-            <div id="checklistContainer">
-                <div class="loading-shimmer" style="height: 100px; border-radius: 12px;"></div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Modal de Finalização -->
-    <div id="finalizarModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content surface-card"
-            style="max-width: 500px; width: 90%; animation: slideDown 0.3s ease-out;">
-            <div class="modal-header mb-4">
-                <h2 class="text-h3">🏁 Finalizar Execução</h2>
-                <p class="text-secondary">Confirme a conclusão deste processo.</p>
-            </div>
-
-            <div class="modal-body mb-5">
-                <!-- Deadline info moved here -->
-                <div class="mb-4 p-3"
-                    style="background: var(--surface-secondary); border-radius: 12px; border: 1px solid var(--border);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span class="text-tertiary small">Prazo Previsto:</span>
-                        <strong id="modalDeadline">{{ instance.due_date if instance.due_date else 'Não definido'
-                            }}</strong>
-                    </div>
-                </div>
-
-                <div class="form-group mb-4">
-                    <label class="form-label">Data de Conclusão Efetiva</label>
-                    <input type="date" id="actualEndDate" class="form-control"
-                        value="{{ now.strftime('%Y-%m-%d') if now else '' }}">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Notas Finais / Observações</label>
-                    <textarea id="finalNotes" class="form-control" rows="3"
-                        placeholder="Opcional: Resumo da conclusão..."></textarea>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button type="button" class="btn btn-ghost" onclick="closeFinalizarModal()">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="confirmarFinalizacao(this)">Confirmar
-                    Conclusão</button>
-            </div>
-        </div>
+        <div id="resourceModalBody" class="bpms-modal__body"></div>
     </div>
 </div>
 
+<div id="hoursModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content surface-card bpms-modal bpms-modal--wide">
+        <div class="bpms-modal__header">
+            <div>
+                <h2 class="text-h3">Registro de Horas</h2>
+                <p class="text-secondary">Controle de apontamentos e esforço realizado na instância.</p>
+            </div>
+            <button type="button" class="btn-icon-small" onclick="closeHoursModal()">&times;</button>
+        </div>
 
+        <div class="bpms-hours-header">
+            <div class="collaborators-avatars" id="collaboratorsGrid"></div>
+        </div>
 
-<style>
-    /* Layout & Cards */
-    .surface-card {
-        background: var(--surface-primary);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 1.5rem;
-    }
+        <div id="collaboratorsInputList" class="bpms-hours-inputs"></div>
 
-    /* Table Styles */
-    .simple-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+        <div id="editLogForm" class="bpms-edit-log-form" style="display:none;">
+            <div class="bpms-edit-log-form__header">
+                <h4 class="text-h4">Editando lançamento</h4>
+                <button class="btn-icon-small" onclick="cancelEditLog()">&times;</button>
+            </div>
+            <div class="bpms-edit-log-form__grid">
+                <input type="hidden" id="editLogId">
+                <input type="hidden" id="editLogEmployeeId">
+                <div>
+                    <label class="form-label small text-tertiary mb-1">Colaborador</label>
+                    <input type="text" class="form-control" id="editLogEmployeeName" readonly>
+                </div>
+                <div>
+                    <label class="form-label small text-tertiary mb-1">Data</label>
+                    <input type="date" class="form-control" id="editLogDate">
+                </div>
+                <div>
+                    <label class="form-label small text-tertiary mb-1">Horas</label>
+                    <input type="text" data-format="hours-decimal" class="form-control" id="editLogHours">
+                </div>
+                <div>
+                    <label class="form-label small text-tertiary mb-1">Descrição</label>
+                    <input type="text" class="form-control" id="editLogDesc">
+                </div>
+            </div>
+            <div class="bpms-edit-log-form__actions">
+                <button class="btn btn-warning" onclick="saveEditedLog()">Salvar</button>
+            </div>
+        </div>
 
-    .simple-table th {
-        text-align: left;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: var(--text-tertiary);
-        padding: 0.75rem 1rem;
-        border-bottom: 2px solid var(--border);
-    }
+        <div class="table-responsive">
+            <table class="simple-table w-100">
+                <thead>
+                    <tr>
+                        <th>Colaborador</th>
+                        <th>Data</th>
+                        <th>Horas</th>
+                        <th>Descrição</th>
+                        <th style="text-align:right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="workLogsHistoryTable"></tbody>
+            </table>
+        </div>
+        <div id="logsEmptyState" class="text-center py-4 text-tertiary" style="display:none;">Nenhum lançamento registrado.</div>
+    </div>
+</div>
 
-    .simple-table td {
-        padding: 1rem;
-        border-bottom: 1px solid var(--border);
-        color: var(--text-secondary);
-        vertical-align: middle;
-        font-size: 0.9rem;
-    }
+<div id="diaryModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content surface-card bpms-modal bpms-modal--wide">
+        <div class="bpms-modal__header">
+            <div>
+                <h2 class="text-h3">Diário de Bordo</h2>
+                <p class="text-secondary">Histórico de observações e ocorrências da instância.</p>
+            </div>
+            <button type="button" class="btn-icon-small" onclick="closeDiaryModal()">&times;</button>
+        </div>
+        <div class="bpms-diary-entry">
+            <textarea class="form-control" id="logEntryText" rows="3" placeholder="Digite uma observação..."></textarea>
+            <div class="bpms-diary-entry__actions">
+                <button class="btn btn-secondary btn-sm" onclick="addLogEntry()">Adicionar</button>
+            </div>
+        </div>
+        <div id="logsHistory" class="logs-history-list"></div>
+    </div>
+</div>
 
-    .simple-table tr:hover {
-        background: var(--surface-secondary);
-    }
-
-    .simple-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    /* Custom Select */
-    .form-select-custom {
-        display: block;
-        width: 100%;
-        appearance: none;
-        background: var(--surface-primary);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.5rem 2rem 0.5rem 1rem;
-        font-size: 0.9rem;
-        line-height: 1.5;
-        color: var(--text-primary);
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 0.75rem center;
-        background-size: 16px;
-    }
-
-    .form-select-custom:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px var(--primary-light);
-    }
-
-    /* Avatars */
-    .avatar-sm {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
-        border: 2px solid var(--surface-primary);
-    }
-
-    .collaborators-avatars {
-        margin-left: auto;
-    }
-
-    /* Legacy / Utility */
-    .log-input-box {
-        transition: all 0.2s;
-    }
-
-    .log-item {
-        padding: 1rem;
-        background: var(--surface-secondary);
-        border-radius: 8px;
-        margin-bottom: 0.75rem;
-        border-left: 3px solid var(--primary);
-    }
-
-    .log-meta {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.75rem;
-        color: var(--text-tertiary);
-        margin-bottom: 0.5rem;
-    }
-
-    .log-text {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        line-height: 1.5;
-    }
-
-    /* Checklist specific */
-    .routine-block {
-        margin-bottom: 2rem;
-    }
-
-    .routine-header {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .step-item {
-        background: var(--surface-secondary);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 1rem;
-        display: flex;
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
-        cursor: pointer;
-    }
-
-    .step-checkbox {
-        width: 20px;
-        height: 20px;
-        border: 2px solid var(--border);
-        border-radius: 4px;
-        flex-shrink: 0;
-    }
-
-    .step-item.checked .step-checkbox {
-        background: var(--success);
-        border-color: var(--success);
-    }
-
-    .btn-icon-small {
-        background: transparent;
-        border: none;
-        padding: 4px;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: background 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .btn-icon-small:hover {
-        background: rgba(0, 0, 0, 0.05);
-    }
-
-    .text-primary {
-        color: var(--primary);
-    }
-
-    .text-danger {
-        color: var(--danger);
-    }
-
-    /* Responsive Adjustments */
-    @media (max-width: 900px) {
-
-        /* Stack header items */
-        .workspace-header {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 1rem;
-        }
-
-        /* Stack log input form */
-        .log-input-box>div {
-            flex-direction: column;
-            align-items: stretch !important;
-        }
-
-        .log-input-box>div>div {
-            flex: 1 1 auto;
-            width: 100%;
-        }
-
-        /* Adjust avatars grid in header */
-        .card-header>div {
-            flex-direction: column;
-            align-items: flex-start !important;
-            gap: 1rem;
-        }
-
-        .collaborators-avatars {
-            margin-left: 0;
-            margin-top: 0.5rem;
-        }
-    }
-
-    /* Small mobile tweaks */
-    @media (max-width: 600px) {
-
-        .simple-table th,
-        .simple-table td {
-            padding: 0.75rem 0.5rem;
-            font-size: 0.85rem;
-        }
-
-        .btn-icon-small {
-            padding: 6px;
-        }
-    }
-
-    /* Modal Styles */
-    .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(4px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-</style>
+<div id="finalizarModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content surface-card bpms-modal">
+        <div class="bpms-modal__header">
+            <div>
+                <h2 class="text-h3">Finalizar execução</h2>
+                <p class="text-secondary">Confirme a conclusão desta instância.</p>
+            </div>
+            <button type="button" class="btn-icon-small" onclick="closeFinalizarModal()">&times;</button>
+        </div>
+        <div class="bpms-modal__body">
+            <div class="bpms-summary-row"><span>Prazo previsto</span><strong id="modalDeadline">{{ instance.due_date if instance.due_date else 'Não definido' }}</strong></div>
+            <div class="form-group mt-3 mb-3">
+                <label class="form-label">Data de conclusão efetiva</label>
+                <input type="date" id="actualEndDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notas finais / observações</label>
+                <textarea id="finalNotes" class="form-control" rows="3" placeholder="Opcional"></textarea>
+            </div>
+        </div>
+        <div class="bpms-modal__footer">
+            <button type="button" class="btn btn-ghost" onclick="closeFinalizarModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="confirmarFinalizacao(this)">Confirmar conclusão</button>
+        </div>
+    </div>
+</div>
 
 <script>
     const instanceId = "{{ instance.id }}";
     const processId = "{{ instance.process_id }}";
     const companyId = "{{ company.id if company else 0 }}";
-
-    let instanceData = {{ instance_data| tojson | safe }};
+    let instanceData = {{ instance_data|tojson|safe }};
     let collaborators = [];
     let workLogs = [];
     let logs = [];
-    let currentLogId = null; // For editing
-    let state = {
-        routines: [],
-        timer: {
-            isRunning: false,
-            seconds: 0,
-            interval: null
-        }
-    };
+    let currentLogId = null;
 
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', initAuxiliaryPanels);
 
-    async function init() {
-        // Parse collaborators from JSON
+    function initAuxiliaryPanels() {
         try {
             collaborators = instanceData.collaborators_json || [];
-            // If it's a string (old format), parse it
             if (typeof collaborators === 'string') collaborators = JSON.parse(collaborators);
-        } catch (e) {
+        } catch (error) {
             collaborators = [];
         }
 
-        // Parse logs from notes
         try {
             logs = instanceData.notes ? JSON.parse(instanceData.notes) : [];
             if (!Array.isArray(logs)) logs = [];
-        } catch (e) {
+        } catch (error) {
             logs = [];
         }
 
+        document.getElementById('actualEndDate').value = new Date().toISOString().split('T')[0];
         renderLogs();
-        await fetchWorkLogs(); // Fetch logs first
-        renderCollaboratorInputs(); // Render inputs for each collaborator
-        renderCollaborators(); // Render summary based on logs
-        await fetchRoutines();
-        renderChecklist();
+        renderCollaboratorInputs();
+        fetchWorkLogs();
     }
+
+    function toggleModal(modalId, isOpen) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        modal.style.display = isOpen ? 'flex' : 'none';
+    }
+
+    function openHoursModal() { toggleModal('hoursModal', true); }
+    function closeHoursModal() { toggleModal('hoursModal', false); }
+    function openDiaryModal() { toggleModal('diaryModal', true); }
+    function closeDiaryModal() { toggleModal('diaryModal', false); }
+    function closeResourceModal() { toggleModal('resourceContentModal', false); }
+    function showFinalizarModal() { toggleModal('finalizarModal', true); }
+    function closeFinalizarModal() { toggleModal('finalizarModal', false); }
+
+    window.openRuntimeSupportModal = function (title, subtitle, html) {
+        const titleEl = document.getElementById('resourceModalTitle');
+        const subtitleEl = document.getElementById('resourceModalSubtitle');
+        const bodyEl = document.getElementById('resourceModalBody');
+        if (titleEl) titleEl.textContent = title || 'Conteúdo da atividade';
+        if (subtitleEl) subtitleEl.textContent = subtitle || 'Material de apoio da etapa atual.';
+        if (bodyEl) bodyEl.innerHTML = html || '<div class="text-tertiary">Sem conteúdo disponível.</div>';
+        toggleModal('resourceContentModal', true);
+    };
 
     function renderCollaboratorInputs() {
         const container = document.getElementById('collaboratorsInputList');
         if (!container) return;
-
-        let html = '';
         const today = new Date().toISOString().split('T')[0];
 
-        // 1. Predefined Collaborators
-        collaborators.forEach((c, idx) => {
-            // Use ID if available, otherwise index fallback for DOM IDs
-            const uid = c.id || `idx-${idx}`;
-            html += `
-            <div class="log-input-row" data-uid="${uid}" data-emp-id="${c.id || ''}" data-emp-name="${c.name.replace(/'/g, "\\'")}" style="background: var(--surface-secondary); padding: 0.75rem; border-radius: 12px; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; min-width: 150px; flex: 1;">
-                     <div class="avatar-sm">${(c.name || 'U').charAt(0).toUpperCase()}</div>
-                     <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">${c.name}</div>
-                </div>
-                
-                <div style="flex: 0 0 130px;">
-                    <input type="date" class="form-control form-control-sm" id="date-${uid}" value="${today}">
-                </div>
-                
-                <div style="flex: 0 0 80px;">
-                    <input type="text" data-format="hours-decimal" class="form-control form-control-sm" id="hours-${uid}" placeholder="00:00">
-                </div>
-                
-                <div style="flex: 2; min-width: 200px;">
-                    <input type="text" class="form-control form-control-sm" id="desc-${uid}" placeholder="Descrição da atividade...">
-                </div>
-            </div>
-            `;
-        });
-
-        if (collaborators.length > 0) {
-            html += `
-                <div style="text-align: right; margin-top: 0.5rem;">
-                    <button class="btn btn-primary" onclick="saveAllLogs()" id="btnSaveAll" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Salvar Apontamentos
-                    </button>
-                </div>
-             `;
-        } else {
-            html = '<div class="text-tertiary p-3 text-center" style="background: var(--surface-secondary); border-radius: 12px;">Nenhum colaborador definido nesta instância.</div>';
-        }
-
-        container.innerHTML = html;
-    }
-
-    // ... [fetchWorkLogs, renderWorkLogs, renderCollaborators, renderLogs, updateCollabHours, addLogEntry, toggleTimer, updateTimerDisplay, saveHours, fetchRoutines, renderChecklist, editWorkLog, cancelEditLog, saveEditedLog, deleteWorkLog kept as is] ...
-
-    // START REPLACEMENT for saveLogFor
-    async function saveAllLogs() {
-        const rows = document.querySelectorAll('.log-input-row');
-        const promises = [];
-        const btn = document.getElementById('btnSaveAll');
-
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Salvando...`;
-        }
-
-        let hasData = false;
-
-        for (const row of rows) {
-            const uid = row.dataset.uid;
-            const empId = row.dataset.empId;
-            const empName = row.dataset.empName;
-
-            const dateInput = document.getElementById(`date-${uid}`);
-            const hoursInput = document.getElementById(`hours-${uid}`);
-            const descInput = document.getElementById(`desc-${uid}`);
-
-            if (!dateInput || !hoursInput) continue;
-
-            const dateVal = dateInput.value;
-            const hoursVal = window.App32InputFormatters
-                ? window.App32InputFormatters.parseClockToDecimalHours(hoursInput.value)
-                : parseFloat(hoursInput.value);
-            const desc = descInput ? descInput.value : '';
-
-            if (dateVal && hoursVal && !isNaN(hoursVal) && hoursVal > 0) {
-                hasData = true;
-
-                // Show loading state on row inputs
-                hoursInput.disabled = true;
-                if (descInput) descInput.disabled = true;
-
-                // Create a promise for this request
-                const p = fetch(`/api/process-instances/${instanceId}/work-logs`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        work_date: dateVal,
-                        hours_worked: hoursVal,
-                        employee_id: empId || null,
-                        employee_name: empName,
-                        description: desc
-                    })
-                }).then(async res => {
-                    hoursInput.disabled = false;
-                    if (descInput) descInput.disabled = false;
-
-                    if (res.ok) {
-                        // Clear inputs on success
-                        hoursInput.value = '';
-                        if (descInput) descInput.value = '';
-                        return { success: true };
-                    } else {
-                        const err = await res.json();
-                        return { success: false, error: err.error || 'Erro desconhecido', name: empName };
-                    }
-                }).catch(e => {
-                    hoursInput.disabled = false;
-                    if (descInput) descInput.disabled = false;
-                    return { success: false, error: e.toString(), name: empName };
-                });
-
-                promises.push(p);
-            }
-        }
-
-        if (!hasData) {
-            alert('Preencha as horas para pelo menos um colaborador antes de salvar.');
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Salvar Apontamentos`;
-            }
+        if (!collaborators.length) {
+            container.innerHTML = '<div class="text-tertiary p-3 text-center" style="background: var(--surface-secondary); border-radius: 12px;">Nenhum colaborador definido nesta instância.</div>';
             return;
         }
 
-        try {
-            const results = await Promise.all(promises);
-
-            const errors = results.filter(r => !r.success);
-
-            // Refresh table regardless of partial failures
-            await fetchWorkLogs();
-            renderCollaborators();
-
-            if (errors.length > 0) {
-                const msg = errors.map(e => `${e.name}: ${e.error}`).join('\n');
-                alert('Alguns registros falharam e não foram limpos:\n' + msg);
-            } else {
-                // Success feedback
-                const toast = document.createElement('div');
-                toast.textContent = 'Apontamentos salvos com sucesso!';
-                toast.style.cssText = `
-                    position: fixed; bottom: 20px; right: 20px;
-                    background: var(--success); color: white;
-                    padding: 12px 24px; border-radius: 8px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    z-index: 9999; animation: fadeIn 0.3s;
+        container.innerHTML = `
+            ${collaborators.map((collaborator, index) => {
+                const uid = collaborator.id || `idx-${index}`;
+                return `
+                    <div class="bpms-hours-row log-input-row" data-uid="${uid}" data-emp-id="${collaborator.id || ''}" data-emp-name="${(collaborator.name || '').replace(/'/g, "\\'")}">
+                        <div class="bpms-hours-row__collab">
+                            <div class="avatar-sm">${(collaborator.name || 'U').charAt(0).toUpperCase()}</div>
+                            <div>${collaborator.name || 'Colaborador'}</div>
+                        </div>
+                        <input type="date" class="form-control form-control-sm" id="date-${uid}" value="${today}">
+                        <input type="text" data-format="hours-decimal" class="form-control form-control-sm" id="hours-${uid}" placeholder="00:00">
+                        <input type="text" class="form-control form-control-sm" id="desc-${uid}" placeholder="Descrição da atividade...">
+                    </div>
                 `;
-                document.body.appendChild(toast);
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 300);
-                }, 3000);
+            }).join('')}
+            <div class="bpms-hours-row__footer">
+                <button class="btn btn-primary" onclick="saveAllLogs()" id="btnSaveAll">Salvar apontamentos</button>
+            </div>
+        `;
+    }
+
+    async function saveAllLogs() {
+        const rows = document.querySelectorAll('.log-input-row');
+        const btn = document.getElementById('btnSaveAll');
+        const payloads = [];
+
+        rows.forEach((row) => {
+            const uid = row.dataset.uid;
+            const workDate = document.getElementById(`date-${uid}`)?.value;
+            const hoursRaw = document.getElementById(`hours-${uid}`)?.value || '';
+            const hoursWorked = window.App32InputFormatters
+                ? window.App32InputFormatters.parseClockToDecimalHours(hoursRaw)
+                : parseFloat(hoursRaw);
+            const description = document.getElementById(`desc-${uid}`)?.value || '';
+
+            if (workDate && hoursWorked && !Number.isNaN(hoursWorked) && hoursWorked > 0) {
+                payloads.push({
+                    work_date: workDate,
+                    hours_worked: hoursWorked,
+                    employee_id: row.dataset.empId || null,
+                    employee_name: row.dataset.empName || 'Colaborador',
+                    description,
+                });
             }
-        } catch (errGlobal) {
-            console.error(errGlobal);
-            alert('Erro crítico ao processar requisições.');
+        });
+
+        if (!payloads.length) {
+            alert('Preencha as horas para pelo menos um colaborador.');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+        }
+
+        try {
+            const responses = await Promise.all(payloads.map((payload) => fetch(`/api/process-instances/${instanceId}/work-logs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            })));
+
+            const failed = responses.filter((response) => !response.ok);
+            await fetchWorkLogs();
+
+            if (failed.length) {
+                alert('Alguns apontamentos não puderam ser salvos.');
+            } else {
+                renderCollaboratorInputs();
+                alert('Apontamentos salvos com sucesso.');
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao salvar apontamentos.');
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg> Salvar Apontamentos`;
+                btn.textContent = 'Salvar apontamentos';
             }
         }
     }
 
     async function fetchWorkLogs() {
         try {
-            const res = await fetch(`/api/process-instances/${instanceId}/work-logs`);
-            if (res.ok) {
-                workLogs = await res.json();
-                renderWorkLogs();
-            }
-        } catch (e) {
-            console.error('Error fetching work logs:', e);
+            const response = await fetch(`/api/process-instances/${instanceId}/work-logs`);
+            if (!response.ok) return;
+            workLogs = await response.json();
+            renderWorkLogs();
+            renderCollaborators();
+        } catch (error) {
+            console.error('Erro ao buscar horas:', error);
         }
     }
 
-    function formatDateBR(value, fallback = '') {
+    function formatDateBR(value, fallback = '—') {
         if (!value) return fallback;
-        const raw = String(value);
-        const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
-            ? new Date(Number(raw.slice(0, 4)), Number(raw.slice(5, 7)) - 1, Number(raw.slice(8, 10)))
-            : new Date(raw);
-        if (Number.isNaN(date.getTime())) return raw || fallback;
-        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value || fallback);
+        return date.toLocaleDateString('pt-BR');
     }
 
     function renderWorkLogs() {
         const container = document.getElementById('workLogsHistoryTable');
         const emptyState = document.getElementById('logsEmptyState');
-
         if (!container) return;
 
-        if (workLogs.length === 0) {
+        if (!workLogs.length) {
             container.innerHTML = '';
             if (emptyState) emptyState.style.display = 'block';
-        } else {
-            if (emptyState) emptyState.style.display = 'none';
-            container.innerHTML = workLogs.map(log => `
-                <tr>
-                    <td>
-                        <div style="font-weight: 500;">${log.employee_name || 'Usuário'}</div>
-                    </td>
-                    <td>
-                        ${formatDateBR(log.work_date, '-')}
-                    </td>
-                    <td>
-                        <strong>${parseFloat(log.hours_worked).toFixed(1)}h</strong>
-                    </td>
-                    <td>
-                        <div class="text-secondary" style="font-size: 0.9em;">${log.description || '-'}</div>
-                    </td>
-                    <td style="text-align: right;">
-                        <div style="display: inline-flex; gap: 0.5rem;">
-                            <button class="btn-icon-small text-primary" onclick="editWorkLog(${log.id})" title="Editar">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button class="btn-icon-small text-danger" onclick="deleteWorkLog(${log.id})" title="Excluir">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            return;
         }
+
+        if (emptyState) emptyState.style.display = 'none';
+        container.innerHTML = workLogs.map((log) => `
+            <tr>
+                <td><div style="font-weight:600;">${log.employee_name || 'Usuário'}</div></td>
+                <td>${formatDateBR(log.work_date)}</td>
+                <td><strong>${Number(log.hours_worked || 0).toFixed(1)}h</strong></td>
+                <td>${log.description || '-'}</td>
+                <td style="text-align:right;">
+                    <div style="display:inline-flex; gap:0.5rem;">
+                        <button class="btn-icon-small text-primary" onclick="editWorkLog(${log.id})" title="Editar">✏️</button>
+                        <button class="btn-icon-small text-danger" onclick="deleteWorkLog(${log.id})" title="Excluir">🗑️</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
     }
 
     function renderCollaborators() {
         const grid = document.getElementById('collaboratorsGrid');
         if (!grid) return;
 
-        // Calculate totals from workLogs
         const totals = {};
-        workLogs.forEach(log => {
-            const eid = log.employee_id;
-            totals[eid] = (totals[eid] || 0) + (parseFloat(log.hours_worked) || 0);
+        workLogs.forEach((log) => {
+            const employeeId = log.employee_id || log.employee_name || 'geral';
+            totals[employeeId] = (totals[employeeId] || 0) + Number(log.hours_worked || 0);
         });
 
-        let html = '';
-        if (collaborators.length > 0) {
-            collaborators.forEach(c => {
-                const actual = (totals[c.id] || 0) + (parseFloat(c.actual_hours) || 0);
-                // Only show if they have hours? Or always? Always show assigned.
-                html += `
-                    <div class="avatar-sm" title="${c.name || 'User'} (Total: ${actual.toFixed(1)}h)">
-                        ${(c.name || 'U').charAt(0).toUpperCase()}
-                    </div>
-                `;
-            });
-        }
+        const avatars = collaborators.map((collaborator) => {
+            const total = totals[collaborator.id] || 0;
+            return `<div class="avatar-sm" title="${collaborator.name || 'Colaborador'} · ${total.toFixed(1)}h">${(collaborator.name || 'U').charAt(0).toUpperCase()}</div>`;
+        }).join('');
 
-        // Show total for unassigned or general total
-        const allTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-        html += `<span class="badge" style="background:var(--surface-secondary); color:var(--text-secondary); margin-left:0.5rem; border:1px solid var(--border);">Total: ${allTotal.toFixed(1)}h</span>`;
-
-        grid.innerHTML = html;
+        const totalHours = Object.values(totals).reduce((acc, value) => acc + value, 0);
+        grid.innerHTML = `${avatars}<span class="badge" style="background:var(--surface-secondary); color:var(--text-secondary); border:1px solid var(--border);">Total: ${totalHours.toFixed(1)}h</span>`;
     }
 
     function renderLogs() {
         const container = document.getElementById('logsHistory');
-        if (logs.length === 0) {
+        if (!container) return;
+        if (!logs.length) {
             container.innerHTML = '<div class="text-tertiary text-center p-3">Nenhum registro no diário de bordo.</div>';
             return;
         }
-
-        container.innerHTML = logs.map(log => `
+        container.innerHTML = logs.map((log) => `
             <div class="log-item">
                 <div class="log-meta">
                     <strong>${log.author || 'Sistema'}</strong>
-                    <span>${new Date(log.timestamp).toLocaleString()}</span>
+                    <span>${new Date(log.timestamp).toLocaleString('pt-BR')}</span>
                 </div>
-                <div class="log-text">${log.content}</div>
+                <div class="log-text">${log.content || ''}</div>
             </div>
         `).join('');
     }
 
-    async function updateCollabHours(idx, value) {
-        collaborators[idx].actual_hours = parseFloat(value) || 0;
-
-        // Calculate total
-        const total = collaborators.reduce((acc, c) => acc + (parseFloat(c.actual_hours) || 0), 0);
-
-        try {
-            const res = await fetch(`/api/process-instances/${instanceId}?company_id=${companyId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    collaborators_json: collaborators,
-                    actual_hours: total
-                })
-            });
-
-            if (res.ok) {
-                // Update local sidebar if needed
-                if (document.getElementById('accumulatedHours')) {
-                    document.getElementById('accumulatedHours').textContent = total.toFixed(2);
-                }
-                // Show subtle feedback
-                const input = document.getElementById(`hours-input-${idx}`);
-                input.style.borderColor = 'var(--success)';
-                setTimeout(() => input.style.borderColor = '', 1000);
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Erro ao salvar horas.');
-        }
-    }
-
-    async function addLogEntry() {
-        const text = document.getElementById('logEntryText').value.trim();
+    async function addLogEntry(forcedText = null) {
+        const input = document.getElementById('logEntryText');
+        const text = (forcedText || input?.value || '').trim();
         if (!text) return;
 
-        const newLog = {
+        logs.unshift({
             timestamp: new Date().toISOString(),
             author: "{{ current_user.name or current_user.username or 'Usuário' }}",
             content: text
-        };
-
-        logs.unshift(newLog);
+        });
 
         try {
-            const res = await fetch(`/api/process-instances/${instanceId}?company_id=${companyId}`, {
+            const response = await fetch(`/api/process-instances/${instanceId}?company_id=${companyId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ notes: JSON.stringify(logs) })
             });
-
-            if (res.ok) {
-                document.getElementById('logEntryText').value = '';
-                renderLogs();
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Erro ao registrar log.');
+            if (!response.ok) throw new Error('Falha ao salvar diário');
+            if (input && !forcedText) input.value = '';
+            renderLogs();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao registrar diário de bordo.');
         }
     }
-
-    // Timer & Sidebar Hours Logic
-    function toggleTimer() {
-        const btn = document.getElementById('btnTimer');
-        if (state.timer.isRunning) {
-            clearInterval(state.timer.interval);
-            state.timer.isRunning = false;
-            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Iniciar Cronômetro`;
-            btn.classList.replace('btn-danger', 'btn-primary');
-            const additionalHours = state.timer.seconds / 3600;
-            const currentTotal = parseFloat(document.getElementById('manualHours').value || 0);
-            saveHours(currentTotal + additionalHours);
-            state.timer.seconds = 0;
-            updateTimerDisplay();
-        } else {
-            state.timer.isRunning = true;
-            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg> Pausar Cronômetro`;
-            btn.className = "btn btn-danger btn-sm w-100";
-            state.timer.interval = setInterval(() => {
-                state.timer.seconds++;
-                updateTimerDisplay();
-            }, 1000);
-        }
-    }
-
-    function updateTimerDisplay() {
-        const h = Math.floor(state.timer.seconds / 3600);
-        const m = Math.floor((state.timer.seconds % 3600) / 60);
-        const s = state.timer.seconds % 60;
-        document.getElementById('timerDisplay').textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-
-    async function saveHours(forcedValue = null) {
-        const value = forcedValue !== null ? forcedValue : parseFloat(document.getElementById('manualHours').value || 0);
-        try {
-            const res = await fetch(`/api/process-instances/${instanceId}?company_id=${companyId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ actual_hours: value })
-            });
-            if (res.ok) {
-                document.getElementById('manualHours').value = value.toFixed(2);
-                document.getElementById('accumulatedHours').textContent = value.toFixed(2);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    async function fetchRoutines() {
-        try {
-            const res = await fetch(`/api/process-routines?process_id=${processId}`);
-            state.routines = await res.json();
-        } catch (err) {
-            console.error('Erro ao carregar roteiros:', err);
-        }
-    }
-
-    function renderChecklist() {
-        const container = document.getElementById('checklistContainer');
-        if (state.routines.length === 0) {
-            container.innerHTML = '<p class="text-tertiary">Este processo não possui roteiros definidos.</p>';
-            return;
-        }
-
-        container.innerHTML = state.routines.map(routine => `
-            <div class="routine-block">
-                <div class="routine-header">
-                    <span class="badge" style="background: var(--surface-tertiary); color: var(--text-secondary);">${routine.code || 'POP'}</span>
-                    <h3 class="text-h3" style="margin:0;">${routine.name}</h3>
-                </div>
-                <div class="steps-list">
-                    ${(routine.steps || []).map(step => `
-                        <div class="step-item" onclick="toggleStep(this)">
-                            <div class="step-checkbox">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4">
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                </svg>
-                            </div>
-                            <div class="step-content">
-                                <div class="step-title">${step.name}</div>
-                                <div class="step-desc">${step.description || ''}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `).join('');
-    }
-
 
     function editWorkLog(id) {
-        const log = workLogs.find(l => l.id === id);
+        const log = workLogs.find((item) => item.id === id);
         if (!log) return;
-
         currentLogId = id;
-
-        // Show edit form, hide others if needed or scroll
-        const form = document.getElementById('editLogForm');
-        form.style.display = 'block';
-
+        document.getElementById('editLogForm').style.display = 'block';
         document.getElementById('editLogId').value = log.id;
-        document.getElementById('editLogEmployeeId').value = log.employee_id;
+        document.getElementById('editLogEmployeeId').value = log.employee_id || '';
         document.getElementById('editLogEmployeeName').value = log.employee_name || 'Desconhecido';
-        document.getElementById('editLogDate').value = log.work_date.split('T')[0];
+        document.getElementById('editLogDate').value = (log.work_date || '').split('T')[0];
         document.getElementById('editLogHours').value = window.App32InputFormatters
             ? window.App32InputFormatters.formatValueByType('hours-decimal', log.hours_worked)
             : log.hours_worked;
         document.getElementById('editLogDesc').value = log.description || '';
-
-        form.scrollIntoView({ behavior: 'smooth' });
     }
 
     function cancelEditLog() {
         currentLogId = null;
         document.getElementById('editLogForm').style.display = 'none';
-        document.getElementById('editLogId').value = '';
     }
 
     async function saveEditedLog() {
         if (!currentLogId) return;
-
-        const dateVal = document.getElementById('editLogDate').value;
-        const hoursVal = window.App32InputFormatters
+        const hoursWorked = window.App32InputFormatters
             ? window.App32InputFormatters.parseClockToDecimalHours(document.getElementById('editLogHours').value)
             : parseFloat(document.getElementById('editLogHours').value);
-        const desc = document.getElementById('editLogDesc').value;
-        const empId = document.getElementById('editLogEmployeeId').value;
-        const empName = document.getElementById('editLogEmployeeName').value;
-
-        if (!dateVal || isNaN(hoursVal)) {
-            alert('Preencha Data e Horas corretamente.');
-            return;
-        }
+        const payload = {
+            work_date: document.getElementById('editLogDate').value,
+            hours_worked: hoursWorked,
+            description: document.getElementById('editLogDesc').value,
+            employee_id: document.getElementById('editLogEmployeeId').value || null,
+            employee_name: document.getElementById('editLogEmployeeName').value || 'Colaborador'
+        };
 
         try {
-            const res = await fetch(`/api/activity-work-logs/${currentLogId}`, {
+            const response = await fetch(`/api/activity-work-logs/${currentLogId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    work_date: dateVal,
-                    hours_worked: hoursVal,
-                    description: desc,
-                    employee_id: empId,
-                    employee_name: empName
-                })
+                body: JSON.stringify(payload)
             });
-
-            if (res.ok) {
-                await fetchWorkLogs();
-                renderCollaborators();
-                cancelEditLog();
-            } else {
-                alert('Erro ao salvar edição.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Erro de conexão.');
+            if (!response.ok) throw new Error('Falha ao salvar edição');
+            await fetchWorkLogs();
+            cancelEditLog();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao salvar edição.');
         }
     }
 
     async function deleteWorkLog(id) {
         if (!confirm('Tem certeza que deseja excluir este registro?')) return;
-
         try {
-            const res = await fetch(`/api/activity-work-logs/${id}`, {
-                method: 'DELETE'
-            });
-
-            if (res.ok) {
-                await fetchWorkLogs();
-                renderCollaborators();
-                if (currentLogId === id) cancelEditLog();
-            } else {
-                alert('Erro ao excluir.');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Erro de conexão.');
+            const response = await fetch(`/api/activity-work-logs/${id}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Falha ao excluir');
+            await fetchWorkLogs();
+            if (currentLogId === id) cancelEditLog();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao excluir lançamento.');
         }
     }
 
-    async function saveLogFor(uid, name, empId) {
-        const dateInput = document.getElementById(`date-${uid}`);
-        const hoursInput = document.getElementById(`hours-${uid}`);
-        const descInput = document.getElementById(`desc-${uid}`);
-
-        const dateVal = dateInput.value;
-        const hoursVal = window.App32InputFormatters
-            ? window.App32InputFormatters.parseClockToDecimalHours(hoursInput.value)
-            : parseFloat(hoursInput.value);
-        const desc = descInput.value;
-
-        if (!dateVal || !hoursVal || isNaN(hoursVal)) {
-            alert('Por favor, informe Data e Horas.');
+    async function confirmarFinalizacao(button) {
+        const actualEndDate = document.getElementById('actualEndDate').value;
+        const finalNotes = document.getElementById('finalNotes').value.trim();
+        if (!actualEndDate) {
+            alert('Informe a data de conclusão.');
             return;
         }
 
-        // If empId is missing (e.g. ad-hoc), we might need to handle it.
-        // But for predefined collabs, empId should be there.
-        // If name is passed, use it.
-
+        button.disabled = true;
+        button.textContent = 'Processando...';
         try {
-            const btn = document.querySelector(`button[onclick*="'${uid}'"]`);
-            if (btn) btn.disabled = true;
-
-            const payload = {
-                work_date: dateVal,
-                hours_worked: hoursVal,
-                employee_id: empId || null,
-                employee_name: name,
-                description: desc
-            };
-
-            const res = await fetch(`/api/process-instances/${instanceId}/work-logs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                await fetchWorkLogs();
-                renderCollaborators();
-
-                // Clear inputs
-                hoursInput.value = '';
-                descInput.value = '';
-
-                // Feedback
-                if (btn) {
-                    const originalText = btn.textContent;
-                    btn.textContent = 'Salvo!';
-                    setTimeout(() => {
-                        btn.disabled = false;
-                        btn.textContent = originalText;
-                    }, 1500);
-                }
-            } else {
-                const err = await res.json();
-                alert('Erro: ' + (err.error || 'Erro desconhecido'));
-                if (btn) btn.disabled = false;
+            if (finalNotes) {
+                await addLogEntry(`${finalNotes} (Nota de finalização)`);
             }
-        } catch (e) {
-            console.error(e);
-            alert('Erro de conexão.');
-            if (btn) btn.disabled = false;
-        }
-    }
-
-
-    function toggleStep(el) {
-        el.classList.toggle('checked');
-    }
-
-    // Modal Control
-    function showFinalizarModal() {
-        document.getElementById('finalizarModal').style.display = 'flex';
-        // Set default date if empty
-        if (!document.getElementById('actualEndDate').value) {
-            document.getElementById('actualEndDate').value = new Date().toISOString().split('T')[0];
-        }
-    }
-
-    function closeFinalizarModal() {
-        document.getElementById('finalizarModal').style.display = 'none';
-    }
-
-    async function confirmarFinalizacao(btn) {
-        const endDate = document.getElementById('actualEndDate').value;
-        const notes = document.getElementById('finalNotes').value;
-
-        if (!endDate) return alert('Informe a data de conclusão.');
-
-        btn.disabled = true;
-        btn.textContent = 'Processando...';
-
-        try {
-            // First, add the final note to the log
-            if (notes.trim()) {
-                await addLogEntry(notes.trim() + " (Nota de finalização)");
-            }
-
-            // Update status and end date
-            const res = await fetch(`/api/process-instances/${instanceId}?company_id=${companyId}`, {
+            const response = await fetch(`/api/process-instances/${instanceId}?company_id=${companyId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     status: 'completed',
-                    actual_end_date: endDate,
+                    actual_end_date: actualEndDate,
                     completed_at: new Date().toISOString()
                 })
             });
-
-            if (res.ok) {
-                alert('Processo finalizado com sucesso!');
-                location.reload();
-            } else {
-                alert('Erro ao finalizar processo.');
-                btn.disabled = false;
-                btn.textContent = 'Confirmar Conclusão';
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Erro de conexão ao finalizar.');
-            btn.disabled = false;
-            btn.textContent = 'Confirmar Conclusão';
+            if (!response.ok) throw new Error('Falha ao finalizar');
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao finalizar execução.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Confirmar conclusão';
         }
     }
-
 </script>
 <script src="/static/vendor/bpmn-js/18.6.3/dist/bpmn-modeler.production.min.js"></script>
 <script src="/static/js/process_instance_runtime.js"></script>
-<script src="{{ url_for('static', filename='js/work-calendar-source-panel.js') }}"></script>
 {% endblock %}
 
-{% block sidebar_right %}
-{% endblock %}
+{% block sidebar_right %}{% endblock %}

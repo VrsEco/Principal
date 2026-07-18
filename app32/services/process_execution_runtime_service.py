@@ -4,11 +4,25 @@ from datetime import datetime
 from typing import Any
 from xml.etree import ElementTree as ET
 
-from models import ProcessBpmnDiagram, ProcessInstance, ProcessInstanceExecution, ProcessRoutine, db
+from models import (
+    Indicator,
+    IndicatorData,
+    IndicatorEntityLink,
+    IndicatorGoal,
+    ProcessBpmnDiagram,
+    ProcessInstance,
+    ProcessInstanceExecution,
+    ProcessRoutine,
+    ProcessStep,
+    db,
+)
+from services.process_bpmn_graph_service import parse_bpmn_graph
+from services.process_book_service import _resolve_asset_url
 from services.process_ai_execution_service import normalize_ai_contract_config, summarize_ai_contract_config
 from services.process_execution_contract_service import resolve_activity_execution_contract
 from services.process_executor_factory_service import build_executor_descriptor
 from services.process_execution_mode_service import normalize_execution_mode, summarize_execution_mode_config
+from utils.indicator_filters import build_indicator_process_filter
 
 
 INSTANCE_ALLOWED_STATUSES = {
@@ -194,6 +208,7 @@ def build_runtime_payload(instance: ProcessInstance) -> dict[str, Any]:
         },
         "overlay": build_runtime_overlay(instance),
         "current_activity": current_activity,
+        "process_indicators": _build_process_indicators_payload(instance),
         "timeline": build_instance_timeline(instance),
     }
 
@@ -301,7 +316,12 @@ def build_current_activity_payload(
         process_routine_id=getattr(routine, "id", None),
     )
     navigation = _build_diagram_navigation(diagram.bpmn_xml if diagram else None, current_element_id)
+    activity_graph = _build_current_activity_graph_context(diagram.bpmn_xml if diagram else None, current_element_id)
     action = _build_current_activity_action(instance, contract, current_execution, current_element_id)
+    support_materials = _build_current_activity_support_materials(
+        routine=routine,
+        contract=contract,
+    )
 
     return {
         "element_id": current_element_id,
@@ -317,6 +337,8 @@ def build_current_activity_payload(
             or action.get("element_type")
         ),
         "status": getattr(current_execution, "status", None) or getattr(instance, "status", None) or "pending",
+        "lane_name": activity_graph.get("lane_name"),
+        "lane_id": activity_graph.get("lane_id"),
         "execution": current_execution.to_dict() if current_execution else None,
         "routine": {
             "id": routine.id,
@@ -324,10 +346,12 @@ def build_current_activity_payload(
             "description": routine.description,
             "bpmn_element_id": routine.bpmn_element_id,
             "bpmn_element_type": routine.bpmn_element_type,
+            "bpmn_data_objects": routine.bpmn_data_objects or [],
         } if routine else None,
         "contract": contract.to_dict() if contract else None,
         "action": action,
         "next_candidates": navigation.get("next_candidates", []),
+        "support_materials": support_materials,
     }
 
 
@@ -553,6 +577,194 @@ def _build_diagram_navigation(bpmn_xml: str | None, current_element_id: str | No
         candidates.append(candidate)
 
     return {"next_candidates": candidates}
+
+
+def _build_current_activity_graph_context(
+    bpmn_xml: str | None,
+    current_element_id: str | None,
+) -> dict[str, Any]:
+    if not bpmn_xml or not current_element_id:
+        return {}
+    graph = parse_bpmn_graph(bpmn_xml)
+    node = (graph.get("node_index") or {}).get(current_element_id) or {}
+    return {
+        "lane_id": node.get("lane_id"),
+        "lane_name": node.get("lane_name"),
+    }
+
+
+def _build_current_activity_support_materials(
+    *,
+    routine: ProcessRoutine | None,
+    contract,
+) -> dict[str, Any]:
+    entries: list[dict[str, Any]] = []
+    if routine:
+        steps = (
+            ProcessStep.query
+            .filter(ProcessStep.routine_id == routine.id)
+            .order_by(ProcessStep.order_index.asc(), ProcessStep.id.asc())
+            .all()
+        )
+        for step in steps:
+            entries.append(
+                {
+                    "id": step.id,
+                    "name": step.name,
+                    "description": step.description,
+                    "expected_result": step.expected_result,
+                    "layout": step.layout or "single",
+                    "image_url": _resolve_asset_url(step.image_path, root_url=""),
+                    "video_url": _resolve_asset_url(getattr(step, "video_path", None), root_url=""),
+                    "video_duration_seconds": getattr(step, "video_duration_seconds", None),
+                    "video_narration": getattr(step, "video_narration", None),
+                    "text_content": " ".join(
+                        part for part in [
+                            str(step.description or "").strip(),
+                            f"Resultado esperado: {step.expected_result}" if step.expected_result else None,
+                        ] if part
+                    ).strip(),
+                }
+            )
+
+    video_entries = [entry for entry in entries if entry.get("video_url")]
+    ai_config = normalize_ai_contract_config(
+        getattr(contract, "ai_config_json", None),
+        execution_mode=getattr(contract, "execution_mode", None),
+    )
+    ai_summary = summarize_ai_contract_config(ai_config) if ai_config else {}
+    data_objects = list(getattr(routine, "bpmn_data_objects", None) or [])
+    ai_sections = _build_ai_spec_sections(ai_summary=ai_summary, data_objects=data_objects)
+
+    return {
+        "pop": {
+            "available": bool(routine or entries),
+            "routine_id": getattr(routine, "id", None),
+            "code": getattr(routine, "code", None),
+            "name": getattr(routine, "name", None),
+            "description": getattr(routine, "description", None),
+            "entries": entries,
+        },
+        "video": {
+            "available": bool(video_entries),
+            "entries": video_entries,
+        },
+        "spec_ai": {
+            "available": bool(ai_sections),
+            "summary": ai_summary,
+            "sections": ai_sections,
+        },
+        "quick_steps": [
+            {
+                "title": entry.get("name") or f"Passo {index + 1}",
+                "description": entry.get("description") or entry.get("expected_result") or "",
+            }
+            for index, entry in enumerate(entries[:5])
+        ],
+    }
+
+
+def _build_ai_spec_sections(*, ai_summary: dict[str, Any], data_objects: list[Any]) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+
+    prompt_parts = []
+    for key in ("instruction", "prompt", "system_prompt", "task_prompt"):
+        value = ai_summary.get(key)
+        if value:
+            prompt_parts.append(str(value).strip())
+    if prompt_parts:
+        sections.append({
+            "label": "Instrução principal",
+            "content": "\n\n".join(part for part in prompt_parts if part),
+        })
+
+    if ai_summary.get("provider") or ai_summary.get("model"):
+        sections.append({
+            "label": "Configuração",
+            "content": " · ".join(
+                part for part in [
+                    f"Provider: {ai_summary.get('provider')}" if ai_summary.get("provider") else None,
+                    f"Modelo: {ai_summary.get('model')}" if ai_summary.get("model") else None,
+                    f"Temperatura: {ai_summary.get('temperature')}" if ai_summary.get("temperature") not in (None, "") else None,
+                ] if part
+            ),
+        })
+
+    for item in data_objects:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or item.get("name") or item.get("type") or "Objeto BPMN").strip()
+        content = item.get("content") or item.get("description") or item.get("instruction") or item.get("value")
+        if not content:
+            continue
+        sections.append({
+            "label": label,
+            "content": str(content).strip(),
+        })
+
+    return sections
+
+
+def _build_process_indicators_payload(instance: ProcessInstance) -> list[dict[str, Any]]:
+    query = (
+        Indicator.query
+        .filter(Indicator.company_id == instance.company_id, Indicator.is_active.is_(True))
+        .filter(build_indicator_process_filter(instance.process_id))
+        .order_by(Indicator.name.asc(), Indicator.id.asc())
+    )
+    indicators = query.limit(6).all()
+    payload: list[dict[str, Any]] = []
+    for indicator in indicators:
+        active_goal = (
+            IndicatorGoal.query
+            .filter_by(indicator_id=indicator.id, company_id=instance.company_id, status="active")
+            .order_by(IndicatorGoal.goal_date.desc(), IndicatorGoal.id.desc())
+            .first()
+        )
+        last_data = (
+            IndicatorData.query
+            .filter_by(indicator_id=indicator.id, company_id=instance.company_id)
+            .order_by(IndicatorData.measured_date.desc(), IndicatorData.id.desc())
+            .first()
+        )
+        current_value = float(last_data.measured_value) if last_data and last_data.measured_value is not None else None
+        goal_value = float(active_goal.goal_value) if active_goal and active_goal.goal_value is not None else None
+        performance = _compute_indicator_performance(
+            polarity=str(getattr(indicator, "polarity", "positive") or "positive"),
+            current_value=current_value,
+            goal_value=goal_value,
+        )
+        payload.append({
+            "id": indicator.id,
+            "name": indicator.name,
+            "code": indicator.code,
+            "unit": indicator.unit or "",
+            "current_value": current_value,
+            "goal_value": goal_value,
+            "performance": performance,
+            "farol": _performance_to_farol(performance),
+            "goal_date": active_goal.goal_date.isoformat() if getattr(active_goal, "goal_date", None) else None,
+            "measured_date": last_data.measured_date.isoformat() if getattr(last_data, "measured_date", None) else None,
+        })
+    return payload
+
+
+def _compute_indicator_performance(*, polarity: str, current_value: float | None, goal_value: float | None) -> float | None:
+    if current_value is None or goal_value in (None, 0):
+        return None
+    if str(polarity or "positive").lower() == "negative":
+        return round((goal_value / current_value) * 100, 1) if current_value > 0 else 100.0
+    return round((current_value / goal_value) * 100, 1)
+
+
+def _performance_to_farol(performance: float | None) -> str:
+    if performance is None:
+        return "neutral"
+    if performance >= 100:
+        return "green"
+    if performance >= 85:
+        return "yellow"
+    return "red"
 
 
 def _strip_namespace(tag_name: str) -> str:
