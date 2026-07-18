@@ -451,8 +451,10 @@ def test_policy_fast_mcp_filters_real_tools_list_per_request(monkeypatch):
         return
     monkeypatch.setattr(
         registry,
-        "iter_surface_tool_names",
-        lambda surface: ["consultive_get_front_context"],
+        "_get_surface_manifest_in_app_context",
+        lambda surface, **kwargs: {
+            "tools": [{"name": "consultive_get_front_context"}],
+        },
     )
     mcp = registry._build_policy_fast_mcp("Policy test", "user")
 
@@ -469,3 +471,29 @@ def test_policy_fast_mcp_filters_real_tools_list_per_request(monkeypatch):
 
     assert "consultive_get_front_context" in names
     assert "consultive_register_assisted_analysis" not in names
+
+
+def test_list_user_capabilities_uses_tenant_aware_manifest_loader(monkeypatch):
+    fake_catalog = _FakeCatalog()
+    monkeypatch.setattr(registry, "catalog", fake_catalog)
+    expected = {
+        "tools": [{"name": "consultive_get_front_context"}],
+        "total": 1,
+    }
+    calls = []
+
+    def load_manifest(surface, **kwargs):
+        calls.append((surface, kwargs))
+        return expected
+
+    monkeypatch.setattr(registry, "_get_surface_manifest_in_app_context", load_manifest)
+    mcp = _FakeMCP()
+    registry.register_user_mcp_tools(mcp, include_shared_registrars=False)
+
+    payload = mcp.registered["list_user_app32_capabilities"]["callable"](
+        domain="consultive",
+        include_tools=True,
+    )
+
+    assert payload == expected
+    assert calls == [("user", {"domain": "consultive", "include_tools": True})]

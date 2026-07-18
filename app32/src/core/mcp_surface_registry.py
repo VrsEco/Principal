@@ -98,6 +98,25 @@ def iter_surface_tool_names(surface: McpSurface | str) -> list[str]:
     return [tool["name"] for tool in manifest.get("tools", [])]
 
 
+def _get_surface_manifest_in_app_context(
+    surface: McpSurface | str,
+    *,
+    domain: str | Sequence[str] | None = None,
+    include_tools: bool = True,
+) -> dict[str, Any]:
+    """Avalia manifesto e policy com o mesmo contexto Flask/tenant do runtime."""
+    from flask import has_app_context
+
+    if has_app_context():
+        return get_surface_manifest(surface, domain=domain, include_tools=include_tools)
+
+    from app import create_app
+
+    app = create_app()
+    with app.app_context():
+        return get_surface_manifest(surface, domain=domain, include_tools=include_tools)
+
+
 def _build_policy_fast_mcp(name: str, surface: McpSurface | str) -> Any:
     """Cria servidor cujo tools/list reflete a policy efetiva da requisição."""
     if FastMCP is None:  # pragma: no cover
@@ -109,11 +128,11 @@ def _build_policy_fast_mcp(name: str, surface: McpSurface | str) -> Any:
     class _PolicyFastMCP(FastMCP):
         async def list_tools(self):
             tools = await super().list_tools()
-            from app import create_app
-
-            app = create_app()
-            with app.app_context():
-                allowed_names = set(iter_surface_tool_names(normalized_surface))
+            manifest = _get_surface_manifest_in_app_context(
+                normalized_surface,
+                include_tools=True,
+            )
+            allowed_names = {tool["name"] for tool in manifest.get("tools", [])}
             allowed_names.add(f"list_{normalized_surface}_app32_capabilities")
             return [tool for tool in tools if tool.name in allowed_names]
 
@@ -233,7 +252,12 @@ def register_mcp_surface_tools(
     ) -> dict[str, Any]:
         """Manifesto consultável por agentes para descoberta de capacidades."""
 
-        return get_surface_manifest(
+        manifest_loader = (
+            _get_surface_manifest_in_app_context
+            if normalized_surface == "user"
+            else get_surface_manifest
+        )
+        return manifest_loader(
             normalized_surface,
             domain=domain,
             include_tools=include_tools,
