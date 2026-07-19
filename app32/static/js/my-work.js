@@ -2070,12 +2070,12 @@ function createActivityElement(activity) {
 
   const actionButtons = isProcess
     ? `
-          <button class="action-btn action-btn--add-hours" title="Adicionar horas e ver informações" data-action="open-info" ${btnDisabledAttr} style="${btnDisabledStyle}">
+        <button class="action-btn action-btn--add-hours" title="Abrir execução" data-action="open-info" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            + Horas / Info
+          Execução
           </button>
           <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2092,12 +2092,12 @@ function createActivityElement(activity) {
             </svg>
             Editar
           </button>
-          <button class="action-btn action-btn--add-hours" title="Adicionar horas e ver informações" data-action="open-info-project" ${btnDisabledAttr} style="${btnDisabledStyle}">
+        <button class="action-btn action-btn--add-hours" title="Abrir execução" data-action="open-info-project" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            + Horas/Info
+          Execução
           </button>
           <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

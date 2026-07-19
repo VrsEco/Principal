@@ -2070,12 +2070,12 @@ function createActivityElement(activity) {
 
   const actionButtons = isProcess
     ? `
-          <button class="action-btn action-btn--add-hours" title="Adicionar horas e ver informações" data-action="open-info" ${btnDisabledAttr} style="${btnDisabledStyle}">
+        <button class="action-btn action-btn--add-hours" title="Abrir execução" data-action="open-info" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            + Horas / Info
+          Execução
           </button>
           <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2092,12 +2092,12 @@ function createActivityElement(activity) {
             </svg>
             Editar
           </button>
-          <button class="action-btn action-btn--add-hours" title="Adicionar horas e ver informações" data-action="open-info-project" ${btnDisabledAttr} style="${btnDisabledStyle}">
+        <button class="action-btn action-btn--add-hours" title="Abrir execução" data-action="open-info-project" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"></circle>
               <polyline points="12 6 12 12 16 14"></polyline>
             </svg>
-            + Horas/Info
+          Execução
           </button>
           <button class="action-btn action-btn--complete" title="Finalizar" data-action="complete" ${btnDisabledAttr} style="${btnDisabledStyle}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -4025,38 +4025,24 @@ function buildReportFiltersPayload() {
     filters.executor_ids = executorCtx.selectedIds;
   }
 
-  // Project IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela.
-  // A tela usa o diretório global para decidir "nenhum projeto/processo";
-  // as opções visíveis podem ficar vazias por cache/empresa. Preserve o modo none.
-  const projectsDirectoryCount = state.projectsDirectory?.length || 0;
+  // Project IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (projectsDirectoryCount > 0 && state.selectedProjectIds.length === 0) {
-    filters.project_selection = SELECTION_MODE_NONE;
-  } else if (projectCtx.availableCount > 0) {
-    if (projectCtx.selectedIds.length === 0) {
-      filters.project_selection = SELECTION_MODE_NONE;
-    } else if (projectCtx.selectedIds.length < projectCtx.availableCount) {
-      filters.project_selection = 'partial';
-      filters.project_ids = projectCtx.selectedIds;
-    } else {
-      filters.project_selection = 'all';
-    }
+  if (
+    projectCtx.availableCount > 0 &&
+    projectCtx.selectedIds.length > 0 &&
+    projectCtx.selectedIds.length < projectCtx.availableCount
+  ) {
+    filters.project_ids = projectCtx.selectedIds;
   }
 
-  // Process IDs - enviar sempre o modo explícito para o relatório espelhar exatamente a tela.
-  const processesDirectoryCount = state.processesDirectory?.length || 0;
+  // Process IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (processesDirectoryCount > 0 && state.selectedProcessIds.length === 0) {
-    filters.process_selection = SELECTION_MODE_NONE;
-  } else if (processCtx.availableCount > 0) {
-    if (processCtx.selectedIds.length === 0) {
-      filters.process_selection = SELECTION_MODE_NONE;
-    } else if (processCtx.selectedIds.length < processCtx.availableCount) {
-      filters.process_selection = 'partial';
-      filters.process_ids = processCtx.selectedIds;
-    } else {
-      filters.process_selection = 'all';
-    }
+  if (
+    processCtx.availableCount > 0 &&
+    processCtx.selectedIds.length > 0 &&
+    processCtx.selectedIds.length < processCtx.availableCount
+  ) {
+    filters.process_ids = processCtx.selectedIds;
   }
 
   // Process Owner IDs - incluir somente quando parcial no contexto atual
