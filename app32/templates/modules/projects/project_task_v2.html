@@ -86,35 +86,16 @@
                     <div id="logsHistory" class="logs-history-list compact-scroll compact-scroll--mini"></div>
                 </div>
 
-                <div class="surface-card section-card section-card--calendar compact-card compact-mini-card"
-                    data-calendar-source-panel
-                    data-company-id="{{ company.id if company else 0 }}"
-                    data-employee-id="{{ task.employee_id or 0 }}"
-                    data-source-type="project_task"
-                    data-source-id="{{ task.id }}">
-                    <div class="card-header compact-card__header compact-card__header--mini">
-                        <h2 class="text-h3">Programação na Rotina</h2>
+                <div class="surface-card section-card section-card--postponements due-date-change-card compact-card compact-mini-card">
+                    <div class="card-header compact-card__header compact-card__header--mini compact-card__header--split">
+                        <h2 class="text-h3">Prazos e adiamentos</h2>
+                        <span class="compact-counter-badge"><span id="postponementCountStat">{{ postponement_count }}</span> histórico</span>
                     </div>
-                    <form data-calendar-source-form class="compact-inline-form compact-inline-form--calendar">
-                        <input data-calendar-source-title type="hidden" value="Executar {{ task.code or ('J.%s' % task.id) }} - {{ task.what }}" />
-                        <input data-calendar-source-date type="text" class="form-control form-control-sm compact-date-field compact-date-text-field" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off" />
-                        <input data-calendar-source-start type="time" class="form-control form-control-sm compact-time-field" />
-                        <input data-calendar-source-end type="time" class="form-control form-control-sm compact-time-field" />
-                        <select data-calendar-source-status class="form-control form-control-sm">
-                            <option value="planned" selected>Planejado</option>
-                            <option value="confirmed">Confirmado</option>
-                            <option value="in_progress">Em execução</option>
-                        </select>
-                        <select data-calendar-source-priority class="form-control form-control-sm">
-                            <option value="low">Baixa</option>
-                            <option value="normal" selected>Normal</option>
-                            <option value="high">Alta</option>
-                            <option value="urgent">Urgente</option>
-                        </select>
-                        <button class="btn btn-primary btn-sm" type="submit">Programar</button>
-                        <input data-calendar-source-description class="form-control form-control-sm compact-inline-form__full" placeholder="Observação da programação" />
-                    </form>
-                    <div data-calendar-source-list class="dependency-list compact-scroll compact-scroll--mini"></div>
+                    <div id="dueDateChangeActions" class="due-date-change-actions project-task-side-actions"></div>
+                    <div id="dueDateChangePendingPanel" style="display: none; margin: 0.5rem 0;"></div>
+                    <div id="dueDateChangeHistory" class="logs-history-list due-date-change-history compact-scroll compact-scroll--mini">
+                        <div class="text-tertiary text-center p-2">Carregando histórico de adiamentos...</div>
+                    </div>
                 </div>
 
                 <div class="surface-card section-card section-card--dependencies compact-card compact-mini-card">
@@ -206,16 +187,35 @@
                 <div id="logsEmptyState" class="text-center py-2 text-tertiary" style="display: none;">Nenhum lançamento registrado.</div>
             </div>
 
-            <div class="surface-card section-card section-card--postponements due-date-change-card compact-card">
-                <div class="card-header compact-card__header compact-card__header--mini compact-card__header--split">
-                    <h2 class="text-h3">Prazos e adiamentos</h2>
-                    <span class="compact-counter-badge"><span id="postponementCountStat">{{ postponement_count }}</span> histórico</span>
+            <div class="surface-card section-card section-card--calendar compact-card"
+                data-calendar-source-panel
+                data-company-id="{{ company.id if company else 0 }}"
+                data-employee-id="{{ task.employee_id or 0 }}"
+                data-source-type="project_task"
+                data-source-id="{{ task.id }}">
+                <div class="card-header compact-card__header compact-card__header--mini">
+                    <h2 class="text-h3">Programação na Rotina</h2>
                 </div>
-                <div id="dueDateChangeActions" class="due-date-change-actions project-task-side-actions"></div>
-                <div id="dueDateChangePendingPanel" style="display: none; margin: 0.5rem 0;"></div>
-                <div id="dueDateChangeHistory" class="logs-history-list due-date-change-history compact-scroll compact-scroll--history">
-                    <div class="text-tertiary text-center p-2">Carregando histórico de adiamentos...</div>
-                </div>
+                <form data-calendar-source-form class="compact-inline-form compact-inline-form--calendar">
+                    <input data-calendar-source-title type="hidden" value="Executar {{ task.code or ('J.%s' % task.id) }} - {{ task.what }}" />
+                    <input data-calendar-source-date type="text" class="form-control form-control-sm compact-date-field compact-date-text-field" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off" />
+                    <input data-calendar-source-start type="time" class="form-control form-control-sm compact-time-field" />
+                    <input data-calendar-source-end type="time" class="form-control form-control-sm compact-time-field" />
+                    <select data-calendar-source-status class="form-control form-control-sm">
+                        <option value="planned" selected>Planejado</option>
+                        <option value="confirmed">Confirmado</option>
+                        <option value="in_progress">Em execução</option>
+                    </select>
+                    <select data-calendar-source-priority class="form-control form-control-sm">
+                        <option value="low">Baixa</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="high">Alta</option>
+                        <option value="urgent">Urgente</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" type="submit">Programar</button>
+                    <input data-calendar-source-description class="form-control form-control-sm compact-inline-form__full" placeholder="Observação da programação" />
+                </form>
+                <div data-calendar-source-list class="dependency-list compact-scroll compact-scroll--history"></div>
             </div>
         </aside>
     </section>
