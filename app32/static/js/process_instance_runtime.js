@@ -139,10 +139,12 @@
   function renderFlowMeta(runtime) {
     const diagram = runtime?.diagram || {};
     if (!diagram.id || !diagram.bpmn_xml) {
+      if (root) root.dataset.runtimeDiagram = 'false';
       runtimeFlowMeta.textContent = 'Processo sem BPMN publicado. A shell continua disponível em modo manual.';
       if (runtimeFlowEmpty) runtimeFlowEmpty.hidden = false;
       return;
     }
+    if (root) root.dataset.runtimeDiagram = 'true';
     runtimeFlowMeta.textContent = `Fluxo BPMN publicado v${diagram.version || '—'} carregado para acompanhamento operacional.`;
     if (runtimeFlowEmpty) runtimeFlowEmpty.hidden = true;
   }

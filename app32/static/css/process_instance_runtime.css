@@ -1,7 +1,7 @@
 .bpms-runtime-page,
 .runtime-shell {
   display: grid;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
 .bpms-runtime-header,
@@ -12,7 +12,7 @@
 .bpms-hours-inputs,
 .bpms-edit-log-form__grid {
   display: grid;
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
 .bpms-runtime-header {
@@ -36,7 +36,7 @@
 }
 
 .bpms-runtime-header__badges {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.35rem;
 }
 
 .bpms-runtime-code {
@@ -50,7 +50,7 @@
 }
 
 .bpms-runtime-grid {
-  grid-template-columns: minmax(0, 1.6fr) minmax(360px, 0.7fr);
+  grid-template-columns: minmax(0, 1.85fr) minmax(320px, 0.72fr);
 }
 
 .bpms-runtime-bottom {
@@ -61,7 +61,7 @@
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 1.35rem;
+  padding: 1.1rem;
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
 }
 
@@ -76,11 +76,11 @@
   justify-content: space-between;
   align-items: start;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .bpms-card__head--compact {
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.65rem;
 }
 
 .bpms-card__head h2,
@@ -91,17 +91,28 @@
 
 .bpms-card__eyebrow {
   display: inline-block;
-  margin-bottom: 0.35rem;
-  font-size: 0.74rem;
+  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-tertiary);
 }
 
+.bpms-runtime-header__content .text-h1 {
+  font-size: clamp(2rem, 2.7vw, 3rem);
+  line-height: 1.08;
+  margin-bottom: 0.45rem;
+}
+
+.bpms-runtime-header__content .text-secondary {
+  margin: 0;
+}
+
 .runtime-flow-shell {
   position: relative;
-  min-height: 600px;
+  min-height: clamp(320px, calc(100vh - 360px), 540px);
+  height: clamp(320px, calc(100vh - 360px), 540px);
   border-radius: 18px;
   border: 1px solid var(--border);
   overflow: hidden;
@@ -110,8 +121,14 @@
 
 .runtime-flow-canvas {
   width: 100%;
-  min-height: 600px;
+  min-height: inherit;
+  height: 100%;
   background: #fff;
+}
+
+.runtime-shell[data-runtime-diagram="false"] .runtime-flow-shell {
+  min-height: 260px;
+  height: 260px;
 }
 
 .runtime-flow-empty {
@@ -119,20 +136,20 @@
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 2rem;
+  padding: 1.25rem;
   text-align: center;
   background: rgba(248, 250, 252, 0.88);
 }
 
 .bpms-summary-grid {
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .bpms-summary-row {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.8rem 0.9rem;
+  padding: 0.65rem 0.75rem;
   border-radius: 14px;
   border: 1px solid rgba(15, 159, 133, 0.12);
   background: rgba(15, 159, 133, 0.06);
@@ -149,8 +166,8 @@
 }
 
 .bpms-summary-timeline {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--border);
 }
 
@@ -163,14 +180,14 @@
 
 .runtime-timeline-list {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 
 .runtime-timeline-item {
   display: grid;
   grid-template-columns: 14px minmax(0, 1fr);
   gap: 0.75rem;
-  padding: 0.85rem 0.9rem;
+  padding: 0.7rem 0.8rem;
   border-radius: 14px;
   background: #fff;
   border: 1px solid var(--border);
@@ -191,7 +208,7 @@
 }
 
 .runtime-empty-card {
-  padding: 1rem;
+  padding: 0.85rem;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: rgba(148, 163, 184, 0.06);
@@ -199,11 +216,12 @@
 
 .bpms-activity-card {
   display: grid;
-  gap: 1rem;
+  gap: 0.8rem;
+  align-content: start;
 }
 
 .bpms-activity-title {
-  padding: 1rem;
+  padding: 0.85rem;
   border-radius: 16px;
   border: 1px solid rgba(37, 99, 235, 0.14);
   background: rgba(37, 99, 235, 0.05);
@@ -221,14 +239,14 @@
 
 .bpms-activity-meta {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.45rem;
 }
 
 .bpms-activity-meta__row {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding-bottom: 0.55rem;
+  padding-bottom: 0.45rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -266,27 +284,27 @@
 }
 
 .bpms-activity-steps {
-  padding: 1rem;
+  padding: 0.85rem;
   border-radius: 16px;
   border: 1px solid rgba(37, 99, 235, 0.12);
   background: rgba(37, 99, 235, 0.04);
 }
 
 .bpms-activity-steps h4 {
-  margin: 0 0 0.85rem;
-  font-size: 0.96rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.92rem;
 }
 
 .bpms-activity-steps ol {
   margin: 0;
   padding-left: 1.25rem;
   display: grid;
-  gap: 0.65rem;
+  gap: 0.45rem;
 }
 
 .bpms-activity-steps li {
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .bpms-activity-steps li strong {
@@ -305,15 +323,15 @@
 
 .bpms-indicators-list {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.55rem;
 }
 
 .bpms-indicator-row {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(70px, 0.6fr) minmax(70px, 0.6fr) 80px;
-  gap: 0.75rem;
+  gap: 0.6rem;
   align-items: center;
-  padding: 0.85rem 0.9rem;
+  padding: 0.7rem 0.8rem;
   border-radius: 14px;
   border: 1px solid rgba(249, 115, 22, 0.12);
   background: rgba(249, 115, 22, 0.05);
@@ -361,8 +379,8 @@
   display: grid;
   gap: 0.4rem;
   align-content: start;
-  min-height: 160px;
-  padding: 1.1rem;
+  min-height: 132px;
+  padding: 0.95rem;
   text-align: left;
   border-radius: 18px;
   border: 1px solid rgba(109, 40, 217, 0.14);
@@ -626,6 +644,12 @@
   .bpms-runtime-bottom {
     grid-template-columns: 1fr;
   }
+
+  .runtime-flow-shell,
+  .runtime-flow-canvas {
+    min-height: 360px;
+    height: 360px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -648,5 +672,12 @@
   .bpms-activity-support .btn,
   .bpms-launcher {
     width: 100%;
+  }
+
+  .runtime-flow-shell,
+  .runtime-flow-canvas,
+  .runtime-shell[data-runtime-diagram="false"] .runtime-flow-shell {
+    min-height: 300px;
+    height: 300px;
   }
 }
