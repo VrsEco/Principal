@@ -173,5 +173,9 @@ Para o piloto `identity/mission`:
 9. usar `current_state.methodological_maturity` para comunicar o estágio real, sem converter cobertura em percentual de maturidade;
 10. quando `write_policy.requires_explicit_human_confirmation=true`, apresentar o payload exato ao responsável e aguardar confirmação antes da tool de escrita;
 11. em `collecting_evidence`, `consultive_register_assisted_analysis` registra o diagnóstico confirmado, mas não autoriza alterar a Missão canônica.
+12. usar human_gate_confirmed=true somente depois de exibir o payload exato e receber confirmação humana explícita;
+13. consultive_register_squad_validation só pode ser chamado com squad=client; nunca validar por Squad Versus ou Engenharia;
+14. consultive_register_consultant_decision é exclusiva do Consultor/Squad Versus e não deve existir no catálogo executável deste harness;
+15. nunca informar user_id de terceiro; a autoria é resolvida pelo token MCP autenticado.
 
 Se `journey_state=blocked`, interromper o avanço, explicar o bloqueio e encaminhar ao responsável indicado. O CLI não pode contornar gap técnico, ausência de evidência, RBAC ou gate humano.

@@ -181,6 +181,11 @@ class _FakeCatalog:
 
 
 def test_user_surface_exposes_only_user_scope_manifest_and_no_admin_diagnostics(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: (_ for _ in ()).throw(RuntimeError("sem contexto MCP")),
+    )
     fake_catalog = _FakeCatalog()
     monkeypatch.setattr(registry, "catalog", fake_catalog)
 
@@ -395,11 +400,15 @@ def test_user_surface_manifest_exposes_consultive_read_tools_to_cliente_harness(
     assert tools["consultive_get_front_context"]["domain"] == "consultive"
     assert tools["consultive_get_front_context"]["permissions"] == ["consultive.read"]
     assert "consultive_resolve_protocol" in tools
-    assert "consultive_register_assisted_analysis" not in tools
+    assert "consultive_register_assisted_analysis" in tools
+    assert "review" in tools["consultive_register_assisted_analysis"]["tags"]
+    assert "consultive_register_squad_validation" in tools
+    assert "review" in tools["consultive_register_squad_validation"]["tags"]
+    assert "consultive_register_consultant_decision" not in tools
 
 
 
-def test_user_surface_manifest_hides_consultive_writes_for_admin_in_squad_cliente(monkeypatch):
+def test_user_surface_manifest_exposes_only_client_gated_reviews_for_admin_in_squad_cliente(monkeypatch):
     monkeypatch.setattr(
         registry,
         "resolve_mcp_execution_context",
@@ -431,8 +440,8 @@ def test_user_surface_manifest_hides_consultive_writes_for_admin_in_squad_client
     assert "consultive_get_next_action" in tool_names
     assert "consultive_get_front_context" in tool_names
     assert "consultive_resolve_protocol" in tool_names
-    assert "consultive_register_assisted_analysis" not in tool_names
-    assert "consultive_register_squad_validation" not in tool_names
+    assert "consultive_register_assisted_analysis" in tool_names
+    assert "consultive_register_squad_validation" in tool_names
     assert "consultive_register_consultant_decision" not in tool_names
     assert "consultive_upsert_protocol" not in tool_names
 

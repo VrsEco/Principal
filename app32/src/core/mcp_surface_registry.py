@@ -76,7 +76,10 @@ def get_surface_manifest(
                         requested_company_id=execution_context.company_id,
                         accessible_company_ids=execution_context.accessible_company_ids,
                         required_permissions=capability.permissions,
-                        confirmed_mutation=not capability.human_gate,
+                        confirmed_mutation=(
+                            "explicit_human_confirmation" in set(capability.tags)
+                            or not capability.human_gate
+                        ),
                         required_context=tuple(getattr(capability, "required_context", ()) or ()),
                         metadata=dict(execution_context.metadata or {}),
                     ),

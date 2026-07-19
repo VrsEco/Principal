@@ -332,13 +332,44 @@ def test_tool_policy_intersects_admin_role_with_squad_cliente_consultive_matrix(
             metadata=source["metadata"],
         ),
     )
-    write_decision = evaluate_tool_policy(
+    action = infer_tool_action("consultive_register_assisted_analysis", "consultive")
+    without_gate = evaluate_tool_policy(
         source,
         ToolPolicyRequest(
             tool_name="consultive_register_assisted_analysis",
             surface="user",
             domain="consultive",
-            action="create",
+            action=action,
+            risk="medium",
+            requested_company_id=9,
+            required_permissions=("consultive.write",),
+            confirmed_mutation=False,
+            required_context=("company",),
+            metadata=source["metadata"],
+        ),
+    )
+    with_gate = evaluate_tool_policy(
+        source,
+        ToolPolicyRequest(
+            tool_name="consultive_register_assisted_analysis",
+            surface="user",
+            domain="consultive",
+            action=action,
+            risk="medium",
+            requested_company_id=9,
+            required_permissions=("consultive.write",),
+            confirmed_mutation=True,
+            required_context=("company",),
+            metadata=source["metadata"],
+        ),
+    )
+    consultant_decision = evaluate_tool_policy(
+        source,
+        ToolPolicyRequest(
+            tool_name="consultive_register_consultant_decision",
+            surface="user",
+            domain="consultive",
+            action=infer_tool_action("consultive_register_consultant_decision", "consultive"),
             risk="medium",
             requested_company_id=9,
             required_permissions=("consultive.write",),
@@ -350,11 +381,12 @@ def test_tool_policy_intersects_admin_role_with_squad_cliente_consultive_matrix(
 
     assert read_decision.allowed is True
     assert "runtime_overlay_permission_matrix" in read_decision.checks
-    assert write_decision.allowed is False
-    assert write_decision.reason == (
-        "matriz do overlay coordenador_cliente não permite create em consultive"
-    )
-    assert "runtime_overlay_matrix_action_blocked" in write_decision.checks
+    assert action == "review"
+    assert without_gate.allowed is False
+    assert "runtime_overlay_matrix_human_gate_required" in without_gate.checks
+    assert with_gate.allowed is True
+    assert consultant_decision.allowed is False
+    assert "runtime_overlay_matrix_action_blocked" in consultant_decision.checks
 
 
 def test_tool_policy_allows_strategy_maturation_review_for_cliente_harness() -> None:

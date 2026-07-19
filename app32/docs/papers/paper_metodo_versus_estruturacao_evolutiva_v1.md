@@ -1165,6 +1165,8 @@ O primeiro recorte vertical oficial é **Identidade Organizacional → Missão**
 
 O registro da análise assistida é uma transição operacional da jornada, não uma persistência canônica da Missão. Ele pode ser executado pelo CLI somente depois de apresentar diagnóstico, fontes, riscos e proposta ao responsável humano e receber confirmação explícita para registrar. As validações, a decisão do consultor e a escrita canônica permanecem gates humanos distintos.
 
+O catálogo MCP deve refletir essa divisão de responsabilidade. No runtime do Squad Cliente, o CLI pode descobrir e executar, sempre com confirmação humana explícita, apenas o registro da análise assistida e a validação do próprio Squad Cliente. A decisão do consultor não pertence a esse runtime e deve permanecer indisponível. Uma tool anunciada por next_action precisa estar efetivamente disponível ao ator responsável; uma tool exclusiva de outro ator deve aparecer como handoff, não como capacidade executável pelo chamador.
+
 Leitura pelos quatro pilares:
 
 - **Forma de Trabalho:** estados, entregáveis e gates explícitos;

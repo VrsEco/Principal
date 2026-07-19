@@ -500,6 +500,16 @@ Ela não executa mutação e retorna:
 - `consultive_register_assisted_analysis` registra diagnóstico rastreável, mas não altera a Missão canônica;
 - validações usam `consultive_register_squad_validation`, decisão usa `consultive_register_consultant_decision` e persistência canônica somente ocorre no estado autorizado.
 
+### 11.3.1 Catálogo efetivo e autorização por ator
+
+- tools/list pode publicar uma operação human-gated quando o ator poderá executá-la após confirmação explícita; a execução sem human_gate_confirmed=true continua negada;
+- no runtime_profile=squad_cliente, consultive_register_assisted_analysis é classificada como review, não como mutação canônica;
+- no mesmo runtime, consultive_register_squad_validation permite somente squad=client;
+- consultive_register_consultant_decision permanece classificada como decisão consultiva e não pode ser publicada nem executada pelo Squad Cliente;
+- o user_id de auditoria é resolvido pelo contexto MCP autenticado; valor divergente informado pelo cliente deve ser rejeitado;
+- todas as operações continuam exigindo company_id tenant-safe e releitura equivalente após a escrita.
+
+
 ### 11.4 Critérios de aceite do piloto
 
 1. `company_id` inexistente ou fora do tenant é recusado pelo contrato MCP;

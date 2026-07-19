@@ -1392,7 +1392,16 @@ def _register_consultive_capability(tool_name: str, *, action: str = "read", wri
         human_gate=write,
         human_gate_reason="Registro ou conversão consultiva exige validação humana e trilha auditável." if write else None,
         required_context=(TOOL_CONTEXT_COMPANY,),
-        tags=("consultive", "assisted_analysis", "mcp_first"),
+        tags=(
+            "consultive",
+            "assisted_analysis",
+            "mcp_first",
+            *(("explicit_human_confirmation",) if tool_name in {
+                "consultive_register_assisted_analysis",
+                "consultive_register_squad_validation",
+                "consultive_register_consultant_decision",
+            } else ()),
+        ),
     )
 
 
@@ -1408,9 +1417,13 @@ for _tool_name in (
     _register_consultive_capability(_tool_name, action="read", write=False)
 
 for _tool_name in (
-    "consultive_upsert_protocol",
     "consultive_register_assisted_analysis",
     "consultive_register_squad_validation",
+):
+    _register_consultive_capability(_tool_name, action="review", write=True)
+
+for _tool_name in (
+    "consultive_upsert_protocol",
     "consultive_register_consultant_decision",
     "consultive_create_recommended_action",
 ):
@@ -1610,6 +1623,11 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
         return "read"
 
     if normalized_domain == "consultive":
+        if lowered in {
+            "consultive_register_assisted_analysis",
+            "consultive_register_squad_validation",
+        }:
+            return "review"
         if lowered.startswith(("consultive_get_", "consultive_list_")):
             return "read"
         if lowered.startswith("consultive_resolve_"):

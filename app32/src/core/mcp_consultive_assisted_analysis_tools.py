@@ -7,13 +7,50 @@ from services.consultive_assisted_analysis_service import ConsultiveAssistedAnal
 from services.consultive_maturity_guidance_service import ConsultiveMaturityGuidanceService
 from services.consultive_protocol_service import ConsultiveProtocolService
 from services.urgent_business_review_common import UrgentBusinessReviewError
-from src.core.mcp_http_auth import get_http_actor_role
+from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
 from src.intelligence.mcp_contracts import (
     MCPErrorDetail,
     MCPErrorEnvelope,
     MCPResponseMeta,
     MCPSuccessEnvelope,
 )
+
+
+_RUNTIME_PROFILE_TO_VALIDATION_SQUAD = {
+    "squad_cliente": "client",
+    "squad_versus": "versus",
+    "engineering": "engineering",
+}
+
+
+def _require_human_gate(confirmed: bool) -> None:
+    if confirmed is not True:
+        raise PermissionError("Confirmação humana explícita é obrigatória para esta operação consultiva.")
+
+
+def _resolve_authenticated_user_id(requested_user_id: int | None) -> int | None:
+    context = dict(get_http_request_context() or {})
+    authenticated_user_id = context.get("user_id")
+    if authenticated_user_id in (None, ""):
+        return requested_user_id
+    authenticated_user_id = int(authenticated_user_id)
+    if requested_user_id not in (None, authenticated_user_id):
+        raise PermissionError("user_id informado diverge do usuário autenticado no MCP.")
+    return authenticated_user_id
+
+
+def _require_own_squad_validation(squad: str) -> str:
+    normalized_squad = str(squad or "").strip().lower()
+    context = dict(get_http_request_context() or {})
+    runtime_profile = str(context.get("runtime_profile") or "").strip().lower()
+    expected_squad = _RUNTIME_PROFILE_TO_VALIDATION_SQUAD.get(runtime_profile)
+    if expected_squad is None and get_http_actor_role() in {"cliente", "colaborador"}:
+        expected_squad = "client"
+    if expected_squad is not None and normalized_squad != expected_squad:
+        raise PermissionError(
+            f"O runtime {runtime_profile or get_http_actor_role()} só pode validar o próprio squad ({expected_squad})."
+        )
+    return normalized_squad
 
 
 def _meta(operation: str, *, company_id: int | None = None, write: bool = False) -> MCPResponseMeta:
@@ -204,18 +241,21 @@ def register_consultive_assisted_analysis_tools(mcp: Any) -> None:
         company_id: int,
         front_key: str,
         payload: dict[str, Any],
+        human_gate_confirmed: bool = False,
         user_id: Optional[int] = None,
     ) -> dict[str, Any]:
-        """Registra no APP32 o resultado trazido pela IA/CLI via MCP."""
+        """Registra no APP32 o resultado trazido pela IA/CLI via MCP após confirmação humana."""
         operation = "assisted_analysis.register"
         try:
+            _require_human_gate(human_gate_confirmed)
+            actor_user_id = _resolve_authenticated_user_id(user_id)
             return _success(
                 operation,
                 ConsultiveAssistedAnalysisService.register_assisted_analysis(
                     company_id=company_id,
                     front_key=front_key,
                     payload=payload,
-                    user_id=user_id,
+                    user_id=actor_user_id,
                 ),
                 company_id=company_id,
                 write=True,
@@ -253,20 +293,24 @@ def register_consultive_assisted_analysis_tools(mcp: Any) -> None:
         squad: str,
         status: str,
         notes: Optional[str] = None,
+        human_gate_confirmed: bool = False,
         user_id: Optional[int] = None,
     ) -> dict[str, Any]:
-        """Registra validação do Squad Cliente, Squad Versus ou Squad Engenharia."""
+        """Registra validação do próprio squad após confirmação humana explícita."""
         operation = "squad_validation.register"
         try:
+            _require_human_gate(human_gate_confirmed)
+            normalized_squad = _require_own_squad_validation(squad)
+            actor_user_id = _resolve_authenticated_user_id(user_id)
             return _success(
                 operation,
                 ConsultiveAssistedAnalysisService.register_squad_validation(
                     company_id=company_id,
                     analysis_id=analysis_id,
-                    squad=squad,
+                    squad=normalized_squad,
                     status=status,
                     notes=notes,
-                    user_id=user_id,
+                    user_id=actor_user_id,
                 ),
                 company_id=company_id,
                 write=True,
@@ -279,18 +323,21 @@ def register_consultive_assisted_analysis_tools(mcp: Any) -> None:
         company_id: int,
         analysis_id: int,
         payload: dict[str, Any],
+        human_gate_confirmed: bool = False,
         user_id: Optional[int] = None,
     ) -> dict[str, Any]:
-        """Registra o gate humano do consultor antes da conversão operacional."""
+        """Registra o gate humano exclusivo do consultor antes da conversão operacional."""
         operation = "consultant_decision.register"
         try:
+            _require_human_gate(human_gate_confirmed)
+            actor_user_id = _resolve_authenticated_user_id(user_id)
             return _success(
                 operation,
                 ConsultiveAssistedAnalysisService.register_consultant_decision(
                     company_id=company_id,
                     analysis_id=analysis_id,
                     payload=payload,
-                    user_id=user_id,
+                    user_id=actor_user_id,
                 ),
                 company_id=company_id,
                 write=True,
