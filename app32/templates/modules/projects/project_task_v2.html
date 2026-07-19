@@ -93,7 +93,7 @@
                     data-source-type="project_task"
                     data-source-id="{{ task.id }}">
                     <div class="card-header compact-card__header compact-card__header--mini">
-                        <h2 class="text-h3">Agenda</h2>
+                        <h2 class="text-h3">Programação na Rotina</h2>
                     </div>
                     <form data-calendar-source-form class="compact-inline-form compact-inline-form--calendar">
                         <input data-calendar-source-title type="hidden" value="Executar {{ task.code or ('J.%s' % task.id) }} - {{ task.what }}" />
@@ -111,8 +111,8 @@
                             <option value="high">Alta</option>
                             <option value="urgent">Urgente</option>
                         </select>
-                        <button class="btn btn-primary btn-sm" type="submit">Agendar</button>
-                        <input data-calendar-source-description class="form-control form-control-sm compact-inline-form__full" placeholder="Observação" />
+                        <button class="btn btn-primary btn-sm" type="submit">Programar</button>
+                        <input data-calendar-source-description class="form-control form-control-sm compact-inline-form__full" placeholder="Observação da programação" />
                     </form>
                     <div data-calendar-source-list class="dependency-list compact-scroll compact-scroll--mini"></div>
                 </div>
