@@ -497,3 +497,71 @@ def test_list_user_capabilities_uses_tenant_aware_manifest_loader(monkeypatch):
 
     assert payload == expected
     assert calls == [("user", {"domain": "consultive", "include_tools": True})]
+
+
+def test_user_surface_router_and_harness_selector_exist_in_all_official_cliente_harnesses(monkeypatch):
+    for harness_key in (
+        "harness_coordenador_cliente_v1",
+        "harness_comercial_cliente_v1",
+        "harness_operacional_cliente_v1",
+        "harness_admfin_cliente_v1",
+    ):
+        monkeypatch.setattr(
+            registry,
+            "resolve_mcp_execution_context",
+            lambda payload=None, key=harness_key: MCPExecutionContext(
+                user_id=22,
+                company_id=1,
+                employee_id=None,
+                role="cliente",
+                channel="claude_remote",
+                thread_id=None,
+                accessible_company_ids=(1,),
+                permissions=(),
+                metadata={
+                    "surface": "user",
+                    "transport": "streamable_http",
+                    "runtime_profile": "squad_cliente",
+                    "actor_type": "client_agent",
+                    "harness_key": key,
+                    "mcp_enabled": True,
+                    "training_completed": True,
+                },
+            ),
+        )
+        manifest = registry.get_surface_manifest("user", domain="identity_self_service", include_tools=True)
+        names = {tool["name"] for tool in manifest["tools"]}
+        assert "resolve_app32_operation_tool" in names
+        assert "describe_app32_session_harness_tool" in names
+        assert "select_app32_session_harness_tool" in names
+
+
+def test_user_surface_payables_summary_is_exposed_only_in_admfin_harness(monkeypatch):
+    def names_for(harness_key):
+        monkeypatch.setattr(
+            registry,
+            "resolve_mcp_execution_context",
+            lambda payload=None: MCPExecutionContext(
+                user_id=22,
+                company_id=1,
+                employee_id=None,
+                role="administrador",
+                channel="claude_remote",
+                thread_id=None,
+                accessible_company_ids=(1,),
+                permissions=(),
+                metadata={
+                    "surface": "user",
+                    "transport": "streamable_http",
+                    "runtime_profile": "squad_cliente",
+                    "actor_type": "client_agent",
+                    "harness_key": harness_key,
+                    "mcp_enabled": True,
+                    "training_completed": True,
+                },
+            ),
+        )
+        return {tool["name"] for tool in registry.get_surface_manifest("user", domain="finance", include_tools=True)["tools"]}
+
+    assert "get_financial_payables_due_summary" not in names_for("harness_coordenador_cliente_v1")
+    assert "get_financial_payables_due_summary" in names_for("harness_admfin_cliente_v1")

@@ -1326,6 +1326,21 @@ for _tool_name in (
     _register_mcp_support_capability(_tool_name, tags=("catalog", "read"))
 
 for _tool_name in (
+    "describe_app32_session_harness_tool",
+    "select_app32_session_harness_tool",
+    "resolve_app32_operation_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="identity_self_service",
+        action="read",
+        scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        risk=ToolRiskLevel.LOW,
+        permissions=("identity_self_service.read",),
+        tags=("routing", "session", "read"),
+    )
+
+for _tool_name in (
     "preview_app32_implantation_persona_profile_update_tool",
     "assess_app32_change_request_tool",
     "evaluate_app32_external_llm_factory_session_tool",
@@ -1587,7 +1602,10 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
 
     if lowered == "review_strategy_maturation_item_tool":
         return "review"
-    if lowered == "resolve_app32_instruction_bundle_tool":
+    if lowered in {
+        "resolve_app32_instruction_bundle_tool",
+        "resolve_app32_operation_tool",
+    }:
         return "read"
 
     if normalized_domain == "consultive":

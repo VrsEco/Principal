@@ -206,3 +206,19 @@ O guia não concede permissão. A autorização efetiva é a interseção de **p
 `meta.actor_role` deve expor o papel-base autenticado. Runtime e harness permanecem metadados próprios, evitando que a interface confunda identidade de segurança com persona operacional.
 
 O **journey_guide** pertence à camada global/runtime: override por tenant pode complementar contexto e linguagem, mas não pode substituir estados, elevar autonomia nem relaxar ações **cannot/gated**.
+
+---
+
+## 13. Roteamento obrigatório por demanda
+
+Para cada nova solicitação operacional, o bundle do Squad Cliente deve instruir:
+
+1. chamar `resolve_app32_operation_tool` uma vez;
+2. quando necessário, ativar o especialista indicado com `select_app32_session_harness_tool`;
+3. atualizar `tools/list` após a troca;
+4. executar a `preferred_tool` com os argumentos devolvidos;
+5. não pesquisar catálogos se `route_status=ready`;
+6. se `route_status=specialist_discovery`, atualizar `tools/list` uma única vez e escolher apenas uma tool executável do domínio indicado;
+7. fazer uma única pergunta objetiva se `route_status=needs_input` ou `unsupported_fast_fallback`.
+
+Essa regra pertence à camada runtime/global e não pode ser relaxada por override tenant.

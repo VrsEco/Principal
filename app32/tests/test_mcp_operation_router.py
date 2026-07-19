@@ -1,0 +1,136 @@
+from datetime import date
+
+import src.core.mcp_operation_router_tools as router_tools
+from services.mcp_operation_router_service import McpOperationRouterService
+
+
+class _FakeMCP:
+    def __init__(self):
+        self.registered = {}
+
+    def tool(self, *args, **kwargs):
+        def decorator(func):
+            self.registered[kwargs.get("name") or func.__name__] = func
+            return func
+        if args and callable(args[0]):
+            return decorator(args[0])
+        return decorator
+
+
+def test_routes_payables_next_week_without_catalog_crawl():
+    result = McpOperationRouterService.resolve(
+        request_text="Quanto temos de contas a pagar para a próxima semana?",
+        company_id=1,
+        current_harness_key="harness_coordenador_cliente_v1",
+        reference_date=date(2026, 7, 18),
+    )
+    assert result["route_status"] == "ready"
+    assert result["domain"] == "finance"
+    assert result["target_harness_key"] == "harness_admfin_cliente_v1"
+    assert result["preferred_tool"] == "get_financial_payables_due_summary"
+    assert result["arguments"] == {
+        "company_id": 1,
+        "due_date_from": "2026-07-20",
+        "due_date_to": "2026-07-26",
+    }
+    assert result["execution_sequence"] == [
+        "select_app32_session_harness_tool",
+        "get_financial_payables_due_summary",
+    ]
+
+
+def test_routes_cross_domain_requests_to_single_preferred_tool():
+    cases = (
+        ("Mostre a hierarquia de processos", "processes", "list_process_hierarchy", "harness_operacional_cliente_v1"),
+        ("Quais projetos estão em andamento?", "projects", "list_projects", "harness_operacional_cliente_v1"),
+        ("Mostre o planejamento estratégico", "strategy", "list_plans", "harness_coordenador_cliente_v1"),
+        ("Como estão nossas vendas?", "commercial", "get_commercial_dashboard", "harness_comercial_cliente_v1"),
+    )
+    for request, domain, tool, harness in cases:
+        result = McpOperationRouterService.resolve(
+            request_text=request,
+            company_id=9,
+            current_harness_key="harness_coordenador_cliente_v1",
+            reference_date=date(2026, 7, 18),
+        )
+        assert result["route_status"] == "ready"
+        assert result["domain"] == domain
+        assert result["preferred_tool"] == tool
+        assert result["target_harness_key"] == harness
+
+
+def test_unknown_request_returns_fast_fallback_without_discovery():
+    result = McpOperationRouterService.resolve(
+        request_text="Quero discutir uma hipótese completamente nova",
+        company_id=9,
+        current_harness_key="harness_coordenador_cliente_v1",
+    )
+    assert result["route_status"] == "unsupported_fast_fallback"
+    assert result["preferred_tool"] is None
+    assert "Não varrer catálogos" in result["discovery_policy"]
+
+
+def test_router_tool_uses_active_tenant_and_rejects_cross_tenant(monkeypatch):
+    monkeypatch.setattr(
+        router_tools,
+        "get_http_request_context",
+        lambda: {
+            "user_id": 7,
+            "company_id": 1,
+            "accessible_company_ids": [1, 9],
+            "harness_key": "harness_coordenador_cliente_v1",
+        },
+    )
+    mcp = _FakeMCP()
+    router_tools.register_operation_router_tools(mcp)
+    ok = mcp.registered["resolve_app32_operation_tool"](
+        request_text="Quais projetos estão em andamento?",
+        company_id=1,
+        reference_date="2026-07-18",
+    )
+    assert ok["success"] is True
+    assert ok["data"]["company_id"] == 1
+    denied = mcp.registered["resolve_app32_operation_tool"](
+        request_text="Quais projetos estão em andamento?",
+        company_id=6,
+    )
+    assert denied["success"] is False
+    assert denied["error"]["code"] == "mcp_operation_company_forbidden"
+
+
+def test_routes_known_domain_to_specialist_discovery_without_global_catalog():
+    result = McpOperationRouterService.resolve(
+        request_text="Qual é o saldo bancário consolidado?",
+        company_id=1,
+        current_harness_key="harness_coordenador_cliente_v1",
+        reference_date=date(2026, 7, 18),
+    )
+    assert result["route_status"] == "specialist_discovery"
+    assert result["domain"] == "finance"
+    assert result["target_harness_key"] == "harness_admfin_cliente_v1"
+    assert result["preferred_tool"] is None
+    assert result["execution_sequence"] == ["select_app32_session_harness_tool"]
+    assert "tools/list" in result["discovery_policy"]
+
+
+def test_payables_without_period_requests_only_missing_input():
+    result = McpOperationRouterService.resolve(
+        request_text="Quanto temos de contas a pagar?",
+        company_id=1,
+        current_harness_key="harness_admfin_cliente_v1",
+        reference_date=date(2026, 7, 18),
+    )
+    assert result["route_status"] == "needs_input"
+    assert result["missing_arguments"] == ["due_date_from", "due_date_to"]
+    assert result["execution_sequence"] == []
+    assert "período" in result["user_message"]
+
+
+def test_process_runtime_route_uses_company_scope_contract():
+    result = McpOperationRouterService.resolve(
+        request_text="Quais processos estão em andamento?",
+        company_id=9,
+        current_harness_key="harness_operacional_cliente_v1",
+    )
+    assert result["preferred_tool"] == "get_my_work"
+    assert result["arguments"] == {"scope": "company", "company_ids": "9"}

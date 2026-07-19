@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-07-13.1"
+    CURRENT_BUNDLE_VERSION = "2026-07-18.1"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -684,6 +684,10 @@ class InstructionRegistryService:
             InstructionRule(
                 rule="MCP First para discovery operacional; o bundle não substitui contratos, capabilities nem playbooks da surface.",
                 rationale="Mantém o APP32 como fonte de verdade operacional.",
+            ),
+            InstructionRule(
+                rule="Para toda nova solicitação operacional, chamar resolve_app32_operation_tool antes de pesquisar tools ou catálogos; se houver troca de especialista, usar select_app32_session_harness_tool e atualizar tools/list.",
+                rationale="Evita varredura lenta de catálogos, separa capabilities planejadas e executa a menor rota determinística disponível.",
             ),
             InstructionRule(
                 rule=per_runtime[runtime_profile],

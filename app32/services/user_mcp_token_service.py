@@ -22,6 +22,7 @@ from services.squad_runtime_bootstrap_service import (
     OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS,
     SquadRuntimeBootstrapService,
 )
+from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
 from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 from utils.permissions import (
     can_access_company,
@@ -2033,6 +2034,87 @@ class UserMcpTokenService:
             }
 
     @classmethod
+    def _resolve_squad_cliente_harness(cls, harness_key: str | None):
+        runtime_spec = get_runtime_profile_spec("squad_cliente")
+        default_key = runtime_spec.default_harness_key if runtime_spec else "harness_coordenador_cliente_v1"
+        normalized = str(harness_key or default_key or "").strip().lower()
+        available = {str(item.key).strip().lower(): item for item in (runtime_spec.harnesses if runtime_spec else ())}
+        harness = available.get(normalized)
+        if harness is None or normalized not in set(OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS):
+            raise ValueError("Harness não pertence ao Squad Cliente oficial.")
+        overlay = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay(normalized)
+        if overlay is None or overlay.runtime_profile != "squad_cliente" or overlay.surface != "user":
+            raise ValueError("Harness sem contrato MCP válido para a surface user.")
+        return harness, overlay
+
+    @classmethod
+    def describe_runtime_harness_scope(cls, *, token: str) -> dict[str, Any]:
+        token_hash = cls._hash_token(token)
+        with cls._ensure_app_context():
+            record = UserMcpToken.query.filter_by(token_hash=token_hash).order_by(UserMcpToken.created_at.desc()).first()
+            if not record:
+                raise ValueError("Token MCP inválido.")
+            cls._expire_if_needed(record)
+            if record.status != "active":
+                db.session.commit()
+                raise ValueError("Token MCP inativo ou expirado.")
+            user = User.query.get(record.user_id)
+            if not user or not getattr(user, "is_active", False):
+                raise ValueError("Usuário MCP inativo.")
+            harness, overlay = cls._resolve_squad_cliente_harness(getattr(record, "last_harness_key", None))
+            base_profile = get_access_profile(record.last_company_id, user=user) if record.last_company_id else "collaborator"
+            profile = PROFILE_TO_FALLBACK_ROLE.get(base_profile, "colaborador")
+            available = []
+            runtime_spec = get_runtime_profile_spec("squad_cliente")
+            for item in (runtime_spec.harnesses if runtime_spec else ()):
+                if item.key not in set(OFFICIAL_SQUAD_CLIENTE_HARNESS_KEYS):
+                    continue
+                contract = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay(item.key)
+                if contract and profile in set(contract.compatible_profiles):
+                    available.append({"key": item.key, "label": item.label, "business_role": item.business_role})
+            return {
+                "user_id": user.id,
+                "active_company_id": record.last_company_id,
+                "runtime_profile": "squad_cliente",
+                "active_harness_key": harness.key,
+                "active_harness_label": harness.label,
+                "active_overlay": overlay.overlay,
+                "available_harnesses": available,
+            }
+
+    @classmethod
+    def select_runtime_harness(cls, *, token: str, harness_key: str) -> dict[str, Any]:
+        token_hash = cls._hash_token(token)
+        with cls._ensure_app_context():
+            record = UserMcpToken.query.filter_by(token_hash=token_hash).order_by(UserMcpToken.created_at.desc()).first()
+            if not record:
+                raise ValueError("Token MCP inválido.")
+            cls._expire_if_needed(record)
+            if record.status != "active":
+                db.session.commit()
+                raise ValueError("Token MCP inativo ou expirado.")
+            user = User.query.get(record.user_id)
+            if not user or not getattr(user, "is_active", False):
+                raise ValueError("Usuário MCP inativo.")
+            harness, overlay = cls._resolve_squad_cliente_harness(harness_key)
+            base_profile = get_access_profile(record.last_company_id, user=user) if record.last_company_id else "collaborator"
+            profile = PROFILE_TO_FALLBACK_ROLE.get(base_profile, "colaborador")
+            if profile not in set(overlay.compatible_profiles):
+                raise ValueError("Harness incompatível com o perfil autenticado.")
+            record.last_harness_key = harness.key
+            record.updated_at = cls._utcnow()
+            db.session.commit()
+            return {
+                "user_id": user.id,
+                "active_company_id": record.last_company_id,
+                "runtime_profile": "squad_cliente",
+                "active_harness_key": harness.key,
+                "active_harness_label": harness.label,
+                "active_overlay": overlay.overlay,
+                "catalog_refresh_required": True,
+            }
+
+    @classmethod
     def resolve_for_http_request(
         cls,
         *,
@@ -2079,6 +2161,12 @@ class UserMcpTokenService:
             record.last_client_name = (client_name or "").strip() or record.last_client_name
             record.updated_at = cls._utcnow()
             db.session.commit()
+            try:
+                active_harness, _active_overlay = cls._resolve_squad_cliente_harness(getattr(record, "last_harness_key", None))
+            except ValueError:
+                active_harness, _active_overlay = cls._resolve_squad_cliente_harness(None)
+                record.last_harness_key = active_harness.key
+                db.session.commit()
             return UserMcpResolvedContext(
                 token_record_id=record.id,
                 user_id=user.id,
@@ -2092,8 +2180,8 @@ class UserMcpTokenService:
                 multi_company=len(accessible_company_ids) > 1,
                 runtime_profile="squad_cliente",
                 actor_type="client_agent",
-                harness_key="harness_coordenador_cliente_v1",
-                harness_label="Harness Coordenador do Squad Cliente",
+                harness_key=active_harness.key,
+                harness_label=active_harness.label,
                 mcp_enabled=True,
                 training_completed=True,
             )

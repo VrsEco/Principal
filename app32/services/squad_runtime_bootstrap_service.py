@@ -126,8 +126,9 @@ class SquadRuntimeBootstrapService:
                     "modo_conselho_por_excecao",
                 ],
                 "guidance": [
+                    "Resolver cada nova solicitação com resolve_app32_operation_tool antes de pesquisar capabilities.",
                     "Responder diretamente quando o pedido for simples e seguro.",
-                    "Acionar um único especialista antes de qualquer composição multiagente.",
+                    "Acionar um único especialista com select_app32_session_harness_tool antes de qualquer composição multiagente.",
                     "Usar multiagente apenas quando houver interdependência real.",
                     "Usar Modo Conselho somente quando o custo de erro for alto.",
                 ],

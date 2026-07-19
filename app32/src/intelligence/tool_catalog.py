@@ -32,6 +32,7 @@ from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
+from src.core.mcp_operation_router_tools import register_operation_router_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
 from src.core.mcp_process_flow_tools import register_process_flow_tools
 from src.core.mcp_process_pop_tools import register_process_pop_tools
@@ -41,6 +42,7 @@ from src.core.mcp_release_checklist_tools import register_release_checklist_tool
 from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
 from src.core.mcp_sapiens_factory_tools import register_sapiens_factory_tools
 from src.core.mcp_session_company_tools import register_session_company_tools
+from src.core.mcp_session_harness_tools import register_session_harness_tools
 from src.core.mcp_squad_runtime_tools import register_squad_runtime_tools
 from src.core.mcp_strategy_alignment_tools import register_strategy_alignment_tools
 from src.core.mcp_surface_playbook_tools import register_surface_playbook_tools
@@ -620,6 +622,9 @@ _supplemental_mcp_tools = (
             ("describe_app32_available_sapiens_squads_tool", "Lista squads Sapiens disponíveis e critérios de ativação."),
             ("resolve_app32_sapiens_activation_tool", "Resolve ativação governada de squad Sapiens."),
             ("describe_app32_session_company_scope_tool", "Descreve escopo de empresa da sessão MCP."),
+            ("describe_app32_session_harness_tool", "Descreve o harness especialista ativo da sessão MCP."),
+            ("select_app32_session_harness_tool", "Ativa um harness oficial do mesmo Squad Cliente."),
+            ("resolve_app32_operation_tool", "Resolve domínio, intenção, harness e tool ativa sem varrer catálogos."),
             ("select_app32_session_company_tool", "Seleciona empresa ativa da sessão MCP quando permitido."),
             ("clear_app32_session_company_tool", "Limpa a empresa ativa da sessão MCP."),
             ("describe_app32_squad_runtime_tool", "Descreve runtime de squads e harnesses oficiais."),
@@ -662,6 +667,7 @@ _supplemental_mcp_tools = (
             "review_financial_ingestion_record",
             "convert_financial_ingestion_record",
             "list_financial_schedules",
+            "get_financial_payables_due_summary",
             "create_financial_schedule",
             "update_financial_schedule",
             "toggle_financial_schedule",
@@ -753,6 +759,7 @@ catalog = ToolCatalog(
         register_integration_request_tools,
         register_instruction_registry_tools,
         register_operational_readiness_tools,
+        register_operation_router_tools,
         register_permission_matrix_tools,
         register_process_flow_tools,
         register_process_pop_tools,
@@ -762,6 +769,7 @@ catalog = ToolCatalog(
         register_sapiens_activation_tools,
         register_sapiens_factory_tools,
         register_session_company_tools,
+        register_session_harness_tools,
         register_squad_runtime_tools,
         register_strategy_alignment_tools,
         register_surface_playbook_tools,

@@ -68,7 +68,7 @@ class MCPConnectionSnippetService:
                 "describe_app32_tool_freeze_procedure_tool",
                 "describe_app32_external_ai_onboarding_tool",
             ],
-            "routing_note": "O Squad Cliente deve operar em menor privilégio, com utilização assistida, foco operacional e sem tentar contornar restrições de admin, analytics ou ops.",
+            "routing_note": "O Squad Cliente deve chamar resolve_app32_operation_tool para cada nova demanda, ativar o harness indicado com select_app32_session_harness_tool quando necessário e executar a tool preferencial sem varrer catálogos; capabilities planned nunca contam como executáveis.",
         },
         "engineering": {
             "label": "Sapiens Engenharia",
@@ -146,6 +146,8 @@ class MCPConnectionSnippetService:
                 "6.6. Em reconexão ou restauração de sessão, repita o mesmo fluxo oficial e reapresente `activation_welcome_opening` em vez de um resumo técnico genérico.",
                 "6.7. Use `resolve_app32_instruction_bundle_tool` para carregar o bundle mínimo, versionado e cacheável da sessão.",
                 "6.8. Use `describe_app32_squad_runtime_tool` como contrato operacional curto do squad antes de agir.",
+                "6.8.1. Para cada nova solicitação operacional, chame `resolve_app32_operation_tool` uma única vez; se a resposta indicar troca de harness, chame `select_app32_session_harness_tool`, atualize tools/list e execute diretamente a `preferred_tool`.",
+                "6.8.2. Não varra catálogos quando o roteador retornar `ready`; se retornar `unsupported_fast_fallback`, faça somente uma pergunta objetiva de esclarecimento.",
                 "6.9. Antes de operar, trate profile contracts, surface/domain playbooks, release checklist, tool freeze e onboarding externo como discovery obrigatório.",
                 profile["routing_note"],
                 "",

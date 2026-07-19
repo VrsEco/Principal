@@ -23,6 +23,7 @@ class UserMcpToken(db.Model):
     last_client_name = db.Column(db.String(120), nullable=True)
     last_surface = db.Column(db.String(32), nullable=True)
     last_company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=True)
+    last_harness_key = db.Column(db.String(120), nullable=True)
     notice_d3_sent_at = db.Column(db.DateTime, nullable=True)
     notice_d0_sent_at = db.Column(db.DateTime, nullable=True)
     updated_at = db.Column(
@@ -53,6 +54,7 @@ class UserMcpToken(db.Model):
             "last_client_name": self.last_client_name,
             "last_surface": self.last_surface,
             "last_company_id": self.last_company_id,
+            "last_harness_key": self.last_harness_key,
             "notice_d3_sent_at": self.notice_d3_sent_at.isoformat() if self.notice_d3_sent_at else None,
             "notice_d0_sent_at": self.notice_d0_sent_at.isoformat() if self.notice_d0_sent_at else None,
         }

@@ -73,6 +73,11 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         return normalized
 
     def _run_financial_action(callback, *args, **kwargs) -> Any:
+        from flask import has_app_context
+
+        if has_app_context():
+            return callback(*args, **kwargs)
+
         from app import create_app
 
         app = create_app()
@@ -298,6 +303,73 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         if error:
             return {"success": False, "error": error}
         return {"success": True, "items": result, "count": len(result)}
+
+    @mcp.tool()
+    def get_financial_payables_due_summary(
+        company_id: int,
+        due_date_from: str,
+        due_date_to: str,
+        include_items: bool = True,
+        limit: int = 50,
+    ) -> dict:
+        """Resume contas a pagar em aberto por vencimento, com período explícito e isolamento por empresa."""
+        from datetime import date
+        from decimal import Decimal
+        from services.financial_service import FinancialService
+
+        try:
+            start_date = date.fromisoformat(str(due_date_from or "").strip())
+            end_date = date.fromisoformat(str(due_date_to or "").strip())
+        except ValueError:
+            return {"success": False, "error": "due_date_from e due_date_to devem usar YYYY-MM-DD."}
+        if start_date > end_date:
+            return {"success": False, "error": "due_date_from não pode ser posterior a due_date_to."}
+        normalized_limit = max(1, min(int(limit or 50), 200))
+        entries, error = _run_financial_action(
+            FinancialService.list_entries,
+            company_id=company_id,
+            entry_type="payable",
+            due_date_from=start_date,
+            due_date_to=end_date,
+        )
+        if error:
+            return {"success": False, "error": error}
+
+        open_items = []
+        total_open = Decimal("0.00")
+        for entry in entries or []:
+            status = str(entry.get("status") or "").strip().lower()
+            if status in {"settled", "cancelled"}:
+                continue
+            original = Decimal(str(entry.get("original_amount") or 0)).copy_abs()
+            settled = Decimal(str(entry.get("settled_principal_amount") or 0)).copy_abs()
+            open_amount = max(original - settled, Decimal("0.00"))
+            if open_amount <= Decimal("0.00"):
+                continue
+            total_open += open_amount
+            open_items.append(
+                {
+                    "id": entry.get("id"),
+                    "code": entry.get("entry_code") or entry.get("display_code"),
+                    "due_date": entry.get("due_date"),
+                    "counterparty": entry.get("counterparty_name"),
+                    "description": entry.get("description"),
+                    "status": status,
+                    "original_amount": float(original),
+                    "open_amount": float(open_amount),
+                }
+            )
+        open_items.sort(key=lambda item: (str(item.get("due_date") or ""), str(item.get("counterparty") or "")))
+        return {
+            "success": True,
+            "company_id": company_id,
+            "period": {"due_date_from": start_date.isoformat(), "due_date_to": end_date.isoformat()},
+            "title_count": len(open_items),
+            "total_open_amount": float(total_open.quantize(Decimal("0.01"))),
+            "currency": "BRL",
+            "items": open_items[:normalized_limit] if include_items else [],
+            "items_truncated": bool(include_items and len(open_items) > normalized_limit),
+        }
 
     @mcp.tool()
     def create_financial_schedule(payload: dict) -> dict:
@@ -641,12 +713,23 @@ def register_financial_mcp_tools(mcp: Any) -> None:
         origin_type: Optional[str] = None,
         activity_id: Optional[int] = None,
         process_instance_id: Optional[int] = None,
+        due_date_from: Optional[str] = None,
+        due_date_to: Optional[str] = None,
     ) -> dict:
         """
         Lista lançamentos financeiros do ledger unificado por empresa.
         Use filtros opcionais para reduzir o escopo operacional.
         """
+        from datetime import date
         from services.financial_service import FinancialService
+
+        try:
+            parsed_due_date_from = date.fromisoformat(due_date_from) if due_date_from else None
+            parsed_due_date_to = date.fromisoformat(due_date_to) if due_date_to else None
+        except ValueError:
+            return {"success": False, "error": "due_date_from e due_date_to devem usar YYYY-MM-DD."}
+        if parsed_due_date_from and parsed_due_date_to and parsed_due_date_from > parsed_due_date_to:
+            return {"success": False, "error": "due_date_from não pode ser posterior a due_date_to."}
 
         entries, error = _run_financial_action(
             FinancialService.list_entries,
@@ -656,6 +739,8 @@ def register_financial_mcp_tools(mcp: Any) -> None:
             origin_type=origin_type,
             activity_id=activity_id,
             process_instance_id=process_instance_id,
+            due_date_from=parsed_due_date_from,
+            due_date_to=parsed_due_date_to,
         )
         if error:
             return {"success": False, "error": error}

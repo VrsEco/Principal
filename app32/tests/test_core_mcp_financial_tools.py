@@ -210,3 +210,65 @@ def test_create_financial_schedule_resolves_employee_by_user_and_company(monkeyp
     assert captured["created_by_user_id"] == 3
     assert captured["created_by_employee_id"] == 88
     assert captured["metadata_json"]["audit"]["actor"]["employee_id"] == 88
+
+
+def test_get_financial_payables_due_summary_uses_due_dates_and_open_balance(monkeypatch):
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+
+    class _FakeFinancialService:
+        @staticmethod
+        def list_entries(**kwargs):
+            assert kwargs["company_id"] == 1
+            assert kwargs["entry_type"] == "payable"
+            assert kwargs["due_date_from"].isoformat() == "2026-07-20"
+            assert kwargs["due_date_to"].isoformat() == "2026-07-26"
+            return [
+                {"id": 1, "entry_code": "PAG-1", "due_date": "2026-07-21", "counterparty_name": "Fornecedor A", "description": "Compra", "status": "posted", "original_amount": 1000, "settled_principal_amount": 250},
+                {"id": 2, "entry_code": "PAG-2", "due_date": "2026-07-22", "counterparty_name": "Fornecedor B", "description": "Serviço", "status": "settled", "original_amount": 500, "settled_principal_amount": 500},
+                {"id": 3, "entry_code": "PAG-3", "due_date": "2026-07-23", "counterparty_name": "Fornecedor C", "description": "Contrato", "status": "scheduled", "original_amount": 200, "settled_principal_amount": 0},
+            ], None
+
+    fake_service_module = types.ModuleType("services.financial_service")
+    fake_service_module.FinancialService = _FakeFinancialService
+    monkeypatch.setitem(sys.modules, "services.financial_service", fake_service_module)
+
+    response = mcp.registered["get_financial_payables_due_summary"](
+        company_id=1,
+        due_date_from="2026-07-20",
+        due_date_to="2026-07-26",
+    )
+
+    assert response["success"] is True
+    assert response["title_count"] == 2
+    assert response["total_open_amount"] == 950.0
+    assert [item["id"] for item in response["items"]] == [1, 3]
+
+
+def test_list_financial_entries_accepts_due_date_filters(monkeypatch):
+    mcp = _FakeMCP()
+    register_financial_mcp_tools(mcp)
+    captured = {}
+
+    class _FakeFinancialService:
+        @staticmethod
+        def list_entries(**kwargs):
+            captured.update(kwargs)
+            return [], None
+
+    fake_service_module = types.ModuleType("services.financial_service")
+    fake_service_module.FinancialService = _FakeFinancialService
+    monkeypatch.setitem(sys.modules, "services.financial_service", fake_service_module)
+
+    response = mcp.registered["list_financial_entries"](
+        company_id=1,
+        entry_type="receivable",
+        due_date_from="2026-07-20",
+        due_date_to="2026-07-26",
+    )
+
+    assert response == {"success": True, "items": [], "count": 0}
+    assert captured["company_id"] == 1
+    assert captured["entry_type"] == "receivable"
+    assert captured["due_date_from"].isoformat() == "2026-07-20"
+    assert captured["due_date_to"].isoformat() == "2026-07-26"

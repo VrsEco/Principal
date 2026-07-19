@@ -463,3 +463,57 @@ POST /api/integrations/mcp-runtime/repair
 - Reparar runtime MCP não executa tool MCP.
 - Ação administrativa exige permissão de administração de integrações.
 - O monitor só reinicia após falhas consecutivas para evitar falso positivo.
+
+---
+
+## 18. MCP-06 — Contrato de roteamento operacional universal
+
+### 18.1 Entrada canônica
+
+A tool `resolve_app32_operation_tool` recebe `request_text`, `company_id` efetivo e data de referência opcional. Ela deve devolver:
+
+- `route_status`;
+- `domain` e `intent` canônicos;
+- `action`, `risk` e `human_gate_required`;
+- `target_harness_key` e `harness_switch_required`;
+- `preferred_tool`;
+- argumentos normalizados, incluindo período;
+- `execution_sequence`;
+- política de fallback.
+
+Estados de rota: `ready`, `needs_input`, `specialist_discovery` e `unsupported_fast_fallback`. Em `specialist_discovery`, o domínio e o harness já estão definidos; o CLI atualiza `tools/list` uma única vez e escolhe somente uma tool executável daquele domínio.
+
+### 18.2 Harness de sessão
+
+`describe_app32_session_harness_tool` e `select_app32_session_harness_tool` são operações de contexto da surface `user`.
+
+A seleção:
+
+- persiste por token pessoal;
+- aceita somente harness oficial do `squad_cliente`;
+- valida compatibilidade com o perfil-base;
+- preserva `company_id`;
+- não altera permissões do usuário;
+- exige refresh do catálogo efetivo na chamada seguinte.
+
+### 18.3 Catálogo e execução
+
+- catálogo efetivo contém apenas tools executáveis para papel-base, surface, runtime, harness, RBAC e tenant atuais;
+- item `planned` nunca aparece como alternativa operacional ativa;
+- roteador não executa regra de negócio nem consulta banco de domínio;
+- tool preferencial chama service existente, sempre tenant-safe;
+- leitura autorizada não exige confirmação;
+- mutações continuam governadas por policy/HITL.
+
+### 18.4 Primeiro contrato financeiro
+
+`get_financial_payables_due_summary` consulta contas a pagar em aberto por `company_id` e intervalo explícito de vencimento. O retorno mínimo contém período, quantidade de títulos, total em aberto, moeda e itens resumidos.
+
+### 18.5 Critérios de aceite
+
+1. pergunta financeira com “próxima semana” resolve período de segunda a domingo;
+2. processo, projeto, estratégia, comercial, reunião e identidade possuem rota determinística inicial;
+3. troca de harness ocorre sem renovar token ou reconectar MCP;
+4. catálogo pós-troca publica somente tools autorizadas;
+5. fallback desconhecido não inicia varredura de catálogos;
+6. smoke remoto confirma isolamento por `company_id` e resposta objetiva.

@@ -137,3 +137,9 @@ Este harness é aderente quando:
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\agentes_oficiais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\harnesses_oficiais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\playbooks\squad_cliente\playbook_handoff_escalonamento_squad_cliente_v1.md`
+
+---
+
+## 11. Roteamento operacional rápido
+
+Antes de pesquisar tools ou catálogos, o Coordenador deve chamar `resolve_app32_operation_tool`. Havendo especialista indicado, deve ativá-lo com `select_app32_session_harness_tool`, atualizar o catálogo e executar a tool preferencial. Capabilities planejadas não são alternativas executáveis. Quando o domínio for reconhecido sem tool preferencial, atualizar `tools/list` uma única vez e selecionar apenas uma tool executável desse domínio. Pedido não reconhecido recebe uma pergunta curta de esclarecimento, sem varredura recursiva.

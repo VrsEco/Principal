@@ -216,3 +216,27 @@ Regra:
 - o monitor não deve reiniciar em toda falha isolada;
 - a ação administrativa não deve renovar token nem alterar tenant;
 - o reparo deve apenas restaurar o processo MCP HTTP e validar health local/público.
+
+---
+
+## 22. MCP-06 — Roteamento operacional universal e econômico
+
+Após estabilizar transporte, autenticação, tenant e catálogo efetivo, fica oficializado que a agilidade do CLI/IA depende de um roteamento determinístico anterior ao discovery amplo.
+
+Decisão:
+
+> Toda nova solicitação operacional deve ser resolvida por `resolve_app32_operation_tool`, que identifica domínio, intenção, harness, risco, período, argumentos e tool preferencial. O CLI não deve varrer catálogos quando houver rota ativa.
+
+Regras:
+
+1. contexto de empresa é reaproveitado da sessão e continua obrigatório;
+2. o Coordenador é a porta de entrada, mas pode ativar Comercial, Operacional ou Adm/Financeiro sem reconectar o MCP;
+3. `select_app32_session_harness_tool` só permite harness oficial da mesma família e nunca amplia o RBAC do usuário;
+4. `tools/list` e `list_user_app32_capabilities` devem refletir o harness ativo na chamada seguinte;
+5. capabilities `planned` permanecem separadas e não podem ser tratadas como executáveis;
+6. leitura operacional autorizada executa diretamente, sem human gate;
+7. mutação, decisão metodológica ou risco relevante seguem policy e gate;
+8. pedido com domínio conhecido, mas sem tool preferencial, deve ativar o especialista e consultar `tools/list` uma única vez, restrito ao domínio;
+9. pedido sem domínio reconhecido deve receber fallback curto, sem investigação recursiva de catálogo.
+
+Meta operacional: pedidos comuns devem exigir, no máximo, resolução da rota, eventual troca de harness e uma chamada da tool de domínio.
