@@ -151,3 +151,20 @@ def test_process_runtime_route_uses_company_scope_contract():
     )
     assert result["preferred_tool"] == "get_my_work"
     assert result["arguments"] == {"scope": "company", "company_ids": "9"}
+
+
+def test_routes_mission_maturity_to_next_action_engine():
+    result = McpOperationRouterService.resolve(
+        request_text="Qual é o próximo passo da missão?",
+        company_id=9,
+        current_harness_key="harness_coordenador_cliente_v1",
+    )
+
+    assert result["route_status"] == "ready"
+    assert result["domain"] == "consultive"
+    assert result["preferred_tool"] == "consultive_get_next_action"
+    assert result["arguments"] == {
+        "company_id": 9,
+        "front_key": "identity",
+        "subphase_key": "mission",
+    }

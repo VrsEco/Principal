@@ -587,6 +587,7 @@ class ConsultiveProtocolService:
             "investigation_layers": list(payload.get("investigation_layers") or []),
             "squad_focus": dict(payload.get("squad_focus") or {}),
             "mcp_tools": [
+                "consultive_get_next_action",
                 "consultive_get_front_context",
                 "consultive_get_front_evidence",
                 "consultive_get_front_gaps",
@@ -651,6 +652,7 @@ Papéis dos squads na validação:
 {squad_focus}
 
 Regras obrigatórias:
+- chame consultive_get_next_action para obter o estado, próximo responsável, critérios e gate antes de improvisar a sequência;
 - use MCP First para buscar contexto, evidências, gaps e orientação metodológica da empresa com company_id;
 - use consultive_resolve_protocol para aprofundar cada subfase relevante antes de concluir;
 - faça pesquisa profunda e vasta na internet quando houver pergunta de boas práticas, benchmarking, mercado ou referência externa;

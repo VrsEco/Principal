@@ -590,6 +590,7 @@ _supplemental_mcp_tools = (
             ("get_feature_guide", "Retorna o guia operacional de uma feature MCP autorizada."),
             ("get_feature_examples", "Retorna exemplos de uso de uma feature MCP autorizada."),
             ("get_feature_constraints", "Retorna restrições e contexto obrigatório de uma feature MCP autorizada."),
+            ("consultive_get_next_action", "Retorna a próxima ação determinística da maturidade assistida, com responsável, tools, critérios e gate."),
             ("consultive_get_front_context", "Retorna o contexto consolidado da frente consultiva no tenant."),
             ("consultive_get_front_evidence", "Lista evidências internas consideradas na frente consultiva."),
             ("consultive_get_front_gaps", "Lista gaps metodológicos e técnicos da frente consultiva."),

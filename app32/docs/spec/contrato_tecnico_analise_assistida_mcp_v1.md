@@ -415,3 +415,76 @@ Regra oficial:
 - quando não houver protocolo tenant-owned/global persistido, o service deve retornar fallback canônico `fallback-v1`;
 - o fallback é segurança operacional, não substitui a evolução versionada;
 - o protocolo pode ser aprofundado por `depth_level` sem alteração de template.
+
+---
+
+## 11. Motor de Condução da Maturidade Assistida
+
+### 11.1 Tool oficial
+
+`consultive_get_next_action(company_id, front_key, subphase_key=None)` é uma tool de leitura da surface `user`, domínio `consultive`, permissionada por `consultive.read` e obrigatoriamente tenant-safe.
+
+Ela não executa mutação e retorna:
+
+```json
+{
+  "company_id": 9,
+  "front_key": "identity",
+  "subphase_key": "mission",
+  "protocol": {"version": "fallback-v1", "source": "fallback"},
+  "journey_state": "collecting_evidence",
+  "current_state": {
+    "maturity": {},
+    "latest_analysis_id": null,
+    "validations": {},
+    "consultant_decision": null
+  },
+  "next_action": {
+    "key": "develop_mission_diagnosis",
+    "label": "Diagnosticar e amadurecer a Missão",
+    "responsible": "Squad Cliente / gestor / CLI do cliente",
+    "objective": "...",
+    "required_inputs": [],
+    "allowed_tools": [],
+    "completion_criteria": [],
+    "human_gate_required": false
+  },
+  "orchestration": {
+    "may_execute": [],
+    "must_not_execute": [],
+    "handoff_to": "Squad Cliente",
+    "blocked": false
+  }
+}
+```
+
+### 11.2 Máquina de estados do piloto Missão
+
+1. `collecting_evidence`: não há análise assistida aplicável; Squad Cliente/gestor/CLI coleta contexto, entrevista, pesquisa e produz diagnóstico.
+2. `awaiting_client_validation`: a análise existe e aguarda confirmação do conteúdo humano pelo Squad Cliente.
+3. `awaiting_versus_validation`: conteúdo confirmado aguarda validação metodológica do Squad Versus.
+4. `awaiting_engineering_validation`: usado quando há gap técnico, de dados, MCP, read model ou rastreabilidade.
+5. `awaiting_consultant_decision`: validações necessárias concluídas; consultor decide aceitar, ajustar, manter ou rejeitar.
+6. `approved_for_execution`: decisão aceita; somente executor autorizado pode persistir o conteúdo aprovado.
+7. `executed_verified`: escrita autorizada foi relida e verificada.
+8. `blocked`: rejeição, ajuste, capability ausente ou evidência insuficiente impede avanço.
+
+### 11.3 Regras de decisão
+
+- protocolo tenant-owned ativo prevalece sobre fallback global;
+- a análise considerada deve pertencer ao mesmo `company_id`, `front_key` e subfase do protocolo quando identificável;
+- validação `rejected` ou `needs_adjustment` interrompe o avanço e devolve ação de revisão;
+- Engenharia é obrigatória somente quando houver gap técnico bloqueante (`high` ou `critical`);
+- nenhuma validação pode ser registrada em nome de outro Squad;
+- decisão e persistência canônica continuam human-gated;
+- a tool nunca declara execução ou maturidade concluída sem releitura equivalente.
+
+### 11.4 Critérios de aceite do piloto
+
+1. `company_id` inexistente ou fora do tenant é recusado pelo contrato MCP;
+2. Identidade sem análise retorna a ação de diagnóstico da Missão;
+3. análise recebida avança sequencialmente pelas validações aplicáveis;
+4. rejeição ou pedido de ajuste devolve estado bloqueado e ação de revisão;
+5. decisão aceita devolve execução autorizada, sem executar escrita;
+6. protocolo, perguntas, camadas de investigação e critérios de conclusão aparecem no retorno;
+7. a tool fica disponível na surface `user` sem publicar qualquer mutação consultiva ao Squad Cliente.

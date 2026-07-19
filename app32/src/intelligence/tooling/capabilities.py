@@ -1397,6 +1397,7 @@ def _register_consultive_capability(tool_name: str, *, action: str = "read", wri
 
 
 for _tool_name in (
+    "consultive_get_next_action",
     "consultive_get_front_context",
     "consultive_get_front_evidence",
     "consultive_get_front_gaps",

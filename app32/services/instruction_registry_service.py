@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-07-19.1"
+    CURRENT_BUNDLE_VERSION = "2026-07-19.2"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -535,7 +535,7 @@ class InstructionRegistryService:
         if runtime_profile != "squad_cliente":
             return None
         return {
-            "version": "structuring-journey-v1",
+            "version": "structuring-journey-v2",
             "scope": "Condução MCP First das quatro frentes da Estruturação Empresarial pelo Squad Cliente.",
             "entry_state": "collecting_evidence",
             "states": [
@@ -553,6 +553,11 @@ class InstructionRegistryService:
                     "key": "awaiting_versus_validation",
                     "responsible": "Squad Versus",
                     "required_output": "Diagnóstico, método utilizado, riscos, fontes e opções de encaminhamento.",
+                },
+                {
+                    "key": "awaiting_engineering_validation",
+                    "responsible": "Squad de Engenharia",
+                    "required_output": "Gaps técnicos, dados, MCP, read models e rastreabilidade validados quando aplicável.",
                 },
                 {
                     "key": "awaiting_consultant_decision",
@@ -619,6 +624,7 @@ class InstructionRegistryService:
             ],
             "read_tool_sequence": [
                 "select_app32_session_company_tool",
+                "consultive_get_next_action",
                 "consultive_get_front_context",
                 "consultive_get_front_evidence",
                 "consultive_get_front_gaps",
@@ -684,6 +690,10 @@ class InstructionRegistryService:
             InstructionRule(
                 rule="MCP First para discovery operacional; o bundle não substitui contratos, capabilities nem playbooks da surface.",
                 rationale="Mantém o APP32 como fonte de verdade operacional.",
+            ),
+            InstructionRule(
+                rule="Na maturidade assistida, chamar consultive_get_next_action para obter estado, próximo responsável, critérios e gate antes de improvisar a sequência metodológica.",
+                rationale="Mantém Forma de Trabalho, Ferramenta, Agentes e Orquestração sincronizados.",
             ),
             InstructionRule(
                 rule="Para toda nova solicitação operacional, chamar resolve_app32_operation_tool antes de pesquisar tools ou catálogos; se houver troca de especialista, usar select_app32_session_harness_tool e atualizar tools/list.",

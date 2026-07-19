@@ -60,6 +60,13 @@ class McpOperationRouterService:
             "keywords": ("planejamento estrategico", "plano estrategico", "planos estrategicos", "planejamento de crescimento", "plano de crescimento"),
         },
         {
+            "intent": "consultive.next_action",
+            "domain": "consultive",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "tool": "consultive_get_next_action",
+            "keywords": ("amadurecer a missao", "proximo passo da missao", "proxima acao consultiva", "jornada da missao", "maturidade da missao"),
+        },
+        {
             "intent": "strategy.identity",
             "domain": "strategy",
             "harness_key": "harness_coordenador_cliente_v1",
@@ -287,6 +294,8 @@ class McpOperationRouterService:
                     "due_date_to": period.get("date_to"),
                 }
             )
+        elif selected["intent"] == "consultive.next_action":
+            arguments.update({"front_key": "identity", "subphase_key": "mission"})
         elif selected["intent"] == "routine.tasks":
             arguments = {"scope": "me"}
         elif selected["intent"] == "processes.operations":

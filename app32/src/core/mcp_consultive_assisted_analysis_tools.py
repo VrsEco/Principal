@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from services.business_review_read_model_service import BusinessReviewReadModelService
 from services.consultive_assisted_analysis_service import ConsultiveAssistedAnalysisService
+from services.consultive_maturity_guidance_service import ConsultiveMaturityGuidanceService
 from services.consultive_protocol_service import ConsultiveProtocolService
 from services.urgent_business_review_common import UrgentBusinessReviewError
 from src.core.mcp_http_auth import get_http_actor_role
@@ -50,6 +51,27 @@ def _error(operation: str, exc: Exception, *, company_id: int | None = None, wri
 
 def register_consultive_assisted_analysis_tools(mcp: Any) -> None:
     """Registra tools MCP para IA/CLI ler contexto e devolver análise ao APP32."""
+
+    @mcp.tool()
+    def consultive_get_next_action(
+        company_id: int,
+        front_key: str,
+        subphase_key: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Retorna estado, próximo responsável, ação, entradas, tools e gate da maturidade assistida."""
+        operation = "next_action.get"
+        try:
+            return _success(
+                operation,
+                ConsultiveMaturityGuidanceService.get_next_action(
+                    company_id=company_id,
+                    front_key=front_key,
+                    subphase_key=subphase_key,
+                ),
+                company_id=company_id,
+            )
+        except Exception as exc:  # pragma: no cover - envelope defensivo
+            return _error(operation, exc, company_id=company_id)
 
     @mcp.tool()
     def consultive_get_front_context(company_id: int, front_key: str) -> dict[str, Any]:

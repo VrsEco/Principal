@@ -390,6 +390,8 @@ def test_user_surface_manifest_exposes_consultive_read_tools_to_cliente_harness(
     manifest = registry.get_surface_manifest("user", domain="consultive", include_tools=True)
     tools = {tool["name"]: tool for tool in manifest["tools"]}
 
+    assert tools["consultive_get_next_action"]["domain"] == "consultive"
+    assert tools["consultive_get_next_action"]["permissions"] == ["consultive.read"]
     assert tools["consultive_get_front_context"]["domain"] == "consultive"
     assert tools["consultive_get_front_context"]["permissions"] == ["consultive.read"]
     assert "consultive_resolve_protocol" in tools
@@ -426,6 +428,7 @@ def test_user_surface_manifest_hides_consultive_writes_for_admin_in_squad_client
     manifest = registry.get_surface_manifest("user", domain="consultive", include_tools=True)
     tool_names = {tool["name"] for tool in manifest["tools"]}
 
+    assert "consultive_get_next_action" in tool_names
     assert "consultive_get_front_context" in tool_names
     assert "consultive_resolve_protocol" in tool_names
     assert "consultive_register_assisted_analysis" not in tool_names

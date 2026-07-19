@@ -194,6 +194,7 @@ def test_front_level_mcp_protocol_covers_all_structural_fronts():
         assert protocol["subphase_key"] is None
         assert protocol["protocol_version"] == "front-guide-v1"
         assert protocol["protocol"]["subphases"] == subphases
+        assert "consultive_get_next_action" in protocol["protocol"]["mcp_tools"]
         assert "consultive_get_front_context" in protocol["protocol"]["mcp_tools"]
         assert "consultive_resolve_protocol" in protocol["protocol"]["mcp_tools"]
         assert "pesquisa profunda" in protocol["prompt_markdown"]
@@ -697,6 +698,7 @@ def test_consultive_assisted_analysis_mcp_tools_are_registered_in_catalog():
         tools = handle.read()
 
     assert "register_consultive_assisted_analysis_tools" in catalog
+    assert "consultive_get_next_action" in catalog
     assert "consultive_get_front_context" in catalog
     assert "consultive_register_assisted_analysis" in catalog
     assert "consultive_register_consultant_decision" in catalog

@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+from services.consultive_maturity_guidance_service import ConsultiveMaturityGuidanceService
+
+
+def _context(engineering=True):
+    return {
+        "maturity": {"status": "partial", "score": 60},
+        "internal_evidence": [{"label": "Missão", "finding": "Registrada."}],
+        "gaps": [],
+        "engineering_gaps": ([{"severity": "high", "description": "read model"}] if engineering else []),
+    }
+
+
+def _protocol():
+    return {
+        "id": None,
+        "protocol_version": "fallback-v1",
+        "source": "fallback",
+        "title": "Protocolo da Missão",
+        "depth_level": "simulation",
+        "protocol": {
+            "investigation_layers": ["gestor_intent", "external_benchmark"],
+            "required_questions": ["O que a empresa entrega?"],
+        },
+    }
+
+
+def _analysis(*, validations=None, decision=None, status="received"):
+    return {
+        "id": 77,
+        "company_id": 9,
+        "front_key": "identity",
+        "status": status,
+        "protocol_snapshot": {"subphase_key": "mission"},
+        "validations": validations or [],
+        "latest_decision": decision,
+    }
+
+
+def _install(monkeypatch, analyses, *, engineering=True):
+    calls = {}
+    monkeypatch.setattr(
+        "services.consultive_maturity_guidance_service.BusinessReviewReadModelService.get_structural_front_analysis",
+        lambda **kwargs: calls.setdefault("context", kwargs) and _context(engineering),
+    )
+    monkeypatch.setattr(
+        "services.consultive_maturity_guidance_service.ConsultiveProtocolService.resolve_protocol",
+        lambda **kwargs: calls.setdefault("protocol", kwargs) and _protocol(),
+    )
+    monkeypatch.setattr(
+        "services.consultive_maturity_guidance_service.ConsultiveAssistedAnalysisService.list_analyses",
+        lambda **kwargs: calls.setdefault("analyses", kwargs) and analyses,
+    )
+    return calls
+
+
+def test_mission_without_analysis_returns_guided_diagnosis(monkeypatch):
+    calls = _install(monkeypatch, [])
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=9, front_key="identity", subphase_key="mission"
+    )
+
+    assert result["company_id"] == 9
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["next_action"]["key"] == "develop_mission_diagnosis"
+    assert "O que a empresa entrega?" in result["next_action"]["required_inputs"]
+    assert result["protocol"]["investigation_layers"] == ["gestor_intent", "external_benchmark"]
+    assert calls["context"]["company_id"] == 9
+    assert calls["analyses"]["company_id"] == 9
+
+
+def test_mission_advances_through_required_squad_validations(monkeypatch):
+    client_validated = [{"squad": "client", "status": "validated"}]
+    _install(monkeypatch, [_analysis(validations=client_validated)])
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+    assert result["journey_state"] == "awaiting_versus_validation"
+
+    versus_validated = client_validated + [{"squad": "versus", "status": "validated"}]
+    _install(monkeypatch, [_analysis(validations=versus_validated)])
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+    assert result["journey_state"] == "awaiting_engineering_validation"
+
+    all_validated = versus_validated + [{"squad": "engineering", "status": "validated"}]
+    _install(monkeypatch, [_analysis(validations=all_validated)])
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+    assert result["journey_state"] == "awaiting_consultant_decision"
+    assert result["next_action"]["human_gate_required"] is True
+
+
+def test_rejected_validation_blocks_and_requests_revision(monkeypatch):
+    _install(monkeypatch, [_analysis(validations=[{"squad": "client", "status": "needs_adjustment"}])])
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+
+    assert result["journey_state"] == "blocked"
+    assert result["next_action"]["key"] == "revise_assisted_analysis"
+    assert result["orchestration"]["blocked"] is True
+
+
+def test_accepted_decision_authorizes_but_does_not_execute_persistence(monkeypatch):
+    validations = [
+        {"squad": "client", "status": "validated"},
+        {"squad": "versus", "status": "validated"},
+        {"squad": "engineering", "status": "validated"},
+    ]
+    _install(monkeypatch, [_analysis(validations=validations, decision={"decision": "accept"})])
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+
+    assert result["journey_state"] == "approved_for_execution"
+    assert result["next_action"]["key"] == "persist_approved_mission"
+    assert result["next_action"]["human_gate_required"] is True
+    assert "persistir dado canônico sem autorização" in result["orchestration"]["must_not_execute"]
+
+
+def test_engineering_validation_is_skipped_without_technical_gap(monkeypatch):
+    validations = [
+        {"squad": "client", "status": "validated"},
+        {"squad": "versus", "status": "validated"},
+    ]
+    _install(monkeypatch, [_analysis(validations=validations)], engineering=False)
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+
+    assert result["journey_state"] == "awaiting_consultant_decision"
+    assert result["current_state"]["engineering_validation_required"] is False

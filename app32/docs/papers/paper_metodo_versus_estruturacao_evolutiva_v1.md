@@ -1120,3 +1120,43 @@ Não deve ser criado, por padrão, um “módulo de agentes” separado para o u
 - **Apontar gaps técnicos**.
 
 Essa decisão preserva simplicidade de uso para o consultor, evita fragmentação da experiência e utiliza o máximo poder dos agentes sem transformar o APP32 em uma coleção de telas desconectadas.
+
+### 12.5.2 Motor de Condução da Maturidade Assistida
+
+A estabilidade do MCP permite avançar da leitura consultiva para uma condução orientada por estado. O CLI não deve depender de um prompt estático nem escolher sozinho o próximo movimento da metodologia.
+
+Decisão conceitual:
+
+> O APP32 deve oferecer, via MCP, uma próxima ação consultiva determinística, ancorada no `company_id`, no protocolo ativo, nas evidências, nas análises recebidas, nas validações dos Squads e na decisão do consultor.
+
+O motor deve responder, no mínimo:
+
+- onde a empresa está na jornada;
+- o que precisa ser feito agora;
+- por que essa ação é necessária;
+- quem é o próximo responsável;
+- quais entradas e tools podem ser usadas;
+- qual evidência conclui a etapa;
+- se existe gate humano ou bloqueio técnico.
+
+O primeiro recorte vertical oficial é **Identidade Organizacional → Missão**. A jornada piloto percorre:
+
+1. contexto e evidências internas;
+2. perguntas ao gestor e separação entre fala humana e hipótese de IA;
+3. pesquisa de mercado e benchmarks quando o protocolo exigir;
+4. confronto entre missão, MVV, posicionamento, processos e capacidade de entrega;
+5. registro da análise assistida;
+6. validação do Squad Cliente;
+7. validação metodológica do Squad Versus;
+8. validação técnica do Squad de Engenharia quando houver gap técnico;
+9. decisão final do consultor;
+10. execução autorizada, releitura e verificação.
+
+Leitura pelos quatro pilares:
+
+- **Forma de Trabalho:** estados, entregáveis e gates explícitos;
+- **Ferramenta:** contexto, protocolos, histórico e próxima ação publicados pelo APP32/MCP;
+- **Agentes:** responsabilidades distintas para CLI, Squad Cliente, Squad Versus, Engenharia e consultor;
+- **Orquestração:** handoff determinístico, sem elevação de permissão e sem mutação automática.
+
+O motor não executa IA, pesquisa ou escrita canônica. Ele orienta o runtime externo e preserva a regra: IA recomenda, Squads validam dentro de seus papéis e o consultor decide.

@@ -24,7 +24,11 @@ def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
     payload = InstructionRegistryService.resolve_bundle(runtime_profile="squad_cliente", channel="stable")
     rules = " ".join(item["rule"] for item in payload["mandatory_rules"])
 
-    assert payload["bundle_version"] == "2026-07-19.1"
+    assert payload["bundle_version"] == "2026-07-19.2"
     assert "capability_not_available" in rules
     assert "502, 503 ou 504" in rules
     assert "Nunca repetir mutação automaticamente" in rules
+    assert "consultive_get_next_action" in rules
+    assert payload["journey_guide"]["version"] == "structuring-journey-v2"
+    state_keys = [item["key"] for item in payload["journey_guide"]["states"]]
+    assert "awaiting_engineering_validation" in state_keys

@@ -153,3 +153,21 @@ Antes de pesquisar tools ou catálogos, o Coordenador deve chamar `resolve_app32
 - em `specialist_discovery`, atualizar `tools/list` uma vez e executar somente correspondência semântica exata;
 - em HTTP `502`, `503` ou `504`, reabrir `streamable-http`, restaurar empresa/harness e repetir apenas leitura idempotente, até três vezes, após 1, 2 e 4 segundos;
 - nunca repetir mutação automaticamente; primeiro confirmar o estado persistido e, se necessário, escalar.
+
+---
+
+## 13. Motor de próxima ação consultiva
+
+Ao conduzir uma frente da Estruturação Empresarial, o Coordenador deve chamar `consultive_get_next_action` antes de improvisar a sequência metodológica.
+
+Para o piloto `identity/mission`:
+
+1. executar apenas as leituras e pesquisas permitidas em `next_action.allowed_tools`;
+2. fazer as perguntas obrigatórias ao gestor e identificar claramente fala humana, dado APP32, benchmark e hipótese da IA;
+3. cumprir `completion_criteria` antes do handoff;
+4. não registrar validação por outro Squad;
+5. não antecipar decisão do consultor;
+6. não persistir Missão canônica sem decisão aceita e executor autorizado;
+7. após qualquer escrita autorizada, reler o estado antes de declarar conclusão.
+
+Se `journey_state=blocked`, interromper o avanço, explicar o bloqueio e encaminhar ao responsável indicado. O CLI não pode contornar gap técnico, ausência de evidência, RBAC ou gate humano.
