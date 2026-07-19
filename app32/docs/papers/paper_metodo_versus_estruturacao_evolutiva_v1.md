@@ -457,6 +457,17 @@ Não confundir maturidade com:
 - projeto aberto sem dono;
 - planejamento estratégico sem cadência.
 
+### 8.5 Cobertura cadastral não é maturidade metodológica
+
+O APP32 pode medir que um elemento existe, está preenchido ou possui evidência disponível. Essa leitura representa **cobertura cadastral** e pode chegar a 100% sem que o elemento esteja metodologicamente maduro.
+
+A maturidade metodológica depende do ciclo completo aplicável: diagnóstico, evidências, tratamento dos gaps, validações dos responsáveis, decisão do consultor, execução autorizada e verificação posterior. Portanto:
+
+- cobertura de 100% não autoriza o rótulo `maduro` ou `OK`;
+- gaps e validações pendentes devem permanecer visíveis;
+- a maturidade metodológica não deve receber percentual artificial derivado do preenchimento;
+- somente execução verificada, sem gaps abertos aplicáveis, permite declarar o elemento maduro.
+
 ---
 
 ## 9. A ferramenta (APP32)
@@ -1151,6 +1162,8 @@ O primeiro recorte vertical oficial é **Identidade Organizacional → Missão**
 8. validação técnica do Squad de Engenharia quando houver gap técnico;
 9. decisão final do consultor;
 10. execução autorizada, releitura e verificação.
+
+O registro da análise assistida é uma transição operacional da jornada, não uma persistência canônica da Missão. Ele pode ser executado pelo CLI somente depois de apresentar diagnóstico, fontes, riscos e proposta ao responsável humano e receber confirmação explícita para registrar. As validações, a decisão do consultor e a escrita canônica permanecem gates humanos distintos.
 
 Leitura pelos quatro pilares:
 

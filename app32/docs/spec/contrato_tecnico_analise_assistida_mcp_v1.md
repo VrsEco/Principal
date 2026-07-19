@@ -434,7 +434,18 @@ Ela não executa mutação e retorna:
   "protocol": {"version": "fallback-v1", "source": "fallback"},
   "journey_state": "collecting_evidence",
   "current_state": {
-    "maturity": {},
+    "coverage": {
+      "score": 100,
+      "metric_type": "registration_coverage",
+      "does_not_prove_methodological_maturity": true
+    },
+    "methodological_maturity": {
+      "status": "in_development",
+      "is_mature": false,
+      "score": null,
+      "score_policy": "not_derived_from_registration_coverage",
+      "open_reasons": ["assisted_analysis_missing"]
+    },
     "latest_analysis_id": null,
     "validations": {},
     "consultant_decision": null
@@ -447,7 +458,12 @@ Ela não executa mutação e retorna:
     "required_inputs": [],
     "allowed_tools": [],
     "completion_criteria": [],
-    "human_gate_required": false
+    "human_gate_required": true,
+    "write_policy": {
+      "write_tools": ["consultive_register_assisted_analysis"],
+      "requires_explicit_human_confirmation": true,
+      "canonical_write_allowed": false
+    }
   },
   "orchestration": {
     "may_execute": [],
@@ -460,7 +476,7 @@ Ela não executa mutação e retorna:
 
 ### 11.2 Máquina de estados do piloto Missão
 
-1. `collecting_evidence`: não há análise assistida aplicável; Squad Cliente/gestor/CLI coleta contexto, entrevista, pesquisa e produz diagnóstico.
+1. `collecting_evidence`: não há análise assistida aplicável; Squad Cliente/gestor/CLI coleta contexto, entrevista, pesquisa e produz diagnóstico. Após apresentar o conteúdo e receber confirmação humana explícita, o CLI pode usar `consultive_register_assisted_analysis` para registrar a transição.
 2. `awaiting_client_validation`: a análise existe e aguarda confirmação do conteúdo humano pelo Squad Cliente.
 3. `awaiting_versus_validation`: conteúdo confirmado aguarda validação metodológica do Squad Versus.
 4. `awaiting_engineering_validation`: usado quando há gap técnico, de dados, MCP, read model ou rastreabilidade.
@@ -478,6 +494,11 @@ Ela não executa mutação e retorna:
 - nenhuma validação pode ser registrada em nome de outro Squad;
 - decisão e persistência canônica continuam human-gated;
 - a tool nunca declara execução ou maturidade concluída sem releitura equivalente.
+- `current_state.coverage` mede presença e preenchimento; não prova maturidade;
+- `current_state.methodological_maturity.score` permanece `null`: não se deriva percentual metodológico da cobertura cadastral;
+- toda tool de escrita publicada em `allowed_tools` deve aparecer também em `write_policy.write_tools` e exigir confirmação humana explícita;
+- `consultive_register_assisted_analysis` registra diagnóstico rastreável, mas não altera a Missão canônica;
+- validações usam `consultive_register_squad_validation`, decisão usa `consultive_register_consultant_decision` e persistência canônica somente ocorre no estado autorizado.
 
 ### 11.4 Critérios de aceite do piloto
 
@@ -487,4 +508,6 @@ Ela não executa mutação e retorna:
 4. rejeição ou pedido de ajuste devolve estado bloqueado e ação de revisão;
 5. decisão aceita devolve execução autorizada, sem executar escrita;
 6. protocolo, perguntas, camadas de investigação e critérios de conclusão aparecem no retorno;
-7. a tool fica disponível na surface `user` sem publicar qualquer mutação consultiva ao Squad Cliente.
+7. `consultive_get_next_action` permanece somente leitura; quando houver transição registrável, ela publica a tool de escrita separada e sua `write_policy`, sem executar a mutação automaticamente.
+8. cobertura de 100% com gaps ou gates pendentes retorna maturidade metodológica não madura;
+9. cada estado registrável publica a tool necessária para avançar e sua política de confirmação humana.

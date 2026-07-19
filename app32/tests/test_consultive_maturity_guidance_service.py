@@ -66,6 +66,19 @@ def test_mission_without_analysis_returns_guided_diagnosis(monkeypatch):
     assert result["journey_state"] == "collecting_evidence"
     assert result["next_action"]["key"] == "develop_mission_diagnosis"
     assert "O que a empresa entrega?" in result["next_action"]["required_inputs"]
+    assert "consultive_register_assisted_analysis" in result["next_action"]["allowed_tools"]
+    assert result["next_action"]["human_gate_required"] is True
+    assert result["next_action"]["write_policy"] == {
+        "write_tools": ["consultive_register_assisted_analysis"],
+        "requires_explicit_human_confirmation": True,
+        "canonical_write_allowed": False,
+    }
+    assert result["current_state"]["coverage"]["score"] == 60
+    assert result["current_state"]["coverage"]["does_not_prove_methodological_maturity"] is True
+    assert result["current_state"]["methodological_maturity"]["status"] == "in_development"
+    assert result["current_state"]["methodological_maturity"]["is_mature"] is False
+    assert result["current_state"]["methodological_maturity"]["score"] is None
+    assert "assisted_analysis_missing" in result["current_state"]["methodological_maturity"]["open_reasons"]
     assert result["protocol"]["investigation_layers"] == ["gestor_intent", "external_benchmark"]
     assert calls["context"]["company_id"] == 9
     assert calls["analyses"]["company_id"] == 9
@@ -76,6 +89,8 @@ def test_mission_advances_through_required_squad_validations(monkeypatch):
     _install(monkeypatch, [_analysis(validations=client_validated)])
     result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
     assert result["journey_state"] == "awaiting_versus_validation"
+    assert "consultive_register_squad_validation" in result["next_action"]["allowed_tools"]
+    assert result["next_action"]["write_policy"]["requires_explicit_human_confirmation"] is True
 
     versus_validated = client_validated + [{"squad": "versus", "status": "validated"}]
     _install(monkeypatch, [_analysis(validations=versus_validated)])
@@ -87,6 +102,7 @@ def test_mission_advances_through_required_squad_validations(monkeypatch):
     result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
     assert result["journey_state"] == "awaiting_consultant_decision"
     assert result["next_action"]["human_gate_required"] is True
+    assert "consultive_register_consultant_decision" in result["next_action"]["allowed_tools"]
 
 
 def test_rejected_validation_blocks_and_requests_revision(monkeypatch):
@@ -112,6 +128,7 @@ def test_accepted_decision_authorizes_but_does_not_execute_persistence(monkeypat
     assert result["journey_state"] == "approved_for_execution"
     assert result["next_action"]["key"] == "persist_approved_mission"
     assert result["next_action"]["human_gate_required"] is True
+    assert result["next_action"]["write_policy"]["canonical_write_allowed"] is True
     assert "persistir dado canônico sem autorização" in result["orchestration"]["must_not_execute"]
 
 
@@ -126,3 +143,23 @@ def test_engineering_validation_is_skipped_without_technical_gap(monkeypatch):
 
     assert result["journey_state"] == "awaiting_consultant_decision"
     assert result["current_state"]["engineering_validation_required"] is False
+
+
+def test_executed_state_only_declares_maturity_without_open_gaps(monkeypatch):
+    validations = [
+        {"squad": "client", "status": "validated"},
+        {"squad": "versus", "status": "validated"},
+    ]
+    _install(
+        monkeypatch,
+        [_analysis(validations=validations, decision={"decision": "accept"}, status="converted")],
+        engineering=False,
+    )
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+
+    maturity = result["current_state"]["methodological_maturity"]
+    assert result["journey_state"] == "executed_verified"
+    assert maturity["status"] == "mature"
+    assert maturity["is_mature"] is True
+    assert maturity["open_reasons"] == []

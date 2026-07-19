@@ -162,12 +162,16 @@ Ao conduzir uma frente da Estruturação Empresarial, o Coordenador deve chamar 
 
 Para o piloto `identity/mission`:
 
-1. executar apenas as leituras e pesquisas permitidas em `next_action.allowed_tools`;
+1. executar apenas as leituras, pesquisas e transições permitidas em `next_action.allowed_tools`;
 2. fazer as perguntas obrigatórias ao gestor e identificar claramente fala humana, dado APP32, benchmark e hipótese da IA;
 3. cumprir `completion_criteria` antes do handoff;
 4. não registrar validação por outro Squad;
 5. não antecipar decisão do consultor;
 6. não persistir Missão canônica sem decisão aceita e executor autorizado;
-7. após qualquer escrita autorizada, reler o estado antes de declarar conclusão.
+7. após qualquer escrita autorizada, reler o estado antes de declarar conclusão;
+8. interpretar `current_state.coverage` somente como cobertura cadastral, nunca como maturidade metodológica;
+9. usar `current_state.methodological_maturity` para comunicar o estágio real, sem converter cobertura em percentual de maturidade;
+10. quando `write_policy.requires_explicit_human_confirmation=true`, apresentar o payload exato ao responsável e aguardar confirmação antes da tool de escrita;
+11. em `collecting_evidence`, `consultive_register_assisted_analysis` registra o diagnóstico confirmado, mas não autoriza alterar a Missão canônica.
 
 Se `journey_state=blocked`, interromper o avanço, explicar o bloqueio e encaminhar ao responsável indicado. O CLI não pode contornar gap técnico, ausência de evidência, RBAC ou gate humano.

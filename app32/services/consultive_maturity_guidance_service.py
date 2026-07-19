@@ -58,11 +58,20 @@ class ConsultiveMaturityGuidanceService:
         )
         validations = cls._validation_map(latest)
         decision = dict((latest or {}).get("latest_decision") or {}) or None
+        coverage = cls._registration_coverage(context)
+        methodological_maturity = cls._methodological_maturity(
+            journey_state=journey_state,
+            context=context,
+            latest=latest,
+            validations=validations,
+            decision=decision,
+            engineering_required=engineering_required,
+        )
         return {
             "company_id": company_id,
             "front_key": normalized_front,
             "subphase_key": normalized_subphase,
-            "journey_version": "mission-maturity-v1" if (normalized_front, normalized_subphase) == ("identity", "mission") else "structuring-journey-v2",
+            "journey_version": "mission-maturity-v1.1" if (normalized_front, normalized_subphase) == ("identity", "mission") else "structuring-journey-v2",
             "pilot_scope": (normalized_front, normalized_subphase) == ("identity", "mission"),
             "protocol": {
                 "id": protocol.get("id"),
@@ -75,7 +84,9 @@ class ConsultiveMaturityGuidanceService:
             },
             "journey_state": journey_state,
             "current_state": {
-                "maturity": dict(context.get("maturity") or {}),
+                "coverage": coverage,
+                "methodological_maturity": methodological_maturity,
+                "maturity": coverage,
                 "evidence_count": len(context.get("internal_evidence") or []),
                 "gap_count": len(context.get("gaps") or []),
                 "engineering_gap_count": len(context.get("engineering_gaps") or []),
@@ -151,12 +162,19 @@ class ConsultiveMaturityGuidanceService:
                     "consultive_get_front_evidence",
                     "consultive_get_front_gaps",
                     "consultive_resolve_protocol",
+                    "consultive_register_assisted_analysis",
                 ],
+                write_policy=cls._write_policy(
+                    "consultive_register_assisted_analysis",
+                    canonical_write_allowed=False,
+                ),
                 completion_criteria=[
                     "Perguntas obrigatórias respondidas ou marcadas como pendentes.",
                     "Fala humana separada de dado APP32, benchmark e hipótese de IA.",
-                    "Diagnóstico, riscos e proposta preparados para registro da análise assistida.",
+                    "Diagnóstico, riscos e proposta apresentados ao gestor antes de qualquer escrita.",
+                    "Confirmação humana explícita obtida para registrar a análise assistida.",
                 ],
+                human_gate_required=True,
             )
 
         validations = cls._validation_map(latest)
@@ -168,8 +186,17 @@ class ConsultiveMaturityGuidanceService:
                     responsible=cls._squad_label(squad),
                     objective="Corrigir os pontos rejeitados ou que exigem ajuste antes de novo handoff.",
                     required_inputs=["Notas da validação", "Evidências ou fontes corrigidas", "Nova versão rastreável da análise"],
-                    allowed_tools=["consultive_list_assisted_analyses", "consultive_get_front_context"],
-                    completion_criteria=["Ajustes respondidos e nova análise preparada para validação."],
+                    allowed_tools=[
+                        "consultive_list_assisted_analyses",
+                        "consultive_get_front_context",
+                        "consultive_register_assisted_analysis",
+                    ],
+                    completion_criteria=["Ajustes respondidos, confirmados e registrados em nova análise rastreável."],
+                    human_gate_required=True,
+                    write_policy=cls._write_policy(
+                        "consultive_register_assisted_analysis",
+                        canonical_write_allowed=False,
+                    ),
                 )
 
         if validations["client"] != "validated":
@@ -187,9 +214,13 @@ class ConsultiveMaturityGuidanceService:
                 responsible="Consultor Versus",
                 objective="Decidir aceitar, ajustar, manter ou rejeitar a recomendação validada pelos Squads.",
                 required_inputs=["Análise assistida", "Validações aplicáveis", "Riscos, fontes e proposta exata"],
-                allowed_tools=["consultive_list_assisted_analyses"],
+                allowed_tools=["consultive_list_assisted_analyses", "consultive_register_consultant_decision"],
                 completion_criteria=["Decisão, justificativa e escopo autorizado registrados."],
                 human_gate_required=True,
+                write_policy=cls._write_policy(
+                    "consultive_register_consultant_decision",
+                    canonical_write_allowed=False,
+                ),
             )
 
         if decision.get("decision") != "accept":
@@ -224,6 +255,10 @@ class ConsultiveMaturityGuidanceService:
             allowed_tools=["get_strategy_identity_tool", "upsert_strategy_identity_tool", "consultive_get_front_context"],
             completion_criteria=["Missão persistida no company_id correto", "Releitura equivalente sem divergência", "Maturidade recalculada"],
             human_gate_required=True,
+            write_policy=cls._write_policy(
+                "upsert_strategy_identity_tool",
+                canonical_write_allowed=True,
+            ),
         )
 
     @classmethod
@@ -240,10 +275,80 @@ class ConsultiveMaturityGuidanceService:
             responsible=responsible,
             objective="Confirmar, rejeitar ou solicitar ajuste dentro do escopo exclusivo do responsável.",
             required_inputs=[f"Análise assistida #{latest.get('id')}", "Evidências, fontes, riscos e perguntas pendentes"],
-            allowed_tools=["consultive_list_assisted_analyses", "consultive_get_front_context"],
+            allowed_tools=[
+                "consultive_list_assisted_analyses",
+                "consultive_get_front_context",
+                "consultive_register_squad_validation",
+            ],
             completion_criteria=[f"Validação do {responsible} registrada com status e notas."],
             human_gate_required=True,
+            write_policy=cls._write_policy(
+                "consultive_register_squad_validation",
+                canonical_write_allowed=False,
+            ),
         )
+
+    @staticmethod
+    def _registration_coverage(context: dict[str, Any]) -> dict[str, Any]:
+        coverage = dict(context.get("maturity") or {})
+        coverage.update(
+            {
+                "metric_type": "registration_coverage",
+                "meaning": "Presença e preenchimento dos elementos no APP32.",
+                "does_not_prove_methodological_maturity": True,
+            }
+        )
+        return coverage
+
+    @classmethod
+    def _methodological_maturity(
+        cls,
+        *,
+        journey_state: str,
+        context: dict[str, Any],
+        latest: dict[str, Any] | None,
+        validations: dict[str, str],
+        decision: dict[str, Any] | None,
+        engineering_required: bool,
+    ) -> dict[str, Any]:
+        gaps = list(context.get("gaps") or [])
+        engineering_gaps = list(context.get("engineering_gaps") or [])
+        reasons: list[str] = []
+        if latest is None:
+            reasons.append("assisted_analysis_missing")
+        if gaps:
+            reasons.append("content_gaps_open")
+        if engineering_gaps:
+            reasons.append("engineering_gaps_open")
+        if latest is not None and validations.get("client") != "validated":
+            reasons.append("client_validation_missing")
+        if latest is not None and validations.get("versus") != "validated":
+            reasons.append("versus_validation_missing")
+        if latest is not None and engineering_required and validations.get("engineering") != "validated":
+            reasons.append("engineering_validation_missing")
+        if latest is not None and not decision:
+            reasons.append("consultant_decision_missing")
+        if journey_state != "executed_verified":
+            reasons.append("execution_not_verified")
+
+        status_by_state = {
+            "collecting_evidence": "in_development",
+            "awaiting_client_validation": "in_validation",
+            "awaiting_versus_validation": "in_validation",
+            "awaiting_engineering_validation": "in_validation",
+            "awaiting_consultant_decision": "awaiting_decision",
+            "approved_for_execution": "approved_pending_execution",
+            "executed_verified": "mature" if not gaps and not engineering_gaps else "executed_with_open_gaps",
+            "blocked": "blocked",
+        }
+        is_mature = journey_state == "executed_verified" and not gaps and not engineering_gaps
+        return {
+            "status": status_by_state.get(journey_state, "in_development"),
+            "is_mature": is_mature,
+            "score": None,
+            "score_policy": "not_derived_from_registration_coverage",
+            "open_reasons": reasons,
+        }
 
     @staticmethod
     def _squad_label(squad: str) -> str:
@@ -260,6 +365,7 @@ class ConsultiveMaturityGuidanceService:
         allowed_tools: list[str],
         completion_criteria: list[str],
         human_gate_required: bool = False,
+        write_policy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
             "key": key,
@@ -270,6 +376,19 @@ class ConsultiveMaturityGuidanceService:
             "allowed_tools": allowed_tools,
             "completion_criteria": completion_criteria,
             "human_gate_required": human_gate_required,
+            "write_policy": write_policy or {
+                "write_tools": [],
+                "requires_explicit_human_confirmation": False,
+                "canonical_write_allowed": False,
+            },
+        }
+
+    @staticmethod
+    def _write_policy(tool_name: str, *, canonical_write_allowed: bool) -> dict[str, Any]:
+        return {
+            "write_tools": [tool_name],
+            "requires_explicit_human_confirmation": True,
+            "canonical_write_allowed": canonical_write_allowed,
         }
 
 
