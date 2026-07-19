@@ -124,6 +124,9 @@ from .internal_audit import (
     AuditAuditor,
     AuditChecklist,
     AuditChecklistItem,
+    AuditExecution,
+    AuditExecutionItem,
+    AuditPoint,
     AuditSchedule,
 )
 

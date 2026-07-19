@@ -96,6 +96,38 @@ def checklists_page():
     return render_template("modules/internal_audit/checklists.html", company=company, company_id=company.id)
 
 
+@internal_audit_bp.route("/internal-audit/executions")
+@login_required
+def executions_page():
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template("modules/internal_audit/executions.html", company=company, company_id=company.id)
+
+
+@internal_audit_bp.route("/internal-audit/executions/<int:execution_id>")
+@login_required
+def execution_detail_page(execution_id: int):
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template(
+        "modules/internal_audit/execution_detail.html",
+        company=company,
+        company_id=company.id,
+        execution_id=execution_id,
+    )
+
+
+@internal_audit_bp.route("/internal-audit/points")
+@login_required
+def points_page():
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template("modules/internal_audit/points.html", company=company, company_id=company.id)
+
+
 @internal_audit_bp.route("/api/internal-audit/summary")
 @login_required
 def api_summary():
@@ -165,3 +197,69 @@ def api_checklist_items(checklist_id: int):
         lambda: InternalAuditService.create_checklist_item(company.id, checklist_id, _payload()),
         status=201,
     )
+
+
+@internal_audit_bp.route("/api/internal-audit/executions", methods=["GET", "POST"])
+@login_required
+def api_executions():
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return jsonify({"success": True, "data": InternalAuditService.list_executions(company.id)})
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_execution(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/executions/<int:execution_id>", methods=["GET"])
+@login_required
+def api_execution_detail(execution_id: int):
+    company = _active_company_or_400()
+    return _json_result(lambda: InternalAuditService.get_execution(company.id, execution_id))
+
+
+@internal_audit_bp.route("/api/internal-audit/execution-items/<int:execution_item_id>", methods=["PATCH", "POST"])
+@login_required
+def api_execution_item_update(execution_item_id: int):
+    company = _active_company_or_400()
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.update_execution_item(
+            company.id,
+            execution_item_id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        )
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/points", methods=["GET", "POST"])
+@login_required
+def api_points():
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return jsonify({"success": True, "data": InternalAuditService.list_points(company.id, request.args.get("status"))})
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_point(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/points/<int:point_id>", methods=["GET", "PATCH", "POST"])
+@login_required
+def api_point_detail(point_id: int):
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return _json_result(lambda: InternalAuditService.get_point(company.id, point_id))
+    _ensure_manage(company.id)
+    return _json_result(lambda: InternalAuditService.update_point(company.id, point_id, _payload()))

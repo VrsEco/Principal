@@ -1,0 +1,28 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Auditoria Interna - Execuções{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><a href="/internal-audit">Auditoria Interna</a><span class="sep">/</span><span class="current">Execuções</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page">
+  <header><p class="eyebrow">Onda 2</p><h1>Execuções de Checklist</h1><p class="subtitle">Abra uma execução a partir de um checklist ativo e acompanhe o status dos itens auditados.</p></header>
+  <section class="panel">
+    <form id="execution-form" class="form-grid">
+      <select name="checklist_id" id="checklist-select" required><option value="">Checklist</option></select>
+      <input name="period_label" placeholder="Período auditado">
+      <input name="planned_start_date" type="date" title="Início planejado">
+      <input name="planned_end_date" type="date" title="Fim planejado">
+      <button class="btn btn-primary">Abrir execução</button>
+    </form>
+  </section>
+  <section id="executions-list" class="cards"></section>
+</div>
+<style>
+.audit-page{padding:0 2rem 2rem}.eyebrow{color:var(--primary);font-weight:800;text-transform:uppercase;font-size:.72rem}.subtitle{color:var(--text-secondary)}.panel,.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1rem;box-shadow:var(--shadow-sm)}.form-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:.75rem}.form-grid input,.form-grid select{border:1px solid var(--border);border-radius:12px;padding:.8rem;background:var(--surface-secondary)}.btn{border:0;border-radius:12px;padding:.8rem 1rem;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex}.btn-primary{background:var(--primary);color:#fff}.btn-secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}.cards{display:grid;gap:1rem;margin-top:1rem}.meta{color:var(--text-secondary);font-size:.85rem}.status{font-weight:800;color:var(--primary)}@media(max-width:1000px){.form-grid{grid-template-columns:1fr}.audit-page{padding:0 1rem 1.5rem}}
+</style>
+<script>
+const checklistSelect=document.getElementById('checklist-select'), list=document.getElementById('executions-list');
+async function loadChecklists(){const r=await fetch('/api/internal-audit/checklists');const j=await r.json();checklistSelect.innerHTML='<option value="">Checklist</option>'+(j.data||[]).map(c=>`<option value="${c.id}">${c.title}</option>`).join('')}
+async function load(){const r=await fetch('/api/internal-audit/executions');const j=await r.json();const rows=j.data||[];list.innerHTML=rows.map(e=>`<article class="card"><h2>${e.checklist_title||'Execução #'+e.id}</h2><p class="meta">${e.period_label||'Sem período'} · <span class="status">${e.status}</span> · Auditor: ${e.auditor_user_name||'-'}</p><a class="btn btn-secondary" href="/internal-audit/executions/${e.id}">Executar checklist</a></article>`).join('')||'<article class="card">Nenhuma execução aberta.</article>'}
+document.getElementById('execution-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const r=await fetch('/api/internal-audit/executions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.success){alert(j.message||'Erro');return}window.location.href=`/internal-audit/executions/${j.data.id}`});
+loadChecklists();load();
+</script>
+{% endblock %}

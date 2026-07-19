@@ -18,11 +18,23 @@ def test_internal_audit_spec_freezes_phase01_flow():
 def test_internal_audit_models_are_tenant_scoped():
     model = _read("models/internal_audit.py")
 
-    for class_name in ["AuditArea", "AuditAuditor", "AuditChecklist", "AuditChecklistItem", "AuditSchedule"]:
+    for class_name in [
+        "AuditArea",
+        "AuditAuditor",
+        "AuditChecklist",
+        "AuditChecklistItem",
+        "AuditSchedule",
+        "AuditExecution",
+        "AuditExecutionItem",
+        "AuditPoint",
+    ]:
         assert f"class {class_name}" in model
-    assert model.count("company_id = db.Column") >= 5
+    assert model.count("company_id = db.Column") >= 8
     assert "description_for_report" in model
     assert "AUDIT_CHECKLIST_TYPES" in model
+    assert "__tablename__ = \"audit_executions\"" in model
+    assert "__tablename__ = \"audit_execution_items\"" in model
+    assert "__tablename__ = \"audit_points\"" in model
 
 
 def test_internal_audit_routes_expose_phase01_catalogs():
@@ -31,8 +43,13 @@ def test_internal_audit_routes_expose_phase01_catalogs():
 
     assert "internal_audit_bp = Blueprint" in route
     assert '"/internal-audit/checklists"' in route
+    assert '"/internal-audit/executions"' in route
+    assert '"/internal-audit/points"' in route
     assert '"/api/internal-audit/checklists"' in route
     assert '"/api/internal-audit/checklists/<int:checklist_id>/items"' in route
+    assert '"/api/internal-audit/executions"' in route
+    assert '"/api/internal-audit/execution-items/<int:execution_item_id>"' in route
+    assert '"/api/internal-audit/points"' in route
     assert "from api.routes.internal_audit import internal_audit_bp" in app_py
     assert "app.register_blueprint(internal_audit_bp)" in app_py
 
@@ -48,3 +65,27 @@ def test_internal_audit_sidebar_is_below_finance_and_before_sapiens():
     assert 'href="/internal-audit/checklists"' in sidebar
     assert 'href="/internal-audit/areas"' in sidebar
     assert 'href="/internal-audit/auditors"' in sidebar
+    assert 'href="/internal-audit/executions"' in sidebar
+    assert 'href="/internal-audit/points"' in sidebar
+
+
+def test_internal_audit_wave2_service_generates_points_from_exceptions():
+    service = _read("services/internal_audit_service.py")
+
+    assert "def create_execution" in service
+    assert "def update_execution_item" in service
+    assert "def _ensure_point_for_execution_item" in service
+    assert "status in {\"qualified_conforming\", \"non_conforming\"}" in service
+    assert "origin_type=\"checklist\"" in service
+    assert "subject_type=\"audit_execution_item\"" in service
+
+
+def test_internal_audit_wave2_templates_exist():
+    for template in [
+        "templates/modules/internal_audit/executions.html",
+        "templates/modules/internal_audit/execution_detail.html",
+        "templates/modules/internal_audit/points.html",
+    ]:
+        content = _read(template)
+        assert "Onda 2" in content
+        assert "/api/internal-audit/" in content

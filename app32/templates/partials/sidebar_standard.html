@@ -423,9 +423,13 @@
             <a href="/internal-audit/auditors" class="sub-nav-link {{ 'active' if '/internal-audit/auditors' in request.path }}">
                 <span>Auditores</span>
             </a>
-            <a href="#" class="sub-nav-link" aria-disabled="true" onclick="return false;">
+            <a href="/internal-audit/executions" class="sub-nav-link {{ 'active' if '/internal-audit/executions' in request.path }}">
+                <span>Execuções</span>
+                <span class="nav-pill">Onda 2</span>
+            </a>
+            <a href="/internal-audit/points" class="sub-nav-link {{ 'active' if '/internal-audit/points' in request.path }}">
                 <span>Pontos de Auditoria</span>
-                <span class="nav-pill nav-pill-warning">Futuro</span>
+                <span class="nav-pill">Onda 2</span>
             </a>
         </div>
     </div>
