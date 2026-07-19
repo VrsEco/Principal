@@ -14,7 +14,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProxyVersion = "1.0.0"
+$ProxyVersion = "1.1.0"
 
 function Write-Step([string]$Message) {
     Write-Host ""
@@ -137,13 +137,15 @@ function Write-SapiensProxy([string]$ProxyPath) {
     $proxySource = @'
 #!/usr/bin/env node
 // Sapiens Cliente stdio -> StreamableHTTP/SSE proxy
-// Version: 1.0.0
+// Version: 1.1.0
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const targetUrl = process.env.SAPIENS_MCP_URL;
 const bearerToken = process.env.SAPIENS_MCP_TOKEN;
-const timeoutMs = Number(process.env.SAPIENS_MCP_TIMEOUT_MS || "30000");
+const timeoutMs = Number(process.env.SAPIENS_MCP_TIMEOUT_MS || "60000");
 let sessionId = process.env.SAPIENS_MCP_SESSION_ID || null;
+const RETRYABLE_METHODS = new Set(["initialize", "tools/list", "prompts/list", "resources/list"]);
+const RETRY_BACKOFF_MS = [500, 1500];
 
 if (!targetUrl || !bearerToken) {
   process.stderr.write("SAPIENS_MCP_URL e SAPIENS_MCP_TOKEN são obrigatórios.\n");
@@ -159,6 +161,17 @@ function debug(message) {
   if (process.env.SAPIENS_PROXY_DEBUG === "1") {
     process.stderr.write(`[sapiens-proxy ${VERSION}] ${message}\n`);
   }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function describeFetchError(error) {
+  const causes = Array.isArray(error?.cause?.errors)
+    ? error.cause.errors.map((item) => `${item.code || "error"}@${item.address || "unknown"}:${item.port || "?"}`)
+    : [];
+  return [error?.message || String(error), ...causes].join(" | ");
 }
 
 function writeJson(payload) {
@@ -225,8 +238,6 @@ async function pumpQueue() {
 }
 
 async function postJsonRpc(message) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const headers = {
     "accept": "application/json, text/event-stream",
     "content-type": "application/json",
@@ -236,15 +247,25 @@ async function postJsonRpc(message) {
   if (sessionId) headers["mcp-session-id"] = sessionId;
 
   let response;
-  try {
-    response = await fetch(targetUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(message),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
+  const maxAttempts = RETRYABLE_METHODS.has(message.method) ? 3 : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      response = await fetch(targetUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(message),
+        signal: controller.signal,
+      });
+      break;
+    } catch (error) {
+      debug(`tentativa ${attempt}/${maxAttempts} falhou em ${message.method}: ${describeFetchError(error)}`);
+      if (attempt >= maxAttempts) throw error;
+      await sleep(RETRY_BACKOFF_MS[attempt - 1]);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   const returnedSessionId = response.headers.get("mcp-session-id");
@@ -255,10 +276,15 @@ async function postJsonRpc(message) {
     const text = await response.text().catch(() => "");
     throw new Error(`HTTP ${response.status} ${response.statusText}: ${text.slice(0, 500)}`);
   }
+  if (response.status === 202 || response.status === 204 || message.id === undefined || message.id === null) {
+    await response.body?.cancel().catch(() => {});
+    return null;
+  }
   if (contentType.includes("text/event-stream")) {
     return await readSseUntilResponse(response, message.id);
   }
-  return await response.json();
+  const text = await response.text();
+  return text.trim() ? JSON.parse(text) : null;
 }
 
 function parseSseBlock(block) {
@@ -319,7 +345,7 @@ function Merge-ClaudeConfig(
         env = [ordered]@{
             SAPIENS_MCP_URL = $ServerUrl
             SAPIENS_MCP_TOKEN = $BearerToken
-            SAPIENS_MCP_TIMEOUT_MS = "30000"
+            SAPIENS_MCP_TIMEOUT_MS = "60000"
         }
         metadata = [ordered]@{
             proxy_version = $ProxyVersion
@@ -338,7 +364,7 @@ function Merge-ClaudeConfig(
 }
 
 function Invoke-ProxySmoke([string]$NodePath, [string]$ProxyPath) {
-    $payload = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"app32-installer","version":"1.0.0"}}}'
+    $payload = '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"app32-installer","version":"1.1.0"}}}'
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $NodePath
     $psi.Arguments = '"' + $ProxyPath.Replace('"', '\"') + '"'
@@ -348,16 +374,16 @@ function Invoke-ProxySmoke([string]$NodePath, [string]$ProxyPath) {
     $psi.RedirectStandardError = $true
     $psi.EnvironmentVariables["SAPIENS_MCP_URL"] = $ServerUrl
     $psi.EnvironmentVariables["SAPIENS_MCP_TOKEN"] = $BearerToken
-    $psi.EnvironmentVariables["SAPIENS_MCP_TIMEOUT_MS"] = "30000"
+    $psi.EnvironmentVariables["SAPIENS_MCP_TIMEOUT_MS"] = "60000"
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
     [void]$process.Start()
     $process.StandardInput.WriteLine($payload)
     $process.StandardInput.Close()
-    if (-not $process.WaitForExit(30000)) {
+    if (-not $process.WaitForExit(190000)) {
         try { $process.Kill() } catch {}
-        throw "Smoke do proxy excedeu 30s. Verifique rede, token e endpoint MCP."
+        throw "Smoke do proxy excedeu 190s. Verifique rede, token e endpoint MCP."
     }
     $stdout = $process.StandardOutput.ReadToEnd()
     $stderr = $process.StandardError.ReadToEnd()

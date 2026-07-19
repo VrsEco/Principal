@@ -13,8 +13,16 @@ def test_claude_desktop_windows_installer_uses_custom_stdio_proxy():
     assert 'replace(/\\r\\n/g, "\\n")' in content
     assert "reader.cancel()" in content
     assert "stdinDone" in content
+    assert 'const VERSION = "1.1.0"' in content
+    assert "response.status === 202" in content
+    assert "message.id === undefined" in content
+    assert 'RETRYABLE_METHODS = new Set(["initialize", "tools/list", "prompts/list", "resources/list"])' in content
+    assert "const maxAttempts = RETRYABLE_METHODS.has(message.method) ? 3 : 1" in content
+    assert 'SAPIENS_MCP_TIMEOUT_MS = "60000"' in content
     assert "Invoke-ProxySmoke" in content
-    assert "protocolVersion\":\"2024-11-05" in content
+    assert '$ProxyVersion = "1.1.0"' in content
+    assert "protocolVersion\":\"2025-03-26" in content
+    assert "WaitForExit(190000)" in content
 
 
 def test_claude_desktop_windows_installer_preserves_existing_config():
