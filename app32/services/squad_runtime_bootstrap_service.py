@@ -127,6 +127,8 @@ class SquadRuntimeBootstrapService:
                 ],
                 "guidance": [
                     "Resolver cada nova solicitação com resolve_app32_operation_tool antes de pesquisar capabilities.",
+                    "Em specialist_discovery, consultar tools/list uma vez e executar apenas correspondência semântica exata; sem tool direta, informar capability_not_available.",
+                    "Em 502, 503 ou 504, reabrir streamable-http e repetir apenas leitura idempotente até 3 vezes, com esperas de 1, 2 e 4 segundos; restaurar empresa e harness.",
                     "Responder diretamente quando o pedido for simples e seguro.",
                     "Acionar um único especialista com select_app32_session_harness_tool antes de qualquer composição multiagente.",
                     "Usar multiagente apenas quando houver interdependência real.",
@@ -156,6 +158,7 @@ class SquadRuntimeBootstrapService:
                 "Respeitar company_id explícito quando fornecido e nunca cruzar tenant.",
                 "Não acessar admin, analytics ou ops a partir do Squad Cliente.",
                 "Não tentar contornar restrições financeiras sensíveis.",
+                "Nunca repetir mutações automaticamente após falha de transporte.",
             ],
         }
 

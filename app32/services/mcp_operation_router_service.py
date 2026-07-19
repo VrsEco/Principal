@@ -76,6 +76,7 @@ class McpOperationRouterService:
         {
             "intent": "commercial.dashboard",
             "domain": "strategy",
+            "business_area": "commercial",
             "harness_key": "harness_comercial_cliente_v1",
             "tool": "get_commercial_dashboard",
             "keywords": ("vendas", "clientes", "funil comercial", "pipeline comercial", "propostas comerciais", "faturamento comercial"),
@@ -103,16 +104,36 @@ class McpOperationRouterService:
         },
     )
 
+    KNOWN_CAPABILITY_GAPS: tuple[dict[str, Any], ...] = (
+        {
+            "intent": "finance.cash_position",
+            "domain": "finance",
+            "business_area": "finance",
+            "harness_key": "harness_admfin_cliente_v1",
+            "keywords": (
+                "saldo bancario consolidado",
+                "posicao bancaria consolidada",
+                "posicao de caixa consolidada",
+                "saldo consolidado dos bancos",
+            ),
+            "message": (
+                "A posição bancária consolidada ainda não possui uma tool executável "
+                "na surface user do Squad Cliente."
+            ),
+        },
+    )
+
     DOMAIN_FALLBACKS: tuple[dict[str, Any], ...] = (
-        {"domain": "finance", "harness_key": "harness_admfin_cliente_v1", "keywords": ("financeiro", "fluxo de caixa", "caixa", "saldo bancario", "banco", "orcamento", "dre", "receita", "despesa", "conciliacao", "pagamento", "recebimento", "faturamento")},
+        {"domain": "finance", "harness_key": "harness_admfin_cliente_v1", "keywords": ("financeiro", "financeira", "financeiras", "fluxo de caixa", "caixa", "saldo bancario", "banco", "orcamento", "dre", "receita", "despesa", "conciliacao", "pagamento", "recebimento", "faturamento")},
         {"domain": "processes", "harness_key": "harness_operacional_cliente_v1", "keywords": ("processo", "macroprocesso", "bpmn", "pop", "procedimento", "fluxo operacional", "auditoria de processo")},
         {"domain": "projects", "harness_key": "harness_operacional_cliente_v1", "keywords": ("projeto", "programa", "portfolio", "marco", "cronograma")},
         {"domain": "strategy", "harness_key": "harness_coordenador_cliente_v1", "keywords": ("estrategia", "estrategico", "planejamento", "meta", "indicador", "okr", "missao", "visao", "valor organizacional")},
-        {"domain": "strategy", "harness_key": "harness_comercial_cliente_v1", "keywords": ("comercial", "venda", "cliente", "crm", "proposta", "pipeline", "funil", "negociacao")},
+        {"domain": "strategy", "business_area": "commercial", "harness_key": "harness_comercial_cliente_v1", "keywords": ("comercial", "venda", "cliente", "crm", "proposta", "pipeline", "funil", "negociacao")},
         {"domain": "routine", "harness_key": "harness_operacional_cliente_v1", "keywords": ("tarefa", "atividade", "pendencia", "prioridade", "rotina", "agenda")},
         {"domain": "meetings", "harness_key": "harness_operacional_cliente_v1", "keywords": ("reuniao", "ata", "pauta")},
         {"domain": "consultive", "harness_key": "harness_coordenador_cliente_v1", "keywords": ("consultivo", "consultoria", "maturidade", "estruturacao empresarial", "business review")},
     )
+
     @staticmethod
     def _normalize(value: str) -> str:
         folded = unicodedata.normalize("NFKD", str(value or ""))
@@ -165,6 +186,34 @@ class McpOperationRouterService:
                 selected_score = score
 
         if selected is None:
+            capability_gap = None
+            capability_gap_score = 0
+            for gap in cls.KNOWN_CAPABILITY_GAPS:
+                score = max((len(keyword) for keyword in gap["keywords"] if keyword in normalized), default=0)
+                if score > capability_gap_score:
+                    capability_gap = gap
+                    capability_gap_score = score
+            if capability_gap is not None:
+                return {
+                    "route_status": "capability_not_available",
+                    "company_id": company_id,
+                    "request_text": request_text,
+                    "domain": capability_gap["domain"],
+                    "business_area": capability_gap.get("business_area") or capability_gap["domain"],
+                    "intent": capability_gap["intent"],
+                    "action": "discover",
+                    "risk": "low",
+                    "human_gate_required": False,
+                    "target_harness_key": capability_gap["harness_key"],
+                    "harness_switch_required": False,
+                    "preferred_tool": None,
+                    "arguments": {"company_id": company_id},
+                    "execution_sequence": [],
+                    "capability_state": "unavailable_in_effective_catalog",
+                    "user_message": capability_gap["message"],
+                    "discovery_policy": "Não atualizar tools/list nem executar tool aproximada.",
+                }
+
             fallback = None
             fallback_score = 0
             for candidate in cls.DOMAIN_FALLBACKS:
@@ -180,6 +229,7 @@ class McpOperationRouterService:
                     "company_id": company_id,
                     "request_text": request_text,
                     "domain": fallback["domain"],
+                    "business_area": fallback.get("business_area") or fallback["domain"],
                     "intent": None,
                     "action": "discover",
                     "risk": "low",
@@ -189,14 +239,24 @@ class McpOperationRouterService:
                     "preferred_tool": None,
                     "arguments": {"company_id": company_id},
                     "execution_sequence": ["select_app32_session_harness_tool"] if switch_required else [],
-                    "user_message": "Domínio identificado. Ative o especialista indicado e escolha uma tool executável no tools/list atualizado.",
-                    "discovery_policy": "Atualizar tools/list uma única vez; não pesquisar catálogos planejados ou outros domínios.",
+                    "user_message": (
+                        "Domínio identificado. Atualize tools/list uma vez e só execute uma tool "
+                        "que responda diretamente ao pedido; sem correspondência exata, informe capacidade indisponível."
+                    ),
+                    "candidate_execution_policy": "exact_semantic_match_required",
+                    "minimum_semantic_confidence": 0.90,
+                    "on_no_exact_match": "capability_not_available",
+                    "discovery_policy": (
+                        "Atualizar tools/list uma única vez e restringir ao domínio; não executar tool "
+                        "por mera afinidade nominal ou de domínio."
+                    ),
                 }
             return {
                 "route_status": "unsupported_fast_fallback",
                 "company_id": company_id,
                 "request_text": request_text,
                 "domain": None,
+                "business_area": None,
                 "intent": None,
                 "action": "clarify",
                 "risk": "low",
@@ -245,6 +305,7 @@ class McpOperationRouterService:
             "company_id": company_id,
             "request_text": request_text,
             "domain": selected["domain"],
+            "business_area": selected.get("business_area") or selected["domain"],
             "intent": selected["intent"],
             "action": "read",
             "risk": "low",

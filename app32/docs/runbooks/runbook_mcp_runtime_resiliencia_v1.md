@@ -111,3 +111,23 @@ O runtime está saudável quando:
 - `scripts/manage_mcp_http.sh status` mostra `public_health=ok`;
 - `/mcp/healthz` retorna `200`;
 - o cliente MCP conecta via `streamable-http`.
+
+---
+
+## 7. Recuperação no cliente MCP
+
+Ao receber HTTP `502`, `503` ou `504`:
+
+1. confirmar que a operação interrompida era somente leitura e idempotente;
+2. aguardar 1 segundo e reabrir a sessão `streamable-http`;
+3. restaurar a empresa ativa e o harness anterior;
+4. repetir a leitura; se necessário, aguardar 2 e depois 4 segundos;
+5. interromper após três tentativas e escalar para Engenharia.
+
+Não renovar/revogar token por esse sintoma e não migrar para SSE. Se a operação era mutação, consultar o estado do APP32 antes de qualquer nova escrita; nunca repetir automaticamente.
+
+O health público informa a política em `transient_recovery`. Durante restart controlado, o servidor pode responder `503` com `Retry-After: 2`; isso é recuperável e não representa perda de tenant ou autorização.
+
+## 8. Descoberta sem tool exata
+
+Se `resolve_app32_operation_tool` retornar `capability_not_available`, encerrar sem atualizar `tools/list`. Em `specialist_discovery`, atualizar a lista apenas uma vez e executar somente uma tool que responda diretamente ao pedido. Não usar ferramenta adjacente para produzir uma resposta aproximada.

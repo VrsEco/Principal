@@ -571,3 +571,28 @@ def test_request_context_rehydrates_from_transport_scope_bridge(monkeypatch):
     monkeypatch.setattr(module, "_get_current_mcp_server_request", lambda: request)
 
     assert module.get_http_request_context() == expected
+
+
+def test_request_context_middleware_returns_retryable_503_during_runtime_restart(monkeypatch):
+    module = _reload_auth(
+        monkeypatch,
+        APP32_MCP_HTTP_TOKEN="token-123",
+        APP32_MCP_USER_ID="3",
+        APP32_MCP_COMPANY_ID="9",
+        APP32_MCP_FALLBACK_ROLE="colaborador",
+    )
+
+    async def endpoint(_: Request):
+        raise RuntimeError("No response returned.")
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user")
+    response = TestClient(app, raise_server_exceptions=False).get(
+        "/", headers={"Authorization": "Bearer token-123"}
+    )
+
+    assert response.status_code == 503
+    assert response.headers["Retry-After"] == "2"
+    assert response.json()["error"] == "mcp_runtime_temporarily_unavailable"
+    assert response.json()["retryable"] is True

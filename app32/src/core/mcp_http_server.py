@@ -130,6 +130,14 @@ async def _healthz(_: Request) -> JSONResponse:
                 "resource_server_url": oauth_preparation.resource_server_url,
             },
             "stateless_http": DEFAULT_STATELESS_HTTP,
+            "transient_recovery": {
+                "retryable_http_statuses": [502, 503, 504],
+                "read_only_max_attempts": 3,
+                "backoff_seconds": [1, 2, 4],
+                "reopen_streamable_http_session": True,
+                "restore_company_and_harness": True,
+                "auto_retry_mutations": False,
+            },
         }
     )
 

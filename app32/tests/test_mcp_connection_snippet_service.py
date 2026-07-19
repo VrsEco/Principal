@@ -63,6 +63,9 @@ def test_build_prompt_supports_squad_cliente_profile():
     assert "describe_app32_release_checklist_tool" in content
     assert "describe_app32_tool_freeze_procedure_tool" in content
     assert "describe_app32_external_ai_onboarding_tool" in content
+    assert "capability_not_available" in content
+    assert "HTTP 502, 503 ou 504" in content
+    assert "Nunca repita mutações automaticamente" in content
     assert "https://app.gestaoversus.com.br/mcp/user" in content
 
 

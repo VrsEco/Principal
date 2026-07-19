@@ -18,3 +18,13 @@ def test_instruction_registry_service_resolves_engineering_bundle_without_db():
     assert payload["experience_label"] == "Sapiens Engenharia"
     assert payload["surface"] == "ops"
     assert "describe_app32_squad_runtime_tool" in payload["startup_sequence"]
+
+
+def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
+    payload = InstructionRegistryService.resolve_bundle(runtime_profile="squad_cliente", channel="stable")
+    rules = " ".join(item["rule"] for item in payload["mandatory_rules"])
+
+    assert payload["bundle_version"] == "2026-07-19.1"
+    assert "capability_not_available" in rules
+    assert "502, 503 ou 504" in rules
+    assert "Nunca repetir mutação automaticamente" in rules

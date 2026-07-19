@@ -517,3 +517,38 @@ A seleção:
 4. catálogo pós-troca publica somente tools autorizadas;
 5. fallback desconhecido não inicia varredura de catálogos;
 6. smoke remoto confirma isolamento por `company_id` e resposta objetiva.
+
+---
+
+## 19. Descoberta segura e recuperação de sessão
+
+### 19.1 Contrato de roteamento
+
+- `domain` é a taxonomia técnica canônica para policy, RBAC, catálogo e telemetria;
+- `business_area` é a classificação de negócio apresentada ao CLI e pode diferir do domínio técnico;
+- `capability_not_available` indica ausência confirmada de tool executável no catálogo efetivo;
+- esse estado deve retornar `preferred_tool=null` e `execution_sequence=[]`.
+
+### 19.2 `specialist_discovery`
+
+O CLI pode atualizar `tools/list` uma única vez, restrito ao harness indicado. Só pode executar uma candidata que responda diretamente ao pedido, com correspondência semântica exata. Afinidade de nome ou domínio não é suficiente. Sem candidata exata, deve encerrar com `capability_not_available`.
+
+### 19.3 Recuperação transitória
+
+Para HTTP `502`, `503` ou `504`:
+
+1. repetir somente leitura idempotente;
+2. limitar a três tentativas, aguardando 1, 2 e 4 segundos;
+3. reabrir a sessão `streamable-http`;
+4. restaurar o `company_id` e o harness anteriormente ativos;
+5. reutilizar o mesmo token enquanto ele permanecer válido;
+6. nunca repetir mutações automaticamente.
+
+O `/healthz` publica essa política em `transient_recovery`. Durante encerramento sem resposta, o middleware deve preferir `503` com `Retry-After` a um erro genérico.
+
+### 19.4 Critérios adicionais de aceite
+
+1. pedido comercial retorna `business_area=commercial` sem romper o `domain=strategy` canônico;
+2. saldo bancário consolidado, enquanto sem tool direta, retorna `capability_not_available` sem execução aproximada;
+3. discovery genérico não executa candidata sem correspondência exata;
+4. restart transitório não gera repetição automática de escrita.

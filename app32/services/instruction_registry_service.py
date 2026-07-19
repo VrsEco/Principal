@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-07-18.1"
+    CURRENT_BUNDLE_VERSION = "2026-07-19.1"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -688,6 +688,14 @@ class InstructionRegistryService:
             InstructionRule(
                 rule="Para toda nova solicitação operacional, chamar resolve_app32_operation_tool antes de pesquisar tools ou catálogos; se houver troca de especialista, usar select_app32_session_harness_tool e atualizar tools/list.",
                 rationale="Evita varredura lenta de catálogos, separa capabilities planejadas e executa a menor rota determinística disponível.",
+            ),
+            InstructionRule(
+                rule="Em specialist_discovery, atualizar tools/list uma vez e executar somente correspondência semântica exata; sem correspondência direta, informar capability_not_available sem testar tools aproximadas.",
+                rationale="Evita respostas incorretas, chamadas irrelevantes e latência por tentativa e erro.",
+            ),
+            InstructionRule(
+                rule="Em 502, 503 ou 504, reabrir streamable-http e repetir só leitura idempotente, até 3 tentativas com espera de 1, 2 e 4s; restaurar empresa e harness. Nunca repetir mutação automaticamente.",
+                rationale="Recupera falhas transitórias sem duplicar escritas nem perder o isolamento da sessão.",
             ),
             InstructionRule(
                 rule=per_runtime[runtime_profile],

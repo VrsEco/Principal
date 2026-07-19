@@ -621,7 +621,21 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
         request.scope["app32_mcp_context"] = dict(payload)
         tokens = set_http_request_context(identity, payload)
         try:
-            return await call_next(request)
+            try:
+                return await call_next(request)
+            except RuntimeError as exc:
+                if "No response returned" not in str(exc):
+                    raise
+                return JSONResponse(
+                    {
+                        "error": "mcp_runtime_temporarily_unavailable",
+                        "detail": "O runtime MCP está reiniciando. Reabra a sessão streamable-http e repita apenas a leitura idempotente.",
+                        "retryable": True,
+                        "retry_after_seconds": 2,
+                    },
+                    status_code=503,
+                    headers={"Retry-After": "2"},
+                )
         finally:
             reset_http_request_context(tokens)
 

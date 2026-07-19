@@ -148,6 +148,8 @@ class MCPConnectionSnippetService:
                 "6.8. Use `describe_app32_squad_runtime_tool` como contrato operacional curto do squad antes de agir.",
                 "6.8.1. Para cada nova solicitação operacional, chame `resolve_app32_operation_tool` uma única vez; se a resposta indicar troca de harness, chame `select_app32_session_harness_tool`, atualize tools/list e execute diretamente a `preferred_tool`.",
                 "6.8.2. Não varra catálogos quando o roteador retornar `ready`; se retornar `unsupported_fast_fallback`, faça somente uma pergunta objetiva de esclarecimento.",
+                "6.8.3. Em `specialist_discovery`, atualize tools/list uma vez e execute somente uma tool com correspondência semântica exata; se não existir, responda `capability_not_available` sem testar tools aproximadas.",
+                "6.8.4. Em HTTP 502, 503 ou 504, reabra a sessão streamable-http e repita somente leituras idempotentes, no máximo 3 vezes, após 1, 2 e 4 segundos; restaure empresa e harness. Nunca repita mutações automaticamente.",
                 "6.9. Antes de operar, trate profile contracts, surface/domain playbooks, release checklist, tool freeze e onboarding externo como discovery obrigatório.",
                 profile["routing_note"],
                 "",

@@ -55,6 +55,8 @@ def test_routes_cross_domain_requests_to_single_preferred_tool():
         )
         assert result["route_status"] == "ready"
         assert result["domain"] == domain
+        expected_business_area = "commercial" if tool == "get_commercial_dashboard" else domain
+        assert result["business_area"] == expected_business_area
         assert result["preferred_tool"] == tool
         assert result["target_harness_key"] == harness
 
@@ -98,19 +100,34 @@ def test_router_tool_uses_active_tenant_and_rejects_cross_tenant(monkeypatch):
     assert denied["error"]["code"] == "mcp_operation_company_forbidden"
 
 
-def test_routes_known_domain_to_specialist_discovery_without_global_catalog():
+def test_known_capability_gap_does_not_guess_or_refresh_catalog():
     result = McpOperationRouterService.resolve(
         request_text="Qual é o saldo bancário consolidado?",
         company_id=1,
         current_harness_key="harness_coordenador_cliente_v1",
         reference_date=date(2026, 7, 18),
     )
+    assert result["route_status"] == "capability_not_available"
+    assert result["domain"] == "finance"
+    assert result["business_area"] == "finance"
+    assert result["target_harness_key"] == "harness_admfin_cliente_v1"
+    assert result["preferred_tool"] is None
+    assert result["execution_sequence"] == []
+    assert "Não atualizar tools/list" in result["discovery_policy"]
+
+
+def test_routes_known_domain_to_safe_specialist_discovery():
+    result = McpOperationRouterService.resolve(
+        request_text="Qual é a margem financeira por unidade?",
+        company_id=1,
+        current_harness_key="harness_coordenador_cliente_v1",
+    )
     assert result["route_status"] == "specialist_discovery"
     assert result["domain"] == "finance"
     assert result["target_harness_key"] == "harness_admfin_cliente_v1"
-    assert result["preferred_tool"] is None
     assert result["execution_sequence"] == ["select_app32_session_harness_tool"]
-    assert "tools/list" in result["discovery_policy"]
+    assert result["candidate_execution_policy"] == "exact_semantic_match_required"
+    assert result["on_no_exact_match"] == "capability_not_available"
 
 
 def test_payables_without_period_requests_only_missing_input():

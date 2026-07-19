@@ -240,3 +240,26 @@ Regras:
 9. pedido sem domínio reconhecido deve receber fallback curto, sem investigação recursiva de catálogo.
 
 Meta operacional: pedidos comuns devem exigir, no máximo, resolução da rota, eventual troca de harness e uma chamada da tool de domínio.
+
+---
+
+## 23. MCP-07 — Descoberta sem adivinhação e recuperação transitória
+
+A validação multicliente mostrou dois riscos remanescentes: selecionar uma tool apenas por afinidade nominal e perder a sessão durante restart/deploy do runtime MCP.
+
+Decisão:
+
+> O roteamento deve separar domínio técnico de área de negócio, declarar capacidades ausentes sem tentativa aproximada e recuperar falhas transitórias somente em leituras idempotentes.
+
+Regras:
+
+1. `domain` permanece a taxonomia técnica canônica usada por RBAC, catálogo e telemetria;
+2. `business_area` expressa a leitura de negócio, permitindo, por exemplo, `domain=strategy` e `business_area=commercial`;
+3. gap conhecido retorna `capability_not_available`, sem troca de harness, `tools/list` ou execução aproximada;
+4. em `specialist_discovery`, o CLI atualiza `tools/list` uma vez e só executa correspondência semântica exata;
+5. sem correspondência direta, o CLI informa a indisponibilidade e não testa tools adjacentes;
+6. HTTP `502`, `503` e `504` são falhas transitórias elegíveis a recuperação apenas para leitura idempotente;
+7. a recuperação reabre `streamable-http`, restaura empresa e harness e usa até três tentativas, com espera de 1, 2 e 4 segundos;
+8. mutações nunca são repetidas automaticamente, pois o resultado anterior pode ser desconhecido.
+
+A queda observada durante restart é tratada como incidente de transporte, não como falha de autenticação, tenant ou regra de negócio.

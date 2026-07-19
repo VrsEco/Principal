@@ -143,3 +143,13 @@ Este harness é aderente quando:
 ## 11. Roteamento operacional rápido
 
 Antes de pesquisar tools ou catálogos, o Coordenador deve chamar `resolve_app32_operation_tool`. Havendo especialista indicado, deve ativá-lo com `select_app32_session_harness_tool`, atualizar o catálogo e executar a tool preferencial. Capabilities planejadas não são alternativas executáveis. Quando o domínio for reconhecido sem tool preferencial, atualizar `tools/list` uma única vez e selecionar apenas uma tool executável desse domínio. Pedido não reconhecido recebe uma pergunta curta de esclarecimento, sem varredura recursiva.
+
+---
+
+## 12. Descoberta segura e resiliência
+
+- tratar `domain` como domínio técnico canônico e `business_area` como leitura de negócio;
+- em `capability_not_available`, informar a limitação sem trocar harness, atualizar catálogo ou testar tool aproximada;
+- em `specialist_discovery`, atualizar `tools/list` uma vez e executar somente correspondência semântica exata;
+- em HTTP `502`, `503` ou `504`, reabrir `streamable-http`, restaurar empresa/harness e repetir apenas leitura idempotente, até três vezes, após 1, 2 e 4 segundos;
+- nunca repetir mutação automaticamente; primeiro confirmar o estado persistido e, se necessário, escalar.
