@@ -97,7 +97,7 @@
                     </div>
                     <form data-calendar-source-form class="compact-inline-form compact-inline-form--calendar">
                         <input data-calendar-source-title type="hidden" value="Executar {{ task.code or ('J.%s' % task.id) }} - {{ task.what }}" />
-                        <input data-calendar-source-date type="date" class="form-control form-control-sm compact-date-field" />
+                        <input data-calendar-source-date type="text" class="form-control form-control-sm compact-date-field compact-date-text-field" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off" />
                         <input data-calendar-source-start type="time" class="form-control form-control-sm compact-time-field" />
                         <input data-calendar-source-end type="time" class="form-control form-control-sm compact-time-field" />
                         <select data-calendar-source-status class="form-control form-control-sm">
@@ -167,7 +167,7 @@
                         <select id="newLogEmployeeId" class="form-control form-control-sm compact-hours-full">
                             <option value="" data-name="">Colaborador...</option>
                         </select>
-                        <input type="date" id="newLogDate" class="form-control form-control-sm compact-date-field">
+                        <input type="text" id="newLogDate" class="form-control form-control-sm compact-date-field compact-date-text-field" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off">
                         <input type="text" data-format="hours-decimal" id="newLogHours" class="form-control form-control-sm compact-hours-field" placeholder="Horas">
                         <button class="btn btn-primary btn-sm" onclick="saveNewWorkLog()" id="btnSaveNewLog">Lançar</button>
                         <input type="text" id="newLogDesc" class="form-control form-control-sm compact-hours-full compact-hours-description" placeholder="Descrição do lançamento">
@@ -179,7 +179,7 @@
                     <div class="hours-form-grid compact-hours-form-grid">
                         <input type="text" class="form-control form-control-sm compact-hours-full" id="editLogEmployeeName" readonly>
                         <input type="hidden" id="editLogEmployeeId">
-                        <input type="date" class="form-control form-control-sm compact-date-field" id="editLogDate">
+                        <input type="text" class="form-control form-control-sm compact-date-field compact-date-text-field" id="editLogDate" placeholder="dd/mm/aaaa" inputmode="numeric" maxlength="10" autocomplete="off">
                         <input type="text" data-format="hours-decimal" class="form-control form-control-sm compact-hours-field" id="editLogHours">
                         <input type="text" class="form-control form-control-sm compact-hours-full" id="editLogDesc" placeholder="Descrição">
                         <div class="compact-edit-actions">
@@ -613,6 +613,12 @@
         min-width: 92px;
     }
 
+    .compact-date-text-field {
+        letter-spacing: 0.02em;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+    }
+
     .compact-hours-full {
         min-width: 0;
     }
@@ -769,7 +775,8 @@
     async function init() {
         // Set today's date as default
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('newLogDate').value = today;
+        document.querySelectorAll('.compact-date-text-field').forEach(bindCompactDateInput);
+        setDateFieldDisplayValue(document.getElementById('newLogDate'), today);
 
         // Parse diary logs from task.logs field
         try {
@@ -952,6 +959,61 @@
         }
         return parsed.toLocaleDateString('pt-BR');
     }
+
+
+    function normalizePtBrDateToIso(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (isoMatch) return raw;
+        const brMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+        return '';
+    }
+
+    function formatIsoDateToDisplay(value) {
+        const iso = normalizePtBrDateToIso(value);
+        if (!iso) return '';
+        const [year, month, day] = iso.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
+    function applyDateMask(value) {
+        const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    }
+
+    function bindCompactDateInput(input) {
+        if (!input || input.dataset.dateBound === '1') return;
+        input.dataset.dateBound = '1';
+        input.addEventListener('input', () => {
+            input.value = applyDateMask(input.value);
+        });
+        input.addEventListener('blur', () => {
+            const normalized = normalizePtBrDateToIso(input.value);
+            input.value = normalized ? formatIsoDateToDisplay(normalized) : applyDateMask(input.value);
+        });
+    }
+
+    function setDateFieldDisplayValue(input, isoValue) {
+        if (!input) return;
+        input.value = formatIsoDateToDisplay(isoValue);
+    }
+
+    function getDateFieldIsoValue(input) {
+        if (!input) return '';
+        return normalizePtBrDateToIso(input.value);
+    }
+
+    window.App32DateFields = {
+        normalizePtBrDateToIso,
+        formatIsoDateToDisplay,
+        bindCompactDateInput,
+        setDateFieldDisplayValue,
+        getDateFieldIsoValue,
+    };
 
     function openDueDateChangeRequestModal() {
         document.getElementById('dueDateChangeCurrentDueDate').value = formatDatePtBr(taskData.due_date) || 'Sem prazo';
@@ -1300,7 +1362,7 @@
         const sel = document.getElementById('newLogEmployeeId');
         const empId = sel.value;
         const empName = sel.options[sel.selectedIndex]?.dataset.name || sel.options[sel.selectedIndex]?.text || '';
-        const date = document.getElementById('newLogDate').value;
+        const date = getDateFieldIsoValue(document.getElementById('newLogDate'));
         const hours = window.App32InputFormatters
             ? window.App32InputFormatters.parseClockToDecimalHours(document.getElementById('newLogHours').value)
             : parseFloat(document.getElementById('newLogHours').value);
