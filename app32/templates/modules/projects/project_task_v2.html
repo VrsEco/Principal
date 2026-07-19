@@ -97,9 +97,9 @@
                     </div>
                     <form data-calendar-source-form class="compact-inline-form compact-inline-form--calendar">
                         <input data-calendar-source-title type="hidden" value="Executar {{ task.code or ('J.%s' % task.id) }} - {{ task.what }}" />
-                        <input data-calendar-source-date type="date" class="form-control form-control-sm" />
-                        <input data-calendar-source-start type="time" class="form-control form-control-sm" />
-                        <input data-calendar-source-end type="time" class="form-control form-control-sm" />
+                        <input data-calendar-source-date type="date" class="form-control form-control-sm compact-date-field" />
+                        <input data-calendar-source-start type="time" class="form-control form-control-sm compact-time-field" />
+                        <input data-calendar-source-end type="time" class="form-control form-control-sm compact-time-field" />
                         <select data-calendar-source-status class="form-control form-control-sm">
                             <option value="planned" selected>Planejado</option>
                             <option value="confirmed">Confirmado</option>
@@ -167,8 +167,8 @@
                         <select id="newLogEmployeeId" class="form-control form-control-sm compact-hours-full">
                             <option value="" data-name="">Colaborador...</option>
                         </select>
-                        <input type="date" id="newLogDate" class="form-control form-control-sm">
-                        <input type="text" data-format="hours-decimal" id="newLogHours" class="form-control form-control-sm" placeholder="Horas">
+                        <input type="date" id="newLogDate" class="form-control form-control-sm compact-date-field">
+                        <input type="text" data-format="hours-decimal" id="newLogHours" class="form-control form-control-sm compact-hours-field" placeholder="Horas">
                         <button class="btn btn-primary btn-sm" onclick="saveNewWorkLog()" id="btnSaveNewLog">Lançar</button>
                         <input type="text" id="newLogDesc" class="form-control form-control-sm compact-hours-full compact-hours-description" placeholder="Descrição do lançamento">
                     </div>
@@ -179,8 +179,8 @@
                     <div class="hours-form-grid compact-hours-form-grid">
                         <input type="text" class="form-control form-control-sm compact-hours-full" id="editLogEmployeeName" readonly>
                         <input type="hidden" id="editLogEmployeeId">
-                        <input type="date" class="form-control form-control-sm" id="editLogDate">
-                        <input type="text" data-format="hours-decimal" class="form-control form-control-sm" id="editLogHours">
+                        <input type="date" class="form-control form-control-sm compact-date-field" id="editLogDate">
+                        <input type="text" data-format="hours-decimal" class="form-control form-control-sm compact-hours-field" id="editLogHours">
                         <input type="text" class="form-control form-control-sm compact-hours-full" id="editLogDesc" placeholder="Descrição">
                         <div class="compact-edit-actions">
                             <button class="btn btn-warning btn-sm" onclick="saveEditedLog()">Salvar</button>
@@ -495,7 +495,7 @@
     }
 
     .compact-inline-form--calendar {
-        grid-template-columns: repeat(3, minmax(82px, 1fr)) minmax(112px, 1fr) minmax(108px, 1fr) auto;
+        grid-template-columns: minmax(132px, 1.15fr) minmax(102px, 0.9fr) minmax(102px, 0.9fr) minmax(120px, 1fr) minmax(116px, 1fr) auto;
         align-items: center;
     }
 
@@ -592,13 +592,25 @@
     .compact-hours-form-grid {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: minmax(0, 1.25fr) 108px 88px auto;
+        grid-template-columns: minmax(0, 1.2fr) minmax(138px, 0.95fr) minmax(94px, 0.7fr) auto;
         gap: 0.45rem;
         align-items: center;
     }
 
     .compact-hours-description {
         grid-column: 1 / -1;
+    }
+
+    .compact-date-field {
+        min-width: 136px;
+    }
+
+    .compact-time-field {
+        min-width: 100px;
+    }
+
+    .compact-hours-field {
+        min-width: 92px;
     }
 
     .compact-hours-full {
