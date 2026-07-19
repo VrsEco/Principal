@@ -44,7 +44,7 @@ def test_routes_cross_domain_requests_to_single_preferred_tool():
         ("Mostre a hierarquia de processos", "processes", "list_process_hierarchy", "harness_operacional_cliente_v1"),
         ("Quais projetos estão em andamento?", "projects", "list_projects", "harness_operacional_cliente_v1"),
         ("Mostre o planejamento estratégico", "strategy", "list_plans", "harness_coordenador_cliente_v1"),
-        ("Como estão nossas vendas?", "commercial", "get_commercial_dashboard", "harness_comercial_cliente_v1"),
+        ("Como estão nossas vendas?", "strategy", "get_commercial_dashboard", "harness_comercial_cliente_v1"),
     )
     for request, domain, tool, harness in cases:
         result = McpOperationRouterService.resolve(

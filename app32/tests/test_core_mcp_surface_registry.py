@@ -565,3 +565,34 @@ def test_user_surface_payables_summary_is_exposed_only_in_admfin_harness(monkeyp
 
     assert "get_financial_payables_due_summary" not in names_for("harness_coordenador_cliente_v1")
     assert "get_financial_payables_due_summary" in names_for("harness_admfin_cliente_v1")
+
+
+def test_user_surface_commercial_dashboard_is_exposed_in_commercial_harness(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=22,
+            company_id=1,
+            employee_id=None,
+            role="administrador",
+            channel="claude_remote",
+            thread_id=None,
+            accessible_company_ids=(1,),
+            permissions=(),
+            metadata={
+                "surface": "user",
+                "transport": "streamable_http",
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_comercial_cliente_v1",
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+    )
+    names = {
+        tool["name"]
+        for tool in registry.get_surface_manifest("user", domain="strategy", include_tools=True)["tools"]
+    }
+    assert "get_commercial_dashboard" in names

@@ -75,7 +75,7 @@ class McpOperationRouterService:
         },
         {
             "intent": "commercial.dashboard",
-            "domain": "commercial",
+            "domain": "strategy",
             "harness_key": "harness_comercial_cliente_v1",
             "tool": "get_commercial_dashboard",
             "keywords": ("vendas", "clientes", "funil comercial", "pipeline comercial", "propostas comerciais", "faturamento comercial"),
@@ -108,7 +108,7 @@ class McpOperationRouterService:
         {"domain": "processes", "harness_key": "harness_operacional_cliente_v1", "keywords": ("processo", "macroprocesso", "bpmn", "pop", "procedimento", "fluxo operacional", "auditoria de processo")},
         {"domain": "projects", "harness_key": "harness_operacional_cliente_v1", "keywords": ("projeto", "programa", "portfolio", "marco", "cronograma")},
         {"domain": "strategy", "harness_key": "harness_coordenador_cliente_v1", "keywords": ("estrategia", "estrategico", "planejamento", "meta", "indicador", "okr", "missao", "visao", "valor organizacional")},
-        {"domain": "commercial", "harness_key": "harness_comercial_cliente_v1", "keywords": ("comercial", "venda", "cliente", "crm", "proposta", "pipeline", "funil", "negociacao")},
+        {"domain": "strategy", "harness_key": "harness_comercial_cliente_v1", "keywords": ("comercial", "venda", "cliente", "crm", "proposta", "pipeline", "funil", "negociacao")},
         {"domain": "routine", "harness_key": "harness_operacional_cliente_v1", "keywords": ("tarefa", "atividade", "pendencia", "prioridade", "rotina", "agenda")},
         {"domain": "meetings", "harness_key": "harness_operacional_cliente_v1", "keywords": ("reuniao", "ata", "pauta")},
         {"domain": "consultive", "harness_key": "harness_coordenador_cliente_v1", "keywords": ("consultivo", "consultoria", "maturidade", "estruturacao empresarial", "business review")},

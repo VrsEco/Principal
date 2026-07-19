@@ -1199,7 +1199,7 @@ for _tool_name, _action in (
 ):
     _register_commercial_capability(
         _tool_name,
-        domain="governance",
+        domain="strategy" if _tool_name == "get_commercial_dashboard" else "governance",
         action=_action,
         human_gate=_tool_name in {"suspend_commercial_contract", "close_commercial_contract", "delete_commercial_contract"},
         human_gate_reason=(
