@@ -608,3 +608,37 @@ def test_user_surface_commercial_dashboard_is_exposed_in_commercial_harness(monk
         for tool in registry.get_surface_manifest("user", domain="strategy", include_tools=True)["tools"]
     }
     assert "get_commercial_dashboard" in names
+
+
+def test_user_surface_discovers_gated_consultive_reviews_without_session_company(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=3,
+            company_id=None,
+            employee_id=None,
+            role="colaborador",
+            channel="claude_remote",
+            thread_id=None,
+            accessible_company_ids=(1, 9),
+            permissions=(),
+            metadata={
+                "surface": "user",
+                "transport": "streamable_http",
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+    )
+
+    manifest = registry.get_surface_manifest("user", domain="consultive", include_tools=True)
+    names = {tool["name"] for tool in manifest["tools"]}
+
+    assert "consultive_get_front_context" in names
+    assert "consultive_register_assisted_analysis" in names
+    assert "consultive_register_squad_validation" in names
+    assert "consultive_register_consultant_decision" not in names

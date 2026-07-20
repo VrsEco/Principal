@@ -81,6 +81,7 @@ def get_surface_manifest(
                             or not capability.human_gate
                         ),
                         required_context=tuple(getattr(capability, "required_context", ()) or ()),
+                        catalog_discovery=True,
                         metadata=dict(execution_context.metadata or {}),
                     ),
                 )

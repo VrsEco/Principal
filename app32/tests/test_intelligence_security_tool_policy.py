@@ -499,3 +499,43 @@ def test_tool_policy_blocks_strategy_maturation_review_without_selected_company(
     assert decision.allowed is False
     assert "empresa não selecionada" in decision.reason
     assert "missing_required_company_context" in decision.checks
+
+
+def test_catalog_discovery_allows_consultive_review_without_fixed_company_but_execution_still_blocks() -> None:
+    source = {
+        "user_id": 3,
+        "company_id": None,
+        "role": "colaborador",
+        "metadata": {
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_coordenador_cliente_v1",
+        },
+    }
+    base_request = dict(
+        tool_name="consultive_register_assisted_analysis",
+        surface="user",
+        domain="consultive",
+        action="review",
+        risk="medium",
+        accessible_company_ids=(1, 9),
+        required_permissions=("consultive.write",),
+        confirmed_mutation=True,
+        required_context=("company",),
+        metadata=source["metadata"],
+    )
+
+    catalog_decision = evaluate_tool_policy(
+        source,
+        ToolPolicyRequest(**base_request, catalog_discovery=True),
+    )
+    execution_decision = evaluate_tool_policy(
+        source,
+        ToolPolicyRequest(**base_request),
+    )
+
+    assert catalog_decision.allowed is True
+    assert catalog_decision.resolved_company_id is None
+    assert "tenant_scope_not_required" in catalog_decision.checks
+    assert execution_decision.allowed is False
+    assert "missing_required_company_context" in execution_decision.checks

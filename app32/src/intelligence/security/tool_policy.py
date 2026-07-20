@@ -58,6 +58,7 @@ class ToolPolicyRequest:
     required_permissions: tuple[str, ...] = ()
     confirmed_mutation: bool = False
     required_context: tuple[str, ...] = ()
+    catalog_discovery: bool = False
     metadata: Optional[Mapping[str, Any]] = None
 
 
@@ -82,6 +83,7 @@ class ToolPolicyDecision:
             "risk": self.resolved_risk,
             "company_id": self.resolved_company_id,
             "required_context": list(self.request.required_context),
+            "catalog_discovery": self.request.catalog_discovery,
             "principal": {
                 "user_id": self.principal.user_id,
                 "employee_id": self.principal.employee_id,
@@ -144,7 +146,11 @@ def _validate_required_context(
             (*checks, "missing_required_user_context"),
         )
 
-    if TOOL_CONTEXT_COMPANY in required_context and _coerce_optional_company_id(requested_company_id, principal.company_id) is None:
+    if (
+        TOOL_CONTEXT_COMPANY in required_context
+        and _coerce_optional_company_id(requested_company_id, principal.company_id) is None
+        and not request.catalog_discovery
+    ):
         missing_company_reason = "feature exige company_id no contexto antes da execução"
         if bool(metadata.get("selection_required_for_mutations")) or bool(metadata.get("multi_company")):
             missing_company_reason = (
@@ -315,7 +321,11 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
                     f"matriz do overlay {overlay_contract.overlay} exige human gate para {action} em {domain}",
                     (*checks, "runtime_overlay_matrix_human_gate_required"),
                 )
-            if domain_rule.requires_explicit_company_id and request.requested_company_id is None:
+            if (
+                domain_rule.requires_explicit_company_id
+                and request.requested_company_id is None
+                and not request.catalog_discovery
+            ):
                 return _deny(
                     request,
                     principal,
@@ -332,9 +342,12 @@ def evaluate_tool_policy(source: Any, request: ToolPolicyRequest) -> ToolPolicyD
         return context_decision
 
     normalized_required_context = _normalize_required_context(request.required_context)
+    resolved_request_company_id = _coerce_optional_company_id(
+        request.requested_company_id, principal.company_id
+    )
     should_validate_tenant = bool(
-        TOOL_CONTEXT_COMPANY in normalized_required_context
-        or _coerce_optional_company_id(request.requested_company_id, principal.company_id) is not None
+        resolved_request_company_id is not None
+        or (TOOL_CONTEXT_COMPANY in normalized_required_context and not request.catalog_discovery)
     )
 
     if should_validate_tenant:
