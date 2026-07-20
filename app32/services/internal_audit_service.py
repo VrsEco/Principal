@@ -9,6 +9,8 @@ from models.employee import Employee
 from models.internal_audit import (
     AUDIT_AUDITOR_ROLES,
     AUDIT_CHECKLIST_TYPES,
+    AUDIT_EVIDENCE_TYPES,
+    AUDIT_FINDING_STATUSES,
     AUDIT_ITEM_STATUSES,
     AUDIT_POINT_ORIGINS,
     AUDIT_POINT_STATUSES,
@@ -19,8 +21,13 @@ from models.internal_audit import (
     AuditChecklistItem,
     AuditExecution,
     AuditExecutionItem,
+    AuditEvidenceLink,
+    AuditFinding,
     AuditPoint,
+    AuditWorkpaper,
 )
+from models.meeting import Meeting
+from models.project import Project, ProjectTask
 from models.user import User
 
 
@@ -45,6 +52,15 @@ def _bool(value: Any, default: bool = True) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "sim", "on", "active"}
 
 
+def _int_or_none(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise InternalAuditServiceError("Identificador inválido.") from exc
+
+
 @dataclass(frozen=True)
 class InternalAuditCatalogSummary:
     areas_count: int
@@ -53,6 +69,9 @@ class InternalAuditCatalogSummary:
     checklist_items_count: int
     executions_count: int
     open_points_count: int
+    workpapers_count: int
+    findings_count: int
+    open_findings_count: int
 
     def to_dict(self) -> dict:
         return {
@@ -62,6 +81,9 @@ class InternalAuditCatalogSummary:
             "checklist_items_count": self.checklist_items_count,
             "executions_count": self.executions_count,
             "open_points_count": self.open_points_count,
+            "workpapers_count": self.workpapers_count,
+            "findings_count": self.findings_count,
+            "open_findings_count": self.open_findings_count,
         }
 
 
@@ -75,6 +97,12 @@ class InternalAuditService:
             checklist_items_count=AuditChecklistItem.query.filter_by(company_id=company_id, active=True).count(),
             executions_count=AuditExecution.query.filter_by(company_id=company_id).count(),
             open_points_count=AuditPoint.query.filter_by(company_id=company_id, status="open").count(),
+            workpapers_count=AuditWorkpaper.query.filter_by(company_id=company_id).count(),
+            findings_count=AuditFinding.query.filter_by(company_id=company_id).count(),
+            open_findings_count=AuditFinding.query.filter(
+                AuditFinding.company_id == company_id,
+                AuditFinding.status.in_(("open", "action_linked", "in_follow_up")),
+            ).count(),
         ).to_dict()
 
     @staticmethod
@@ -450,3 +478,233 @@ class InternalAuditService:
         point.updated_at = datetime.utcnow()
         db.session.commit()
         return point.to_dict()
+
+    @staticmethod
+    def list_workpapers(company_id: int) -> list[dict]:
+        return [
+            workpaper.to_dict(include_evidences=False)
+            for workpaper in AuditWorkpaper.query.filter_by(company_id=company_id)
+            .order_by(AuditWorkpaper.updated_at.desc(), AuditWorkpaper.id.desc())
+            .all()
+        ]
+
+    @staticmethod
+    def get_workpaper(company_id: int, workpaper_id: int) -> dict:
+        workpaper = AuditWorkpaper.query.filter_by(company_id=company_id, id=workpaper_id).first()
+        if not workpaper:
+            raise InternalAuditServiceError("Papel de trabalho não encontrado.")
+        return workpaper.to_dict(include_evidences=True)
+
+    @staticmethod
+    def create_workpaper(company_id: int, payload: dict, *, current_user_id: int | None = None) -> dict:
+        execution_id = _int_or_none(payload.get("execution_id"))
+        execution_item_id = _int_or_none(payload.get("execution_item_id"))
+        audit_point_id = _int_or_none(payload.get("audit_point_id"))
+        if not any([execution_id, execution_item_id, audit_point_id]):
+            raise InternalAuditServiceError("Informe execução, item executado ou ponto de auditoria.")
+
+        if execution_id and not AuditExecution.query.filter_by(company_id=company_id, id=execution_id).first():
+            raise InternalAuditServiceError("Execução de auditoria não encontrada.")
+        if execution_item_id:
+            item = AuditExecutionItem.query.filter_by(company_id=company_id, id=execution_item_id).first()
+            if not item:
+                raise InternalAuditServiceError("Item da execução não encontrado.")
+            execution_id = execution_id or item.execution_id
+            audit_point_id = audit_point_id or item.audit_point_id
+        if audit_point_id and not AuditPoint.query.filter_by(company_id=company_id, id=audit_point_id).first():
+            raise InternalAuditServiceError("Ponto de auditoria não encontrado.")
+
+        workpaper = AuditWorkpaper(
+            company_id=company_id,
+            execution_id=execution_id,
+            execution_item_id=execution_item_id,
+            audit_point_id=audit_point_id,
+            auditor_user_id=_int_or_none(payload.get("auditor_user_id")) or current_user_id,
+            comments=_clean_text(payload.get("comments")),
+            conclusion=_clean_text(payload.get("conclusion")),
+            alert_notes=_clean_text(payload.get("alert_notes")),
+            evidence_summary=_clean_text(payload.get("evidence_summary")),
+            metadata_json=payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+        )
+        db.session.add(workpaper)
+        db.session.commit()
+        return workpaper.to_dict(include_evidences=True)
+
+    @staticmethod
+    def list_findings(company_id: int, status: str | None = None) -> list[dict]:
+        query = AuditFinding.query.filter_by(company_id=company_id)
+        if status:
+            query = query.filter_by(status=status)
+        return [
+            finding.to_dict(include_evidences=False)
+            for finding in query.order_by(AuditFinding.updated_at.desc(), AuditFinding.id.desc()).all()
+        ]
+
+    @staticmethod
+    def get_finding(company_id: int, finding_id: int) -> dict:
+        finding = AuditFinding.query.filter_by(company_id=company_id, id=finding_id).first()
+        if not finding:
+            raise InternalAuditServiceError("Achado de auditoria não encontrado.")
+        return finding.to_dict(include_evidences=True)
+
+    @staticmethod
+    def create_finding(company_id: int, payload: dict, *, current_user_id: int | None = None) -> dict:
+        audit_point_id = _int_or_none(payload.get("audit_point_id"))
+        point = None
+        if audit_point_id:
+            point = AuditPoint.query.filter_by(company_id=company_id, id=audit_point_id).first()
+            if not point:
+                raise InternalAuditServiceError("Ponto de auditoria não encontrado.")
+
+        title = _clean_text(payload.get("title"), max_length=255) or (point.title if point else None)
+        if not title:
+            raise InternalAuditServiceError("Título do achado é obrigatório.")
+        severity = _clean_text(payload.get("severity"), max_length=30) or (point.severity if point else "medium")
+        if severity not in AUDIT_SEVERITIES:
+            raise InternalAuditServiceError("Severidade inválida.")
+
+        execution_id = _int_or_none(payload.get("execution_id"))
+        execution_item_id = _int_or_none(payload.get("execution_item_id"))
+        if point and point.subject_type == "audit_execution_item" and point.subject_id:
+            execution_item = AuditExecutionItem.query.filter_by(company_id=company_id, id=point.subject_id).first()
+            if execution_item:
+                execution_item_id = execution_item_id or execution_item.id
+                execution_id = execution_id or execution_item.execution_id
+
+        finding = AuditFinding(
+            company_id=company_id,
+            audit_point_id=audit_point_id,
+            execution_id=execution_id,
+            execution_item_id=execution_item_id,
+            title=title,
+            condition_text=_clean_text(payload.get("condition_text")) or (point.description if point else None),
+            criterion_text=_clean_text(payload.get("criterion_text")),
+            cause_text=_clean_text(payload.get("cause_text")),
+            effect_text=_clean_text(payload.get("effect_text")),
+            recommendation_text=_clean_text(payload.get("recommendation_text")),
+            severity=severity,
+            status="open",
+            responsible_user_id=_int_or_none(payload.get("responsible_user_id")) or current_user_id,
+            due_date=InternalAuditService._parse_date(payload.get("due_date")),
+            metadata_json=payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+        )
+        db.session.add(finding)
+        if point:
+            point.status = "converted_to_finding"
+            point.updated_at = datetime.utcnow()
+        db.session.commit()
+        return finding.to_dict(include_evidences=True)
+
+    @staticmethod
+    def update_finding(company_id: int, finding_id: int, payload: dict) -> dict:
+        finding = AuditFinding.query.filter_by(company_id=company_id, id=finding_id).first()
+        if not finding:
+            raise InternalAuditServiceError("Achado de auditoria não encontrado.")
+
+        status = _clean_text(payload.get("status"), max_length=40)
+        if status:
+            if status not in AUDIT_FINDING_STATUSES:
+                raise InternalAuditServiceError("Status do achado inválido.")
+            finding.status = status
+        severity = _clean_text(payload.get("severity"), max_length=30)
+        if severity:
+            if severity not in AUDIT_SEVERITIES:
+                raise InternalAuditServiceError("Severidade inválida.")
+            finding.severity = severity
+
+        for field in (
+            "title",
+            "condition_text",
+            "criterion_text",
+            "cause_text",
+            "effect_text",
+            "recommendation_text",
+        ):
+            if field in payload:
+                value = _clean_text(payload.get(field), max_length=255) if field == "title" else _clean_text(payload.get(field))
+                if field == "title" and not value:
+                    raise InternalAuditServiceError("Título do achado é obrigatório.")
+                setattr(finding, field, value)
+
+        if "responsible_user_id" in payload:
+            finding.responsible_user_id = _int_or_none(payload.get("responsible_user_id"))
+        if "due_date" in payload:
+            finding.due_date = InternalAuditService._parse_date(payload.get("due_date"))
+        if "project_id" in payload:
+            finding.project_id = InternalAuditService._validate_project_link(company_id, payload.get("project_id"))
+        if "task_id" in payload:
+            finding.task_id = InternalAuditService._validate_task_link(company_id, payload.get("task_id"), finding.project_id)
+        if "alignment_meeting_id" in payload:
+            finding.alignment_meeting_id = InternalAuditService._validate_meeting_link(company_id, payload.get("alignment_meeting_id"))
+
+        if finding.status == "open" and (finding.project_id or finding.task_id):
+            finding.status = "action_linked"
+        finding.updated_at = datetime.utcnow()
+        db.session.commit()
+        return finding.to_dict(include_evidences=True)
+
+    @staticmethod
+    def create_evidence_link(company_id: int, payload: dict, *, current_user_id: int | None = None) -> dict:
+        workpaper_id = _int_or_none(payload.get("workpaper_id"))
+        finding_id = _int_or_none(payload.get("finding_id"))
+        if not workpaper_id and not finding_id:
+            raise InternalAuditServiceError("Informe papel de trabalho ou achado.")
+        if workpaper_id and not AuditWorkpaper.query.filter_by(company_id=company_id, id=workpaper_id).first():
+            raise InternalAuditServiceError("Papel de trabalho não encontrado.")
+        if finding_id and not AuditFinding.query.filter_by(company_id=company_id, id=finding_id).first():
+            raise InternalAuditServiceError("Achado de auditoria não encontrado.")
+        evidence_type = _clean_text(payload.get("evidence_type"), max_length=30) or "comment"
+        if evidence_type not in AUDIT_EVIDENCE_TYPES:
+            raise InternalAuditServiceError("Tipo de evidência inválido.")
+        evidence = AuditEvidenceLink(
+            company_id=company_id,
+            workpaper_id=workpaper_id,
+            finding_id=finding_id,
+            evidence_type=evidence_type,
+            source_module=_clean_text(payload.get("source_module"), max_length=60),
+            source_id=_int_or_none(payload.get("source_id")),
+            file_path=_clean_text(payload.get("file_path")),
+            caption=_clean_text(payload.get("caption")),
+            created_by_user_id=current_user_id,
+        )
+        db.session.add(evidence)
+        db.session.commit()
+        return evidence.to_dict()
+
+    @staticmethod
+    def _validate_project_link(company_id: int, project_id: Any) -> int | None:
+        project_id = _int_or_none(project_id)
+        if not project_id:
+            return None
+        project = Project.query.filter_by(company_id=company_id, id=project_id, is_deleted=False).first()
+        if not project:
+            raise InternalAuditServiceError("Projeto não encontrado para a empresa ativa.")
+        return project.id
+
+    @staticmethod
+    def _validate_task_link(company_id: int, task_id: Any, project_id: int | None = None) -> int | None:
+        task_id = _int_or_none(task_id)
+        if not task_id:
+            return None
+        query = ProjectTask.query.join(Project, Project.id == ProjectTask.project_id).filter(
+            Project.company_id == company_id,
+            ProjectTask.id == task_id,
+            ProjectTask.is_deleted.is_(False),
+            Project.is_deleted.is_(False),
+        )
+        if project_id:
+            query = query.filter(ProjectTask.project_id == project_id)
+        task = query.first()
+        if not task:
+            raise InternalAuditServiceError("Atividade não encontrada para a empresa ativa.")
+        return task.id
+
+    @staticmethod
+    def _validate_meeting_link(company_id: int, meeting_id: Any) -> int | None:
+        meeting_id = _int_or_none(meeting_id)
+        if not meeting_id:
+            return None
+        meeting = Meeting.query.filter_by(company_id=company_id, id=meeting_id).first()
+        if not meeting:
+            raise InternalAuditServiceError("Reunião de alinhamento não encontrada para a empresa ativa.")
+        return meeting.id

@@ -128,6 +128,38 @@ def points_page():
     return render_template("modules/internal_audit/points.html", company=company, company_id=company.id)
 
 
+@internal_audit_bp.route("/internal-audit/workpapers")
+@login_required
+def workpapers_page():
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template("modules/internal_audit/workpapers.html", company=company, company_id=company.id)
+
+
+@internal_audit_bp.route("/internal-audit/findings")
+@login_required
+def findings_page():
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template("modules/internal_audit/findings.html", company=company, company_id=company.id)
+
+
+@internal_audit_bp.route("/internal-audit/findings/<int:finding_id>")
+@login_required
+def finding_detail_page(finding_id: int):
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template(
+        "modules/internal_audit/findings.html",
+        company=company,
+        company_id=company.id,
+        finding_id=finding_id,
+    )
+
+
 @internal_audit_bp.route("/api/internal-audit/summary")
 @login_required
 def api_summary():
@@ -263,3 +295,69 @@ def api_point_detail(point_id: int):
         return _json_result(lambda: InternalAuditService.get_point(company.id, point_id))
     _ensure_manage(company.id)
     return _json_result(lambda: InternalAuditService.update_point(company.id, point_id, _payload()))
+
+
+@internal_audit_bp.route("/api/internal-audit/workpapers", methods=["GET", "POST"])
+@login_required
+def api_workpapers():
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return jsonify({"success": True, "data": InternalAuditService.list_workpapers(company.id)})
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_workpaper(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/workpapers/<int:workpaper_id>", methods=["GET"])
+@login_required
+def api_workpaper_detail(workpaper_id: int):
+    company = _active_company_or_400()
+    return _json_result(lambda: InternalAuditService.get_workpaper(company.id, workpaper_id))
+
+
+@internal_audit_bp.route("/api/internal-audit/findings", methods=["GET", "POST"])
+@login_required
+def api_findings():
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return jsonify({"success": True, "data": InternalAuditService.list_findings(company.id, request.args.get("status"))})
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_finding(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/findings/<int:finding_id>", methods=["GET", "PATCH", "POST"])
+@login_required
+def api_finding_detail(finding_id: int):
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return _json_result(lambda: InternalAuditService.get_finding(company.id, finding_id))
+    _ensure_manage(company.id)
+    return _json_result(lambda: InternalAuditService.update_finding(company.id, finding_id, _payload()))
+
+
+@internal_audit_bp.route("/api/internal-audit/evidence-links", methods=["POST"])
+@login_required
+def api_evidence_links():
+    company = _active_company_or_400()
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_evidence_link(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )

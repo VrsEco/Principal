@@ -1,0 +1,33 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Auditoria Interna - Papéis de Trabalho{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><a href="/internal-audit">Auditoria Interna</a><span class="sep">/</span><span class="current">Papéis de Trabalho</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page">
+  <header><p class="eyebrow">Onda 3</p><h1>Papéis de Trabalho</h1><p class="subtitle">Registre evidências, comentários, alertas e conclusões técnicas vinculadas à execução, item ou ponto de auditoria.</p></header>
+  <section class="panel">
+    <form id="workpaper-form" class="form-grid">
+      <input name="audit_point_id" placeholder="ID do ponto de auditoria">
+      <input name="execution_id" placeholder="ID da execução">
+      <input name="execution_item_id" placeholder="ID do item executado">
+      <textarea name="evidence_summary" placeholder="Resumo das evidências"></textarea>
+      <textarea name="comments" placeholder="Comentários do auditor"></textarea>
+      <textarea name="alert_notes" placeholder="Alertas / pontos de atenção"></textarea>
+      <textarea name="conclusion" placeholder="Conclusão técnica"></textarea>
+      <button class="btn btn-primary">Salvar papel de trabalho</button>
+    </form>
+  </section>
+  <section id="workpapers-list" class="cards"></section>
+</div>
+<style>
+.audit-page{padding:0 2rem 2rem}.eyebrow{color:var(--primary);font-weight:800;text-transform:uppercase;font-size:.72rem}.subtitle,.meta{color:var(--text-secondary)}.panel,.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1rem;box-shadow:var(--shadow-sm)}.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}.form-grid textarea{grid-column:span 3}.form-grid input,.form-grid textarea{border:1px solid var(--border);border-radius:12px;padding:.8rem;background:var(--surface-secondary)}.btn{border:0;border-radius:12px;padding:.8rem 1rem;font-weight:800;cursor:pointer;text-decoration:none}.btn-primary{background:var(--primary);color:#fff}.cards{display:grid;gap:1rem;margin-top:1rem}.evidence-form{display:grid;grid-template-columns:1fr 2fr auto;gap:.5rem;margin-top:.75rem}.evidence-form input,.evidence-form select{border:1px solid var(--border);border-radius:10px;padding:.65rem;background:var(--surface-secondary)}@media(max-width:900px){.form-grid,.evidence-form{grid-template-columns:1fr}.form-grid textarea{grid-column:auto}.audit-page{padding:0 1rem 1.5rem}}
+</style>
+<script>
+const list=document.getElementById('workpapers-list'), qs=new URLSearchParams(window.location.search);
+function esc(v){return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+for(const key of ['audit_point_id','execution_id','execution_item_id']){const val=qs.get(key);if(val){document.querySelector(`[name="${key}"]`).value=val}}
+async function load(){const r=await fetch('/api/internal-audit/workpapers');const j=await r.json();const rows=j.data||[];list.innerHTML=rows.map(w=>`<article class="card"><h2>Papel #${w.id}${w.audit_point_title?' · '+esc(w.audit_point_title):''}</h2><p class="meta">Ponto: ${w.audit_point_id||'-'} · Execução: ${w.execution_id||'-'} · Item: ${w.execution_item_id||'-'} · Auditor: ${esc(w.auditor_user_name)||'-'}</p><p><strong>Evidências:</strong> ${esc(w.evidence_summary)||'-'}</p><p><strong>Comentários:</strong> ${esc(w.comments)||'-'}</p><p><strong>Alertas:</strong> ${esc(w.alert_notes)||'-'}</p><p><strong>Conclusão:</strong> ${esc(w.conclusion)||'-'}</p><form class="evidence-form" data-id="${w.id}"><select name="evidence_type"><option value="comment">Comentário</option><option value="file">Arquivo</option><option value="image">Imagem</option><option value="link">Link</option><option value="system_record">Registro do sistema</option></select><input name="caption" placeholder="Descrição da evidência"><button class="btn btn-primary">Anexar evidência</button></form></article>`).join('')||'<article class="card">Nenhum papel de trabalho registrado.</article>';document.querySelectorAll('.evidence-form').forEach(f=>f.addEventListener('submit',saveEvidence))}
+async function saveEvidence(e){e.preventDefault();const data=Object.fromEntries(new FormData(e.target));data.workpaper_id=e.target.dataset.id;const r=await fetch('/api/internal-audit/evidence-links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.success){alert(j.message||'Erro');return}e.target.reset();alert('Evidência registrada.')}
+document.getElementById('workpaper-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const r=await fetch('/api/internal-audit/workpapers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.success){alert(j.message||'Erro');return}e.target.reset();load()});
+load();
+</script>
+{% endblock %}

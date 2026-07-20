@@ -1,0 +1,34 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Auditoria Interna - Achados{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><a href="/internal-audit">Auditoria Interna</a><span class="sep">/</span><span class="current">Achados</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page">
+  <header><p class="eyebrow">Onda 3</p><h1>Achados de Auditoria</h1><p class="subtitle">Formalize achados e vincule a correção a projeto/atividade, reunião de alinhamento, relatório e follow-up.</p></header>
+  <section class="panel">
+    <form id="finding-form" class="form-grid">
+      <input name="audit_point_id" placeholder="ID do ponto de auditoria">
+      <input name="title" placeholder="Título do achado">
+      <select name="severity"><option value="medium">Média</option><option value="low">Baixa</option><option value="high">Alta</option><option value="critical">Crítica</option></select>
+      <textarea name="condition_text" placeholder="Condição encontrada"></textarea>
+      <textarea name="criterion_text" placeholder="Critério / padrão esperado"></textarea>
+      <textarea name="cause_text" placeholder="Causa provável"></textarea>
+      <textarea name="effect_text" placeholder="Efeito / risco"></textarea>
+      <textarea name="recommendation_text" placeholder="Recomendação"></textarea>
+      <input name="due_date" type="date" title="Prazo">
+      <button class="btn btn-primary">Criar achado</button>
+    </form>
+  </section>
+  <section id="findings-list" class="cards"></section>
+</div>
+<style>
+.audit-page{padding:0 2rem 2rem}.eyebrow{color:var(--primary);font-weight:800;text-transform:uppercase;font-size:.72rem}.subtitle,.meta{color:var(--text-secondary)}.panel,.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1rem;box-shadow:var(--shadow-sm)}.form-grid{display:grid;grid-template-columns:1fr 2fr 1fr;gap:.75rem}.form-grid textarea{grid-column:span 3}.form-grid input,.form-grid select,.form-grid textarea{border:1px solid var(--border);border-radius:12px;padding:.8rem;background:var(--surface-secondary)}.btn{border:0;border-radius:12px;padding:.8rem 1rem;font-weight:800;cursor:pointer;text-decoration:none}.btn-primary{background:var(--primary);color:#fff}.btn-secondary{background:var(--surface-secondary);border:1px solid var(--border);color:var(--text-primary)}.cards{display:grid;gap:1rem;margin-top:1rem}.badge{display:inline-flex;border-radius:999px;padding:.2rem .55rem;font-size:.72rem;font-weight:800;background:rgba(37,99,235,.12);color:#2563eb}.badge.high,.badge.critical{background:rgba(220,38,38,.12);color:#dc2626}.badge.low{background:rgba(100,116,139,.12);color:#475569}.remediation-form{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.5rem;margin-top:.75rem}.remediation-form input,.remediation-form select{border:1px solid var(--border);border-radius:10px;padding:.65rem;background:var(--surface-secondary)}@media(max-width:1100px){.form-grid,.remediation-form{grid-template-columns:1fr}.form-grid textarea{grid-column:auto}.audit-page{padding:0 1rem 1.5rem}}
+</style>
+<script>
+const list=document.getElementById('findings-list'), detailId={{ finding_id|default('null') }};
+function esc(v){return String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function load(){const r=await fetch('/api/internal-audit/findings');const j=await r.json();const rows=j.data||[];list.innerHTML=rows.map(f=>`<article class="card" id="finding-${f.id}" style="${detailId==f.id?'outline:3px solid var(--primary);':''}"><h2>${esc(f.title)}</h2><p class="meta"><span class="badge ${f.severity}">${f.severity}</span> · ${f.status} · Ponto: ${f.audit_point_id||'-'} · Projeto: ${f.project_id||'-'} · Atividade: ${f.task_id||'-'} · Prazo: ${f.due_date||'-'}</p><p><strong>Condição:</strong> ${esc(f.condition_text)||'-'}</p><p><strong>Critério:</strong> ${esc(f.criterion_text)||'-'}</p><p><strong>Causa:</strong> ${esc(f.cause_text)||'-'}</p><p><strong>Efeito:</strong> ${esc(f.effect_text)||'-'}</p><p><strong>Recomendação:</strong> ${esc(f.recommendation_text)||'-'}</p><form class="remediation-form" data-id="${f.id}"><input name="project_id" placeholder="ID projeto" value="${f.project_id||''}"><input name="task_id" placeholder="ID atividade" value="${f.task_id||''}"><input name="alignment_meeting_id" placeholder="ID reunião" value="${f.alignment_meeting_id||''}"><select name="status"><option value="">Status</option><option value="open">Aberto</option><option value="action_linked">Projeto/atividade vinculado</option><option value="in_follow_up">Em follow-up</option><option value="resolved">Resolvido</option><option value="closed">Fechado</option><option value="cancelled">Cancelado</option></select><button class="btn btn-secondary">Atualizar vínculo</button></form></article>`).join('')||'<article class="card">Nenhum achado registrado.</article>';document.querySelectorAll('.remediation-form').forEach(f=>f.addEventListener('submit',saveRemediation))}
+async function saveRemediation(e){e.preventDefault();const data=Object.fromEntries(new FormData(e.target));Object.keys(data).forEach(k=>{if(data[k]==='')delete data[k]});const r=await fetch(`/api/internal-audit/findings/${e.target.dataset.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.success){alert(j.message||'Erro');return}load()}
+document.getElementById('finding-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const r=await fetch('/api/internal-audit/findings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.success){alert(j.message||'Erro');return}e.target.reset();window.location.href=`/internal-audit/findings/${j.data.id}`});
+load();
+</script>
+{% endblock %}

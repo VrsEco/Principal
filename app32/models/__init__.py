@@ -126,8 +126,11 @@ from .internal_audit import (
     AuditChecklistItem,
     AuditExecution,
     AuditExecutionItem,
+    AuditEvidenceLink,
+    AuditFinding,
     AuditPoint,
     AuditSchedule,
+    AuditWorkpaper,
 )
 
 # Operations & Governance
@@ -203,6 +206,7 @@ __all__ = [
     'FinancialAutomationBatch', 'FinancialAutomationDocument', 'FinancialAutomationHistory', 'FinancialAutomationRecord',
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
     'AutomationRegistry', 'AutomationRule', 'AutomationExecution', 'AutomationBpmsLink',
+    'AuditArea', 'AuditAuditor', 'AuditChecklist', 'AuditChecklistItem', 'AuditSchedule', 'AuditExecution', 'AuditExecutionItem', 'AuditPoint', 'AuditWorkpaper', 'AuditFinding', 'AuditEvidenceLink',
     'RealEstateAuctionProperty', 'RealEstateAuctionEvent', 'RealEstateAuctionFinancialSheet', 'RealEstateAuctionDueDiligence', 'RealEstateAuctionAttachment', 'RealEstateAuctionSource', 'RealEstateAuctionImportJob', 'RealEstateAuctionImportJobItem', 'RealEstateAuctionTenantSettings',
     'Contract', 'ContractCatalogItem', 'ContractParty', 'ContractingLegalEntity', 'ContractItem', 'ContractBillingItem', 'ContractNativeBilling', 'ContractNativeBillingItem', 'ContractFinancialTerm', 'ContractFiscalTerm', 'ContractRetention', 'ContractTrigger', 'ContractDocument', 'ContractClause', 'ContractNote', 'ContractEvent',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 

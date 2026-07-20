@@ -404,7 +404,7 @@
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
             </svg>
             Auditoria Interna
-            <span class="nav-pill nav-pill-warning">Onda 1</span>
+            <span class="nav-pill nav-pill-warning">Onda 3</span>
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                 <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
@@ -430,6 +430,14 @@
             <a href="/internal-audit/points" class="sub-nav-link {{ 'active' if '/internal-audit/points' in request.path }}">
                 <span>Pontos de Auditoria</span>
                 <span class="nav-pill">Onda 2</span>
+            </a>
+            <a href="/internal-audit/workpapers" class="sub-nav-link {{ 'active' if '/internal-audit/workpapers' in request.path }}">
+                <span>Papéis de Trabalho</span>
+                <span class="nav-pill">Onda 3</span>
+            </a>
+            <a href="/internal-audit/findings" class="sub-nav-link {{ 'active' if '/internal-audit/findings' in request.path }}">
+                <span>Achados</span>
+                <span class="nav-pill">Onda 3</span>
             </a>
         </div>
     </div>

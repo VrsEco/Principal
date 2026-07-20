@@ -19,6 +19,8 @@ AUDIT_ITEM_STATUSES = (
 AUDIT_POINT_ORIGINS = ("manual", "checklist", "analyzer")
 AUDIT_POINT_STATUSES = ("open", "in_review", "converted_to_finding", "dismissed", "closed")
 AUDIT_SEVERITIES = ("low", "medium", "high", "critical")
+AUDIT_FINDING_STATUSES = ("open", "action_linked", "in_follow_up", "resolved", "closed", "cancelled")
+AUDIT_EVIDENCE_TYPES = ("file", "image", "link", "system_record", "comment")
 
 
 def _iso(value):
@@ -359,6 +361,189 @@ class AuditPoint(db.Model):
             "metadata": self.metadata_json or {},
             "created_at": _iso(self.created_at),
             "updated_at": _iso(self.updated_at),
+        }
+
+
+class AuditWorkpaper(db.Model):
+    __tablename__ = "audit_workpapers"
+    __table_args__ = (
+        db.Index("ix_audit_workpapers_company_execution", "company_id", "execution_id"),
+        db.Index("ix_audit_workpapers_company_item", "company_id", "execution_item_id"),
+        db.Index("ix_audit_workpapers_company_point", "company_id", "audit_point_id"),
+        db.Index("ix_audit_workpapers_company_auditor", "company_id", "auditor_user_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    execution_id = db.Column(db.Integer, db.ForeignKey("audit_executions.id", ondelete="SET NULL"))
+    execution_item_id = db.Column(db.Integer, db.ForeignKey("audit_execution_items.id", ondelete="SET NULL"))
+    audit_point_id = db.Column(db.Integer, db.ForeignKey("audit_points.id", ondelete="SET NULL"))
+    auditor_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    comments = db.Column(db.Text)
+    conclusion = db.Column(db.Text)
+    alert_notes = db.Column(db.Text)
+    evidence_summary = db.Column(db.Text)
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    execution = db.relationship("AuditExecution", foreign_keys=[execution_id])
+    execution_item = db.relationship("AuditExecutionItem", foreign_keys=[execution_item_id])
+    audit_point = db.relationship("AuditPoint", foreign_keys=[audit_point_id])
+    auditor_user = db.relationship("User", foreign_keys=[auditor_user_id])
+    evidences = db.relationship(
+        "AuditEvidenceLink",
+        back_populates="workpaper",
+        cascade="all, delete-orphan",
+        foreign_keys="AuditEvidenceLink.workpaper_id",
+    )
+
+    def to_dict(self, include_evidences: bool = False) -> dict:
+        payload = {
+            "id": self.id,
+            "company_id": self.company_id,
+            "execution_id": self.execution_id,
+            "execution_item_id": self.execution_item_id,
+            "audit_point_id": self.audit_point_id,
+            "audit_point_title": getattr(self.audit_point, "title", None),
+            "auditor_user_id": self.auditor_user_id,
+            "auditor_user_name": getattr(self.auditor_user, "name", None),
+            "comments": self.comments,
+            "conclusion": self.conclusion,
+            "alert_notes": self.alert_notes,
+            "evidence_summary": self.evidence_summary,
+            "metadata": self.metadata_json or {},
+            "created_at": _iso(self.created_at),
+            "updated_at": _iso(self.updated_at),
+        }
+        if include_evidences:
+            payload["evidences"] = [evidence.to_dict() for evidence in self.evidences]
+        return payload
+
+
+class AuditFinding(db.Model):
+    __tablename__ = "audit_findings"
+    __table_args__ = (
+        db.CheckConstraint("severity IN ('low','medium','high','critical')", name="ck_audit_findings_severity"),
+        db.CheckConstraint(
+            "status IN ('open','action_linked','in_follow_up','resolved','closed','cancelled')",
+            name="ck_audit_findings_status",
+        ),
+        db.Index("ix_audit_findings_company_status", "company_id", "status"),
+        db.Index("ix_audit_findings_company_severity", "company_id", "severity"),
+        db.Index("ix_audit_findings_company_point", "company_id", "audit_point_id"),
+        db.Index("ix_audit_findings_company_project", "company_id", "project_id"),
+        db.Index("ix_audit_findings_company_task", "company_id", "task_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    audit_point_id = db.Column(db.Integer, db.ForeignKey("audit_points.id", ondelete="SET NULL"))
+    execution_id = db.Column(db.Integer, db.ForeignKey("audit_executions.id", ondelete="SET NULL"))
+    execution_item_id = db.Column(db.Integer, db.ForeignKey("audit_execution_items.id", ondelete="SET NULL"))
+    title = db.Column(db.String(255), nullable=False)
+    condition_text = db.Column(db.Text)
+    criterion_text = db.Column(db.Text)
+    cause_text = db.Column(db.Text)
+    effect_text = db.Column(db.Text)
+    recommendation_text = db.Column(db.Text)
+    severity = db.Column(db.String(30), nullable=False, default="medium")
+    status = db.Column(db.String(40), nullable=False, default="open")
+    responsible_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    due_date = db.Column(db.Date)
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.id", ondelete="SET NULL"))
+    task_id = db.Column(db.Integer, db.ForeignKey("project_tasks.id", ondelete="SET NULL"))
+    alignment_meeting_id = db.Column(db.Integer, db.ForeignKey("meetings.id", ondelete="SET NULL"))
+    metadata_json = db.Column(JSONB, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    audit_point = db.relationship("AuditPoint", foreign_keys=[audit_point_id])
+    execution = db.relationship("AuditExecution", foreign_keys=[execution_id])
+    execution_item = db.relationship("AuditExecutionItem", foreign_keys=[execution_item_id])
+    responsible_user = db.relationship("User", foreign_keys=[responsible_user_id])
+    project = db.relationship("Project", foreign_keys=[project_id])
+    task = db.relationship("ProjectTask", foreign_keys=[task_id])
+    alignment_meeting = db.relationship("Meeting", foreign_keys=[alignment_meeting_id])
+    evidences = db.relationship(
+        "AuditEvidenceLink",
+        back_populates="finding",
+        cascade="all, delete-orphan",
+        foreign_keys="AuditEvidenceLink.finding_id",
+    )
+
+    def to_dict(self, include_evidences: bool = False) -> dict:
+        payload = {
+            "id": self.id,
+            "company_id": self.company_id,
+            "audit_point_id": self.audit_point_id,
+            "execution_id": self.execution_id,
+            "execution_item_id": self.execution_item_id,
+            "title": self.title,
+            "condition_text": self.condition_text,
+            "criterion_text": self.criterion_text,
+            "cause_text": self.cause_text,
+            "effect_text": self.effect_text,
+            "recommendation_text": self.recommendation_text,
+            "severity": self.severity,
+            "status": self.status,
+            "responsible_user_id": self.responsible_user_id,
+            "responsible_user_name": getattr(self.responsible_user, "name", None),
+            "due_date": _iso(self.due_date),
+            "project_id": self.project_id,
+            "project_name": getattr(self.project, "name", None),
+            "task_id": self.task_id,
+            "task_title": getattr(self.task, "what", None),
+            "alignment_meeting_id": self.alignment_meeting_id,
+            "alignment_meeting_title": getattr(self.alignment_meeting, "title", None),
+            "metadata": self.metadata_json or {},
+            "created_at": _iso(self.created_at),
+            "updated_at": _iso(self.updated_at),
+        }
+        if include_evidences:
+            payload["evidences"] = [evidence.to_dict() for evidence in self.evidences]
+        return payload
+
+
+class AuditEvidenceLink(db.Model):
+    __tablename__ = "audit_evidence_links"
+    __table_args__ = (
+        db.CheckConstraint("evidence_type IN ('file','image','link','system_record','comment')", name="ck_audit_evidence_links_type"),
+        db.Index("ix_audit_evidence_links_company_workpaper", "company_id", "workpaper_id"),
+        db.Index("ix_audit_evidence_links_company_finding", "company_id", "finding_id"),
+        db.Index("ix_audit_evidence_links_company_source", "company_id", "source_module", "source_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    workpaper_id = db.Column(db.Integer, db.ForeignKey("audit_workpapers.id", ondelete="CASCADE"))
+    finding_id = db.Column(db.Integer, db.ForeignKey("audit_findings.id", ondelete="CASCADE"))
+    evidence_type = db.Column(db.String(30), nullable=False, default="comment")
+    source_module = db.Column(db.String(60))
+    source_id = db.Column(db.Integer)
+    file_path = db.Column(db.Text)
+    caption = db.Column(db.Text)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    workpaper = db.relationship("AuditWorkpaper", back_populates="evidences", foreign_keys=[workpaper_id])
+    finding = db.relationship("AuditFinding", back_populates="evidences", foreign_keys=[finding_id])
+    created_by_user = db.relationship("User", foreign_keys=[created_by_user_id])
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "workpaper_id": self.workpaper_id,
+            "finding_id": self.finding_id,
+            "evidence_type": self.evidence_type,
+            "source_module": self.source_module,
+            "source_id": self.source_id,
+            "file_path": self.file_path,
+            "caption": self.caption,
+            "created_by_user_id": self.created_by_user_id,
+            "created_by_user_name": getattr(self.created_by_user, "name", None),
+            "created_at": _iso(self.created_at),
         }
 
 
