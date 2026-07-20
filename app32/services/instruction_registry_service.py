@@ -535,7 +535,7 @@ class InstructionRegistryService:
         if runtime_profile != "squad_cliente":
             return None
         return {
-            "version": "structuring-journey-v2",
+            "version": "structuring-journey-v2.1",
             "scope": "Condução MCP First das quatro frentes da Estruturação Empresarial pelo Squad Cliente.",
             "entry_state": "collecting_evidence",
             "states": [
@@ -595,6 +595,11 @@ class InstructionRegistryService:
                     "action": "research_benchmark",
                     "autonomy": "may",
                     "rule": "Pesquisar quando o protocolo exigir e registrar fontes, recorte e limitações.",
+                },
+                {
+                    "action": "classify_assisted_analysis",
+                    "autonomy": "must",
+                    "rule": "Classificar como technical_test ou methodological; somente análise metodológica elegível pode avançar a jornada.",
                 },
                 {
                     "action": "register_canonical_data",

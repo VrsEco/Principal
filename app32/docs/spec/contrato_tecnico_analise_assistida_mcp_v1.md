@@ -521,3 +521,41 @@ Ela não executa mutação e retorna:
 7. `consultive_get_next_action` permanece somente leitura; quando houver transição registrável, ela publica a tool de escrita separada e sua `write_policy`, sem executar a mutação automaticamente.
 8. cobertura de 100% com gaps ou gates pendentes retorna maturidade metodológica não madura;
 9. cada estado registrável publica a tool necessária para avançar e sua política de confirmação humana.
+
+## 12. Classificação e elegibilidade da análise
+
+### 12.1 Campos canônicos
+
+`consultive_assisted_analyses` passa a registrar:
+
+- `analysis_type`: `methodological` ou `technical_test`;
+- `journey_eligible`: booleano calculado exclusivamente pelo service;
+- `eligibility_reasons_json`: razões objetivas que permitem ou impedem o avanço.
+
+O cliente MCP deve informar `payload.analysis_type`. O APP32 não aceita que o cliente force `journey_eligible`.
+
+### 12.2 Critério mínimo de Missão
+
+Uma análise `methodological` de `identity/mission` é elegível somente quando contém:
+
+1. `subphase_key=mission`;
+2. `diagnosis` preenchido;
+3. `human_evidence` preenchido;
+4. `internal_evidence` preenchido;
+5. `risks` preenchido;
+6. `recommendations` preenchido;
+7. `benchmarks` preenchido ou `benchmark_not_applicable_reason` justificado.
+
+Análise `technical_test` é sempre `journey_eligible=false`. Análise metodológica incompleta também é persistida como inelegível para preservar auditoria, mas não avança a máquina de estados.
+
+### 12.3 Regras da máquina de estados
+
+- `_latest_applicable_analysis` considera somente análise da mesma empresa, frente e subfase com `journey_eligible=true`;
+- `latest_received_analysis_id` expõe o registro mais recente, mesmo inelegível, sem confundi-lo com a análise metodológica ativa;
+- validação de Squad, decisão do consultor e conversão operacional recusam análise inelegível;
+- ausência de análise elegível mantém `collecting_evidence` e publica as razões de inelegibilidade;
+- reclassificações corretivas preservam o registro original e sua autoria.
+
+### 12.4 Correção auditável do piloto
+
+O registro `id=7`, `company_id=9`, foi criado exclusivamente para testar o write-path MCP. Deve permanecer no histórico como `technical_test`, `journey_eligible=false`, sem validações ou decisão. A Missão da Versus retorna a `collecting_evidence` até existir análise metodológica elegível.

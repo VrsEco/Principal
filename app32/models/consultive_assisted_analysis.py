@@ -12,6 +12,11 @@ CONSULTIVE_FRONT_KEY_VALUES = (
     "strategic_management",
 )
 
+ASSISTED_ANALYSIS_TYPE_VALUES = (
+    "methodological",
+    "technical_test",
+)
+
 ASSISTED_ANALYSIS_STATUS_VALUES = (
     "received",
     "under_review",
@@ -74,6 +79,10 @@ class AssistedAnalysis(db.Model):
             name="ck_consultive_assisted_analyses_front_key",
         ),
         db.CheckConstraint(
+            f"analysis_type IN {ASSISTED_ANALYSIS_TYPE_VALUES}",
+            name="ck_consultive_assisted_analyses_analysis_type",
+        ),
+        db.CheckConstraint(
             f"status IN {ASSISTED_ANALYSIS_STATUS_VALUES}",
             name="ck_consultive_assisted_analyses_status",
         ),
@@ -86,6 +95,9 @@ class AssistedAnalysis(db.Model):
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
     front_key = db.Column(db.String(40), nullable=False)
     status = db.Column(db.String(30), nullable=False, default="received")
+    analysis_type = db.Column(db.String(30), nullable=False, default="technical_test")
+    journey_eligible = db.Column(db.Boolean, nullable=False, default=False)
+    eligibility_reasons_json = db.Column(db.JSON, default=list)
 
     ai_origin = db.Column(db.String(120))
     responsible = db.Column(db.String(160))
@@ -115,6 +127,9 @@ class AssistedAnalysis(db.Model):
             "company_id": self.company_id,
             "front_key": self.front_key,
             "status": self.status,
+            "analysis_type": self.analysis_type,
+            "journey_eligible": bool(self.journey_eligible),
+            "eligibility_reasons": list(self.eligibility_reasons_json or []),
             "ai_origin": self.ai_origin,
             "responsible": self.responsible,
             "diagnosis": self.diagnosis,
@@ -229,6 +244,7 @@ class AssistedAnalysisDecision(db.Model):
 
 __all__ = [
     "CONSULTIVE_FRONT_KEY_VALUES",
+    "ASSISTED_ANALYSIS_TYPE_VALUES",
     "ASSISTED_ANALYSIS_STATUS_VALUES",
     "ASSISTED_ANALYSIS_VALIDATION_SQUAD_VALUES",
     "ASSISTED_ANALYSIS_VALIDATION_STATUS_VALUES",

@@ -29,6 +29,8 @@ def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
     assert "502, 503 ou 504" in rules
     assert "Nunca repetir mutação automaticamente" in rules
     assert "consultive_get_next_action" in rules
-    assert payload["journey_guide"]["version"] == "structuring-journey-v2"
+    assert payload["journey_guide"]["version"] == "structuring-journey-v2.1"
     state_keys = [item["key"] for item in payload["journey_guide"]["states"]]
+    action_policy = {item["action"]: item["autonomy"] for item in payload["journey_guide"]["action_policy"]}
+    assert action_policy["classify_assisted_analysis"] == "must"
     assert "awaiting_engineering_validation" in state_keys

@@ -244,7 +244,11 @@ def register_consultive_assisted_analysis_tools(mcp: Any) -> None:
         human_gate_confirmed: bool = False,
         user_id: Optional[int] = None,
     ) -> dict[str, Any]:
-        """Registra no APP32 o resultado trazido pela IA/CLI via MCP após confirmação humana."""
+        """Registra análise assistida após confirmação humana.
+
+        payload.analysis_type deve ser methodological ou technical_test. O APP32
+        calcula journey_eligible; o cliente não pode forçar avanço da jornada.
+        """
         operation = "assisted_analysis.register"
         try:
             _require_human_gate(human_gate_confirmed)

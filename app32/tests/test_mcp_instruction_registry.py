@@ -61,12 +61,13 @@ def test_instruction_registry_exposes_structuring_journey_guide_only_to_squad_cl
     )
     guide = client_payload["data"]["journey_guide"]
 
-    assert guide["version"] == "structuring-journey-v1"
+    assert guide["version"] == "structuring-journey-v2.1"
     assert guide["entry_state"] == "collecting_evidence"
     assert [item["key"] for item in guide["states"]] == [
         "collecting_evidence",
         "awaiting_client_validation",
         "awaiting_versus_validation",
+        "awaiting_engineering_validation",
         "awaiting_consultant_decision",
         "approved_for_execution",
         "executed_verified",
@@ -74,6 +75,7 @@ def test_instruction_registry_exposes_structuring_journey_guide_only_to_squad_cl
     ]
     action_policy = {item["action"]: item["autonomy"] for item in guide["action_policy"]}
     assert action_policy["collect_human_evidence"] == "must"
+    assert action_policy["classify_assisted_analysis"] == "must"
     assert action_policy["register_canonical_data"] == "cannot"
     assert action_policy["execute_authorized_mutation"] == "gated"
     assert "consultive_resolve_protocol" in guide["read_tool_sequence"]

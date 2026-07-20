@@ -32,6 +32,9 @@ def _analysis(*, validations=None, decision=None, status="received"):
         "company_id": 9,
         "front_key": "identity",
         "status": status,
+        "analysis_type": "methodological",
+        "journey_eligible": True,
+        "eligibility_reasons": [],
         "protocol_snapshot": {"subphase_key": "mission"},
         "validations": validations or [],
         "latest_decision": decision,
@@ -163,3 +166,43 @@ def test_executed_state_only_declares_maturity_without_open_gaps(monkeypatch):
     assert maturity["status"] == "mature"
     assert maturity["is_mature"] is True
     assert maturity["open_reasons"] == []
+
+
+def test_technical_test_is_auditable_but_does_not_advance_journey(monkeypatch):
+    technical = _analysis()
+    technical.update(
+        analysis_type="technical_test",
+        journey_eligible=False,
+        eligibility_reasons=["technical_test_not_methodological"],
+    )
+    _install(monkeypatch, [technical], engineering=False)
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=9, front_key="identity", subphase_key="mission"
+    )
+
+    state = result["current_state"]
+    assert result["journey_version"] == "mission-maturity-v1.2"
+    assert result["journey_state"] == "collecting_evidence"
+    assert state["latest_analysis_id"] is None
+    assert state["latest_received_analysis_id"] == 77
+    assert state["latest_received_analysis_type"] == "technical_test"
+    assert state["latest_received_journey_eligible"] is False
+    assert state["latest_received_eligibility_reasons"] == ["technical_test_not_methodological"]
+    assert "latest_analysis_ineligible" in state["methodological_maturity"]["open_reasons"]
+    assert result["next_action"]["key"] == "develop_mission_diagnosis"
+
+
+def test_ineligible_methodological_analysis_does_not_advance_journey(monkeypatch):
+    incomplete = _analysis()
+    incomplete.update(
+        journey_eligible=False,
+        eligibility_reasons=["human_evidence_missing", "internal_evidence_missing"],
+    )
+    _install(monkeypatch, [incomplete], engineering=False)
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(company_id=9, front_key="identity")
+
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["current_state"]["latest_received_analysis_id"] == 77
+    assert result["current_state"]["latest_analysis_id"] is None

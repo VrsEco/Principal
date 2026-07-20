@@ -1175,3 +1175,20 @@ Leitura pelos quatro pilares:
 - **Orquestração:** handoff determinístico, sem elevação de permissão e sem mutação automática.
 
 O motor não executa IA, pesquisa ou escrita canônica. Ele orienta o runtime externo e preserva a regra: IA recomenda, Squads validam dentro de seus papéis e o consultor decide.
+
+### 12.5.3 Natureza da análise e avanço metodológico
+
+Nem todo registro produzido por IA/CLI representa amadurecimento da empresa. A camada assistida distingue obrigatoriamente:
+
+1. **Análise metodológica (`methodological`)** — investiga o conteúdo da subfase, reúne fala humana, evidências internas, referências externas quando aplicáveis, riscos e recomendação. Somente ela pode se tornar elegível para avançar a jornada.
+2. **Teste técnico (`technical_test`)** — comprova transporte, contrato, autenticação, persistência, tenant e gate. É evidência auditável, mas não altera o estado metodológico e não pode receber validação de conteúdo ou decisão do consultor.
+
+A elegibilidade para a jornada não é declarada livremente pelo agente. O APP32 a calcula a partir de critérios mínimos do protocolo. Para a Missão, exige ao menos: subfase identificada, respostas ou evidências humanas, evidências internas, diagnóstico, riscos, recomendação e benchmark ou justificativa explícita de não aplicabilidade.
+
+Consequências:
+
+- cobertura cadastral continua separada de maturidade metodológica;
+- teste técnico permanece no histórico e nunca é apagado para “corrigir” a leitura;
+- análise incompleta pode ser registrada para auditoria, mas permanece inelegível e mantém a jornada em `collecting_evidence`;
+- validações dos Squads e decisão do consultor só se aplicam a análise metodológica elegível;
+- Engenharia continua condicional: participa quando houver gap técnico relevante, não como validação automática de todo conteúdo.

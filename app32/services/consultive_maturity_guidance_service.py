@@ -48,10 +48,16 @@ class ConsultiveMaturityGuidanceService:
             front_key=normalized_front,
             limit=100,
         )
-        latest = cls._latest_applicable_analysis(analyses, normalized_subphase)
+        latest_received = cls._latest_applicable_analysis(
+            analyses, normalized_subphase, eligible_only=False
+        )
+        latest = cls._latest_applicable_analysis(
+            analyses, normalized_subphase, eligible_only=True
+        )
         engineering_required = cls._engineering_validation_required(context)
         journey_state, action = cls._resolve_state_and_action(
             latest=latest,
+            latest_received=latest_received,
             context=context,
             protocol=protocol,
             engineering_required=engineering_required,
@@ -63,6 +69,7 @@ class ConsultiveMaturityGuidanceService:
             journey_state=journey_state,
             context=context,
             latest=latest,
+            latest_received=latest_received,
             validations=validations,
             decision=decision,
             engineering_required=engineering_required,
@@ -71,7 +78,7 @@ class ConsultiveMaturityGuidanceService:
             "company_id": company_id,
             "front_key": normalized_front,
             "subphase_key": normalized_subphase,
-            "journey_version": "mission-maturity-v1.1" if (normalized_front, normalized_subphase) == ("identity", "mission") else "structuring-journey-v2",
+            "journey_version": "mission-maturity-v1.2" if (normalized_front, normalized_subphase) == ("identity", "mission") else "structuring-journey-v2",
             "pilot_scope": (normalized_front, normalized_subphase) == ("identity", "mission"),
             "protocol": {
                 "id": protocol.get("id"),
@@ -92,6 +99,11 @@ class ConsultiveMaturityGuidanceService:
                 "engineering_gap_count": len(context.get("engineering_gaps") or []),
                 "latest_analysis_id": (latest or {}).get("id"),
                 "latest_analysis_status": (latest or {}).get("status"),
+                "latest_received_analysis_id": (latest_received or {}).get("id"),
+                "latest_received_analysis_status": (latest_received or {}).get("status"),
+                "latest_received_analysis_type": (latest_received or {}).get("analysis_type"),
+                "latest_received_journey_eligible": bool((latest_received or {}).get("journey_eligible")),
+                "latest_received_eligibility_reasons": list((latest_received or {}).get("eligibility_reasons") or []),
                 "validations": validations,
                 "engineering_validation_required": engineering_required,
                 "consultant_decision": decision,
@@ -112,12 +124,21 @@ class ConsultiveMaturityGuidanceService:
         }
 
     @staticmethod
-    def _latest_applicable_analysis(analyses: list[dict[str, Any]], subphase_key: str | None) -> dict[str, Any] | None:
+    def _latest_applicable_analysis(
+        analyses: list[dict[str, Any]],
+        subphase_key: str | None,
+        *,
+        eligible_only: bool,
+    ) -> dict[str, Any] | None:
         for analysis in analyses:
             snapshot = dict(analysis.get("protocol_snapshot") or {})
-            analysis_subphase = snapshot.get("subphase_key")
-            if analysis_subphase in (None, "", subphase_key):
-                return analysis
+            source_payload = dict(analysis.get("source_payload") or {})
+            analysis_subphase = snapshot.get("subphase_key") or source_payload.get("subphase_key")
+            if analysis_subphase not in (None, "", subphase_key):
+                continue
+            if eligible_only and not bool(analysis.get("journey_eligible")):
+                continue
+            return analysis
         return None
 
     @staticmethod
@@ -141,6 +162,7 @@ class ConsultiveMaturityGuidanceService:
         cls,
         *,
         latest: dict[str, Any] | None,
+        latest_received: dict[str, Any] | None,
         context: dict[str, Any],
         protocol: dict[str, Any],
         engineering_required: bool,
@@ -153,6 +175,10 @@ class ConsultiveMaturityGuidanceService:
                 responsible="Squad Cliente / gestor / CLI do cliente",
                 objective="Entender a intenção do gestor, pesquisar referências e confrontar a promessa com a capacidade real de entrega.",
                 required_inputs=[
+                    *([
+                        f"O registro assistido #{latest_received.get('id')} é inelegível e não avançou a jornada.",
+                        *[f"Corrigir elegibilidade: {reason}" for reason in latest_received.get("eligibility_reasons") or []],
+                    ] if latest_received else []),
                     *list(protocol_data.get("required_questions") or []),
                     "Evidências de MVV, posicionamento, processos, pessoas e mercado.",
                     "Fontes, premissas e limitações dos benchmarks utilizados.",
@@ -307,6 +333,7 @@ class ConsultiveMaturityGuidanceService:
         journey_state: str,
         context: dict[str, Any],
         latest: dict[str, Any] | None,
+        latest_received: dict[str, Any] | None,
         validations: dict[str, str],
         decision: dict[str, Any] | None,
         engineering_required: bool,
@@ -316,6 +343,8 @@ class ConsultiveMaturityGuidanceService:
         reasons: list[str] = []
         if latest is None:
             reasons.append("assisted_analysis_missing")
+        if latest_received is not None and not bool(latest_received.get("journey_eligible")):
+            reasons.append("latest_analysis_ineligible")
         if gaps:
             reasons.append("content_gaps_open")
         if engineering_gaps:
