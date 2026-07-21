@@ -380,6 +380,30 @@ Critério de aceite:
 - o fallback em código é permitido somente como segurança operacional;
 - evolução metodológica deve ocorrer preferencialmente por protocolo versionado, não por alteração de template.
 
+### 10.1.1 Protocolo oficial da Missão
+
+A subfase `identity/mission` utiliza oficialmente o protocolo persistido `mission-official-v1.0`, com `audience=ai_cli` e `depth_level=simulation`.
+
+Regras de resolução e evolução:
+
+1. protocolo ativo tenant-owned para o `company_id` solicitado;
+2. protocolo global ativo;
+3. `fallback-v1` em código, exclusivamente como contingência operacional.
+
+O seed oficial cria uma referência global e uma cópia tenant-owned para a Versus, localizada por `companies.client_code='AA'`, sem fixar id de produção. Um tenant que já possua protocolo ativo para a mesma frente, subfase e audiência não é sobrescrito.
+
+O contrato oficial da Missão exige:
+
+- entrevista do gestor com as oito perguntas obrigatórias do protocolo;
+- evidências humanas e internas, classificadas como declaradas ou auditadas;
+- pesquisa profunda e vasta, quando aplicável, com pares no Brasil e no mundo, mercado consumidor, fontes, recorte e limitações;
+- simulação de aderência entre promessa, MVV, posicionamento, processos, pessoas, recursos e percepção do mercado;
+- análise `methodological` com diagnóstico, riscos, recomendações e benchmarks ou justificativa de não aplicabilidade;
+- validação sequencial por Squad Cliente, Squad Versus, Engenharia quando requerida e decisão final do consultor;
+- confirmação humana antes de escrita, proibição de mutação canônica anterior à decisão do consultor e releitura após qualquer mutação.
+
+Uma evolução do método deve gerar nova versão ativa, arquivando ou substituindo a anterior de forma controlada. O snapshot gravado em cada análise é imutável: análises históricas feitas com `fallback-v1` permanecem com essa versão e fonte.
+
 ### 10.2 Rastreabilidade Protocolo → Análise
 
 Cada análise recebida deve guardar uma fotografia do protocolo usado no momento do trabalho.

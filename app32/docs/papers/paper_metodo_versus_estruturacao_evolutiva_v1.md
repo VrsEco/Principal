@@ -1111,7 +1111,9 @@ Os quatro roteiros de frente são:
 3. **Planejamento Estratégico** — estruturado, conectado, desdobrado e vinculado ao Gerenciamento Estratégico.
 4. **Gerenciamento Estratégico** — indicadores, ciclos, incentivos e teia de conexões.
 
-O roteiro é modificável: nasce como fallback canônico da Versus, mas pode ser evoluído por protocolo tenant/global versionado quando o método amadurecer.
+O roteiro é modificável e versionado. O fallback em código existe apenas como contingência operacional; a condução normal deve usar um protocolo persistido, resolvido na ordem **tenant → global → fallback**.
+
+A Missão Organizacional é a primeira subfase oficializada nesse modelo, pelo protocolo `mission-official-v1.0`. Existe uma referência global para todos os tenants e uma versão tenant-owned da própria Versus, identificada pelo código estável da empresa. A versão tenant-owned pode evoluir sem alterar código e sem afetar outros clientes. Cada análise conserva a fotografia do protocolo utilizado; portanto, evoluir o protocolo não reescreve análises históricas nem transforma registros feitos com `fallback-v1`.
 
 Essa camada assistida deve atuar dentro das quatro frentes do cockpit:
 

@@ -1735,3 +1735,23 @@ def test_mcp_surface_exposes_assisted_analysis_history_tool():
     assert "ConsultiveAssistedAnalysisService.list_analyses" in mcp_body
     assert "assisted_analysis.list" in mcp_body
     assert "consultive_list_assisted_analyses" in catalog_body
+
+def test_official_mission_protocol_library_contract_is_seeded_without_fixed_tenant_id():
+    migration_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "migrations",
+            "versions",
+            "20260721_0900_seed_official_mission_protocol.py",
+        )
+    )
+    with open(migration_path, "r", encoding="utf-8") as handle:
+        migration_body = handle.read()
+
+    assert "mission-official-v1.0" in migration_body
+    assert "seed:mission-official-v1.0:global" in migration_body
+    assert "seed:mission-official-v1.0:tenant-aa" in migration_body
+    assert "client_code = 'AA'" in migration_body
+    assert "company_id IS NOT DISTINCT FROM CAST(:company_id AS INTEGER)" in migration_body
+    assert "company_id=9" not in migration_body.replace(" ", "")

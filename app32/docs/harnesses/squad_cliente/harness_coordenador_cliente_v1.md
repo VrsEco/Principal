@@ -224,3 +224,14 @@ Depois de entrevistar o gestor, ler o APP32, pesquisar quando aplicável e apres
 ```
 
 Usar os argumentos explícitos publicados no schema, sem escondê-los dentro de `payload`. Usar `benchmark_not_applicable_reason` somente quando a ausência de pesquisa for metodologicamente justificada. Depois da escrita, a análise só pode seguir para validação se o APP32 retornar `analysis_type=methodological` e `journey_eligible=true`.
+
+### 14.2 Protocolo oficial da Missão
+
+Antes de iniciar ou retomar `identity/mission`, chamar `consultive_resolve_protocol` com o `company_id` autorizado e confirmar:
+
+- `id` não nulo;
+- `source` igual a `tenant` ou `global`;
+- `protocol_version=mission-official-v1.0`;
+- `status=active` e `depth_level=simulation`.
+
+Se a resolução retornar `fallback`, interromper o avanço metodológico novo e escalar ao Squad Engenharia. O fallback preserva disponibilidade, mas não substitui o protocolo oficial editável. Análises históricas mantêm o snapshot da versão com que foram produzidas.
