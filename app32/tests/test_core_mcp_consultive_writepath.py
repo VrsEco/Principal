@@ -61,6 +61,40 @@ def test_client_assisted_analysis_requires_explicit_gate_and_uses_authenticated_
     assert captured["user_id"] == 22
 
 
+def test_assisted_analysis_exposes_and_merges_methodological_contract(monkeypatch):
+    registered = _register(monkeypatch)
+    captured = {}
+    monkeypatch.setattr(
+        tools_module.ConsultiveAssistedAnalysisService,
+        "register_assisted_analysis",
+        lambda **kwargs: captured.update(kwargs) or {"id": 102},
+    )
+
+    result = registered["consultive_register_assisted_analysis"](
+        company_id=9,
+        front_key="identity",
+        payload={
+            "analysis_type": "technical_test",
+            "diagnosis": "Diagnóstico confirmado",
+            "benchmarks": "Benchmark documentado",
+            "risks": "Riscos documentados",
+            "recommendations": "Recomendações documentadas",
+        },
+        human_gate_confirmed=True,
+        analysis_type="methodological",
+        subphase_key="mission",
+        human_evidence=["Entrevista confirmada pelo gestor"],
+        internal_evidence=["MVV e processos lidos via MCP"],
+    )
+
+    assert result["success"] is True
+    assert captured["payload"]["analysis_type"] == "methodological"
+    assert captured["payload"]["subphase_key"] == "mission"
+    assert captured["payload"]["human_evidence"] == ["Entrevista confirmada pelo gestor"]
+    assert captured["payload"]["internal_evidence"] == ["MVV e processos lidos via MCP"]
+    assert captured["payload"]["diagnosis"] == "Diagnóstico confirmado"
+
+
 def test_client_can_validate_only_own_squad(monkeypatch):
     registered = _register(monkeypatch)
     captured = {}
@@ -116,3 +150,30 @@ def test_gated_write_schemas_expose_explicit_confirmation(monkeypatch):
     ):
         signature = inspect.signature(registered[tool_name])
         assert signature.parameters["human_gate_confirmed"].default is False
+
+    assisted_signature = inspect.signature(registered["consultive_register_assisted_analysis"])
+    for field in (
+        "analysis_type",
+        "subphase_key",
+        "human_evidence",
+        "internal_evidence",
+        "benchmark_not_applicable_reason",
+    ):
+        assert field in assisted_signature.parameters
+
+
+
+def test_methodological_arguments_generate_explicit_json_schema(monkeypatch):
+    from pydantic import TypeAdapter
+    from typing import get_type_hints
+
+    registered = _register(monkeypatch)
+    hints = get_type_hints(registered["consultive_register_assisted_analysis"])
+
+    analysis_schema = TypeAdapter(hints["analysis_type"]).json_schema()
+    human_evidence_schema = TypeAdapter(hints["human_evidence"]).json_schema()
+    internal_evidence_schema = TypeAdapter(hints["internal_evidence"]).json_schema()
+
+    assert analysis_schema["anyOf"][0]["enum"] == ["methodological", "technical_test"]
+    assert human_evidence_schema["anyOf"][0]["items"]["type"] == "string"
+    assert internal_evidence_schema["anyOf"][0]["items"]["type"] == "string"

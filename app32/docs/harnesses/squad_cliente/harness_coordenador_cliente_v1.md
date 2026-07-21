@@ -184,7 +184,7 @@ Se `journey_state=blocked`, interromper o avanço, explicar o bloqueio e encamin
 
 ## 14. Classificação obrigatória da análise consultiva
 
-Antes de `consultive_register_assisted_analysis`, classificar explicitamente o payload:
+Antes de `consultive_register_assisted_analysis`, classificar explicitamente a análise nos argumentos publicados pelo schema MCP:
 
 - `analysis_type=technical_test` quando o objetivo for testar conexão, schema, autenticação, tenant, persistência ou gate;
 - `analysis_type=methodological` somente quando houver conteúdo real da subfase e evidências suficientes.
@@ -206,16 +206,21 @@ Depois de entrevistar o gestor, ler o APP32, pesquisar quando aplicável e apres
 
 ```json
 {
+  "company_id": 9,
+  "front_key": "identity",
+  "human_gate_confirmed": true,
   "analysis_type": "methodological",
   "subphase_key": "mission",
   "human_evidence": ["respostas literais ou síntese confirmada pelo gestor"],
   "internal_evidence": ["MVV, posicionamento, processos, pessoas e demais dados MCP utilizados"],
-  "diagnosis": "diagnóstico objetivo e limites da análise",
-  "benchmarks": ["fontes, recorte e achados externos"],
   "benchmark_not_applicable_reason": null,
-  "risks": ["riscos e incoerências encontrados"],
-  "recommendations": ["proposta e próximos passos priorizados"]
+  "payload": {
+    "diagnosis": "diagnóstico objetivo e limites da análise",
+    "benchmarks": ["fontes, recorte e achados externos"],
+    "risks": ["riscos e incoerências encontrados"],
+    "recommendations": ["proposta e próximos passos priorizados"]
+  }
 }
 ```
 
-Usar `benchmark_not_applicable_reason` somente quando a ausência de pesquisa for metodologicamente justificada. Depois da escrita, a análise só pode seguir para validação se o APP32 retornar `analysis_type=methodological` e `journey_eligible=true`.
+Usar os argumentos explícitos publicados no schema, sem escondê-los dentro de `payload`. Usar `benchmark_not_applicable_reason` somente quando a ausência de pesquisa for metodologicamente justificada. Depois da escrita, a análise só pode seguir para validação se o APP32 retornar `analysis_type=methodological` e `journey_eligible=true`.

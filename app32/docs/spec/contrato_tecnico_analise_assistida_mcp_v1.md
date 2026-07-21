@@ -532,7 +532,9 @@ Ela não executa mutação e retorna:
 - `journey_eligible`: booleano calculado exclusivamente pelo service;
 - `eligibility_reasons_json`: razões objetivas que permitem ou impedem o avanço.
 
-O cliente MCP deve informar `payload.analysis_type`. O APP32 não aceita que o cliente force `journey_eligible`.
+A tool MCP expõe `analysis_type`, `subphase_key`, `human_evidence`, `internal_evidence` e `benchmark_not_applicable_reason` como argumentos explícitos do schema. `diagnosis`, `benchmarks`, `risks`, `recommendations` e os demais dados descritivos permanecem em `payload`. Argumentos explícitos prevalecem sobre duplicatas existentes no `payload`.
+
+O APP32 não aceita que o cliente force `journey_eligible`; o service calcula a elegibilidade a partir da classificação e das evidências estruturadas.
 
 ### 12.2 Critério mínimo de Missão
 

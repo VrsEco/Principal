@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from services.business_review_read_model_service import BusinessReviewReadModelService
 from services.consultive_assisted_analysis_service import ConsultiveAssistedAnalysisService
@@ -242,23 +242,40 @@ def register_consultive_assisted_analysis_tools(mcp: Any) -> None:
         front_key: str,
         payload: dict[str, Any],
         human_gate_confirmed: bool = False,
+        analysis_type: Optional[Literal["methodological", "technical_test"]] = None,
+        subphase_key: Optional[str] = None,
+        human_evidence: Optional[list[str]] = None,
+        internal_evidence: Optional[list[str]] = None,
+        benchmark_not_applicable_reason: Optional[str] = None,
         user_id: Optional[int] = None,
     ) -> dict[str, Any]:
         """Registra análise assistida após confirmação humana.
 
-        payload.analysis_type deve ser methodological ou technical_test. O APP32
-        calcula journey_eligible; o cliente não pode forçar avanço da jornada.
+        A classificação e as evidências estruturadas são argumentos explícitos
+        para aparecerem no schema MCP. O APP32 calcula journey_eligible; o
+        cliente nunca pode forçar o avanço da jornada.
         """
         operation = "assisted_analysis.register"
         try:
             _require_human_gate(human_gate_confirmed)
             actor_user_id = _resolve_authenticated_user_id(user_id)
+            normalized_payload = dict(payload)
+            explicit_fields = {
+                "analysis_type": analysis_type,
+                "subphase_key": subphase_key,
+                "human_evidence": human_evidence,
+                "internal_evidence": internal_evidence,
+                "benchmark_not_applicable_reason": benchmark_not_applicable_reason,
+            }
+            normalized_payload.update(
+                {key: value for key, value in explicit_fields.items() if value is not None}
+            )
             return _success(
                 operation,
                 ConsultiveAssistedAnalysisService.register_assisted_analysis(
                     company_id=company_id,
                     front_key=front_key,
-                    payload=payload,
+                    payload=normalized_payload,
                     user_id=actor_user_id,
                 ),
                 company_id=company_id,
