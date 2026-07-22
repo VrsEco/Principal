@@ -11,6 +11,21 @@ class McpOperationRouterService:
 
     ROUTES: tuple[dict[str, Any], ...] = (
         {
+            "intent": "strategy.plan_participants.sync",
+            "domain": "strategy",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "tool": "sync_plan_participants_tool",
+            "action": "create",
+            "risk": "medium",
+            "human_gate_required": True,
+            "keywords": (
+                "todos os usuarios cadastrados owner",
+                "participantes do planejamento",
+                "cadastrar participantes do plano",
+                "sincronizar participantes do plano",
+            ),
+        },
+        {
             "intent": "strategy.sector_structure.create",
             "domain": "strategy",
             "harness_key": "harness_coordenador_cliente_v1",

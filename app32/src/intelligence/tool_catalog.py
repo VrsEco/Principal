@@ -34,6 +34,7 @@ from src.core.mcp_instruction_registry_tools import register_instruction_registr
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_operation_router_tools import register_operation_router_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
+from src.core.mcp_plan_participant_tools import register_plan_participant_tools
 from src.core.mcp_process_flow_tools import register_process_flow_tools
 from src.core.mcp_process_pop_tools import register_process_pop_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
@@ -255,6 +256,10 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(
+        name="sync_plan_participants_tool",
+        description="Sincroniza todos os colaboradores ativos do tenant como participantes do plano e define um owner oficial.",
+    ),
     SimpleNamespace(
         name="create_sector_okr_structure_tool",
         description="Cadastra atomicamente OKRs setoriais, resultados-chave propostos e iniciativas vinculadas, com confirmação humana.",
@@ -767,6 +772,7 @@ catalog = ToolCatalog(
         register_operational_readiness_tools,
         register_operation_router_tools,
         register_permission_matrix_tools,
+        register_plan_participant_tools,
         register_process_flow_tools,
         register_process_pop_tools,
         register_profile_contract_tools,

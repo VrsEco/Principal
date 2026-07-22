@@ -63,6 +63,18 @@ def test_routes_cross_domain_requests_to_single_preferred_tool():
         assert result["target_harness_key"] == harness
 
 
+def test_routes_plan_participant_sync_as_human_gated_mutation():
+    result = McpOperationRouterService.resolve(
+        request_text="Cadastrar participantes do plano: todos os usuários cadastrados, owner Fabiano",
+        company_id=13,
+        current_harness_key="harness_coordenador_cliente_v1",
+    )
+    assert result["route_status"] == "ready"
+    assert result["preferred_tool"] == "sync_plan_participants_tool"
+    assert result["action"] == "create"
+    assert result["human_gate_required"] is True
+
+
 def test_unknown_request_returns_fast_fallback_without_discovery():
     result = McpOperationRouterService.resolve(
         request_text="Quero discutir uma hipótese completamente nova",

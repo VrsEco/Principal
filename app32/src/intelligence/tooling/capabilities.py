@@ -1570,6 +1570,19 @@ _register_mcp_support_capability(
     tags=("strategy", "sector_structure", "transactional", "explicit_human_confirmation"),
 )
 
+_register_mcp_support_capability(
+    "sync_plan_participants_tool",
+    domain="strategy",
+    action="create",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.MEDIUM,
+    permissions=("plan.participants.create", "plan.section.update"),
+    human_gate=True,
+    human_gate_reason="Inclusão de participantes e definição do owner do planejamento exigem confirmação humana explícita.",
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    tags=("strategy", "planning", "participants", "transactional", "explicit_human_confirmation"),
+)
+
 for _tool_name in (
     "list_work_journey_absences_tool",
     "list_work_journey_transfers_tool",
