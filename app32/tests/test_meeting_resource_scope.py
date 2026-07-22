@@ -175,6 +175,54 @@ def test_meeting_delete_uses_company_scope_and_deletes(monkeypatch):
     assert fake_session.committed == 1
 
 
+def test_meeting_create_rejects_blank_title(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(meeting_resource, 'user_can_access_company', lambda company_id: True)
+
+    with app.test_request_context('/meetings/api/company/12/meeting', method='POST', json={'title': '   '}):
+        response, status = meeting_resource.MeetingListResource().post.__wrapped__(
+            meeting_resource.MeetingListResource(), 12
+        )
+
+    assert status == 400
+    assert response['success'] is False
+    assert response['message'] == 'Informe o título da reunião.'
+
+
+def test_meeting_create_persists_trimmed_title_without_schedule(monkeypatch):
+    app = _build_app()
+    captured = {}
+    fake_session = _FakeDbSession()
+
+    class _FakeMeeting:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+            self.id = 77
+            self.updated_at = None
+
+    monkeypatch.setattr(meeting_resource, 'user_can_access_company', lambda company_id: True)
+    monkeypatch.setattr(meeting_resource, 'Meeting', _FakeMeeting)
+    monkeypatch.setattr(meeting_resource.db, 'session', fake_session)
+    monkeypatch.setattr(meeting_resource, '_sync_meeting_work_journey_item', lambda meeting: None)
+
+    with app.test_request_context(
+        '/meetings/api/company/12/meeting',
+        method='POST',
+        json={'title': '  Comitê Executivo  '},
+    ):
+        response, status = meeting_resource.MeetingListResource().post.__wrapped__(
+            meeting_resource.MeetingListResource(), 12
+        )
+
+    assert status == 201
+    assert response['success'] is True
+    assert response['meeting_id'] == 77
+    assert captured['company_id'] == 12
+    assert captured['title'] == 'Comitê Executivo'
+    assert captured['scheduled_date'] is None
+    assert fake_session.committed == 1
+
+
 def test_meetings_template_contains_delete_action():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:
@@ -464,6 +512,9 @@ def test_meeting_sync_activities_respects_activity_project_id(monkeypatch):
                     'responsible': 'Adenize',
                     'employee_id': 34,
                     'deadline': '2026-04-20',
+                    'budget': 'R$ 12.500',
+                    'estimated_hours': 18.5,
+                    'priority': 'high',
                     'project_id': 22,
                 }
             ]
@@ -476,8 +527,48 @@ def test_meeting_sync_activities_respects_activity_project_id(monkeypatch):
     assert response['synced_count'] == 1
     assert created_task.project_id == 22
     assert created_task.what == 'Plano de Estruturação da Loja - Adenize'
+    assert created_task.amount == 'R$ 12.500'
+    assert created_task.estimated_hours == 18.5
+    assert created_task.priority == 'high'
     assert meeting_payload.project_id == 22
     assert fake_session.committed == 1
+
+
+def test_meeting_sync_rejects_activity_employee_from_other_tenant(monkeypatch):
+    app = _build_app()
+    fake_session = _FakeDbSession()
+    meeting_payload = SimpleNamespace(
+        id=27, company_id=8, project_id=22, meeting_notes='', participants_json='[]',
+        discussions_json='[]', activities_json='[]', actual_duration_minutes=None,
+        planned_duration_minutes=None, status='draft', updated_at=None,
+    )
+    fake_project = SimpleNamespace(id=22, company_id=8, name='Consultoria', code='C.J.22')
+
+    class _FakeProjectTask:
+        query = _FakeFilterAllQuery([])
+        project_id = _FakeColumn()
+
+    monkeypatch.setattr(meeting_resource, 'current_user', SimpleNamespace(is_authenticated=True, id=9, role='admin'))
+    monkeypatch.setattr(meeting_resource, 'Meeting', SimpleNamespace(query=_FakeMeetingQuery(meeting_payload)))
+    monkeypatch.setattr(meeting_resource, 'Company', SimpleNamespace(query=_FakeCompanyQuery(SimpleNamespace(id=8, is_active=True))))
+    monkeypatch.setattr(meeting_resource, 'Employee', SimpleNamespace(query=_FakeEmployeeQuery(None)))
+    monkeypatch.setattr(meeting_resource, 'db', SimpleNamespace(session=fake_session))
+    monkeypatch.setattr(models, 'ProjectTask', _FakeProjectTask)
+    monkeypatch.setattr(meeting_resource, '_load_meeting_target_projects', lambda company_id, project_ids: {22: fake_project})
+
+    with app.test_request_context(
+        '/meetings/api/meeting/27/sync-activities?company_id=8',
+        method='POST',
+        json={'activities': [{'title': 'Ação', 'employee_id': 999, 'project_id': 22}]},
+    ):
+        response, status = meeting_resource.MeetingSyncActivitiesResource().post.__wrapped__(
+            meeting_resource.MeetingSyncActivitiesResource(), 27
+        )
+
+    assert status == 400
+    assert response['success'] is False
+    assert 'não pertence à empresa' in response['message']
+    assert fake_session.rolled_back is True
 
 
 def test_meeting_activities_resource_loads_tasks_from_activity_projects(monkeypatch):

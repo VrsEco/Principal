@@ -523,14 +523,17 @@ class MeetingListResource(Resource):
         if not user_can_access_company(company_id):
             return {"success": False, "message": "Você não tem acesso à empresa informada."}, 403
 
-        data = request.get_json()
-        if not data:
-            return {"success": False, "message": "No data provided"}, 400
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return {"success": False, "message": "Dados da reunião não informados."}, 400
+        title = _clean_text(data.get('title'))
+        if not title:
+            return {"success": False, "message": "Informe o título da reunião."}, 400
             
         try:
             meeting = Meeting(
                 company_id=company_id,
-                title=data.get('title'),
+                title=title,
                 scheduled_date=datetime.strptime(data.get('scheduled_date'), '%Y-%m-%d').date() if data.get('scheduled_date') else None,
                 scheduled_time=data.get('scheduled_time'),
                 planned_duration_minutes=_parse_optional_int(data.get('planned_duration_minutes')),
@@ -573,10 +576,14 @@ class MeetingResource(Resource):
         meeting, error_response = get_meeting_or_404(meeting_id)
         if error_response:
             return error_response
-        data = request.get_json()
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return {"success": False, "message": "Dados da reunião não informados."}, 400
+        if 'title' in data and not _clean_text(data.get('title')):
+            return {"success": False, "message": "O título da reunião não pode ficar vazio."}, 400
         
         try:
-            if 'title' in data: meeting.title = data['title']
+            if 'title' in data: meeting.title = _clean_text(data['title'])
             if 'scheduled_date' in data: 
                 meeting.scheduled_date = datetime.strptime(data['scheduled_date'], '%Y-%m-%d').date() if data['scheduled_date'] else None
             if 'scheduled_time' in data: meeting.scheduled_time = data['scheduled_time']
@@ -1062,15 +1069,16 @@ class MeetingSyncActivitiesResource(Resource):
                 return {"success": False, "message": "Vincule a reunião a um projeto ou selecione um projeto destino nas atividades."}, 400
 
             existing_tasks = ProjectTask.query.filter(ProjectTask.project_id.in_(list(projects_by_id.keys()))).all()
-            titles_by_project = {}
+            tasks_by_project_title = {}
             for task in existing_tasks:
-                titles_by_project.setdefault(task.project_id, set()).add(task.what)
+                tasks_by_project_title[(task.project_id, task.what)] = task
             
             created_count = 0
+            updated_count = 0
             for act in m_acts:
                 if not isinstance(act, dict):
                     continue
-                title = act.get('title')
+                title = _clean_text(act.get('title'))
                 if not title:
                     continue
 
@@ -1078,25 +1086,55 @@ class MeetingSyncActivitiesResource(Resource):
                 if not target_project_id or target_project_id not in projects_by_id:
                     continue
                 
-                if title not in titles_by_project.setdefault(target_project_id, set()):
+                try:
+                    due_date = datetime.strptime(act.get('deadline'), '%Y-%m-%d').date() if act.get('deadline') else None
+                except Exception:
+                    db.session.rollback()
+                    return {"success": False, "message": f"Prazo inválido na atividade '{title}'. Use AAAA-MM-DD."}, 400
+
+                employee_id = _normalize_project_id(act.get('employee_id'))
+                if employee_id:
+                    employee = Employee.query.filter_by(id=employee_id, company_id=meeting.company_id).first()
+                    if not employee:
+                        db.session.rollback()
+                        return {"success": False, "message": f"Responsável da atividade '{title}' não pertence à empresa da reunião."}, 400
+
+                estimated_hours = act.get('estimated_hours')
+                if estimated_hours not in (None, ''):
                     try:
-                        due_date = datetime.strptime(act.get('deadline'), '%Y-%m-%d').date() if act.get('deadline') else None
-                    except Exception:
-                        due_date = None
-                        
+                        estimated_hours = float(estimated_hours)
+                        if estimated_hours < 0:
+                            raise ValueError
+                    except (TypeError, ValueError):
+                        db.session.rollback()
+                        return {"success": False, "message": f"Horas estimadas inválidas na atividade '{title}'."}, 400
+                else:
+                    estimated_hours = 0
+
+                priority = _clean_text(act.get('priority')).lower() or 'normal'
+                if priority not in {'low', 'normal', 'high', 'urgent'}:
+                    priority = 'normal'
+
+                task = tasks_by_project_title.get((target_project_id, title))
+                if task is None:
                     task = ProjectTask(
                         project_id=target_project_id,
                         what=title,
-                        how=act.get('how', ''),
-                        who=act.get('responsible'),
-                        employee_id=act.get('employee_id'),
-                        due_date=due_date,
                         status='not_started',
-                        priority='medium'
                     )
                     db.session.add(task)
-                    titles_by_project[target_project_id].add(title)
+                    tasks_by_project_title[(target_project_id, title)] = task
                     created_count += 1
+                else:
+                    updated_count += 1
+
+                task.how = _clean_text(act.get('how')) or None
+                task.who = _clean_text(act.get('responsible')) or None
+                task.employee_id = employee_id
+                task.due_date = due_date
+                task.amount = _clean_text(act.get('budget') or act.get('amount')) or None
+                task.estimated_hours = estimated_hours
+                task.priority = priority
 
             if not _normalize_project_id(meeting.project_id) and len(projects_by_id) == 1:
                 meeting.project_id = next(iter(projects_by_id.keys()))
@@ -1118,8 +1156,9 @@ class MeetingSyncActivitiesResource(Resource):
             project = projects_by_id.get(primary_project_id) or (Project.query.get(primary_project_id) if primary_project_id else None)
             return {
                 "success": True, 
-                "message": f"Sincronização concluída. {created_count} novas atividades criadas.",
+                "message": f"Sincronização concluída. {created_count} atividades criadas e {updated_count} atualizadas.",
                 "synced_count": created_count,
+                "updated_count": updated_count,
                 "project_id": primary_project_id,
                 "project_title": project.name if project else None
             }

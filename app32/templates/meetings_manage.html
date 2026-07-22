@@ -955,6 +955,7 @@
     .discussion-item-row,
     .activity-edit-grid-primary,
     .activity-edit-grid-secondary,
+    .activity-edit-grid-tertiary,
     .activity-edit-actions,
     .activity-summary-row,
     .activity-summary-actions {
@@ -1032,6 +1033,7 @@
         .meeting-participants-entry-grid,
         .activity-edit-grid-primary,
         .activity-edit-grid-secondary,
+        .activity-edit-grid-tertiary,
         #participants-list,
         .participants-list {
             grid-template-columns: 1fr !important;
@@ -1172,9 +1174,19 @@
     .meeting-context-panel>.form-section{padding:18px}
     .meeting-context-panel .form-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
     .meeting-context-panel #meeting-title{font-size:1rem;font-weight:700}
-    .meeting-context-panel .meeting-agenda-inline{display:grid!important;grid-template-columns:1fr auto!important;gap:8px!important}
-    .meeting-context-panel .meeting-agenda-inline .button-outline{grid-column:1/-1;justify-content:center}
-    .meeting-context-panel .agenda-item{border:0;border-left:3px solid #5b6ee1;border-radius:8px;background:#f7f8ff;padding:10px}
+    .meeting-title-save-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}
+    .meeting-title-save-row .button{white-space:nowrap;padding:10px 16px}
+    .meeting-title-save-help{margin:7px 0 0;color:var(--text-muted);font-size:.75rem;line-height:1.4}
+    .meeting-topic-shortcuts-panel{margin-top:18px;padding-top:16px;border-top:1px solid var(--border-color)}
+    .meeting-topic-shortcuts-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .meeting-topic-shortcuts-heading p{margin:2px 0 0;color:var(--text-muted);font-size:.75rem;line-height:1.35}
+    .meeting-topic-shortcuts-heading .button{padding:7px 10px;font-size:.75rem;white-space:nowrap}
+    .meeting-topic-shortcuts{display:flex;flex-direction:column;gap:7px}
+    .meeting-topic-shortcut{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:var(--text-main);font:inherit;text-align:left;cursor:pointer;transition:.15s ease}
+    .meeting-topic-shortcut:hover,.meeting-topic-shortcut:focus-visible{border-color:#805ad5;background:#faf5ff;outline:none}
+    .meeting-topic-shortcut-index{display:grid;place-items:center;flex:0 0 24px;height:24px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:.7rem;font-weight:800}
+    .meeting-topic-shortcut-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;font-weight:650}
+    .meeting-topic-shortcuts-empty{padding:12px;border:1px dashed #cbd5e1;border-radius:10px;color:var(--text-muted);font-size:.76rem;line-height:1.4;background:#f8fafc}
     .meeting-execution-panel>.form-section{padding:18px}
     .meeting-execution-panel .meeting-status-panel{margin-bottom:16px!important;padding:12px 14px!important;border-color:#dbeafe!important;background:#f7f9ff!important}
     .meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;padding:12px;border:1px solid var(--border-color);border-radius:12px;background:#f8fafc}
@@ -1185,7 +1197,7 @@
     .activity-item{box-shadow:none!important}
     .meeting-save-bar{position:sticky;bottom:12px;z-index:8;margin:16px 0 0;border:1px solid #dbe2ef;box-shadow:0 12px 32px rgba(15,23,42,.12);backdrop-filter:blur(10px)}
     @media(max-width:1180px){.meeting-app32-workspace-shell{grid-template-columns:1fr}.meeting-context-panel{position:static}.meeting-live-grid{grid-template-columns:1fr!important}}
-    @media(max-width:760px){.meeting-editor-header{align-items:flex-start!important;flex-direction:column}.meeting-editor-toolbar,.meeting-page-actions{width:100%;flex-wrap:wrap}.meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:1fr!important}}
+    @media(max-width:760px){.meeting-editor-header{align-items:flex-start!important;flex-direction:column}.meeting-editor-toolbar,.meeting-page-actions{width:100%;flex-wrap:wrap}.meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:1fr!important}.meeting-title-save-row{grid-template-columns:1fr}.meeting-title-save-row .button{width:100%;justify-content:center}.meeting-topic-shortcuts-heading{flex-direction:column}.meeting-topic-shortcuts-heading .button{width:100%;justify-content:center}}
 
 </style>
 {% endblock %}
@@ -1263,7 +1275,6 @@
                     {% set participants_list = (p_internal|map(attribute='name')|list + p_external|map(attribute='name')|list + g_internal|map(attribute='name')|list + g_external|map(attribute='name')|list) %}
                     {% set participants_str = participants_list | join(', ') %}
                     {% set participants_count = participants_list | length %}
-                    {% set agenda_count = meeting.agenda | length if meeting.agenda else 0 %}
                     {% set discussions_count = meeting.discussions | length if meeting.discussions else 0 %}
                     {% set activities_count = meeting.activities | length if meeting.activities else 0 %}
                     {% set agenda_str = (meeting.agenda|map(attribute='title')|list if meeting.agenda else []) | join(' ') %}
@@ -1307,7 +1318,7 @@
                                     {% endif %}
                                 </span>
                                 <span><strong>Participantes:</strong> {{ participants_count }}</span>
-                                <span><strong>Temas:</strong> {{ agenda_count }}</span>
+                                <span><strong>Temas:</strong> {{ discussions_count }}</span>
                                 <span><strong>Decis&otilde;es:</strong> {{ discussions_count }}</span>
                                 <span><strong>Atividades:</strong> {{ activities_count }}</span>
                             </div>
@@ -1437,10 +1448,18 @@
                 <!-- SESSO A: Agendamento -->
                 <div class="tab-content active meeting-context-panel" id="content-agendamento">
                     <div class="form-section">
-                        <div class="form-group">
+                        <div class="form-group meeting-title-save-group">
                             <label class="form-label">Título da Reunião *</label>
-                            <input type="text" id="meeting-title" class="form-input"
-                                placeholder="Ex: Planejamento Estratgico Q4">
+                            <div class="meeting-title-save-row">
+                                <input type="text" id="meeting-title" class="form-input"
+                                    placeholder="Ex: Planejamento Estratégico Q4"
+                                    autocomplete="off">
+                                <button type="button" id="btn-save-meeting-title" class="button button-primary"
+                                    onclick="salvarTituloReuniao()">Criar reunião</button>
+                            </div>
+                            <p class="meeting-title-save-help" id="meeting-title-save-help">
+                                Informe o título e clique em <strong>Criar reunião</strong>. Depois continue registrando os temas discutidos.
+                            </p>
                         </div>
 
                         <div class="form-row meeting-form-grid-3 meeting-scheduling-fields" aria-hidden="true">
@@ -1492,42 +1511,18 @@
                             <div id="guests-external-list" class="guests-list"></div>
                         </div>
 
-                        <!-- Pauta -->
-                        <div class="form-group">
-                            <label class="form-label">Temas da reuni&atilde;o</label>
-                            <div class="meeting-agenda-inline" style="display: flex; gap: 12px; margin-bottom: 12px;">
-                                <input type="text" id="agenda-item-input" class="form-input"
-                                    placeholder="Adicione um tema para discuss&atilde;o" style="flex: 1;">
-                                <button type="button" class="button button-primary" onclick="adicionarPauta()">+
-                                    Adicionar</button>
-                                <button type="button" class="button button-outline" onclick="mostrarPautaSalva()">??
-                                    Reutilizar</button>
-                            </div>
-                            <div id="agenda-list" class="agenda-list"></div>
-
-                            <!-- Modal para selecionar pauta salva -->
-                            <div id="saved-agenda-modal"
-                                style="display: none; margin-top: 12px; padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: #f8fafc;">
-                                <h4 style="margin: 0 0 12px 0; color: var(--text-main);">Pautas Salvas</h4>
-                                <div id="saved-agenda-list" style="max-height: 200px; overflow-y: auto;">
-                                    {% for item in agenda_items %}
-                                    <div class="saved-agenda-item"
-                                        style="padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.2s ease;"
-                                        onmouseover="this.style.background='rgba(59, 130, 246, 0.05)'"
-                                        onmouseout="this.style.background='transparent'"
-                                        onclick="usarPautaSalva({{ item.id }}, {{ item.title | tojson | safe }})">
-                                        <div style="font-weight: 600; color: var(--text-main);">{{ item.title }}</div>
-                                        {% if item.description %}<div
-                                            style="font-size: 0.75rem; color: var(--text-muted);">{{ item.description }}
-                                        </div>{% endif %}
-                                        <div style="font-size: 0.75rem; color: #3b82f6;">Usado {{ item.usage_count }}x
-                                        </div>
-                                    </div>
-                                    {% endfor %}
+                        <!-- Atalhos dos temas registrados durante a reunião -->
+                        <div class="form-group meeting-topic-shortcuts-panel">
+                            <div class="meeting-topic-shortcuts-heading">
+                                <div>
+                                    <label class="form-label">Temas discutidos</label>
+                                    <p>Acesso rápido aos temas registrados na reunião.</p>
                                 </div>
-                                <button type="button" class="button button-ghost" onclick="fecharPautaSalva()"
-                                    style="margin-top: 12px;">Fechar</button>
+                                <button type="button" class="button button-outline" onclick="adicionarDiscussaoEIr()">
+                                    + Novo tema
+                                </button>
                             </div>
+                            <div id="meeting-topic-shortcuts" class="meeting-topic-shortcuts" aria-live="polite"></div>
                         </div>
 
                         <!-- Observaes -->
@@ -1612,8 +1607,8 @@
                         <div class="form-group">
                             <label class="form-label">Temas discutidos e decis&otilde;es</label>
                             <div id="discussions-list" class="discussions-list"></div>
-                            <button type="button" class="button button-outline" onclick="adicionarDiscussação()"
-                                style="margin-top: 8px;">+ Registrar decis&atilde;o</button>
+                            <button type="button" class="button button-outline" onclick="adicionarDiscussaoEIr()"
+                                style="margin-top: 8px;">+ Registrar tema discutido</button>
                         </div>
 
                         <!-- Notas Gerais -->
@@ -1897,8 +1892,8 @@
 
     function updateMeetingWorkspaceCounters() {
         const values = {
-            'meeting-counter-topics': (agendaItems || []).filter(item => item && item.title).length,
-            'meeting-counter-decisions': (discussions || []).filter(item => item && (item.title || item.discussion)).length,
+            'meeting-counter-topics': (discussions || []).filter(item => item && item.title?.trim()).length,
+            'meeting-counter-decisions': (discussions || []).filter(item => item && item.discussion?.trim()).length,
             'meeting-counter-activities': (activities || []).filter(item => item && item.title).length,
         };
         Object.entries(values).forEach(([id, value]) => {
@@ -1967,6 +1962,14 @@
         if (shareButton) shareButton.style.display = display;
         const hiddenInput = document.getElementById('current-meeting-id');
         if (hiddenInput) hiddenInput.value = currentMeetingId || '';
+        const titleSaveButton = document.getElementById('btn-save-meeting-title');
+        const titleSaveHelp = document.getElementById('meeting-title-save-help');
+        if (titleSaveButton) titleSaveButton.textContent = currentMeetingId ? 'Salvar título' : 'Criar reunião';
+        if (titleSaveHelp) {
+            titleSaveHelp.innerHTML = currentMeetingId
+                ? 'Altere o título e clique em <strong>Salvar título</strong> para atualizar a reunião.'
+                : 'Informe o título e clique em <strong>Criar reunião</strong>. Depois continue registrando os temas discutidos.';
+        }
     }
 
     function showSaveToast(message, variant = 'success') {
@@ -1990,6 +1993,7 @@
         const hint = document.getElementById('meeting-save-status-hint');
         const time = document.getElementById('meeting-save-status-time');
         const button = document.getElementById('btn-salvar-reuniao');
+        const titleButton = document.getElementById('btn-save-meeting-title');
         if (!pill || !hint || !time) return;
 
         pill.classList.remove('is-clean', 'is-dirty', 'is-saving');
@@ -2016,6 +2020,12 @@
             button.disabled = isSavingMeeting;
             button.textContent = isSavingMeeting ? 'Salvando...' : 'Salvar reunião';
         }
+        if (titleButton) {
+            titleButton.disabled = isSavingMeeting;
+            titleButton.textContent = isSavingMeeting
+                ? 'Salvando...'
+                : (currentMeetingId ? 'Salvar título' : 'Criar reunião');
+        }
     }
 
     function setSavingState(nextState) {
@@ -2025,7 +2035,8 @@
 
     function syncDiscussionsFromDom() {
         const discussionItems = document.querySelectorAll('#discussions-list .discussion-item');
-        discussions = Array.from(discussionItems).map((item) => ({
+        discussions = Array.from(discussionItems).map((item, index) => ({
+            ...(discussions[index] || {}),
             title: item.querySelector('input[type="text"]')?.value?.trim() || '',
             discussion: item.querySelector('textarea')?.value || '',
         })).filter((item) => item.title || item.discussion);
@@ -2035,12 +2046,14 @@
         const activityItems = document.querySelectorAll('#activities-list .activity-item');
         activities = Array.from(activityItems).map((item, index) => {
             const existingActivity = activities[index] || {};
-            const titleInput = item.querySelector('input[type="text"]');
-            const deadlineInput = item.querySelector('input[type="date"]');
-            const howInput = item.querySelector('textarea');
-            const selects = item.querySelectorAll('select');
-            const responsibleSelect = selects[0];
-            const projectSelect = selects[1];
+            const titleInput = item.querySelector('[data-activity-field="title"]');
+            const deadlineInput = item.querySelector('[data-activity-field="deadline"]');
+            const howInput = item.querySelector('[data-activity-field="how"]');
+            const budgetInput = item.querySelector('[data-activity-field="budget"]');
+            const hoursInput = item.querySelector('[data-activity-field="estimated_hours"]');
+            const responsibleSelect = item.querySelector('[data-activity-field="employee_id"]');
+            const projectSelect = item.querySelector('[data-activity-field="project_id"]');
+            const prioritySelect = item.querySelector('[data-activity-field="priority"]');
 
             return {
                 ...existingActivity,
@@ -2051,9 +2064,12 @@
                     : (existingActivity.responsible || ''),
                 deadline: deadlineInput ? (deadlineInput.value || '') : (existingActivity.deadline || ''),
                 how: howInput ? (howInput.value || '') : (existingActivity.how || ''),
+                budget: budgetInput ? (budgetInput.value?.trim() || '') : (existingActivity.budget || ''),
+                estimated_hours: hoursInput ? (hoursInput.value || '') : (existingActivity.estimated_hours || ''),
+                priority: prioritySelect ? (prioritySelect.value || 'normal') : (existingActivity.priority || 'normal'),
                 project_id: projectSelect ? (projectSelect?.value || null) : (existingActivity.project_id || null),
             };
-        }).filter((item) => item.title || item.employee_id || item.deadline || item.how || item.project_id);
+        }).filter((item) => item.title || item.employee_id || item.deadline || item.how || item.budget || item.estimated_hours || item.project_id);
     }
 
     function normalizeActivityUiState(activity = {}) {
@@ -2062,6 +2078,9 @@
             responsible: '',
             deadline: '',
             how: '',
+            budget: '',
+            estimated_hours: '',
+            priority: 'normal',
             project_id: linkedProjectId || null,
             employee_id: null,
             ui_state: 'saved',
@@ -2078,6 +2097,9 @@
             responsible: activity.responsible || '',
             deadline: activity.deadline || '',
             how: activity.how || '',
+            budget: activity.budget || activity.amount || '',
+            estimated_hours: activity.estimated_hours || '',
+            priority: activity.priority || 'normal',
             project_id: activity.project_id || null,
             source_discussion_index: Number.isInteger(activity.source_discussion_index) ? activity.source_discussion_index : null,
             source_discussion_title: activity.source_discussion_title || '',
@@ -2099,7 +2121,7 @@
                     : normalized;
                 return [sanitizeActivityForPersistence(sourceForPersistence)];
             })
-            .filter((item) => item.title || item.employee_id || item.deadline || item.how || item.project_id);
+            .filter((item) => item.title || item.employee_id || item.deadline || item.how || item.budget || item.estimated_hours || item.project_id);
     }
 
     function syncMeetingStateFromDom() {
@@ -2439,6 +2461,16 @@
             editorSection.addEventListener('input', markDirtyFromEvent);
             editorSection.addEventListener('change', markDirtyFromEvent);
             editorSection.dataset.draftWatchersBound = 'true';
+        }
+
+        const titleInput = document.getElementById('meeting-title');
+        if (titleInput && titleInput.dataset.enterSaveBound !== 'true') {
+            titleInput.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' || event.isComposing) return;
+                event.preventDefault();
+                salvarTituloReuniao();
+            });
+            titleInput.dataset.enterSaveBound = 'true';
         }
 
         updateSaveStatusUi();
@@ -2977,41 +3009,10 @@
         markMeetingDirty();
     }
 
-    function adicionarPauta() {
-        const input = document.getElementById('agenda-item-input');
-        const title = input.value.trim();
-        if (!title) return;
-        agendaItems.push({ title });
-        input.value = '';
-        renderAgenda();
-        markMeetingDirty();
-    }
-
+    // Compatibilidade de leitura com reuniões antigas que ainda possuem pauta.
+    // A UI nova usa exclusivamente os temas registrados durante a realização.
     function renderAgenda() {
-        const container = document.getElementById('agenda-list');
-        container.innerHTML = agendaItems.map((item, index) => `
-        <div class="agenda-item">
-            <span style="flex: 1; font-weight: 500;">${index + 1}. ${item.title}</span>
-            ${buildRemoveActionButton(`removerAgenda(${index})`, `Excluir item de pauta ${item.title || ''}`)}
-        </div>
-    `).join('');
-        updateMeetingWorkspaceCounters();
-    }
-
-    function removerAgenda(index) {
-        agendaItems.splice(index, 1);
-        renderAgenda();
-        markMeetingDirty();
-    }
-
-    function mostrarPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'block'; }
-    function fecharPautaSalva() { document.getElementById('saved-agenda-modal').style.display = 'none'; }
-    function usarPautaSalva(itemId, title) {
-        agendaItems.push({ title });
-        renderAgenda();
-        fetch(`/meetings/api/agenda-item/${itemId}/use`, { method: 'POST' });
-        fecharPautaSalva();
-        markMeetingDirty();
+        renderTopicShortcuts();
     }
 
     function buildPreliminaresPayload() {
@@ -3056,19 +3057,22 @@
             if (!response.ok || !result.success) {
                 return {
                     success: false,
-                    message: result.message || 'Não foi possível salvar o agendamento da reunião.'
+                    message: result.message || 'Não foi possível salvar a reunião.'
                 };
             }
 
             if (result.meeting_id) currentMeetingId = result.meeting_id;
             if (!previousMeetingId && currentMeetingId) clearStoredMeetingDraft(null);
             toggleEditorActionButtons();
+            const persistedTitle = data.title || 'Reunião';
+            const editorTitle = document.getElementById('meeting-editor-title');
+            if (editorTitle) editorTitle.textContent = persistedTitle;
             return result;
         } catch (error) {
             console.error('Erro ação salvar:', error);
             return {
                 success: false,
-                message: 'Erro de conexão ao salvar o agendamento da reunião.'
+                message: 'Erro de conexão ao salvar a reunião.'
             };
         }
     }
@@ -3121,6 +3125,28 @@
     }
 
     window.salvarReuniaoCompleta = salvarReuniaoCompleta;
+
+    async function salvarTituloReuniao() {
+        const titleInput = document.getElementById('meeting-title');
+        const title = titleInput?.value?.trim() || '';
+        if (!title) {
+            showSaveToast('Informe o título da reunião antes de salvar.', 'warning');
+            titleInput?.focus();
+            return false;
+        }
+
+        const wasNewMeeting = !currentMeetingId;
+        const saved = await salvarReuniaoCompleta({ showToast: false });
+        if (!saved) return false;
+
+        showSaveToast(wasNewMeeting
+            ? 'Reunião criada. Agora registre os temas discutidos.'
+            : 'Título da reunião atualizado.');
+        renderTopicShortcuts();
+        return true;
+    }
+
+    window.salvarTituloReuniao = salvarTituloReuniao;
 
     async function salvarPreliminares(options = {}) {
         const { advance = false } = options;
@@ -3214,6 +3240,50 @@
         markMeetingDirty();
     }
 
+    function adicionarDiscussaoEIr() {
+        mostrarWorkspaceReuniao();
+        adicionarDiscussação();
+        const index = discussions.length - 1;
+        requestAnimationFrame(() => focarTemaDiscussao(index));
+    }
+
+    function focarTemaDiscussao(index) {
+        const item = document.querySelectorAll('#discussions-list .discussion-item')[index];
+        if (!item) return;
+        item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        item.querySelector('input[type="text"]')?.focus();
+    }
+
+    function atualizarDiscussaoCampo(index, field, value) {
+        if (!discussions[index]) return;
+        discussions[index][field] = value;
+        markMeetingDirty();
+        updateMeetingWorkspaceCounters();
+        if (field === 'title') renderTopicShortcuts();
+    }
+
+    function renderTopicShortcuts() {
+        const container = document.getElementById('meeting-topic-shortcuts');
+        if (!container) return;
+
+        const topics = (discussions || [])
+            .map((item, index) => ({ index, title: String(item?.title || '').trim() }))
+            .filter((item) => item.title);
+
+        if (!topics.length) {
+            container.innerHTML = '<div class="meeting-topic-shortcuts-empty">Nenhum tema registrado. Use <strong>+ Novo tema</strong> para começar a reunião.</div>';
+            return;
+        }
+
+        container.innerHTML = topics.map((topic, shortcutIndex) => `
+            <button type="button" class="meeting-topic-shortcut" onclick="focarTemaDiscussao(${topic.index})"
+                title="Ir para o tema ${escapeHtml(topic.title)}">
+                <span class="meeting-topic-shortcut-index">${shortcutIndex + 1}</span>
+                <span class="meeting-topic-shortcut-label">${escapeHtml(topic.title)}</span>
+            </button>
+        `).join('');
+    }
+
     function criarAtividadeDaDiscussao(index) {
         syncDiscussionsFromDom();
         const discussion = discussions[index] || {};
@@ -3256,19 +3326,20 @@
         container.innerHTML = discussions.map((disc, index) => `
         <div class="discussion-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
             <div class="discussion-item-row" style="display: flex; gap: 12px; margin-bottom: 12px;">
-                <input type="text" class="form-input" placeholder="Tema / decis&atilde;o"
-                       value="${disc.title || ''}" onchange="discussions[${index}].title = this.value" style="flex: 1;">
+                <input type="text" class="form-input" placeholder="Tema discutido"
+                       value="${escapeHtml(disc.title || '')}" oninput="atualizarDiscussaoCampo(${index}, 'title', this.value)" style="flex: 1;">
                 <button type="button" class="button button-sm button-outline" onclick="criarAtividadeDaDiscussao(${index})" title="Criar atividade de projeto a partir desta discussão">+ Atividade</button>
                 ${buildRemoveActionButton(`removerDiscussação(${index})`, `Excluir discussão ${disc.title || ''}`)}
             </div>
-            <textarea class="form-textarea" rows="3" placeholder="Contexto discutido e defini&ccedil;&atilde;o tomada..."
-                      onchange="discussions[${index}].discussion = this.value">${disc.discussion || ''}</textarea>
+            <textarea class="form-textarea" rows="3" placeholder="Decisão tomada, contexto e definição..."
+                      oninput="atualizarDiscussaoCampo(${index}, 'discussion', this.value)">${escapeHtml(disc.discussion || '')}</textarea>
             <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
                 Use <strong>+ Atividade</strong> para transformar o título em <strong>O que</strong> e a decisão em <strong>Como</strong> do projeto.
             </div>
         </div>
     `).join('');
         updateMeetingWorkspaceCounters();
+        renderTopicShortcuts();
     }
 
     function removerDiscussação(index) {
@@ -3351,7 +3422,7 @@
             const act = normalizeActivityUiState(rawActivity);
             activities[index] = act;
             const employeeOptions = employeesData.map(emp =>
-                `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${emp.name}</option>`
+                `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${escapeHtml(emp.name || '')}</option>`
             ).join('');
             const discussionSourceLabel = act.source_discussion_title
                 ? `Gerada da discussão: ${act.source_discussion_title}`
@@ -3364,21 +3435,31 @@
                 <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #bfdbfe; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08); margin-bottom: 12px;">
                     ${discussionSourceLabel ? `
                     <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
-                        ${discussionSourceLabel}
+                        ${escapeHtml(discussionSourceLabel)}
                     </div>` : ''}
                     <div class="activity-edit-grid-primary" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <input type="text" class="form-input" placeholder="O que da atividade" value="${act.title || ''}" onchange="activities[${index}].title = this.value">
-                        <select class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.options[this.selectedIndex].text">
-                            <option value="">Responsvel...</option>
+                        <input type="text" data-activity-field="title" class="form-input" placeholder="O que da atividade" value="${escapeHtml(act.title || '')}" onchange="activities[${index}].title = this.value">
+                        <select data-activity-field="employee_id" class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.value ? this.options[this.selectedIndex].text : ''">
+                            <option value="">Responsável...</option>
                             ${employeeOptions}
                         </select>
-                        <input type="date" class="form-input" value="${act.deadline || ''}" onchange="activities[${index}].deadline = this.value">
+                        <input type="date" data-activity-field="deadline" class="form-input" value="${escapeHtml(act.deadline || '')}" onchange="activities[${index}].deadline = this.value">
                     </div>
                     <div class="activity-edit-grid-secondary" style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <textarea class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${act.how || ''}</textarea>
-                        <select class="form-select" onchange="activities[${index}].project_id = this.value">
-                            <option value="">Projeto Padro</option>
+                        <textarea data-activity-field="how" class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${escapeHtml(act.how || '')}</textarea>
+                        <select data-activity-field="project_id" class="form-select" onchange="activities[${index}].project_id = this.value">
+                            <option value="">Projeto padrão</option>
                             {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="activity-edit-grid-tertiary" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                        <input type="text" data-activity-field="budget" class="form-input" placeholder="Orçamento / valor" value="${escapeHtml(act.budget || '')}" onchange="activities[${index}].budget = this.value">
+                        <input type="number" data-activity-field="estimated_hours" class="form-input" min="0" step="0.25" placeholder="Horas estimadas" value="${escapeHtml(act.estimated_hours || '')}" onchange="activities[${index}].estimated_hours = this.value">
+                        <select data-activity-field="priority" class="form-select" onchange="activities[${index}].priority = this.value">
+                            <option value="low" ${act.priority === 'low' ? 'selected' : ''}>Prioridade baixa</option>
+                            <option value="normal" ${act.priority === 'normal' ? 'selected' : ''}>Prioridade normal</option>
+                            <option value="high" ${act.priority === 'high' ? 'selected' : ''}>Prioridade alta</option>
+                            <option value="urgent" ${act.priority === 'urgent' ? 'selected' : ''}>Prioridade urgente</option>
                         </select>
                     </div>
                     <div class="activity-edit-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -3393,15 +3474,18 @@
             <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
                 ${discussionSourceLabel ? `
                 <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
-                    ${discussionSourceLabel}
+                        ${escapeHtml(discussionSourceLabel)}
                 </div>` : ''}
                 <div class="activity-summary-row" style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;">
                     <div style="flex: 1;">
-                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${act.title || 'Atividade sem título'}</div>
+                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${escapeHtml(act.title || 'Atividade sem título')}</div>
                         <div style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 4px;">
-                            Responsável: ${act.responsible || 'N/D'} · Prazo: ${act.deadline || 'N/D'}
+                            Responsável: ${escapeHtml(act.responsible || 'N/D')} · Prazo: ${escapeHtml(act.deadline || 'N/D')}
                         </div>
-                        <div style="font-size: 0.86rem; color: var(--text-main); white-space: pre-wrap;">${act.how || 'Sem detalhamento do como.'}</div>
+                        <div style="font-size: 0.86rem; color: var(--text-main); white-space: pre-wrap;">${escapeHtml(act.how || 'Sem detalhamento do como.')}</div>
+                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 6px;">
+                            Orçamento: ${escapeHtml(act.budget || 'N/D')} · Horas estimadas: ${escapeHtml(act.estimated_hours || 'N/D')} · Prioridade: ${escapeHtml(act.priority || 'normal')}
+                        </div>
                     </div>
                     <div class="activity-summary-actions" style="display: flex; gap: 8px; flex-shrink: 0;">
                         <button type="button" class="button button-sm button-outline" onclick="iniciarEdicaoAtividade(${index})">Editar</button>
@@ -3409,7 +3493,7 @@
                     </div>
                 </div>
                 <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 10px;">
-                    Projeto destino: ${resolveActivityProjectTitle(act, linkedProjectTitle) || 'Projeto padrão da reunião'}
+                    Projeto destino: ${escapeHtml(resolveActivityProjectTitle(act, linkedProjectTitle) || 'Projeto padrão da reunião')}
                 </div>
             </div>
             `;
