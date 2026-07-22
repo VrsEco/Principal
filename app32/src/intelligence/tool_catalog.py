@@ -36,6 +36,7 @@ from src.core.mcp_operation_router_tools import register_operation_router_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
 from src.core.mcp_plan_driver_tools import register_plan_driver_tools
 from src.core.mcp_plan_global_okr_tools import register_plan_global_okr_tools
+from src.core.mcp_plan_global_okr_correction_tools import register_plan_global_okr_correction_tools
 from src.core.mcp_plan_participant_tools import register_plan_participant_tools
 from src.core.mcp_process_flow_tools import register_process_flow_tools
 from src.core.mcp_process_pop_tools import register_process_pop_tools
@@ -258,6 +259,10 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(
+        name="correct_plan_global_okrs_tool",
+        description="Corrige os dois OKRs Globais do plano e refaz seus vínculos setoriais com confirmação humana.",
+    ),
     SimpleNamespace(
         name="create_and_link_plan_global_okrs_tool",
         description="Cria dois OKRs Globais e os vincula aos respectivos OKRs de Área do planejamento.",
@@ -784,6 +789,7 @@ catalog = ToolCatalog(
         register_permission_matrix_tools,
         register_plan_driver_tools,
         register_plan_global_okr_tools,
+        register_plan_global_okr_correction_tools,
         register_plan_participant_tools,
         register_process_flow_tools,
         register_process_pop_tools,

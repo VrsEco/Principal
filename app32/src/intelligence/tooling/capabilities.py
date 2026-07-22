@@ -1609,6 +1609,19 @@ _register_mcp_support_capability(
     tags=("strategy", "planning", "global_okr", "transactional", "explicit_human_confirmation"),
 )
 
+_register_mcp_support_capability(
+    "correct_plan_global_okrs_tool",
+    domain="strategy",
+    action="update",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.MEDIUM,
+    permissions=("okrs.global.update", "okrs.area.update", "plan.section.update"),
+    human_gate=True,
+    human_gate_reason="Correção de OKRs Globais e de seus vínculos setoriais exige confirmação humana explícita.",
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    tags=("strategy", "planning", "global_okr", "correction", "transactional", "explicit_human_confirmation"),
+)
+
 for _tool_name in (
     "list_work_journey_absences_tool",
     "list_work_journey_transfers_tool",
