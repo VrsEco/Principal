@@ -4,7 +4,7 @@ import re
 import unicodedata
 from typing import Any
 
-from models import Company, Employee, KeyResultArea, OKRArea, OKRGlobal, Project, db
+from models import Company, Employee, KeyResultArea, OKRArea, OKRGlobal, Plan, Project, db
 
 
 class SectorStrategyStructureError(ValueError):
@@ -84,6 +84,17 @@ class SectorStrategyStructureService:
         okrs_payload = payload.get("okrs") if isinstance(payload, dict) else None
         if not isinstance(okrs_payload, list) or not okrs_payload:
             raise SectorStrategyStructureError("payload.okrs deve conter ao menos um OKR setorial.")
+        plan_id = payload.get("plan_id")
+        if plan_id is not None:
+            try:
+                plan_id = int(plan_id)
+            except (TypeError, ValueError) as exc:
+                raise SectorStrategyStructureError("plan_id deve ser inteiro.") from exc
+            plan = Plan.query.filter(Plan.id == plan_id, Plan.company_id == company_id).first()
+            if plan is None:
+                raise SectorStrategyStructureError(
+                    f"Planejamento {plan_id} não pertence à empresa {company_id}."
+                )
 
         names = set()
         for item in okrs_payload:
@@ -103,6 +114,7 @@ class SectorStrategyStructureService:
         ]
         result: dict[str, Any] = {
             "company_id": company_id,
+            "plan_id": plan_id,
             "user_id": user_id,
             "created": {"okrs": [], "key_results": [], "projects": []},
             "reused": {"okrs": [], "key_results": [], "projects": []},
@@ -165,10 +177,17 @@ class SectorStrategyStructureService:
                     okr = matches[0]
                     if cls._normalize(okr.department or "") != cls._normalize(department or ""):
                         raise SectorStrategyStructureError(f"OKR existente diverge do departamento: {objective}")
+                    if plan_id is not None:
+                        if okr.plan_id not in (None, plan_id):
+                            raise SectorStrategyStructureError(
+                                f"OKR existente já pertence a outro planejamento: {objective}"
+                            )
+                        okr.plan_id = plan_id
                     result["reused"]["okrs"].append(okr.id)
                 else:
                     okr = OKRArea(
                         company_id=company_id,
+                        plan_id=plan_id,
                         objective=objective,
                         type=okr_type,
                         department=department,
@@ -216,11 +235,18 @@ class SectorStrategyStructureService:
                             raise SectorStrategyStructureError(
                                 f"Projeto existente sem o vínculo esperado; atualização automática bloqueada: {name}"
                             )
+                        if plan_id is not None:
+                            if project.plan_id not in (None, plan_id):
+                                raise SectorStrategyStructureError(
+                                    f"Projeto existente já pertence a outro planejamento: {name}"
+                                )
+                            project.plan_id = plan_id
                         result["reused"]["projects"].append(project.id)
                         continue
                     project_owner = identities[str(project_data["owner_name"]).strip()].name
                     project = Project(
                         company_id=company_id,
+                        plan_id=plan_id,
                         name=name,
                         description=str(project_data.get("description") or "").strip() or None,
                         owner=project_owner,
