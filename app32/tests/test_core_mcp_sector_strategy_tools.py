@@ -1,4 +1,5 @@
 import src.core.mcp_sector_strategy_tools as sector_tools
+from services.sector_strategy_structure_service import SectorStrategyStructureService
 
 
 class _FakeMCP:
@@ -62,3 +63,8 @@ def test_sector_structure_tool_delegates_authenticated_tenant(monkeypatch):
     assert captured["company_id"] == 13
     assert captured["user_id"] == 44
     assert captured["confirmed_mutation"] is True
+
+
+def test_identity_resolution_accepts_legacy_ativo_status():
+    assert SectorStrategyStructureService._is_active_status("Ativo") is True
+    assert SectorStrategyStructureService._is_active_status("inactive") is False

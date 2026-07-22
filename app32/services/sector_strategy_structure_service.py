@@ -21,14 +21,22 @@ class SectorStrategyStructureService:
         return re.sub(r"\s+", " ", ascii_value.casefold()).strip()
 
     @classmethod
+    def _is_active_status(cls, status: str | None) -> bool:
+        return cls._normalize(status or "") in {"", "active", "ativo", "enabled", "habilitado"}
+
+    @classmethod
     def _resolve_employee(cls, *, company_id: int, informed_name: str) -> Employee:
         requested = cls._normalize(informed_name)
         if not requested:
             raise SectorStrategyStructureError("Nome de responsável vazio.")
-        employees = Employee.query.filter(
-            Employee.company_id == company_id,
-            Employee.status == "active",
-        ).all()
+        employees = Employee.query.filter(Employee.company_id == company_id).all()
+        # A base legada possui tanto ``active`` quanto ``ativo`` (e alguns
+        # vínculos antigos sem status). Normalizamos sem aceitar inativos.
+        employees = [
+            item
+            for item in employees
+            if cls._is_active_status(item.status)
+        ]
         exact = [item for item in employees if cls._normalize(item.name) == requested]
         if len(exact) == 1:
             return exact[0]
