@@ -1,4 +1,4 @@
-﻿{% extends "layouts/workspace.html" %}
+{% extends "layouts/workspace.html" %}
 
 {% block title %}Gestão de Reuniões - Versus Gestão Corporativa{% endblock %}
 
@@ -1157,6 +1157,36 @@
         }
     }
 
+    /* Workspace APP32 v2: reuniao orientada a decisoes e entregas */
+    .meeting-legacy-tabs,.meeting-scheduling-fields,.meeting-scheduling-only{display:none!important}
+    .meeting-editor-section{margin-top:0!important}
+    .meeting-editor-header{margin:0 0 16px!important;padding:18px 20px!important;border:1px solid var(--border-color)!important;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#f8fafc 100%);gap:20px}
+    .meeting-workspace-subtitle{margin:4px 0 10px;color:var(--text-muted);font-size:.86rem}
+    .meeting-workspace-counters{display:flex;gap:8px;flex-wrap:wrap}
+    .meeting-workspace-counters span{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;color:#64748b;font-size:.75rem}
+    .meeting-workspace-counters strong{color:var(--text-main)}
+    .meeting-app32-workspace-shell{display:grid;grid-template-columns:minmax(250px,300px) minmax(0,1fr);gap:16px;align-items:start}
+    #content-agendamento,[id^="content-realiz"]{display:block!important}
+    .meeting-context-panel{position:sticky;top:84px;z-index:2}
+    .meeting-context-panel>.form-section,.meeting-execution-panel>.form-section{border:1px solid var(--border-color);border-radius:16px;background:#fff;box-shadow:0 4px 18px rgba(15,23,42,.04)}
+    .meeting-context-panel>.form-section{padding:18px}
+    .meeting-context-panel .form-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+    .meeting-context-panel #meeting-title{font-size:1rem;font-weight:700}
+    .meeting-context-panel .meeting-agenda-inline{display:grid!important;grid-template-columns:1fr auto!important;gap:8px!important}
+    .meeting-context-panel .meeting-agenda-inline .button-outline{grid-column:1/-1;justify-content:center}
+    .meeting-context-panel .agenda-item{border:0;border-left:3px solid #5b6ee1;border-radius:8px;background:#f7f8ff;padding:10px}
+    .meeting-execution-panel>.form-section{padding:18px}
+    .meeting-execution-panel .meeting-status-panel{margin-bottom:16px!important;padding:12px 14px!important;border-color:#dbeafe!important;background:#f7f9ff!important}
+    .meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;padding:12px;border:1px solid var(--border-color);border-radius:12px;background:#f8fafc}
+    .meeting-live-grid{grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr)!important;gap:14px!important;align-items:start}
+    .meeting-live-panel{border:1px solid var(--border-color);border-radius:14px;background:#fbfcfe;padding:14px}
+    #activities-live-panel{background:#fafbff}
+    .discussion-item{border-left:4px solid #805ad5!important;box-shadow:none!important}
+    .activity-item{box-shadow:none!important}
+    .meeting-save-bar{position:sticky;bottom:12px;z-index:8;margin:16px 0 0;border:1px solid #dbe2ef;box-shadow:0 12px 32px rgba(15,23,42,.12);backdrop-filter:blur(10px)}
+    @media(max-width:1180px){.meeting-app32-workspace-shell{grid-template-columns:1fr}.meeting-context-panel{position:static}.meeting-live-grid{grid-template-columns:1fr!important}}
+    @media(max-width:760px){.meeting-editor-header{align-items:flex-start!important;flex-direction:column}.meeting-editor-toolbar,.meeting-page-actions{width:100%;flex-wrap:wrap}.meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:1fr!important}}
+
 </style>
 {% endblock %}
 
@@ -1176,12 +1206,7 @@
                 oninput="filtrarReuniãoes()" style="background-image: none;">
         </div>
         <div class="form-group">
-            <label class="form-label">Data prevista</label>
-            <input type="date" id="filter-scheduled-date" class="form-select-custom" onchange="filtrarReuniãoes()"
-                style="background-image: none;">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Data realizada</label>
+            <label class="form-label">Data da reuni&atilde;o</label>
             <input type="date" id="filter-actual-date" class="form-select-custom" onchange="filtrarReuniãoes()"
                 style="background-image: none;">
         </div>
@@ -1211,7 +1236,7 @@
                 <div class="meeting-header-copy">
                     <h1 class="text-h1">🗓️ Reuniões Corporativas</h1>
                     <p class="text-secondary">
-                        Acompanhe agendamentos, execução, atas e atividades geradas a partir das reuniões da empresa.
+                        Conduza a conversa, registre decis&otilde;es e transforme os acordos em atividades e projetos.
                     </p>
                 </div>
                 <div class="meeting-page-actions">
@@ -1266,9 +1291,6 @@
                                 {% else %}
                                 <span class="meeting-chip chip-meta">{{ meeting.status or 'Sem status' }}</span>
                                 {% endif %}
-                                {% if meeting.planned_duration_minutes %}
-                                <span class="meeting-chip chip-meta">Prev {{ meeting.planned_duration_minutes }} min</span>
-                                {% endif %}
                                 {% if meeting.actual_duration_minutes %}
                                 <span class="meeting-chip chip-success">Real {{ meeting.actual_duration_minutes }} min</span>
                                 {% endif %}
@@ -1277,11 +1299,7 @@
                         <div class="meeting-card-footer-row">
                             <div class="meeting-meta">
                                 <span>
-                                    <strong>Prevista:</strong>
-                                    {{ meeting.scheduled_date or 'Não definida' }}{% if meeting.scheduled_time %} às {{ meeting.scheduled_time }}{% endif %}
-                                </span>
-                                <span>
-                                    <strong>Real:</strong>
+                                    <strong>Realizada:</strong>
                                     {% if meeting.actual_date %}
                                     {{ meeting.actual_date }}{% if meeting.actual_time %} às {{ meeting.actual_time }}{% endif %}
                                     {% else %}
@@ -1289,8 +1307,8 @@
                                     {% endif %}
                                 </span>
                                 <span><strong>Participantes:</strong> {{ participants_count }}</span>
-                                <span><strong>Pauta:</strong> {{ agenda_count }} itens</span>
-                                <span><strong>Discussões / Decisões:</strong> {{ discussions_count }}</span>
+                                <span><strong>Temas:</strong> {{ agenda_count }}</span>
+                                <span><strong>Decis&otilde;es:</strong> {{ discussions_count }}</span>
                                 <span><strong>Atividades:</strong> {{ activities_count }}</span>
                             </div>
                             <div class="meeting-actions">
@@ -1326,21 +1344,27 @@
                     <h3 class="text-h3">Nenhuma reunião cadastrada</h3>
                     <p class="text-secondary">Crie a primeira reunião da empresa para registrar decisões, atas e atividades.</p>
                     <button onclick="novaReuniao()" class="button button-primary" style="margin-top: 1rem;">
-                        Agendar Primeira Reunião
+                        Criar Primeira Reuni&atilde;o
                     </button>
                 </div>
                 {% endif %}
             </div>
 
-            <!-- Editor de Reunião (3 Abas) -->
+            <!-- Workspace APP32 de Reunião (3 Abas) -->
             <div class="meeting-editor-section" id="meeting-editor-section" style="display: none; margin-top: 24px;">
                 <div class="meeting-editor-header"
                     style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
                     <div>
-                        <span class="section-eyebrow">Acompanhamento</span>
+                        <span class="section-eyebrow">Workspace de reuni&atilde;o</span>
                         <h3 id="meeting-editor-title"
                             style="margin: 4px 0 0 0; font-weight: 700; color: var(--text-main); font-size: 1.5rem;">
-                            Nova Reunião</h3>
+                            Nova Reuni&atilde;o</h3>
+                        <p class="meeting-workspace-subtitle">Temas, decis&otilde;es e entregas em um &uacute;nico fluxo de trabalho.</p>
+                        <div class="meeting-workspace-counters" aria-label="Resumo da reuni&atilde;o">
+                            <span><strong id="meeting-counter-topics">0</strong> temas</span>
+                            <span><strong id="meeting-counter-decisions">0</strong> decis&otilde;es</span>
+                            <span><strong id="meeting-counter-activities">0</strong> atividades</span>
+                        </div>
                     </div>
                     <div class="meeting-editor-toolbar" style="display: flex; gap: 12px;">
                         <button type="button" onclick="excluirReuniaoAtual()"
@@ -1395,7 +1419,7 @@
                 <input type="hidden" id="current-meeting-id" value="">
 
                 <!-- Tabs -->
-                <div class="tabs-container" style="border-bottom: 2px solid var(--border-color); margin-bottom: 24px;">
+                <div class="tabs-container meeting-legacy-tabs" aria-hidden="true">
                     <div class="tabs meeting-tabs" style="display: flex; gap: 8px;">
                         <button class="tab-btn active" onclick="trocarAba('agendamento')" id="tab-agendamento"
                             type="button">
@@ -1411,7 +1435,7 @@
                 </div>
 
                 <!-- SESSO A: Agendamento -->
-                <div class="tab-content active" id="content-agendamento">
+                <div class="tab-content active meeting-context-panel" id="content-agendamento">
                     <div class="form-section">
                         <div class="form-group">
                             <label class="form-label">Título da Reunião *</label>
@@ -1419,7 +1443,7 @@
                                 placeholder="Ex: Planejamento Estratgico Q4">
                         </div>
 
-                        <div class="form-row meeting-form-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div class="form-row meeting-form-grid-3 meeting-scheduling-fields" aria-hidden="true">
                             <div class="form-group">
                                 <label class="form-label">Data Prevista</label>
                                 <input type="date" id="meeting-scheduled-date" class="form-input">
@@ -1435,7 +1459,7 @@
                         </div>
 
                         <!-- Convidados da Organização -->
-                        <div class="form-group">
+                        <div class="form-group meeting-scheduling-only" aria-hidden="true">
                             <label class="form-label">Convidados da Organização</label>
                             <div class="meeting-guest-inline" style="display: flex; gap: 12px; margin-bottom: 12px;">
                                 <select id="employee-select" class="form-input" style="flex: 1;">
@@ -1455,7 +1479,7 @@
                         </div>
 
                         <!-- Convidados Externos -->
-                        <div class="form-group">
+                        <div class="form-group meeting-scheduling-only" aria-hidden="true">
                             <label class="form-label">Convidados Externos</label>
                             <div class="meeting-guest-grid"
                                 style="display: grid; grid-template-columns: 2fr 2fr 2fr auto; gap: 12px; margin-bottom: 12px;">
@@ -1470,10 +1494,10 @@
 
                         <!-- Pauta -->
                         <div class="form-group">
-                            <label class="form-label">Pauta da Reunião</label>
+                            <label class="form-label">Temas da reuni&atilde;o</label>
                             <div class="meeting-agenda-inline" style="display: flex; gap: 12px; margin-bottom: 12px;">
                                 <input type="text" id="agenda-item-input" class="form-input"
-                                    placeholder="Digite um tópico da pauta" style="flex: 1;">
+                                    placeholder="Adicione um tema para discuss&atilde;o" style="flex: 1;">
                                 <button type="button" class="button button-primary" onclick="adicionarPauta()">+
                                     Adicionar</button>
                                 <button type="button" class="button button-outline" onclick="mostrarPautaSalva()">??
@@ -1507,14 +1531,14 @@
                         </div>
 
                         <!-- Observaes -->
-                        <div class="form-group">
+                        <div class="form-group meeting-scheduling-only" aria-hidden="true">
                             <label class="form-label">Observaes do Convite</label>
                             <textarea id="meeting-invite-notes" class="form-textarea" rows="4"
                                 placeholder="Informações adicionais para os convidados..."></textarea>
                         </div>
 
                         <!-- Botes -->
-                        <div class="meeting-form-actions" style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                        <div class="meeting-form-actions meeting-scheduling-only" aria-hidden="true">
                             <button type="button" class="button button-outline"
                                 onclick="fecharEditor()">Cancelar</button>
                             <button type="button" class="button button-outline"
@@ -1528,7 +1552,7 @@
                 </div>
 
                 <!-- SESSO B: Realização -->
-                <div class="tab-content" id="content-realizacação" style="display: none;">
+                <div class="tab-content meeting-execution-panel" id="content-realizacação" style="display: block;">
                     <div class="form-section">
                         <div class="meeting-status-panel"
                             style="background: #eff6ff; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #dbeafe; display: flex; justify-content: space-between; align-items: center;">
@@ -1563,7 +1587,7 @@
                         <div class="form-group">
                             <label class="form-label">Participantes (Efetivos)</label>
                             <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 8px;">
-                                Arraste dos convidados ou adicione novos colaboradores/externos
+                                Adicione as pessoas que participaram da conversa.
                             </p>
                             <div class="meeting-participants-entry-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                                 <div class="meeting-participant-entry" style="display: flex; gap: 8px;">
@@ -1586,17 +1610,17 @@
 
                         <!-- Assuntos Discutidos -->
                         <div class="form-group">
-                            <label class="form-label">Assuntos Discutidos</label>
+                            <label class="form-label">Temas discutidos e decis&otilde;es</label>
                             <div id="discussions-list" class="discussions-list"></div>
                             <button type="button" class="button button-outline" onclick="adicionarDiscussação()"
-                                style="margin-top: 8px;">+ Adicionar Discusso</button>
+                                style="margin-top: 8px;">+ Registrar decis&atilde;o</button>
                         </div>
 
                         <!-- Notas Gerais -->
                         <div class="form-group">
-                            <label class="form-label">Notas Gerais e Decises</label>
+                            <label class="form-label">Notas gerais da reuni&atilde;o</label>
                             <textarea id="meeting-notes" class="form-textarea" rows="4"
-                                placeholder="Notas finais, concluses e decisões tomadas..."></textarea>
+                                placeholder="Contexto, observações e conclusões gerais..."></textarea>
                         </div>
 
                         <!-- Botes de Ao da Realização -->
@@ -1629,9 +1653,9 @@
 
                         <!-- Atividades Planejadas -->
                         <div class="form-group">
-                            <label class="form-label">Acordado a ser feito (Plano de Ao)</label>
+                            <label class="form-label">Atividades e projetos gerados</label>
                             <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 12px;">
-                                Defina as atividades, responsveis e prazos acordados durante a reuniao.
+                                Defina o que será feito, o responsável, o prazo e o projeto de destino.
                             </p>
                             <div id="activities-list" class="activities-list"></div>
                             <div class="meeting-inline-actions" style="display: flex; gap: 12px; margin-top: 16px;">
@@ -1869,6 +1893,27 @@
     function getExecutionTabKey() {
         const executionTab = document.querySelector('[id^="tab-realiz"]');
         return executionTab ? executionTab.id.replace('tab-', '') : 'realizacao';
+    }
+
+    function updateMeetingWorkspaceCounters() {
+        const values = {
+            'meeting-counter-topics': (agendaItems || []).filter(item => item && item.title).length,
+            'meeting-counter-decisions': (discussions || []).filter(item => item && (item.title || item.discussion)).length,
+            'meeting-counter-activities': (activities || []).filter(item => item && item.title).length,
+        };
+        Object.entries(values).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = String(value);
+        });
+    }
+
+    function mostrarWorkspaceReuniao() {
+        const contextPanel = document.getElementById('content-agendamento');
+        const executionPanel = document.querySelector('[id^="content-realiz"]');
+        if (contextPanel) contextPanel.style.display = 'block';
+        if (executionPanel) executionPanel.style.display = 'block';
+        updateMeetingWorkspaceCounters();
+        if (currentMeetingId) atualizarAtividades();
     }
 
     function deepClone(value) {
@@ -2371,6 +2416,18 @@
             if (syncButton) syncButton.textContent = 'Sincronizar com Projeto';
         }
 
+        const contextPanel = document.getElementById('content-agendamento');
+        const executionPanel = document.querySelector('[id^="content-realiz"]');
+        if (contextPanel && executionPanel && !document.getElementById('meeting-app32-workspace-shell')) {
+            const shell = document.createElement('div');
+            shell.id = 'meeting-app32-workspace-shell';
+            shell.className = 'meeting-app32-workspace-shell';
+            contextPanel.insertAdjacentElement('beforebegin', shell);
+            shell.appendChild(contextPanel);
+            shell.appendChild(executionPanel);
+        }
+        mostrarWorkspaceReuniao();
+
         if (editorSection.dataset.draftWatchersBound !== 'true') {
             const markDirtyFromEvent = (event) => {
                 if (!event.target || !editorSection.contains(event.target)) return;
@@ -2852,19 +2909,8 @@
         }
     }
 
-    function trocarAba(aba) {
-        const executionTabKey = getExecutionTabKey();
-        if (aba === 'atividades') {
-            aba = executionTabKey;
-        }
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
-        const targetTab = document.getElementById(`tab-${aba}`);
-        const targetContent = document.getElementById(`content-${aba}`);
-        if (!targetTab || !targetContent) return;
-        targetTab.classList.add('active');
-        targetContent.style.display = 'block';
-        if (aba === executionTabKey) atualizarAtividades();
+    function trocarAba() {
+        mostrarWorkspaceReuniao();
     }
 
     function adicionarColaborador() {
@@ -2949,6 +2995,7 @@
             ${buildRemoveActionButton(`removerAgenda(${index})`, `Excluir item de pauta ${item.title || ''}`)}
         </div>
     `).join('');
+        updateMeetingWorkspaceCounters();
     }
 
     function removerAgenda(index) {
@@ -3209,18 +3256,19 @@
         container.innerHTML = discussions.map((disc, index) => `
         <div class="discussion-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
             <div class="discussion-item-row" style="display: flex; gap: 12px; margin-bottom: 12px;">
-                <input type="text" class="form-input" placeholder="Tpico / Título" 
+                <input type="text" class="form-input" placeholder="Tema / decis&atilde;o"
                        value="${disc.title || ''}" onchange="discussions[${index}].title = this.value" style="flex: 1;">
                 <button type="button" class="button button-sm button-outline" onclick="criarAtividadeDaDiscussao(${index})" title="Criar atividade de projeto a partir desta discussão">+ Atividade</button>
                 ${buildRemoveActionButton(`removerDiscussação(${index})`, `Excluir discussão ${disc.title || ''}`)}
             </div>
-            <textarea class="form-textarea" rows="3" placeholder="Discusso e definies..."
+            <textarea class="form-textarea" rows="3" placeholder="Contexto discutido e defini&ccedil;&atilde;o tomada..."
                       onchange="discussions[${index}].discussion = this.value">${disc.discussion || ''}</textarea>
             <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
                 Use <strong>+ Atividade</strong> para transformar o título em <strong>O que</strong> e a decisão em <strong>Como</strong> do projeto.
             </div>
         </div>
     `).join('');
+        updateMeetingWorkspaceCounters();
     }
 
     function removerDiscussação(index) {
@@ -3366,6 +3414,7 @@
             </div>
             `;
         }).join('');
+        updateMeetingWorkspaceCounters();
     }
 
     function adicionarParticipanteEfetivo(type) {
@@ -3664,7 +3713,7 @@
     // FILTROS
     window.filtrarReuniãoes = function () {
         const titleF = document.getElementById('filter-title').value.toLowerCase().trim();
-        const schDateF = document.getElementById('filter-scheduled-date').value;
+        const schDateF = document.getElementById('filter-scheduled-date')?.value || '';
         const actDateF = document.getElementById('filter-actual-date').value;
         const partF = document.getElementById('filter-participants').value.toLowerCase().trim();
         const freeF = document.getElementById('filter-free').value.toLowerCase().trim();
@@ -3750,7 +3799,7 @@
 
     window.limparFiltros = function () {
         document.getElementById('filter-title').value = '';
-        document.getElementById('filter-scheduled-date').value = '';
+        if (document.getElementById('filter-scheduled-date')) document.getElementById('filter-scheduled-date').value = '';
         document.getElementById('filter-actual-date').value = '';
         document.getElementById('filter-participants').value = '';
         document.getElementById('filter-free').value = '';

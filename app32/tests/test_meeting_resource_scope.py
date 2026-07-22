@@ -249,7 +249,7 @@ def test_meetings_template_shows_discussion_and_activity_counts_on_cards():
 
     assert '{% set discussions_count = meeting.discussions | length if meeting.discussions else 0 %}' in content
     assert '{% set activities_count = meeting.activities | length if meeting.activities else 0 %}' in content
-    assert '<strong>Discussões / Decisões:</strong>' in content
+    assert '<strong>Decis&otilde;es:</strong>' in content
     assert '<strong>Atividades:</strong>' in content
 
 
