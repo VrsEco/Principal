@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, session, redirect, url_for, request, abort
+from io import BytesIO
+
+from flask import Blueprint, render_template, session, redirect, url_for, request, abort, send_file
 from flask_login import login_required, current_user
 from services.plan_service import PlanService
 from api.routes.projects import get_active_company
@@ -48,6 +50,36 @@ def growth_dashboard(plan_id):
                            okrs_count=data['stats']['okrs_count'],
                            completed_sections=data['stats']['completed_sections'],
                            total_completable=data['stats']['total_completable'])
+
+@plans_bp.route('/<int:plan_id>/growth/final_report/pdf')
+@login_required
+def growth_report_pdf(plan_id):
+    """Entrega o relatório executivo como arquivo PDF gerado no servidor."""
+    company = get_active_company()
+    _ensure_plans_access(company)
+    if not company:
+        return redirect(url_for('auth.portal'))
+
+    plan = PlanService.get_plan(plan_id, company.id)
+    if not plan or plan.mode != 'growth':
+        abort(404)
+
+    from services.growth_report_pdf_service import generate_growth_report_pdf
+
+    report_context = PlanService.get_growth_report_context(plan_id, company.id)
+    pdf_bytes = generate_growth_report_pdf(
+        plan=plan,
+        company=company,
+        report=report_context,
+    )
+    return send_file(
+        BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=f'relatorio-executivo-plano-{plan_id}.pdf',
+        max_age=0,
+    )
+
 
 @plans_bp.route('/<int:plan_id>/growth/<section>')
 @login_required

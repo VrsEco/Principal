@@ -1,9 +1,12 @@
 from datetime import date, datetime
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 
 from jinja2 import Environment
+from pypdf import PdfReader
 
+from services.growth_report_pdf_service import generate_growth_report_pdf
 from services.plan_service import PlanService
 
 
@@ -76,3 +79,46 @@ def test_growth_report_template_is_valid_and_has_no_demo_content():
     assert "Projetos estratégicos" in source
     assert "Expansão regional Nordeste" not in source
     assert "Crescimento de 30% no MRR" not in source
+    assert "plans.growth_report_pdf" in source
+    assert "window.print()" not in source
+
+
+def test_growth_report_pdf_is_a_valid_downloadable_document():
+    plan = ns(title="Plano Executivo 2026")
+    company = ns(name="Empresa Teste")
+    report = {
+        "generated_on": "22/07/2026",
+        "plan_updated_on": "20/07/2026",
+        "status_label": "Ativo",
+        "progress": 75,
+        "description": "Crescimento rentável com disciplina de execução.",
+        "stats": {
+            "drivers": 0, "global_okrs": 0, "key_results": 0,
+            "area_okrs": 0, "projects": 0, "participants": 0,
+        },
+        "drivers": [], "global_okrs": [], "area_okrs": [], "projects": [],
+        "governance": {
+            "high_risk_count": 0, "overdue_count": 0,
+            "missing_owner_count": 0, "active_projects": 0,
+            "completed_projects": 0, "high_risks": [],
+        },
+    }
+
+    pdf_bytes = generate_growth_report_pdf(plan=plan, company=company, report=report)
+    reader = PdfReader(BytesIO(pdf_bytes))
+
+    assert pdf_bytes.startswith(b"%PDF-")
+    assert len(pdf_bytes) > 3000
+    assert len(reader.pages) >= 3
+    assert reader.metadata.title == "Relatório Executivo - Plano Executivo 2026"
+
+
+def test_growth_report_pdf_route_keeps_tenant_and_download_contract():
+    route_path = Path(__file__).parents[1] / "api" / "routes" / "plans.py"
+    source = route_path.read_text(encoding="utf-8")
+    route_block = source[source.index("def growth_report_pdf(plan_id):"):source.index("@plans_bp.route('/<int:plan_id>/growth/<section>')")]
+
+    assert "PlanService.get_plan(plan_id, company.id)" in route_block
+    assert "PlanService.get_growth_report_context(plan_id, company.id)" in route_block
+    assert "as_attachment=True" in route_block
+    assert "mimetype='application/pdf'" in route_block
