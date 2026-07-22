@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 from services.mcp_operation_router_service import McpOperationRouterService
 from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
+from src.core.mcp_runtime import resolve_mcp_execution_context
 from src.intelligence.mcp_contracts import MCPErrorDetail, MCPErrorEnvelope, MCPResponseMeta, MCPSuccessEnvelope
 
 
@@ -67,6 +68,25 @@ def register_operation_router_tools(mcp: Any) -> None:
                 error=MCPErrorDetail(code="mcp_operation_invalid_request", message=str(exc)),
                 meta=_meta("resolve_app32_operation_tool", company_id=resolved_company_id, user_id=context.get("user_id")),
             ).model_dump(mode="json")
+        if route.get("route_status") == "ready" and route.get("preferred_tool"):
+            from src.core.mcp_surface_registry import get_surface_capability_status
+
+            try:
+                execution_context = resolve_mcp_execution_context({"company_id": resolved_company_id})
+            except RuntimeError:
+                execution_context = None
+            status = get_surface_capability_status(
+                str(context.get("surface") or "user"),
+                str(route["preferred_tool"]),
+                execution_context=execution_context,
+                harness_key=str(route.get("target_harness_key") or "").strip() or None,
+                require_principal=True,
+            )
+            route = McpOperationRouterService.enforce_runtime_availability(
+                route,
+                executable=bool(status.get("executable")),
+                reason=str(status.get("reason") or "").strip() or None,
+            )
         route["catalog_scope"] = "effective_runtime_only"
         return MCPSuccessEnvelope[Any](
             data=route,

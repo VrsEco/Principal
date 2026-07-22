@@ -146,6 +146,29 @@ def _analytics_context(
     }
 
 
+def _strategic_read_context(
+    operation: str,
+    *,
+    company_id: int,
+    user_id: int | None = None,
+    request_id: str | None = None,
+    trace_id: str | None = None,
+) -> dict[str, Any]:
+    """Metadados da projeção estratégica liberada em menor privilégio."""
+
+    return {
+        "company_id": company_id,
+        "user_id": user_id,
+        "request_id": request_id,
+        "trace_id": trace_id,
+        "domain": "strategy",
+        "scope": "mcp_user",
+        "capability": f"strategy.{operation}",
+        "permissions": ["strategy.alignment.read"],
+        "tags": ["strategy", "strategic_connections", "read_model", "multi_tenant", "empty_safe"],
+    }
+
+
 def _build_connection_graph_payload(*, company_id: int, anonymize: bool = False) -> dict[str, Any]:
     graph = _json_safe(IncentiveSpiderWebService.build_graph(company_id))
 
@@ -381,7 +404,7 @@ def register_incentive_tools(mcp: Any) -> None:
         """Retorna métricas pré-calculadas da Teia para análise executiva por IA externa."""
 
         operation = "get_strategic_connection_metrics"
-        context = _analytics_context(
+        context = _strategic_read_context(
             operation,
             company_id=company_id,
             user_id=user_id,

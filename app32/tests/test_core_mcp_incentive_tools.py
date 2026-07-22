@@ -133,6 +133,9 @@ def test_strategic_connection_tools_expose_graph_metrics_and_summary(monkeypatch
     assert "department" not in graph_result["data"]["graph"]["nodes"][0]
 
     assert metrics_result["success"] is True
+    assert metrics_result["meta"]["domain"] == "strategy"
+    assert metrics_result["meta"]["scope"] == "mcp_user"
+    assert metrics_result["meta"]["permissions"] == ["strategy.alignment.read"]
     assert metrics_result["data"]["metrics"]["total_nodes"] == 5
     assert metrics_result["data"]["metrics"]["by_health"]["orphan"] == 2
     assert metrics_result["data"]["metrics"]["coverage"]["has_routines"] is True
@@ -153,10 +156,9 @@ def test_strategic_connection_tools_reject_invalid_company_id():
     assert result["meta"]["domain"] == "analytics"
 
 
-def test_strategic_connection_capabilities_are_analytics_scoped():
+def test_strategic_connection_graph_and_summary_remain_analytics_scoped():
     for tool_name in (
         "get_strategic_connection_graph",
-        "get_strategic_connection_metrics",
         "generate_strategic_connection_summary",
     ):
         capability = infer_tool_capability(SimpleNamespace(name=tool_name, description="Teia"))
@@ -166,6 +168,43 @@ def test_strategic_connection_capabilities_are_analytics_scoped():
         assert ToolScope.MCP_ANALYTICS.value in capability.scopes
         assert capability.permissions == ("analytics.read",)
         assert "tenant_safe" in capability.tags
+
+
+def test_strategic_connection_metrics_is_published_as_safe_strategy_read():
+    capability = infer_tool_capability(
+        SimpleNamespace(name="get_strategic_connection_metrics", description="Teia")
+    )
+
+    assert capability.domain == "strategy"
+    assert ToolScope.MCP_USER.value in capability.scopes
+    assert capability.permissions == ("strategy.alignment.read",)
+    assert capability.risk.value == "low"
+    assert capability.human_gate is False
+    assert "empty_safe" in capability.tags
+
+
+def test_strategic_connection_metrics_returns_structured_empty_result(monkeypatch):
+    monkeypatch.setattr(
+        mcp_incentive_tools.IncentiveSpiderWebService,
+        "build_graph",
+        classmethod(
+            lambda cls, company_id: {
+                "nodes": [],
+                "links": [],
+                "summary": {"total": 0, "orphans": 0, "fragile": 0, "connected": 0, "by_type": {}},
+            }
+        ),
+    )
+    mcp = _FakeMCP()
+    register_incentive_tools(mcp)
+
+    result = mcp.registered["get_strategic_connection_metrics"](company_id=13, user_id=44)
+
+    assert result["success"] is True
+    assert result["data"]["snapshot"]["company_id"] == 13
+    assert result["data"]["metrics"]["total_nodes"] == 0
+    assert result["data"]["metrics"]["total_links"] == 0
+    assert result["data"]["metrics"]["density"] == 0
 
 
 def test_fetch_indicator_catalog_filters_company_and_optional_fields(monkeypatch):

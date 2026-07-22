@@ -142,6 +142,36 @@ class McpOperationRouterService:
     )
 
     @staticmethod
+    def enforce_runtime_availability(
+        route: dict[str, Any],
+        *,
+        executable: bool,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        """Impede ``ready`` quando a combinação efetiva não pode executar."""
+
+        if route.get("route_status") != "ready" or executable:
+            if route.get("route_status") == "ready":
+                route["capability_state"] = "executable_in_effective_catalog"
+            return route
+
+        blocked_tool = route.get("preferred_tool")
+        route.update(
+            {
+                "route_status": "capability_not_available",
+                "preferred_tool": None,
+                "harness_switch_required": False,
+                "execution_sequence": [],
+                "capability_state": "unavailable_in_effective_catalog",
+                "runtime_blocker": reason or "tool não executável no runtime efetivo",
+                "blocked_preferred_tool": blocked_tool,
+                "user_message": "A operação reconhecida não está executável neste perfil, harness ou escopo.",
+                "discovery_policy": "Não atualizar tools/list nem executar tool aproximada.",
+            }
+        )
+        return route
+
+    @staticmethod
     def _normalize(value: str) -> str:
         folded = unicodedata.normalize("NFKD", str(value or ""))
         ascii_value = "".join(char for char in folded if not unicodedata.combining(char))

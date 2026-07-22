@@ -1,7 +1,9 @@
 from datetime import date
 
 import src.core.mcp_operation_router_tools as router_tools
+import src.core.mcp_surface_registry as surface_registry
 from services.mcp_operation_router_service import McpOperationRouterService
+from src.core.mcp_runtime import MCPExecutionContext
 
 
 class _FakeMCP:
@@ -168,3 +170,100 @@ def test_routes_mission_maturity_to_next_action_engine():
         "front_key": "identity",
         "subphase_key": "mission",
     }
+
+
+def _squad_cliente_context(*, permissions=("strategy.alignment.read",)):
+    return MCPExecutionContext(
+        user_id=44,
+        company_id=13,
+        employee_id=None,
+        role="cliente",
+        channel="claude_code",
+        thread_id="thread-squad-cliente",
+        accessible_company_ids=(13,),
+        permissions=permissions,
+        metadata={
+            "surface": "user",
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "mcp_enabled": True,
+            "training_completed": True,
+        },
+    )
+
+
+def test_strategy_metrics_route_is_ready_published_and_overlay_executable(monkeypatch):
+    context = _squad_cliente_context()
+    monkeypatch.setattr(
+        router_tools,
+        "get_http_request_context",
+        lambda: {
+            "user_id": 44,
+            "company_id": 13,
+            "accessible_company_ids": [13],
+            "surface": "user",
+            "harness_key": "harness_coordenador_cliente_v1",
+        },
+    )
+    monkeypatch.setattr(router_tools, "resolve_mcp_execution_context", lambda payload: context)
+    monkeypatch.setattr(surface_registry, "resolve_mcp_execution_context", lambda payload: context)
+    mcp = _FakeMCP()
+    router_tools.register_operation_router_tools(mcp)
+
+    routed = mcp.registered["resolve_app32_operation_tool"](
+        request_text="Consultar conexões e métricas estratégicas de objetivos e indicadores",
+        company_id=13,
+    )
+    manifest = surface_registry.get_surface_manifest("user", include_tools=True)
+    capability = next(
+        item for item in manifest["tools"] if item["name"] == "get_strategic_connection_metrics"
+    )
+
+    assert routed["success"] is True
+    assert routed["data"]["route_status"] == "ready"
+    assert routed["data"]["preferred_tool"] == "get_strategic_connection_metrics"
+    assert routed["data"]["target_harness_key"] == "harness_coordenador_cliente_v1"
+    assert routed["data"]["harness_switch_required"] is False
+    assert routed["data"]["execution_sequence"] == ["get_strategic_connection_metrics"]
+    assert routed["data"]["capability_state"] == "executable_in_effective_catalog"
+    assert capability["domain"] == "strategy"
+    assert capability["permissions"] == ["strategy.alignment.read"]
+    assert capability["risk"] == "low"
+    assert capability["human_gate"] is False
+
+
+def test_router_never_returns_ready_when_capability_is_not_effectively_available(monkeypatch):
+    context = _squad_cliente_context()
+    monkeypatch.setattr(
+        router_tools,
+        "get_http_request_context",
+        lambda: {
+            "user_id": 44,
+            "company_id": 13,
+            "accessible_company_ids": [13],
+            "surface": "user",
+            "harness_key": "harness_coordenador_cliente_v1",
+        },
+    )
+    monkeypatch.setattr(router_tools, "resolve_mcp_execution_context", lambda payload: context)
+    monkeypatch.setattr(
+        surface_registry,
+        "get_surface_capability_status",
+        lambda *args, **kwargs: {
+            "executable": False,
+            "reason": "tool ausente ou bloqueada no runtime efetivo",
+        },
+    )
+    mcp = _FakeMCP()
+    router_tools.register_operation_router_tools(mcp)
+
+    routed = mcp.registered["resolve_app32_operation_tool"](
+        request_text="Consultar métricas estratégicas dos indicadores",
+        company_id=13,
+    )
+
+    assert routed["data"]["route_status"] == "capability_not_available"
+    assert routed["data"]["preferred_tool"] is None
+    assert routed["data"]["execution_sequence"] == []
+    assert routed["data"]["blocked_preferred_tool"] == "get_strategic_connection_metrics"

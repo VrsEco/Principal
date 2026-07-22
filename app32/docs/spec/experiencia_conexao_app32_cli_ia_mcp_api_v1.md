@@ -483,6 +483,10 @@ A tool `resolve_app32_operation_tool` recebe `request_text`, `company_id` efetiv
 
 Estados de rota: `ready`, `needs_input`, `specialist_discovery` e `unsupported_fast_fallback`. Em `specialist_discovery`, o domínio e o harness já estão definidos; o CLI atualiza `tools/list` uma única vez e escolhe somente uma tool executável daquele domínio.
 
+Antes de publicar `ready`, o roteador deve executar o mesmo preflight efetivo de `tools/list`: capability publicada na surface, tenant, RBAC, profile, harness, overlay, domínio e ação. Falha em qualquer camada converte a resposta para `capability_not_available`, remove `preferred_tool` e zera a sequência de execução.
+
+Para o Squad Cliente, `get_strategic_connection_metrics` é leitura `strategy`, risco baixo, permissão `strategy.alignment.read`, sem human gate e executável no `harness_coordenador_cliente_v1`. O grafo detalhado e o resumo analítico permanecem restritos a `analytics`. Respostas sem dados devem preservar envelope estruturado com contagens zero.
+
 ### 18.2 Harness de sessão
 
 `describe_app32_session_harness_tool` e `select_app32_session_harness_tool` são operações de contexto da surface `user`.

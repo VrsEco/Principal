@@ -1526,7 +1526,6 @@ _register_mcp_support_capability(
 
 for _tool_name, _action in (
     ("get_strategic_connection_graph", "read"),
-    ("get_strategic_connection_metrics", "read"),
     ("generate_strategic_connection_summary", "analyze"),
 ):
     _register_mcp_support_capability(
@@ -1539,6 +1538,24 @@ for _tool_name, _action in (
         required_context=(TOOL_CONTEXT_COMPANY,),
         tags=("strategic_connections", "incentives", "read_model", "tenant_safe"),
     )
+
+# Projeção estritamente read-only dos vínculos estratégicos já cadastrados. Ela
+# segue o mesmo contrato RBAC das demais leituras de alinhamento do Squad Cliente.
+_register_mcp_support_capability(
+    "get_strategic_connection_metrics",
+    domain="strategy",
+    action="read",
+    scopes=(
+        ToolScope.SAPIENS.value,
+        ToolScope.MCP_USER.value,
+        ToolScope.MCP_ADMIN.value,
+        ToolScope.MCP_ANALYTICS.value,
+    ),
+    risk=ToolRiskLevel.LOW,
+    permissions=("strategy.alignment.read",),
+    required_context=(TOOL_CONTEXT_COMPANY,),
+    tags=("strategic_connections", "incentives", "read_model", "tenant_safe", "empty_safe"),
+)
 
 for _tool_name in (
     "list_work_journey_absences_tool",

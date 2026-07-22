@@ -511,6 +511,44 @@ def test_list_user_capabilities_uses_tenant_aware_manifest_loader(monkeypatch):
     assert calls == [("user", {"domain": "consultive", "include_tools": True})]
 
 
+def test_squad_cliente_capabilities_publish_strategy_metrics_after_single_refresh(monkeypatch):
+    context = MCPExecutionContext(
+        user_id=44,
+        company_id=13,
+        employee_id=None,
+        role="cliente",
+        channel="claude_remote",
+        thread_id=None,
+        accessible_company_ids=(13,),
+        permissions=("strategy.alignment.read",),
+        metadata={
+            "surface": "user",
+            "transport": "streamable_http",
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "mcp_enabled": True,
+            "training_completed": True,
+        },
+    )
+    monkeypatch.setattr(registry, "resolve_mcp_execution_context", lambda payload=None: context)
+    mcp = _FakeMCP()
+    registry.register_user_mcp_tools(mcp)
+
+    manifest = mcp.registered["list_user_app32_capabilities"]["callable"](
+        domain="strategy",
+        include_tools=True,
+    )
+    capability = next(
+        item for item in manifest["tools"] if item["name"] == "get_strategic_connection_metrics"
+    )
+
+    assert "get_strategic_connection_metrics" in mcp.registered
+    assert capability["permissions"] == ["strategy.alignment.read"]
+    assert capability["risk"] == "low"
+    assert capability["human_gate"] is False
+
+
 def test_user_surface_router_and_harness_selector_exist_in_all_official_cliente_harnesses(monkeypatch):
     for harness_key in (
         "harness_coordenador_cliente_v1",

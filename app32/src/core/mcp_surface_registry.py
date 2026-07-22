@@ -35,6 +35,96 @@ def get_surface_scope_filter(surface: McpSurface | str) -> tuple[str, ...]:
     return _SURFACE_SCOPE_FILTERS[normalized]
 
 
+def get_surface_capability_status(
+    surface: McpSurface | str,
+    tool_name: str,
+    *,
+    execution_context: Any | None = None,
+    harness_key: str | None = None,
+    capability: Any | None = None,
+    require_principal: bool = False,
+) -> dict[str, Any]:
+    """Valida publicação, harness, tenant, RBAC e overlay antes do roteamento."""
+
+    normalized_surface = normalize_surface(surface)
+    resolved_capability = capability
+    if resolved_capability is None and hasattr(catalog, "get_tool_capability"):
+        resolved_capability = catalog.get_tool_capability(str(tool_name or "").strip())
+    capability = resolved_capability
+    if capability is None:
+        return {"executable": False, "reason": "tool ausente do catálogo publicado", "capability": None}
+    if not set(get_surface_scope_filter(normalized_surface)).intersection(set(capability.scopes)):
+        return {
+            "executable": False,
+            "reason": f"tool não publicada na surface {normalized_surface}",
+            "capability": capability,
+        }
+
+    context = execution_context
+    if context is None:
+        try:
+            context = resolve_mcp_execution_context({})
+        except RuntimeError:
+            context = None
+    if context is None or getattr(context, "user_id", None) is None:
+        if require_principal:
+            return {
+                "executable": False,
+                "reason": "principal da sessão ausente para validar tenant e RBAC",
+                "capability": capability,
+            }
+        return {"executable": True, "reason": "catálogo publicado; policy sem principal", "capability": capability}
+
+    metadata = dict(getattr(context, "metadata", {}) or {})
+    if harness_key:
+        from src.intelligence.mcp_contracts import APP32_PROFILE_CONTRACTS_MANIFEST
+
+        overlay = APP32_PROFILE_CONTRACTS_MANIFEST.get_overlay(harness_key)
+        if overlay is None:
+            return {"executable": False, "reason": "harness sem overlay publicado", "capability": capability}
+        runtime_profile = str(metadata.get("runtime_profile") or "").strip().lower()
+        if runtime_profile and overlay.runtime_profile != runtime_profile:
+            return {"executable": False, "reason": "harness fora do runtime profile ativo", "capability": capability}
+        metadata["harness_key"] = overlay.harness_key
+        metadata["squad_overlay"] = overlay.overlay
+
+    decision = evaluate_tool_policy(
+        {
+            "user_id": context.user_id,
+            "company_id": context.company_id,
+            "employee_id": context.employee_id,
+            "role": context.role,
+            "channel": context.channel,
+            "thread_id": context.thread_id,
+            "permissions": context.permissions,
+            "metadata": metadata,
+        },
+        ToolPolicyRequest(
+            tool_name=capability.name,
+            surface=normalized_surface,
+            domain=capability.domain,
+            action=infer_tool_action(capability.name, capability.domain),
+            risk=getattr(capability.risk, "value", capability.risk),
+            requested_company_id=context.company_id,
+            accessible_company_ids=context.accessible_company_ids,
+            required_permissions=capability.permissions,
+            confirmed_mutation=(
+                "explicit_human_confirmation" in set(capability.tags)
+                or not capability.human_gate
+            ),
+            required_context=tuple(getattr(capability, "required_context", ()) or ()),
+            catalog_discovery=True,
+            metadata=metadata,
+        ),
+    )
+    return {
+        "executable": decision.allowed,
+        "reason": decision.reason,
+        "capability": capability,
+        "decision": decision,
+    }
+
+
 def get_surface_manifest(
     surface: McpSurface | str,
     *,
@@ -56,36 +146,13 @@ def get_surface_manifest(
     if execution_context is not None and execution_context.user_id is not None:
         filtered_capabilities = []
         for capability in capabilities:
-            decision = evaluate_tool_policy(
-                {
-                    "user_id": execution_context.user_id,
-                    "company_id": execution_context.company_id,
-                    "employee_id": execution_context.employee_id,
-                    "role": execution_context.role,
-                    "channel": execution_context.channel,
-                    "thread_id": execution_context.thread_id,
-                    "permissions": execution_context.permissions,
-                    "metadata": dict(execution_context.metadata or {}),
-                },
-                    ToolPolicyRequest(
-                        tool_name=capability.name,
-                        surface=normalized_surface,
-                        domain=capability.domain,
-                        action=infer_tool_action(capability.name, capability.domain),
-                        risk=getattr(capability.risk, "value", capability.risk),
-                        requested_company_id=execution_context.company_id,
-                        accessible_company_ids=execution_context.accessible_company_ids,
-                        required_permissions=capability.permissions,
-                        confirmed_mutation=(
-                            "explicit_human_confirmation" in set(capability.tags)
-                            or not capability.human_gate
-                        ),
-                        required_context=tuple(getattr(capability, "required_context", ()) or ()),
-                        catalog_discovery=True,
-                        metadata=dict(execution_context.metadata or {}),
-                    ),
-                )
-            if decision.allowed:
+            status = get_surface_capability_status(
+                normalized_surface,
+                capability.name,
+                execution_context=execution_context,
+                capability=capability,
+            )
+            if status["executable"]:
                 filtered_capabilities.append(capability)
         capabilities = filtered_capabilities
 

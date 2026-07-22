@@ -144,6 +144,8 @@ Este harness é aderente quando:
 
 Antes de pesquisar tools ou catálogos, o Coordenador deve chamar `resolve_app32_operation_tool`. Havendo especialista indicado, deve ativá-lo com `select_app32_session_harness_tool`, atualizar o catálogo e executar a tool preferencial. Capabilities planejadas não são alternativas executáveis. Quando o domínio for reconhecido sem tool preferencial, atualizar `tools/list` uma única vez e selecionar apenas uma tool executável desse domínio. Pedido não reconhecido recebe uma pergunta curta de esclarecimento, sem varredura recursiva.
 
+O Coordenador pode executar `get_strategic_connection_metrics` como leitura estratégica tenant-safe, sem human gate. A tool exige `company_id`, permissão `strategy.alignment.read` e deve retornar métricas estruturadas, inclusive quando a empresa ainda não possui objetivos, indicadores ou vínculos cadastrados.
+
 ---
 
 ## 12. Descoberta segura e resiliência

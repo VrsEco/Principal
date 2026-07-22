@@ -131,3 +131,5 @@ O health público informa a política em `transient_recovery`. Durante restart c
 ## 8. Descoberta sem tool exata
 
 Se `resolve_app32_operation_tool` retornar `capability_not_available`, encerrar sem atualizar `tools/list`. Em `specialist_discovery`, atualizar a lista apenas uma vez e executar somente uma tool que responda diretamente ao pedido. Não usar ferramenta adjacente para produzir uma resposta aproximada.
+
+Para consultas de conexões/métricas estratégicas no Squad Cliente, o fluxo esperado é `resolve_app32_operation_tool` -> `get_strategic_connection_metrics` no harness Coordenador. Não trocar para `analytics`. Se o preflight efetivo não confirmar catálogo, overlay, tenant e RBAC, tratar como indisponibilidade e não tentar grafo ou resumo como fallback.
