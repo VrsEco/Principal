@@ -89,8 +89,6 @@ class SectorStrategyStructureService:
         for item in okrs_payload:
             if not isinstance(item, dict):
                 raise SectorStrategyStructureError("Cada OKR deve ser um objeto.")
-            if item.get("owner_name"):
-                names.add(str(item["owner_name"]).strip())
             for initiative in item.get("initiatives") or []:
                 if initiative.get("owner_name"):
                     names.add(str(initiative["owner_name"]).strip())
@@ -125,7 +123,30 @@ class SectorStrategyStructureService:
                 okr_type = str(item.get("okr_type") or "estruturante").strip()
                 if not objective or not department:
                     raise SectorStrategyStructureError("objective e department são obrigatórios em cada OKR.")
-                owner = identities[str(item["owner_name"]).strip()].name if item.get("owner_name") else None
+                owner = None
+                if item.get("owner_name"):
+                    informed_owner = str(item["owner_name"]).strip()
+                    try:
+                        owner_employee = cls._resolve_employee(
+                            company_id=company_id,
+                            informed_name=informed_owner,
+                        )
+                        owner = owner_employee.name
+                        if not any(
+                            row["employee_id"] == owner_employee.id
+                            for row in result["resolved_identities"]
+                        ):
+                            result["resolved_identities"].append(
+                                {
+                                    "informed_name": informed_owner,
+                                    "employee_id": owner_employee.id,
+                                    "official_name": owner_employee.name,
+                                }
+                            )
+                    except SectorStrategyStructureError as exc:
+                        result["pending"].append(
+                            f"Owner do OKR '{objective}' não vinculado: {exc}"
+                        )
                 internal_client = str(item.get("internal_client_name") or "").strip() or None
                 observations = str(item.get("observations") or "").strip()
                 if internal_client:
