@@ -688,6 +688,80 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "permissions": ("user.contacts.update",),
         "tags": ("crud",),
     },
+    "create_meeting": {
+        "domain": "meetings",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("meeting.write",),
+        "tags": ("crud", "tenant_safe", "no_scheduling", "quota"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "get_meeting": {
+        "domain": "meetings",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("meeting.read",),
+        "tags": ("read", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "update_meeting": {
+        "domain": "meetings",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("meeting.write",),
+        "tags": ("crud", "tenant_safe", "quota"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "create_meeting_topic": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "topic", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "update_meeting_topic": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "topic", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "delete_meeting_topic": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "topic", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "create_meeting_decision": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "decision", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "update_meeting_decision": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "decision", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "delete_meeting_decision": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "decision", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "create_meeting_activity": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "activity", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "update_meeting_activity": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "activity", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "delete_meeting_activity": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("crud", "activity", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "sync_meeting_activities_to_project": {
+        "domain": "meetings", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM, "permissions": ("meeting.write",),
+        "tags": ("sync", "projects", "activity", "tenant_safe", "quota"), "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "schedule_meeting": {
         "domain": "meetings",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
@@ -730,7 +804,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "delete_meeting_secure": {
         "domain": "meetings",
-        "scopes": (ToolScope.MCP_ADMIN.value,),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("meeting.delete",),
         "human_gate": True,
@@ -762,7 +836,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "create_project": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("project.create",),
         "tags": ("crud", "tenant_safe", "quota"),
@@ -770,7 +844,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "list_projects": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
         "permissions": ("project.read",),
         "tags": ("read", "tenant_safe"),
@@ -778,7 +852,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "update_project": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("project.update",),
         "tags": ("crud", "tenant_safe", "quota"),
@@ -786,7 +860,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "delete_project": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_ADMIN.value,),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("project.delete",),
         "human_gate": True,
@@ -796,28 +870,28 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "list_project_tasks_secure": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
         "permissions": ("project.task.read",),
         "tags": ("read", "tenant_safe"),
     },
     "create_project_task_secure": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("project.task.create",),
         "tags": ("crud", "tenant_safe", "quota"),
     },
     "update_project_task_secure": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("project.task.update",),
         "tags": ("crud", "tenant_safe", "quota"),
     },
     "delete_project_task_secure": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_ADMIN.value,),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("project.task.delete",),
         "human_gate": True,
@@ -826,7 +900,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "delete_project_task": {
         "domain": "projects",
-        "scopes": (ToolScope.MCP_ADMIN.value,),
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("project.task.delete",),
         "human_gate": True,
@@ -1613,6 +1687,15 @@ def _expand_domain_aliases(domains: set[str]) -> set[str]:
 def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
     lowered = str(tool_name or "").strip().lower()
     normalized_domain = normalize_tool_domain(domain) if domain else None
+
+    if lowered in {
+        "delete_meeting_topic",
+        "delete_meeting_decision",
+        "delete_meeting_activity",
+    }:
+        # Remoções de itens JSON pertencem à atualização da reunião; não apagam
+        # a reunião nem ProjectTask já sincronizada.
+        return "update"
 
     if lowered == "review_strategy_maturation_item_tool":
         return "review"

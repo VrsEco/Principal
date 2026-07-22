@@ -347,13 +347,31 @@ def build_app32_crud_contracts_manifest() -> CRUDContractsManifest:
                 mutation_roles=operational_roles,
                 read_roles=all_roles,
             ),
-            _domain_contract(
+            CRUDDomainContract(
                 domain="meetings",
                 title="Reuniões",
-                description="Agendamento, pauta, discussões, encerramento e atas de reunião.",
-                entity="meeting",
-                mutation_roles=operational_roles,
-                read_roles=all_roles,
+                description=(
+                    "Workspace de reuniões sem dependência de agendamento, com temas, decisões, "
+                    "atividades completas e sincronização tenant-safe com projetos."
+                ),
+                surface="mcp_user",
+                tenant_scope_required=True,
+                operations=[
+                    _operation(domain="meetings", action="list", entity="meeting", description="Lista reuniões do tenant.", roles=all_roles, permission="meeting.read", implementation_status="implemented"),
+                    _operation(domain="meetings", action="read", entity="meeting", description="Lê reunião completa com temas, decisões e atividades.", roles=all_roles, permission="meeting.read", implementation_status="implemented"),
+                    _operation(domain="meetings", action="create", entity="meeting", description="Cria reunião de trabalho sem exigir agendamento.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="update", entity="meeting", description="Atualiza dados whitelisted da reunião.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="delete", entity="meeting", description="Exclui reunião com confirmação explícita e auditoria.", roles=["administrador", "admin_tecnico"], permission="meeting.delete", risk="high", surface="mcp_admin", human_gate_required=True, implementation_status="implemented"),
+                    _operation(domain="meetings", action="create", entity="meeting_topic", description="Cria tema discutido com ID estável.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="read", entity="meeting_topic", description="Lê temas dentro do detalhe da reunião.", roles=all_roles, permission="meeting.read", implementation_status="implemented"),
+                    _operation(domain="meetings", action="update", entity="meeting_topic", description="Atualiza ou remove tema dentro da reunião.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="create", entity="meeting_decision", description="Registra decisão vinculada a tema.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="read", entity="meeting_decision", description="Lê decisões dentro do detalhe da reunião.", roles=all_roles, permission="meeting.read", implementation_status="implemented"),
+                    _operation(domain="meetings", action="update", entity="meeting_decision", description="Atualiza ou remove decisão vinculada a tema.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="create", entity="meeting_activity", description="Cria atividade com prazo, responsável, orçamento, esforço e projeto.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                    _operation(domain="meetings", action="read", entity="meeting_activity", description="Lê atividades dentro do detalhe da reunião.", roles=all_roles, permission="meeting.read", implementation_status="implemented"),
+                    _operation(domain="meetings", action="update", entity="meeting_activity", description="Atualiza, remove ou sincroniza atividade com ProjectTask.", roles=operational_roles, permission="meeting.write", risk="medium", implementation_status="implemented"),
+                ],
             ),
             CRUDDomainContract(
                 domain="real_estate_auctions",

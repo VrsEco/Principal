@@ -535,6 +535,107 @@ def list_meetings(company_id: int = None, status: str = None, limit: int = 20):
 
 
 @tool
+def create_meeting(title: str, company_id: int = None, project_id: int = None, participants: list | dict = None, meeting_notes: str = None):
+    """Cria uma reunião de trabalho sem exigir data, horário ou convite."""
+    return meeting_ops_domain.create_meeting(
+        title=title, company_id=company_id, project_id=project_id,
+        participants=participants, meeting_notes=meeting_notes,
+    )
+
+
+@tool
+def get_meeting(meeting_id: int, company_id: int = None):
+    """Lê reunião completa com temas, decisões, atividades e vínculo ao projeto."""
+    return meeting_ops_domain.get_meeting(meeting_id=meeting_id, company_id=company_id)
+
+
+@tool
+def update_meeting(meeting_id: int, changes: dict, company_id: int = None):
+    """Atualiza reunião via whitelist tenant-safe, sem depender de agendamento."""
+    return meeting_ops_domain.update_meeting(meeting_id=meeting_id, changes=changes, company_id=company_id)
+
+
+@tool
+def create_meeting_topic(meeting_id: int, title: str, notes: str = None, company_id: int = None):
+    """Registra um tema discutido e retorna seu ID estável."""
+    return meeting_ops_domain.create_meeting_topic(meeting_id=meeting_id, title=title, notes=notes, company_id=company_id)
+
+
+@tool
+def update_meeting_topic(meeting_id: int, topic_id: str, changes: dict, company_id: int = None):
+    """Atualiza título, notas ou status de um tema da reunião."""
+    return meeting_ops_domain.update_meeting_topic(meeting_id=meeting_id, topic_id=topic_id, changes=changes, company_id=company_id)
+
+
+@tool
+def delete_meeting_topic(meeting_id: int, topic_id: str, company_id: int = None):
+    """Remove um tema e suas decisões da reunião."""
+    return meeting_ops_domain.delete_meeting_topic(meeting_id=meeting_id, topic_id=topic_id, company_id=company_id)
+
+
+@tool
+def create_meeting_decision(meeting_id: int, topic_id: str, text: str, rationale: str = None, owner: str = None, company_id: int = None):
+    """Registra uma decisão vinculada a um tema da reunião."""
+    return meeting_ops_domain.create_meeting_decision(
+        meeting_id=meeting_id, topic_id=topic_id, text=text,
+        rationale=rationale, owner=owner, company_id=company_id,
+    )
+
+
+@tool
+def update_meeting_decision(meeting_id: int, topic_id: str, decision_id: str, changes: dict, company_id: int = None):
+    """Atualiza texto, justificativa ou dono de uma decisão."""
+    return meeting_ops_domain.update_meeting_decision(
+        meeting_id=meeting_id, topic_id=topic_id, decision_id=decision_id,
+        changes=changes, company_id=company_id,
+    )
+
+
+@tool
+def delete_meeting_decision(meeting_id: int, topic_id: str, decision_id: str, company_id: int = None):
+    """Remove uma decisão específica de um tema."""
+    return meeting_ops_domain.delete_meeting_decision(
+        meeting_id=meeting_id, topic_id=topic_id, decision_id=decision_id, company_id=company_id,
+    )
+
+
+@tool
+def create_meeting_activity(
+    meeting_id: int, title: str, company_id: int = None, responsible: str = None,
+    deadline: str = None, budget: str = None, estimated_hours: float = None,
+    priority: str = "normal", how: str = None, employee_id: int = None, project_id: int = None,
+):
+    """Cria atividade da reunião com prazo, responsável, orçamento, esforço e projeto destino."""
+    return meeting_ops_domain.create_meeting_activity(
+        meeting_id=meeting_id, title=title, company_id=company_id, responsible=responsible,
+        deadline=deadline, budget=budget, estimated_hours=estimated_hours, priority=priority,
+        how=how, employee_id=employee_id, project_id=project_id,
+    )
+
+
+@tool
+def update_meeting_activity(meeting_id: int, activity_id: str, changes: dict, company_id: int = None):
+    """Atualiza uma atividade da reunião via whitelist tenant-safe."""
+    return meeting_ops_domain.update_meeting_activity(
+        meeting_id=meeting_id, activity_id=activity_id, changes=changes, company_id=company_id,
+    )
+
+
+@tool
+def delete_meeting_activity(meeting_id: int, activity_id: str, company_id: int = None):
+    """Remove atividade da reunião sem excluir a tarefa de projeto já sincronizada."""
+    return meeting_ops_domain.delete_meeting_activity(meeting_id=meeting_id, activity_id=activity_id, company_id=company_id)
+
+
+@tool
+def sync_meeting_activities_to_project(meeting_id: int, activity_ids: list[str] = None, company_id: int = None):
+    """Sincroniza atividades selecionadas da reunião com ProjectTask no mesmo tenant."""
+    return meeting_ops_domain.sync_meeting_activities_to_project(
+        meeting_id=meeting_id, activity_ids=activity_ids, company_id=company_id,
+    )
+
+
+@tool
 def get_plan_diagnostics_read_model(company_id: int, plan_id: int):
     """
     Retorna o read model whitelisted do diagnóstico de um plano estratégico.
@@ -1194,6 +1295,19 @@ tools = [
     update_user_contacts,
     # Fase 2 — Meetings
     list_meetings,
+    create_meeting,
+    get_meeting,
+    update_meeting,
+    create_meeting_topic,
+    update_meeting_topic,
+    delete_meeting_topic,
+    create_meeting_decision,
+    update_meeting_decision,
+    delete_meeting_decision,
+    create_meeting_activity,
+    update_meeting_activity,
+    delete_meeting_activity,
+    sync_meeting_activities_to_project,
     schedule_meeting,
     start_meeting,
     log_meeting_discussion,

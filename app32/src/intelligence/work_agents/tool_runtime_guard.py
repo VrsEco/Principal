@@ -49,6 +49,12 @@ def _infer_surface(role: str) -> str:
 
 
 def _infer_action(tool_name: str, capability: Any) -> str:
+    if tool_name in {
+        "delete_meeting_topic",
+        "delete_meeting_decision",
+        "delete_meeting_activity",
+    }:
+        return "update"
     for prefix, action in _ACTION_PREFIXES.items():
         if tool_name.startswith(prefix):
             return action

@@ -665,6 +665,218 @@ def send_meeting_minutes(meeting_id: int, channel: str = "email", company_id: in
         return f"Erro ao enviar ATA: {str(e)}"
 
 
+def _meeting_service_mutation(
+    *,
+    tool_name: str,
+    company_id: int | None,
+    service_method,
+    metadata: dict | None = None,
+    **service_kwargs,
+):
+    requested_company_id = _resolve_requested_company_id(company_id)
+    principal, decision = _authorize_meeting_mcp(
+        tool_name=tool_name,
+        action="create" if tool_name in {"create_meeting", "create_meeting_topic", "create_meeting_decision", "create_meeting_activity"} else "update",
+        company_id=requested_company_id,
+        risk="medium",
+        required_permissions=("meeting.write",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+
+    limit_decision = evaluate_mutation_limit(
+        action="create" if tool_name.startswith("create_") else "update",
+        company_id=decision.resolved_company_id,
+        user_id=principal.get("user_id"),
+    )
+    if not limit_decision.allowed:
+        return {"success": False, "error": limit_decision.reason, "limits": limit_decision.to_dict()}
+
+    try:
+        payload, error = service_method(
+            company_id=int(decision.resolved_company_id),
+            **service_kwargs,
+        )
+        if error:
+            return {"success": False, "error": error}
+        if principal.get("user_id"):
+            record_mutation_success(
+                action="create" if tool_name.startswith("create_") else "update",
+                company_id=int(decision.resolved_company_id),
+                user_id=int(principal["user_id"]),
+                tool_name=tool_name,
+                domain="meetings",
+                metadata=dict(metadata or {}),
+            )
+        return {"success": True, **(payload or {})}
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Falha na tool %s", tool_name)
+        return {"success": False, "error": f"Erro ao operar reunião: {exc}"}
+
+
+def create_meeting(
+    title: str,
+    company_id: int | None = None,
+    project_id: int | None = None,
+    participants: list | dict | None = None,
+    meeting_notes: str | None = None,
+):
+    """Cria uma reunião de trabalho sem exigir agendamento."""
+    from services.meeting_mcp_service import MeetingMCPService
+
+    return _meeting_service_mutation(
+        tool_name="create_meeting",
+        company_id=company_id,
+        service_method=MeetingMCPService.create_meeting,
+        metadata={"project_id": project_id},
+        title=title,
+        project_id=project_id,
+        participants=participants,
+        meeting_notes=meeting_notes,
+    )
+
+
+def get_meeting(meeting_id: int, company_id: int | None = None):
+    """Lê a reunião completa, incluindo temas, decisões e atividades."""
+    from services.meeting_mcp_service import MeetingMCPService
+
+    requested_company_id = _resolve_requested_company_id(company_id)
+    _, decision = _authorize_meeting_mcp(
+        tool_name="get_meeting",
+        action="read",
+        company_id=requested_company_id,
+        risk="low",
+        required_permissions=("meeting.read",),
+    )
+    if not decision.allowed:
+        return {"success": False, "error": decision.reason, "policy": decision.to_audit_event()}
+    meeting, error = MeetingMCPService.get_meeting(
+        company_id=int(decision.resolved_company_id), meeting_id=int(meeting_id)
+    )
+    if error or meeting is None:
+        return {"success": False, "error": error}
+    return {"success": True, "meeting": meeting.to_dict()}
+
+
+def update_meeting(meeting_id: int, changes: dict, company_id: int | None = None):
+    """Atualiza campos whitelisted da reunião sem depender de agendamento."""
+    from services.meeting_mcp_service import MeetingMCPService
+
+    return _meeting_service_mutation(
+        tool_name="update_meeting", company_id=company_id,
+        service_method=MeetingMCPService.update_meeting,
+        metadata={"meeting_id": int(meeting_id)}, meeting_id=int(meeting_id), changes=changes,
+    )
+
+
+def create_meeting_topic(meeting_id: int, title: str, notes: str | None = None, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="create_meeting_topic", company_id=company_id,
+        service_method=MeetingMCPService.create_topic,
+        metadata={"meeting_id": int(meeting_id)}, meeting_id=int(meeting_id), title=title, notes=notes,
+    )
+
+
+def update_meeting_topic(meeting_id: int, topic_id: str, changes: dict, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="update_meeting_topic", company_id=company_id,
+        service_method=MeetingMCPService.update_topic,
+        metadata={"meeting_id": int(meeting_id), "topic_id": topic_id},
+        meeting_id=int(meeting_id), topic_id=topic_id, changes=changes,
+    )
+
+
+def delete_meeting_topic(meeting_id: int, topic_id: str, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="delete_meeting_topic", company_id=company_id,
+        service_method=MeetingMCPService.delete_topic,
+        metadata={"meeting_id": int(meeting_id), "topic_id": topic_id},
+        meeting_id=int(meeting_id), topic_id=topic_id,
+    )
+
+
+def create_meeting_decision(meeting_id: int, topic_id: str, text: str, rationale: str | None = None, owner: str | None = None, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="create_meeting_decision", company_id=company_id,
+        service_method=MeetingMCPService.create_decision,
+        metadata={"meeting_id": int(meeting_id), "topic_id": topic_id},
+        meeting_id=int(meeting_id), topic_id=topic_id, text=text, rationale=rationale, owner=owner,
+    )
+
+
+def update_meeting_decision(meeting_id: int, topic_id: str, decision_id: str, changes: dict, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="update_meeting_decision", company_id=company_id,
+        service_method=MeetingMCPService.update_decision,
+        metadata={"meeting_id": int(meeting_id), "topic_id": topic_id, "decision_id": decision_id},
+        meeting_id=int(meeting_id), topic_id=topic_id, decision_id=decision_id, changes=changes,
+    )
+
+
+def delete_meeting_decision(meeting_id: int, topic_id: str, decision_id: str, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="delete_meeting_decision", company_id=company_id,
+        service_method=MeetingMCPService.delete_decision,
+        metadata={"meeting_id": int(meeting_id), "topic_id": topic_id, "decision_id": decision_id},
+        meeting_id=int(meeting_id), topic_id=topic_id, decision_id=decision_id,
+    )
+
+
+def create_meeting_activity(
+    meeting_id: int, title: str, company_id: int | None = None, responsible: str | None = None,
+    deadline: str | None = None, budget: str | None = None, estimated_hours: float | None = None,
+    priority: str = "normal", how: str | None = None, employee_id: int | None = None,
+    project_id: int | None = None,
+):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="create_meeting_activity", company_id=company_id,
+        service_method=MeetingMCPService.create_activity,
+        metadata={"meeting_id": int(meeting_id), "project_id": project_id},
+        meeting_id=int(meeting_id), title=title, responsible=responsible, deadline=deadline,
+        budget=budget, estimated_hours=estimated_hours, priority=priority, how=how,
+        employee_id=employee_id, project_id=project_id,
+    )
+
+
+def update_meeting_activity(meeting_id: int, activity_id: str, changes: dict, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="update_meeting_activity", company_id=company_id,
+        service_method=MeetingMCPService.update_activity,
+        metadata={"meeting_id": int(meeting_id), "activity_id": activity_id},
+        meeting_id=int(meeting_id), activity_id=activity_id, changes=changes,
+    )
+
+
+def delete_meeting_activity(meeting_id: int, activity_id: str, company_id: int | None = None):
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="delete_meeting_activity", company_id=company_id,
+        service_method=MeetingMCPService.delete_activity,
+        metadata={"meeting_id": int(meeting_id), "activity_id": activity_id},
+        meeting_id=int(meeting_id), activity_id=activity_id,
+    )
+
+
+def sync_meeting_activities_to_project(meeting_id: int, activity_ids: list[str] | None = None, company_id: int | None = None):
+    """Cria ou atualiza ProjectTask a partir das atividades da reunião."""
+    from services.meeting_mcp_service import MeetingMCPService
+    return _meeting_service_mutation(
+        tool_name="sync_meeting_activities_to_project", company_id=company_id,
+        service_method=MeetingMCPService.sync_activities,
+        metadata={"meeting_id": int(meeting_id), "activity_ids": activity_ids or []},
+        meeting_id=int(meeting_id), activity_ids=activity_ids,
+    )
+
+
 def delete_meeting_secure(
     meeting_id: int,
     reason: str,
