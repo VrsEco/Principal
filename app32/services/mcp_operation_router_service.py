@@ -11,6 +11,21 @@ class McpOperationRouterService:
 
     ROUTES: tuple[dict[str, Any], ...] = (
         {
+            "intent": "strategy.plan_global_okrs.create",
+            "domain": "strategy",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "tool": "create_and_link_plan_global_okrs_tool",
+            "action": "create",
+            "risk": "medium",
+            "human_gate_required": True,
+            "keywords": (
+                "okrs globais serao 02",
+                "dois okrs globais",
+                "okr global comercial e logistica",
+                "okrs globais comercial e logistica",
+            ),
+        },
+        {
             "intent": "strategy.plan_driver.create",
             "domain": "strategy",
             "harness_key": "harness_coordenador_cliente_v1",
