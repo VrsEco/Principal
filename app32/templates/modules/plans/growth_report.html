@@ -1,106 +1,219 @@
 {% extends "modules/plans/base_planning.html" %}
 
 {% block planning_content %}
-<div class="planning-header"
-    style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px;">
+{% set report = report_context or {} %}
+{% set stats = report.get('stats', {}) %}
+{% set governance = report.get('governance', {}) %}
+<div class="report-toolbar">
     <div>
-        <h1 style="font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">Relatório Final</h1>
-        <p style="color: #64748b; font-size: 16px;">Gere o documento oficial do planejamento para apresentação aos
-            stakeholders.</p>
+        <span class="report-eyebrow">Consolidado estratégico</span>
+        <h1>Relatório Executivo</h1>
+        <p>Visão consolidada para alinhamento, decisão e acompanhamento da diretoria.</p>
     </div>
-    <button onclick="window.print()" class="nav-button"
-        style="background: #0f172a; color: #ffffff; padding: 12px 24px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
-        <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+    <button type="button" onclick="window.print()" class="report-export">
+        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+        Exportar relatório
     </button>
 </div>
 
-<div class="planning-card report-preview"
-    style="padding: 60px; min-height: 800px; background: #ffffff; box-shadow: 0 30px 60px -12px rgba(0,0,0,0.15); border-radius: 4px;">
-    <div style="text-align: center; margin-bottom: 80px;">
-        <img src="{{ url_for('static', filename='img/logo-versus.png') }}" alt="Versus Logo"
-            style="height: 60px; margin-bottom: 40px;">
-        <h1
-            style="font-size: 42px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 16px; letter-spacing: -1px;">
-            Relatório de Planejamento</h1>
-        <div
-            style="display: flex; justify-content: center; gap: 12px; font-size: 20px; font-weight: 600; color: #2563eb;">
-            <span>{{ plan.title }}</span>
-            <span style="color: #e2e8f0;">|</span>
-            <span>GROWTH 2026</span>
+<article class="executive-report" aria-label="Relatório executivo do planejamento {{ plan.title }}">
+    <header class="report-cover">
+        <div class="cover-orbit cover-orbit-one"></div>
+        <div class="cover-orbit cover-orbit-two"></div>
+        <div class="cover-topline">
+            <div class="report-brand">
+                <img src="{{ url_for('static', filename='img/logo-versus.png') }}" alt="Versus">
+            </div>
+            <span class="confidentiality">Uso executivo</span>
         </div>
-    </div>
+        <div class="cover-content">
+            <span class="cover-kicker">Planejamento estratégico · Growth</span>
+            <h2>{{ plan.title }}</h2>
+            <p>{{ company.name }}</p>
+        </div>
+        <div class="cover-metadata">
+            <div><span>Status</span><strong>{{ report.get('status_label', 'Em elaboração') }}</strong></div>
+            <div><span>Avanço do plano</span><strong>{{ report.get('progress', 0) }}%</strong></div>
+            <div><span>Atualizado em</span><strong>{{ report.get('plan_updated_on') or 'Não informado' }}</strong></div>
+            <div><span>Emitido em</span><strong>{{ report.get('generated_on', '') }}</strong></div>
+        </div>
+    </header>
 
-    <div style="margin-bottom: 48px;">
-        <h2
-            style="font-size: 24px; font-weight: 800; color: #0f172a; border-left: 4px solid #2563eb; padding-left: 16px; margin-bottom: 24px;">
-            Resumo Executivo</h2>
-        <p style="color: #334155; font-size: 16px; line-height: 1.8;">
-            Este documento formaliza as decisões estratégicas tomadas para o período, focando em alavancas de
-            crescimento,
-            identificação de riscos e definição de OKRs que nortearão a execução tática da empresa <strong>{{
-                company.name }}</strong>.
-        </p>
-    </div>
+    <section class="report-section executive-summary">
+        <div class="section-heading">
+            <span class="section-number">01</span>
+            <div><span class="section-kicker">Leitura da diretoria</span><h2>Resumo executivo</h2></div>
+        </div>
+        <div class="summary-grid">
+            <div class="summary-copy">
+                <p>{{ report.get('description') or ('Este relatório consolida as escolhas estratégicas, os objetivos e a carteira de iniciativas de ' ~ company.name ~ ' para orientar prioridades, responsabilidades e decisões ao longo do ciclo.') }}</p>
+                <div class="progress-panel">
+                    <div class="progress-copy"><span>Maturidade do planejamento</span><strong>{{ report.get('progress', 0) }}%</strong></div>
+                    <div class="progress-track"><span style="width: {{ report.get('progress', 0) }}%"></span></div>
+                    <small>Percentual geral registrado no plano</small>
+                </div>
+            </div>
+            <aside class="decision-panel">
+                <span class="panel-label">Pontos de atenção</span>
+                <div class="attention-item {{ 'is-alert' if governance.get('high_risk_count', 0) else '' }}">
+                    <strong>{{ governance.get('high_risk_count', 0) }}</strong><span>riscos de alta prioridade</span>
+                </div>
+                <div class="attention-item {{ 'is-alert' if governance.get('overdue_count', 0) else '' }}">
+                    <strong>{{ governance.get('overdue_count', 0) }}</strong><span>itens com prazo vencido</span>
+                </div>
+                <div class="attention-item {{ 'is-warning' if governance.get('missing_owner_count', 0) else '' }}">
+                    <strong>{{ governance.get('missing_owner_count', 0) }}</strong><span>itens sem responsável</span>
+                </div>
+            </aside>
+        </div>
+        <div class="metric-strip">
+            <div><strong>{{ stats.get('drivers', 0) }}</strong><span>Direcionadores</span></div>
+            <div><strong>{{ stats.get('global_okrs', 0) }}</strong><span>OKRs globais</span></div>
+            <div><strong>{{ stats.get('key_results', 0) }}</strong><span>Resultados-chave</span></div>
+            <div><strong>{{ stats.get('area_okrs', 0) }}</strong><span>OKRs de área</span></div>
+            <div><strong>{{ stats.get('projects', 0) }}</strong><span>Projetos</span></div>
+        </div>
+    </section>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 48px;">
-        <div>
-            <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 16px;">Direcionadores Primários
-            </h3>
-            <ul style="padding-left: 20px; color: #475569; font-size: 14px; line-height: 2;">
-                <li>Expansão regional Nordeste</li>
-                <li>Digitalização plena do suporte</li>
-                <li>Otimização de custos logísticos</li>
-            </ul>
+    <section class="report-section">
+        <div class="section-heading">
+            <span class="section-number">02</span>
+            <div><span class="section-kicker">Contexto e escolhas</span><h2>Direcionadores estratégicos</h2></div>
         </div>
-        <div>
-            <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 16px;">Principais OKRs</h3>
-            <ul style="padding-left: 20px; color: #475569; font-size: 14px; line-height: 2;">
-                <li>Crescimento de 30% no MRR</li>
-                <li>NPS acima de 75</li>
-                <li>Redução de 15% em Churn rate</li>
-            </ul>
+        {% if report.get('drivers') %}
+        <div class="driver-grid">
+            {% for driver in report.get('drivers', []) %}
+            <article class="driver-card driver-{{ driver.type }}">
+                <div class="card-meta"><span>{{ driver.type_label }}</span><em>Prioridade {{ driver.priority_label|lower }}</em></div>
+                <p>{{ driver.description }}</p>
+            </article>
+            {% endfor %}
         </div>
-    </div>
-</div>
+        {% else %}
+        <div class="empty-state"><i class="fa-regular fa-compass"></i><p>Direcionadores ainda não registrados neste plano.</p></div>
+        {% endif %}
+    </section>
+
+    <section class="report-section">
+        <div class="section-heading">
+            <span class="section-number">03</span>
+            <div><span class="section-kicker">Ambição corporativa</span><h2>Objetivos e resultados-chave</h2></div>
+        </div>
+        {% if report.get('global_okrs') %}
+        <div class="okr-stack">
+            {% for okr in report.get('global_okrs', []) %}
+            <article class="okr-card">
+                <div class="okr-index">O{{ '%02d'|format(loop.index) }}</div>
+                <div class="okr-body">
+                    <div class="okr-topline">
+                        <span class="type-pill">{{ okr.type_label }}</span>
+                        {% if okr.overdue %}<span class="overdue-pill">Prazo vencido</span>{% endif %}
+                    </div>
+                    <h3>{{ okr.objective }}</h3>
+                    <div class="owner-line">
+                        <span><i class="fa-regular fa-user"></i>{{ okr.owner or 'Responsável não definido' }}</span>
+                        <span><i class="fa-regular fa-calendar"></i>{% if okr.deadline %}{{ okr.deadline[8:10] }}/{{ okr.deadline[5:7] }}/{{ okr.deadline[0:4] }}{% else %}Prazo não definido{% endif %}</span>
+                    </div>
+                    {% if okr.key_results %}
+                    <div class="kr-list">
+                        {% for kr in okr.key_results %}
+                        <div class="kr-row">
+                            <span class="kr-number">KR{{ loop.index }}</span>
+                            <div><strong>{{ kr.label }}</strong><small>{{ kr.metric or 'Métrica não informada' }}{% if kr.target %} · Meta: {{ kr.target }}{% endif %}</small></div>
+                            {% if kr.overdue %}<i class="fa-solid fa-circle-exclamation" title="Prazo vencido"></i>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}<p class="inline-empty">Nenhum resultado-chave vinculado.</p>{% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fa-solid fa-bullseye"></i><p>OKRs globais ainda não definidos.</p></div>
+        {% endif %}
+    </section>
+
+    <section class="report-section">
+        <div class="section-heading">
+            <span class="section-number">04</span>
+            <div><span class="section-kicker">Desdobramento organizacional</span><h2>Compromissos por área</h2></div>
+        </div>
+        {% if report.get('area_okrs') %}
+        <div class="area-grid">
+            {% for okr in report.get('area_okrs', []) %}
+            <article class="area-card">
+                <span class="area-name">{{ okr.department }}</span>
+                <h3>{{ okr.objective }}</h3>
+                <div class="area-footer">
+                    <span>{{ okr.owner or 'Sem responsável' }}</span>
+                    <span>{{ okr.key_results_count }} KR{{ '' if okr.key_results_count == 1 else 's' }}</span>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fa-solid fa-layer-group"></i><p>O desdobramento de OKRs por área ainda não foi registrado.</p></div>
+        {% endif %}
+    </section>
+
+    <section class="report-section">
+        <div class="section-heading">
+            <span class="section-number">05</span>
+            <div><span class="section-kicker">Portfólio de execução</span><h2>Projetos estratégicos</h2></div>
+        </div>
+        {% if report.get('projects') %}
+        <div class="project-table-wrap">
+            <table class="project-table">
+                <thead><tr><th>Projeto</th><th>Responsável</th><th>Status</th><th>Progresso</th><th>Prazo</th></tr></thead>
+                <tbody>
+                {% for project in report.get('projects', []) %}
+                <tr class="{{ 'row-overdue' if project.overdue else '' }}">
+                    <td><span class="project-code">{{ project.code }}</span><strong>{{ project.name }}</strong></td>
+                    <td>{{ project.owner or 'Não definido' }}</td>
+                    <td><span class="status-chip status-{{ project.status }}">{{ project.status_label }}</span></td>
+                    <td><div class="table-progress"><span style="width: {{ project.progress }}%"></span></div><small>{{ project.progress }}%</small></td>
+                    <td>{% if project.deadline %}{{ project.deadline[8:10] }}/{{ project.deadline[5:7] }}/{{ project.deadline[0:4] }}{% else %}—{% endif %}{% if project.overdue %}<em>Vencido</em>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state"><i class="fa-solid fa-diagram-project"></i><p>Nenhum projeto estratégico foi vinculado ao plano.</p></div>
+        {% endif %}
+    </section>
+
+    <section class="report-section governance-section">
+        <div class="section-heading">
+            <span class="section-number">06</span>
+            <div><span class="section-kicker">Governança e cadência</span><h2>Prontidão para execução</h2></div>
+        </div>
+        <div class="governance-grid">
+            <div class="governance-score">
+                <div class="score-ring" style="--score: {{ report.get('progress', 0) }}"><strong>{{ report.get('progress', 0) }}%</strong></div>
+                <div><h3>Avanço consolidado</h3><p>A diretoria deve priorizar os itens sem responsável, com prazo vencido e riscos críticos antes do próximo ciclo de acompanhamento.</p></div>
+            </div>
+            <div class="governance-cards">
+                <div><span>Projetos em andamento</span><strong>{{ governance.get('active_projects', 0) }}</strong></div>
+                <div><span>Projetos concluídos</span><strong>{{ governance.get('completed_projects', 0) }}</strong></div>
+                <div><span>Equipe envolvida</span><strong>{{ stats.get('participants', 0) }}</strong></div>
+            </div>
+        </div>
+        {% if governance.get('high_risks') %}
+        <div class="risk-callout"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Riscos críticos para deliberação</strong><ul>{% for risk in governance.high_risks %}<li>{{ risk.description }}</li>{% endfor %}</ul></div></div>
+        {% endif %}
+    </section>
+
+    <footer class="report-footer">
+        <div><img src="{{ url_for('static', filename='img/logo-versus.png') }}" alt="Versus"><span>Gestão Versus · Inteligência para execução</span></div>
+        <p>Relatório gerado em {{ report.get('generated_on', '') }} · {{ company.name }}</p>
+    </footer>
+</article>
 
 <style>
-    @media print {
-
-        .app-header,
-        .planning-sidebar,
-        .planning-header,
-        .mobile-menu-toggle {
-            display: none !important;
-        }
-
-        .planning-shell {
-            height: auto !important;
-            overflow: visible !important;
-            display: block !important;
-            padding: 0 !important;
-        }
-
-        .app-main,
-        .planning-content {
-            padding: 0 !important;
-            margin: 0 !important;
-            overflow: visible !important;
-        }
-
-        .planning-container {
-            max-width: 100% !important;
-            padding: 0 !important;
-        }
-
-        .report-preview {
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-        }
-
-        body {
-            background: white !important;
-        }
-    }
+.report-toolbar,.report-toolbar *,.executive-report,.executive-report *{box-sizing:border-box}.report-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:28px}.report-toolbar h1{font-size:32px;line-height:1.1;font-weight:850;color:#0b172a;margin:6px 0 8px;letter-spacing:-.8px}.report-toolbar p{color:#64748b;font-size:15px;margin:0}.report-eyebrow,.section-kicker{font-size:11px;font-weight:800;letter-spacing:1.7px;text-transform:uppercase;color:#2563eb}.report-export{border:0;border-radius:12px;padding:13px 20px;background:#0b172a;color:#fff;font-weight:750;display:flex;align-items:center;gap:9px;box-shadow:0 10px 22px rgba(15,23,42,.18);cursor:pointer}.executive-report{--navy:#0b172a;--blue:#2563eb;--gold:#c9a96e;--ink:#172033;--muted:#64748b;background:#fff;color:var(--ink);border:1px solid #e7edf5;border-radius:18px;overflow:hidden;box-shadow:0 28px 70px rgba(15,23,42,.12)}.report-cover{min-height:535px;background:linear-gradient(135deg,#07111f 0%,#102642 60%,#17375d 100%);color:#fff;padding:54px 60px 46px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}.cover-orbit{position:absolute;border:1px solid rgba(255,255,255,.12);border-radius:50%}.cover-orbit-one{width:430px;height:430px;right:-150px;top:-110px}.cover-orbit-two{width:260px;height:260px;right:55px;top:75px;border-color:rgba(201,169,110,.26)}.cover-topline,.cover-metadata{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}.report-brand{background:#fff;border-radius:10px;padding:9px 14px;display:inline-flex}.report-brand img{height:29px;width:auto}.confidentiality{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;font-weight:800;border:1px solid rgba(255,255,255,.25);padding:8px 12px;border-radius:999px}.cover-content{position:relative;z-index:1;max-width:720px}.cover-kicker{color:#d7bb87;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:2px}.cover-content h2{font-size:50px;line-height:1.05;letter-spacing:-1.7px;margin:18px 0 16px;color:#fff;font-weight:850}.cover-content p{font-size:19px;color:#cbd7e6;margin:0}.cover-metadata{border-top:1px solid rgba(255,255,255,.14);padding-top:25px;gap:28px;align-items:flex-start}.cover-metadata div{display:flex;flex-direction:column;gap:5px;flex:1}.cover-metadata span{font-size:10px;color:#9fb1c7;text-transform:uppercase;letter-spacing:1.2px}.cover-metadata strong{font-size:14px;color:#fff}.report-section{padding:54px 60px;border-bottom:1px solid #e8edf3}.section-heading{display:flex;gap:18px;align-items:flex-start;margin-bottom:30px}.section-number{font-size:12px;font-weight:850;color:#2563eb;border:1px solid #bfdbfe;background:#eff6ff;border-radius:8px;padding:7px 8px}.section-heading h2{margin:3px 0 0;font-size:28px;line-height:1.2;color:#0b172a;letter-spacing:-.6px}.summary-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,.8fr);gap:34px}.summary-copy>p{font-size:17px;line-height:1.75;color:#334155;margin:0 0 28px}.progress-panel{background:#f7f9fc;border:1px solid #e4eaf2;border-radius:14px;padding:18px}.progress-copy{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#475569}.progress-copy strong{font-size:20px;color:#0f172a}.progress-track,.table-progress{height:7px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin:10px 0 8px}.progress-track span,.table-progress span{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:999px}.progress-panel small{color:#94a3b8}.decision-panel{background:#0f2037;color:#fff;border-radius:16px;padding:22px}.panel-label{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#94a8c2;font-weight:800}.attention-item{display:grid;grid-template-columns:40px 1fr;align-items:center;gap:10px;padding:15px 0;border-bottom:1px solid rgba(255,255,255,.09)}.attention-item:last-child{border:0}.attention-item strong{font-size:25px}.attention-item span{font-size:12px;color:#c7d4e4}.attention-item.is-alert strong{color:#fb7185}.attention-item.is-warning strong{color:#fbbf24}.metric-strip{display:grid;grid-template-columns:repeat(5,1fr);margin-top:32px;border:1px solid #e4eaf2;border-radius:14px;overflow:hidden}.metric-strip div{padding:18px 16px;border-right:1px solid #e4eaf2}.metric-strip div:last-child{border:0}.metric-strip strong{display:block;font-size:24px;color:#0f172a}.metric-strip span{font-size:11px;color:#64748b}.driver-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.driver-card{border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:12px;padding:18px 20px;background:#fff}.driver-card.driver-opportunity{border-left-color:#10b981}.driver-card.driver-threat{border-left-color:#e11d48}.card-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}.card-meta span{font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:850;color:#475569}.card-meta em{font-style:normal;font-size:10px;color:#94a3b8}.driver-card p{margin:0;color:#334155;line-height:1.55}.okr-stack{display:flex;flex-direction:column;gap:16px}.okr-card{display:grid;grid-template-columns:62px 1fr;border:1px solid #dde5ef;border-radius:14px;overflow:hidden}.okr-index{background:#0e2037;color:#fff;display:flex;align-items:flex-start;justify-content:center;padding-top:22px;font-size:12px;font-weight:850;letter-spacing:1px}.okr-body{padding:21px 24px}.okr-topline{display:flex;gap:8px}.type-pill,.overdue-pill,.status-chip{display:inline-block;border-radius:999px;padding:5px 9px;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.6px;background:#eff6ff;color:#1d4ed8}.overdue-pill{background:#fff1f2;color:#be123c}.okr-body h3{font-size:18px;line-height:1.4;color:#152238;margin:10px 0}.owner-line{display:flex;gap:24px;color:#64748b;font-size:11px}.owner-line span{display:flex;align-items:center;gap:6px}.kr-list{margin-top:18px;border-top:1px solid #edf1f6}.kr-row{display:grid;grid-template-columns:42px 1fr 18px;gap:10px;padding:12px 0;border-bottom:1px solid #edf1f6;align-items:center}.kr-row:last-child{border:0}.kr-number{font-size:10px;font-weight:850;color:#2563eb}.kr-row strong{display:block;font-size:12px;color:#334155}.kr-row small{font-size:10px;color:#94a3b8}.kr-row i{color:#e11d48}.inline-empty{font-size:12px;color:#94a3b8;margin:16px 0 0}.area-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.area-card{padding:20px;border:1px solid #e1e7ef;border-radius:13px;background:linear-gradient(145deg,#fff,#f8fafc)}.area-name{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;font-weight:850;color:#2563eb}.area-card h3{font-size:15px;line-height:1.45;min-height:44px;margin:10px 0 20px}.area-footer{display:flex;justify-content:space-between;border-top:1px solid #e7ecf2;padding-top:12px;color:#64748b;font-size:10px}.project-table-wrap{overflow-x:auto}.project-table{width:100%;border-collapse:collapse;font-size:11px}.project-table th{text-align:left;padding:11px 12px;background:#f1f5f9;color:#475569;text-transform:uppercase;letter-spacing:.7px;font-size:9px}.project-table td{padding:15px 12px;border-bottom:1px solid #e8edf3;vertical-align:middle;color:#475569}.project-table td:first-child strong{display:block;color:#172033;font-size:12px;margin-top:3px}.project-code{font-size:8px;color:#2563eb;font-weight:850;letter-spacing:.6px}.status-planned{background:#f1f5f9;color:#475569}.status-in_progress{background:#eff6ff;color:#1d4ed8}.status-completed{background:#ecfdf5;color:#047857}.table-progress{width:84px;height:5px;display:inline-block;margin:0 7px 0 0}.project-table td em{display:block;color:#be123c;font-size:8px;font-style:normal;font-weight:800}.row-overdue{background:#fffafb}.governance-section{background:#f8fafc}.governance-grid{display:grid;grid-template-columns:1.3fr .9fr;gap:24px}.governance-score{display:flex;align-items:center;gap:22px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px}.score-ring{--score:0;width:92px;height:92px;flex:0 0 92px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#2563eb calc(var(--score)*1%),#e2e8f0 0);position:relative}.score-ring:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#fff}.score-ring strong{position:relative;z-index:1;color:#0f172a;font-size:18px}.governance-score h3{font-size:16px;margin:0 0 7px}.governance-score p{font-size:11px;line-height:1.6;color:#64748b;margin:0}.governance-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.governance-cards div{background:#0e2037;border-radius:12px;padding:17px;display:flex;flex-direction:column;justify-content:space-between}.governance-cards span{font-size:9px;color:#a9b9cc;line-height:1.35}.governance-cards strong{font-size:25px;color:#fff;margin-top:14px}.risk-callout{display:flex;gap:15px;background:#fff1f2;border:1px solid #fecdd3;color:#881337;padding:18px 20px;border-radius:12px;margin-top:18px}.risk-callout>i{margin-top:2px}.risk-callout strong{font-size:12px}.risk-callout ul{margin:8px 0 0;padding-left:17px;font-size:11px;line-height:1.6}.empty-state{border:1px dashed #cbd5e1;border-radius:14px;padding:32px;text-align:center;background:#f8fafc;color:#94a3b8}.empty-state i{font-size:24px;margin-bottom:8px}.empty-state p{margin:0;font-size:12px}.report-footer{padding:24px 60px;display:flex;align-items:center;justify-content:space-between;background:#fff}.report-footer div{display:flex;align-items:center;gap:12px}.report-footer img{height:23px}.report-footer span,.report-footer p{font-size:9px;color:#94a3b8;margin:0}
+@media(max-width:900px){.report-cover,.report-section{padding:36px 30px}.cover-content h2{font-size:38px}.cover-metadata{display:grid;grid-template-columns:1fr 1fr}.summary-grid,.governance-grid{grid-template-columns:1fr}.metric-strip{grid-template-columns:repeat(2,1fr)}.metric-strip div{border-bottom:1px solid #e4eaf2}.driver-grid,.area-grid{grid-template-columns:1fr}.report-toolbar{align-items:flex-start;flex-direction:column}.report-footer{padding:22px 30px;gap:15px;align-items:flex-start;flex-direction:column}}
+@media print{@page{size:A4;margin:12mm}.app-header,.planning-sidebar,.report-toolbar,.mobile-menu-toggle{display:none!important}.planning-shell,.app-main,.planning-content{height:auto!important;overflow:visible!important;display:block!important;padding:0!important;margin:0!important}.planning-container{max-width:none!important;padding:0!important}.executive-report{border:0!important;border-radius:0!important;box-shadow:none!important}.report-cover{min-height:250mm;page-break-after:always;-webkit-print-color-adjust:exact;print-color-adjust:exact}.report-section{padding:12mm 8mm;break-inside:auto}.section-heading,.okr-card,.driver-card,.area-card,.governance-grid,.risk-callout,.project-table tr{break-inside:avoid}.report-footer{break-inside:avoid}.project-table{font-size:9px}body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 {% endblock %}

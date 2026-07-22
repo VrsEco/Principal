@@ -103,6 +103,8 @@ def growth_section(plan_id, section):
         # For simplicity, passing all active employees
         extra_data['employees'] = Employee.query.filter_by(company_id=company.id, status='active').order_by(Employee.name).all()
         extra_data['participants'] = PlanParticipant.query.filter_by(plan_id=plan_id).all()
+    elif section == 'final_report':
+        extra_data['report_context'] = PlanService.get_growth_report_context(plan_id, company.id)
         
     # Common sections for sidebar
     sections = PlanService.get_sections_config('growth')

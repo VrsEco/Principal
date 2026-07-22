@@ -1,13 +1,145 @@
 from models import db, Plan, PlanParticipant, PlanSectionStatus, PlanDriver, PlanImplantationData
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 import logging
 
 logger = logging.getLogger(__name__)
 
 class PlanService:
+    @staticmethod
+    def _build_growth_report_context(
+        plan: Plan,
+        drivers: List[Any],
+        global_okrs: List[Any],
+        area_okrs: List[Any],
+        projects: List[Any],
+        participants: List[Any],
+        today: Optional[date] = None,
+    ) -> Dict[str, Any]:
+        """Monta o read model executivo do relatório sem acoplar regra ao template."""
+        today = today or date.today()
+
+        def iso(value):
+            return value.isoformat() if value and hasattr(value, "isoformat") else None
+
+        def is_overdue(value):
+            return bool(value and value < today)
+
+        driver_labels = {"driver": "Direcionador", "opportunity": "Oportunidade", "threat": "Risco"}
+        priority_labels = {"high": "Alta", "medium": "Média", "low": "Baixa"}
+        status_labels = {
+            "planned": "Planejado", "in_progress": "Em andamento",
+            "completed": "Concluído", "cancelled": "Cancelado",
+        }
+
+        driver_items = [{
+            "description": item.description,
+            "type": item.type,
+            "type_label": driver_labels.get(item.type, "Direcionador"),
+            "priority": item.priority or "medium",
+            "priority_label": priority_labels.get(item.priority or "medium", "Média"),
+        } for item in drivers]
+
+        global_items = []
+        total_key_results = 0
+        for okr in global_okrs:
+            key_results = okr.key_results.all() if hasattr(okr.key_results, "all") else list(okr.key_results or [])
+            total_key_results += len(key_results)
+            global_items.append({
+                "objective": okr.objective, "type": okr.type,
+                "type_label": {"aceleracao": "Aceleração", "estruturante": "Estruturante"}.get(okr.type, (okr.type or "Objetivo").replace("_", " ").title()),
+                "owner": okr.owner,
+                "deadline": iso(okr.deadline), "overdue": is_overdue(okr.deadline),
+                "key_results": [{
+                    "label": kr.label, "metric": kr.metric, "target": kr.target,
+                    "owner": kr.owner, "deadline": iso(kr.deadline),
+                    "overdue": is_overdue(kr.deadline),
+                } for kr in key_results],
+            })
+
+        area_items = []
+        for okr in area_okrs:
+            key_results = okr.key_results.all() if hasattr(okr.key_results, "all") else list(okr.key_results or [])
+            area_items.append({
+                "objective": okr.objective, "department": okr.department or "Área não informada",
+                "owner": okr.owner, "deadline": iso(okr.deadline),
+                "overdue": is_overdue(okr.deadline), "key_results_count": len(key_results),
+            })
+
+        project_items = []
+        for project in projects:
+            status = project.status or "planned"
+            project_items.append({
+                "code": project.code, "name": project.name, "owner": project.owner,
+                "status": status,
+                "status_label": status_labels.get(status, status.replace("_", " ").title()),
+                "priority": project.priority or "medium",
+                "priority_label": priority_labels.get(project.priority or "medium", "Média"),
+                "progress": max(0, min(int(project.progress or 0), 100)),
+                "deadline": iso(project.deadline),
+                "overdue": is_overdue(project.deadline) and status != "completed",
+            })
+
+        participant_items = []
+        for participant in participants:
+            person = participant.employee or participant.user
+            participant_items.append({
+                "name": getattr(person, "name", None) or getattr(person, "full_name", None) or "Participante",
+                "role": participant.role or "viewer",
+            })
+
+        overdue_count = sum(item["overdue"] for item in global_items + area_items + project_items)
+        overdue_count += sum(kr["overdue"] for item in global_items for kr in item["key_results"])
+        missing_owner_count = sum(not item["owner"] for item in global_items + area_items + project_items)
+        high_risks = [item for item in driver_items if item["type"] == "threat" and item["priority"] == "high"]
+
+        return {
+            "generated_on": today.strftime("%d/%m/%Y"),
+            "plan_updated_on": plan.updated_at.strftime("%d/%m/%Y") if plan.updated_at else None,
+            "description": (plan.description or "").strip(),
+            "progress": max(0, min(int(plan.progress or 0), 100)),
+            "status": plan.status or "draft",
+            "status_label": {"draft": "Em elaboração", "active": "Ativo", "archived": "Arquivado"}.get(plan.status, "Em elaboração"),
+            "stats": {
+                "drivers": len(driver_items), "global_okrs": len(global_items),
+                "key_results": total_key_results, "area_okrs": len(area_items),
+                "projects": len(project_items), "participants": len(participant_items),
+            },
+            "drivers": driver_items, "global_okrs": global_items,
+            "area_okrs": area_items, "projects": project_items,
+            "participants": participant_items,
+            "governance": {
+                "overdue_count": overdue_count,
+                "missing_owner_count": missing_owner_count,
+                "high_risk_count": len(high_risks), "high_risks": high_risks,
+                "completed_projects": sum(item["status"] == "completed" for item in project_items),
+                "active_projects": sum(item["status"] == "in_progress" for item in project_items),
+            },
+        }
+
+    @staticmethod
+    def get_growth_report_context(plan_id: int, company_id: int) -> Dict[str, Any]:
+        """Consolida dados reais do plano com isolamento obrigatório por empresa."""
+        plan = PlanService.get_plan(plan_id, company_id)
+        if not plan or plan.mode != "growth":
+            return {}
+
+        from models import OKRArea, OKRGlobal, Project
+
+        drivers = PlanDriver.query.filter_by(plan_id=plan_id).order_by(PlanDriver.id).all()
+        global_okrs = OKRGlobal.query.filter_by(plan_id=plan_id, company_id=company_id).order_by(OKRGlobal.id).all()
+        area_okrs = OKRArea.query.filter_by(plan_id=plan_id, company_id=company_id).order_by(OKRArea.id).all()
+        projects = Project.query.filter_by(
+            plan_id=plan_id, company_id=company_id, is_deleted=False
+        ).order_by(Project.id).all()
+        participants = PlanParticipant.query.filter_by(plan_id=plan_id).order_by(PlanParticipant.id).all()
+
+        return PlanService._build_growth_report_context(
+            plan, drivers, global_okrs, area_okrs, projects, participants
+        )
+
     @staticmethod
     def get_valid_section_keys(mode: str) -> List[str]:
         """Retorna as section_keys válidas para o modo informado."""
