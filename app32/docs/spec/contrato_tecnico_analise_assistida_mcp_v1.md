@@ -404,6 +404,44 @@ O contrato oficial da Missão exige:
 
 Uma evolução do método deve gerar nova versão ativa, arquivando ou substituindo a anterior de forma controlada. O snapshot gravado em cada análise é imutável: análises históricas feitas com `fallback-v1` permanecem com essa versão e fonte.
 
+### 10.1.2 Protocolo oficial da Visão
+
+A subfase `identity/vision` utiliza `vision-official-v1.0`, com jornada `vision-maturity-v1.0`.
+
+O protocolo exige:
+
+- horizonte futuro explícito e ambição desejada;
+- clientes, mercados, geografias, ofertas e posição competitiva pretendidos;
+- evidências mensuráveis de alcance, sem converter a Visão em lista de metas;
+- pesquisa profunda de pares, tendências e cenários;
+- simulação de cenário favorável, base e adverso;
+- confronto da ambição com capacidades, processos, pessoas, tecnologia, capital, restrições e trade-offs;
+- coerência com Missão, Valores, Posicionamento e Planejamento Estratégico.
+
+### 10.1.3 Protocolo oficial dos Valores
+
+A subfase `identity/values` utiliza `values-official-v1.0`, com jornada `values-maturity-v1.0`.
+
+O protocolo exige:
+
+- princípios realmente inegociáveis;
+- comportamento observável e anticomportamento para cada valor;
+- dilemas reais ou simulados que testem decisões sob pressão;
+- evidências de aderência e distância entre discurso e prática;
+- resposta esperada diante de violações;
+- coerência com Missão, Visão, processos, pessoas, políticas e incentivos;
+- evidências, indicadores ou auditorias que acompanhem a prática sem reduzir Valores a slogans.
+
+### 10.1.4 Coerência final do MVV
+
+Missão, Visão e Valores podem avançar em jornadas separadas. O encerramento metodológico do MVV exige revisão integrada posterior, preservando:
+
+- Missão como propósito, cliente e transformação presente;
+- Visão como futuro desejado e ambição sustentável;
+- Valores como princípios traduzidos em comportamento e decisão;
+- ausência de contradições relevantes entre os três elementos;
+- aderência ao Posicionamento, aos processos e ao Planejamento Estratégico.
+
 ### 10.2 Rastreabilidade Protocolo → Análise
 
 Cada análise recebida deve guardar uma fotografia do protocolo usado no momento do trabalho.

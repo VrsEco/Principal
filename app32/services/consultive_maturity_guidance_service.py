@@ -19,6 +19,30 @@ class ConsultiveMaturityGuidanceService:
         "strategic_management": "indicators",
     }
 
+    IDENTITY_SUBPHASE_CONTRACTS = {
+        "mission": {
+            "title": "Missão",
+            "journey_version": "mission-maturity-v1.2",
+            "develop_key": "develop_mission_diagnosis",
+            "develop_objective": "Entender a intenção do gestor, pesquisar referências e confrontar a promessa com a capacidade real de entrega.",
+            "persist_key": "persist_approved_mission",
+        },
+        "vision": {
+            "title": "Visão",
+            "journey_version": "vision-maturity-v1.0",
+            "develop_key": "develop_vision_diagnosis",
+            "develop_objective": "Definir futuro desejado, horizonte e ambição sustentável, confrontando cenários com capacidades e restrições reais.",
+            "persist_key": "persist_approved_vision",
+        },
+        "values": {
+            "title": "Valores",
+            "journey_version": "values-maturity-v1.0",
+            "develop_key": "develop_values_diagnosis",
+            "develop_objective": "Transformar princípios declarados em comportamentos observáveis, dilemas, anticomportamentos e evidências da cultura real.",
+            "persist_key": "persist_approved_values",
+        },
+    }
+
     @classmethod
     def get_next_action(
         cls,
@@ -43,6 +67,11 @@ class ConsultiveMaturityGuidanceService:
             subphase_key=normalized_subphase,
             audience="ai_cli",
         )
+        subphase_contract = cls._subphase_contract(
+            front_key=normalized_front,
+            subphase_key=normalized_subphase,
+            protocol=protocol,
+        )
         analyses = ConsultiveAssistedAnalysisService.list_analyses(
             company_id=company_id,
             front_key=normalized_front,
@@ -60,6 +89,7 @@ class ConsultiveMaturityGuidanceService:
             latest_received=latest_received,
             context=context,
             protocol=protocol,
+            subphase_contract=subphase_contract,
             engineering_required=engineering_required,
         )
         validations = cls._validation_map(latest)
@@ -78,8 +108,8 @@ class ConsultiveMaturityGuidanceService:
             "company_id": company_id,
             "front_key": normalized_front,
             "subphase_key": normalized_subphase,
-            "journey_version": "mission-maturity-v1.2" if (normalized_front, normalized_subphase) == ("identity", "mission") else "structuring-journey-v2",
-            "pilot_scope": (normalized_front, normalized_subphase) == ("identity", "mission"),
+            "journey_version": subphase_contract["journey_version"],
+            "pilot_scope": normalized_front == "identity" and normalized_subphase in cls.IDENTITY_SUBPHASE_CONTRACTS,
             "protocol": {
                 "id": protocol.get("id"),
                 "version": protocol.get("protocol_version"),
@@ -123,6 +153,34 @@ class ConsultiveMaturityGuidanceService:
             },
         }
 
+    @classmethod
+    def _subphase_contract(
+        cls,
+        *,
+        front_key: str,
+        subphase_key: str | None,
+        protocol: dict[str, Any],
+    ) -> dict[str, str]:
+        configured = dict(cls.IDENTITY_SUBPHASE_CONTRACTS.get(subphase_key) or {}) if front_key == "identity" else {}
+        title = configured.get("title") or ConsultiveProtocolService._subphase_title(subphase_key or front_key)
+        article = "os " if title == "Valores" else "a "
+        protocol_data = dict(protocol.get("protocol") or {})
+        return {
+            "title": title,
+            "title_with_article": f"{article}{title}",
+            "approval_adjective": "aprovados" if title == "Valores" else "aprovada",
+            "persistence_adjective": "persistidos" if title == "Valores" else "persistida",
+            "journey_version": (
+                str(protocol_data.get("journey_version") or configured.get("journey_version") or "structuring-journey-v2")
+            ),
+            "develop_key": configured.get("develop_key") or f"develop_{subphase_key or front_key}_diagnosis",
+            "develop_objective": (
+                configured.get("develop_objective")
+                or f"Diagnosticar e amadurecer {article}{title} com evidências internas, externas e validação humana."
+            ),
+            "persist_key": configured.get("persist_key") or f"persist_approved_{subphase_key or front_key}",
+        }
+
     @staticmethod
     def _latest_applicable_analysis(
         analyses: list[dict[str, Any]],
@@ -134,7 +192,10 @@ class ConsultiveMaturityGuidanceService:
             snapshot = dict(analysis.get("protocol_snapshot") or {})
             source_payload = dict(analysis.get("source_payload") or {})
             analysis_subphase = snapshot.get("subphase_key") or source_payload.get("subphase_key")
-            if analysis_subphase not in (None, "", subphase_key):
+            if subphase_key in {"vision", "values"}:
+                if analysis_subphase != subphase_key:
+                    continue
+            elif analysis_subphase not in (None, "", subphase_key):
                 continue
             if eligible_only and not bool(analysis.get("journey_eligible")):
                 continue
@@ -165,15 +226,16 @@ class ConsultiveMaturityGuidanceService:
         latest_received: dict[str, Any] | None,
         context: dict[str, Any],
         protocol: dict[str, Any],
+        subphase_contract: dict[str, str],
         engineering_required: bool,
     ) -> tuple[str, dict[str, Any]]:
         if latest is None:
             protocol_data = dict(protocol.get("protocol") or {})
             return "collecting_evidence", cls._action(
-                key="develop_mission_diagnosis",
-                label="Diagnosticar e amadurecer a Missão",
+                key=subphase_contract["develop_key"],
+                label=f"Diagnosticar e amadurecer {subphase_contract['title_with_article']}",
                 responsible="Squad Cliente / gestor / CLI do cliente",
-                objective="Entender a intenção do gestor, pesquisar referências e confrontar a promessa com a capacidade real de entrega.",
+                objective=subphase_contract["develop_objective"],
                 required_inputs=[
                     *([
                         f"O registro assistido #{latest_received.get('id')} é inelegível e não avançou a jornada.",
@@ -273,13 +335,17 @@ class ConsultiveMaturityGuidanceService:
             )
 
         return "approved_for_execution", cls._action(
-            key="persist_approved_mission",
-            label="Persistir e verificar a Missão aprovada",
+            key=subphase_contract["persist_key"],
+            label=f"Persistir e verificar {subphase_contract['title_with_article']} {subphase_contract['approval_adjective']}",
             responsible="Executor autorizado / Consultor Versus",
             objective="Gravar somente o conteúdo expressamente aprovado e confirmar a persistência por releitura.",
             required_inputs=["Texto exato aprovado", "Decisão do consultor", "Executor e tenant confirmados"],
             allowed_tools=["get_strategy_identity_tool", "upsert_strategy_identity_tool", "consultive_get_front_context"],
-            completion_criteria=["Missão persistida no company_id correto", "Releitura equivalente sem divergência", "Maturidade recalculada"],
+            completion_criteria=[
+                f"{subphase_contract['title']} {subphase_contract['persistence_adjective']} no company_id correto",
+                "Releitura equivalente sem divergência",
+                "Maturidade recalculada",
+            ],
             human_gate_required=True,
             write_policy=cls._write_policy(
                 "upsert_strategy_identity_tool",

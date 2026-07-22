@@ -189,7 +189,7 @@ Antes de `consultive_register_assisted_analysis`, classificar explicitamente a a
 - `analysis_type=technical_test` quando o objetivo for testar conexão, schema, autenticação, tenant, persistência ou gate;
 - `analysis_type=methodological` somente quando houver conteúdo real da subfase e evidências suficientes.
 
-Para `identity/mission`, uma análise metodológica deve incluir `subphase_key`, `human_evidence`, `internal_evidence`, `diagnosis`, `risks`, `recommendations` e `benchmarks` ou justificativa de não aplicabilidade.
+Para `identity/mission`, `identity/vision` e `identity/values`, uma análise metodológica deve incluir `subphase_key`, `human_evidence`, `internal_evidence`, `diagnosis`, `risks`, `recommendations` e `benchmarks` ou justificativa de não aplicabilidade.
 
 O Coordenador não pode:
 
@@ -235,3 +235,18 @@ Antes de iniciar ou retomar `identity/mission`, chamar `consultive_resolve_proto
 - `status=active` e `depth_level=simulation`.
 
 Se a resolução retornar `fallback`, interromper o avanço metodológico novo e escalar ao Squad Engenharia. O fallback preserva disponibilidade, mas não substitui o protocolo oficial editável. Análises históricas mantêm o snapshot da versão com que foram produzidas.
+
+### 14.3 Protocolos oficiais da Visão e dos Valores
+
+Antes de iniciar ou retomar essas subfases, resolver o protocolo com o `company_id` autorizado e confirmar:
+
+| Subfase | Versão oficial | Jornada |
+|---|---|---|
+| `identity/vision` | `vision-official-v1.0` | `vision-maturity-v1.0` |
+| `identity/values` | `values-official-v1.0` | `values-maturity-v1.0` |
+
+Para ambas, `id` deve ser não nulo, `source` deve ser `tenant` ou `global`, `status=active` e `depth_level=simulation`. Retorno `fallback` interrompe nova condução metodológica e deve ser escalado à Engenharia.
+
+Na Visão, o CLI deve pesquisar cenários e confrontar ambição com capacidades e restrições, sem transformar a Visão em metas. Nos Valores, deve testar comportamentos, anticomportamentos, dilemas, violações, políticas e incentivos, sem copiar listas externas. Cada análise usa exclusivamente sua `subphase_key`; uma análise de Missão nunca pode avançar Visão ou Valores.
+
+Após a execução separada das três subfases, o Consultor Versus deve conduzir revisão final de coerência do MVV antes de declarar a Identidade Organizacional madura.

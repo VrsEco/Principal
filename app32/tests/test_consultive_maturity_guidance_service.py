@@ -12,21 +12,38 @@ def _context(engineering=True):
     }
 
 
-def _protocol():
+def _protocol(subphase="mission"):
+    titles = {"mission": "Missão", "vision": "Visão", "values": "Valores"}
+    versions = {
+        "mission": "mission-official-v1.0",
+        "vision": "vision-official-v1.0",
+        "values": "values-official-v1.0",
+    }
+    journey_versions = {
+        "mission": "mission-maturity-v1.2",
+        "vision": "vision-maturity-v1.0",
+        "values": "values-maturity-v1.0",
+    }
+    questions = {
+        "mission": "O que a empresa entrega?",
+        "vision": "Onde a empresa quer estar?",
+        "values": "Quais princípios são inegociáveis?",
+    }
     return {
-        "id": None,
-        "protocol_version": "fallback-v1",
-        "source": "fallback",
-        "title": "Protocolo da Missão",
+        "id": 1,
+        "protocol_version": versions[subphase],
+        "source": "global",
+        "title": f"Protocolo da {titles[subphase]}",
         "depth_level": "simulation",
         "protocol": {
-            "investigation_layers": ["gestor_intent", "external_benchmark"],
-            "required_questions": ["O que a empresa entrega?"],
+            "journey_version": journey_versions[subphase],
+            "investigation_layers": (["gestor_intent", "external_benchmark"] if subphase == "mission" else [f"{subphase}_layer", "external_benchmark"]),
+            "required_questions": [questions[subphase]],
         },
     }
 
 
-def _analysis(*, validations=None, decision=None, status="received"):
+def _analysis(*, validations=None, decision=None, status="received", subphase="mission"):
     return {
         "id": 77,
         "company_id": 9,
@@ -35,13 +52,13 @@ def _analysis(*, validations=None, decision=None, status="received"):
         "analysis_type": "methodological",
         "journey_eligible": True,
         "eligibility_reasons": [],
-        "protocol_snapshot": {"subphase_key": "mission"},
+        "protocol_snapshot": {"subphase_key": subphase},
         "validations": validations or [],
         "latest_decision": decision,
     }
 
 
-def _install(monkeypatch, analyses, *, engineering=True):
+def _install(monkeypatch, analyses, *, engineering=True, subphase="mission"):
     calls = {}
     monkeypatch.setattr(
         "services.consultive_maturity_guidance_service.BusinessReviewReadModelService.get_structural_front_analysis",
@@ -49,7 +66,7 @@ def _install(monkeypatch, analyses, *, engineering=True):
     )
     monkeypatch.setattr(
         "services.consultive_maturity_guidance_service.ConsultiveProtocolService.resolve_protocol",
-        lambda **kwargs: calls.setdefault("protocol", kwargs) and _protocol(),
+        lambda **kwargs: calls.setdefault("protocol", kwargs) and _protocol(subphase),
     )
     monkeypatch.setattr(
         "services.consultive_maturity_guidance_service.ConsultiveAssistedAnalysisService.list_analyses",
@@ -205,4 +222,86 @@ def test_ineligible_methodological_analysis_does_not_advance_journey(monkeypatch
 
     assert result["journey_state"] == "collecting_evidence"
     assert result["current_state"]["latest_received_analysis_id"] == 77
+    assert result["current_state"]["latest_analysis_id"] is None
+
+
+def test_vision_without_analysis_uses_its_own_official_journey(monkeypatch):
+    _install(monkeypatch, [], engineering=False, subphase="vision")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="vision"
+    )
+
+    assert result["journey_version"] == "vision-maturity-v1.0"
+    assert result["pilot_scope"] is True
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["next_action"]["key"] == "develop_vision_diagnosis"
+    assert result["next_action"]["label"] == "Diagnosticar e amadurecer a Visão"
+    assert "Onde a empresa quer estar?" in result["next_action"]["required_inputs"]
+    assert result["protocol"]["version"] == "vision-official-v1.0"
+
+
+def test_values_without_analysis_uses_behavioral_journey(monkeypatch):
+    _install(monkeypatch, [], engineering=False, subphase="values")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="values"
+    )
+
+    assert result["journey_version"] == "values-maturity-v1.0"
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["next_action"]["key"] == "develop_values_diagnosis"
+    assert result["next_action"]["label"] == "Diagnosticar e amadurecer os Valores"
+    assert "Quais princípios são inegociáveis?" in result["next_action"]["required_inputs"]
+
+
+def test_values_accepted_decision_authorizes_only_values_persistence(monkeypatch):
+    validations = [
+        {"squad": "client", "status": "validated"},
+        {"squad": "versus", "status": "validated"},
+    ]
+    analysis = _analysis(
+        validations=validations,
+        decision={"decision": "accept"},
+        subphase="values",
+    )
+    _install(monkeypatch, [analysis], engineering=False, subphase="values")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="values"
+    )
+
+    assert result["journey_state"] == "approved_for_execution"
+    assert result["next_action"]["key"] == "persist_approved_values"
+    assert result["next_action"]["label"] == "Persistir e verificar os Valores aprovados"
+    assert result["next_action"]["write_policy"]["canonical_write_allowed"] is True
+
+
+def test_vision_does_not_consume_mission_analysis(monkeypatch):
+    _install(
+        monkeypatch,
+        [_analysis(validations=[{"squad": "client", "status": "validated"}], subphase="mission")],
+        engineering=False,
+        subphase="vision",
+    )
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="vision"
+    )
+
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["current_state"]["latest_analysis_id"] is None
+    assert result["next_action"]["key"] == "develop_vision_diagnosis"
+
+
+def test_vision_does_not_consume_legacy_analysis_without_subphase(monkeypatch):
+    legacy = _analysis(subphase="mission")
+    legacy["protocol_snapshot"] = {"subphase_key": None}
+    _install(monkeypatch, [legacy], engineering=False, subphase="vision")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="vision"
+    )
+
+    assert result["journey_state"] == "collecting_evidence"
     assert result["current_state"]["latest_analysis_id"] is None

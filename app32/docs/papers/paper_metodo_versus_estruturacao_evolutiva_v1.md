@@ -1113,7 +1113,11 @@ Os quatro roteiros de frente são:
 
 O roteiro é modificável e versionado. O fallback em código existe apenas como contingência operacional; a condução normal deve usar um protocolo persistido, resolvido na ordem **tenant → global → fallback**.
 
-A Missão Organizacional é a primeira subfase oficializada nesse modelo, pelo protocolo `mission-official-v1.0`. Existe uma referência global para todos os tenants e uma versão tenant-owned da própria Versus, identificada pelo código estável da empresa. A versão tenant-owned pode evoluir sem alterar código e sem afetar outros clientes. Cada análise conserva a fotografia do protocolo utilizado; portanto, evoluir o protocolo não reescreve análises históricas nem transforma registros feitos com `fallback-v1`.
+O MVV é conduzido por protocolos oficiais e editáveis: `mission-official-v1.0`, `vision-official-v1.0` e `values-official-v1.0`. Cada um possui referência global para todos os tenants e versão tenant-owned da própria Versus, identificada pelo código estável da empresa. A versão tenant-owned pode evoluir sem alterar código e sem afetar outros clientes.
+
+Missão, Visão e Valores percorrem a mesma jornada de evidências, pesquisa, simulação, validações e decisão humana, mas com perguntas e critérios próprios. A Missão investiga propósito, cliente e transformação; a Visão investiga futuro desejado, horizonte, cenários e sustentabilidade da ambição; os Valores investigam princípios inegociáveis, comportamentos, anticomportamentos, dilemas e aderência dos incentivos. O fechamento do MVV exige uma revisão final de coerência entre os três elementos, sem transformar Visão em meta nem Valores em slogans.
+
+Cada análise conserva a fotografia do protocolo utilizado; portanto, evoluir o protocolo não reescreve análises históricas nem transforma registros feitos com `fallback-v1`.
 
 Essa camada assistida deve atuar dentro das quatro frentes do cockpit:
 
