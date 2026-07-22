@@ -11,6 +11,22 @@ class McpOperationRouterService:
 
     ROUTES: tuple[dict[str, Any], ...] = (
         {
+            "intent": "strategy.sector_structure.create",
+            "domain": "strategy",
+            "harness_key": "harness_coordenador_cliente_v1",
+            "tool": "create_sector_okr_structure_tool",
+            "action": "create",
+            "risk": "medium",
+            "human_gate_required": True,
+            "keywords": (
+                "cadastrar a estrutura setorial",
+                "cadastrar dois okrs setoriais",
+                "cadastrar okrs setoriais",
+                "criar okrs setoriais",
+                "resultados-chave propostos",
+            ),
+        },
+        {
             "intent": "finance.payables_due",
             "domain": "finance",
             "harness_key": "harness_admfin_cliente_v1",
@@ -346,9 +362,9 @@ class McpOperationRouterService:
             "domain": selected["domain"],
             "business_area": selected.get("business_area") or selected["domain"],
             "intent": selected["intent"],
-            "action": "read",
-            "risk": "low",
-            "human_gate_required": False,
+            "action": selected.get("action", "read"),
+            "risk": selected.get("risk", "low"),
+            "human_gate_required": bool(selected.get("human_gate_required", False)),
             "target_harness_key": target_harness,
             "harness_switch_required": current_harness_key != target_harness,
             "preferred_tool": selected["tool"],

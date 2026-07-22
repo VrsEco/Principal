@@ -41,6 +41,15 @@ def test_permission_matrix_manifest_covers_main_profiles_and_surfaces():
     assert len(manifest.overlay_matrices) == 23
 
 
+def test_coordinator_allows_only_human_gated_strategy_create():
+    matrix = APP32_PERMISSION_MATRIX_MANIFEST.get_overlay("coordenador_cliente")[0]
+    strategy = next(rule for rule in matrix.domains if rule.domain == "strategy")
+
+    assert "create" in strategy.allowed_actions
+    assert "create" in strategy.human_gate_for_actions
+    assert {"update", "delete", "audit"} <= set(strategy.denied_actions)
+
+
 def test_permission_matrix_boundaries_for_cliente_and_finance():
     cliente_matrices = APP32_PERMISSION_MATRIX_MANIFEST.get_profile("cliente")
     admin_analytics = [m for m in APP32_PERMISSION_MATRIX_MANIFEST.get_profile("administrador") if m.surface == "analytics"][0]

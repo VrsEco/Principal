@@ -39,6 +39,7 @@ from src.core.mcp_process_pop_tools import register_process_pop_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_real_estate_auction_tools import register_real_estate_auction_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
+from src.core.mcp_sector_strategy_tools import register_sector_strategy_tools
 from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
 from src.core.mcp_sapiens_factory_tools import register_sapiens_factory_tools
 from src.core.mcp_session_company_tools import register_session_company_tools
@@ -254,6 +255,10 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(
+        name="create_sector_okr_structure_tool",
+        description="Cadastra atomicamente OKRs setoriais, resultados-chave propostos e iniciativas vinculadas, com confirmação humana.",
+    ),
     SimpleNamespace(name="create_process_bpmn_activity_tool", description="Cria uma atividade BPMN, conexões e Data Object Reference no diagrama draft."),
     SimpleNamespace(
         name="analyze_process_flow_copilot_tool",
@@ -767,6 +772,7 @@ catalog = ToolCatalog(
         register_profile_contract_tools,
         register_real_estate_auction_tools,
         register_release_checklist_tools,
+        register_sector_strategy_tools,
         register_sapiens_activation_tools,
         register_sapiens_factory_tools,
         register_session_company_tools,

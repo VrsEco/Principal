@@ -1557,6 +1557,19 @@ _register_mcp_support_capability(
     tags=("strategic_connections", "incentives", "read_model", "tenant_safe", "empty_safe"),
 )
 
+_register_mcp_support_capability(
+    "create_sector_okr_structure_tool",
+    domain="strategy",
+    action="create",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.MEDIUM,
+    permissions=("okrs.area.create", "okrs.key_results.create", "project.create"),
+    human_gate=True,
+    human_gate_reason="Cadastro de OKRs setoriais, resultados-chave e projetos exige confirmação humana explícita.",
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    tags=("strategy", "sector_structure", "transactional", "explicit_human_confirmation"),
+)
+
 for _tool_name in (
     "list_work_journey_absences_tool",
     "list_work_journey_transfers_tool",

@@ -233,6 +233,49 @@ def test_strategy_metrics_route_is_ready_published_and_overlay_executable(monkey
     assert capability["human_gate"] is False
 
 
+def test_sector_structure_mutation_routes_to_published_human_gated_tool(monkeypatch):
+    context = _squad_cliente_context(
+        permissions=("okrs.area.create", "okrs.key_results.create", "project.create")
+    )
+    monkeypatch.setattr(
+        router_tools,
+        "get_http_request_context",
+        lambda: {
+            "user_id": 44,
+            "company_id": 13,
+            "accessible_company_ids": [13],
+            "surface": "user",
+            "harness_key": "harness_operacional_cliente_v1",
+        },
+    )
+    monkeypatch.setattr(router_tools, "resolve_mcp_execution_context", lambda payload: context)
+    monkeypatch.setattr(surface_registry, "resolve_mcp_execution_context", lambda payload: context)
+    mcp = _FakeMCP()
+    router_tools.register_operation_router_tools(mcp)
+
+    routed = mcp.registered["resolve_app32_operation_tool"](
+        request_text="Cadastrar a estrutura setorial com dois OKRs setoriais, resultados-chave propostos e projetos",
+        company_id=13,
+    )
+    manifest = surface_registry.get_surface_manifest("user", include_tools=True)
+    capability = next(item for item in manifest["tools"] if item["name"] == "create_sector_okr_structure_tool")
+
+    assert routed["data"]["route_status"] == "ready"
+    assert routed["data"]["preferred_tool"] == "create_sector_okr_structure_tool"
+    assert routed["data"]["action"] == "create"
+    assert routed["data"]["risk"] == "medium"
+    assert routed["data"]["human_gate_required"] is True
+    assert routed["data"]["target_harness_key"] == "harness_coordenador_cliente_v1"
+    assert routed["data"]["harness_switch_required"] is True
+    assert routed["data"]["execution_sequence"] == [
+        "select_app32_session_harness_tool",
+        "create_sector_okr_structure_tool",
+    ]
+    assert capability["domain"] == "strategy"
+    assert capability["permissions"] == ["okrs.area.create", "okrs.key_results.create", "project.create"]
+    assert capability["human_gate"] is True
+
+
 def test_router_never_returns_ready_when_capability_is_not_effectively_available(monkeypatch):
     context = _squad_cliente_context()
     monkeypatch.setattr(
