@@ -53,7 +53,8 @@ def model_stub(rows=None, **attrs):
 def test_spider_web_service_includes_routines_and_capacity(monkeypatch):
     employee = SimpleNamespace(id=10, name="Ana", department="Operações")
     process = SimpleNamespace(id=20, name="Atendimento", kanban_stage="stable", owner_employee_id=10, responsible_id=None)
-    project = SimpleNamespace(id=30, name="Implantação", status="in_progress", progress=40, kpis=[])
+    project = SimpleNamespace(id=30, name="Implantação", status="in_progress", progress=40, kpis=[], owner="Ana", okr_links=[70])
+    area_okr = SimpleNamespace(id=70, objective="Elevar a execução", department="Operações")
     routine = SimpleNamespace(
         id=40,
         name="Conferência diária",
@@ -91,6 +92,8 @@ def test_spider_web_service_includes_routines_and_capacity(monkeypatch):
     monkeypatch.setattr(spider_service, "Employee", model_stub([employee]))
     monkeypatch.setattr(spider_service, "Process", model_stub([process]))
     monkeypatch.setattr(spider_service, "Project", model_stub([project]))
+    monkeypatch.setattr(spider_service, "OKRArea", model_stub([area_okr]))
+    monkeypatch.setattr(spider_service, "OKRGlobal", model_stub([]))
     monkeypatch.setattr(spider_service, "Routine", model_stub([routine]))
     monkeypatch.setattr(spider_service, "WorkJourneyBlock", model_stub([block]))
     monkeypatch.setattr(spider_service, "Indicator", model_stub([indicator]))
@@ -127,6 +130,9 @@ def test_spider_web_service_includes_routines_and_capacity(monkeypatch):
     assert {"source": "routine_40", "target": "capacity_60", "label": "alocada em bloco", "strength": "direct"} in payload["links"]
     assert payload["summary"]["by_type"]["routine"] == 1
     assert payload["summary"]["by_type"]["capacity"] == 1
+    assert nodes_by_id["okr_area_70"]["type"] == "area_okr"
+    assert {"source": "proj_30", "target": "okr_area_70", "label": "iniciativa do OKR", "strength": "direct"} in payload["links"]
+    assert {"source": "colab_10", "target": "proj_30", "label": "responsável", "strength": "direct"} in payload["links"]
 
 
 def test_spider_web_template_uses_csp_compatible_d3_cdn():

@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
+import re
+import unicodedata
 
 from models import (
     db,
     Employee,
     Indicator,
     IndicatorGoal,
+    OKRArea,
+    OKRGlobal,
     Process,
     ProcessInstance,
     ProcessInstanceCollaborator,
@@ -47,8 +51,15 @@ class IncentiveSpiderWebService:
             link_counter[tgt] = link_counter.get(tgt, 0) + 1
 
         employees = Employee.query.filter_by(company_id=company_id, status="active").all()
+        def normalize_name(value: str) -> str:
+            folded = unicodedata.normalize("NFKD", str(value or ""))
+            ascii_value = "".join(char for char in folded if not unicodedata.combining(char))
+            return re.sub(r"\s+", " ", ascii_value.casefold()).strip()
+
+        employee_ids_by_name: dict[str, list[int]] = {}
         for emp in employees:
             add_node(f"colab_{emp.id}", emp.name, "collaborator", {"department": emp.department})
+            employee_ids_by_name.setdefault(normalize_name(emp.name), []).append(emp.id)
 
         processes = Process.query.filter_by(company_id=company_id, is_active=True).all()
         for proc in processes:
@@ -66,6 +77,31 @@ class IncentiveSpiderWebService:
                 "project",
                 {"status": proj.status, "progress": proj.progress},
             )
+
+        area_okrs = OKRArea.query.filter_by(company_id=company_id).all()
+        global_okrs = OKRGlobal.query.filter_by(company_id=company_id).all()
+        area_okr_ids = {okr.id for okr in area_okrs}
+        global_okr_ids = {okr.id for okr in global_okrs}
+        for okr in area_okrs:
+            add_node(f"okr_area_{okr.id}", okr.objective, "area_okr", {"department": okr.department})
+        for okr in global_okrs:
+            add_node(f"okr_global_{okr.id}", okr.objective, "global_okr")
+
+        for proj in projects:
+            owner_ids = employee_ids_by_name.get(normalize_name(proj.owner), [])
+            if len(owner_ids) == 1:
+                add_link(f"colab_{owner_ids[0]}", f"proj_{proj.id}", "responsável", "direct")
+            for raw_okr_id in proj.okr_links or []:
+                try:
+                    okr_id = int(raw_okr_id)
+                except (TypeError, ValueError):
+                    continue
+                # IDs sem tipo são legados. Só criamos aresta quando o ID é
+                # inequívoco dentro do tenant, evitando vínculo falso.
+                if okr_id in area_okr_ids and okr_id not in global_okr_ids:
+                    add_link(f"proj_{proj.id}", f"okr_area_{okr_id}", "iniciativa do OKR", "direct")
+                elif okr_id in global_okr_ids and okr_id not in area_okr_ids:
+                    add_link(f"proj_{proj.id}", f"okr_global_{okr_id}", "iniciativa do OKR", "direct")
 
         routines = Routine.query.filter_by(company_id=company_id, is_active=True).all()
         for routine in routines:
