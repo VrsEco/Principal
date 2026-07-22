@@ -94,6 +94,9 @@ class PlanGlobalOKRMCPService:
             else:
                 section.status = "completed"
             db.session.commit()
+            from services.plan_service import PlanService
+
+            PlanService._recalculate_progress(int(plan_id), company_id=int(company_id))
         except Exception:
             db.session.rollback()
             raise

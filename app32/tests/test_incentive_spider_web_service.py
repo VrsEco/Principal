@@ -54,7 +54,7 @@ def test_spider_web_service_includes_routines_and_capacity(monkeypatch):
     employee = SimpleNamespace(id=10, name="Ana", department="Operações")
     process = SimpleNamespace(id=20, name="Atendimento", kanban_stage="stable", owner_employee_id=10, responsible_id=None)
     project = SimpleNamespace(id=30, name="Implantação", status="in_progress", progress=40, kpis=[], owner="Ana", okr_links=[70])
-    area_okr = SimpleNamespace(id=70, objective="Elevar a execução", department="Operações")
+    area_okr = SimpleNamespace(id=70, objective="Elevar a execução", department="Operações", linked_okr_ids=[])
     routine = SimpleNamespace(
         id=40,
         name="Conferência diária",

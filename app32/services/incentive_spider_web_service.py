@@ -96,12 +96,26 @@ class IncentiveSpiderWebService:
                     okr_id = int(raw_okr_id)
                 except (TypeError, ValueError):
                     continue
-                # IDs sem tipo são legados. Só criamos aresta quando o ID é
-                # inequívoco dentro do tenant, evitando vínculo falso.
-                if okr_id in area_okr_ids and okr_id not in global_okr_ids:
+                # Na tela de Projetos, ``okr_links`` referencia prioritariamente
+                # OKRs de Área. O fallback global preserva registros legados.
+                if okr_id in area_okr_ids:
                     add_link(f"proj_{proj.id}", f"okr_area_{okr_id}", "iniciativa do OKR", "direct")
-                elif okr_id in global_okr_ids and okr_id not in area_okr_ids:
+                elif okr_id in global_okr_ids:
                     add_link(f"proj_{proj.id}", f"okr_global_{okr_id}", "iniciativa do OKR", "direct")
+
+        for area in area_okrs:
+            for raw_global_id in area.linked_okr_ids or []:
+                try:
+                    global_id = int(raw_global_id)
+                except (TypeError, ValueError):
+                    continue
+                if global_id in global_okr_ids:
+                    add_link(
+                        f"okr_area_{area.id}",
+                        f"okr_global_{global_id}",
+                        "desdobra OKR Global",
+                        "direct",
+                    )
 
         routines = Routine.query.filter_by(company_id=company_id, is_active=True).all()
         for routine in routines:
