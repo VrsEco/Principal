@@ -79,9 +79,8 @@ class SectorStrategyStructureService:
         for item in okrs_payload:
             if not isinstance(item, dict):
                 raise SectorStrategyStructureError("Cada OKR deve ser um objeto.")
-            for key in ("owner_name", "internal_client_name"):
-                if item.get(key):
-                    names.add(str(item[key]).strip())
+            if item.get("owner_name"):
+                names.add(str(item["owner_name"]).strip())
             for initiative in item.get("initiatives") or []:
                 if initiative.get("owner_name"):
                     names.add(str(initiative["owner_name"]).strip())
@@ -117,15 +116,14 @@ class SectorStrategyStructureService:
                 if not objective or not department:
                     raise SectorStrategyStructureError("objective e department são obrigatórios em cada OKR.")
                 owner = identities[str(item["owner_name"]).strip()].name if item.get("owner_name") else None
-                internal_client = (
-                    identities[str(item["internal_client_name"]).strip()].name
-                    if item.get("internal_client_name")
-                    else None
-                )
+                internal_client = str(item.get("internal_client_name") or "").strip() or None
                 observations = str(item.get("observations") or "").strip()
                 if internal_client:
                     note = f"Cliente interno: {internal_client}. Não é responsável pela execução logística."
                     observations = f"{observations}\n{note}".strip()
+                    result["pending"].append(
+                        f"Cliente interno '{internal_client}' mantido em observações; OKRArea não possui campo relacional para esse papel."
+                    )
 
                 normalized_objective = cls._normalize(objective)
                 existing_okrs = OKRArea.query.filter(OKRArea.company_id == company_id).all()
