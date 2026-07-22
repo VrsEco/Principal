@@ -52,6 +52,16 @@ class SectorStrategyStructureService:
             raise SectorStrategyStructureError(
                 f"Identidade ambígua para '{informed_name}' na empresa {company_id}."
             )
+        first_name = requested.split(" ", 1)[0]
+        candidates = [
+            item for item in employees if cls._normalize(item.name).split(" ", 1)[0] == first_name
+        ]
+        if candidates:
+            candidate_text = ", ".join(f"{item.name} (employee_id={item.id})" for item in candidates)
+            raise SectorStrategyStructureError(
+                f"Identidade exata não encontrada para '{informed_name}' na empresa {company_id}. "
+                f"Candidatos por primeiro nome: {candidate_text}."
+            )
         raise SectorStrategyStructureError(
             f"Identidade ativa não encontrada para '{informed_name}' na empresa {company_id}."
         )
