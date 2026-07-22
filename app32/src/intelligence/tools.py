@@ -556,9 +556,15 @@ def update_meeting(meeting_id: int, changes: dict, company_id: int = None):
 
 
 @tool
-def create_meeting_topic(meeting_id: int, title: str, notes: str = None, company_id: int = None):
-    """Registra um tema discutido e retorna seu ID estável."""
-    return meeting_ops_domain.create_meeting_topic(meeting_id=meeting_id, title=title, notes=notes, company_id=company_id)
+def create_meeting_topic(
+    meeting_id: int, title: str, notes: str = None,
+    discussion: str = None, company_id: int = None,
+):
+    """Registra um tema discutido, seu contexto e retorna um ID estável."""
+    return meeting_ops_domain.create_meeting_topic(
+        meeting_id=meeting_id, title=title, notes=notes,
+        discussion=discussion, company_id=company_id,
+    )
 
 
 @tool

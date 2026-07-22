@@ -770,12 +770,16 @@ def update_meeting(meeting_id: int, changes: dict, company_id: int | None = None
     )
 
 
-def create_meeting_topic(meeting_id: int, title: str, notes: str | None = None, company_id: int | None = None):
+def create_meeting_topic(
+    meeting_id: int, title: str, notes: str | None = None,
+    discussion: str | None = None, company_id: int | None = None,
+):
     from services.meeting_mcp_service import MeetingMCPService
     return _meeting_service_mutation(
         tool_name="create_meeting_topic", company_id=company_id,
         service_method=MeetingMCPService.create_topic,
-        metadata={"meeting_id": int(meeting_id)}, meeting_id=int(meeting_id), title=title, notes=notes,
+        metadata={"meeting_id": int(meeting_id)}, meeting_id=int(meeting_id),
+        title=title, notes=notes, discussion=discussion,
     )
 
 

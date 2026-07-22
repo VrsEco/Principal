@@ -65,3 +65,11 @@ def test_activity_editor_captures_budget_effort_and_priority():
     assert 'data-activity-field="estimated_hours"' in source
     assert 'data-activity-field="priority"' in source
     assert "budget: activity.budget || activity.amount || ''" in source
+
+
+def test_meetings_workspace_preserves_mcp_stable_ids_and_project_task_link():
+    source = _template_source()
+    assert "createWorkspaceItemId('topic')" in source
+    assert "createWorkspaceItemId('activity')" in source
+    assert "project_task_id: activity.project_task_id || null" in source
+    assert "disc.discussion || disc.decision || ''" in source

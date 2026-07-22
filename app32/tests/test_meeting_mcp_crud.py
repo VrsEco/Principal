@@ -44,10 +44,12 @@ def test_topic_and_decision_crud_keep_stable_ids_and_legacy_decision(monkeypatch
     monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
 
     topic_payload, error = MeetingMCPService.create_topic(
-        company_id=13, meeting_id=9, title="Meta de vendas", notes="Contexto"
+        company_id=13, meeting_id=9, title="Meta de vendas", notes="Contexto",
+        discussion="Cenário debatido",
     )
     assert error is None
     topic_id = topic_payload["topic"]["id"]
+    assert topic_payload["topic"]["discussion"] == "Cenário debatido"
 
     decision_payload, error = MeetingMCPService.create_decision(
         company_id=13, meeting_id=9, topic_id=topic_id,
@@ -57,6 +59,7 @@ def test_topic_and_decision_crud_keep_stable_ids_and_legacy_decision(monkeypatch
     decision_id = decision_payload["decision"]["id"]
     stored = json.loads(meeting.discussions_json)
     assert stored[0]["decision"] == "Aumentar a meta em 10%"
+    assert stored[0]["discussion"] == "Aumentar a meta em 10%"
     assert stored[0]["decisions"][0]["id"] == decision_id
 
     payload, error = MeetingMCPService.update_decision(
@@ -65,6 +68,7 @@ def test_topic_and_decision_crud_keep_stable_ids_and_legacy_decision(monkeypatch
     )
     assert error is None
     assert payload["decision"]["text"] == "Aumentar a meta em 12%"
+    assert json.loads(meeting.discussions_json)[0]["discussion"] == "Aumentar a meta em 12%"
 
     payload, error = MeetingMCPService.delete_decision(
         company_id=13, meeting_id=9, topic_id=topic_id, decision_id=decision_id,
@@ -72,6 +76,7 @@ def test_topic_and_decision_crud_keep_stable_ids_and_legacy_decision(monkeypatch
     assert error is None
     assert payload["deleted_decision_id"] == decision_id
     assert json.loads(meeting.discussions_json)[0]["decision"] == ""
+    assert json.loads(meeting.discussions_json)[0]["discussion"] == ""
     assert session.commits == 4
 
 
@@ -114,6 +119,61 @@ def test_activity_crud_preserves_deadline_responsible_budget_and_effort(monkeypa
     )
     assert error is None
     assert json.loads(meeting.activities_json) == []
+
+
+def test_activity_crud_rejects_priority_outside_project_contract(monkeypatch):
+    meeting = _meeting()
+    monkeypatch.setattr(MeetingMCPService, "get_meeting", staticmethod(lambda **kwargs: (meeting, None)))
+
+    payload, error = MeetingMCPService.create_activity(
+        company_id=13, meeting_id=9, title="Atividade", priority="critical",
+    )
+
+    assert payload is None
+    assert "low, normal, high ou urgent" in error
+
+
+def test_sync_reuses_ui_activity_by_project_and_title_and_preserves_link(monkeypatch):
+    meeting = _meeting()
+    meeting.project_id = 22
+    meeting.activities_json = json.dumps([
+        {
+            "id": "activity-ui-1",
+            "title": "Preparar proposta",
+            "project_id": 22,
+            "priority": "valor-legado-invalido",
+        }
+    ])
+    existing_task = SimpleNamespace(id=81, project_id=22, what="Preparar proposta", is_deleted=False)
+
+    class _TaskQuery:
+        def filter_by(self, **kwargs):
+            assert kwargs == {"project_id": 22, "what": "Preparar proposta", "is_deleted": False}
+            return self
+
+        def first(self):
+            return existing_task
+
+    session = _Session()
+    monkeypatch.setattr(MeetingMCPService, "get_meeting", staticmethod(lambda **kwargs: (meeting, None)))
+    monkeypatch.setattr(
+        MeetingMCPService,
+        "_validate_project",
+        staticmethod(lambda **kwargs: (SimpleNamespace(id=22), None)),
+    )
+    monkeypatch.setattr(
+        "services.meeting_mcp_service.ProjectTask",
+        SimpleNamespace(query=_TaskQuery()),
+    )
+    monkeypatch.setattr("services.meeting_mcp_service.db", SimpleNamespace(session=session))
+
+    payload, error = MeetingMCPService.sync_activities(company_id=13, meeting_id=9)
+
+    assert error is None
+    assert payload["created_tasks"] == 0
+    assert payload["updated_tasks"] == 1
+    assert existing_task.priority == "normal"
+    assert json.loads(meeting.activities_json)[0]["project_task_id"] == 81
 
 
 def test_meeting_crud_tools_are_in_sapiens_and_mcp_catalogs():

@@ -1835,6 +1835,13 @@
     let activities = [];
     let employeesData = [];
     const meetingsCompanyId = {{ company.id|tojson }};
+
+    function createWorkspaceItemId(prefix) {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+        return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+    }
     const projectTitleMap = {};
     const projectCodeMap = {};
     {% for project in projects %}
@@ -2037,6 +2044,7 @@
         const discussionItems = document.querySelectorAll('#discussions-list .discussion-item');
         discussions = Array.from(discussionItems).map((item, index) => ({
             ...(discussions[index] || {}),
+            id: discussions[index]?.id || createWorkspaceItemId('topic'),
             title: item.querySelector('input[type="text"]')?.value?.trim() || '',
             discussion: item.querySelector('textarea')?.value || '',
         })).filter((item) => item.title || item.discussion);
@@ -2057,6 +2065,7 @@
 
             return {
                 ...existingActivity,
+                id: existingActivity.id || createWorkspaceItemId('activity'),
                 title: titleInput ? (titleInput.value?.trim() || '') : (existingActivity.title || ''),
                 employee_id: responsibleSelect ? (responsibleSelect?.value || null) : (existingActivity.employee_id || null),
                 responsible: responsibleSelect
@@ -2087,11 +2096,13 @@
             ui_is_new: false,
             ui_backup: null,
             ...activity,
+            id: activity.id || createWorkspaceItemId('activity'),
         };
     }
 
     function sanitizeActivityForPersistence(activity = {}) {
         return {
+            id: activity.id || createWorkspaceItemId('activity'),
             title: activity.title || '',
             employee_id: activity.employee_id || null,
             responsible: activity.responsible || '',
@@ -2101,6 +2112,9 @@
             estimated_hours: activity.estimated_hours || '',
             priority: activity.priority || 'normal',
             project_id: activity.project_id || null,
+            project_task_id: activity.project_task_id || null,
+            status: activity.status || 'planned',
+            created_at: activity.created_at || null,
             source_discussion_index: Number.isInteger(activity.source_discussion_index) ? activity.source_discussion_index : null,
             source_discussion_title: activity.source_discussion_title || '',
             source_uid: activity.source_uid || null,
@@ -3235,7 +3249,15 @@
     }
 
     function adicionarDiscussação() {
-        discussions.push({ title: '', discussion: '' });
+        discussions.push({
+            id: createWorkspaceItemId('topic'),
+            title: '',
+            notes: '',
+            discussion: '',
+            decision: '',
+            decisions: [],
+            status: 'open',
+        });
         renderDiscussions();
         markMeetingDirty();
     }
@@ -3257,6 +3279,13 @@
     function atualizarDiscussaoCampo(index, field, value) {
         if (!discussions[index]) return;
         discussions[index][field] = value;
+        if (field === 'discussion') {
+            discussions[index].decision = value;
+            const decisions = discussions[index].decisions;
+            if (Array.isArray(decisions) && decisions.length) {
+                decisions[decisions.length - 1].text = value;
+            }
+        }
         markMeetingDirty();
         updateMeetingWorkspaceCounters();
         if (field === 'title') renderTopicShortcuts();
@@ -3332,7 +3361,7 @@
                 ${buildRemoveActionButton(`removerDiscussação(${index})`, `Excluir discussão ${disc.title || ''}`)}
             </div>
             <textarea class="form-textarea" rows="3" placeholder="Decisão tomada, contexto e definição..."
-                      oninput="atualizarDiscussaoCampo(${index}, 'discussion', this.value)">${escapeHtml(disc.discussion || '')}</textarea>
+                      oninput="atualizarDiscussaoCampo(${index}, 'discussion', this.value)">${escapeHtml(disc.discussion || disc.decision || '')}</textarea>
             <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
                 Use <strong>+ Atividade</strong> para transformar o título em <strong>O que</strong> e a decisão em <strong>Como</strong> do projeto.
             </div>

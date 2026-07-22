@@ -16,6 +16,8 @@ from services.project_task_service import ProjectTaskService
 class MeetingMCPService:
     """Regras tenant-safe para o workspace de reuniões consumido por Sapiens/MCP."""
 
+    ACTIVITY_PRIORITIES = frozenset({"low", "normal", "high", "urgent"})
+
     MEETING_UPDATE_FIELDS = frozenset(
         {
             "title",
@@ -28,7 +30,7 @@ class MeetingMCPService:
             "status",
         }
     )
-    TOPIC_UPDATE_FIELDS = frozenset({"title", "notes", "status"})
+    TOPIC_UPDATE_FIELDS = frozenset({"title", "notes", "discussion", "status"})
     DECISION_UPDATE_FIELDS = frozenset({"text", "rationale", "owner"})
     ACTIVITY_UPDATE_FIELDS = frozenset(
         {
@@ -202,7 +204,10 @@ class MeetingMCPService:
         return {"meeting": meeting.to_dict()}, None
 
     @staticmethod
-    def create_topic(*, company_id: int, meeting_id: int, title: str, notes: str | None = None) -> tuple[dict[str, Any] | None, str | None]:
+    def create_topic(
+        *, company_id: int, meeting_id: int, title: str,
+        notes: str | None = None, discussion: str | None = None,
+    ) -> tuple[dict[str, Any] | None, str | None]:
         meeting, error = MeetingMCPService.get_meeting(company_id=company_id, meeting_id=meeting_id)
         if error or meeting is None:
             return None, error
@@ -215,6 +220,9 @@ class MeetingMCPService:
             "id": uuid4().hex,
             "title": normalized_title,
             "notes": str(notes or "").strip(),
+            # Campo exibido e editado pelo workspace APP32. ``notes`` permanece
+            # separado para contexto adicional dos clientes MCP.
+            "discussion": str(discussion if discussion is not None else notes or "").strip(),
             "status": "open",
             "decision": "",
             "decisions": [],
@@ -294,6 +302,7 @@ class MeetingMCPService:
         }
         decisions.append(decision)
         topic["decision"] = normalized_text
+        topic["discussion"] = normalized_text
         meeting.discussions_json = MeetingMCPService._dump(topics)
         db.session.commit()
         return {"decision": decision, "topic_id": str(topic_id), "meeting_id": meeting.id}, None
@@ -318,6 +327,7 @@ class MeetingMCPService:
         if "text" in normalized and not decision["text"]:
             return None, "O texto da decisão não pode ficar vazio."
         topic["decision"] = str(decisions[-1].get("text") or "") if decisions else ""
+        topic["discussion"] = topic["decision"]
         meeting.discussions_json = MeetingMCPService._dump(topics)
         db.session.commit()
         return {"decision": decision, "topic_id": str(topic_id), "meeting_id": meeting.id}, None
@@ -335,6 +345,7 @@ class MeetingMCPService:
             return None, "Decisão não encontrada no tema."
         topic["decisions"] = remaining
         topic["decision"] = str(remaining[-1].get("text") or "") if remaining else ""
+        topic["discussion"] = topic["decision"]
         meeting.discussions_json = MeetingMCPService._dump(topics)
         db.session.commit()
         return {"deleted_decision_id": str(decision_id), "topic_id": str(topic_id), "meeting_id": meeting.id}, None
@@ -370,6 +381,9 @@ class MeetingMCPService:
                 return None, project_error
         activities = MeetingMCPService._load_list(meeting.activities_json)
         MeetingMCPService._ensure_ids(activities)
+        normalized_priority = str(priority or "normal").strip().lower() or "normal"
+        if normalized_priority not in MeetingMCPService.ACTIVITY_PRIORITIES:
+            return None, "priority deve ser low, normal, high ou urgent."
         activity = {
             "id": uuid4().hex,
             "title": normalized_title,
@@ -378,7 +392,7 @@ class MeetingMCPService:
             "deadline": due_date.isoformat() if due_date else None,
             "budget": str(budget or "").strip() or None,
             "estimated_hours": float(hours) if hours is not None else None,
-            "priority": str(priority or "normal").strip() or "normal",
+            "priority": normalized_priority,
             "status": "planned",
             "how": str(how or "").strip(),
             "project_id": int(target_project_id) if target_project_id else None,
@@ -410,9 +424,14 @@ class MeetingMCPService:
             if not title:
                 return None, "O título da atividade não pode ficar vazio."
             activity["title"] = title
-        for key in ("responsible", "budget", "priority", "status", "how"):
+        for key in ("responsible", "budget", "status", "how"):
             if key in normalized:
                 activity[key] = str(normalized.get(key) or "").strip() or None
+        if "priority" in normalized:
+            priority = str(normalized.get("priority") or "normal").strip().lower() or "normal"
+            if priority not in MeetingMCPService.ACTIVITY_PRIORITIES:
+                return None, "priority deve ser low, normal, high ou urgent."
+            activity["priority"] = priority
         if "employee_id" in normalized:
             normalized_employee_id, employee_error = MeetingMCPService._validate_employee(
                 company_id=company_id, employee_id=normalized.get("employee_id")
@@ -471,6 +490,10 @@ class MeetingMCPService:
             if selected and str(activity.get("id")) not in selected:
                 continue
             target_project_id = activity.get("project_id") or meeting.project_id
+            activity_title = str(activity.get("title") or "").strip()
+            if not activity_title:
+                skipped += 1
+                continue
             project, project_error = MeetingMCPService._validate_project(
                 company_id=company_id, project_id=target_project_id
             )
@@ -498,19 +521,27 @@ class MeetingMCPService:
                     ProjectTask.is_deleted.is_(False),
                 ).first()
             if task is None:
-                task = ProjectTask(project_id=project.id, what=str(activity.get("title") or "").strip())
+                # Atividades originadas pela UI podem ainda não possuir
+                # project_task_id. O fallback por projeto+título evita duplicar a
+                # mesma entrega nas sincronizações seguintes.
+                task = ProjectTask.query.filter_by(
+                    project_id=int(project.id), what=activity_title, is_deleted=False
+                ).first()
+            if task is None:
+                task = ProjectTask(project_id=project.id, what=activity_title)
                 db.session.add(task)
                 created += 1
             else:
                 updated += 1
-            task.what = str(activity.get("title") or "").strip()
+            task.what = activity_title
             task.who = str(activity.get("responsible") or "").strip() or None
             task.employee_id = normalized_employee_id
             task.due_date = due_date
             task.how = str(activity.get("how") or "").strip() or None
             task.amount = str(activity.get("budget") or "").strip() or None
             task.estimated_hours = hours or Decimal("0")
-            task.priority = str(activity.get("priority") or "normal").strip() or "normal"
+            priority = str(activity.get("priority") or "normal").strip().lower() or "normal"
+            task.priority = priority if priority in MeetingMCPService.ACTIVITY_PRIORITIES else "normal"
             task.status = str(activity.get("status") or "planned").strip() or "planned"
             db.session.flush()
             activity["project_id"] = project.id
