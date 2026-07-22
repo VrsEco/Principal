@@ -1339,7 +1339,9 @@
                                     Enviar Resumo
                                 </button>
                                 <button type="button" class="btn-meeting-action action-delete"
-                                    onclick="event.stopPropagation(); excluirReuniao({{ meeting.id }}, {{ meeting.title|tojson|safe }});"
+                                    data-meeting-id="{{ meeting.id }}"
+                                    data-meeting-title="{{ meeting.title|e }}"
+                                    onclick="event.stopPropagation(); excluirReuniao(Number(this.dataset.meetingId), this.dataset.meetingTitle);"
                                     title="Excluir reunião" aria-label="Excluir reunião {{ meeting.title }}">
                                     Excluir
                                 </button>

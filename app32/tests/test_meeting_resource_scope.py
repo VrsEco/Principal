@@ -231,6 +231,10 @@ def test_meetings_template_contains_delete_action():
     assert 'btn-excluir-reuniao-editor' in content
     assert 'window.excluirReuniao = excluirReuniao;' in content
     assert "method: 'DELETE'" in content
+    assert 'data-meeting-id="{{ meeting.id }}"' in content
+    assert 'data-meeting-title="{{ meeting.title|e }}"' in content
+    assert 'excluirReuniao(Number(this.dataset.meetingId), this.dataset.meetingTitle)' in content
+    assert 'excluirReuniao({{ meeting.id }}, {{ meeting.title|tojson|safe }})' not in content
 
 
 def test_meetings_template_uses_execucao_endpoint_without_accent():
