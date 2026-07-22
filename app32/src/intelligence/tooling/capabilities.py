@@ -764,10 +764,10 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "schedule_meeting": {
         "domain": "meetings",
-        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.MCP_ADMIN.value,),
         "risk": ToolRiskLevel.MEDIUM,
         "permissions": ("meeting.schedule",),
-        "tags": ("crud",),
+        "tags": ("legacy_scheduling", "deprecated"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
     },
     "start_meeting": {

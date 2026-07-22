@@ -141,6 +141,11 @@ def test_meeting_crud_tools_are_in_sapiens_and_mcp_catalogs():
         assert ToolScope.SAPIENS.value in capability.scopes
         assert ToolScope.MCP_USER.value in capability.scopes
 
+    scheduling = catalog.get_tool_capability("schedule_meeting")
+    assert scheduling is not None
+    assert ToolScope.SAPIENS.value not in scheduling.scopes
+    assert ToolScope.MCP_USER.value not in scheduling.scopes
+
 
 def test_nested_meeting_removal_is_governed_as_meeting_update():
     assert infer_tool_action("delete_meeting_topic", "meetings") == "update"
