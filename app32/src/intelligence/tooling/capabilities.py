@@ -1583,6 +1583,19 @@ _register_mcp_support_capability(
     tags=("strategy", "planning", "participants", "transactional", "explicit_human_confirmation"),
 )
 
+_register_mcp_support_capability(
+    "create_single_plan_driver_tool",
+    domain="strategy",
+    action="create",
+    scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+    risk=ToolRiskLevel.MEDIUM,
+    permissions=("plan.section.update",),
+    human_gate=True,
+    human_gate_reason="Cadastro e conclusão do direcionador estratégico exigem confirmação humana explícita.",
+    required_context=(TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    tags=("strategy", "planning", "driver", "transactional", "explicit_human_confirmation"),
+)
+
 for _tool_name in (
     "list_work_journey_absences_tool",
     "list_work_journey_transfers_tool",
