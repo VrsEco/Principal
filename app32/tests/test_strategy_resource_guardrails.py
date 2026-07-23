@@ -25,8 +25,10 @@ def test_okr_resource_write_methods_have_permission_and_company_scope():
     assert "@permission_required('okrs', 'delete')\n    def delete(self, okr_id):" in text
     assert "OKRGlobal.query.filter_by(id=okr_id, company_id=company_id).first_or_404()" in text
     assert "OKRArea.query.filter_by(id=okr_id, company_id=company_id).first_or_404()" in text
-    assert "KeyResult.query.filter_by(id=kr_id, company_id=company_id).first_or_404()" in text
-    assert "KeyResultArea.query.filter_by(id=kr_id, company_id=company_id).first_or_404()" in text
+    assert "KeyResult.query.join(OKRGlobal" in text
+    assert "OKRGlobal.company_id == company_id" in text
+    assert "KeyResultArea.query.join(OKRArea" in text
+    assert "OKRArea.company_id == company_id" in text
 
 
 def test_indicator_resource_goal_and_data_access_are_company_scoped():

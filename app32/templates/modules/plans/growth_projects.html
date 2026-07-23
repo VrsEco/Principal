@@ -320,7 +320,7 @@
         if (!confirm('Tem certeza que deseja excluir este projeto?')) return;
 
         try {
-            const response = await fetch(`/api/projects/${id}`, {
+            const response = await fetch(`/api/projects/${id}?company_id=${window.companyId}`, {
                 method: 'DELETE'
             });
 
@@ -368,7 +368,6 @@
         const portfolioOption = document.querySelector('input[name="portfolioOption"]:checked').value;
 
         const data = {
-            company_id: window.companyId,
             plan_id: parseInt(window.planId),
             name: document.getElementById('projName').value,
             notes: document.getElementById('projNotes').value,
@@ -400,7 +399,9 @@
             }
 
             const projId = document.getElementById('projectId').value;
-            const url = projId ? `/api/projects/${projId}` : '/api/projects';
+            const url = projId
+                ? `/api/projects/${projId}?company_id=${window.companyId}`
+                : `/api/projects?company_id=${window.companyId}`;
             const method = projId ? 'PUT' : 'POST';
 
             const response = await fetch(url, {

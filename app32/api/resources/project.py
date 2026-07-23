@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from flask_restful import Resource
-from models import db, Project, Company, Indicator
+from models import db, Project
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_schema, projects_schema
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required, can_create_projects
@@ -87,13 +87,24 @@ def get_request_company_id():
             return int(float(val))
         except Exception:
             pass
+
+    # 2. Try JSON payload before session fallback. This keeps the authorization
+    # tenant and the persistence tenant aligned for API mutations.
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        val = data.get('company_id')
+        if val:
+            try:
+                return int(float(val))
+            except Exception:
+                pass
             
-    # 2. Try session
+    # 3. Try session
     cid = session.get('active_company_id')
     if cid:
         return int(cid)
         
-    # 3. Try current_user
+    # 4. Try current_user
     if current_user.is_authenticated:
         default_company_id = get_default_company_id()
         if default_company_id:
@@ -113,15 +124,20 @@ def apply_project_employee_filter(query, company_id):
     if has_company_full_access(company_id):
         return query
 
-    # Colaborador: só projetos onde tem atividades atribuídas
+    # Colaborador: projetos sob sua responsabilidade ou com atividades atribuídas.
     employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
     if employee:
         return query.filter(
-            Project.tasks.any(
-                or_(
-                    ProjectTask.employee_id == employee.id,
-                    ProjectTask.collaborators.any(ProjectActivityCollaborator.employee_id == employee.id)
-                )
+            or_(
+                Project.owner == employee.name,
+                Project.tasks.any(
+                    or_(
+                        ProjectTask.employee_id == employee.id,
+                        ProjectTask.collaborators.any(
+                            ProjectActivityCollaborator.employee_id == employee.id
+                        ),
+                    )
+                ),
             )
         )
         
@@ -150,46 +166,21 @@ class ProjectListResource(Resource):
         projects = query.all()
         return projects_schema.dump(projects), 200
 
-    @permission_required('projects', 'view')
+    @permission_required('projects', 'create')
     def post(self):
         """Create a new project."""
+        from services.project_service import ProjectService
+
         company_id = get_request_company_id()
         if not can_create_projects(company_id):
             return {"message": "Acesso negado: usuário não pode criar projetos nesta empresa."}, 403
-        data = request.get_json()
-        indicator_id = data.pop('indicator_id', None)
-        new_project = Project(
-            company_id=company_id,
-            name=data['name'],
-            plan_id=data.get('plan_id'),
-            owner=data.get('owner'),
-            status=data.get('status', 'planned'),
-            deadline=data.get('deadline'),
-            budget=data.get('budget'),
-            notes=data.get('notes'),
-            priority=data.get('priority', 'medium'),
-            portfolio_id=data.get('portfolio_id')
+        project, error = ProjectService.create_project(
+            company_id,
+            request.get_json(silent=True) or {},
         )
-        db.session.add(new_project)
-        if indicator_id:
-            indicator = Indicator.query.filter_by(
-                id=indicator_id,
-                company_id=company_id,
-                is_active=True,
-            ).first()
-            if not indicator:
-                return {"message": "Indicador inválido para a empresa ativa."}, 400
-            indicator.project = new_project
-            marker = f"APP32_INDICATOR_LINK: {indicator.id}"
-            notes = new_project.notes or ""
-            if marker not in notes:
-                new_project.notes = (notes + "\n\n" if notes else "") + (
-                    f"{marker}\n"
-                    "Projeto criado a partir do Painel de Gestão Estratégica. "
-                    "Após criar o projeto, crie as atividades corretivas vinculadas ao indicador."
-                )
-        db.session.commit()
-        return project_schema.dump(new_project), 201
+        if error:
+            return {"message": error}, 400
+        return project_schema.dump(project), 201
 
 class ProjectResource(Resource):
     @permission_required('projects', 'view')
