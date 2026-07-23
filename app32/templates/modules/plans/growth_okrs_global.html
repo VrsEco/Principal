@@ -345,7 +345,6 @@
 
         const okrId = document.getElementById('okrId').value;
         const data = {
-            company_id: window.companyId,
             plan_id: parseInt(window.planId),
             objective: document.getElementById('okrObjective').value,
             type: document.getElementById('okrType').value,
@@ -354,7 +353,7 @@
         };
 
         try {
-            let url = '/api/okrs-global';
+            let url = `/api/okrs-global?company_id=${window.companyId}`;
             let method = 'POST';
 
             if (okrId) {
@@ -448,7 +447,6 @@
         const krId = document.getElementById('krId').value;
 
         const data = {
-            company_id: window.companyId,
             okr_global_id: parseInt(okrId),
             label: document.getElementById('krLabel').value,
             target: document.getElementById('krTarget').value,
@@ -458,7 +456,7 @@
         };
 
         try {
-            let url = '/api/key-results';
+            let url = `/api/key-results?company_id=${window.companyId}`;
             let method = 'POST';
 
             if (krId) {

@@ -26,6 +26,40 @@ def _ensure_company_id():
     return company_id, None
 
 
+def _tenant_key_result_or_404(kr_id, company_id):
+    return (
+        KeyResult.query.join(OKRGlobal, KeyResult.okr_global_id == OKRGlobal.id)
+        .filter(KeyResult.id == kr_id, OKRGlobal.company_id == company_id)
+        .first_or_404()
+    )
+
+
+def _tenant_key_result_area_or_404(kr_id, company_id):
+    return (
+        KeyResultArea.query.join(OKRArea, KeyResultArea.okr_area_id == OKRArea.id)
+        .filter(KeyResultArea.id == kr_id, OKRArea.company_id == company_id)
+        .first_or_404()
+    )
+
+
+def _validate_global_okr_parent(data, company_id):
+    okr_id = data.get("okr_global_id")
+    if not okr_id:
+        return {"okr_global_id": ["Missing data for required field."]}
+    if not OKRGlobal.query.filter_by(id=okr_id, company_id=company_id).first():
+        return {"okr_global_id": ["OKR global não encontrado para a empresa ativa."]}
+    return None
+
+
+def _validate_area_okr_parent(data, company_id):
+    okr_id = data.get("okr_area_id")
+    if not okr_id:
+        return {"okr_area_id": ["Missing data for required field."]}
+    if not OKRArea.query.filter_by(id=okr_id, company_id=company_id).first():
+        return {"okr_area_id": ["OKR de área não encontrado para a empresa ativa."]}
+    return None
+
+
 class OKRGlobalListResource(Resource):
     @permission_required('okrs', 'view')
     def get(self):
@@ -110,7 +144,10 @@ class KeyResultListResource(Resource):
             company_id, error = _ensure_company_id()
             if error:
                 return error
-            data['company_id'] = company_id
+            data.pop('company_id', None)
+            parent_error = _validate_global_okr_parent(data, company_id)
+            if parent_error:
+                return {"errors": parent_error}, 400
             kr = key_result_schema.load(data)
             db.session.add(kr)
             db.session.commit()
@@ -125,7 +162,7 @@ class KeyResultResource(Resource):
         company_id, error = _ensure_company_id()
         if error:
             return error
-        kr = KeyResult.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
+        kr = _tenant_key_result_or_404(kr_id, company_id)
         db.session.delete(kr)
         db.session.commit()
         return {"message": "KR deleted successfully"}, 200
@@ -135,10 +172,14 @@ class KeyResultResource(Resource):
         company_id, error = _ensure_company_id()
         if error:
             return error
-        kr = KeyResult.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
+        kr = _tenant_key_result_or_404(kr_id, company_id)
         try:
             data = request.get_json()
-            data['company_id'] = company_id
+            data.pop('company_id', None)
+            if 'okr_global_id' in data:
+                parent_error = _validate_global_okr_parent(data, company_id)
+                if parent_error:
+                    return {"errors": parent_error}, 400
             kr = key_result_schema.load(data, instance=kr, partial=True)
             db.session.commit()
             return key_result_schema.dump(kr), 200
@@ -223,7 +264,10 @@ class KeyResultAreaListResource(Resource):
             company_id, error = _ensure_company_id()
             if error:
                 return error
-            data['company_id'] = company_id
+            data.pop('company_id', None)
+            parent_error = _validate_area_okr_parent(data, company_id)
+            if parent_error:
+                return {"errors": parent_error}, 400
             kr = key_result_area_schema.load(data)
             db.session.add(kr)
             db.session.commit()
@@ -238,10 +282,14 @@ class KeyResultAreaResource(Resource):
         company_id, error = _ensure_company_id()
         if error:
             return error
-        kr = KeyResultArea.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
+        kr = _tenant_key_result_area_or_404(kr_id, company_id)
         try:
             data = request.get_json()
-            data['company_id'] = company_id
+            data.pop('company_id', None)
+            if 'okr_area_id' in data:
+                parent_error = _validate_area_okr_parent(data, company_id)
+                if parent_error:
+                    return {"errors": parent_error}, 400
             kr = key_result_area_schema.load(data, instance=kr, partial=True)
             db.session.commit()
             return key_result_area_schema.dump(kr), 200
@@ -253,7 +301,7 @@ class KeyResultAreaResource(Resource):
         company_id, error = _ensure_company_id()
         if error:
             return error
-        kr = KeyResultArea.query.filter_by(id=kr_id, company_id=company_id).first_or_404()
+        kr = _tenant_key_result_area_or_404(kr_id, company_id)
         db.session.delete(kr)
         db.session.commit()
         return {"message": "KR Area deleted successfully"}, 200

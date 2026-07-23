@@ -322,7 +322,6 @@
         const linkedOkrValue = document.getElementById('areaOkrLinked').value;
 
         const data = {
-            company_id: window.companyId,
             plan_id: parseInt(window.planId),
             objective: document.getElementById('areaOkrObjective').value,
             department: document.getElementById('areaOkrDept').value,
@@ -331,7 +330,7 @@
         };
 
         try {
-            let url = '/api/okrs-area';
+            let url = `/api/okrs-area?company_id=${window.companyId}`;
             let method = 'POST';
 
             if (okrId) {
@@ -424,7 +423,6 @@
         const krId = document.getElementById('krId').value;
 
         const data = {
-            company_id: window.companyId,
             okr_area_id: parseInt(okrId),
             label: document.getElementById('krLabel').value,
             target: document.getElementById('krTarget').value,
@@ -434,7 +432,7 @@
         };
 
         try {
-            let url = '/api/key-results-area';
+            let url = `/api/key-results-area?company_id=${window.companyId}`;
             let method = 'POST';
 
             if (krId) {
