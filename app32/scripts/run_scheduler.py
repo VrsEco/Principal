@@ -13,7 +13,6 @@ import json
 import os
 import signal
 import sys
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event
@@ -50,6 +49,21 @@ def _request_stop(_signum, _frame) -> None:
     STOP_EVENT.set()
 
 
+def _create_scheduler_app():
+    # Não usar create_app(): o factory web registra blueprints, LangGraph/RAG e
+    # outros componentes desnecessários ao scheduler, excedendo a memória do
+    # host quando combinado com uWSGI e MCP.
+    from flask import Flask
+
+    from config import config
+    from models import db
+
+    app = Flask("app32_scheduler")
+    app.config.from_object(config["production"])
+    db.init_app(app)
+    return app
+
+
 def main() -> int:
     TMP_DIR.mkdir(parents=True, exist_ok=True)
     lock_handle = LOCK_PATH.open("a+", encoding="utf-8")
@@ -63,14 +77,14 @@ def main() -> int:
     os.environ["APP_BOOTSTRAP_RUNTIME_SERVICES"] = "0"
     os.environ.setdefault("FLASK_CONFIG", "production")
     sys.path.insert(0, str(APP_DIR))
+    os.chdir(APP_DIR)
 
-    from app import create_app
     from services.scheduler_service import initialize_scheduler, scheduler_service, shutdown_scheduler
 
     signal.signal(signal.SIGTERM, _request_stop)
     signal.signal(signal.SIGINT, _request_stop)
 
-    app = create_app("production")
+    app = _create_scheduler_app()
     initialize_scheduler(app)
     _write_heartbeat(scheduler_service)
     print(

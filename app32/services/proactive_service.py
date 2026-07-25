@@ -12,7 +12,6 @@ from models.process import ProcessInstance, ProcessInstanceCollaborator
 from models.meeting import Meeting
 from models.company import Company
 from models.agent_action import AgentAction
-from api.webhooks.telegram_webhook import bot
 from src.core.theme_tokens import (
     get_summary_email_theme,
     get_summary_email_section_styles,
@@ -1267,6 +1266,10 @@ def notify_task_completion(app, task, completed_by_user):
                 recipients.extend(admins)
 
             if not recipients: return
+
+            # Import tardio: o webhook carrega LangGraph/RAG e não deve aumentar
+            # a memória do runtime dedicado do scheduler durante o bootstrap.
+            from api.webhooks.telegram_webhook import bot
 
             msg = (
                 f"✅ <b>ATIVIDADE CONCLUÍDA VIA IA</b>\n\n"
