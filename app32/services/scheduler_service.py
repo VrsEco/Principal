@@ -174,11 +174,12 @@ def setup_proactive_jobs(app):
     """
     logger.info("🔧 Configurando jobs proativos do Sapiens...")
 
-    # Job: Resumo Matinal às 08:00h
+    # Job: Resumo Matinal às 08:00h, somente em dias úteis.
     scheduler_service.add_job(
         func=lambda: send_proactive_morning_summary(app),
         trigger="cron",
         job_id="proactive_morning_summary",
+        day_of_week="mon-fri",
         hour=8,
         minute=0,
         name="Resumo Matinal Proativo (Canais Configurados)",

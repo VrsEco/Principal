@@ -178,7 +178,22 @@ if [ "$WEB_READY" -ne 1 ]; then
     exit 1
 fi
 
-# 5. MCP HTTP remoto (reinício controlado para refletir novas tools/contratos após deploy)
+# 5. Scheduler dedicado (fora dos workers uWSGI para impedir duplicidade)
+echo "⏰ Reiniciando scheduler dedicado do APP32..."
+if [ -f "$APP/scripts/manage_scheduler.sh" ]; then
+    chmod +x "$APP/scripts/manage_scheduler.sh" "$APP/scripts/run_scheduler.py"
+    APP32_BASE_DIR="$BASE" \
+    APP32_APP_DIR="$APP" \
+    APP32_PYTHON="$PYTHON" \
+    bash "$APP/scripts/manage_scheduler.sh" restart
+    bash "$APP/scripts/manage_scheduler.sh" health >/dev/null
+    echo "✅ Scheduler dedicado ativo e com heartbeat válido."
+else
+    echo "❌ ERRO: scripts/manage_scheduler.sh não encontrado."
+    exit 1
+fi
+
+# 6. MCP HTTP remoto (reinício controlado para refletir novas tools/contratos após deploy)
 echo "🧠 Reiniciando runtime MCP HTTP remoto para refletir o código recém-publicado..."
 MCP_HEALTH_URL="http://127.0.0.1:8101/healthz"
 MCP_PUBLIC_HEALTH_URL="https://app.gestaoversus.com.br/mcp/healthz"
