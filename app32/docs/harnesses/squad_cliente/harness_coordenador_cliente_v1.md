@@ -238,7 +238,7 @@ Antes de iniciar ou retomar `identity/mission`, chamar `consultive_resolve_proto
 
 Se a resolução retornar `fallback`, interromper o avanço metodológico novo e escalar ao Squad Engenharia. O fallback preserva disponibilidade, mas não substitui o protocolo oficial editável. Análises históricas mantêm o snapshot da versão com que foram produzidas.
 
-### 14.3 Protocolos oficiais da Visão, dos Valores e do Posicionamento
+### 14.3 Protocolos oficiais da Visão, dos Valores, do Posicionamento e do Organograma
 
 Antes de iniciar ou retomar essas subfases, resolver o protocolo com o `company_id` autorizado e confirmar:
 
@@ -247,11 +247,14 @@ Antes de iniciar ou retomar essas subfases, resolver o protocolo com o `company_
 | `identity/vision` | `vision-official-v1.0` | `vision-maturity-v1.0` |
 | `identity/values` | `values-official-v1.0` | `values-maturity-v1.0` |
 | `identity/positioning` | `positioning-official-v1.0` | `positioning-maturity-v1.0` |
+| `identity/org_chart` | `org-chart-official-v1.0` | `org-chart-maturity-v1.0` |
 
-Para as três subfases, `id` deve ser não nulo, `source` deve ser `tenant` ou `global`, `status=active` e `depth_level=simulation`. Retorno `fallback` interrompe nova condução metodológica e deve ser escalado à Engenharia.
+Para as quatro subfases, `id` deve ser não nulo, `source` deve ser `tenant` ou `global`, `status=active` e `depth_level=simulation`. Retorno `fallback` interrompe nova condução metodológica e deve ser escalado à Engenharia.
 
-Na Visão, o CLI deve pesquisar cenários e confrontar ambição com capacidades e restrições, sem transformar a Visão em metas. Nos Valores, deve testar comportamentos, anticomportamentos, dilemas, violações, políticas e incentivos, sem copiar listas externas. No Posicionamento, deve pesquisar clientes, concorrentes, substitutos e percepção de mercado, separar requisito básico de diferencial defensável e confrontar a promessa com ofertas, canais, preços, processos e capacidades reais, sem reduzir o trabalho a slogan.
+Na Visão, o CLI deve pesquisar cenários e confrontar ambição com capacidades e restrições, sem transformar a Visão em metas. Nos Valores, deve testar comportamentos, anticomportamentos, dilemas, violações, políticas e incentivos, sem copiar listas externas. No Posicionamento, deve pesquisar clientes, concorrentes, substitutos e percepção de mercado, separar requisito básico de diferencial defensável e confrontar a promessa com ofertas, canais, preços, processos e capacidades reais, sem reduzir o trabalho a slogan. No Organograma, deve diferenciar cargos de pessoas, estrutura formal de estrutura praticada e estado atual de estrutura-alvo; mapear responsabilidades, decisões, reportes, capacidade e conflitos; e simular crescimento e ausência de papéis críticos, sem copiar estruturas externas.
 
-Cada análise usa exclusivamente sua `subphase_key`; uma análise de Missão nunca pode avançar Visão ou Valores. Do mesmo modo, análises de Missão, Visão ou Valores nunca podem avançar o Posicionamento, e nenhuma subfase pode consumir análise pertencente a outra.
+Cada análise usa exclusivamente sua `subphase_key`; uma análise de Missão nunca pode avançar Visão ou Valores. Do mesmo modo, análises de Missão, Visão ou Valores nunca podem avançar o Posicionamento ou o Organograma, e nenhuma subfase pode consumir análise pertencente a outra.
 
-Após a execução separada do MVV, o Consultor Versus deve conduzir sua revisão final de coerência. A Identidade Organizacional somente poderá amadurecer por completo quando o Posicionamento também estiver coerente com o MVV e com a capacidade real de entrega.
+O CLI do Squad Cliente pode registrar a análise metodológica e, após confirmação humana, a validação do próprio Squad Cliente. Não pode criar, alterar ou excluir cargos, vincular colaboradores, mudar subordinações, validar em nome de outro Squad ou decidir em nome do consultor. A escrita canônica do Organograma exige decisão do consultor e executor autorizado; enquanto não houver tool MCP específica aprovada, deve ser encaminhada para execução na UI/API autorizada do APP32.
+
+Após a execução separada do MVV, o Consultor Versus deve conduzir sua revisão final de coerência. A Identidade Organizacional somente poderá amadurecer por completo quando o Posicionamento e o Organograma também estiverem coerentes com o MVV, a estratégia, os processos e a capacidade real de entrega.

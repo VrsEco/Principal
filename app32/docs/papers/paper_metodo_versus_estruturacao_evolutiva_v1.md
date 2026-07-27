@@ -1113,11 +1113,15 @@ Os quatro roteiros de frente são:
 
 O roteiro é modificável e versionado. O fallback em código existe apenas como contingência operacional; a condução normal deve usar um protocolo persistido, resolvido na ordem **tenant → global → fallback**.
 
-O MVV e o Posicionamento são conduzidos por protocolos oficiais e editáveis: `mission-official-v1.0`, `vision-official-v1.0`, `values-official-v1.0` e `positioning-official-v1.0`. Cada um possui referência global para todos os tenants e versão tenant-owned da própria Versus, identificada pelo código estável da empresa. A versão tenant-owned pode evoluir sem alterar código e sem afetar outros clientes.
+Os cinco componentes da Identidade Organizacional são conduzidos por protocolos oficiais e editáveis: `mission-official-v1.0`, `vision-official-v1.0`, `values-official-v1.0`, `positioning-official-v1.0` e `org-chart-official-v1.0`. Cada um possui referência global para todos os tenants e versão tenant-owned da própria Versus, identificada pelo código estável da empresa. A versão tenant-owned pode evoluir sem alterar código e sem afetar outros clientes.
 
 Missão, Visão e Valores percorrem a mesma jornada de evidências, pesquisa, simulação, validações e decisão humana, mas com perguntas e critérios próprios. A Missão investiga propósito, cliente e transformação; a Visão investiga futuro desejado, horizonte, cenários e sustentabilidade da ambição; os Valores investigam princípios inegociáveis, comportamentos, anticomportamentos, dilemas e aderência dos incentivos. O fechamento do MVV exige uma revisão final de coerência entre os três elementos, sem transformar Visão em meta nem Valores em slogans.
 
 O Posicionamento parte do MVV já amadurecido para definir cliente prioritário, situação de compra, problema relevante, categoria de referência, proposta de valor, diferenciais defensáveis, provas e escolhas explícitas. Ele não é slogan, campanha publicitária ou lista genérica de atributos. Sua maturidade depende da coerência entre o que a empresa declara, o que consegue entregar, o que o mercado percebe e o que deliberadamente escolhe não atender.
+
+O Organograma traduz a estratégia e os processos em papéis, responsabilidades, direitos de decisão, relações de reporte e capacidade organizacional. Ele não é apenas um desenho de caixas nem uma lista de pessoas. A jornada diferencia cargo de ocupante, estrutura formal de estrutura praticada e estado atual de estrutura-alvo; identifica lacunas, sobreposições, conflitos de decisão, amplitude de liderança e riscos de capacidade; e testa se a organização sustenta o MVV, o Posicionamento, os processos, o crescimento e o Gerenciamento Estratégico.
+
+Alterações de cargos, vínculos de colaboradores e relações de subordinação são dados canônicos sensíveis. A IA/CLI pode ler evidências e registrar análise metodológica, mas não deve alterar o Organograma automaticamente. A execução canônica exige decisão do consultor, executor autorizado, escopo explícito por `company_id`, releitura e verificação. Enquanto não existir uma surface MCP específica e aprovada para essa escrita, a execução ocorre pelas telas e APIs autorizadas do APP32.
 
 Cada análise conserva a fotografia do protocolo utilizado; portanto, evoluir o protocolo não reescreve análises históricas nem transforma registros feitos com `fallback-v1`.
 

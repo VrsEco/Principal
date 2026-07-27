@@ -18,24 +18,28 @@ def _protocol(subphase="mission"):
         "vision": "Visão",
         "values": "Valores",
         "positioning": "Posicionamento",
+        "org_chart": "Organograma",
     }
     versions = {
         "mission": "mission-official-v1.0",
         "vision": "vision-official-v1.0",
         "values": "values-official-v1.0",
         "positioning": "positioning-official-v1.0",
+        "org_chart": "org-chart-official-v1.0",
     }
     journey_versions = {
         "mission": "mission-maturity-v1.2",
         "vision": "vision-maturity-v1.0",
         "values": "values-maturity-v1.0",
         "positioning": "positioning-maturity-v1.0",
+        "org_chart": "org-chart-maturity-v1.0",
     }
     questions = {
         "mission": "O que a empresa entrega?",
         "vision": "Onde a empresa quer estar?",
         "values": "Quais princípios são inegociáveis?",
         "positioning": "Quem é o cliente prioritário?",
+        "org_chart": "Quais papéis existem de fato?",
     }
     return {
         "id": 1,
@@ -372,6 +376,70 @@ def test_positioning_does_not_consume_values_or_legacy_analysis(monkeypatch):
 
     result = ConsultiveMaturityGuidanceService.get_next_action(
         company_id=10, front_key="identity", subphase_key="positioning"
+    )
+
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["current_state"]["latest_analysis_id"] is None
+    assert result["current_state"]["latest_received_analysis_id"] is None
+
+
+def test_org_chart_without_analysis_uses_organizational_design_journey(monkeypatch):
+    _install(monkeypatch, [], engineering=False, subphase="org_chart")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="org_chart"
+    )
+
+    assert result["journey_version"] == "org-chart-maturity-v1.0"
+    assert result["pilot_scope"] is True
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["next_action"]["key"] == "develop_org_chart_diagnosis"
+    assert result["next_action"]["label"] == "Diagnosticar e amadurecer o Organograma"
+    assert "Quais papéis existem de fato?" in result["next_action"]["required_inputs"]
+    assert result["protocol"]["version"] == "org-chart-official-v1.0"
+
+
+def test_org_chart_accepted_decision_authorizes_only_org_chart_persistence(monkeypatch):
+    validations = [
+        {"squad": "client", "status": "validated"},
+        {"squad": "versus", "status": "validated"},
+    ]
+    analysis = _analysis(
+        validations=validations,
+        decision={"decision": "accept"},
+        subphase="org_chart",
+    )
+    _install(monkeypatch, [analysis], engineering=False, subphase="org_chart")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="org_chart"
+    )
+
+    assert result["journey_state"] == "approved_for_execution"
+    assert result["next_action"]["key"] == "persist_approved_org_chart"
+    assert result["next_action"]["label"] == "Persistir e verificar o Organograma aprovado"
+    assert result["next_action"]["write_policy"]["canonical_write_allowed"] is True
+
+
+def test_org_chart_does_not_consume_positioning_or_legacy_analysis(monkeypatch):
+    legacy = _analysis(subphase="mission")
+    legacy["id"] = 78
+    legacy["protocol_snapshot"] = {"subphase_key": None}
+    _install(
+        monkeypatch,
+        [
+            _analysis(
+                validations=[{"squad": "client", "status": "validated"}],
+                subphase="positioning",
+            ),
+            legacy,
+        ],
+        engineering=False,
+        subphase="org_chart",
+    )
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="org_chart"
     )
 
     assert result["journey_state"] == "collecting_evidence"

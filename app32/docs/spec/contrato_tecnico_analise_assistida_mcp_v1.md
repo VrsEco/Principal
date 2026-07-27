@@ -461,6 +461,27 @@ O protocolo exige:
 
 O Posicionamento pode usar o MVV como evidência de coerência, mas deve possuir análise própria com `subphase_key=positioning`. Análises de Missão, Visão ou Valores não podem avançar essa jornada.
 
+### 10.1.6 Protocolo oficial do Organograma
+
+A subfase `identity/org_chart` utiliza `org-chart-official-v1.0`, com jornada `org-chart-maturity-v1.0`.
+
+O protocolo exige:
+
+- distinção explícita entre cargo, pessoa ocupante e eventual acúmulo de papéis;
+- leitura da estrutura formal e da estrutura efetivamente praticada;
+- entregas, responsabilidades, direitos de decisão, alçadas e relações de reporte de cada papel crítico;
+- identificação de lacunas, sobreposições, conflitos, concentração de decisão, posições órfãs e colaboradores sem cargo;
+- vínculo dos responsáveis por processos, indicadores, projetos e Squads quando aplicável;
+- análise de capacidade, competências, amplitude de liderança, segregação de funções e custo organizacional;
+- separação entre estrutura atual e estrutura-alvo, com sequência de implantação coerente com o crescimento;
+- simulação mínima dos cenários operação atual, crescimento planejado e ausência/ruptura de papel crítico;
+- coerência com MVV, Posicionamento, arquitetura de processos, Planejamento Estratégico e Gerenciamento Estratégico;
+- evidências de implantação e funcionamento, pois desenho cadastrado não comprova maturidade metodológica.
+
+Pesquisa externa e benchmarking devem ser usados quando ajudarem a avaliar desenho organizacional, governança, amplitude de liderança, segregação de funções ou estruturas comparáveis. Referências externas não autorizam copiar organogramas nem substituir a realidade operacional, o porte e a estratégia do tenant.
+
+Uma análise do Organograma deve usar `subphase_key=org_chart` e não pode consumir análises de outras subfases para avançar sua jornada. Alterações em cargos, vínculos de colaboradores e relações de subordinação permanecem proibidas antes da decisão do consultor e da atuação de executor autorizado. Na ausência de uma surface MCP específica e aprovada para essas mutações, a execução canônica deve ocorrer pelas telas/APIs autorizadas do APP32, sempre com `company_id`, releitura e verificação.
+
 ### 10.2 Rastreabilidade Protocolo → Análise
 
 Cada análise recebida deve guardar uma fotografia do protocolo usado no momento do trabalho.

@@ -51,6 +51,16 @@ class ConsultiveMaturityGuidanceService:
             "develop_objective": "Delimitar cliente prioritário, problema, categoria, proposta de valor e diferenciais defensáveis, confrontando a promessa com mercado e capacidade real de entrega.",
             "persist_key": "persist_approved_positioning",
         },
+        "org_chart": {
+            "title": "Organograma",
+            "article": "o ",
+            "approval_adjective": "aprovado",
+            "persistence_adjective": "persistido",
+            "journey_version": "org-chart-maturity-v1.0",
+            "develop_key": "develop_org_chart_diagnosis",
+            "develop_objective": "Traduzir estratégia e processos em papéis, responsabilidades, decisões, reportes e capacidade, confrontando estrutura formal, prática e estrutura-alvo.",
+            "persist_key": "persist_approved_org_chart",
+        },
     }
 
     @classmethod
@@ -208,7 +218,7 @@ class ConsultiveMaturityGuidanceService:
             snapshot = dict(analysis.get("protocol_snapshot") or {})
             source_payload = dict(analysis.get("source_payload") or {})
             analysis_subphase = snapshot.get("subphase_key") or source_payload.get("subphase_key")
-            if subphase_key in {"vision", "values", "positioning"}:
+            if subphase_key in {"vision", "values", "positioning", "org_chart"}:
                 if analysis_subphase != subphase_key:
                     continue
             elif analysis_subphase not in (None, "", subphase_key):
