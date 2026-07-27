@@ -41,6 +41,16 @@ class ConsultiveMaturityGuidanceService:
             "develop_objective": "Transformar princípios declarados em comportamentos observáveis, dilemas, anticomportamentos e evidências da cultura real.",
             "persist_key": "persist_approved_values",
         },
+        "positioning": {
+            "title": "Posicionamento",
+            "article": "o ",
+            "approval_adjective": "aprovado",
+            "persistence_adjective": "persistido",
+            "journey_version": "positioning-maturity-v1.0",
+            "develop_key": "develop_positioning_diagnosis",
+            "develop_objective": "Delimitar cliente prioritário, problema, categoria, proposta de valor e diferenciais defensáveis, confrontando a promessa com mercado e capacidade real de entrega.",
+            "persist_key": "persist_approved_positioning",
+        },
     }
 
     @classmethod
@@ -163,13 +173,19 @@ class ConsultiveMaturityGuidanceService:
     ) -> dict[str, str]:
         configured = dict(cls.IDENTITY_SUBPHASE_CONTRACTS.get(subphase_key) or {}) if front_key == "identity" else {}
         title = configured.get("title") or ConsultiveProtocolService._subphase_title(subphase_key or front_key)
-        article = "os " if title == "Valores" else "a "
+        article = configured.get("article") or ("os " if title == "Valores" else "a ")
         protocol_data = dict(protocol.get("protocol") or {})
         return {
             "title": title,
             "title_with_article": f"{article}{title}",
-            "approval_adjective": "aprovados" if title == "Valores" else "aprovada",
-            "persistence_adjective": "persistidos" if title == "Valores" else "persistida",
+            "approval_adjective": (
+                configured.get("approval_adjective")
+                or ("aprovados" if title == "Valores" else "aprovada")
+            ),
+            "persistence_adjective": (
+                configured.get("persistence_adjective")
+                or ("persistidos" if title == "Valores" else "persistida")
+            ),
             "journey_version": (
                 str(protocol_data.get("journey_version") or configured.get("journey_version") or "structuring-journey-v2")
             ),
@@ -192,7 +208,7 @@ class ConsultiveMaturityGuidanceService:
             snapshot = dict(analysis.get("protocol_snapshot") or {})
             source_payload = dict(analysis.get("source_payload") or {})
             analysis_subphase = snapshot.get("subphase_key") or source_payload.get("subphase_key")
-            if subphase_key in {"vision", "values"}:
+            if subphase_key in {"vision", "values", "positioning"}:
                 if analysis_subphase != subphase_key:
                     continue
             elif analysis_subphase not in (None, "", subphase_key):

@@ -442,6 +442,25 @@ Missão, Visão e Valores podem avançar em jornadas separadas. O encerramento m
 - ausência de contradições relevantes entre os três elementos;
 - aderência ao Posicionamento, aos processos e ao Planejamento Estratégico.
 
+### 10.1.5 Protocolo oficial do Posicionamento
+
+A subfase `identity/positioning` utiliza `positioning-official-v1.0`, com jornada `positioning-maturity-v1.0`.
+
+O protocolo exige:
+
+- cliente prioritário e situação de compra claramente delimitados, sem confundir mercado amplo com ICP;
+- problema, necessidade ou trabalho a realizar que torna a oferta relevante;
+- categoria de referência e alternativas reais consideradas pelo cliente;
+- proposta de valor com resultado percebido e razões para acreditar;
+- diferenciais relevantes, comprováveis e defensáveis, separados de requisitos básicos da categoria;
+- pesquisa profunda sobre clientes, concorrentes, substitutos, pares e percepção de mercado, com fontes e limitações;
+- simulação de aderência em cenários favorável, base e adverso e teste de mensagens com segmentos distintos;
+- escolhas explícitas sobre o que a empresa não pretende ser, atender ou prometer;
+- coerência com Missão, Visão, Valores, ofertas, preços, canais, experiência, processos e capacidades;
+- proibição de tratar slogan, texto publicitário ou intenção interna como prova de posicionamento percebido.
+
+O Posicionamento pode usar o MVV como evidência de coerência, mas deve possuir análise própria com `subphase_key=positioning`. Análises de Missão, Visão ou Valores não podem avançar essa jornada.
+
 ### 10.2 Rastreabilidade Protocolo → Análise
 
 Cada análise recebida deve guardar uma fotografia do protocolo usado no momento do trabalho.

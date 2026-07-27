@@ -13,21 +13,29 @@ def _context(engineering=True):
 
 
 def _protocol(subphase="mission"):
-    titles = {"mission": "Missão", "vision": "Visão", "values": "Valores"}
+    titles = {
+        "mission": "Missão",
+        "vision": "Visão",
+        "values": "Valores",
+        "positioning": "Posicionamento",
+    }
     versions = {
         "mission": "mission-official-v1.0",
         "vision": "vision-official-v1.0",
         "values": "values-official-v1.0",
+        "positioning": "positioning-official-v1.0",
     }
     journey_versions = {
         "mission": "mission-maturity-v1.2",
         "vision": "vision-maturity-v1.0",
         "values": "values-maturity-v1.0",
+        "positioning": "positioning-maturity-v1.0",
     }
     questions = {
         "mission": "O que a empresa entrega?",
         "vision": "Onde a empresa quer estar?",
         "values": "Quais princípios são inegociáveis?",
+        "positioning": "Quem é o cliente prioritário?",
     }
     return {
         "id": 1,
@@ -305,3 +313,67 @@ def test_vision_does_not_consume_legacy_analysis_without_subphase(monkeypatch):
 
     assert result["journey_state"] == "collecting_evidence"
     assert result["current_state"]["latest_analysis_id"] is None
+
+
+def test_positioning_without_analysis_uses_market_fit_journey(monkeypatch):
+    _install(monkeypatch, [], engineering=False, subphase="positioning")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="positioning"
+    )
+
+    assert result["journey_version"] == "positioning-maturity-v1.0"
+    assert result["pilot_scope"] is True
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["next_action"]["key"] == "develop_positioning_diagnosis"
+    assert result["next_action"]["label"] == "Diagnosticar e amadurecer o Posicionamento"
+    assert "Quem é o cliente prioritário?" in result["next_action"]["required_inputs"]
+    assert result["protocol"]["version"] == "positioning-official-v1.0"
+
+
+def test_positioning_accepted_decision_authorizes_only_positioning_persistence(monkeypatch):
+    validations = [
+        {"squad": "client", "status": "validated"},
+        {"squad": "versus", "status": "validated"},
+    ]
+    analysis = _analysis(
+        validations=validations,
+        decision={"decision": "accept"},
+        subphase="positioning",
+    )
+    _install(monkeypatch, [analysis], engineering=False, subphase="positioning")
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="positioning"
+    )
+
+    assert result["journey_state"] == "approved_for_execution"
+    assert result["next_action"]["key"] == "persist_approved_positioning"
+    assert result["next_action"]["label"] == "Persistir e verificar o Posicionamento aprovado"
+    assert result["next_action"]["write_policy"]["canonical_write_allowed"] is True
+
+
+def test_positioning_does_not_consume_values_or_legacy_analysis(monkeypatch):
+    legacy = _analysis(subphase="mission")
+    legacy["id"] = 78
+    legacy["protocol_snapshot"] = {"subphase_key": None}
+    _install(
+        monkeypatch,
+        [
+            _analysis(
+                validations=[{"squad": "client", "status": "validated"}],
+                subphase="values",
+            ),
+            legacy,
+        ],
+        engineering=False,
+        subphase="positioning",
+    )
+
+    result = ConsultiveMaturityGuidanceService.get_next_action(
+        company_id=10, front_key="identity", subphase_key="positioning"
+    )
+
+    assert result["journey_state"] == "collecting_evidence"
+    assert result["current_state"]["latest_analysis_id"] is None
+    assert result["current_state"]["latest_received_analysis_id"] is None
