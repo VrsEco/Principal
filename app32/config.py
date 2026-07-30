@@ -94,6 +94,12 @@ class Config:
     AI_PROVIDER = os.environ.get("AI_PROVIDER", "openai")  # openai, anthropic, local
     AI_API_KEY = os.environ.get("AI_API_KEY")
     AI_WEBHOOK_URL = os.environ.get("AI_WEBHOOK_URL")
+    KNOWLEDGE_PRODUCT_HELP_SYNC_MINUTES = int(
+        os.environ.get("KNOWLEDGE_PRODUCT_HELP_SYNC_MINUTES") or 15
+    )
+    KNOWLEDGE_TENANT_SYNC_MINUTES = int(
+        os.environ.get("KNOWLEDGE_TENANT_SYNC_MINUTES") or 15
+    )
 
     # WhatsApp Integration
     WHATSAPP_PROVIDER = os.environ.get(

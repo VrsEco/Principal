@@ -70,7 +70,7 @@ def test_surface_contract_rules_and_crud_coherence():
     assert "workload" in ops_playbook.allowed_domains
 
     crud_domains = {contract.domain for contract in APP32_CRUD_CONTRACTS_MANIFEST.domains}
-    allowed_non_crud_domains = {"governance", "analytics", "operations", "workload", "identity_self_service", "identity_admin"}
+    allowed_non_crud_domains = {"governance", "analytics", "operations", "workload", "identity_self_service", "identity_admin", "consultive", "knowledge"}
     assert set(user_playbook.allowed_domains).issubset(crud_domains | allowed_non_crud_domains)
     assert set(admin_playbook.allowed_domains).issubset(crud_domains | allowed_non_crud_domains)
 

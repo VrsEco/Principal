@@ -65,6 +65,12 @@ DOMAIN_MATRIX = {
         "administrador": READ_ACTIONS | WRITE_ACTIONS,
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },
+    "knowledge": {
+        "colaborador": {"discover", "read", "list", "search", "analyze"},
+        "cliente": {"discover", "read", "list", "search", "analyze"},
+        "administrador": {"discover", "read", "list", "search", "analyze", "audit"},
+        "administrador_tecnico": {"discover", "read", "list", "search", "analyze", "audit"},
+    },
     "real_estate_auctions": {
         "colaborador": READ_ACTIONS | {"create", "update"},
         "cliente": {"discover", "read", "list", "search", "analyze"},

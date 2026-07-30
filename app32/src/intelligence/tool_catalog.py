@@ -31,6 +31,7 @@ from src.core.mcp_financial_tools import register_financial_mcp_tools
 from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
+from src.core.mcp_knowledge_tools import register_knowledge_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_operation_router_tools import register_operation_router_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
@@ -259,6 +260,18 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(
+        name="answer_product_help",
+        description="Responde como usar o APP Versus com evidências do manual oficial.",
+    ),
+    SimpleNamespace(
+        name="search_organizational_knowledge",
+        description="Busca conhecimento autorizado da empresa ativa e conteúdo oficial do produto.",
+    ),
+    SimpleNamespace(
+        name="answer_organizational_question",
+        description="Responde pergunta organizacional com claims e citações autorizadas.",
+    ),
     SimpleNamespace(
         name="correct_plan_global_okrs_tool",
         description="Corrige os dois OKRs Globais do plano e refaz seus vínculos setoriais com confirmação humana.",
@@ -784,6 +797,7 @@ catalog = ToolCatalog(
         register_incentive_tools,
         register_integration_request_tools,
         register_instruction_registry_tools,
+        register_knowledge_tools,
         register_operational_readiness_tools,
         register_operation_router_tools,
         register_permission_matrix_tools,

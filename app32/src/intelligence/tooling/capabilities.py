@@ -84,6 +84,29 @@ class ToolCapability:
 
 
 _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
+    "answer_product_help": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": (),
+        "tags": ("read", "product_help", "citations"),
+    },
+    "search_organizational_knowledge": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "search", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
+    "answer_organizational_question": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value, ToolScope.MCP_ANALYTICS.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "answer", "citations", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
+    },
     "create_process_bpmn_activity_tool": {
         "domain": "processes", "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.MEDIUM, "permissions": ("processes.ai_assistant.execute",),

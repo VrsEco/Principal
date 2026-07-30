@@ -188,6 +188,65 @@ def setup_proactive_jobs(app):
     logger.info("✅ Jobs proativos configurados!")
 
 
+def setup_knowledge_jobs(app):
+    """Configura a atualização automática da Camada de Conhecimento."""
+    interval_minutes = max(
+        1,
+        int(app.config.get("KNOWLEDGE_PRODUCT_HELP_SYNC_MINUTES", 15)),
+    )
+    scheduler_service.add_job(
+        func=lambda: sync_product_help_knowledge(app),
+        trigger="interval",
+        job_id="knowledge_product_help_sync",
+        minutes=interval_minutes,
+        next_run_time=datetime.now(),
+        name="Atualização automática do Manual Interativo",
+    )
+    tenant_interval_minutes = max(
+        1,
+        int(app.config.get("KNOWLEDGE_TENANT_SYNC_MINUTES", 15)),
+    )
+    scheduler_service.add_job(
+        func=lambda: sync_tenant_knowledge(app),
+        trigger="interval",
+        job_id="knowledge_tenant_sources_sync",
+        minutes=tenant_interval_minutes,
+        next_run_time=datetime.now(),
+        name="Atualização automática do Conhecimento por Empresa",
+    )
+    logger.info(
+        "✅ Jobs de conhecimento configurados! product=%smin tenant=%smin",
+        interval_minutes,
+        tenant_interval_minutes,
+    )
+
+
+def sync_product_help_knowledge(app):
+    """Bridge tenant-safe para o sincronizador global product_help."""
+    with app.app_context():
+        from services.knowledge.auto_update_service import KnowledgeAutoUpdateService
+
+        result = KnowledgeAutoUpdateService().sync_product_help(trigger_kind="scheduled")
+        if not result.get("ok"):
+            logger.error("❌ Atualização product_help falhou: %s", result.get("error"))
+        return result
+
+
+def sync_tenant_knowledge(app):
+    """Reconcilia adapters tenant-owned para todas as empresas ativas."""
+    with app.app_context():
+        from services.knowledge.auto_update_service import KnowledgeAutoUpdateService
+
+        result = KnowledgeAutoUpdateService().sync_all_tenant_sources(
+            trigger_kind="scheduled",
+        )
+        if not result.get("ok"):
+            logger.error(
+                "❌ Atualização de conhecimento tenant-owned teve falhas: %s", result
+            )
+        return result
+
+
 def send_proactive_morning_summary(app):
     """Bridge para o proactive_service"""
     from services.proactive_service import send_morning_summaries
@@ -225,6 +284,9 @@ def initialize_scheduler(app):
         
         # Configurar jobs proativos (Fase 4)
         setup_proactive_jobs(app)
+
+        # Configurar atualização automática da Camada de Conhecimento
+        setup_knowledge_jobs(app)
 
         # Configurar monitor de chat
         setup_chat_timeout_job(app)

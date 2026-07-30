@@ -19,6 +19,7 @@ CANONICAL_TOOL_DOMAINS: tuple[str, ...] = (
     "operations",
     "admin",
     "diagnostics",
+    "knowledge",
     "general",
 )
 

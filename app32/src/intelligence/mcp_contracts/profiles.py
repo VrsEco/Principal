@@ -438,7 +438,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 surface="user",
                 harness_key="harness_coordenador_cliente_v1",
                 harness_label="Harness Coordenador do Squad Cliente",
-                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "consultive", "governance", "identity_self_service"],
+                allowed_domains=["routine", "projects", "processes", "meetings", "strategy", "consultive", "knowledge", "governance", "identity_self_service"],
                 allowed_actions=["discover", "read", "create", "update", "analyze", "review"],
                 blocked_domains=["analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[

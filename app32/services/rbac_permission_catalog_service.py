@@ -756,6 +756,26 @@ class RbacPermissionCatalogService:
             ],
         ),
         _node(
+            "knowledge",
+            "Conhecimento Corporativo",
+            "Busca citada, manual interativo e fontes autorizadas por empresa.",
+            ["view", "execute", "configure", "audit"],
+            [
+                _feature(
+                    "knowledge.search",
+                    "Busca e Respostas",
+                    "Consulta tenant-safe com abstenção, claims e citações.",
+                    ["view", "execute", "audit"],
+                ),
+                _tool(
+                    "knowledge.mcp.answers",
+                    "Tools MCP de Conhecimento",
+                    "Ajuda do produto e respostas organizacionais citadas.",
+                    ["view", "execute", "audit"],
+                ),
+            ],
+        ),
+        _node(
             "operations",
             "Operations / IA / MCP Console",
             "Console operacional, monitoramento, auditoria e capabilities.",

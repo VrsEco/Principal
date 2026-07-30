@@ -1,0 +1,42 @@
+{
+  "source_ref": "processos.publicar_portal",
+  "title": "Publicar um processo no Portal de Processos",
+  "version": "v1",
+  "product_version": "3.2",
+  "locale": "pt-BR",
+  "status": "published",
+  "authority_level": "official",
+  "route_key": "processes.detail",
+  "module_key": "processes",
+  "help_kind": "guided_tour",
+  "canonical_uri": "app-versus://help/processes/publish",
+  "navigation_target": "processes.detail",
+  "tour_definition_id": "processes.publish.v1",
+  "audience": ["administrator", "client", "collaborator"],
+  "required_capabilities": ["processes.view"],
+  "valid_from": "2026-07-30T00:00:00",
+  "source_updated_at": "2026-07-30T00:00:00",
+  "suggested_questions": [
+    "Como publico este processo?",
+    "Por que o botão de publicação não aparece?",
+    "Como revisar o fluxo e o POP?"
+  ],
+  "tour_steps": [
+    {
+      "step": 1,
+      "help_id": "process-flow-pop-tab",
+      "instruction": "Abra Fluxo / POP e conclua as revisões pendentes."
+    },
+    {
+      "step": 2,
+      "help_id": "process-publication-tab",
+      "instruction": "Abra Publicação e revise a visibilidade."
+    },
+    {
+      "step": 3,
+      "help_id": "process-publication-submit",
+      "instruction": "Envie para aprovação pelo workflow oficial."
+    }
+  ],
+  "content": "# Antes de publicar\n\nConfirme que o fluxo está concluído, o POP foi revisado e seu perfil possui permissão de publicação.\n\n# Passos\n\n1. Abra **Fluxo / POP** e conclua as revisões pendentes.\n2. Confirme responsáveis, passos e resultado esperado.\n3. Acesse **Publicação** e revise a visibilidade.\n4. Envie para aprovação e confirme a publicação no workflow oficial.\n\n# Quando a opção não aparece\n\nVerifique o status do processo, a conclusão do POP e a capability de publicação. O APP Versus não contorna aprovação nem permissão.\n"
+}
