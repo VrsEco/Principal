@@ -85,3 +85,41 @@ def test_build_project_summary_payload_lists_stats_and_tasks():
     assert 'Atividades priorizadas:' in payload['body']
     assert '1. AC.J.7.11 | Implantar painel executivo' in payload['body']
     assert '2. AC.J.7.12 | Validar indicadores' in payload['body']
+
+
+def test_build_project_summary_payload_lists_all_project_tasks():
+    tasks = [
+        SimpleNamespace(
+            id=index,
+            code=f'AX.J.31.{index}',
+            what=f'Atividade {index}',
+            due_date='2026-08-04',
+            status='in_progress',
+            employee_name='Fabiano Ferreira',
+            who='Fabiano Ferreira',
+        )
+        for index in range(1, 12)
+    ]
+
+    class _TaskQuery:
+        def order_by(self, *args, **kwargs):
+            return self
+
+        def all(self):
+            return tasks
+
+    project = SimpleNamespace(
+        id=166,
+        code='AX.J.31',
+        name='Atividades Gerais',
+        owner='Fabiano Ferreira',
+        status='planned',
+        deadline='2026-08-04',
+        task_stats={'total': 11, 'open': 11, 'completed': 0, 'delayed': 0, 'progress': 0},
+        tasks=_TaskQuery(),
+    )
+
+    payload = svc._build_project_summary_payload(project)
+
+    assert '1. AX.J.31.1 | Atividade 1' in payload['body']
+    assert '11. AX.J.31.11 | Atividade 11' in payload['body']

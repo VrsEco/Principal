@@ -153,7 +153,7 @@ def _build_project_summary_payload(project: Project) -> dict[str, str | None]:
             tasks = task_query.all() if hasattr(task_query, 'all') else []
 
     prioritized_lines = []
-    for index, task in enumerate(tasks[:5], start=1):
+    for index, task in enumerate(tasks, start=1):
         prioritized_lines.append(
             f"{index}. {getattr(task, 'code', None) or f'J.{task.id}'} | "
             f"{_normalize_text(getattr(task, 'what', None))} | "
