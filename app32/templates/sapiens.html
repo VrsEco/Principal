@@ -1975,30 +1975,6 @@
         }
     }
 
-    userInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
-
-    userInput.addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-    });
-
-    workflowRejectModal.addEventListener('click', (event) => {
-        if (event.target === workflowRejectModal) {
-            closeWorkflowRejectModal();
-        }
-    });
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && workflowRejectModal.classList.contains('visible')) {
-            closeWorkflowRejectModal();
-        }
-    });
-
     let sapiensPageInitialized = false;
 
     function initializeSapiensPage() {
@@ -2048,5 +2024,29 @@
     } else {
         initializeSapiensPage();
     }
+
+    userInput?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    userInput?.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    workflowRejectModal?.addEventListener('click', (event) => {
+        if (event.target === workflowRejectModal) {
+            closeWorkflowRejectModal();
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && workflowRejectModal?.classList.contains('visible')) {
+            closeWorkflowRejectModal();
+        }
+    });
 </script>
 {% endblock %}

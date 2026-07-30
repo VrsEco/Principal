@@ -36,3 +36,6 @@ def test_sapiens_page_initializes_even_after_dom_content_loaded():
         in template
     )
     assert "initializeSapiensPage();" in template
+    assert template.index("initializeSapiensPage();") < template.index(
+        "userInput?.addEventListener('keydown'"
+    )
