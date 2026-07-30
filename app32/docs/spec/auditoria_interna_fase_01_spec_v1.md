@@ -582,3 +582,14 @@ Implementar em três ondas:
 1. **Base e cadastros:** tabelas, services, RBAC, menu, checklists, áreas e auditores.
 2. **Execução e achados:** execução de checklist, pontos, papéis de trabalho, evidências e achados.
 3. **Integrações e relatório:** projeto/atividade, reunião de alinhamento, relatório, envio e follow-up.
+
+### Contrato implementado da Onda 4
+
+- `audit_reports`: relatório versionado por `company_id + execution_id + version`;
+- emissão exige aprovação humana e conclusão do auditor;
+- emissão grava `snapshot_json` e torna a versão imutável;
+- correções posteriores criam nova versão e preservam a anterior como `superseded`;
+- `audit_follow_ups`: trilha append-only de acompanhamento por achado e empresa;
+- resolução e encerramento exigem validação textual do auditor;
+- saída A4 permite impressão ou salvamento em PDF;
+- entrega auditável por e-mail/WhatsApp permanece evolução subsequente.

@@ -1,0 +1,80 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Relatórios de Auditoria{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><a href="/internal-audit">Auditoria Interna</a><span class="sep">/</span><span class="current">Relatórios</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page fade-in">
+  <header class="audit-header">
+    <div><p class="eyebrow">Onda 4</p><h1>Relatórios de Auditoria</h1><p class="subtitle">Crie versões formais, aprove a emissão humana e preserve o snapshot dos dados auditados.</p></div>
+  </header>
+
+  <section class="panel">
+    <h2>Novo rascunho</h2>
+    <form id="report-form" class="form-grid">
+      <label>Execução ID<input name="execution_id" type="number" min="1" required></label>
+      <label class="wide">Título<input name="title" maxlength="255" placeholder="Preenchimento automático quando vazio"></label>
+      <label>Período inicial<input name="period_start" type="date"></label>
+      <label>Período final<input name="period_end" type="date"></label>
+      <label class="wide">Objetivo<textarea name="objective" rows="2"></textarea></label>
+      <label class="wide">Escopo<textarea name="scope_text" rows="2"></textarea></label>
+      <label class="wide">Sumário executivo<textarea name="executive_summary" rows="3"></textarea></label>
+      <label class="wide">Conclusão do auditor<textarea name="auditor_conclusion" rows="3" required></textarea></label>
+      <label>Parecer
+        <select name="opinion">
+          <option value="">Selecione</option>
+          <option>Conforme</option>
+          <option>Conforme com ressalva</option>
+          <option>Não conforme</option>
+        </select>
+      </label>
+      <div class="actions"><button type="submit">Criar rascunho</button></div>
+    </form>
+    <p id="message" class="message"></p>
+  </section>
+
+  <section class="panel">
+    <div class="section-title"><h2>Histórico de versões</h2><button type="button" class="secondary" onclick="loadReports()">Atualizar</button></div>
+    <div id="reports" class="cards"></div>
+  </section>
+</div>
+<style>
+.audit-page{padding:0 2rem 2rem}.eyebrow{margin:0;color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.subtitle,.muted{color:var(--text-secondary)}.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.25rem;margin-bottom:1rem;box-shadow:var(--shadow-sm)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.form-grid label{display:grid;gap:.35rem;font-weight:700}.form-grid .wide{grid-column:1/-1}input,textarea,select{width:100%;border:1px solid var(--border);border-radius:10px;padding:.7rem;background:var(--surface);color:var(--text-primary)}button,.button-link{border:0;border-radius:10px;padding:.7rem 1rem;background:var(--primary);color:white;font-weight:800;cursor:pointer;text-decoration:none;display:inline-block}.secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}.actions{display:flex;align-items:end}.section-title,.card-actions{display:flex;align-items:center;justify-content:space-between;gap:.75rem}.cards{display:grid;gap:.75rem}.report-card{border:1px solid var(--border);border-radius:14px;padding:1rem}.report-card h3{margin:.1rem 0}.meta{display:flex;flex-wrap:wrap;gap:.5rem;color:var(--text-secondary);font-size:.85rem}.pill{padding:.2rem .55rem;border-radius:999px;background:var(--surface-secondary);font-weight:800}.message{min-height:1.2rem}@media(max-width:800px){.audit-page{padding:0 1rem 1.5rem}.form-grid{grid-template-columns:1fr}.form-grid .wide{grid-column:auto}.section-title,.card-actions{align-items:flex-start;flex-direction:column}}
+</style>
+<script>
+const reportForm = document.getElementById('report-form');
+const message = document.getElementById('message');
+async function api(url, options={}) {
+  const response = await fetch(url, {headers:{'Content-Type':'application/json'}, ...options});
+  const body = await response.json();
+  if (!response.ok || !body.success) throw new Error(body.message || 'Falha na operação.');
+  return body.data;
+}
+function escapeHtml(value=''){const div=document.createElement('div');div.textContent=value||'';return div.innerHTML}
+async function loadReports(){
+  try {
+    const rows = await api('/api/internal-audit/reports');
+    document.getElementById('reports').innerHTML = rows.length ? rows.map(row => `
+      <article class="report-card">
+        <div class="card-actions">
+          <div><div class="meta"><span class="pill">${escapeHtml(row.status)}</span><span>Versão ${row.version}</span><span>Execução #${row.execution_id}</span></div><h3>${escapeHtml(row.title)}</h3><p class="muted">${escapeHtml(row.opinion || 'Parecer ainda não informado')}</p></div>
+          <div class="card-actions">
+            ${row.status === 'draft' ? `<button type="button" onclick="issueReport(${row.id})">Aprovar e emitir</button>` : ''}
+            <a class="button-link secondary" target="_blank" href="/internal-audit/reports/${row.id}/print">Visualizar / PDF</a>
+          </div>
+        </div>
+      </article>`).join('') : '<p class="muted">Nenhum relatório criado.</p>';
+  } catch (error) { message.textContent = error.message; }
+}
+async function issueReport(id){
+  if (!confirm('Aprovar e emitir esta versão? Após a emissão o snapshot será imutável.')) return;
+  try { await api(`/api/internal-audit/reports/${id}/issue`, {method:'POST', body:'{}'}); message.textContent='Relatório emitido com sucesso.'; loadReports(); }
+  catch(error){ message.textContent=error.message; }
+}
+reportForm.addEventListener('submit', async event => {
+  event.preventDefault(); message.textContent='Salvando...';
+  const payload = Object.fromEntries(new FormData(reportForm).entries());
+  try { await api('/api/internal-audit/reports', {method:'POST', body:JSON.stringify(payload)}); reportForm.reset(); message.textContent='Rascunho criado.'; loadReports(); }
+  catch(error){ message.textContent=error.message; }
+});
+loadReports();
+</script>
+{% endblock %}

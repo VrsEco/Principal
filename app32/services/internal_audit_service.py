@@ -11,6 +11,7 @@ from models.internal_audit import (
     AUDIT_CHECKLIST_TYPES,
     AUDIT_EVIDENCE_TYPES,
     AUDIT_FINDING_STATUSES,
+    AUDIT_FOLLOW_UP_STATUSES,
     AUDIT_ITEM_STATUSES,
     AUDIT_POINT_ORIGINS,
     AUDIT_POINT_STATUSES,
@@ -23,7 +24,9 @@ from models.internal_audit import (
     AuditExecutionItem,
     AuditEvidenceLink,
     AuditFinding,
+    AuditFollowUp,
     AuditPoint,
+    AuditReport,
     AuditWorkpaper,
 )
 from models.meeting import Meeting
@@ -72,6 +75,8 @@ class InternalAuditCatalogSummary:
     workpapers_count: int
     findings_count: int
     open_findings_count: int
+    reports_count: int
+    pending_follow_ups_count: int
 
     def to_dict(self) -> dict:
         return {
@@ -84,6 +89,8 @@ class InternalAuditCatalogSummary:
             "workpapers_count": self.workpapers_count,
             "findings_count": self.findings_count,
             "open_findings_count": self.open_findings_count,
+            "reports_count": self.reports_count,
+            "pending_follow_ups_count": self.pending_follow_ups_count,
         }
 
 
@@ -102,6 +109,11 @@ class InternalAuditService:
             open_findings_count=AuditFinding.query.filter(
                 AuditFinding.company_id == company_id,
                 AuditFinding.status.in_(("open", "action_linked", "in_follow_up")),
+            ).count(),
+            reports_count=AuditReport.query.filter_by(company_id=company_id).count(),
+            pending_follow_ups_count=AuditFinding.query.filter(
+                AuditFinding.company_id == company_id,
+                AuditFinding.status.in_(("open", "action_linked", "in_follow_up", "resolved")),
             ).count(),
         ).to_dict()
 
@@ -708,3 +720,197 @@ class InternalAuditService:
         if not meeting:
             raise InternalAuditServiceError("Reunião de alinhamento não encontrada para a empresa ativa.")
         return meeting.id
+
+    @staticmethod
+    def list_reports(company_id: int) -> list[dict]:
+        return [
+            report.to_dict(include_snapshot=False)
+            for report in AuditReport.query.filter_by(company_id=company_id)
+            .order_by(AuditReport.updated_at.desc(), AuditReport.id.desc())
+            .all()
+        ]
+
+    @staticmethod
+    def get_report(company_id: int, report_id: int) -> dict:
+        report = AuditReport.query.filter_by(company_id=company_id, id=report_id).first()
+        if not report:
+            raise InternalAuditServiceError("Relatório de auditoria não encontrado.")
+        return report.to_dict(include_snapshot=True)
+
+    @staticmethod
+    def create_report(company_id: int, payload: dict, *, current_user_id: int | None = None) -> dict:
+        execution_id = _int_or_none(payload.get("execution_id"))
+        if not execution_id:
+            raise InternalAuditServiceError("Execução de auditoria é obrigatória.")
+        execution = AuditExecution.query.filter_by(company_id=company_id, id=execution_id).first()
+        if not execution:
+            raise InternalAuditServiceError("Execução de auditoria não encontrada.")
+
+        latest = (
+            AuditReport.query.filter_by(company_id=company_id, execution_id=execution.id)
+            .order_by(AuditReport.version.desc())
+            .first()
+        )
+        version = (latest.version + 1) if latest else 1
+        default_title = f"Relatório de Auditoria — {getattr(execution.checklist, 'title', '') or execution.id}"
+        report = AuditReport(
+            company_id=company_id,
+            execution_id=execution.id,
+            version=version,
+            supersedes_report_id=latest.id if latest else None,
+            title=_clean_text(payload.get("title"), max_length=255) or default_title[:255],
+            objective=_clean_text(payload.get("objective")),
+            scope_text=_clean_text(payload.get("scope_text")),
+            period_start=InternalAuditService._parse_date(payload.get("period_start")) or execution.planned_start_date,
+            period_end=InternalAuditService._parse_date(payload.get("period_end")) or execution.planned_end_date,
+            executive_summary=_clean_text(payload.get("executive_summary")),
+            auditor_conclusion=_clean_text(payload.get("auditor_conclusion")),
+            opinion=_clean_text(payload.get("opinion"), max_length=80),
+            status="draft",
+            snapshot_json={},
+            prepared_by_user_id=current_user_id,
+        )
+        db.session.add(report)
+        db.session.commit()
+        return report.to_dict(include_snapshot=True)
+
+    @staticmethod
+    def update_report(company_id: int, report_id: int, payload: dict) -> dict:
+        report = AuditReport.query.filter_by(company_id=company_id, id=report_id).first()
+        if not report:
+            raise InternalAuditServiceError("Relatório de auditoria não encontrado.")
+        if report.status != "draft":
+            raise InternalAuditServiceError("Relatório emitido é imutável; crie uma nova versão.")
+
+        for field in ("title", "objective", "scope_text", "executive_summary", "auditor_conclusion", "opinion"):
+            if field in payload:
+                value = _clean_text(payload.get(field), max_length=255 if field == "title" else None)
+                if field == "title" and not value:
+                    raise InternalAuditServiceError("Título do relatório é obrigatório.")
+                setattr(report, field, value)
+        if "period_start" in payload:
+            report.period_start = InternalAuditService._parse_date(payload.get("period_start"))
+        if "period_end" in payload:
+            report.period_end = InternalAuditService._parse_date(payload.get("period_end"))
+        report.updated_at = datetime.utcnow()
+        db.session.commit()
+        return report.to_dict(include_snapshot=True)
+
+    @staticmethod
+    def issue_report(company_id: int, report_id: int, *, current_user_id: int | None = None) -> dict:
+        report = AuditReport.query.filter_by(company_id=company_id, id=report_id).first()
+        if not report:
+            raise InternalAuditServiceError("Relatório de auditoria não encontrado.")
+        if report.status != "draft":
+            raise InternalAuditServiceError("Somente relatório em rascunho pode ser emitido.")
+        if not report.auditor_conclusion:
+            raise InternalAuditServiceError("Conclusão do auditor é obrigatória para emissão.")
+
+        execution = AuditExecution.query.filter_by(company_id=company_id, id=report.execution_id).first()
+        if not execution:
+            raise InternalAuditServiceError("Execução vinculada não encontrada.")
+
+        previous_issued = (
+            AuditReport.query.filter(
+                AuditReport.company_id == company_id,
+                AuditReport.execution_id == execution.id,
+                AuditReport.id != report.id,
+                AuditReport.status == "issued",
+            )
+            .order_by(AuditReport.version.desc())
+            .first()
+        )
+        now = datetime.utcnow()
+        if previous_issued:
+            previous_issued.status = "superseded"
+            previous_issued.updated_at = now
+            report.supersedes_report_id = previous_issued.id
+
+        report.snapshot_json = InternalAuditService._build_report_snapshot(company_id, execution)
+        report.status = "issued"
+        report.approved_by_user_id = current_user_id
+        report.approved_at = now
+        report.issued_at = now
+        report.updated_at = now
+        db.session.commit()
+        return report.to_dict(include_snapshot=True)
+
+    @staticmethod
+    def _build_report_snapshot(company_id: int, execution: AuditExecution) -> dict:
+        findings = (
+            AuditFinding.query.filter_by(company_id=company_id, execution_id=execution.id)
+            .order_by(AuditFinding.severity.desc(), AuditFinding.id.asc())
+            .all()
+        )
+        workpapers = (
+            AuditWorkpaper.query.filter_by(company_id=company_id, execution_id=execution.id)
+            .order_by(AuditWorkpaper.id.asc())
+            .all()
+        )
+        items = execution.to_dict(include_items=True).get("items", [])
+        status_counts: dict[str, int] = {}
+        for item in items:
+            status = item.get("status") or "not_tested"
+            status_counts[status] = status_counts.get(status, 0) + 1
+        return {
+            "generated_at": datetime.utcnow().isoformat(),
+            "execution": execution.to_dict(include_items=True),
+            "findings": [finding.to_dict(include_evidences=True) for finding in findings],
+            "workpapers": [workpaper.to_dict(include_evidences=True) for workpaper in workpapers],
+            "summary": {
+                "items_count": len(items),
+                "status_counts": status_counts,
+                "findings_count": len(findings),
+                "open_findings_count": sum(
+                    1 for finding in findings if finding.status in {"open", "action_linked", "in_follow_up"}
+                ),
+            },
+        }
+
+    @staticmethod
+    def list_follow_ups(company_id: int, finding_id: int | None = None) -> list[dict]:
+        query = AuditFollowUp.query.filter_by(company_id=company_id)
+        if finding_id:
+            query = query.filter_by(finding_id=finding_id)
+        return [
+            follow_up.to_dict()
+            for follow_up in query.order_by(AuditFollowUp.created_at.desc(), AuditFollowUp.id.desc()).all()
+        ]
+
+    @staticmethod
+    def create_follow_up(company_id: int, payload: dict, *, current_user_id: int | None = None) -> dict:
+        finding_id = _int_or_none(payload.get("finding_id"))
+        finding = AuditFinding.query.filter_by(company_id=company_id, id=finding_id).first()
+        if not finding:
+            raise InternalAuditServiceError("Achado de auditoria não encontrado.")
+        status = _clean_text(payload.get("status"), max_length=40) or "awaiting_action"
+        if status not in AUDIT_FOLLOW_UP_STATUSES:
+            raise InternalAuditServiceError("Status de follow-up inválido.")
+        if status in {"resolved", "closed"} and not _clean_text(payload.get("auditor_notes")):
+            raise InternalAuditServiceError("Resolução ou encerramento exige validação do auditor.")
+
+        previous_status = finding.status
+        follow_up = AuditFollowUp(
+            company_id=company_id,
+            finding_id=finding.id,
+            previous_status=previous_status,
+            status=status,
+            action_summary=_clean_text(payload.get("action_summary")),
+            auditor_notes=_clean_text(payload.get("auditor_notes")),
+            evidence_summary=_clean_text(payload.get("evidence_summary")),
+            due_date=InternalAuditService._parse_date(payload.get("due_date")) or finding.due_date,
+            next_review_date=InternalAuditService._parse_date(payload.get("next_review_date")),
+            performed_by_user_id=current_user_id,
+        )
+        finding.status = {
+            "awaiting_action": "action_linked" if (finding.project_id or finding.task_id) else "open",
+            "in_progress": "in_follow_up",
+            "awaiting_validation": "in_follow_up",
+            "resolved": "resolved",
+            "closed": "closed",
+            "reopened": "open",
+        }[status]
+        finding.updated_at = datetime.utcnow()
+        db.session.add(follow_up)
+        db.session.commit()
+        return follow_up.to_dict()

@@ -30,9 +30,11 @@ def test_internal_audit_models_are_tenant_scoped():
         "AuditWorkpaper",
         "AuditFinding",
         "AuditEvidenceLink",
+        "AuditReport",
+        "AuditFollowUp",
     ]:
         assert f"class {class_name}" in model
-    assert model.count("company_id = db.Column") >= 11
+    assert model.count("company_id = db.Column") >= 13
     assert "description_for_report" in model
     assert "AUDIT_CHECKLIST_TYPES" in model
     assert "__tablename__ = \"audit_executions\"" in model
@@ -41,6 +43,8 @@ def test_internal_audit_models_are_tenant_scoped():
     assert "__tablename__ = \"audit_workpapers\"" in model
     assert "__tablename__ = \"audit_findings\"" in model
     assert "__tablename__ = \"audit_evidence_links\"" in model
+    assert "__tablename__ = \"audit_reports\"" in model
+    assert "__tablename__ = \"audit_follow_ups\"" in model
 
 
 def test_internal_audit_routes_expose_phase01_catalogs():
@@ -53,6 +57,8 @@ def test_internal_audit_routes_expose_phase01_catalogs():
     assert '"/internal-audit/points"' in route
     assert '"/internal-audit/workpapers"' in route
     assert '"/internal-audit/findings"' in route
+    assert '"/internal-audit/reports"' in route
+    assert '"/internal-audit/follow-ups"' in route
     assert '"/api/internal-audit/checklists"' in route
     assert '"/api/internal-audit/checklists/<int:checklist_id>/items"' in route
     assert '"/api/internal-audit/executions"' in route
@@ -61,6 +67,8 @@ def test_internal_audit_routes_expose_phase01_catalogs():
     assert '"/api/internal-audit/workpapers"' in route
     assert '"/api/internal-audit/findings"' in route
     assert '"/api/internal-audit/evidence-links"' in route
+    assert '"/api/internal-audit/reports"' in route
+    assert '"/api/internal-audit/follow-ups"' in route
     assert "from api.routes.internal_audit import internal_audit_bp" in app_py
     assert "app.register_blueprint(internal_audit_bp)" in app_py
 
@@ -80,6 +88,8 @@ def test_internal_audit_sidebar_is_below_finance_and_before_sapiens():
     assert 'href="/internal-audit/points"' in sidebar
     assert 'href="/internal-audit/workpapers"' in sidebar
     assert 'href="/internal-audit/findings"' in sidebar
+    assert 'href="/internal-audit/reports"' in sidebar
+    assert 'href="/internal-audit/follow-ups"' in sidebar
 
 
 def test_internal_audit_wave2_service_generates_points_from_exceptions():
@@ -127,3 +137,28 @@ def test_internal_audit_wave3_templates_exist():
         content = _read(template)
         assert "Onda 3" in content
         assert "/api/internal-audit/" in content
+
+
+def test_internal_audit_wave4_service_versions_reports_and_tracks_followups():
+    service = _read("services/internal_audit_service.py")
+
+    assert "def create_report" in service
+    assert "def update_report" in service
+    assert "def issue_report" in service
+    assert "def _build_report_snapshot" in service
+    assert "Relatório emitido é imutável" in service
+    assert 'previous_issued.status = "superseded"' in service
+    assert "def create_follow_up" in service
+    assert "AUDIT_FOLLOW_UP_STATUSES" in service
+    assert "company_id=company_id" in service
+
+
+def test_internal_audit_wave4_templates_exist():
+    for template in [
+        "templates/modules/internal_audit/reports.html",
+        "templates/modules/internal_audit/follow_ups.html",
+        "templates/modules/internal_audit/report_print.html",
+    ]:
+        content = _read(template)
+        assert "Onda 4" in content or "Documento controlado" in content
+        assert "/api/internal-audit/" in content or "window.print()" in content

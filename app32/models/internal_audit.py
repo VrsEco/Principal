@@ -21,6 +21,15 @@ AUDIT_POINT_STATUSES = ("open", "in_review", "converted_to_finding", "dismissed"
 AUDIT_SEVERITIES = ("low", "medium", "high", "critical")
 AUDIT_FINDING_STATUSES = ("open", "action_linked", "in_follow_up", "resolved", "closed", "cancelled")
 AUDIT_EVIDENCE_TYPES = ("file", "image", "link", "system_record", "comment")
+AUDIT_REPORT_STATUSES = ("draft", "issued", "superseded", "cancelled")
+AUDIT_FOLLOW_UP_STATUSES = (
+    "awaiting_action",
+    "in_progress",
+    "awaiting_validation",
+    "resolved",
+    "closed",
+    "reopened",
+)
 
 
 def _iso(value):
@@ -543,6 +552,129 @@ class AuditEvidenceLink(db.Model):
             "caption": self.caption,
             "created_by_user_id": self.created_by_user_id,
             "created_by_user_name": getattr(self.created_by_user, "name", None),
+            "created_at": _iso(self.created_at),
+        }
+
+
+class AuditReport(db.Model):
+    __tablename__ = "audit_reports"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('draft','issued','superseded','cancelled')",
+            name="ck_audit_reports_status",
+        ),
+        db.UniqueConstraint(
+            "company_id",
+            "execution_id",
+            "version",
+            name="uq_audit_reports_company_execution_version",
+        ),
+        db.Index("ix_audit_reports_company_status", "company_id", "status"),
+        db.Index("ix_audit_reports_company_execution", "company_id", "execution_id"),
+        db.Index("ix_audit_reports_company_issued", "company_id", "issued_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    execution_id = db.Column(db.Integer, db.ForeignKey("audit_executions.id", ondelete="RESTRICT"), nullable=False)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    supersedes_report_id = db.Column(db.Integer, db.ForeignKey("audit_reports.id", ondelete="SET NULL"))
+    title = db.Column(db.String(255), nullable=False)
+    objective = db.Column(db.Text)
+    scope_text = db.Column(db.Text)
+    period_start = db.Column(db.Date)
+    period_end = db.Column(db.Date)
+    executive_summary = db.Column(db.Text)
+    auditor_conclusion = db.Column(db.Text)
+    opinion = db.Column(db.String(80))
+    status = db.Column(db.String(30), nullable=False, default="draft")
+    snapshot_json = db.Column(JSONB, nullable=False, default=dict)
+    prepared_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    approved_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    approved_at = db.Column(db.DateTime)
+    issued_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    execution = db.relationship("AuditExecution", foreign_keys=[execution_id])
+    supersedes_report = db.relationship("AuditReport", remote_side=[id], foreign_keys=[supersedes_report_id])
+    prepared_by_user = db.relationship("User", foreign_keys=[prepared_by_user_id])
+    approved_by_user = db.relationship("User", foreign_keys=[approved_by_user_id])
+
+    def to_dict(self, include_snapshot: bool = False) -> dict:
+        payload = {
+            "id": self.id,
+            "company_id": self.company_id,
+            "execution_id": self.execution_id,
+            "execution_title": getattr(getattr(self.execution, "checklist", None), "title", None),
+            "version": self.version,
+            "supersedes_report_id": self.supersedes_report_id,
+            "title": self.title,
+            "objective": self.objective,
+            "scope_text": self.scope_text,
+            "period_start": _iso(self.period_start),
+            "period_end": _iso(self.period_end),
+            "executive_summary": self.executive_summary,
+            "auditor_conclusion": self.auditor_conclusion,
+            "opinion": self.opinion,
+            "status": self.status,
+            "prepared_by_user_id": self.prepared_by_user_id,
+            "prepared_by_user_name": getattr(self.prepared_by_user, "name", None),
+            "approved_by_user_id": self.approved_by_user_id,
+            "approved_by_user_name": getattr(self.approved_by_user, "name", None),
+            "approved_at": _iso(self.approved_at),
+            "issued_at": _iso(self.issued_at),
+            "created_at": _iso(self.created_at),
+            "updated_at": _iso(self.updated_at),
+        }
+        if include_snapshot:
+            payload["snapshot"] = self.snapshot_json or {}
+        return payload
+
+
+class AuditFollowUp(db.Model):
+    __tablename__ = "audit_follow_ups"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('awaiting_action','in_progress','awaiting_validation','resolved','closed','reopened')",
+            name="ck_audit_follow_ups_status",
+        ),
+        db.Index("ix_audit_follow_ups_company_finding", "company_id", "finding_id"),
+        db.Index("ix_audit_follow_ups_company_status", "company_id", "status"),
+        db.Index("ix_audit_follow_ups_company_review", "company_id", "next_review_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    finding_id = db.Column(db.Integer, db.ForeignKey("audit_findings.id", ondelete="CASCADE"), nullable=False)
+    previous_status = db.Column(db.String(40))
+    status = db.Column(db.String(40), nullable=False, default="awaiting_action")
+    action_summary = db.Column(db.Text)
+    auditor_notes = db.Column(db.Text)
+    evidence_summary = db.Column(db.Text)
+    due_date = db.Column(db.Date)
+    next_review_date = db.Column(db.Date)
+    performed_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    finding = db.relationship("AuditFinding", foreign_keys=[finding_id])
+    performed_by_user = db.relationship("User", foreign_keys=[performed_by_user_id])
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "finding_id": self.finding_id,
+            "finding_title": getattr(self.finding, "title", None),
+            "previous_status": self.previous_status,
+            "status": self.status,
+            "action_summary": self.action_summary,
+            "auditor_notes": self.auditor_notes,
+            "evidence_summary": self.evidence_summary,
+            "due_date": _iso(self.due_date),
+            "next_review_date": _iso(self.next_review_date),
+            "performed_by_user_id": self.performed_by_user_id,
+            "performed_by_user_name": getattr(self.performed_by_user, "name", None),
             "created_at": _iso(self.created_at),
         }
 

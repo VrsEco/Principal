@@ -160,6 +160,42 @@ def finding_detail_page(finding_id: int):
     )
 
 
+@internal_audit_bp.route("/internal-audit/reports")
+@login_required
+def reports_page():
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template("modules/internal_audit/reports.html", company=company, company_id=company.id)
+
+
+@internal_audit_bp.route("/internal-audit/reports/<int:report_id>/print")
+@login_required
+def report_print_page(report_id: int):
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    try:
+        report = InternalAuditService.get_report(company.id, report_id)
+    except InternalAuditServiceError:
+        abort(404, description="Relatório de auditoria não encontrado.")
+    return render_template(
+        "modules/internal_audit/report_print.html",
+        company=company,
+        company_id=company.id,
+        report=report,
+    )
+
+
+@internal_audit_bp.route("/internal-audit/follow-ups")
+@login_required
+def follow_ups_page():
+    company = _active_company_or_redirect()
+    if not company:
+        return redirect(url_for("auth.portal"))
+    return render_template("modules/internal_audit/follow_ups.html", company=company, company_id=company.id)
+
+
 @internal_audit_bp.route("/api/internal-audit/summary")
 @login_required
 def api_summary():
@@ -355,6 +391,67 @@ def api_evidence_links():
     _ensure_manage(company.id)
     return _json_result(
         lambda: InternalAuditService.create_evidence_link(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/reports", methods=["GET", "POST"])
+@login_required
+def api_reports():
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return jsonify({"success": True, "data": InternalAuditService.list_reports(company.id)})
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_report(
+            company.id,
+            _payload(),
+            current_user_id=getattr(current_user, "id", None),
+        ),
+        status=201,
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/reports/<int:report_id>", methods=["GET", "PATCH", "POST"])
+@login_required
+def api_report_detail(report_id: int):
+    company = _active_company_or_400()
+    if request.method == "GET":
+        return _json_result(lambda: InternalAuditService.get_report(company.id, report_id))
+    _ensure_manage(company.id)
+    return _json_result(lambda: InternalAuditService.update_report(company.id, report_id, _payload()))
+
+
+@internal_audit_bp.route("/api/internal-audit/reports/<int:report_id>/issue", methods=["POST"])
+@login_required
+def api_report_issue(report_id: int):
+    company = _active_company_or_400()
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.issue_report(
+            company.id,
+            report_id,
+            current_user_id=getattr(current_user, "id", None),
+        )
+    )
+
+
+@internal_audit_bp.route("/api/internal-audit/follow-ups", methods=["GET", "POST"])
+@login_required
+def api_follow_ups():
+    company = _active_company_or_400()
+    if request.method == "GET":
+        finding_id = request.args.get("finding_id", type=int)
+        return jsonify(
+            {"success": True, "data": InternalAuditService.list_follow_ups(company.id, finding_id)}
+        )
+    _ensure_manage(company.id)
+    return _json_result(
+        lambda: InternalAuditService.create_follow_up(
             company.id,
             _payload(),
             current_user_id=getattr(current_user, "id", None),

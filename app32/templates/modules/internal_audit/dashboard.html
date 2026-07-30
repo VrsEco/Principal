@@ -4,7 +4,7 @@
 {% block workspace_content %}
 <div class="audit-page fade-in">
   <header class="audit-header">
-    <div><p class="eyebrow">Assurance Versus</p><h1>Auditoria Interna</h1><p class="subtitle">Onda 3: fluxo Checklist → Execução → Ponto → Papel de Trabalho → Achado → Projeto/Atividade.</p></div>
+    <div><p class="eyebrow">Assurance Versus</p><h1>Auditoria Interna</h1><p class="subtitle">Onda 4: ciclo completo até relatório versionado, aprovação humana e follow-up dos achados.</p></div>
   </header>
   <section class="summary-grid">
     <a class="summary-card" href="/internal-audit/areas"><span>Áreas</span><strong>{{ summary.areas_count }}</strong></a>
@@ -15,6 +15,8 @@
     <a class="summary-card" href="/internal-audit/points"><span>Pontos abertos</span><strong>{{ summary.open_points_count }}</strong></a>
     <a class="summary-card" href="/internal-audit/workpapers"><span>Papéis</span><strong>{{ summary.workpapers_count }}</strong></a>
     <a class="summary-card" href="/internal-audit/findings"><span>Achados abertos</span><strong>{{ summary.open_findings_count }}</strong></a>
+    <a class="summary-card" href="/internal-audit/reports"><span>Relatórios</span><strong>{{ summary.reports_count }}</strong></a>
+    <a class="summary-card" href="/internal-audit/follow-ups"><span>Follow-ups pendentes</span><strong>{{ summary.pending_follow_ups_count }}</strong></a>
   </section>
   <section class="audit-grid">
     <a href="/internal-audit/checklists" class="audit-card"><h2>Checklists</h2><p>Vincule checklists a processos, projetos ou itens autônomos.</p></a>
@@ -22,6 +24,8 @@
     <a href="/internal-audit/points" class="audit-card"><h2>Pontos de Auditoria</h2><p>Triagem dos itens manuais ou gerados por ressalva/não conformidade.</p></a>
     <a href="/internal-audit/workpapers" class="audit-card"><h2>Papéis de Trabalho</h2><p>Registre evidências, comentários, imagens/anexos e conclusões técnicas.</p></a>
     <a href="/internal-audit/findings" class="audit-card"><h2>Achados</h2><p>Formalize condição, critério, causa, efeito e vincule projeto/atividade de correção.</p></a>
+    <a href="/internal-audit/reports" class="audit-card"><h2>Relatórios</h2><p>Emita versões formais com aprovação humana e snapshot imutável.</p></a>
+    <a href="/internal-audit/follow-ups" class="audit-card"><h2>Follow-ups</h2><p>Acompanhe ações, valide evidências, reabra ou encerre achados.</p></a>
     <a href="/internal-audit/areas" class="audit-card"><h2>Áreas</h2><p>Cadastre áreas/departamentos auditáveis.</p></a>
     <a href="/internal-audit/auditors" class="audit-card"><h2>Auditores</h2><p>Defina perfis de auditoria para a empresa ativa.</p></a>
   </section>

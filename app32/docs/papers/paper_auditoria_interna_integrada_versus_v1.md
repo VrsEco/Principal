@@ -434,3 +434,54 @@ Checklist
 ```
 
 Esse desenho mantém a simplicidade da Fase 01, mas já prepara o módulo para cruzamentos automáticos e auditoria contínua no futuro.
+
+---
+
+## 15. Onda 4 — relatório controlado e follow-up
+
+A Onda 4 fecha o ciclo operacional básico sem duplicar Projetos, Atividades ou Reuniões:
+
+```text
+achado
+→ projeto/atividade existente
+→ reunião de alinhamento
+→ relatório versionado
+→ follow-up
+→ validação do auditor
+→ encerramento ou reabertura
+```
+
+### 15.1 Relatório versionado
+
+- cada relatório nasce vinculado a uma execução e ao `company_id`;
+- versões são numeradas por empresa e execução;
+- o rascunho pode ser alterado até a aprovação humana;
+- a emissão congela um snapshot de execução, itens, papéis de trabalho, evidências e achados;
+- versão emitida é imutável; alterações exigem nova versão;
+- a versão anterior passa para `superseded`, sem perda histórica;
+- a saída web é preparada para impressão A4 e salvamento em PDF.
+
+### 15.2 Follow-up
+
+Estados operacionais:
+
+```text
+aguardando ação
+→ em andamento
+→ aguardando validação
+→ resolvido
+→ encerrado
+```
+
+O auditor pode reabrir o achado. Cada acompanhamento registra:
+
+- status anterior e novo status;
+- ação executada;
+- evidências recebidas;
+- validação do auditor;
+- prazo e próxima revisão;
+- usuário e data/hora do registro.
+
+### 15.3 Limites desta entrega
+
+Onda 4 entrega relatório controlado, visualização/PDF pelo navegador e follow-up. Distribuição auditável por e-mail e WhatsApp permanece como evolução incremental, com registro obrigatório de destinatário, versão, remetente e data/hora.

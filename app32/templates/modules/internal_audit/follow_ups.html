@@ -1,0 +1,46 @@
+{% extends "layouts/workspace.html" %}
+{% block title %}Follow-ups de Auditoria{% endblock %}
+{% block breadcrumb %}<a href="/">Início</a><span class="sep">/</span><a href="/internal-audit">Auditoria Interna</a><span class="sep">/</span><span class="current">Follow-ups</span>{% endblock %}
+{% block workspace_content %}
+<div class="audit-page fade-in">
+  <header><p class="eyebrow">Onda 4</p><h1>Follow-ups</h1><p class="subtitle">Acompanhe planos de ação, valide evidências e encerre achados com trilha auditável.</p></header>
+  <section class="panel">
+    <h2>Registrar acompanhamento</h2>
+    <form id="follow-form" class="form-grid">
+      <label>Achado ID<input name="finding_id" type="number" min="1" required></label>
+      <label>Status
+        <select name="status" required>
+          <option value="awaiting_action">Aguardando ação</option>
+          <option value="in_progress">Em andamento</option>
+          <option value="awaiting_validation">Aguardando validação</option>
+          <option value="resolved">Resolvido</option>
+          <option value="closed">Encerrado</option>
+          <option value="reopened">Reaberto</option>
+        </select>
+      </label>
+      <label>Prazo<input name="due_date" type="date"></label>
+      <label>Próxima revisão<input name="next_review_date" type="date"></label>
+      <label class="wide">Ação executada<textarea name="action_summary" rows="2"></textarea></label>
+      <label class="wide">Evidências recebidas<textarea name="evidence_summary" rows="2"></textarea></label>
+      <label class="wide">Validação do auditor<textarea name="auditor_notes" rows="2" placeholder="Obrigatória para resolvido ou encerrado"></textarea></label>
+      <button type="submit">Registrar follow-up</button>
+    </form>
+    <p id="message" class="message"></p>
+  </section>
+  <section class="panel">
+    <div class="section-title"><h2>Histórico</h2><button class="secondary" type="button" onclick="loadFollowUps()">Atualizar</button></div>
+    <div id="follow-ups" class="cards"></div>
+  </section>
+</div>
+<style>
+.audit-page{padding:0 2rem 2rem}.eyebrow{margin:0;color:var(--primary);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.subtitle,.muted{color:var(--text-secondary)}.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.25rem;margin:1rem 0;box-shadow:var(--shadow-sm)}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.form-grid label{display:grid;gap:.35rem;font-weight:700}.wide{grid-column:1/-1}input,textarea,select{width:100%;border:1px solid var(--border);border-radius:10px;padding:.7rem;background:var(--surface);color:var(--text-primary)}button{border:0;border-radius:10px;padding:.7rem 1rem;background:var(--primary);color:white;font-weight:800;cursor:pointer}.secondary{background:var(--surface-secondary);color:var(--text-primary);border:1px solid var(--border)}.section-title{display:flex;align-items:center;justify-content:space-between}.cards{display:grid;gap:.75rem}.follow-card{border:1px solid var(--border);border-radius:14px;padding:1rem}.follow-card h3{margin:.1rem 0}.meta{display:flex;flex-wrap:wrap;gap:.55rem;font-size:.84rem;color:var(--text-secondary)}.pill{padding:.2rem .55rem;border-radius:999px;background:var(--surface-secondary);font-weight:800}.message{min-height:1.2rem}@media(max-width:800px){.audit-page{padding:0 1rem 1.5rem}.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style>
+<script>
+const followForm=document.getElementById('follow-form'),message=document.getElementById('message');
+async function api(url,options={}){const response=await fetch(url,{headers:{'Content-Type':'application/json'},...options});const body=await response.json();if(!response.ok||!body.success)throw new Error(body.message||'Falha na operação.');return body.data}
+function escapeHtml(value=''){const div=document.createElement('div');div.textContent=value||'';return div.innerHTML}
+async function loadFollowUps(){try{const rows=await api('/api/internal-audit/follow-ups');document.getElementById('follow-ups').innerHTML=rows.length?rows.map(row=>`<article class="follow-card"><div class="meta"><span class="pill">${escapeHtml(row.status)}</span><span>Achado #${row.finding_id}</span><span>${escapeHtml(row.created_at||'')}</span></div><h3>${escapeHtml(row.finding_title||'Achado')}</h3><p>${escapeHtml(row.action_summary||row.auditor_notes||'Sem observação registrada.')}</p><p class="muted">Próxima revisão: ${escapeHtml(row.next_review_date||'não definida')} · Responsável pelo registro: ${escapeHtml(row.performed_by_user_name||'—')}</p></article>`).join(''):'<p class="muted">Nenhum follow-up registrado.</p>'}catch(error){message.textContent=error.message}}
+followForm.addEventListener('submit',async event=>{event.preventDefault();message.textContent='Salvando...';const payload=Object.fromEntries(new FormData(followForm).entries());try{await api('/api/internal-audit/follow-ups',{method:'POST',body:JSON.stringify(payload)});followForm.reset();message.textContent='Follow-up registrado.';loadFollowUps()}catch(error){message.textContent=error.message}});
+loadFollowUps();
+</script>
+{% endblock %}
