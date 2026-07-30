@@ -1999,7 +1999,12 @@
         }
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
+    let sapiensPageInitialized = false;
+
+    function initializeSapiensPage() {
+        if (sapiensPageInitialized) return;
+        sapiensPageInitialized = true;
+
         loadContacts();
         const params = new URLSearchParams(window.location.search);
         const contactParam = params.get('contact');
@@ -2036,6 +2041,12 @@
                 refreshWorkflowCatalog();
             }
         }, 45000);
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeSapiensPage, { once: true });
+    } else {
+        initializeSapiensPage();
+    }
 </script>
 {% endblock %}

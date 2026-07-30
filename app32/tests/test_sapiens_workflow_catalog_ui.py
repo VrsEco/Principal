@@ -24,3 +24,15 @@ def test_sapiens_template_contains_workflow_catalog_panel():
     assert 'sapiensChatArea' in template
     assert 'workflow-catalog-link' in template
     assert 'compact-meta workflow-card-meta' in template
+
+
+def test_sapiens_page_initializes_even_after_dom_content_loaded():
+    template = _resolve_sapiens_template_path().read_text(encoding="utf-8")
+
+    assert "function initializeSapiensPage()" in template
+    assert "if (document.readyState === 'loading')" in template
+    assert (
+        "document.addEventListener('DOMContentLoaded', initializeSapiensPage, { once: true })"
+        in template
+    )
+    assert "initializeSapiensPage();" in template
