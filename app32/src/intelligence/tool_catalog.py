@@ -17,6 +17,7 @@ from typing import Callable, Iterable, List, Sequence
 
 from src.intelligence.audit import build_ai_execution_audit_record, emit_ai_execution_audit_event
 from src.core.mcp_http_auth import get_http_request_context, get_http_request_identity
+from src.intelligence.knowledge_tools import knowledge_langchain_tools
 from src.intelligence.tools import tools as legacy_langchain_tools
 from src.core.mcp_analysis_catalog_tools import register_analysis_catalog_tools
 from src.core.mcp_commercial_tools import register_commercial_mcp_tools
@@ -260,18 +261,6 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
-    SimpleNamespace(
-        name="answer_product_help",
-        description="Responde como usar o APP Versus com evidências do manual oficial.",
-    ),
-    SimpleNamespace(
-        name="search_organizational_knowledge",
-        description="Busca conhecimento autorizado da empresa ativa e conteúdo oficial do produto.",
-    ),
-    SimpleNamespace(
-        name="answer_organizational_question",
-        description="Responde pergunta organizacional com claims e citações autorizadas.",
-    ),
     SimpleNamespace(
         name="correct_plan_global_okrs_tool",
         description="Corrige os dois OKRs Globais do plano e refaz seus vínculos setoriais com confirmação humana.",
@@ -774,12 +763,14 @@ _supplemental_mcp_tools = (
     ),
 )
 
+_langchain_tools = tuple(legacy_langchain_tools) + tuple(knowledge_langchain_tools)
+
 _legacy_tool_registry = ToolCapabilityRegistry.from_tools(
-    tuple(legacy_langchain_tools) + _supplemental_mcp_tools
+    _langchain_tools + _supplemental_mcp_tools
 )
 
 catalog = ToolCatalog(
-    langchain_tools=tuple(legacy_langchain_tools),
+    langchain_tools=_langchain_tools,
     mcp_registrars=tuple(
         registrar
         for registrar in (
