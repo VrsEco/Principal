@@ -39,3 +39,14 @@ def test_sapiens_page_initializes_even_after_dom_content_loaded():
     assert template.index("initializeSapiensPage();") < template.index(
         "userInput?.addEventListener('keydown'"
     )
+
+
+def test_sapiens_markdown_dependency_fails_open_without_blocking_chat():
+    template = _resolve_sapiens_template_path().read_text(encoding="utf-8")
+
+    assert "const sapiensMarkdown = window.marked;" in template
+    assert "if (sapiensMarkdown?.setOptions)" in template
+    assert "function renderSapiensMarkdown(content)" in template
+    assert "return escapeHtml(String(content || '')).replace(/\\n/g, '<br>');" in template
+    assert "marked.setOptions(" not in template
+    assert "marked.parse(content)" not in template

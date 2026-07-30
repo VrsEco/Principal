@@ -1211,7 +1211,17 @@
         usage: 'all',
     };
 
-    marked.setOptions({ gfm: true, breaks: true });
+    const sapiensMarkdown = window.marked;
+    if (sapiensMarkdown?.setOptions) {
+        sapiensMarkdown.setOptions({ gfm: true, breaks: true });
+    }
+
+    function renderSapiensMarkdown(content) {
+        if (sapiensMarkdown?.parse) {
+            return sapiensMarkdown.parse(String(content || ''));
+        }
+        return escapeHtml(String(content || '')).replace(/\n/g, '<br>');
+    }
 
     function getSurfaceMeta(surface) {
         const map = {
@@ -1857,7 +1867,7 @@
         row.innerHTML = `
             <div class="tg-bubble">
                 ${authorLabel}
-                <div class="msg-text">${role === 'assistant' ? marked.parse(content) : escapeHtml(content)}</div>
+                <div class="msg-text">${role === 'assistant' ? renderSapiensMarkdown(content) : escapeHtml(content)}</div>
                 <div class="tg-msg-meta">
                     ${timestamp}
                     ${role === 'user' ? '<i class="fas fa-check-double" style="color: #4fae4e; font-size:0.75rem;"></i>' : ''}
