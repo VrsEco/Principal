@@ -153,6 +153,20 @@ def test_product_help_answer_is_cited_and_has_registered_action(knowledge_app):
     assert payload["query_plan"]["strategies"] == ["sql", "full_text"]
 
 
+def test_product_help_search_considers_source_title(knowledge_app):
+    with knowledge_app.app_context():
+        payload = KnowledgeQueryService().search(
+            "publicar",
+            company_id=1,
+            source_types=("product_help",),
+            require_company=False,
+        )
+
+    assert [item["source_ref"] for item in payload["results"]] == [
+        "processos.publicar"
+    ]
+
+
 def test_company_search_never_returns_another_tenant(knowledge_app):
     with knowledge_app.app_context():
         own = KnowledgeQueryService().search(

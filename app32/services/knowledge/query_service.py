@@ -312,7 +312,12 @@ class KnowledgeQueryService:
         dialect_name = db.session.get_bind().dialect.name
         if dialect_name == "postgresql":
             ts_query = func.plainto_tsquery("portuguese", question)
-            document_vector = func.to_tsvector("portuguese", KnowledgeChunk.content)
+            searchable_document = (
+                func.coalesce(KnowledgeSource.title, "")
+                + " "
+                + func.coalesce(KnowledgeChunk.content, "")
+            )
+            document_vector = func.to_tsvector("portuguese", searchable_document)
             score = func.ts_rank_cd(document_vector, ts_query).label("relevance")
             query = query.add_columns(score).filter(document_vector.op("@@")(ts_query))
         else:
