@@ -45,6 +45,8 @@
     let activeScope = params.get('scope') || 'all';
     let lastPayload = null;
     let loadingMessageTimer = null;
+    const KNOWLEDGE_TIMEOUT_MS = 12000;
+    const OPERATIONAL_TIMEOUT_MS = 15000;
     const storageKey = `gv-sapiens-recent-v2:${root.dataset.companyId || 'product'}`;
     const scopeLabels = {
         all: 'Todos',
@@ -122,6 +124,21 @@
             return `${target.pathname}${target.search}${target.hash}`;
         } catch (_) {
             return null;
+        }
+    }
+
+    async function fetchWithTimeout(url, options, timeoutMs) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+            if (error && error.name === 'AbortError') {
+                throw new Error('A consulta demorou além do esperado. Tente novamente.');
+            }
+            throw error;
+        } finally {
+            window.clearTimeout(timeout);
         }
     }
 
@@ -305,7 +322,7 @@
 
     async function requestKnowledge(question) {
         const sourceType = elements.sourceType.value;
-        const response = await fetch('/api/agents/knowledge/answer', {
+        const response = await fetchWithTimeout('/api/agents/knowledge/answer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -313,7 +330,7 @@
                 scope: activeScope,
                 source_types: sourceType ? [sourceType] : [],
             }),
-        });
+        }, KNOWLEDGE_TIMEOUT_MS);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.success) throw new Error(payload.error || 'Não foi possível consultar as fontes agora.');
         return payload;
@@ -322,11 +339,16 @@
     async function requestOperationalFallback(question, knowledgePayload) {
         if (!(knowledgePayload.warnings || []).includes('knowledge_gap')) return knowledgePayload;
         setStatus('Não encontrei uma fonte indexada. Consultando o Sapiens operacional…', 'loading');
-        const response = await fetch('/api/agents/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: question, contact: 'sapiens' }),
-        });
+        let response;
+        try {
+            response = await fetchWithTimeout('/api/agents/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: question, contact: 'sapiens' }),
+            }, OPERATIONAL_TIMEOUT_MS);
+        } catch (_) {
+            return knowledgePayload;
+        }
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.success || !payload.response) return knowledgePayload;
         return {
@@ -361,13 +383,19 @@
                 payload = await requestKnowledge(normalized);
                 payload = await requestOperationalFallback(normalized, payload);
             } catch (knowledgeError) {
-                const response = await fetch('/api/agents/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: normalized, contact: 'sapiens' }),
-                });
-                const fallback = await response.json().catch(() => ({}));
-                if (!response.ok || !fallback.success) throw knowledgeError;
+                let response;
+                let fallback;
+                try {
+                    response = await fetchWithTimeout('/api/agents/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: normalized, contact: 'sapiens' }),
+                    }, OPERATIONAL_TIMEOUT_MS);
+                    fallback = await response.json().catch(() => ({}));
+                } catch (_) {
+                    throw knowledgeError;
+                }
+                if (!response.ok || !fallback.success || !fallback.response) throw knowledgeError;
                 payload = {
                     answer: fallback.response,
                     claims: [], citations: [], actions: [], warnings: [], trust_signals: [],

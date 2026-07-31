@@ -28,6 +28,9 @@ def test_sapiens_knowledge_client_uses_structured_tenant_safe_endpoint():
     assert "source_types" in script
     assert "safeAppTarget" in script
     assert "knowledge_gap" in script
+    assert "AbortController" in script
+    assert "OPERATIONAL_TIMEOUT_MS" in script
+    assert "fetchWithTimeout('/api/agents/chat'" in script
 
 
 def test_knowledge_route_never_accepts_company_id_from_payload():
