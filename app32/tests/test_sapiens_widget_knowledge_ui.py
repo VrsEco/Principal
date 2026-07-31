@@ -43,3 +43,14 @@ def test_global_widget_has_accessible_launcher_and_dialog_controls():
     assert 'aria-expanded="false"' in template
     assert 'aria-label="Fechar Sapiens"' in template
     assert 'aria-live="polite"' in template
+
+
+def test_global_widget_is_included_in_both_base_layouts():
+    classic_base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
+    modern_base = (ROOT / "templates" / "layouts" / "base.html").read_text(
+        encoding="utf-8"
+    )
+
+    include = "{% include 'components/sapiens_widget.html' %}"
+    assert include in classic_base
+    assert include in modern_base
