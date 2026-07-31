@@ -177,6 +177,66 @@
         return index >= 0 ? index + 1 : null;
     }
 
+    function appendSafeInlineFormatting(container, value) {
+        const text = String(value || '');
+        const boldPattern = /\*\*([^*]+)\*\*/g;
+        let cursor = 0;
+        let match;
+        while ((match = boldPattern.exec(text)) !== null) {
+            if (match.index > cursor) {
+                container.append(document.createTextNode(text.slice(cursor, match.index)));
+            }
+            const strong = document.createElement('strong');
+            strong.textContent = match[1];
+            container.append(strong);
+            cursor = match.index + match[0].length;
+        }
+        if (cursor < text.length) container.append(document.createTextNode(text.slice(cursor)));
+    }
+
+    function renderSafeStructuredText(container, value) {
+        const lines = String(value || 'Não encontrei uma resposta.').split(/\r?\n/);
+        let activeList = null;
+        let activeListType = null;
+        lines.forEach((rawLine) => {
+            const line = rawLine.trim();
+            if (!line) {
+                activeList = null;
+                activeListType = null;
+                return;
+            }
+            const heading = line.match(/^#{1,4}\s+(.+)$/);
+            if (heading) {
+                activeList = null;
+                activeListType = null;
+                const title = document.createElement('h4');
+                appendSafeInlineFormatting(title, heading[1]);
+                container.append(title);
+                return;
+            }
+            const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+            const bullet = line.match(/^[-*]\s+(.+)$/);
+            if (ordered || bullet) {
+                const listType = ordered ? 'ol' : 'ul';
+                if (!activeList || activeListType !== listType) {
+                    activeList = document.createElement(listType);
+                    activeListType = listType;
+                    container.append(activeList);
+                }
+                const item = document.createElement('li');
+                appendSafeInlineFormatting(item, (ordered || bullet)[1]);
+                activeList.append(item);
+                return;
+            }
+            activeList = null;
+            activeListType = null;
+            const paragraph = document.createElement('p');
+            paragraph.className = 'kv-claim';
+            appendSafeInlineFormatting(paragraph, line);
+            container.append(paragraph);
+        });
+    }
+
     function openSources(citationId) {
         elements.sources.hidden = false;
         const target = citationId ? elements.sourcesList.querySelector(`[data-citation-id="${CSS.escape(citationId)}"]`) : null;
@@ -211,10 +271,7 @@
             });
             return;
         }
-        const text = document.createElement('p');
-        text.className = 'kv-claim';
-        text.textContent = payload.answer || 'Não encontrei uma resposta.';
-        elements.answerBody.append(text);
+        renderSafeStructuredText(elements.answerBody, payload.answer);
     }
 
     function renderSources(payload) {

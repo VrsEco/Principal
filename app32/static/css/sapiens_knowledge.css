@@ -154,6 +154,10 @@ body.page-sapiens-chat.sapiens-legacy .kv-page {
 .kv-trust strong { color: #155f42; }
 .kv-answer-body { color: #2c374b; line-height: 1.68; font-size: 15px; }
 .kv-claim { margin: 0 0 13px; }
+.kv-answer-body h4 { margin: 1.35rem 0 .55rem; color: #17223b; font-size: 1rem; line-height: 1.4; }
+.kv-answer-body ul,
+.kv-answer-body ol { margin: .45rem 0 1rem 1.35rem; padding: 0; color: #334155; }
+.kv-answer-body li { margin: .42rem 0; padding-left: .2rem; line-height: 1.65; }
 .kv-citation { border: 0; border-radius: 999px; padding: 1px 7px; background: #e9f3ff; color: #1768c6; cursor: pointer; font-size: 11px; font-weight: 800; vertical-align: 2px; }
 .kv-warning { padding: 13px 14px; border-radius: 11px; background: #fff8e8; border: 1px solid #f0d79c; color: #775d20; }
 .kv-answer-actions { flex-wrap: wrap; gap: 8px; padding-top: 2px; }
