@@ -4,6 +4,7 @@ from services.knowledge.adapters.base import KnowledgeSourceAdapter
 from services.knowledge.adapters.meeting import MeetingKnowledgeAdapter
 from services.knowledge.adapters.process_publication import ProcessPublicationKnowledgeAdapter
 from services.knowledge.adapters.product_help import ProductHelpKnowledgeAdapter
+from services.knowledge.adapters.system_documentation import SystemDocumentationKnowledgeAdapter
 
 
 class KnowledgeSourceRegistry:
@@ -27,5 +28,6 @@ class KnowledgeSourceRegistry:
 
 knowledge_source_registry = KnowledgeSourceRegistry()
 knowledge_source_registry.register(ProductHelpKnowledgeAdapter())
+knowledge_source_registry.register(SystemDocumentationKnowledgeAdapter())
 knowledge_source_registry.register(ProcessPublicationKnowledgeAdapter())
 knowledge_source_registry.register(MeetingKnowledgeAdapter())

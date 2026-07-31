@@ -115,3 +115,28 @@ def test_auto_update_syncs_each_registered_tenant_source(monkeypatch):
         ("process_publication", 9, "manual"),
         ("meeting", 9, "manual"),
     ]
+
+
+def test_auto_update_syncs_all_global_product_sources(monkeypatch):
+    service = KnowledgeAutoUpdateService()
+    calls = []
+
+    def fake_sync_source(source_type, *, company_id, trigger_kind):
+        calls.append((source_type, company_id, trigger_kind))
+        return {"ok": True}
+
+    monkeypatch.setattr(service, "sync_source", fake_sync_source)
+    monkeypatch.setattr(
+        service,
+        "audit_product_manual",
+        lambda: {"ok": True, "coverage_percent": 100.0},
+    )
+
+    payload = service.sync_product_sources(trigger_kind="manual")
+
+    assert payload["ok"] is True
+    assert calls == [
+        ("product_help", None, "manual"),
+        ("system_documentation", None, "manual"),
+    ]
+    assert payload["manual_catalog_audit"]["coverage_percent"] == 100.0

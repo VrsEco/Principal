@@ -395,6 +395,7 @@
 
     async function requestOperationalFallback(question, knowledgePayload) {
         if (!(knowledgePayload.warnings || []).includes('knowledge_gap')) return knowledgePayload;
+        if (activeScope === 'product' || looksLikeGuidanceQuestion(question)) return knowledgePayload;
         setStatus('Não encontrei uma fonte indexada. Consultando o Sapiens operacional…', 'loading');
         let response;
         try {
@@ -420,6 +421,16 @@
                 strategy_label: 'Consulta operacional',
             },
         };
+    }
+
+    function looksLikeGuidanceQuestion(question) {
+        const normalized = String(question || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+        return /^(como|onde|por onde)\b/.test(normalized)
+            || /\b(me ensine|me oriente|preciso de ajuda|ajuda para)\b/.test(normalized);
     }
 
     async function submitQuestion(question) {

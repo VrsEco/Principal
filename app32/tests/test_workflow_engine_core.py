@@ -16,6 +16,7 @@ from src.intelligence.workflows.evaluation_catalog import (
 )
 from src.intelligence.workflows.confidence import (
     DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS,
+    DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH,
     DISCOVERY_CONFIDENCE_ROUTE_SELECT,
     WorkflowDiscoveryConfidencePolicy,
 )
@@ -714,6 +715,29 @@ def test_workflow_discovery_confidence_policy_requires_disambiguation_for_close_
 
     assert decision.route == DISCOVERY_CONFIDENCE_ROUTE_AMBIGUOUS
     assert decision.reason == "needs_disambiguation"
+
+
+def test_workflow_discovery_confidence_policy_rejects_weak_single_candidate():
+    policy = WorkflowDiscoveryConfidencePolicy(min_top_score_for_auto_select=18)
+
+    decision = policy.decide(
+        [{"code": "121", "action_key": "my_work.open", "score": 4}]
+    )
+
+    assert decision.route == DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH
+    assert decision.reason == "single_candidate_below_threshold"
+    assert decision.selected_code == "121"
+
+
+def test_workflow_discovery_confidence_policy_accepts_strong_single_candidate():
+    policy = WorkflowDiscoveryConfidencePolicy(min_top_score_for_auto_select=18)
+
+    decision = policy.decide(
+        [{"code": "121", "action_key": "my_work.open", "score": 30}]
+    )
+
+    assert decision.route == DISCOVERY_CONFIDENCE_ROUTE_SELECT
+    assert decision.reason == "single_candidate"
 
 
 def test_llm_workflow_reranker_reorders_candidates_from_structured_response():

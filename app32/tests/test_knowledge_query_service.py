@@ -73,6 +73,34 @@ def knowledge_app():
                 source_span="passos",
             )
         )
+        open_titles = KnowledgeSource(
+            knowledge_scope="product",
+            company_id=None,
+            source_type="product_help",
+            source_ref="financeiro.titulos_em_aberto",
+            knowledge_kind="product_help",
+            title="Consultar títulos financeiros em aberto",
+            canonical_uri="app-versus://help/finance/open-titles",
+            status="published",
+            authority_level="official",
+            version="v1",
+            module_key="finance",
+            navigation_target="/financial/schedules",
+            content_checksum="1" * 64,
+        )
+        open_titles.chunks.append(
+            KnowledgeChunk(
+                knowledge_scope="product",
+                company_id=None,
+                section_key="como-ver",
+                content=(
+                    "Como ver títulos financeiros em aberto. Abra Gestão Financeira, "
+                    "selecione Agendamentos e escolha Em aberto no filtro Baixa."
+                ),
+                content_checksum="2" * 64,
+                source_span="Como ver os títulos financeiros em aberto",
+            )
+        )
         tenant_one = KnowledgeSource(
             knowledge_scope="company",
             company_id=1,
@@ -132,7 +160,7 @@ def knowledge_app():
                 grant_scope="company",
             )
         )
-        db.session.add_all([product, tenant_one, tenant_two])
+        db.session.add_all([product, open_titles, tenant_one, tenant_two])
         db.session.commit()
         yield app
         db.session.remove()
@@ -228,3 +256,18 @@ def test_company_only_search_does_not_mix_product_manual(knowledge_app):
 
     assert payload["results"] == []
     assert payload["query_plan"]["include_product"] is False
+
+
+def test_colloquial_open_financial_titles_question_returns_manual_not_workflow(knowledge_app):
+    with knowledge_app.app_context():
+        payload = KnowledgeQueryService().answer(
+            "Como que eu faço pra ver os títulos financeiros em aberto?",
+            company_id=None,
+            source_types=("product_help",),
+            require_company=False,
+        )
+
+    assert payload["warnings"] == []
+    assert payload["citations"][0]["source_ref"] == "financeiro.titulos_em_aberto"
+    assert payload["actions"][0]["target"] == "/financial/schedules"
+    assert "Em aberto" in payload["answer"]

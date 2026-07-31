@@ -1,0 +1,23 @@
+{
+  "source_ref": "financeiro.titulos_em_aberto",
+  "title": "Consultar títulos financeiros em aberto",
+  "version": "v1",
+  "product_version": "3.2",
+  "locale": "pt-BR",
+  "status": "published",
+  "authority_level": "official",
+  "route_key": "financial.financial_schedules_page",
+  "module_key": "finance",
+  "help_kind": "how_to",
+  "canonical_uri": "app-versus://help/finance/open-titles",
+  "navigation_target": "/financial/schedules",
+  "audience": ["administrator", "client", "collaborator"],
+  "required_capabilities": ["financial.view"],
+  "suggested_questions": [
+    "Como que eu faço pra ver os títulos financeiros em aberto?",
+    "Onde vejo contas a pagar em aberto?",
+    "Como consultar contas a receber pendentes?",
+    "Quero visualizar os agendamentos ainda não baixados"
+  ],
+  "content": "# Como ver os títulos financeiros em aberto\n\n1. Confirme a empresa ativa no cabeçalho.\n2. Abra **Gestão Financeira** no menu lateral.\n3. Em **Movimentos**, selecione **Agendamentos**. A tela exibida se chama **Títulos Financeiros**.\n4. Abra o painel de **Filtros** à direita.\n5. No filtro **Baixa**, escolha **Em aberto**.\n6. Se necessário, refine por tipo (**Pagamentos** ou **Recebimentos**), favorecido, vencimento, competência, plano de contas ou centro de resultados.\n7. Clique em **Aplicar Filtros**.\n\n# O que a tela mostra\n\nA lista apresenta situação, histórico, tipo, valor do título, saldo, favorecido, competência e vencimento. O indicador **Em Aberto** contabiliza títulos sem baixa integral.\n\n# Permissões e segurança\n\nOs dados respeitam a empresa ativa e as permissões de Gestão Financeira. Se o menu não aparecer, solicite a capability `financial.view` ao administrador."
+}

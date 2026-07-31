@@ -43,7 +43,35 @@ def test_automation_registry_exposes_knowledge_sync():
 
     assert specs["knowledge_product_help_sync"]["kind"] == "knowledge_sync"
     assert "idempotente" in " ".join(specs["knowledge_product_help_sync"]["governance"])
+    assert "drift" in " ".join(specs["knowledge_product_help_sync"]["governance"])
     assert specs["knowledge_tenant_sources_sync"]["kind"] == "knowledge_sync"
     assert "company_id" in " ".join(
         specs["knowledge_tenant_sources_sync"]["governance"]
     ).lower()
+
+
+def test_scheduled_product_job_syncs_manual_and_system_documentation(monkeypatch):
+    calls = []
+
+    class _Service:
+        def sync_product_sources(self, *, trigger_kind):
+            calls.append(trigger_kind)
+            return {"ok": True, "manual_catalog_audit": {"coverage_percent": 100.0}}
+
+    monkeypatch.setattr(
+        "services.knowledge.auto_update_service.KnowledgeAutoUpdateService",
+        _Service,
+    )
+
+    class _Context:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    app = SimpleNamespace(app_context=lambda: _Context())
+    payload = scheduler_module.sync_product_help_knowledge(app)
+
+    assert calls == ["scheduled"]
+    assert payload["manual_catalog_audit"]["coverage_percent"] == 100.0

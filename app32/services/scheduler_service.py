@@ -222,13 +222,13 @@ def setup_knowledge_jobs(app):
 
 
 def sync_product_help_knowledge(app):
-    """Bridge tenant-safe para o sincronizador global product_help."""
+    """Bridge para manual, navegação e documentação global do produto."""
     with app.app_context():
         from services.knowledge.auto_update_service import KnowledgeAutoUpdateService
 
-        result = KnowledgeAutoUpdateService().sync_product_help(trigger_kind="scheduled")
+        result = KnowledgeAutoUpdateService().sync_product_sources(trigger_kind="scheduled")
         if not result.get("ok"):
-            logger.error("❌ Atualização product_help falhou: %s", result.get("error"))
+            logger.error("❌ Atualização do catálogo global falhou: %s", result)
         return result
 
 

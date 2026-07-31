@@ -1213,6 +1213,8 @@ def _is_menu_request(lower_text: str) -> bool:
 
 def _looks_like_command(lower_text: str) -> bool:
     normalized = _normalize_text(lower_text)
+    if _looks_like_guidance_query(normalized):
+        return False
     has_command = any(token in normalized for token in COMMAND_HINTS)
     has_query = any(token in normalized for token in COMMAND_QUERY_HINTS)
     has_scope = any(token in normalized for token in COMMAND_SCOPE_HINTS)
@@ -1250,7 +1252,19 @@ def _looks_like_command(lower_text: str) -> bool:
 def _looks_like_guidance_query(normalized_text: str) -> bool:
     if not normalized_text:
         return False
-    return any(token in normalized_text for token in GUIDANCE_QUERY_HINTS)
+    normalized = normalized_text.strip()
+    if normalized.startswith(("como ", "onde ", "por onde ")):
+        return True
+    return any(
+        token in normalized
+        for token in (
+            "me ensine",
+            "me orientar",
+            "me oriente",
+            "ajuda para",
+            "preciso de ajuda",
+        )
+    )
 
 
 def _build_system_guidance_response(lower_text: str, *, channel: str = "web") -> Optional[Dict[str, str]]:

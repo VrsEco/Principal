@@ -77,3 +77,27 @@ adapters `process_publication` e `meeting`.
 6. fonte sem grant suportado deve permanecer sem resultado;
 7. grant de usuário ou colaborador precisa coincidir com o principal do runtime;
 8. nunca corrigir ausência de acesso criando grant de empresa artificial.
+
+## Operação do catálogo global completo
+
+O job `knowledge_product_help_sync` executa, nesta ordem lógica:
+
+1. compila as entradas navegáveis do menu lateral;
+2. preserva artigos curados como fonte preferencial por rota;
+3. sincroniza `product_help` por checksum;
+4. indexa Papers e SPECs via `system_documentation`;
+5. audita cobertura, lacunas e duplicidades;
+6. registra cada adapter no ledger de indexação.
+
+Critério saudável atual:
+
+- `coverage_percent = 100`;
+- `missing_targets = []`;
+- `duplicate_targets = []`;
+- perguntas douradas retornam citação e ação interna segura.
+
+Perguntas douradas mínimas:
+
+- `Como que eu faço pra ver os títulos financeiros em aberto?`;
+- `Como eu faço para conciliar uma conta bancária?`;
+- `Como publico um processo no Portal de Processos?`.

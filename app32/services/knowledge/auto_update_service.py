@@ -5,6 +5,7 @@ from typing import Any
 
 from services.knowledge.registry import KnowledgeSourceRegistry, knowledge_source_registry
 from services.knowledge.repository import KnowledgeRepository
+from services.knowledge.manual_catalog_compiler import ManualCatalogCompiler
 
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ class KnowledgeAutoUpdateService:
     """Sincroniza fontes por adapter com checksum, deativação e ledger auditável."""
 
     TENANT_SOURCE_TYPES = ("process_publication", "meeting")
+    PRODUCT_SOURCE_TYPES = ("product_help", "system_documentation")
 
     def __init__(
         self,
@@ -81,6 +83,27 @@ class KnowledgeAutoUpdateService:
             company_id=None,
             trigger_kind=trigger_kind,
         )
+
+    def sync_product_sources(self, *, trigger_kind: str = "scheduled") -> dict[str, Any]:
+        results = {
+            source_type: self.sync_source(
+                source_type,
+                company_id=None,
+                trigger_kind=trigger_kind,
+            )
+            for source_type in self.PRODUCT_SOURCE_TYPES
+        }
+        audit = self.audit_product_manual()
+        return {
+            "ok": all(item.get("ok") for item in results.values()) and audit["ok"],
+            "sources": results,
+            "manual_catalog_audit": audit,
+        }
+
+    def audit_product_manual(self) -> dict[str, Any]:
+        adapter = self.registry.get("product_help")
+        documents = adapter.discover_documents(company_id=None)
+        return ManualCatalogCompiler().audit_documents(documents)
 
     def sync_company_sources(
         self,

@@ -9,6 +9,7 @@ from typing import Any
 
 from services.knowledge.adapters.base import KnowledgeSourceAdapter
 from services.knowledge.contracts import SourceChunkDocument, SourceDocument
+from services.knowledge.manual_catalog_compiler import ManualCatalogCompiler
 
 
 class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
@@ -42,6 +43,7 @@ class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
     def __init__(self, catalog_dir: str | Path | None = None):
         app_root = Path(__file__).resolve().parents[3]
         self.catalog_dir = Path(catalog_dir or app_root / "knowledge" / "product_help")
+        self.navigation_compiler = ManualCatalogCompiler(app_root) if catalog_dir is None else None
 
     def discover_documents(self, *, company_id: int | None = None) -> tuple[SourceDocument, ...]:
         self.validate_scope(company_id=company_id)
@@ -57,6 +59,19 @@ class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
                 raise ValueError(f"source_ref duplicado em product_help: {document.source_ref}")
             seen_refs.add(document.source_ref)
             documents.append(document)
+        if self.navigation_compiler is not None:
+            excluded_targets = {
+                document.navigation_target
+                for document in documents
+                if document.navigation_target
+            }
+            for document in self.navigation_compiler.compile_documents(
+                excluded_targets=excluded_targets,
+            ):
+                if document.source_ref in seen_refs:
+                    raise ValueError(f"source_ref duplicado em product_help: {document.source_ref}")
+                seen_refs.add(document.source_ref)
+                documents.append(document)
         return tuple(documents)
 
     def _load_payload(self, path: Path) -> dict[str, Any]:

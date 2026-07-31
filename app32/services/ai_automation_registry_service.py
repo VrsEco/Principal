@@ -50,10 +50,11 @@ class AIAutomationRegistryService:
             "trigger": "interval:15m",
             "surface": "scheduler",
             "status": "ready",
-            "description": "Descobre artigos product_help, compara checksum e sincroniza somente mudanças.",
+            "description": "Compila o menu completo, artigos curados, Papers e SPECs; valida cobertura e sincroniza somente mudanças.",
             "governance": [
                 "conteúdo global sem company_id",
                 "execução idempotente por checksum",
+                "cobertura automática contra drift do menu",
                 "falha fechada e ledger auditável",
             ],
         },

@@ -14,6 +14,7 @@ class KnowledgeInteractionService:
 
     VALID_SCOPES = {"company", "product", "all"}
     MAX_SOURCE_TYPES = 12
+    PRODUCT_SOURCE_TYPES = ("product_help", "system_documentation")
 
     def __init__(self, query_service: KnowledgeQueryService | None = None) -> None:
         self.query_service = query_service or KnowledgeQueryService()
@@ -47,7 +48,7 @@ class KnowledgeInteractionService:
             query_company_id = None
             require_company = False
             include_product = True
-            normalized_types = ("product_help",)
+            normalized_types = self.PRODUCT_SOURCE_TYPES
         else:
             if company_id is None:
                 raise KnowledgeTenantContextError(

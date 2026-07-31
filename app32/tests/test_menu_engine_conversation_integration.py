@@ -1052,6 +1052,24 @@ def test_looks_like_command_accepts_operational_query_in_natural_language():
     )
 
 
+def test_looks_like_command_rejects_how_to_financial_question():
+    assert (
+        menu_engine._looks_like_command(
+            "Como eu faço para conciliar uma conta bancária?"
+        )
+        is False
+    )
+
+
+def test_looks_like_command_rejects_how_to_open_titles_question():
+    assert (
+        menu_engine._looks_like_command(
+            "Como que eu faço pra ver os títulos financeiros em aberto?"
+        )
+        is False
+    )
+
+
 def test_looks_like_command_accepts_me_traga_operational_phrase():
     assert (
         menu_engine._looks_like_command(

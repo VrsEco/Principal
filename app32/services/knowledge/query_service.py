@@ -68,13 +68,17 @@ class KnowledgeQueryService:
         "e",
         "em",
         "eu",
+        "faco",
+        "faço",
         "o",
         "os",
         "para",
+        "pra",
         "por",
         "que",
         "um",
         "uma",
+        "ver",
     }
 
     def build_plan(

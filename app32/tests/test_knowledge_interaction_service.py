@@ -38,7 +38,7 @@ def test_product_scope_never_receives_tenant_artificially():
     _, kwargs = spy.calls[0]
     assert kwargs["company_id"] is None
     assert kwargs["require_company"] is False
-    assert kwargs["source_types"] == ("product_help",)
+    assert kwargs["source_types"] == ("product_help", "system_documentation")
     assert payload["presentation"]["source_label"] == "Manual oficial"
 
 

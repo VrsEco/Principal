@@ -1187,3 +1187,23 @@ Limites conhecidos:
 - instâncias de processos, projetos, atividades e estratégia permanecem nas
   próximas ondas;
 - migrations ainda precisam ser aplicadas no ambiente antes da ativação.
+
+## 41. Catálogo oficial do Manual Inteligente
+
+Ficam oficializadas as seguintes regras de implementação:
+
+1. `product_help` reúne artigos curados e ajuda de navegação compilada;
+2. `system_documentation` indexa somente `docs/papers` e `docs/spec`;
+3. SPEC possui autoridade `official`; Paper possui autoridade `contextual`;
+4. cada entrada navegável do menu deve possuir exatamente uma ajuda alcançável;
+5. o job `knowledge_product_help_sync` sincroniza todas as fontes globais;
+6. o job falha quando a auditoria detectar lacuna ou duplicidade de navegação;
+7. perguntas de orientação iniciadas por `como`, `onde` ou equivalentes não
+   podem cair em confirmação de workflow operacional;
+8. candidato operacional único abaixo do limiar mínimo resulta em `no_match`;
+9. conteúdo global nunca recebe `company_id`; fontes corporativas mantêm grants;
+10. geração automática oferece navegação, não inventa procedimento operacional.
+
+O baseline de 2026-07-31 contém 94 documentos de manual para 93 rotas distintas
+do menu, com 100% de cobertura aferida pelo compilador. A diferença decorre de
+duas visões autorizadas na mesma rota com parâmetros distintos.

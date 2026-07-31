@@ -61,6 +61,16 @@ class WorkflowDiscoveryConfidencePolicy:
         selected_action_key = str(top_match.get("action_key") or "").strip() or None
 
         if len(candidates) == 1:
+            if top_score < self._min_top_score_for_auto_select:
+                return WorkflowDiscoveryConfidenceDecision(
+                    route=DISCOVERY_CONFIDENCE_ROUTE_NO_MATCH,
+                    selected_code=selected_code,
+                    selected_action_key=selected_action_key,
+                    candidate_codes=candidate_codes,
+                    candidate_count=1,
+                    top_score=top_score,
+                    reason="single_candidate_below_threshold",
+                )
             return WorkflowDiscoveryConfidenceDecision(
                 route=DISCOVERY_CONFIDENCE_ROUTE_SELECT,
                 selected_code=selected_code,

@@ -1405,3 +1405,20 @@ preservar a autorização da origem:
 Essa decisão mantém a interface simples sem transformar o índice em um atalho de
 acesso. A fonte continua soberana, e a projeção só amplia a descoberta dentro do
 mesmo perímetro de autorização.
+
+## 46. Evolução executável — catálogo integral do manual
+
+Em 2026-07-31, o manual passou a combinar três bases globais complementares:
+
+1. artigos `product_help` curados para procedimentos críticos;
+2. catálogo de navegação compilado automaticamente a partir do menu oficial;
+3. Papers e SPECs projetados pelo adapter `system_documentation`.
+
+O catálogo inicial cobre todas as entradas navegáveis identificadas no menu e
+inclui procedimentos curados para títulos financeiros em aberto e conciliação
+bancária. Novas entradas de menu passam a produzir ajuda de navegação na próxima
+sincronização, enquanto novos Papers e SPECs entram por checksum e versão.
+
+A compilação automática não autoriza inventar procedimentos: ela garante a
+cobertura mínima de descoberta e navegação. Passos operacionais específicos
+continuam exigindo artigo curado e validação contra a interface publicada.

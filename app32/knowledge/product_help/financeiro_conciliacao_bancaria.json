@@ -1,0 +1,22 @@
+{
+  "source_ref": "financeiro.conciliacao_bancaria",
+  "title": "Realizar uma conciliação bancária",
+  "version": "v1",
+  "product_version": "3.2",
+  "locale": "pt-BR",
+  "status": "published",
+  "authority_level": "official",
+  "route_key": "financial.financial_bank_reconciliation_page",
+  "module_key": "finance",
+  "help_kind": "how_to",
+  "canonical_uri": "app-versus://help/finance/bank-reconciliation",
+  "navigation_target": "/financial/reconciliation",
+  "audience": ["administrator", "client", "collaborator"],
+  "required_capabilities": ["financial.reconciliation"],
+  "suggested_questions": [
+    "Como eu faço para conciliar uma conta bancária?",
+    "Como importar o extrato e fazer a conciliação?",
+    "Onde encontro a conciliação bancária?"
+  ],
+  "content": "# Como iniciar a conciliação\n\n1. Confirme a empresa ativa.\n2. Acesse **Gestão Financeira > Movimentos > Conciliação Bancária**.\n3. Em **Upload de Arquivos**, selecione a conta bancária.\n4. Escolha o formato do extrato (**OFX, XLSX, XLS ou CSV**), informe o código do lote e envie o arquivo.\n5. Selecione o lote importado para abrir o workspace.\n\n# Como revisar\n\nO workspace apresenta quatro áreas: **Extrato do banco**, **Extrato do sistema**, **Títulos em aberto** e **Painel de decisão**. Revise as sugestões e confira valores, datas e favorecidos antes de confirmar qualquer vínculo ou baixa.\n\n# Formas de conciliação\n\nVocê pode relacionar uma linha bancária a um lançamento, realizar vínculo em conjunto ou efetuar a baixa de títulos compatíveis. Quando não existir lançamento, a criação deve seguir as permissões e o fluxo financeiro oficial.\n\n# Segurança\n\nPerguntar como conciliar apenas exibe esta orientação. Confirmação operacional é solicitada somente ao executar vínculo, baixa, criação ou cancelamento. Os dados sempre respeitam a empresa ativa e a capability `financial.reconciliation`."
+}
