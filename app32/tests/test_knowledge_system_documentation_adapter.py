@@ -75,3 +75,41 @@ def test_system_documentation_adapter_never_collides_natural_and_generated_suffi
 
     assert len(keys) == len(set(keys))
     assert keys == ["exemplo", "exemplo-2", "exemplo-3"]
+
+
+def test_system_documentation_adapter_respects_database_string_limits(tmp_path):
+    nested = tmp_path / "spec"
+    nested.mkdir()
+    long_name = "documento_muito_extenso_v1.md"
+    long_heading = "Título " + ("extremamente longo " * 30)
+    (nested / long_name).write_text(
+        f"# {long_heading}\n\n## {long_heading}\n\nConteúdo.",
+        encoding="utf-8",
+    )
+
+    document = SystemDocumentationKnowledgeAdapter(tmp_path).discover_documents()[0]
+    bounded_ref = SystemDocumentationKnowledgeAdapter._bounded_identifier(
+        "system_documentation:" + ("caminho/" * 40),
+        180,
+    )
+
+    assert len(document.source_ref) <= 180
+    assert len(bounded_ref) <= 180
+    assert len(document.title) <= 240
+    assert len(document.canonical_uri) <= 500
+    assert all(len(chunk.section_key) <= 180 for chunk in document.chunks)
+    assert all(len(chunk.source_span or "") <= 240 for chunk in document.chunks)
+
+
+def test_real_system_documentation_catalog_respects_database_contract():
+    documents = SystemDocumentationKnowledgeAdapter().discover_documents()
+
+    assert documents
+    assert all(len(document.source_ref) <= 180 for document in documents)
+    assert all(len(document.title) <= 240 for document in documents)
+    assert all(len(document.canonical_uri) <= 500 for document in documents)
+    assert all(
+        len(chunk.section_key) <= 180 and len(chunk.source_span or "") <= 240
+        for document in documents
+        for chunk in document.chunks
+    )

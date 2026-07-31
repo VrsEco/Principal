@@ -271,3 +271,11 @@ def test_colloquial_open_financial_titles_question_returns_manual_not_workflow(k
     assert payload["citations"][0]["source_ref"] == "financeiro.titulos_em_aberto"
     assert payload["actions"][0]["target"] == "/financial/schedules"
     assert "Em aberto" in payload["answer"]
+
+
+def test_colloquial_question_terms_remove_guidance_noise():
+    terms = KnowledgeQueryService._query_terms(
+        "Como que eu faço pra ver os títulos financeiros em aberto?"
+    )
+
+    assert terms == ("títulos", "financeiros", "aberto")

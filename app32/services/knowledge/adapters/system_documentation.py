@@ -60,17 +60,23 @@ class SystemDocumentationKnowledgeAdapter(KnowledgeSourceAdapter):
             raise ValueError(f"Documento sistêmico vazio: {path.name}")
 
         relative_path = path.relative_to(self.docs_root).as_posix()
-        title = self._extract_title(content, fallback=path.stem.replace("_", " ").title())
+        title = self._bounded_text(
+            self._extract_title(content, fallback=path.stem.replace("_", " ").title()),
+            240,
+        )
         version = self._extract_version(content, path.name)
         chunks = self._build_chunks(content)
         checksum = self._checksum(content)
         return SourceDocument(
             knowledge_scope="product",
             source_type=self.source_type,
-            source_ref=f"system_documentation:{relative_path}",
+            source_ref=self._bounded_identifier(
+                f"system_documentation:{relative_path}",
+                180,
+            ),
             knowledge_kind=document_class,
             title=title,
-            canonical_uri=f"app-versus://docs/{relative_path}",
+            canonical_uri=self._bounded_text(f"app-versus://docs/{relative_path}", 500),
             status="published",
             authority_level=authority_level,
             version=version,
@@ -111,7 +117,7 @@ class SystemDocumentationKnowledgeAdapter(KnowledgeSourceAdapter):
         chunks: list[SourceChunkDocument] = []
         used_keys: set[str] = set()
         for order, (heading, body) in enumerate(sections):
-            base_key = self._slugify(heading)
+            base_key = self._bounded_identifier(self._slugify(heading), 170)
             section_key = base_key
             suffix = 2
             while section_key in used_keys:
@@ -126,7 +132,7 @@ class SystemDocumentationKnowledgeAdapter(KnowledgeSourceAdapter):
                     chunk_order=order,
                     content_checksum=self._checksum(normalized),
                     token_count=len(normalized.split()),
-                    source_span=heading,
+                    source_span=self._bounded_text(heading, 240),
                     metadata={"heading": heading},
                     adapter_version=self.adapter_version,
                     parser_version=self.parser_version,
@@ -178,6 +184,17 @@ class SystemDocumentationKnowledgeAdapter(KnowledgeSourceAdapter):
     @staticmethod
     def _checksum(value: str) -> str:
         return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _bounded_identifier(cls, value: str, limit: int) -> str:
+        if len(value) <= limit:
+            return value
+        digest = cls._checksum(value)[:12]
+        return f"{value[: limit - len(digest) - 1]}-{digest}"
+
+    @staticmethod
+    def _bounded_text(value: str, limit: int) -> str:
+        return value if len(value) <= limit else value[:limit].rstrip()
 
     @staticmethod
     def _slugify(value: str) -> str:
