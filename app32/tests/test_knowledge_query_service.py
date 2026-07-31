@@ -60,7 +60,7 @@ def knowledge_app():
             authority_level="official",
             version="v1",
             module_key="processes",
-            navigation_target="processes.detail",
+            navigation_target="/process-portal",
             content_checksum="a" * 64,
         )
         product.chunks.append(
@@ -150,6 +150,7 @@ def test_product_help_answer_is_cited_and_has_registered_action(knowledge_app):
     assert payload["citations"][0]["canonical_uri"] == "app-versus://help/processes/publish"
     assert payload["claims"][0]["citations"] == ["citation-1"]
     assert payload["actions"][0]["label"] == "Abrir processo (Fluxo / POP)"
+    assert payload["actions"][0]["target"] == "/process-portal"
     assert payload["query_plan"]["strategies"] == ["sql", "full_text"]
 
 

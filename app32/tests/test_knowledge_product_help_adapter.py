@@ -23,7 +23,7 @@ def _payload(**overrides):
         "module_key": "processes",
         "help_kind": "guided_tour",
         "canonical_uri": "app-versus://help/processes/publish",
-        "navigation_target": "processes.detail",
+        "navigation_target": "/process-portal",
         "audience": ["administrator"],
         "required_capabilities": ["processes.view"],
         "content": "# Antes\n\nValide o POP.\n\n# Passos\n\n1. Abra Fluxo / POP.",
@@ -52,6 +52,7 @@ def test_product_help_adapter_discovers_versioned_chunks_and_checksum(tmp_path):
     assert document.source_type == "product_help"
     assert document.product_version == "3.2"
     assert document.required_capabilities == ("processes.view",)
+    assert document.navigation_target == "/process-portal"
     assert [chunk.section_key for chunk in document.chunks] == ["antes", "passos"]
     assert document.content_checksum == second[0].content_checksum
 
@@ -82,4 +83,18 @@ def test_product_help_adapter_rejects_duplicate_source_ref(tmp_path):
     _write(tmp_path, "b.json", _payload(title="Outro título"))
 
     with pytest.raises(ValueError, match="source_ref duplicado"):
+        ProductHelpKnowledgeAdapter(tmp_path).discover_documents()
+
+
+@pytest.mark.parametrize(
+    "navigation_target",
+    ["processes.detail", "//external.example/process", r"/process-portal\\escape"],
+)
+def test_product_help_adapter_rejects_unsafe_or_unresolvable_navigation_target(
+    tmp_path,
+    navigation_target,
+):
+    _write(tmp_path, "invalid-target.json", _payload(navigation_target=navigation_target))
+
+    with pytest.raises(ValueError, match="rota interna absoluta"):
         ProductHelpKnowledgeAdapter(tmp_path).discover_documents()

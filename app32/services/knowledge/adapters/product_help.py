@@ -78,6 +78,15 @@ class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
             raise ValueError(f"help_kind inválido em {path.name}: {help_kind}")
 
         content = self._required_text(payload, "content", path)
+        navigation_target = str(payload.get("navigation_target") or "").strip() or None
+        if navigation_target and (
+            not navigation_target.startswith("/")
+            or navigation_target.startswith("//")
+            or "\\" in navigation_target
+        ):
+            raise ValueError(
+                f"navigation_target deve ser uma rota interna absoluta em {path.name}"
+            )
         status = str(payload.get("status") or "published").strip().lower()
         if status != "published":
             raise ValueError(f"Somente product_help publicado é elegível: {path.name}")
@@ -118,7 +127,7 @@ class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
                 )
             ),
             help_kind=help_kind,
-            navigation_target=str(payload.get("navigation_target") or "").strip() or None,
+            navigation_target=navigation_target,
             tour_definition_id=str(payload.get("tour_definition_id") or "").strip() or None,
             content_checksum=content_checksum,
             valid_from=self._parse_datetime(payload.get("valid_from"), "valid_from", path),

@@ -10,7 +10,7 @@
   "module_key": "processes",
   "help_kind": "guided_tour",
   "canonical_uri": "app-versus://help/processes/publish",
-  "navigation_target": "processes.detail",
+  "navigation_target": "/process-portal",
   "tour_definition_id": "processes.publish.v1",
   "audience": ["administrator", "client", "collaborator"],
   "required_capabilities": ["processes.view"],
