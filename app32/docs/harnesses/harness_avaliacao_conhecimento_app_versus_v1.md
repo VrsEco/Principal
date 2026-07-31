@@ -49,6 +49,25 @@ python -m pytest `
 
 Adicionar golden questions, precisão de citações, abstenção, conflitos, ACL revogada, temporalidade e prompt injection conforme novos adapters e retrieval forem habilitados.
 
+## Suíte de linguagem simples e atalho global
+
+- orientação funcional prioriza um manual oficial e não concatena SPEC técnica;
+- pergunta explicitamente técnica continua elegível a `system_documentation`;
+- conteúdo estruturado preserva listas e opções;
+- ações secundárias aceitam apenas rotas internas seguras;
+- o atalho global usa `/api/agents/knowledge/answer` sem receber `company_id`;
+- tela completa e atalho global mantêm os escopos `all`, `company` e `product`.
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+python -m pytest `
+  .\app32\tests\test_knowledge_query_service.py `
+  .\app32\tests\test_knowledge_product_help_adapter.py `
+  .\app32\tests\test_sapiens_knowledge_ui.py `
+  .\app32\tests\test_sapiens_widget_knowledge_ui.py `
+  -q
+```
+
 ## Suíte busca citada
 
 - pergunta de ajuda retorna claim e citação;

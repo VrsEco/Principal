@@ -94,14 +94,8 @@ class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
 
         content = self._required_text(payload, "content", path)
         navigation_target = str(payload.get("navigation_target") or "").strip() or None
-        if navigation_target and (
-            not navigation_target.startswith("/")
-            or navigation_target.startswith("//")
-            or "\\" in navigation_target
-        ):
-            raise ValueError(
-                f"navigation_target deve ser uma rota interna absoluta em {path.name}"
-            )
+        self._validate_navigation_target(navigation_target, path=path)
+        navigation_actions = self._navigation_actions(payload, path=path)
         status = str(payload.get("status") or "published").strip().lower()
         if status != "published":
             raise ValueError(f"Somente product_help publicado é elegível: {path.name}")
@@ -157,8 +151,44 @@ class ProductHelpKnowledgeAdapter(KnowledgeSourceAdapter):
                 "catalog_file": path.name,
                 "tour_steps": list(payload.get("tour_steps") or []),
                 "suggested_questions": list(payload.get("suggested_questions") or []),
+                "navigation_actions": navigation_actions,
             },
         )
+
+    def _navigation_actions(self, payload: dict[str, Any], *, path: Path) -> list[dict[str, str]]:
+        raw_actions = payload.get("navigation_actions") or []
+        if not isinstance(raw_actions, list):
+            raise ValueError(f"navigation_actions deve ser uma lista em {path.name}")
+        actions: list[dict[str, str]] = []
+        for index, raw_action in enumerate(raw_actions, start=1):
+            if not isinstance(raw_action, dict):
+                raise ValueError(
+                    f"navigation_actions[{index}] deve ser um objeto em {path.name}"
+                )
+            label = str(raw_action.get("label") or "").strip()
+            target = str(raw_action.get("target") or "").strip()
+            if not label:
+                raise ValueError(
+                    f"navigation_actions[{index}].label é obrigatório em {path.name}"
+                )
+            if not target:
+                raise ValueError(
+                    f"navigation_actions[{index}].target é obrigatório em {path.name}"
+                )
+            self._validate_navigation_target(target, path=path)
+            actions.append({"label": label, "target": target})
+        return actions
+
+    @staticmethod
+    def _validate_navigation_target(target: str | None, *, path: Path) -> None:
+        if target and (
+            not target.startswith("/")
+            or target.startswith("//")
+            or "\\" in target
+        ):
+            raise ValueError(
+                f"navigation_target deve ser uma rota interna absoluta em {path.name}"
+            )
 
     def _build_chunks(self, content: str) -> tuple[SourceChunkDocument, ...]:
         sections: list[tuple[str, str]] = []

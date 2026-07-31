@@ -198,10 +198,11 @@ class KnowledgeQueryService:
             user_id=user_id,
             employee_id=employee_id,
         )
-        hits = [
+        retrieved_hits = [
             self._serialize_hit(source, chunk, score=float(score or 0))
             for source, chunk, score in rows[: plan.answer_source_limit]
         ]
+        hits = self._select_answer_hits(normalized_question, retrieved_hits)
         if not hits:
             return self._abstention(plan)
 
@@ -230,17 +231,8 @@ class KnowledgeQueryService:
                 trust_signals.append(hit["authority_level"])
             if hit["status"] not in trust_signals:
                 trust_signals.append(hit["status"])
-            if index == 1 and hit.get("navigation_target"):
-                actions.append(
-                    {
-                        "kind": "open",
-                        "label": "Abrir processo (Fluxo / POP)"
-                        if hit["module_key"] == "processes"
-                        else "Abrir no APP Versus",
-                        "target": hit["navigation_target"],
-                        "canonical_uri": hit["canonical_uri"],
-                    }
-                )
+            if index == 1:
+                actions.extend(self._navigation_actions(hit))
 
         return {
             "query_id": uuid.uuid4().hex,
@@ -376,10 +368,76 @@ class KnowledgeQueryService:
 
     @staticmethod
     def _claim_text(content: str) -> str:
-        normalized = " ".join(str(content or "").replace("**", "").split())
-        if len(normalized) <= 900:
+        lines = [line.rstrip() for line in str(content or "").replace("\r\n", "\n").split("\n")]
+        normalized = "\n".join(lines).strip()
+        if len(normalized) <= 1200:
             return normalized
-        return normalized[:897].rstrip() + "..."
+        return normalized[:1197].rstrip() + "..."
+
+    @classmethod
+    def _select_answer_hits(
+        cls,
+        question: str,
+        hits: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Mantém a resposta útil ao usuário sem misturar documentação técnica."""
+        if not hits:
+            return []
+        technical_terms = {
+            "api",
+            "arquitetura",
+            "endpoint",
+            "mcp",
+            "paper",
+            "spec",
+            "técnico",
+            "técnica",
+            "tool",
+        }
+        query_terms = set(cls._query_terms(question))
+        if query_terms.isdisjoint(technical_terms):
+            non_technical = [
+                hit for hit in hits if hit.get("source_type") != "system_documentation"
+            ]
+            if non_technical:
+                hits = non_technical
+
+        product_help = [hit for hit in hits if hit.get("source_type") == "product_help"]
+        if product_help and hits[0].get("source_type") == "product_help":
+            # Um manual oficial completo é mais claro que a concatenação de documentos.
+            return [product_help[0]]
+        return hits[:3]
+
+    @staticmethod
+    def _navigation_actions(hit: dict[str, Any]) -> list[dict[str, Any]]:
+        metadata = hit.get("metadata") or {}
+        configured = metadata.get("navigation_actions") or []
+        actions: list[dict[str, Any]] = []
+        for action in configured:
+            label = str(action.get("label") or "").strip()
+            target = str(action.get("target") or "").strip()
+            if not label or not target:
+                continue
+            actions.append(
+                {
+                    "kind": "open",
+                    "label": label,
+                    "target": target,
+                    "canonical_uri": hit["canonical_uri"],
+                }
+            )
+        if actions or not hit.get("navigation_target"):
+            return actions
+        return [
+            {
+                "kind": "open",
+                "label": "Abrir processo (Fluxo / POP)"
+                if hit["module_key"] == "processes"
+                else "Abrir no APP Versus",
+                "target": hit["navigation_target"],
+                "canonical_uri": hit["canonical_uri"],
+            }
+        ]
 
     @staticmethod
     def _serialize_hit(
@@ -402,6 +460,7 @@ class KnowledgeQueryService:
             "module_key": source.module_key,
             "route_key": source.route_key,
             "navigation_target": source.navigation_target,
+            "metadata": dict(source.metadata_json or {}),
             "score": round(score, 6),
         }
 

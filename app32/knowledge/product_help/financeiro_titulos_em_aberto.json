@@ -11,6 +11,16 @@
   "help_kind": "how_to",
   "canonical_uri": "app-versus://help/finance/open-titles",
   "navigation_target": "/financial/schedules",
+  "navigation_actions": [
+    {
+      "label": "Abrir Títulos Financeiros",
+      "target": "/financial/schedules"
+    },
+    {
+      "label": "Abrir Relatório de Agendamentos",
+      "target": "/financial/reports/agendamento"
+    }
+  ],
   "audience": ["administrator", "client", "collaborator"],
   "required_capabilities": ["financial.view"],
   "suggested_questions": [
@@ -19,5 +29,5 @@
     "Como consultar contas a receber pendentes?",
     "Quero visualizar os agendamentos ainda não baixados"
   ],
-  "content": "# Como ver os títulos financeiros em aberto\n\n1. Confirme a empresa ativa no cabeçalho.\n2. Abra **Gestão Financeira** no menu lateral.\n3. Em **Movimentos**, selecione **Agendamentos**. A tela exibida se chama **Títulos Financeiros**.\n4. Abra o painel de **Filtros** à direita.\n5. No filtro **Baixa**, escolha **Em aberto**.\n6. Se necessário, refine por tipo (**Pagamentos** ou **Recebimentos**), favorecido, vencimento, competência, plano de contas ou centro de resultados.\n7. Clique em **Aplicar Filtros**.\n\n# O que a tela mostra\n\nA lista apresenta situação, histórico, tipo, valor do título, saldo, favorecido, competência e vencimento. O indicador **Em Aberto** contabiliza títulos sem baixa integral.\n\n# Permissões e segurança\n\nOs dados respeitam a empresa ativa e as permissões de Gestão Financeira. Se o menu não aparecer, solicite a capability `financial.view` ao administrador."
+  "content": "# Como ver os títulos financeiros em aberto\n\nVocê pode consultar de duas formas:\n\n**Opção 1 — pela lista de títulos**\n1. Acesse **Gestão Financeira > Movimentos > Agendamentos**.\n2. Abra **Filtros**.\n3. No campo **Baixa**, escolha **Em aberto**.\n4. Clique em **Aplicar Filtros**.\n\n**Opção 2 — pelo relatório**\n1. Acesse **Gestão Financeira > Relatórios > Relatório de Agendamentos**.\n2. Escolha os filtros desejados.\n3. Selecione somente os títulos em aberto.\n4. Clique em **Gerar relatório**.\n\nUse a primeira opção para uma consulta rápida. Use o relatório quando precisar analisar, imprimir ou exportar os resultados. Se algum menu não aparecer, peça ajuda ao administrador do APP Versus."
 }

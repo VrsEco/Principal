@@ -86,6 +86,15 @@ def knowledge_app():
             version="v1",
             module_key="finance",
             navigation_target="/financial/schedules",
+            metadata_json={
+                "navigation_actions": [
+                    {"label": "Abrir Títulos Financeiros", "target": "/financial/schedules"},
+                    {
+                        "label": "Abrir Relatório de Agendamentos",
+                        "target": "/financial/reports/agendamento",
+                    },
+                ]
+            },
             content_checksum="1" * 64,
         )
         open_titles.chunks.append(
@@ -270,6 +279,7 @@ def test_colloquial_open_financial_titles_question_returns_manual_not_workflow(k
     assert payload["warnings"] == []
     assert payload["citations"][0]["source_ref"] == "financeiro.titulos_em_aberto"
     assert payload["actions"][0]["target"] == "/financial/schedules"
+    assert payload["actions"][1]["target"] == "/financial/reports/agendamento"
     assert "Em aberto" in payload["answer"]
 
 
@@ -279,3 +289,63 @@ def test_colloquial_question_terms_remove_guidance_noise():
     )
 
     assert terms == ("títulos", "financeiros", "aberto")
+
+
+def test_end_user_guidance_prefers_one_product_manual_and_hides_technical_docs():
+    hits = [
+        {
+            "source_type": "product_help",
+            "source_ref": "financeiro.titulos_em_aberto",
+        },
+        {
+            "source_type": "system_documentation",
+            "source_ref": "spec.finance.contract",
+        },
+        {
+            "source_type": "product_help",
+            "source_ref": "financeiro.agendamentos",
+        },
+    ]
+
+    selected = KnowledgeQueryService._select_answer_hits(
+        "Como ver os títulos financeiros em aberto?",
+        hits,
+    )
+
+    assert selected == [hits[0]]
+
+
+def test_technical_question_can_use_system_documentation():
+    hits = [
+        {
+            "source_type": "system_documentation",
+            "source_ref": "spec.finance.contract",
+        }
+    ]
+
+    selected = KnowledgeQueryService._select_answer_hits(
+        "Qual é o contrato técnico da API financeira?",
+        hits,
+    )
+
+    assert selected == hits
+
+
+def test_company_evidence_is_not_replaced_by_lower_ranked_product_help():
+    hits = [
+        {"source_type": "meeting", "source_ref": "meeting-1"},
+        {"source_type": "product_help", "source_ref": "menu.meetings"},
+    ]
+
+    selected = KnowledgeQueryService._select_answer_hits(
+        "O que foi decidido na última reunião?",
+        hits,
+    )
+
+    assert selected[0] == hits[0]
+
+
+def test_claim_text_preserves_safe_structure_for_readable_steps():
+    content = "**Opção 1**\n1. Abra Gestão Financeira.\n2. Aplique os filtros."
+
+    assert KnowledgeQueryService._claim_text(content) == content

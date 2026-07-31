@@ -1207,3 +1207,23 @@ Ficam oficializadas as seguintes regras de implementação:
 O baseline de 2026-07-31 contém 94 documentos de manual para 93 rotas distintas
 do menu, com 100% de cobertura aferida pelo compilador. A diferença decorre de
 duas visões autorizadas na mesma rota com parâmetros distintos.
+
+## 42. Política de resposta simples e superfícies equivalentes
+
+Ficam oficializadas as seguintes regras de experiência:
+
+1. pergunta funcional de usuário não mistura manual com Paper/SPEC técnico;
+2. quando um manual oficial for a melhor evidência, a resposta principal usa um
+   único artigo e mantém as demais fontes fora do texto principal;
+3. listas, opções e caminhos de menu permanecem estruturados, sem achatamento em
+   um parágrafo longo;
+4. identificadores internos, nomes de tools, capabilities, contratos de API e
+   detalhes de arquitetura só aparecem quando a pergunta for explicitamente
+   técnica;
+5. um artigo pode cadastrar mais de uma ação de navegação interna segura;
+6. caminhos alternativos relevantes devem ser apresentados com indicação clara
+   de quando utilizar cada um;
+7. a tela `/sapiens` e o atalho global usam o mesmo endpoint tenant-safe, os
+   mesmos escopos e a mesma política de fallback;
+8. o atalho global é uma versão compacta da experiência de conhecimento, com
+   acesso explícito à tela completa.

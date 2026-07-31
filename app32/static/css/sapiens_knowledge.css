@@ -10,6 +10,16 @@ body.page-sapiens-chat.sapiens-legacy .kv-page {
     display: none;
 }
 
+.kv-claim-block + .kv-claim-block {
+    margin-top: 1rem;
+}
+
+.kv-claim-citations {
+    display: flex;
+    gap: .35rem;
+    margin-top: .65rem;
+}
+
 .kv-page {
     --kv-primary: #1677ff;
     --kv-primary-dark: #075fc7;

@@ -68,6 +68,26 @@ def test_product_help_adapter_checksum_changes_with_content(tmp_path):
     assert adapter.discover_documents()[0].content_checksum != first_checksum
 
 
+def test_product_help_adapter_exposes_safe_navigation_actions(tmp_path):
+    _write(
+        tmp_path,
+        "publish.json",
+        _payload(
+            navigation_actions=[
+                {"label": "Abrir títulos", "target": "/financial/schedules"},
+                {"label": "Abrir relatório", "target": "/financial/reports/agendamento"},
+            ]
+        ),
+    )
+
+    document = ProductHelpKnowledgeAdapter(tmp_path).discover_documents()[0]
+
+    assert document.metadata["navigation_actions"] == [
+        {"label": "Abrir títulos", "target": "/financial/schedules"},
+        {"label": "Abrir relatório", "target": "/financial/reports/agendamento"},
+    ]
+
+
 def test_product_help_adapter_rejects_company_scope_and_invalid_catalog(tmp_path):
     adapter = ProductHelpKnowledgeAdapter(tmp_path)
     with pytest.raises(ValueError, match="não aceita company_id"):
@@ -97,4 +117,30 @@ def test_product_help_adapter_rejects_unsafe_or_unresolvable_navigation_target(
     _write(tmp_path, "invalid-target.json", _payload(navigation_target=navigation_target))
 
     with pytest.raises(ValueError, match="rota interna absoluta"):
+        ProductHelpKnowledgeAdapter(tmp_path).discover_documents()
+
+
+def test_product_help_adapter_rejects_unsafe_navigation_action(tmp_path):
+    _write(
+        tmp_path,
+        "invalid-action.json",
+        _payload(
+            navigation_actions=[
+                {"label": "Site externo", "target": "//external.example/process"},
+            ]
+        ),
+    )
+
+    with pytest.raises(ValueError, match="rota interna absoluta"):
+        ProductHelpKnowledgeAdapter(tmp_path).discover_documents()
+
+
+def test_product_help_adapter_requires_navigation_action_target(tmp_path):
+    _write(
+        tmp_path,
+        "missing-action-target.json",
+        _payload(navigation_actions=[{"label": "Abrir relatório"}]),
+    )
+
+    with pytest.raises(ValueError, match="target é obrigatório"):
         ProductHelpKnowledgeAdapter(tmp_path).discover_documents()

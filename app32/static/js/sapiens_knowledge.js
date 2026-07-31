@@ -252,22 +252,24 @@
         elements.answerBody.textContent = '';
         if (claims.length) {
             claims.forEach((claim) => {
-                const paragraph = document.createElement('p');
-                paragraph.className = 'kv-claim';
-                paragraph.append(document.createTextNode(claim.text || ''));
+                const claimBlock = document.createElement('div');
+                claimBlock.className = 'kv-claim-block';
+                renderSafeStructuredText(claimBlock, claim.text || '');
+                const citationRow = document.createElement('div');
+                citationRow.className = 'kv-claim-citations';
                 (claim.citations || []).forEach((citationId) => {
                     const number = citationNumber(citationId, citations);
                     if (!number) return;
-                    paragraph.append(document.createTextNode(' '));
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = 'kv-citation';
                     button.textContent = String(number);
                     button.title = 'Ver fonte desta afirmação';
                     button.addEventListener('click', () => openSources(citationId));
-                    paragraph.append(button);
+                    citationRow.append(button);
                 });
-                elements.answerBody.append(paragraph);
+                if (citationRow.childElementCount) claimBlock.append(citationRow);
+                elements.answerBody.append(claimBlock);
             });
             return;
         }
