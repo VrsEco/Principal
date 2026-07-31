@@ -334,10 +334,15 @@ class KnowledgeQueryService:
             document_vector = func.to_tsvector("portuguese", searchable_document)
             term_queries = [func.plainto_tsquery("portuguese", term) for term in terms]
             term_matches = [document_vector.op("@@")(term_query) for term_query in term_queries]
-            score = sum(
+            matched_term_count = sum(
+                (case((term_match, 1.0), else_=0.0) for term_match in term_matches),
+                0.0,
+            )
+            text_rank = sum(
                 (func.ts_rank_cd(document_vector, term_query) for term_query in term_queries),
                 0.0,
-            ).label("relevance")
+            )
+            score = (matched_term_count + (text_rank * 0.01)).label("relevance")
             query = query.add_columns(score).filter(or_(*term_matches))
         else:
             searchable = func.lower(
