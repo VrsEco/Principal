@@ -25,6 +25,7 @@ class KnowledgeQueryPlan:
     query_kind: str
     knowledge_scope: str
     company_id: int | None
+    include_product: bool
     source_types: tuple[str, ...]
     strategies: tuple[str, ...]
     candidate_limit: int
@@ -35,6 +36,7 @@ class KnowledgeQueryPlan:
             "query_kind": self.query_kind,
             "knowledge_scope": self.knowledge_scope,
             "company_id": self.company_id,
+            "include_product": self.include_product,
             "source_types": list(self.source_types),
             "strategies": list(self.strategies),
             "entities": [],
@@ -84,6 +86,7 @@ class KnowledgeQueryService:
         answer_source_limit: int = 5,
         require_company: bool = True,
         query_kind: str = "answer",
+        include_product: bool = True,
     ) -> tuple[str, KnowledgeQueryPlan]:
         normalized_question = " ".join(str(question or "").split())
         if len(normalized_question) < self.MIN_QUERY_LENGTH:
@@ -113,6 +116,7 @@ class KnowledgeQueryService:
             query_kind=query_kind,
             knowledge_scope=scope,
             company_id=company_id,
+            include_product=include_product,
             source_types=normalized_types,
             strategies=strategies,
             candidate_limit=min(source_limit * 6, self.MAX_CANDIDATE_LIMIT),
@@ -129,6 +133,7 @@ class KnowledgeQueryService:
         require_company: bool = True,
         user_id: int | None = None,
         employee_id: int | None = None,
+        include_product: bool = True,
     ) -> dict[str, Any]:
         normalized_question, plan = self.build_plan(
             question,
@@ -137,6 +142,7 @@ class KnowledgeQueryService:
             answer_source_limit=limit,
             require_company=require_company,
             query_kind="search",
+            include_product=include_product,
         )
         terms = self._query_terms(normalized_question)
         rows = self._search_rows(
@@ -169,6 +175,7 @@ class KnowledgeQueryService:
         require_company: bool = True,
         user_id: int | None = None,
         employee_id: int | None = None,
+        include_product: bool = True,
     ) -> dict[str, Any]:
         normalized_question, plan = self.build_plan(
             question,
@@ -177,6 +184,7 @@ class KnowledgeQueryService:
             answer_source_limit=limit,
             require_company=require_company,
             query_kind="answer",
+            include_product=include_product,
         )
         terms = self._query_terms(normalized_question)
         rows = self._search_rows(
@@ -283,6 +291,18 @@ class KnowledgeQueryService:
             (KnowledgeSource.authority_level == "internal", 2),
             else_=1,
         )
+        visibility_filters = []
+        if plan.include_product:
+            visibility_filters.append(KnowledgeSource.knowledge_scope == "product")
+        if plan.company_id is not None:
+            visibility_filters.append(
+                (KnowledgeSource.knowledge_scope == "company")
+                & (KnowledgeSource.company_id == plan.company_id)
+                & authorized_grant
+            )
+        if not visibility_filters:
+            visibility_filters.append(False)
+
         query = (
             db.session.query(KnowledgeSource, KnowledgeChunk)
             .join(
@@ -294,16 +314,7 @@ class KnowledgeQueryService:
                 KnowledgeSource.status.in_(("active", "published")),
                 or_(KnowledgeSource.valid_from.is_(None), KnowledgeSource.valid_from <= now),
                 or_(KnowledgeSource.valid_to.is_(None), KnowledgeSource.valid_to >= now),
-                or_(
-                    KnowledgeSource.knowledge_scope == "product",
-                    (
-                        (KnowledgeSource.knowledge_scope == "company")
-                        & (KnowledgeSource.company_id == plan.company_id)
-                        & authorized_grant
-                    )
-                    if plan.company_id is not None
-                    else False,
-                ),
+                or_(*visibility_filters),
             )
         )
         if plan.source_types:

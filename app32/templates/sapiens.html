@@ -7,6 +7,7 @@
 {% block head %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/sapiens_knowledge.css') }}">
 <style>
     /* THEME TELEGRAM PREMIUM - SQUAD ENGENHARIA ELITE */
     :root {
@@ -982,6 +983,134 @@
 {% endblock %}
 
 {% block content %}
+<main class="kv-page" id="knowledgeExperience" data-company-id="{{ session.get('active_company_id') or '' }}">
+    <div class="kv-shell">
+        <header class="kv-header">
+            <div class="kv-brand">
+                <span class="kv-brand-mark" aria-hidden="true"><i class="fas fa-sparkles"></i></span>
+                <div>
+                    <p class="kv-eyebrow">Sapiens</p>
+                    <h1>Conhecimento e ajuda</h1>
+                    <p class="kv-company">
+                        {% if active_company %}{{ active_company.name }}{% else %}Empresa ativa{% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="kv-header-actions">
+                <span class="kv-authorized"><i class="fas fa-shield-alt" aria-hidden="true"></i> Fontes autorizadas</span>
+                <a class="kv-icon-button" href="{{ url_for('agents.sapiens_page', legacy=1) }}" title="Abrir operações dos agentes" aria-label="Abrir operações dos agentes">
+                    <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                </a>
+            </div>
+        </header>
+
+        <section class="kv-ask-card" aria-labelledby="kvAskTitle">
+            <div class="kv-intro">
+                <div>
+                    <p class="kv-eyebrow">Pergunte ao Sapiens</p>
+                    <h2 id="kvAskTitle">O que você precisa saber?</h2>
+                    <p>Consulte processos, decisões, reuniões, projetos, estratégia ou aprenda a usar o APP Versus.</p>
+                </div>
+                <div class="kv-scope" role="group" aria-label="Escopo da pergunta">
+                    <button type="button" class="kv-scope-button is-active" data-scope="all" aria-pressed="true">
+                        <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Todos
+                    </button>
+                    <button type="button" class="kv-scope-button" data-scope="company" aria-pressed="false">
+                        <i class="far fa-building" aria-hidden="true"></i> Minha empresa
+                    </button>
+                    <button type="button" class="kv-scope-button" data-scope="product" aria-pressed="false">
+                        <i class="far fa-circle-question" aria-hidden="true"></i> Como usar o APP Versus
+                    </button>
+                </div>
+            </div>
+
+            <form class="kv-question-form" id="knowledgeQuestionForm">
+                <label for="knowledgeQuestion" class="sr-only">Faça uma pergunta ao Sapiens</label>
+                <div class="kv-question-box">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <textarea id="knowledgeQuestion" rows="1" maxlength="500" placeholder="Ex.: Como publico um processo no Portal de Processos?"></textarea>
+                    <button type="submit" class="kv-submit" id="knowledgeSubmit">
+                        <span>Perguntar</span><i class="fas fa-arrow-up" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="kv-question-meta">
+                    <span id="knowledgeModeLabel"><i class="fas fa-bolt" aria-hidden="true"></i> Busca rápida selecionada automaticamente</span>
+                    <button type="button" class="kv-refine-toggle" id="knowledgeRefineToggle" aria-expanded="false" aria-controls="knowledgeRefinePanel">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i> Refinar pesquisa
+                    </button>
+                </div>
+                <div class="kv-refine-panel" id="knowledgeRefinePanel" hidden>
+                    <label>
+                        <span>Tipo de fonte</span>
+                        <select id="knowledgeSourceType">
+                            <option value="">Todas as fontes autorizadas</option>
+                            <option value="process_publication">Processos e POPs</option>
+                            <option value="meeting">Reuniões e decisões</option>
+                            <option value="project">Projetos e atividades</option>
+                            <option value="strategy">Estratégia e indicadores</option>
+                        </select>
+                    </label>
+                </div>
+            </form>
+
+            <div class="kv-suggestions" id="knowledgeSuggestions" aria-label="Perguntas sugeridas">
+                <button type="button" data-question="Como publico um processo no Portal de Processos?">Como publico um processo?</button>
+                <button type="button" data-question="O que foi decidido na última reunião?">Última decisão da empresa</button>
+                <button type="button" data-question="Existe algo definido sobre responsabilidade de manutenção elétrica dos prédios?">Buscar uma definição</button>
+            </div>
+        </section>
+
+        <section class="kv-status" id="knowledgeStatus" role="status" aria-live="polite" hidden></section>
+
+        <section class="kv-empty" id="knowledgeEmpty">
+            <div class="kv-empty-icon" aria-hidden="true"><i class="fas fa-book-open"></i></div>
+            <h2>Uma pergunta, todas as fontes certas</h2>
+            <p>Você não precisa saber onde a informação está. O Sapiens procura somente no conteúdo que você pode acessar e mostra de onde veio cada resposta.</p>
+            <div class="kv-capabilities">
+                <span><i class="fas fa-diagram-project" aria-hidden="true"></i> Processos e POPs</span>
+                <span><i class="fas fa-comments" aria-hidden="true"></i> Reuniões e decisões</span>
+                <span><i class="fas fa-list-check" aria-hidden="true"></i> Projetos e atividades</span>
+                <span><i class="fas fa-bullseye" aria-hidden="true"></i> Estratégia e indicadores</span>
+            </div>
+        </section>
+
+        <article class="kv-answer" id="knowledgeAnswer" aria-live="polite" hidden>
+            <header class="kv-answer-header">
+                <div>
+                    <p class="kv-eyebrow" id="knowledgeAnswerEyebrow">Resposta do Sapiens</p>
+                    <h2 id="knowledgeAnswerTitle">Resposta</h2>
+                </div>
+                <span class="kv-answer-badge" id="knowledgeAnswerBadge">Fontes autorizadas</span>
+            </header>
+            <div class="kv-trust" id="knowledgeTrust" hidden>
+                <i class="fas fa-circle-check" aria-hidden="true"></i>
+                <div id="knowledgeTrustText"></div>
+            </div>
+            <div class="kv-answer-body" id="knowledgeAnswerBody"></div>
+            <div class="kv-warning" id="knowledgeWarning" hidden></div>
+            <div class="kv-answer-actions" id="knowledgeActions"></div>
+            <section class="kv-sources" id="knowledgeSources" hidden>
+                <div class="kv-sources-heading">
+                    <div><p class="kv-eyebrow">Evidências</p><h3>Fontes usadas nesta resposta</h3></div>
+                    <button type="button" class="kv-icon-button" id="knowledgeSourcesClose" aria-label="Ocultar fontes"><i class="fas fa-chevron-up"></i></button>
+                </div>
+                <div id="knowledgeSourcesList"></div>
+            </section>
+            <footer class="kv-feedback">
+                <span>Esta resposta ajudou?</span>
+                <button type="button" data-feedback="positive" aria-label="Resposta útil"><i class="far fa-thumbs-up"></i></button>
+                <button type="button" data-feedback="negative" aria-label="Resposta não útil"><i class="far fa-thumbs-down"></i></button>
+                <button type="button" data-feedback="outdated" aria-label="Reportar resposta desatualizada"><i class="far fa-flag"></i></button>
+            </footer>
+        </article>
+
+        <section class="kv-recent" id="knowledgeRecent" hidden>
+            <div class="kv-recent-heading"><h2>Perguntas recentes</h2><button type="button" id="knowledgeRecentClear">Limpar</button></div>
+            <div class="kv-recent-list" id="knowledgeRecentList"></div>
+        </section>
+    </div>
+</main>
+
 <div class="telegram-layout">
     <!-- BARRA LATERAL (CONTATOS) -->
     <aside class="tg-sidebar" id="tgSidebar">
@@ -2062,4 +2191,5 @@
         }
     });
 </script>
+<script src="{{ url_for('static', filename='js/sapiens_knowledge.js') }}"></script>
 {% endblock %}

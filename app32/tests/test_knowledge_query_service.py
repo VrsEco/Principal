@@ -214,3 +214,16 @@ def test_company_search_denies_source_without_matching_grant(knowledge_app):
         )
 
     assert payload["results"] == []
+
+
+def test_company_only_search_does_not_mix_product_manual(knowledge_app):
+    with knowledge_app.app_context():
+        payload = KnowledgeQueryService().search(
+            "publicar processo",
+            company_id=1,
+            employee_id=101,
+            include_product=False,
+        )
+
+    assert payload["results"] == []
+    assert payload["query_plan"]["include_product"] is False

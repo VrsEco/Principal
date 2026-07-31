@@ -241,6 +241,42 @@ def agents_chat():
             "error": PUBLIC_ERROR_MESSAGE
         }), 500
 
+
+@agents_bp.route('/api/agents/knowledge/answer', methods=['POST'])
+@login_required
+def answer_sapiens_knowledge():
+    """Responde pela camada estruturada sem aceitar company_id do cliente."""
+    from flask import session
+    from services.knowledge.interaction_service import KnowledgeInteractionService
+    from services.knowledge.query_service import KnowledgeQueryError
+
+    data = request.get_json(silent=True) or {}
+    try:
+        result = KnowledgeInteractionService().answer(
+            data.get("question"),
+            scope=data.get("scope", "all"),
+            company_id=session.get("active_company_id"),
+            user_id=int(current_user.id),
+            employee_id=getattr(current_user, "employee_id", None),
+            source_types=data.get("source_types")
+            if isinstance(data.get("source_types"), list)
+            else (),
+            limit=5,
+        )
+        return jsonify({"success": True, **result})
+    except KnowledgeQueryError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        from models import db
+        import logging
+
+        db.session.rollback()
+        logging.getLogger(__name__).exception(
+            "Erro na consulta web de conhecimento para user_id=%s",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
 @agents_bp.route('/api/agents/diagnostics', methods=['GET'])
 @login_required
 def agents_diagnostics():
