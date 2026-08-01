@@ -136,9 +136,6 @@
       modeler = new Modeler({
         container: '#bpmnCanvas',
         additionalModules: [buildAiReplaceModule()],
-        keyboard: {
-          bindTo: document
-        },
         textRenderer: {
           defaultStyle: {
             fontFamily: 'Arial, sans-serif',
