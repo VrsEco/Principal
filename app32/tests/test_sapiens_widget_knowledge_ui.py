@@ -17,9 +17,11 @@ def test_global_sapiens_widget_uses_same_knowledge_endpoint_as_full_page():
     assert 'data-sapiens-scope="product"' in template
     assert 'href="/sapiens"' in template
     assert "/api/agents/knowledge/answer" in script
+    assert "/api/agents/knowledge/feedback" in script
     assert "/api/agents/chat" in script
     assert "knowledge_gap" in script
     assert "company_id" not in script
+    assert "interaction_id" in script
 
 
 def test_global_widget_renders_structured_answer_and_safe_internal_actions():
@@ -28,6 +30,10 @@ def test_global_widget_renders_structured_answer_and_safe_internal_actions():
     )
 
     assert "appendStructured" in script
+    assert "appendFeedback" in script
+    assert "Certo" in script
+    assert "Parcial" in script
+    assert "Errado" in script
     assert "document.createTextNode" in script
     assert "safeTarget" in script
     assert "target.startsWith('/')" in script

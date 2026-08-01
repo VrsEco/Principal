@@ -7,7 +7,7 @@
 {% block head %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/sapiens_knowledge.css') }}?v=20260731-3">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/sapiens_knowledge.css') }}?v=20260801-1">
 <style>
     /* THEME TELEGRAM PREMIUM - SQUAD ENGENHARIA ELITE */
     :root {
@@ -1098,11 +1098,12 @@
                 </div>
                 <div id="knowledgeSourcesList"></div>
             </section>
-            <footer class="kv-feedback">
-                <span>Esta resposta ajudou?</span>
-                <button type="button" data-feedback="positive" aria-label="Resposta útil"><i class="far fa-thumbs-up"></i></button>
-                <button type="button" data-feedback="negative" aria-label="Resposta não útil"><i class="far fa-thumbs-down"></i></button>
-                <button type="button" data-feedback="outdated" aria-label="Reportar resposta desatualizada"><i class="far fa-flag"></i></button>
+            <footer class="kv-feedback" aria-label="Avaliação da resposta">
+                <span>Esta resposta acertou?</span>
+                <button type="button" data-feedback="correct" aria-label="Resposta certa">Certo</button>
+                <button type="button" data-feedback="partial" data-feedback-reason="incomplete" aria-label="Resposta parcialmente certa">Parcial</button>
+                <button type="button" data-feedback="wrong" data-feedback-reason="wrong_subject" aria-label="Resposta errada">Errado</button>
+                <span id="knowledgeFeedbackStatus" class="kv-feedback-status" aria-live="polite"></span>
             </footer>
         </article>
 
@@ -2193,5 +2194,5 @@
         }
     });
 </script>
-<script src="{{ url_for('static', filename='js/sapiens_knowledge.js') }}?v=20260731-3"></script>
+<script src="{{ url_for('static', filename='js/sapiens_knowledge.js') }}?v=20260801-1"></script>
 {% endblock %}

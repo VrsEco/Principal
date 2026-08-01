@@ -40,6 +40,7 @@
         recent: document.getElementById('knowledgeRecent'),
         recentList: document.getElementById('knowledgeRecentList'),
         recentClear: document.getElementById('knowledgeRecentClear'),
+        feedbackStatus: document.getElementById('knowledgeFeedbackStatus'),
     };
 
     let activeScope = params.get('scope') || 'all';
@@ -363,6 +364,8 @@
 
     function renderPayload(payload, question) {
         lastPayload = payload;
+        root.querySelectorAll('[data-feedback]').forEach((item) => item.classList.remove('is-selected'));
+        if (elements.feedbackStatus) elements.feedbackStatus.textContent = '';
         elements.empty.hidden = true;
         elements.answer.hidden = false;
         elements.answerEyebrow.textContent = payload.presentation?.eyebrow || 'Resposta do Sapiens';
@@ -377,6 +380,39 @@
         renderActions(payload);
         renderSources(payload);
         elements.answer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function submitFeedback(button) {
+        if (!lastPayload || !lastPayload.interaction_id) {
+            if (elements.feedbackStatus) elements.feedbackStatus.textContent = 'Avaliação indisponível para esta resposta.';
+            return;
+        }
+        const rating = button.dataset.feedback;
+        const reason = button.dataset.feedbackReason || null;
+        button.disabled = true;
+        if (elements.feedbackStatus) elements.feedbackStatus.textContent = 'Enviando avaliação…';
+        try {
+            const response = await fetchWithTimeout('/api/agents/knowledge/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    interaction_id: lastPayload.interaction_id,
+                    rating,
+                    reason,
+                    surface: 'sapiens_page',
+                }),
+            }, 8000);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.success) throw new Error(payload.error || 'Não foi possível registrar a avaliação.');
+            root.querySelectorAll('[data-feedback]').forEach((item) => item.classList.remove('is-selected'));
+            button.classList.add('is-selected');
+            button.title = 'Obrigado pelo feedback';
+            if (elements.feedbackStatus) elements.feedbackStatus.textContent = 'Obrigado. Isso ajuda a treinar o Sapiens.';
+        } catch (error) {
+            if (elements.feedbackStatus) elements.feedbackStatus.textContent = error.message || 'Não foi possível registrar a avaliação.';
+        } finally {
+            button.disabled = false;
+        }
     }
 
     async function requestKnowledge(question) {
@@ -544,9 +580,7 @@
     elements.recentClear.addEventListener('click', () => { localStorage.removeItem(storageKey); renderRecent(); });
     root.querySelectorAll('[data-feedback]').forEach((button) => {
         button.addEventListener('click', () => {
-            root.querySelectorAll('[data-feedback]').forEach((item) => item.classList.remove('is-selected'));
-            button.classList.add('is-selected');
-            button.title = 'Obrigado pelo feedback';
+            submitFeedback(button);
         });
     });
 

@@ -277,6 +277,45 @@ def answer_sapiens_knowledge():
         )
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
 
+
+@agents_bp.route('/api/agents/knowledge/feedback', methods=['POST'])
+@login_required
+def register_sapiens_knowledge_feedback():
+    """Registra avaliação supervisionada sem aceitar company_id do cliente."""
+    from flask import session
+    from services.knowledge.feedback_service import (
+        KnowledgeFeedbackError,
+        KnowledgeFeedbackService,
+    )
+
+    data = request.get_json(silent=True) or {}
+    try:
+        result = KnowledgeFeedbackService().register_feedback(
+            interaction_id=data.get("interaction_id"),
+            rating=data.get("rating"),
+            reason=data.get("reason"),
+            comment=data.get("comment"),
+            expected_answer=data.get("expected_answer"),
+            metadata={
+                "surface": data.get("surface") or "sapiens",
+            },
+            company_id=session.get("active_company_id"),
+            user_id=int(current_user.id),
+        )
+        return jsonify({"success": True, **result})
+    except KnowledgeFeedbackError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        from models import db
+        import logging
+
+        db.session.rollback()
+        logging.getLogger(__name__).exception(
+            "Erro ao registrar feedback de conhecimento para user_id=%s",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
 @agents_bp.route('/api/agents/diagnostics', methods=['GET'])
 @login_required
 def agents_diagnostics():

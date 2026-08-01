@@ -40,6 +40,9 @@ def test_product_scope_never_receives_tenant_artificially():
     assert kwargs["require_company"] is False
     assert kwargs["source_types"] == ("product_help", "system_documentation")
     assert payload["presentation"]["source_label"] == "Manual oficial"
+    assert payload["interaction_id"]
+    assert payload["understanding"]["intent"] == "product_help"
+    assert payload["understanding"]["domain"] in {"app_versus_usage", "processes"}
 
 
 def test_company_scope_is_tenant_bound_and_excludes_product():
@@ -57,6 +60,29 @@ def test_company_scope_is_tenant_bound_and_excludes_product():
     assert kwargs["include_product"] is False
     assert kwargs["user_id"] == 7
     assert kwargs["employee_id"] == 8
+
+
+def test_financial_how_to_question_is_understood_as_product_help():
+    understanding = KnowledgeInteractionService(QueryServiceSpy()).understand_question(
+        "Como eu faço para ver os títulos financeiros em aberto?",
+        requested_scope="all",
+    )
+
+    assert understanding["intent"] == "product_help"
+    assert understanding["domain"] == "finance"
+    assert "how_to_question" in understanding["signals"]
+    assert "finance_terms" in understanding["signals"]
+
+
+def test_how_to_create_question_does_not_turn_into_operational_action():
+    understanding = KnowledgeInteractionService(QueryServiceSpy()).understand_question(
+        "Como criar um processo no portal?",
+        requested_scope="all",
+    )
+
+    assert understanding["intent"] == "product_help"
+    assert understanding["domain"] == "processes"
+    assert understanding["clarification_required"] is False
 
 
 def test_company_scope_fails_closed_without_active_company():

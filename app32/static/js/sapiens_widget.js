@@ -110,6 +110,53 @@
         return card;
     }
 
+    async function sendFeedback(interactionId, rating, reason) {
+        return fetchJson('/api/agents/knowledge/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                interaction_id: interactionId,
+                rating,
+                reason: reason || null,
+                surface: 'sapiens_widget',
+            }),
+        }, 8000);
+    }
+
+    function appendFeedback(card, payload) {
+        if (!payload.interaction_id) return;
+        const row = document.createElement('div');
+        row.className = 'sapiens-widget-feedback';
+        const label = document.createElement('span');
+        label.textContent = 'Acertou?';
+        row.append(label);
+        [
+            ['correct', 'Certo', null],
+            ['partial', 'Parcial', 'incomplete'],
+            ['wrong', 'Errado', 'wrong_subject'],
+        ].forEach(([rating, text, reason]) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = text;
+            button.addEventListener('click', async () => {
+                button.disabled = true;
+                showStatus('Registrando avaliação...');
+                try {
+                    await sendFeedback(payload.interaction_id, rating, reason);
+                    row.querySelectorAll('button').forEach((item) => item.classList.remove('is-selected'));
+                    button.classList.add('is-selected');
+                    showStatus('Obrigado. Isso ajuda a treinar o Sapiens.');
+                } catch (error) {
+                    showStatus(error.message || 'Não foi possível registrar a avaliação.', 'error');
+                } finally {
+                    button.disabled = false;
+                }
+            });
+            row.append(button);
+        });
+        card.append(row);
+    }
+
     function renderPayload(payload) {
         const claims = Array.isArray(payload.claims) ? payload.claims : [];
         const answer = claims.length
@@ -135,6 +182,7 @@
             note.textContent = `${citations.length} ${citations.length === 1 ? 'fonte oficial consultada' : 'fontes autorizadas consultadas'}`;
             card.append(note);
         }
+        appendFeedback(card, payload);
     }
 
     function looksLikeGuidanceQuestion(question) {

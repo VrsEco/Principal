@@ -1227,3 +1227,60 @@ Ficam oficializadas as seguintes regras de experiência:
    mesmos escopos e a mesma política de fallback;
 8. o atalho global é uma versão compacta da experiência de conhecimento, com
    acesso explícito à tela completa.
+
+
+## 43. Camada de entendimento e treinamento supervisionado
+
+Ficam oficializados os seguintes contratos para a próxima evolução do Sapiens:
+
+1. toda resposta gerada por `/api/agents/knowledge/answer` deve possuir um
+   `interaction_id` persistível ou correlacionável;
+2. antes da recuperação, o backend deve produzir um entendimento mínimo da pergunta
+   com `intent`, `domain`, `confidence`, `signals` e `clarification_required`;
+3. pergunta funcional de uso do produto prioriza `product_help` sobre ferramentas
+   operacionais, exceto quando o usuário pedir execução explícita;
+4. baixa confiança exige esclarecimento curto e não fallback técnico automático;
+5. o feedback do usuário usa escala simples: `correct`, `partial`, `wrong`;
+6. `partial` e `wrong` podem receber motivo controlado e comentário livre;
+7. feedback sempre grava `company_id`, `user_id`, pergunta, entendimento, fontes,
+   resposta resumida, rating, motivo, comentário, versão do motor e timestamps;
+8. dados de feedback são tenant-owned e nunca ampliam acesso a fontes;
+9. feedback não altera ranking, aliases ou artigos automaticamente;
+10. o Robô Treinador gera propostas auditáveis em fila de curadoria.
+
+### 43.1 Motivos controlados de feedback
+
+Motivos iniciais:
+
+- `wrong_subject`: respondeu sobre outro assunto;
+- `too_technical`: linguagem técnica demais;
+- `missing_path`: faltou caminho no APP;
+- `wrong_source`: fonte usada não era adequada;
+- `incomplete`: resposta incompleta;
+- `not_found`: deveria saber, mas não encontrou;
+- `outdated`: orientação desatualizada.
+
+### 43.2 Robô Treinador
+
+O robô consolida janelas de feedback por `company_id` e por escopo global quando a
+fonte for `product_help`. A saída mínima é uma proposta com:
+
+- padrão de pergunta;
+- intenção/domínio sugeridos;
+- evidências de avaliações negativas;
+- fontes que foram usadas;
+- sugestão de alias, ranking, artigo ou pergunta de esclarecimento;
+- status `pending_review`.
+
+A aplicação automática fica proibida no MVP. O cockpit de curadoria decidirá se a
+proposta vira ajuste oficial.
+
+### 43.3 Critérios de aceite do MVP
+
+- botões `Certo`, `Parcial`, `Errado` na tela `/sapiens` e no widget global;
+- endpoint tenant-safe para registrar feedback;
+- modelo e migration de feedback/treinamento;
+- service sem lógica de negócio em rota;
+- testes de isolamento por `company_id`;
+- testes de contrato para motivos controlados;
+- job/service do Robô Treinador consolidando propostas sem aplicá-las.

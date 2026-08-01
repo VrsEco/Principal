@@ -319,3 +319,199 @@ class KnowledgeIndexRun(db.Model):
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
+
+
+class KnowledgeInteraction(db.Model):
+    __tablename__ = "knowledge_interactions"
+    __table_args__ = (
+        db.CheckConstraint(
+            "rating_status IN ('unrated', 'correct', 'partial', 'wrong')",
+            name="ck_knowledge_interactions_rating_status",
+        ),
+        db.Index("ix_knowledge_interactions_company_created", "company_id", "created_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    interaction_uuid = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    company_id = db.Column(
+        db.Integer,
+        db.ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    employee_id = db.Column(
+        db.Integer,
+        db.ForeignKey("employees.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    requested_scope = db.Column(db.String(20), nullable=False, default="all", index=True)
+    knowledge_scope = db.Column(db.String(20), nullable=False, default="company", index=True)
+    question = db.Column(db.Text, nullable=False)
+    normalized_question = db.Column(db.String(600), nullable=False, index=True)
+    answer_preview = db.Column(db.Text, nullable=True)
+    understanding_json = db.Column(db.JSON, nullable=False, default=dict)
+    query_plan_json = db.Column(db.JSON, nullable=False, default=dict)
+    citations_json = db.Column(db.JSON, nullable=False, default=list)
+    actions_json = db.Column(db.JSON, nullable=False, default=list)
+    warnings_json = db.Column(db.JSON, nullable=False, default=list)
+    engine_version = db.Column(db.String(60), nullable=False, default="knowledge-v1")
+    rating_status = db.Column(db.String(20), nullable=False, default="unrated", index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    feedback_entries = db.relationship(
+        "KnowledgeFeedback",
+        back_populates="interaction",
+        cascade="all, delete-orphan",
+        order_by="KnowledgeFeedback.created_at",
+    )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "interaction_id": self.interaction_uuid,
+            "company_id": self.company_id,
+            "user_id": self.user_id,
+            "employee_id": self.employee_id,
+            "requested_scope": self.requested_scope,
+            "knowledge_scope": self.knowledge_scope,
+            "question": self.question,
+            "normalized_question": self.normalized_question,
+            "answer_preview": self.answer_preview,
+            "understanding": dict(self.understanding_json or {}),
+            "query_plan": dict(self.query_plan_json or {}),
+            "citations": list(self.citations_json or []),
+            "actions": list(self.actions_json or []),
+            "warnings": list(self.warnings_json or []),
+            "engine_version": self.engine_version,
+            "rating_status": self.rating_status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class KnowledgeFeedback(db.Model):
+    __tablename__ = "knowledge_feedback"
+    __table_args__ = (
+        db.CheckConstraint(
+            "rating IN ('correct', 'partial', 'wrong')",
+            name="ck_knowledge_feedback_rating",
+        ),
+        db.CheckConstraint(
+            "reason IS NULL OR reason IN ("
+            "'wrong_subject', 'too_technical', 'missing_path', 'wrong_source', "
+            "'incomplete', 'not_found', 'outdated')",
+            name="ck_knowledge_feedback_reason",
+        ),
+        db.Index("ix_knowledge_feedback_company_rating", "company_id", "rating"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    interaction_id = db.Column(
+        db.Integer,
+        db.ForeignKey("knowledge_interactions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    company_id = db.Column(
+        db.Integer,
+        db.ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    rating = db.Column(db.String(20), nullable=False, index=True)
+    reason = db.Column(db.String(40), nullable=True, index=True)
+    comment = db.Column(db.Text, nullable=True)
+    expected_answer = db.Column(db.Text, nullable=True)
+    metadata_json = db.Column(db.JSON, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+    interaction = db.relationship("KnowledgeInteraction", back_populates="feedback_entries")
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "interaction_id": self.interaction.interaction_uuid if self.interaction else None,
+            "company_id": self.company_id,
+            "user_id": self.user_id,
+            "rating": self.rating,
+            "reason": self.reason,
+            "comment": self.comment,
+            "expected_answer": self.expected_answer,
+            "metadata": dict(self.metadata_json or {}),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class KnowledgeTrainingProposal(db.Model):
+    __tablename__ = "knowledge_training_proposals"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('pending_review', 'approved', 'rejected', 'applied')",
+            name="ck_knowledge_training_proposals_status",
+        ),
+        db.Index("ix_knowledge_training_company_status", "company_id", "status"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    proposal_uuid = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    company_id = db.Column(
+        db.Integer,
+        db.ForeignKey("companies.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    proposal_scope = db.Column(db.String(20), nullable=False, default="company", index=True)
+    pattern = db.Column(db.String(240), nullable=False, index=True)
+    suggested_intent = db.Column(db.String(60), nullable=True, index=True)
+    suggested_domain = db.Column(db.String(80), nullable=True, index=True)
+    suggestion_type = db.Column(db.String(40), nullable=False, index=True)
+    evidence_count = db.Column(db.Integer, nullable=False, default=0)
+    evidence_json = db.Column(db.JSON, nullable=False, default=list)
+    sources_json = db.Column(db.JSON, nullable=False, default=list)
+    recommendation_json = db.Column(db.JSON, nullable=False, default=dict)
+    status = db.Column(db.String(30), nullable=False, default="pending_review", index=True)
+    created_by = db.Column(db.String(80), nullable=False, default="sapiens_training_robot")
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "proposal_id": self.proposal_uuid,
+            "company_id": self.company_id,
+            "proposal_scope": self.proposal_scope,
+            "pattern": self.pattern,
+            "suggested_intent": self.suggested_intent,
+            "suggested_domain": self.suggested_domain,
+            "suggestion_type": self.suggestion_type,
+            "evidence_count": self.evidence_count,
+            "evidence": list(self.evidence_json or []),
+            "sources": list(self.sources_json or []),
+            "recommendation": dict(self.recommendation_json or {}),
+            "status": self.status,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

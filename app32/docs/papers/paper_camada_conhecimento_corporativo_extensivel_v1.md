@@ -1422,3 +1422,45 @@ sincronização, enquanto novos Papers e SPECs entram por checksum e versão.
 A compilação automática não autoriza inventar procedimentos: ela garante a
 cobertura mínima de descoberta e navegação. Passos operacionais específicos
 continuam exigindo artigo curado e validação contra a interface publicada.
+
+
+## 47. Evolução cognitiva supervisionada
+
+A qualidade percebida do Sapiens depende de duas competências distintas: recuperar
+a fonte correta e entender a intenção real da pergunta. A experiência recente mostrou
+que uma resposta pode estar tecnicamente correta e ainda assim ser inútil quando o
+roteamento inicial escolhe o domínio errado. Por isso, a camada de conhecimento deve
+ganhar uma etapa explícita de entendimento antes do ranking de fontes.
+
+A etapa de entendimento classifica pelo menos:
+
+- `product_help`: aprender a usar o APP Versus;
+- `corporate_knowledge`: consultar decisões, POPs, atas, processos ou estratégia;
+- `operational_action`: executar ou preparar uma ação operacional;
+- `diagnostic`: analisar situação, tendência ou indicador;
+- `technical`: arquitetura, API, MCP, SPEC ou implementação.
+
+Perguntas iniciadas por expressões como “como faço”, “onde vejo”, “como cadastro”,
+“como gero” e “como filtro” devem favorecer `product_help` quando não houver pedido
+explícito de execução. Quando a confiança for baixa, a resposta correta é perguntar
+um esclarecimento curto, não acionar uma tool adjacente nem devolver documentação
+técnica.
+
+A evolução cognitiva deve ser supervisionada por usuários e curadores. O usuário
+avalia cada resposta como `certo`, `parcial` ou `errado`; nos casos `parcial` ou
+`errado`, pode indicar o motivo e o que esperava. Esses sinais alimentam uma base
+de treinamento do APP Versus, não treinam diretamente o modelo de linguagem em
+produção. A aprendizagem inicial ajusta aliases, roteamento, priorização de fontes,
+perguntas de esclarecimento e artigos de manual.
+
+O Robô Treinador do Sapiens opera como curador assistido:
+
+1. agrupa perguntas semelhantes com baixo acerto;
+2. identifica intenção/domínio provável e fontes usadas indevidamente;
+3. sugere aliases, novos artigos ou ajustes de ranking;
+4. mantém propostas em fila de curadoria;
+5. só aplica mudanças após aprovação humana ou política explícita de baixo risco.
+
+Esse ciclo transforma o feedback real em melhoria auditável, tenant-safe e
+reversível, sem permitir que uma avaliação isolada oficialize conhecimento ou
+contorne ACL, capability ou autoridade da fonte.

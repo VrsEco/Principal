@@ -187,9 +187,11 @@ body.page-sapiens-chat.sapiens-legacy .kv-page {
 .kv-source-meta { color: var(--kv-muted); font-size: 12px; }
 .kv-source-span { color: #48556a; font-size: 13px; }
 .kv-source-card a { color: var(--kv-primary); text-decoration: none; font-size: 12px; font-weight: 800; }
-.kv-feedback { gap: 6px; padding-top: 14px; border-top: 1px solid var(--kv-line); color: var(--kv-muted); font-size: 12px; }
-.kv-feedback button { width: 34px; height: 34px; border: 0; border-radius: 9px; background: transparent; color: #6d788a; cursor: pointer; }
+.kv-feedback { gap: 8px; padding-top: 14px; border-top: 1px solid var(--kv-line); color: var(--kv-muted); font-size: 12px; flex-wrap: wrap; }
+.kv-feedback button { min-width: 64px; height: 34px; padding: 0 10px; border: 0; border-radius: 999px; background: #f3f6fb; color: #526071; cursor: pointer; font-weight: 800; }
 .kv-feedback button:hover, .kv-feedback button.is-selected { background: #edf5ff; color: var(--kv-primary); }
+.kv-feedback button:disabled { cursor: progress; opacity: .7; }
+.kv-feedback-status { color: #6d788a; }
 
 .kv-recent { padding: 18px; display: grid; gap: 11px; }
 .kv-recent-heading { justify-content: space-between; }
