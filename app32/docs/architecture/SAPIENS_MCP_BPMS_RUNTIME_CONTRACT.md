@@ -1,6 +1,7 @@
 # APP32 — Contrato MCP para Runtime BPMN/BPMS
 
 **Data:** 2026-05-07  
+**Atualizado em:** 2026-08-01
 **Status:** contrato técnico alvo  
 **Especialista líder:** @ARQUITETO  
 **Apoios naturais:** @AI_ENGINEER, @BACKEND_API, @BACKEND_SERVICE, @QA_AUTOMATION
@@ -331,3 +332,108 @@ Com esse contrato:
 - o MCP continua sendo a camada de execução tool-first;
 - a IA passa a operar com contexto suficiente e governado;
 - a conclusão da etapa deixa de depender de inferência solta e passa a depender de contrato, evidência e policy.
+
+---
+
+## 11. Composição oficial por artefatos
+
+O `runtime packet` deve incorporar os artefatos publicados e materializados para a execução atual. O bloco mínimo adicional é:
+
+```json
+{
+  "assignment": {
+    "assignment_id": 3301,
+    "assignee_type": "employee",
+    "employee_id": 778,
+    "team_id": null,
+    "status": "assigned"
+  },
+  "artifacts": [
+    {
+      "artifact_execution_id": 7001,
+      "type": "pop",
+      "name": "Conferência técnica",
+      "version": 4,
+      "required": true,
+      "status": "completed",
+      "completion_policy": "acknowledgement_required",
+      "output": {"acknowledged": true}
+    },
+    {
+      "artifact_execution_id": 7002,
+      "type": "form",
+      "name": "Dados da unidade",
+      "version": 2,
+      "required": true,
+      "status": "completed",
+      "output": {"response_ref": "artifact-response:7002"}
+    },
+    {
+      "artifact_execution_id": 7003,
+      "type": "check",
+      "name": "Critérios de aceite",
+      "version": 3,
+      "required": true,
+      "status": "in_progress",
+      "output": {"checked": 5, "total": 7, "accepted": false}
+    }
+  ],
+  "artifact_completion": {
+    "required_total": 3,
+    "required_completed": 2,
+    "activity_may_complete": false,
+    "blocking_artifact_execution_ids": [7003]
+  }
+}
+```
+
+Regras:
+
+- FORM e CHECK devem fornecer dados estruturados, não apenas texto renderizado;
+- POP deve fornecer instruções da versão publicada e evidência requerida;
+- resultados de `data_in` e etapas anteriores podem alimentar o contexto da IA;
+- o Sapiens não pode alterar diretamente respostas humanas já enviadas;
+- a IA só pode preencher, sugerir ou validar campos quando a policy do artefato permitir;
+- o response contract deve citar `artifact_execution_id` em cada output ou evidência produzida.
+
+## 12. AI Task e AI Gateway como artefato IA
+
+O tipo do artefato IA deve ser explícito:
+
+- `ai_task`: produz outputs e uma decisão operacional;
+- `ai_gateway`: avalia condições e recomenda uma saída BPMN permitida.
+
+Para `ai_gateway`, a resposta deve acrescentar:
+
+```json
+{
+  "gateway_decision": {
+    "selected_sequence_flow_id": "Flow_Approved",
+    "allowed_sequence_flow_ids": ["Flow_Approved", "Flow_Rework"],
+    "rationale": "Critérios técnicos atendidos",
+    "confidence": 0.91
+  }
+}
+```
+
+O BPMS valida se a saída pertence ao conjunto permitido. A IA nunca cria uma transição nem move o token diretamente.
+
+## 13. Conexões IN e OUT no runtime packet
+
+Artefatos de conexão devem aparecer por referência segura:
+
+- `IN`: evento recebido, origem, schema version, correlation/idempotency key e payload normalizado;
+- `OUT`: destino lógico, schema version, payload preparado, status de entrega e confirmação;
+- credenciais e segredos nunca entram no packet;
+- payload sensível pode ser substituído por referência com autorização tenant-safe;
+- falha definitiva deve resultar em `wait_human` ou `fail_business`, conforme contrato.
+
+## 14. Descoberta e retomada pelo usuário
+
+Quando houver assignment humano, o runtime deve fornecer uma rota interna de retomada da atividade:
+
+```text
+/my-work/process-instance/{instance_id}?execution_id={activity_execution_id}
+```
+
+O Portal de Processos e `Meu Trabalho` devem derivar seus cards da mesma consulta de assignments ativos. O Portal apenas acrescenta o contexto do processo. Uma execução IA/IN/OUT sem gate humano não deve gerar card pessoal.

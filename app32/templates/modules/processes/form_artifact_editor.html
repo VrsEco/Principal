@@ -1,0 +1,159 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Editor FORM | {{ process.name }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/process_artifact_editor.css') }}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/processes">Processos</a><span class="sep">/</span>
+<a href="{{ url_for('processes.process_details', process_id=process.id) }}">{{ process.code or process.name }}</a><span class="sep">/</span>
+<span class="current">FORM</span>
+{% endblock %}
+
+{% block workspace_content %}
+<main class="artifact-editor" id="formEditor">
+  <header class="artifact-editor__hero">
+    <div class="artifact-editor__identity">
+      <div class="artifact-editor__badge">FORM</div>
+      <div>
+        <h1>Editor de formulário</h1>
+        <p>{{ process.code or '' }}{% if process.code %} · {% endif %}{{ process.name }}</p>
+      </div>
+    </div>
+    <div class="artifact-editor__actions">
+      <button class="artifact-btn" type="button" onclick="history.back()">Voltar ao fluxo</button>
+      <button class="artifact-btn artifact-btn--primary" id="saveArtifactBtn" type="button">Salvar rascunho</button>
+      <button class="artifact-btn" id="publishArtifactBtn" type="button">Publicar versão</button>
+    </div>
+  </header>
+
+  <div class="artifact-editor__grid">
+    <section class="artifact-editor__panel">
+      <div class="artifact-editor__section-title">
+        <h2>Estrutura do formulário</h2>
+        <span>Organize campos em seções reutilizáveis</span>
+      </div>
+      <div id="formSections"></div>
+      <button class="artifact-add" id="addSectionBtn" type="button">+ Adicionar seção</button>
+    </section>
+
+    <aside class="artifact-editor__sidebar">
+      <div class="artifact-context">
+        <strong>Atividade BPMN</strong><br>
+        {{ bpmn_element_name or 'Atividade selecionada' }}<br>
+        <small>{{ bpmn_element_id or 'Vínculo será informado pelo modelador' }}</small>
+      </div>
+      <div class="artifact-field">
+        <label for="artifactName">Nome do formulário</label>
+        <input id="artifactName" maxlength="255" placeholder="Ex.: Dados para aprovação">
+      </div>
+      <div class="artifact-field">
+        <label for="artifactDescription">Orientação ao executor</label>
+        <textarea id="artifactDescription" rows="4" placeholder="Explique quando e como preencher"></textarea>
+      </div>
+      <div class="artifact-field">
+        <label for="submitLabel">Texto do botão de envio</label>
+        <input id="submitLabel" maxlength="60" value="Enviar formulário">
+      </div>
+      <div class="artifact-field">
+        <label><input id="allowDraft" type="checkbox" checked> Permitir salvar parcialmente</label>
+      </div>
+      <div class="artifact-field">
+        <label><input id="requiredArtifact" type="checkbox" checked> Obrigatório para concluir atividade</label>
+      </div>
+      <p class="artifact-help">As respostas serão persistidas por empresa, instância e execução da atividade. Uma versão publicada fica imutável para preservar o histórico.</p>
+      <span class="artifact-status" id="artifactStatus">Rascunho</span>
+    </aside>
+  </div>
+</main>
+<div class="artifact-toast" id="artifactToast" role="status"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+  const state = {
+    processId: {{ process.id }},
+    artifact: {{ artifact|tojson }},
+    bpmnElementId: {{ bpmn_element_id|tojson }},
+    bpmnElementName: {{ bpmn_element_name|tojson }},
+    sections: []
+  };
+  const types = ['text','textarea','number','date','datetime','select','multiselect','checkbox','email','phone','file'];
+  const $ = id => document.getElementById(id);
+  const uid = prefix => `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const toast = (message, error=false) => { const el=$('artifactToast'); el.textContent=message; el.className=`artifact-toast is-visible${error?' is-error':''}`; setTimeout(()=>el.className='artifact-toast',2800); };
+  const config = state.artifact?.configuration_json || {};
+  state.sections = Array.isArray(config.sections) ? structuredClone(config.sections) : [];
+  if (!state.sections.length) state.sections=[{id:uid('section'),title:'Seção 1',description:'',fields:[]}];
+  $('artifactName').value = state.artifact?.name || state.bpmnElementName || 'Novo formulário';
+  $('artifactDescription').value = state.artifact?.description || '';
+  $('submitLabel').value = config.submit_label || 'Enviar formulário';
+  $('allowDraft').checked = config.allow_draft !== false;
+  const linkedRequired = state.artifact?.link?.is_required;
+  $('requiredArtifact').checked = linkedRequired === undefined ? true : Boolean(linkedRequired);
+
+  function render() {
+    const host=$('formSections'); host.innerHTML='';
+    state.sections.forEach((section, sIndex) => {
+      const card=document.createElement('article'); card.className='artifact-builder-card';
+      card.innerHTML=`<div class="artifact-builder-card__head"><input type="text" value="${esc(section.title)}" aria-label="Título da seção"><button class="artifact-icon-btn" type="button" title="Remover seção">×</button></div><div class="artifact-fields"></div><button class="artifact-add" type="button">+ Adicionar campo</button>`;
+      card.querySelector('input').addEventListener('input',e=>section.title=e.target.value);
+      card.querySelector('.artifact-icon-btn').addEventListener('click',()=>{state.sections.splice(sIndex,1); render();});
+      const fieldHost=card.querySelector('.artifact-fields');
+      (section.fields||[]).forEach((field,fIndex)=>{
+        const row=document.createElement('div'); row.className='artifact-row';
+        row.innerHTML=`<input type="text" value="${esc(field.label)}" placeholder="Rótulo do campo"><select>${types.map(type=>`<option value="${type}" ${field.type===type?'selected':''}>${type}</option>`).join('')}</select><label class="artifact-row__flag"><input type="checkbox" ${field.required?'checked':''}> Obrigatório</label><button class="artifact-icon-btn" type="button" title="Remover campo">×</button>`;
+        const [labelInput,typeSelect,requiredInput,removeBtn]=[row.children[0],row.children[1],row.querySelector('input[type="checkbox"]'),row.querySelector('button')];
+        labelInput.addEventListener('input',e=>field.label=e.target.value);
+        typeSelect.addEventListener('change',e=>field.type=e.target.value);
+        requiredInput.addEventListener('change',e=>field.required=e.target.checked);
+        removeBtn.addEventListener('click',()=>{section.fields.splice(fIndex,1); render();});
+        fieldHost.appendChild(row);
+      });
+      card.querySelector('.artifact-add').addEventListener('click',()=>{section.fields=section.fields||[]; section.fields.push({id:uid('field'),label:'Novo campo',type:'text',required:false}); render();});
+      host.appendChild(card);
+    });
+    if (!state.sections.length) host.innerHTML='<div class="artifact-empty">Adicione uma seção para começar o formulário.</div>';
+  }
+
+  function payload() {
+    return {
+      artifact_type:'form',
+      name:$('artifactName').value.trim(),
+      description:$('artifactDescription').value.trim(),
+      bpmn_element_id:state.bpmnElementId,
+      is_required:$('requiredArtifact').checked,
+      completion_policy_json:{mode:'valid_submission',allow_skip:false},
+      configuration_json:{sections:state.sections,submit_label:$('submitLabel').value.trim()||'Enviar formulário',allow_draft:$('allowDraft').checked}
+    };
+  }
+
+  async function save() {
+    const editing=Boolean(state.artifact?.id);
+    const url=editing?`/api/process-activity-artifacts/${state.artifact.id}`:`/api/processes/${state.processId}/activity-artifacts`;
+    const response=await fetch(url,{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
+    const data=await response.json(); if(!response.ok) throw new Error(data.error||'Não foi possível salvar.');
+    state.artifact=data; toast('Rascunho salvo.');
+    if(!editing) location.href=`/processes/${state.processId}/artifacts/${data.id}/edit?bpmn_element_id=${encodeURIComponent(state.bpmnElementId)}&bpmn_element_name=${encodeURIComponent(state.bpmnElementName)}`;
+    return data;
+  }
+  async function publish() {
+    if(!state.artifact?.id) await save();
+    const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish`,{method:'POST'});
+    const data=await response.json(); if(!response.ok) throw new Error(data.error||'Não foi possível publicar.');
+    state.artifact=data; setStatus(); toast('Versão publicada.');
+  }
+  function setStatus(){const published=state.artifact?.status==='published'; $('artifactStatus').textContent=published?'Publicado':'Rascunho'; $('artifactStatus').className=`artifact-status${published?' artifact-status--published':''}`; $('saveArtifactBtn').disabled=published; $('publishArtifactBtn').disabled=published;}
+  $('addSectionBtn').addEventListener('click',()=>{state.sections.push({id:uid('section'),title:`Seção ${state.sections.length+1}`,description:'',fields:[]});render();});
+  $('saveArtifactBtn').addEventListener('click',()=>save().catch(error=>toast(error.message,true)));
+  $('publishArtifactBtn').addEventListener('click',()=>publish().catch(error=>toast(error.message,true)));
+  render(); setStatus();
+})();
+</script>
+{% endblock %}

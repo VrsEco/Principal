@@ -1,0 +1,113 @@
+{% extends "layouts/workspace.html" %}
+
+{% block title %}Editor CHECK | {{ process.name }}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/process_artifact_editor.css') }}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/processes">Processos</a><span class="sep">/</span>
+<a href="{{ url_for('processes.process_details', process_id=process.id) }}">{{ process.code or process.name }}</a><span class="sep">/</span>
+<span class="current">CHECK</span>
+{% endblock %}
+
+{% block workspace_content %}
+<main class="artifact-editor artifact-editor--check" id="checkEditor">
+  <header class="artifact-editor__hero">
+    <div class="artifact-editor__identity">
+      <div class="artifact-editor__badge">CHECK</div>
+      <div>
+        <h1>Editor de checklist</h1>
+        <p>{{ process.code or '' }}{% if process.code %} · {% endif %}{{ process.name }}</p>
+      </div>
+    </div>
+    <div class="artifact-editor__actions">
+      <button class="artifact-btn" type="button" onclick="history.back()">Voltar ao fluxo</button>
+      <button class="artifact-btn artifact-btn--primary" id="saveArtifactBtn" type="button">Salvar rascunho</button>
+      <button class="artifact-btn" id="publishArtifactBtn" type="button">Publicar versão</button>
+    </div>
+  </header>
+
+  <div class="artifact-editor__grid">
+    <section class="artifact-editor__panel">
+      <div class="artifact-editor__section-title">
+        <h2>Itens de verificação</h2>
+        <span>Defina obrigatoriedade, evidência e tratamento de N/A</span>
+      </div>
+      <div id="checkItems"></div>
+      <button class="artifact-add" id="addItemBtn" type="button">+ Adicionar item</button>
+    </section>
+
+    <aside class="artifact-editor__sidebar">
+      <div class="artifact-context">
+        <strong>Atividade BPMN</strong><br>
+        {{ bpmn_element_name or 'Atividade selecionada' }}<br>
+        <small>{{ bpmn_element_id or 'Vínculo será informado pelo modelador' }}</small>
+      </div>
+      <div class="artifact-field">
+        <label for="artifactName">Nome do checklist</label>
+        <input id="artifactName" maxlength="255" placeholder="Ex.: Conferência para liberação">
+      </div>
+      <div class="artifact-field">
+        <label for="artifactDescription">Instrução ao executor</label>
+        <textarea id="artifactDescription" rows="4" placeholder="Explique o critério geral de aceite"></textarea>
+      </div>
+      <div class="artifact-field">
+        <label for="failureBehavior">Ao encontrar reprovação</label>
+        <select id="failureBehavior"><option value="block">Bloquear conclusão</option><option value="request_review">Solicitar revisão</option><option value="allow_with_justification">Permitir com justificativa</option></select>
+      </div>
+      <div class="artifact-field"><label><input id="requiredArtifact" type="checkbox" checked> Obrigatório para concluir atividade</label></div>
+      <p class="artifact-help">Cada resposta ficará auditada na execução. Evidências obrigatórias deverão ser anexadas antes do aceite do item.</p>
+      <span class="artifact-status" id="artifactStatus">Rascunho</span>
+    </aside>
+  </div>
+</main>
+<div class="artifact-toast" id="artifactToast" role="status"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+  const state={processId:{{ process.id }},artifact:{{ artifact|tojson }},bpmnElementId:{{ bpmn_element_id|tojson }},bpmnElementName:{{ bpmn_element_name|tojson }},items:[]};
+  const $=id=>document.getElementById(id);
+  const uid=prefix=>`${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
+  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const toast=(message,error=false)=>{const el=$('artifactToast');el.textContent=message;el.className=`artifact-toast is-visible${error?' is-error':''}`;setTimeout(()=>el.className='artifact-toast',2800);};
+  const config=state.artifact?.configuration_json||{};
+  state.items=Array.isArray(config.items)?structuredClone(config.items):[];
+  if(!state.items.length) state.items=[{id:uid('item'),label:'Novo item de verificação',required:true,evidence_required:false,allow_na:false}];
+  $('artifactName').value=state.artifact?.name||state.bpmnElementName||'Novo checklist';
+  $('artifactDescription').value=state.artifact?.description||'';
+  $('failureBehavior').value=config.failure_behavior||'block';
+  const linkedRequired=state.artifact?.link?.is_required;
+  $('requiredArtifact').checked=linkedRequired===undefined?true:Boolean(linkedRequired);
+
+  function render(){
+    const host=$('checkItems');host.innerHTML='';
+    state.items.forEach((item,index)=>{
+      const row=document.createElement('div');row.className='artifact-builder-card';
+      row.innerHTML=`<div class="artifact-row" style="grid-template-columns:minmax(220px,1fr) auto auto auto auto"><input type="text" value="${esc(item.label)}" placeholder="Descrição do item"><label class="artifact-row__flag"><input data-flag="required" type="checkbox" ${item.required?'checked':''}> Obrigatório</label><label class="artifact-row__flag"><input data-flag="evidence_required" type="checkbox" ${item.evidence_required?'checked':''}> Evidência</label><label class="artifact-row__flag"><input data-flag="allow_na" type="checkbox" ${item.allow_na?'checked':''}> Permitir N/A</label><button class="artifact-icon-btn" type="button">×</button></div>`;
+      row.querySelector('input[type="text"]').addEventListener('input',e=>item.label=e.target.value);
+      row.querySelectorAll('input[type="checkbox"]').forEach(input=>input.addEventListener('change',e=>item[e.target.dataset.flag]=e.target.checked));
+      row.querySelector('button').addEventListener('click',()=>{state.items.splice(index,1);render();});
+      host.appendChild(row);
+    });
+    if(!state.items.length)host.innerHTML='<div class="artifact-empty">Adicione um item para começar o checklist.</div>';
+  }
+  function payload(){return {artifact_type:'check',name:$('artifactName').value.trim(),description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'all_required_accepted',allow_skip:false},configuration_json:{items:state.items,failure_behavior:$('failureBehavior').value}};}
+  async function save(){
+    const editing=Boolean(state.artifact?.id);const url=editing?`/api/process-activity-artifacts/${state.artifact.id}`:`/api/processes/${state.processId}/activity-artifacts`;
+    const response=await fetch(url,{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível salvar.');
+    state.artifact=data;toast('Rascunho salvo.');if(!editing)location.href=`/processes/${state.processId}/artifacts/${data.id}/edit?bpmn_element_id=${encodeURIComponent(state.bpmnElementId)}&bpmn_element_name=${encodeURIComponent(state.bpmnElementName)}`;return data;
+  }
+  async function publish(){if(!state.artifact?.id)await save();const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível publicar.');state.artifact=data;setStatus();toast('Versão publicada.');}
+  function setStatus(){const published=state.artifact?.status==='published';$('artifactStatus').textContent=published?'Publicado':'Rascunho';$('artifactStatus').className=`artifact-status${published?' artifact-status--published':''}`;$('saveArtifactBtn').disabled=published;$('publishArtifactBtn').disabled=published;}
+  $('addItemBtn').addEventListener('click',()=>{state.items.push({id:uid('item'),label:'Novo item de verificação',required:true,evidence_required:false,allow_na:false});render();});
+  $('saveArtifactBtn').addEventListener('click',()=>save().catch(error=>toast(error.message,true)));$('publishArtifactBtn').addEventListener('click',()=>publish().catch(error=>toast(error.message,true)));
+  render();setStatus();
+})();
+</script>
+{% endblock %}

@@ -67,6 +67,7 @@ def open_or_create_pop_activity_for_bpmn(
         existing.bpmn_element_type = bpmn_element_type or existing.bpmn_element_type
         existing.bpmn_data_objects = data_objects or existing.bpmn_data_objects
         db.session.commit()
+        _ensure_generic_pop_artifact(existing)
         return existing, False
 
     next_order = (
@@ -90,7 +91,15 @@ def open_or_create_pop_activity_for_bpmn(
     )
     db.session.add(routine)
     db.session.commit()
+    _ensure_generic_pop_artifact(routine)
     return routine, True
+
+
+def _ensure_generic_pop_artifact(routine: ProcessRoutine) -> None:
+    # Import local evita ciclo entre o adaptador legado e o catálogo genérico.
+    from services.process_artifact_service import ensure_pop_artifact_for_routine
+
+    ensure_pop_artifact_for_routine(routine)
 
 
 def serialize_pop_binding(routine: ProcessRoutine, *, created: bool) -> dict[str, Any]:

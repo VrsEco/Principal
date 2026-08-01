@@ -326,6 +326,20 @@
             color: #1e3a8a;
         }
 
+        .mp2-work-badge {
+            position: absolute;
+            right: 6px;
+            bottom: 5px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: #0f766e;
+            color: #fff;
+            font-size: .58rem;
+            font-weight: 900;
+            line-height: 1.2;
+            box-shadow: 0 2px 7px rgba(15,118,110,.22);
+        }
+
         .mp2-process-card--disabled .mp2-process-name {
             color: #64748b;
         }
@@ -439,6 +453,9 @@
                                             <div class="indicator-perf" style="background: {{ p.perf_color }}; box-shadow: 0 0 0 3px {{ p.perf_color }}1f;"></div>
                                         </div>
                                         <div class="mp2-process-name">{{ p.display_name }}</div>
+                                        {% if p.portal_stats.my_active_activity_count %}
+                                        <span class="mp2-work-badge">{{ p.portal_stats.my_active_activity_count }} para você</span>
+                                        {% endif %}
                                     </a>
                                     {% else %}
                                     <div class="mp2-process-card mp2-process-card--disabled" aria-disabled="true">

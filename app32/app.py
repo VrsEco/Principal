@@ -765,6 +765,7 @@ def register_api_resources(api):
         ProcessSipocRegulatoryItemListResource, ProcessSipocRegulatoryItemResource,
         ProcessSipocPublishResource, ProcessSipocArchiveResource,
         ProcessBpmnDiagramResource, ProcessBpmnDiagramExportResource, ProcessBpmnPopBindingResource,
+        ProcessActivityArtifactListResource, ProcessActivityArtifactResource, ProcessActivityArtifactPublishResource,
         ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
         ProcessBpmnAiAssistantResource,
         ResourceCatalogListResource, ResourceCatalogResource,
@@ -777,6 +778,7 @@ def register_api_resources(api):
         ProcessInstanceTimelineResource, ProcessInstanceOverlayResource,
         ProcessInstancePauseResource, ProcessInstanceResumeResource,
         ProcessInstanceExecutionListResource, ProcessInstanceExecutionResource,
+        ProcessArtifactExecutionResource,
         ActivityWorkLogItemResource
     )
     from api.resources.okr import (
@@ -964,6 +966,9 @@ def register_api_resources(api):
     api.add_resource(ProcessBpmnDiagramResource, '/api/processes/<int:process_id>/bpmn-diagram')
     api.add_resource(ProcessBpmnDiagramExportResource, '/api/processes/<int:process_id>/bpmn-diagram/export')
     api.add_resource(ProcessBpmnPopBindingResource, '/api/processes/<int:process_id>/bpmn-pop-bindings')
+    api.add_resource(ProcessActivityArtifactListResource, '/api/processes/<int:process_id>/activity-artifacts')
+    api.add_resource(ProcessActivityArtifactResource, '/api/process-activity-artifacts/<int:artifact_id>')
+    api.add_resource(ProcessActivityArtifactPublishResource, '/api/process-activity-artifacts/<int:artifact_id>/publish')
     api.add_resource(ProcessBpmnAiAssistantResource, '/api/processes/<int:process_id>/bpmn-ai-assistant')
     api.add_resource(ProcessActivityExecutionContractListResource, '/api/processes/<int:process_id>/activity-execution-contracts')
     api.add_resource(ProcessActivityExecutionContractResource, '/api/process-activity-execution-contracts/<int:contract_id>')
@@ -987,6 +992,7 @@ def register_api_resources(api):
     api.add_resource(ProcessInstanceResumeResource, '/api/process-instances/<int:instance_id>/resume')
     api.add_resource(ProcessInstanceExecutionListResource, '/api/process-instances/<int:instance_id>/executions')
     api.add_resource(ProcessInstanceExecutionResource, '/api/process-instances/<int:instance_id>/executions/<int:execution_id>')
+    api.add_resource(ProcessArtifactExecutionResource, '/api/process-artifact-executions/<int:artifact_execution_id>')
     api.add_resource(ActivityWorkLogItemResource, '/api/activity-work-logs/<int:log_id>')
     api.add_resource(OKRGlobalListResource, '/api/okrs-global')
     api.add_resource(OKRGlobalResource, '/api/okrs-global/<int:okr_id>')

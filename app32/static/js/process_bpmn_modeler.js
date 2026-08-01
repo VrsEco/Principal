@@ -1248,15 +1248,21 @@
     if (!panel || !list) return;
 
     const allActivities = getOperationalActivities();
-    const elements = extractPopBindingCandidates();
-    const ignoredCount = Math.max(0, allActivities.length - elements.length);
+    const elements = allActivities.map((element) => ({
+      id: element.id,
+      code: element.id,
+      type: element.businessObject.$type.replace('bpmn:', ''),
+      name: element.businessObject.name || '(sem nome)',
+      data_objects: getAssociatedDataObjectRefs(element)
+    })).sort((a, b) => a.id.localeCompare(b.id));
+    const popEligibleCount = elements.filter((item) => item.data_objects.length > 0).length;
     popCandidatesByElementId = new Map(elements.map((item) => [item.id, item]));
 
     if (!elements.length) {
       list.innerHTML = `
         <div class="bpmn-element-card bpmn-element-card--empty">
-          <strong>Nenhuma atividade marcada para POP.</strong>
-          <span>Associe um Data Object Reference à atividade BPMN para ela entrar na preparação do POP.</span>
+          <strong>Nenhuma atividade executável encontrada.</strong>
+          <span>Adicione uma tarefa BPMN para associar POP, FORM ou CHECK.</span>
         </div>
       `;
     } else {
@@ -1266,9 +1272,13 @@
           <div>
             <strong>${escapeHtml(item.name)}</strong>
             <span>${escapeHtml(item.type)}</span>
-            <small>Data Object: ${escapeHtml(formatDataObjectNames(item.data_objects))}</small>
+            <small>${item.data_objects.length ? `Data Object: ${escapeHtml(formatDataObjectNames(item.data_objects))}` : 'Sem marcador POP · FORM/CHECK disponíveis'}</small>
           </div>
-          <button type="button" class="bpmn-chip-btn" data-pop-bind="${escapeHtml(item.id)}">Abrir/Criar POP</button>
+          <div class="bpmn-element-card__actions">
+            ${item.data_objects.length ? `<button type="button" class="bpmn-chip-btn" data-pop-bind="${escapeHtml(item.id)}">POP</button>` : ''}
+            <button type="button" class="bpmn-chip-btn bpmn-chip-btn--form" data-artifact-new="form" data-element-id="${escapeHtml(item.id)}">FORM</button>
+            <button type="button" class="bpmn-chip-btn bpmn-chip-btn--check" data-artifact-new="check" data-element-id="${escapeHtml(item.id)}">CHECK</button>
+          </div>
         </div>
       `).join('');
     }
@@ -1276,8 +1286,8 @@
     panel.hidden = false;
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     setStatus(
-      'Atividades POP detectadas',
-      `${elements.length} atividade(s) com Data Object Reference. ${ignoredCount} atividade(s) sem marcador POP.`
+      'Atividades e artefatos disponíveis',
+      `${elements.length} atividade(s) encontradas. ${popEligibleCount} com marcador POP; FORM e CHECK disponíveis em todas.`
     );
   }
 
@@ -1835,6 +1845,18 @@
     const popBindButton = event.target.closest('[data-pop-bind]');
     if (popBindButton) {
       await openOrCreatePopBinding(popBindButton.dataset.popBind, popBindButton);
+      return;
+    }
+
+    const artifactNewButton = event.target.closest('[data-artifact-new]');
+    if (artifactNewButton) {
+      const candidate = popCandidatesByElementId.get(artifactNewButton.dataset.elementId);
+      if (!candidate) return;
+      const query = new URLSearchParams({
+        bpmn_element_id: candidate.id,
+        bpmn_element_name: candidate.name || candidate.id
+      });
+      window.location.href = `/processes/${processId}/artifacts/new/${artifactNewButton.dataset.artifactNew}?${query.toString()}`;
       return;
     }
 

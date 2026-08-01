@@ -70,9 +70,9 @@
       <button type="button" class="bpmn-tool-btn" data-action="svg">Baixar SVG</button>
     </div>
     <div class="bpmn-ribbon-group">
-      <span class="bpmn-ribbon-title">POP IA</span>
+      <span class="bpmn-ribbon-title">Artefatos</span>
       <button type="button" class="bpmn-tool-btn" data-action="normalize-codes">Codificar atividades</button>
-      <button type="button" class="bpmn-tool-btn" data-action="inspect-elements">Preparar vínculo com POP</button>
+      <button type="button" class="bpmn-tool-btn" data-action="inspect-elements">Configurar POP / FORM / CHECK</button>
     </div>
     <div class="bpmn-ribbon-hint">
       Elementos BPMN disponíveis na paleta lateral: eventos, tarefas, gateways, subprocessos, conexões e anotações. O APP32 adiciona AI Task e AI Gateway no Change Element e no painel assistido pelo Sapiens.
@@ -101,12 +101,11 @@
 
   <section class="bpmn-pop-binding-panel" id="bpmnPopBindingPanel" hidden>
     <div>
-      <span class="bpmn-eyebrow">Preparação para POP + IA</span>
-      <h2>Elementos BPMN detectados</h2>
+      <span class="bpmn-eyebrow">Artefatos externos da atividade</span>
+      <h2>Configurar POP, FORM e CHECK</h2>
       <p>
-        A leitura considera como atividade candidata ao POP somente a atividade BPMN que possuir um
-        <strong>Data Object Reference</strong> associado. Esse marcador indica que a atividade exige
-        documentação operacional, POP humano e futura versão para IA. As atividades operacionais são
+        FORM e CHECK podem ser configurados em qualquer atividade executável. O POP continua usando
+        <strong>Data Object Reference</strong> como marcador compatível com a modelagem atual. As atividades operacionais são
         codificadas automaticamente no padrão <strong>código do processo + .NN</strong>, por exemplo
         <strong>{{ process.code or 'AA.C.1.1.2' }}.04</strong>.
       </p>

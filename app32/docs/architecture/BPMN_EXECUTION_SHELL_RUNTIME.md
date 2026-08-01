@@ -1094,3 +1094,39 @@ O que você pediu se traduz assim no APP32:
 - **suporta humano, automático, REST e MCP**
 
 Esse é o caminho correto para transformar o BPMN do APP32 em **runtime operacional real**.
+
+---
+
+## 19. Addendum — artefatos externos e fila operacional
+
+### 19.1. Composição da atividade
+
+A shell deve tratar `POP`, `FORM`, `CHECK`, `IA`, `IN` e `OUT` como artefatos externos associados ao `bpmn_element_id`. Ao entrar na atividade, o painel lateral deve listar cada execução de artefato com:
+
+- tipo/cor;
+- nome e versão;
+- obrigatório/opcional;
+- status e progresso;
+- ação contextual (`Ler`, `Preencher`, `Executar`, `Revisar`, `Ver dados`);
+- bloqueio ou pendência que impede a conclusão.
+
+Uma mesma atividade pode compor os seis tipos. A conclusão ocorre somente após validação das policies obrigatórias em service.
+
+### 19.2. Persistência por snapshot
+
+A instância deve preservar a versão publicada de cada artefato no momento de sua materialização. Respostas de FORM, itens de CHECK, ciência do POP, decisões de IA e envelopes IN/OUT ficam relacionados a `activity_execution_id`, `process_instance_id` e `company_id`.
+
+### 19.3. Entrada pelo Portal de Processos
+
+O usuário pode chegar à mesma shell por duas projeções:
+
+- `Meu Trabalho`: fila consolidada de assignments ativos;
+- `Portal de Processos`: fila contextual do processo selecionado.
+
+Ambas abrem a rota autenticada da instância com `execution_id`. O Portal mostra badges e cards apenas para atividades humanas acionáveis. IA/IN/OUT só entram como card quando houver revisão, aprovação, exceção ou fallback humano.
+
+### 19.4. Assignment canônico
+
+O runtime não deve inferir o executor exclusivamente pelo responsável genérico da instância ou pela lane. Deve existir assignment por execução de atividade, com resolução por colaborador, equipe, papel e fallback governado. Reatribuição, claim e conclusão devem permanecer auditáveis e tenant-safe.
+
+Implementação de referência: `ProcessExecutionAssignment` relaciona `company_id` e `activity_execution_id` ao alvo (`employee`, `team` ou `role`). O Portal e o `Meu Trabalho` consultam essa mesma fonte; os campos de responsável da instância são apenas fallback de materialização, nunca uma segunda verdade concorrente.

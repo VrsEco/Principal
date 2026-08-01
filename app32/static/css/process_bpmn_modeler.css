@@ -567,6 +567,10 @@
   opacity: 0.7;
 }
 
+.bpmn-element-card__actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.35rem; }
+.bpmn-chip-btn--form { color:#6d28d9; background:#f5f3ff; border-color:rgba(124,58,237,.2); }
+.bpmn-chip-btn--check { color:#047857; background:#ecfdf5; border-color:rgba(5,150,105,.2); }
+
 @media (max-width: 1100px) {
   .bpmn-modeler-hero,
   .bpmn-ribbon {

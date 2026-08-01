@@ -74,7 +74,7 @@
         .hero p { margin-top: .35rem; max-width: 72ch; font-size: .95rem; line-height: 1.35; color: rgba(255,255,255,.86); }
         .hero__stats {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
+            grid-template-columns: repeat(6, minmax(0, 1fr));
             gap: .55rem;
             align-self: center;
         }
@@ -561,6 +561,7 @@
                 <div class="hero-stat"><strong>-</strong><span>Indicadores</span></div>
                 <div class="hero-stat"><strong>-</strong><span>Recursos</span></div>
                 <div class="hero-stat"><strong>-</strong><span>SPEC IA</span></div>
+                <div class="hero-stat"><strong>-</strong><span>Para você</span></div>
             </div>
         </section>
 
@@ -589,6 +590,7 @@
                     </div>
                     <div class="sidebar-content" id="actionButtons">
                         <button class="action-btn">▶️ Iniciar instância</button>
+                        <button class="action-btn" disabled>✅ Minhas execuções</button>
                         <button class="action-btn" disabled>📋 POP Publicado</button>
                         <button class="action-btn" disabled>🎬 Vídeos</button>
                         <button class="action-btn" disabled>📅 Rotinas</button>
@@ -747,6 +749,7 @@
                 <div class="hero-stat"><strong>${cardValue(stats.indicator_count)}</strong><span>Indicadores</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.resource_count)}</strong><span>Recursos</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.spec_count)}</strong><span>SPEC IA</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.my_active_activity_count)}</strong><span>Para você</span></div>
             `;
         }
 
@@ -772,8 +775,10 @@
             const hasIndicators = (data.indicators || []).length > 0;
             const hasResources = ((data.resources || {}).links || []).length > 0;
             const hasSpecs = (data.ai_specs?.contracts || []).length > 0 || !!data.ai_specs?.flow_copilot_analysis;
+            const myActivities = data.my_active_activities || [];
             actionButtons.innerHTML = `
                 <button class="action-btn" data-action="start-instance">▶️ Iniciar instância</button>
+                <button class="action-btn" ${myActivities.length ? '' : 'disabled'} data-action="my-activities">✅ Minhas execuções (${myActivities.length})</button>
                 <button class="action-btn" ${hasPop ? '' : 'disabled'} data-action="pop">📋 POP Publicado</button>
                 <button class="action-btn" ${hasVideos ? '' : 'disabled'} data-action="videos">🎬 Vídeos</button>
                 <button class="action-btn" ${hasRoutines ? '' : 'disabled'} data-action="routines">📅 Rotinas</button>
@@ -889,6 +894,22 @@
                     <p style="margin-top:.6rem;"><strong>Prazo:</strong> ${esc(String((item.deadline_days || 0)))} dia(s) / ${esc(String((item.deadline_hours || 0)))} hora(s)</p>
                     ${item.deadline_date ? `<p style="margin-top:.45rem;"><strong>Data limite:</strong> ${esc(item.deadline_date)}</p>` : ''}
                     <p style="margin-top:.45rem;"><strong>Equipe:</strong> ${esc((item.collaborators || []).map(c => c.employee_name).join(', ') || 'Sem equipe vinculada')}</p>
+                </article>
+            `).join('')}</div>`;
+        }
+
+        function renderMyActivities(items) {
+            if (!items.length) return '<div class="portal-empty" style="min-height:180px;">Nenhuma atividade ativa atribuída a você neste processo.</div>';
+            const labels = { pending: 'Pendente', ready: 'Pronta', in_progress: 'Em execução', paused: 'Pausada', waiting_external: 'Aguardando externo', waiting_human: 'Aguardando decisão' };
+            return `<div class="portal-grid portal-grid--cards">${items.map(item => `
+                <article class="portal-content-card">
+                    <h4>${esc(item.activity_name || item.activity_id || 'Atividade')}</h4>
+                    <p>${esc(item.instance_code || '')}${item.instance_code ? ' · ' : ''}${esc(item.instance_title || 'Instância')}</p>
+                    <p style="margin-top:.6rem;"><strong>Status:</strong> ${esc(labels[item.status] || item.status || 'Pendente')}</p>
+                    <p><strong>Prazo:</strong> ${esc(item.due_date || 'Não definido')}</p>
+                    <p><strong>Artefatos:</strong> ${esc((item.artifact_types || []).map(type => type.toUpperCase()).join(', ') || 'Nenhum')}</p>
+                    ${item.required_artifacts_pending ? `<p style="color:#b45309;"><strong>${esc(item.required_artifacts_pending)}</strong> obrigatório(s) pendente(s)</p>` : ''}
+                    <a class="action-btn" style="margin-top:.8rem; text-decoration:none; display:inline-flex; width:auto;" href="${esc(item.execution_url)}">Executar atividade →</a>
                 </article>
             `).join('')}</div>`;
         }
@@ -1032,6 +1053,7 @@
             if (action === 'pop') showModal('POP Publicado', 'Atividades e passos operacionais', renderPopActivities(data.pop_activities || []));
             if (action === 'videos') showModal('Vídeos do Processo', 'Clipes operacionais publicados', renderVideos(data.videos || []));
             if (action === 'routines') showModal('Rotinas do Processo', 'Agenda operacional vinculada', renderRoutines(data.routines || []));
+            if (action === 'my-activities') showModal('Minhas execuções neste processo', 'Atividades acionáveis atribuídas a você', renderMyActivities(data.my_active_activities || []));
             if (action === 'indicators') showModal('Indicadores do Processo', 'Medição e acompanhamento', renderIndicators(data.indicators || []));
             if (action === 'resources') showModal('Estrutura/Recursos', 'Capacidade, custo e alocação publicada', renderResources(data.resources || {}));
             if (action === 'specs') showModal('SPEC para IA', 'Contratos e leitura do copiloto de fluxo', renderSpecs(data.ai_specs || {}));

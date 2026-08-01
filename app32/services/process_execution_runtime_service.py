@@ -22,6 +22,7 @@ from services.process_ai_execution_service import normalize_ai_contract_config, 
 from services.process_execution_contract_service import resolve_activity_execution_contract
 from services.process_executor_factory_service import build_executor_descriptor
 from services.process_execution_mode_service import normalize_execution_mode, summarize_execution_mode_config
+from services.process_artifact_service import build_activity_artifacts_runtime_payload
 from utils.indicator_filters import build_indicator_process_filter
 
 
@@ -30,6 +31,7 @@ INSTANCE_ALLOWED_STATUSES = {
     "in_progress",
     "paused",
     "waiting_external",
+    "waiting_human",
     "completed",
     "failed",
     "cancelled",
@@ -181,7 +183,11 @@ def build_runtime_overlay(instance: ProcessInstance) -> dict[str, Any]:
     }
 
 
-def build_runtime_payload(instance: ProcessInstance) -> dict[str, Any]:
+def build_runtime_payload(
+    instance: ProcessInstance,
+    *,
+    execution_id: int | None = None,
+) -> dict[str, Any]:
     diagram = None
     if instance.process_bpmn_diagram_id:
         diagram = (
@@ -195,7 +201,11 @@ def build_runtime_payload(instance: ProcessInstance) -> dict[str, Any]:
             company_id=instance.company_id,
         )
 
-    current_activity = build_current_activity_payload(instance=instance, diagram=diagram)
+    current_activity = build_current_activity_payload(
+        instance=instance,
+        diagram=diagram,
+        execution_id=execution_id,
+    )
 
     return {
         "instance": instance.to_dict(),
@@ -269,6 +279,7 @@ def build_current_activity_payload(
     *,
     instance: ProcessInstance,
     diagram: ProcessBpmnDiagram | None = None,
+    execution_id: int | None = None,
 ) -> dict[str, Any]:
     current_element_id = getattr(instance, "current_bpmn_element_id", None)
     if not diagram and getattr(instance, "process_bpmn_diagram_id", None):
@@ -290,8 +301,15 @@ def build_current_activity_payload(
         .all()
     )
     current_execution = None
+    if execution_id:
+        current_execution = next((item for item in executions if int(item.id) == int(execution_id)), None)
+        if current_execution:
+            current_element_id = current_execution.bpmn_element_id
     if current_element_id:
-        current_execution = next((item for item in executions if item.bpmn_element_id == current_element_id), None)
+        current_execution = current_execution or next(
+            (item for item in executions if item.bpmn_element_id == current_element_id),
+            None,
+        )
     if not current_execution:
         current_execution = next((item for item in executions if item.status == "in_progress"), None)
 
@@ -321,6 +339,17 @@ def build_current_activity_payload(
     support_materials = _build_current_activity_support_materials(
         routine=routine,
         contract=contract,
+    )
+    artifacts = build_activity_artifacts_runtime_payload(
+        instance.company_id,
+        instance.process_id,
+        current_element_id,
+        activity_execution_id=getattr(current_execution, "id", None),
+    )
+    artifact_completion = artifacts.get("completion") or {}
+    action["artifact_gate"] = artifact_completion
+    action["can_complete"] = bool(action.get("can_complete")) and bool(
+        artifact_completion.get("activity_may_complete", True)
     )
 
     return {
@@ -352,6 +381,7 @@ def build_current_activity_payload(
         "action": action,
         "next_candidates": navigation.get("next_candidates", []),
         "support_materials": support_materials,
+        "artifacts": artifacts,
     }
 
 

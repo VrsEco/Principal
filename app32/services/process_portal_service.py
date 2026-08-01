@@ -12,8 +12,10 @@ from models import (
     MacroProcess,
     Process,
     ProcessActivityExecutionContract,
+    ProcessActivityArtifactExecution,
     ProcessBpmnDiagram,
     ProcessInstance,
+    ProcessInstanceExecution,
     ProcessRoutine,
     ProcessStep,
     Routine,
@@ -30,6 +32,7 @@ from services.process_book_service import (
 from services.process_bpmn_service import sanitize_svg_snapshot, serialize_flow_snapshot
 from services.process_flow_copilot_service import build_process_flow_copilot_analysis
 from services.process_resource_service import build_process_resources_bundle
+from services.process_assignment_service import employee_assignment_execution_ids, is_execution_actionable
 from utils.indicator_filters import (
     PROCESS_SOURCE_MODULES,
     indicator_supports_source_context,
@@ -72,6 +75,12 @@ def build_process_portal_summary(
     )
 
     process_ids = [process.id for process in processes]
+    my_active_activities = load_employee_active_activities(
+        company_id,
+        current_employee_id,
+        process_ids=process_ids,
+    )
+    my_activity_counts = _count_activities_by_process(my_active_activities)
     accessible_process_ids = _resolve_accessible_process_ids(
         company_id=company_id,
         process_ids=process_ids,
@@ -167,6 +176,7 @@ def build_process_portal_summary(
                     "spec_count": spec_counts.get(process.id, 0),
                     "has_published_flow": process.id in published_diagram_ids,
                     "has_video": process.id in video_process_ids,
+                    "my_active_activity_count": my_activity_counts.get(process.id, 0),
                 },
             }
         )
@@ -190,7 +200,9 @@ def build_process_portal_summary(
             "total_processes": len(processes),
             "accessible_processes": len(accessible_process_ids),
             "published_flows": len(published_diagram_ids),
+            "my_active_activity_count": len(my_active_activities),
         },
+        "my_active_activities": my_active_activities,
         "areas": areas,
     }
 
@@ -277,6 +289,11 @@ def build_process_portal_process_detail(
     routines = list(context.get("routines") or [])
     videos = _collect_video_entries(pop_activities)
     resources = build_process_resources_bundle(company_id, process.id)
+    my_active_activities = load_employee_active_activities(
+        company_id,
+        current_employee_id,
+        process_ids=[process.id],
+    )
 
     macro = getattr(process, "macro", None)
     area = getattr(macro, "area", None) if macro else None
@@ -315,6 +332,7 @@ def build_process_portal_process_detail(
             "spec_count": len(contract_payload),
             "video_count": len(videos),
             "resource_count": len(resources.get("links") or []),
+            "my_active_activity_count": len(my_active_activities),
         },
         "pop_activities": pop_activities,
         "routines": routines,
@@ -326,8 +344,95 @@ def build_process_portal_process_detail(
         },
         "videos": videos,
         "pop_bindings": pop_bindings,
+        "my_active_activities": my_active_activities,
         "notes": process.notes,
     }
+
+
+def load_employee_active_activities(
+    company_id: int,
+    employee_id: int | None,
+    *,
+    process_ids: list[int] | None = None,
+) -> list[dict[str, Any]]:
+    """Projecao unica do trabalho acionavel do colaborador no portal."""
+    if not employee_id:
+        return []
+    execution_ids = employee_assignment_execution_ids(company_id, employee_id)
+    if not execution_ids:
+        return []
+
+    query = (
+        ProcessInstanceExecution.query.join(
+            ProcessInstance,
+            ProcessInstance.id == ProcessInstanceExecution.process_instance_id,
+        )
+        .filter(
+            ProcessInstanceExecution.company_id == company_id,
+            ProcessInstance.company_id == company_id,
+            ProcessInstanceExecution.id.in_(execution_ids),
+            ProcessInstanceExecution.status.in_(
+                ["pending", "ready", "in_progress", "paused", "waiting_external", "waiting_human"]
+            ),
+        )
+    )
+    if process_ids is not None:
+        query = query.filter(ProcessInstanceExecution.process_id.in_(process_ids or [-1]))
+    executions = query.order_by(ProcessInstance.due_date.asc().nulls_last(), ProcessInstanceExecution.id.asc()).all()
+    executions = [execution for execution in executions if is_execution_actionable(execution)]
+    if not executions:
+        return []
+
+    artifact_rows = (
+        ProcessActivityArtifactExecution.query.filter(
+            ProcessActivityArtifactExecution.company_id == company_id,
+            ProcessActivityArtifactExecution.activity_execution_id.in_([row.id for row in executions]),
+        )
+        .order_by(ProcessActivityArtifactExecution.id.asc())
+        .all()
+    )
+    artifacts_by_execution: dict[int, list[ProcessActivityArtifactExecution]] = defaultdict(list)
+    for artifact in artifact_rows:
+        artifacts_by_execution[int(artifact.activity_execution_id)].append(artifact)
+
+    payload = []
+    for execution in executions:
+        instance = execution.process_instance
+        artifacts = artifacts_by_execution.get(int(execution.id), [])
+        required_pending = 0
+        for artifact in artifacts:
+            link = dict((artifact.definition_snapshot_json or {}).get("link") or {})
+            if link.get("is_required") and artifact.status not in {"completed", "skipped"}:
+                required_pending += 1
+        payload.append(
+            {
+                "execution_id": int(execution.id),
+                "instance_id": int(instance.id),
+                "instance_code": instance.instance_code,
+                "instance_title": instance.title,
+                "process_id": int(execution.process_id),
+                "activity_id": execution.bpmn_element_id,
+                "activity_name": execution.bpmn_element_name or execution.bpmn_element_id,
+                "execution_mode": execution.execution_mode,
+                "status": execution.status,
+                "priority": instance.priority,
+                "due_date": instance.due_date.isoformat() if instance.due_date else None,
+                "artifact_types": sorted({str(item.artifact_type) for item in artifacts}),
+                "required_artifacts_pending": required_pending,
+                "execution_url": (
+                    f"/my-work/process-instance/{instance.id}"
+                    f"?execution_id={execution.id}&company_id={company_id}&from=process-portal"
+                ),
+            }
+        )
+    return payload
+
+
+def _count_activities_by_process(activities: list[dict[str, Any]]) -> dict[int, int]:
+    counts: dict[int, int] = defaultdict(int)
+    for activity in activities:
+        counts[int(activity["process_id"])] += 1
+    return dict(counts)
 
 
 def _aggregate_counts(rows: list[tuple[int | None, int]]) -> dict[int, int]:
@@ -421,6 +526,17 @@ def _resolve_accessible_process_ids(
                 ProcessInstance.executor_id == current_employee_id,
             )
         )
+        .distinct()
+        .all()
+        if row[0] is not None
+    )
+    assigned_execution_ids = employee_assignment_execution_ids(company_id, current_employee_id)
+    accessible.update(
+        row[0]
+        for row in db.session.query(ProcessInstanceExecution.process_id)
+        .filter(ProcessInstanceExecution.company_id == company_id)
+        .filter(ProcessInstanceExecution.process_id.in_(process_ids))
+        .filter(ProcessInstanceExecution.id.in_(assigned_execution_ids or [-1]))
         .distinct()
         .all()
         if row[0] is not None

@@ -4,6 +4,7 @@
 
   const instanceId = root.dataset.instanceId;
   const processId = root.dataset.processId;
+  const focusedExecutionId = new URLSearchParams(window.location.search).get('execution_id');
 
   const runtimeStatusLabel = document.getElementById('runtimeStatusLabel');
   const runtimeStartedAt = document.getElementById('runtimeStartedAt');
@@ -73,7 +74,8 @@
   }
 
   async function fetchRuntime() {
-    const response = await fetch(`/api/process-instances/${instanceId}/runtime`, {
+    const focusQuery = focusedExecutionId ? `?execution_id=${encodeURIComponent(focusedExecutionId)}` : '';
+    const response = await fetch(`/api/process-instances/${instanceId}/runtime${focusQuery}`, {
       headers: { Accept: 'application/json' }
     });
     if (!response.ok) {
@@ -88,8 +90,7 @@
     if (!BpmnCtor) throw new Error('Biblioteca BPMN não carregada.');
     if (!viewer) {
       viewer = new BpmnCtor({
-        container: '#runtimeBpmnCanvas',
-        keyboard: { bindTo: document }
+        container: '#runtimeBpmnCanvas'
       });
     }
     await viewer.importXML(xml);
@@ -211,6 +212,9 @@
     const execution = payload.execution || null;
     const action = payload.action || {};
     const materials = payload.support_materials || {};
+    const artifactsPayload = payload.artifacts || {};
+    const artifacts = Array.isArray(artifactsPayload.items) ? artifactsPayload.items : [];
+    const artifactCompletion = artifactsPayload.completion || {};
     const quickSteps = Array.isArray(materials.quick_steps) ? materials.quick_steps : [];
 
     if (!payload.element_id && !execution && !payload.routine) {
@@ -255,6 +259,22 @@
           `).join('')}
         </div>
 
+        <div class="bpms-artifact-runtime">
+          <div class="bpms-artifact-runtime__head">
+            <h4>Artefatos da atividade</h4>
+            <span>${escapeHtml(`${artifactCompletion.required_completed || 0}/${artifactCompletion.required_total || 0} obrigatórios concluídos`)}</span>
+          </div>
+          ${artifacts.length ? `<div class="bpms-artifact-runtime__list">
+            ${artifacts.map((artifact) => `
+              <button type="button" class="bpms-artifact-card bpms-artifact-card--${escapeHtml(artifact.artifact_type || 'generic')}" data-artifact-id="${artifact.id || ''}" data-artifact-type="${escapeHtml(artifact.artifact_type || '')}">
+                <span class="bpms-artifact-card__type">${escapeHtml(artifactTypeLabel(artifact.artifact_type))}</span>
+                <span class="bpms-artifact-card__body"><strong>${escapeHtml(artifact.name || 'Artefato')}</strong><small>${artifact.is_required ? 'Obrigatório' : 'Opcional'} · ${escapeHtml(artifactStatusLabel(artifact.status))}</small></span>
+                <span class="bpms-artifact-card__state">${artifact.status === 'completed' ? '✓' : '›'}</span>
+              </button>
+            `).join('')}
+          </div>` : '<div class="bpms-support-empty">Nenhum artefato publicado para esta atividade.</div>'}
+        </div>
+
         <div class="bpms-activity-steps">
           <h4>Etapas da atividade</h4>
           ${quickSteps.length ? `
@@ -273,7 +293,7 @@
           ${hasOpenAction
             ? `<a class="btn btn-secondary" href="${escapeHtml(openActionHref)}" ${openActionTarget}>${escapeHtml(action.action_label || 'Abrir tela operacional')}</a>`
             : ''}
-          <button type="button" class="btn btn-primary" data-runtime-action="complete" ${(action.can_complete || action.can_start) ? '' : 'disabled'}>Concluir atividade</button>
+          <button type="button" class="btn btn-primary" data-runtime-action="complete" ${(action.can_complete || action.can_start) ? '' : 'disabled'}>${execution ? 'Concluir atividade' : 'Iniciar atividade'}</button>
         </div>
       </div>
     `;
@@ -284,12 +304,37 @@
       });
     });
 
+    runtimeCurrentActivity.querySelectorAll('[data-artifact-type]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const artifact = artifacts.find((item) => String(item.id || '') === String(button.dataset.artifactId || '') && item.artifact_type === button.dataset.artifactType)
+          || artifacts.find((item) => item.artifact_type === button.dataset.artifactType && !item.id);
+        try {
+          await openArtifactExecution(artifact, payload, execution, action);
+        } catch (error) {
+          window.alert(error.message || 'Erro ao abrir artefato.');
+        }
+      });
+    });
+
     const concludeButton = runtimeCurrentActivity.querySelector('[data-runtime-action="complete"]');
     if (concludeButton) {
       concludeButton.addEventListener('click', async () => {
         concludeButton.disabled = true;
         try {
-          await handleCompleteCurrentActivity(payload, execution, action);
+          if (!execution) {
+            await createExecution({
+              bpmn_element_id: payload.element_id,
+              bpmn_element_name: payload.element_name,
+              bpmn_element_type: payload.element_type,
+              execution_mode: action.execution_mode || 'human_task',
+              interaction_mode: action.interaction_mode || null,
+              capability_key: action.capability_key || null,
+              handler_key: action.handler_key || null,
+              status: 'in_progress'
+            });
+          } else {
+            await handleCompleteCurrentActivity(payload, execution, action);
+          }
           await refreshRuntime();
         } catch (error) {
           console.error('[process-instance-runtime] conclude error', error);
@@ -299,6 +344,92 @@
         }
       });
     }
+  }
+
+  function artifactTypeLabel(type) {
+    return ({ pop: 'POP', form: 'FORM', check: 'CHECK', ai: 'IA', data_in: 'IN', data_out: 'OUT' })[type] || 'ARTEFATO';
+  }
+
+  function artifactStatusLabel(status) {
+    return ({ pending: 'Pendente', in_progress: 'Em andamento', waiting_external: 'Aguardando', waiting_human: 'Revisão humana', completed: 'Concluído', failed: 'Falhou', skipped: 'Dispensado' })[status] || status || 'Pendente';
+  }
+
+  async function openArtifactExecution(artifact, currentActivity, execution, action) {
+    if (!artifact) return;
+    if (artifact.artifact_type === 'pop') {
+      openSupportMaterialModal('pop', currentActivity);
+      return;
+    }
+    if (!execution?.id || !artifact.id) {
+      await createExecution({
+        bpmn_element_id: currentActivity.element_id,
+        bpmn_element_name: currentActivity.element_name,
+        bpmn_element_type: currentActivity.element_type,
+        execution_mode: action.execution_mode || 'human_task',
+        status: 'in_progress'
+      });
+      await refreshRuntime();
+      window.alert('Atividade iniciada. Abra novamente o artefato para preencher.');
+      return;
+    }
+    if (artifact.artifact_type === 'form') openFormArtifactModal(artifact);
+    else if (artifact.artifact_type === 'check') openCheckArtifactModal(artifact);
+    else window.alert(`${artifactTypeLabel(artifact.artifact_type)} será executado automaticamente pelo runtime configurado.`);
+  }
+
+  function fieldInputHtml(field, value) {
+    const id = escapeHtml(field.id || 'field');
+    const label = escapeHtml(field.label || field.id || 'Campo');
+    const required = field.required ? 'required' : '';
+    const current = value ?? '';
+    if (field.type === 'textarea') return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><textarea data-form-field="${id}" ${required}>${escapeHtml(current)}</textarea></label>`;
+    if (field.type === 'checkbox') return `<label class="bpms-runtime-form-field bpms-runtime-form-field--check"><input type="checkbox" data-form-field="${id}" ${current ? 'checked' : ''}> <span>${label}</span></label>`;
+    if (field.type === 'select' || field.type === 'multiselect') {
+      const selected = Array.isArray(current) ? current.map(String) : [String(current)];
+      const options = (field.options || []).map(option => typeof option === 'object' ? option : { value: option, label: option });
+      return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><select data-form-field="${id}" ${field.type === 'multiselect' ? 'multiple' : ''} ${required}>${options.map(option => `<option value="${escapeHtml(option.value)}" ${selected.includes(String(option.value)) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
+    }
+    const htmlType = ({number:'number',date:'date',datetime:'datetime-local',email:'email',phone:'tel'})[field.type] || 'text';
+    return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><input type="${htmlType}" data-form-field="${id}" value="${escapeHtml(current)}" ${required}></label>`;
+  }
+
+  function openFormArtifactModal(artifact) {
+    const config = artifact.configuration_json || {};
+    const answers = artifact.output_json?.answers || {};
+    const html = `<form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id])).join('')}</fieldset>`).join('')}<div class="bpms-runtime-form__actions"><button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar progresso</button><button type="submit" class="btn btn-primary">Concluir formulário</button></div></form>`;
+    window.openRuntimeSupportModal(`FORM · ${artifact.name || 'Formulário'}`, 'Dados persistidos nesta execução da atividade.', html);
+    const form = document.getElementById('runtimeArtifactForm');
+    const collect = () => {
+      const values = {};
+      form.querySelectorAll('[data-form-field]').forEach(input => {
+        if (input.type === 'checkbox') values[input.dataset.formField] = input.checked;
+        else if (input.multiple) values[input.dataset.formField] = Array.from(input.selectedOptions).map(option => option.value);
+        else values[input.dataset.formField] = input.value;
+      });
+      return values;
+    };
+    form.querySelector('[data-artifact-save]').addEventListener('click', () => saveArtifactExecution(artifact.id, 'in_progress', { answers: collect() }, {}).catch(error => window.alert(error.message)));
+    form.addEventListener('submit', event => { event.preventDefault(); saveArtifactExecution(artifact.id, 'completed', { answers: collect() }, {}).catch(error => window.alert(error.message)); });
+  }
+
+  function openCheckArtifactModal(artifact) {
+    const config = artifact.configuration_json || {};
+    const answers = artifact.output_json?.answers || {};
+    const evidence = artifact.evidence_json || {};
+    const html = `<form id="runtimeArtifactCheck" class="bpms-runtime-check">${(config.items || []).map(item => { const answer=answers[item.id]||{}; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><select data-check-status="${escapeHtml(item.id)}"><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário"><input type="text" data-check-evidence="${escapeHtml(item.id)}" value="${escapeHtml(evidence[item.id] || '')}" placeholder="${item.evidence_required?'Evidência obrigatória':'Evidência opcional'}"></article>`; }).join('')}<div class="bpms-runtime-form__actions"><button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar progresso</button><button type="submit" class="btn btn-primary">Concluir checklist</button></div></form>`;
+    window.openRuntimeSupportModal(`CHECK · ${artifact.name || 'Checklist'}`, 'Verifique cada item e registre as evidências.', html);
+    const form=document.getElementById('runtimeArtifactCheck');
+    const collect=()=>{const output={};const evidencePayload={};form.querySelectorAll('[data-check-status]').forEach(select=>{const id=select.dataset.checkStatus;output[id]={status:select.value,comment:form.querySelector(`[data-check-comment="${CSS.escape(id)}"]`)?.value||''};evidencePayload[id]=form.querySelector(`[data-check-evidence="${CSS.escape(id)}"]`)?.value||'';});return {output,evidencePayload};};
+    form.querySelector('[data-artifact-save]').addEventListener('click',()=>{const data=collect();saveArtifactExecution(artifact.id,'in_progress',{answers:data.output},data.evidencePayload).catch(error=>window.alert(error.message));});
+    form.addEventListener('submit',event=>{event.preventDefault();const data=collect();saveArtifactExecution(artifact.id,'completed',{answers:data.output},data.evidencePayload).catch(error=>window.alert(error.message));});
+  }
+
+  async function saveArtifactExecution(artifactExecutionId, status, outputJson, evidenceJson) {
+    const response = await fetch(`/api/process-artifact-executions/${artifactExecutionId}`, { method:'PUT', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({status,output_json:outputJson,evidence_json:evidenceJson}) });
+    const data = await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.error || `Falha ao salvar artefato (${response.status})`);
+    if(status === 'completed') { document.getElementById('resourceContentModal').style.display='none'; await refreshRuntime(); }
+    return data;
   }
 
   function openSupportMaterialModal(type, currentActivity) {

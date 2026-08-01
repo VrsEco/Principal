@@ -122,6 +122,22 @@ from services.process_resource_service import (
     update_process_resource_link,
     update_resource,
 )
+from services.process_artifact_service import (
+    ProcessArtifactValidationError,
+    archive_artifact_definition,
+    build_activity_artifacts_runtime_payload,
+    build_definition_snapshot,
+    create_artifact_definition,
+    get_artifact_definition,
+    get_artifact_execution,
+    link_artifact_to_activity,
+    list_process_artifact_definitions,
+    materialize_activity_artifacts,
+    publish_artifact_definition,
+    update_artifact_definition,
+    update_artifact_execution,
+    evaluate_required_artifacts,
+)
 from services.macro_process_sipoc_service import (
     archive_sipoc_snapshot as archive_macro_process_sipoc_snapshot,
     create_regulatory_item as create_macro_process_regulatory_item,
@@ -140,6 +156,12 @@ from services.process_ai_runtime_service import (
     should_auto_run_ai_execution,
 )
 from services.work_journey_sync import sync_process_instance_item
+from services.process_assignment_service import (
+    employee_has_assignment_for_instance,
+    ensure_execution_assignment,
+    extract_assignment_payload,
+    sync_execution_assignment_status,
+)
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 PROCESS_SOURCE_MODULES = ("processo", "process")
@@ -260,6 +282,8 @@ def _instance_visible_to_employee(instance, employee_id):
     if not instance or not employee_id:
         return False
     if instance.owner_employee_id == employee_id or instance.responsible_id == employee_id or instance.executor_id == employee_id:
+        return True
+    if employee_has_assignment_for_instance(instance.company_id, employee_id, instance.id):
         return True
 
     collaborators = instance.collaborators_json or []
@@ -1140,7 +1164,7 @@ class ProcessInstanceRuntimeResource(Resource):
             employee = Employee.query.filter_by(user_id=current_user.id, company_id=instance.company_id).first()
             if not employee or not _instance_visible_to_employee(instance, employee.id):
                 return {"error": "Acesso negado à instância."}, 403
-        return build_runtime_payload(instance), 200
+        return build_runtime_payload(instance, execution_id=request.args.get('execution_id', type=int)), 200
 
 
 class ProcessInstanceTimelineResource(Resource):
@@ -1215,6 +1239,7 @@ class ProcessInstanceExecutionListResource(Resource):
             return {"error": "Permission denied: edit on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
+            assignment_payload = extract_assignment_payload(payload)
             contract = resolve_activity_execution_contract(
                 company_id=instance.company_id,
                 process_id=instance.process_id,
@@ -1240,6 +1265,16 @@ class ProcessInstanceExecutionListResource(Resource):
 
             db.session.add(execution)
             db.session.flush()
+            artifact_executions = materialize_activity_artifacts(
+                instance.company_id,
+                execution.id,
+                commit=False,
+            )
+            artifact_gate = evaluate_required_artifacts(artifact_executions)
+            if execution.status == 'completed' and not artifact_gate.get('activity_may_complete', True):
+                execution.status = 'in_progress'
+                execution.completed_at = None
+                execution.started_at = execution.started_at or datetime.utcnow()
             if execution.bpmn_element_id:
                 instance.current_bpmn_element_id = execution.bpmn_element_id
             if instance.status == 'pending':
@@ -1256,6 +1291,18 @@ class ProcessInstanceExecutionListResource(Resource):
                     contract=contract,
                     user_id=getattr(current_user, 'id', None),
                 )
+                artifact_gate = evaluate_required_artifacts(artifact_executions)
+                if execution.status == 'completed' and not artifact_gate.get('activity_may_complete', True):
+                    execution.status = 'in_progress'
+                    execution.completed_at = None
+            ensure_execution_assignment(
+                company_id=instance.company_id,
+                instance=instance,
+                execution=execution,
+                assignment_payload=assignment_payload,
+                assigned_by_user_id=getattr(current_user, 'id', None),
+            )
+            sync_execution_assignment_status(instance.company_id, execution)
             db.session.commit()
             try:
                 _sync_process_instance_work_journey_item(instance)
@@ -1296,6 +1343,7 @@ class ProcessInstanceExecutionResource(Resource):
             return {"error": "Permission denied: edit on processes"}, 403
         try:
             payload = request.get_json(silent=True) or {}
+            assignment_payload = extract_assignment_payload(payload)
             run_now = bool(payload.pop('run_now', False))
             if payload.get('status') is not None:
                 payload['status'] = validate_execution_status(payload.get('status'))
@@ -1304,6 +1352,16 @@ class ProcessInstanceExecutionResource(Resource):
             execution = process_instance_execution_schema.load(payload, instance=execution, partial=True)
             execution.status = validate_execution_status(execution.status)
             execution.execution_mode = normalize_execution_mode(execution.execution_mode)
+
+            if execution.status == 'completed':
+                artifact_gate = build_activity_artifacts_runtime_payload(
+                    instance.company_id,
+                    instance.process_id,
+                    execution.bpmn_element_id,
+                    activity_execution_id=execution.id,
+                ).get('completion') or {}
+                if not artifact_gate.get('activity_may_complete', True):
+                    raise ProcessArtifactValidationError("Conclua os artefatos obrigatórios antes de finalizar a atividade.")
 
             if execution.status == 'in_progress' and not execution.started_at:
                 execution.started_at = datetime.utcnow()
@@ -1337,7 +1395,24 @@ class ProcessInstanceExecutionResource(Resource):
                     contract=contract,
                     user_id=getattr(current_user, 'id', None),
                 )
+                artifact_gate = build_activity_artifacts_runtime_payload(
+                    instance.company_id,
+                    instance.process_id,
+                    execution.bpmn_element_id,
+                    activity_execution_id=execution.id,
+                ).get('completion') or {}
+                if execution.status == 'completed' and not artifact_gate.get('activity_may_complete', True):
+                    execution.status = 'in_progress'
+                    execution.completed_at = None
 
+            ensure_execution_assignment(
+                company_id=instance.company_id,
+                instance=instance,
+                execution=execution,
+                assignment_payload=assignment_payload,
+                assigned_by_user_id=getattr(current_user, 'id', None),
+            )
+            sync_execution_assignment_status(instance.company_id, execution)
             db.session.commit()
             try:
                 _sync_process_instance_work_journey_item(instance)
@@ -2101,6 +2176,210 @@ class ProcessBpmnAiAssistantResource(Resource):
                 process_id,
                 getattr(process, 'company_id', None),
             )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessArtifactExecutionResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, artifact_execution_id):
+        company_id = get_default_company_id()
+        try:
+            artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
+            instance = ProcessInstance.query.filter_by(
+                id=artifact_execution.process_instance_id,
+                company_id=company_id,
+            ).first()
+            if not instance:
+                return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            if not has_company_full_access(company_id):
+                from models.employee import Employee
+                employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id).first()
+                if not employee or not _instance_visible_to_employee(instance, employee.id):
+                    return {"error": "Acesso negado à instância."}, 403
+            return artifact_execution.to_dict(), 200
+        except ProcessArtifactValidationError as exc:
+            return {"error": str(exc)}, 404
+
+    @permission_required('processes', 'edit')
+    def put(self, artifact_execution_id):
+        company_id = get_default_company_id()
+        try:
+            artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
+            instance = ProcessInstance.query.filter_by(
+                id=artifact_execution.process_instance_id,
+                company_id=company_id,
+            ).first()
+            if not instance or not has_permission(company_id, 'processes', 'edit'):
+                return {"error": "Permission denied: edit on processes"}, 403
+            artifact_execution = update_artifact_execution(
+                company_id,
+                artifact_execution_id,
+                request.get_json(silent=True) or {},
+            )
+            return artifact_execution.to_dict(), 200
+        except ProcessArtifactValidationError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao atualizar execução de artefato artifact_execution_id=%s company_id=%s",
+                artifact_execution_id,
+                company_id,
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessActivityArtifactListResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            payload = list_process_artifact_definitions(
+                process.company_id,
+                process.id,
+                artifact_type=request.args.get('artifact_type'),
+                bpmn_element_id=request.args.get('bpmn_element_id'),
+            )
+            return {"artifacts": payload}, 200
+        except ProcessArtifactValidationError as exc:
+            return {"error": str(exc)}, 400
+
+    @permission_required('processes', 'view')
+    def post(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process or not can_model_process(process.company_id):
+            return {"error": "Permission denied: model on processes"}, 403
+        try:
+            payload = request.get_json(silent=True) or {}
+            definition = create_artifact_definition(
+                process.company_id,
+                process.id,
+                payload,
+                user_id=getattr(current_user, 'id', None),
+                commit=False,
+            )
+            link = None
+            if payload.get('bpmn_element_id'):
+                link = link_artifact_to_activity(
+                    process.company_id,
+                    process.id,
+                    definition.id,
+                    {
+                        "bpmn_element_id": payload.get('bpmn_element_id'),
+                        "display_order": payload.get('display_order', 0),
+                        "is_required": payload.get('is_required', False),
+                        "completion_policy_json": payload.get('completion_policy_json') or {},
+                    },
+                    commit=False,
+                )
+            db.session.commit()
+            response = build_definition_snapshot(definition)
+            response['link'] = link.to_dict(include_definition=False) if link else None
+            return response, 201
+        except ProcessArtifactValidationError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro ao criar artefato process_id=%s company_id=%s",
+                process_id,
+                getattr(process, 'company_id', None),
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessActivityArtifactResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, artifact_id):
+        company_id = get_default_company_id()
+        try:
+            definition = get_artifact_definition(company_id, artifact_id)
+            process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
+            if not process or process.company_id != definition.company_id:
+                return {"error": "Permission denied: view on processes"}, 403
+            return build_definition_snapshot(definition), 200
+        except ProcessArtifactValidationError as exc:
+            return {"error": str(exc)}, 404
+
+    @permission_required('processes', 'view')
+    def put(self, artifact_id):
+        company_id = get_default_company_id()
+        try:
+            definition = get_artifact_definition(company_id, artifact_id)
+            process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
+            if not process or process.company_id != definition.company_id or not can_model_process(company_id):
+                return {"error": "Permission denied: model on processes"}, 403
+            definition = update_artifact_definition(
+                company_id,
+                artifact_id,
+                request.get_json(silent=True) or {},
+                user_id=getattr(current_user, 'id', None),
+                commit=False,
+            )
+            payload = request.get_json(silent=True) or {}
+            if payload.get('bpmn_element_id'):
+                link_artifact_to_activity(
+                    company_id,
+                    definition.process_id,
+                    definition.id,
+                    {
+                        "bpmn_element_id": payload.get('bpmn_element_id'),
+                        "display_order": payload.get('display_order', 0),
+                        "is_required": payload.get('is_required', False),
+                        "completion_policy_json": payload.get('completion_policy_json') or {},
+                    },
+                    commit=False,
+                )
+            db.session.commit()
+            return build_definition_snapshot(definition), 200
+        except ProcessArtifactValidationError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar artefato artifact_id=%s company_id=%s", artifact_id, company_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'view')
+    def delete(self, artifact_id):
+        company_id = get_default_company_id()
+        try:
+            definition = get_artifact_definition(company_id, artifact_id)
+            process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
+            if not process or process.company_id != definition.company_id or not can_model_process(company_id):
+                return {"error": "Permission denied: model on processes"}, 403
+            archive_artifact_definition(company_id, artifact_id)
+            return {"message": "Artefato arquivado com sucesso."}, 200
+        except ProcessArtifactValidationError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+
+
+class ProcessActivityArtifactPublishResource(Resource):
+    @permission_required('processes', 'view')
+    def post(self, artifact_id):
+        company_id = get_default_company_id()
+        try:
+            definition = get_artifact_definition(company_id, artifact_id)
+            process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
+            if not process or process.company_id != definition.company_id or not can_model_process(company_id):
+                return {"error": "Permission denied: model on processes"}, 403
+            definition = publish_artifact_definition(
+                company_id,
+                artifact_id,
+                user_id=getattr(current_user, 'id', None),
+            )
+            return build_definition_snapshot(definition), 200
+        except ProcessArtifactValidationError as exc:
+            db.session.rollback()
+            return {"error": str(exc)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao publicar artefato artifact_id=%s company_id=%s", artifact_id, company_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 

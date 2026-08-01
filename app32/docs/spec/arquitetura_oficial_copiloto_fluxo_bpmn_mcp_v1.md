@@ -2,6 +2,7 @@
 
 Status: canônico  
 Classe: SPEC
+Atualizado em: 2026-08-01
 
 ## 1. Objetivo
 
@@ -131,3 +132,250 @@ E as capabilities:
 3. rascunho de contrato de execução;
 4. revisão humana;
 5. publicação manual controlada.
+
+## 10. Catálogo oficial de artefatos de atividade
+
+O APP32 passa a reconhecer seis tipos canônicos de artefato associados a elementos executáveis do BPMN:
+
+| Código | Nome | Cor semântica | Finalidade |
+|---|---|---|---|
+| `pop` | POP | azul | instrução operacional, mídia e conhecimento |
+| `form` | FORM | violeta | coleta estruturada de dados |
+| `check` | CHECK | verde | verificação, evidência e aceite item a item |
+| `ai` | IA | âmbar | task/gateway executado ou assistido pelo Sapiens |
+| `data_in` | IN | vermelho | conexão de dados recebidos |
+| `data_out` | OUT | vermelho escuro | conexão de dados enviados |
+
+Regras oficiais:
+
+- o artefato é externo à atividade e ligado por associação BPMN;
+- sua representação visual parte da mesma base hoje usada pelo POP, alterando cor, ícone e nome;
+- uma atividade aceita zero ou vários artefatos, inclusive mais de um do mesmo tipo quando houver finalidade distinta;
+- o vínculo não altera a semântica nativa do elemento BPMN;
+- cada artefato abre diretamente seu editor especializado;
+- POP, FORM e CHECK podem coexistir com IA, IN e OUT na mesma atividade.
+
+## 11. Modelo canônico de definição e vínculo
+
+A implementação deve separar quatro conceitos:
+
+1. **definição do artefato** — configuração editável e versionada;
+2. **vínculo com a atividade** — associação ao `bpmn_element_id`, ordem e obrigatoriedade;
+3. **snapshot publicado** — versão imutável consumida por novas instâncias;
+4. **execução do artefato** — estado, dados e evidências de uma instância específica.
+
+Entidades lógicas propostas:
+
+- `ProcessActivityArtifactDefinition`
+  - `id`, `company_id`, `process_id`, `artifact_type`, `name`, `status`, `version`, `configuration_json`, timestamps;
+- `ProcessActivityArtifactLink`
+  - `id`, `company_id`, `process_id`, `bpmn_element_id`, `artifact_definition_id`, `display_order`, `is_required`, `completion_policy_json`;
+- `ProcessActivityArtifactExecution`
+  - `id`, `company_id`, `process_instance_id`, `activity_execution_id`, `artifact_definition_id`, `artifact_version`, `status`, `input_json`, `output_json`, `evidence_json`, `started_at`, `completed_at`.
+
+`ProcessRoutine` continua sendo a base legada do POP durante a migração. A camada canônica deve oferecer adaptador para que POPs existentes sejam expostos como artefatos sem duplicação nem quebra de URLs.
+
+Toda consulta e mutação deve validar `company_id` em definição, vínculo, processo, instância e execução. Não é permitido confiar apenas em ids recebidos.
+
+## 12. Contratos específicos por tipo
+
+### 12.1. POP
+
+- conteúdo rico, passos, imagens, vídeos e anexos;
+- versão oficial e conteúdo adicional para IA;
+- evidência configurável de leitura, ciência ou aceite.
+
+### 12.2. FORM
+
+- schema de seções e campos;
+- tipos, validações e regras condicionais;
+- resposta persistida por execução;
+- mapeamento opcional de respostas para variáveis da instância;
+- controle de edição após envio e trilha de auditoria.
+
+### 12.3. CHECK
+
+- itens ordenados e versionados;
+- opções de resposta, comentário e evidência;
+- política para item obrigatório, não aplicável e reprovação;
+- cálculo de progresso e regra explícita de aceite.
+
+### 12.4. IA
+
+- tipo `task` ou `gateway`;
+- objetivo, contrato de entrada/saída e instruções;
+- surface e tools MCP autorizadas;
+- autonomia, threshold de confiança e human gate;
+- fallback humano, retry e evidência estruturada.
+
+### 12.5. IN
+
+- origem lógica, trigger e estratégia de autenticação;
+- schema e mapeamento de entrada;
+- idempotency key, timeout e política de erro;
+- persistência do evento recebido e correlação com a instância.
+
+### 12.6. OUT
+
+- destino lógico, trigger e estratégia de autenticação;
+- schema, template e mapeamento do payload;
+- retry, idempotência e critério de entrega;
+- persistência de request, response e confirmação.
+
+Segredos nunca devem ser persistidos em `configuration_json`; o artefato referencia credenciais governadas por integration key ou secret store.
+
+## 13. Editores e publicação
+
+Cada tipo possui tela própria, visualmente coerente com sua cor semântica e baseada no shell já validado para POP.
+
+Fluxo oficial:
+
+```text
+clicar no artefato no BPMN
+→ abrir editor correto
+→ editar rascunho
+→ validar contrato específico
+→ publicar versão
+→ disponibilizar a versão somente para novas instâncias
+```
+
+O editor deve mostrar o processo e o `bpmn_element_id` de origem, permitir voltar ao fluxo e impedir publicação quando a configuração mínima do tipo estiver incompleta.
+
+## 14. Runtime e regra de conclusão
+
+Ao ativar uma atividade, o runtime deve materializar as execuções dos artefatos vinculados usando o snapshot publicado.
+
+Estados mínimos:
+
+- `pending`
+- `in_progress`
+- `waiting_external`
+- `waiting_human`
+- `completed`
+- `failed`
+- `skipped`, somente quando a política permitir.
+
+Uma atividade só pode ser concluída quando:
+
+- todos os artefatos obrigatórios satisfizerem sua `completion_policy`;
+- FORM obrigatório possuir resposta válida e salva;
+- CHECK obrigatório atender à regra de aceite;
+- POP obrigatório possuir a evidência configurada;
+- IA/IN/OUT obrigatório estiver concluído ou em fallback humano formalmente resolvido;
+- a validação ocorrer em service, nunca apenas no frontend.
+
+Finalização direta da instância não pode contornar esses gates. Override, quando permitido por RBAC, exige justificativa e auditoria.
+
+## 15. Endereço eletrônico e acesso
+
+A identidade do artefato e de suas respostas é interna e persistida no banco. A navegação autenticada recomendada é:
+
+```text
+/my-work/process-instance/{instance_id}?execution_id={activity_execution_id}&artifact_execution_id={artifact_execution_id}
+```
+
+Regras:
+
+- a rota sempre resolve o tenant e a autorização no backend;
+- URL pública permanente não é requisito nem fonte da verdade;
+- acesso externo, quando necessário, usa token assinado, escopo mínimo, expiração e revogação;
+- o link externo nunca expõe ids suficientes para acesso sem validação.
+
+## 16. Assignment por atividade e Portal de Processos
+
+O trabalho deve ser atribuído no nível da execução da atividade, não apenas no nível da instância.
+
+Entidade lógica proposta:
+
+- `ProcessExecutionAssignment`
+  - `id`, `company_id`, `activity_execution_id`, `assignee_type`, `employee_id`, `team_id`, `role_key`, `status`, `assigned_at`, `claimed_at`, `completed_at`.
+
+Resolução oficial:
+
+1. atribuição explícita ao colaborador;
+2. claim válido de uma fila de equipe;
+3. regra de papel/equipe do contrato;
+4. fallback governado para responsável da instância.
+
+O Portal de Processos deve expor:
+
+- resumo pessoal no mapa geral;
+- badge `N atividades para você` nos processos pertinentes;
+- seção `Minhas execuções neste processo` no detalhe;
+- cards por atividade acionável com instância, atividade, SLA, progresso de artefatos e ação `Continuar`;
+- separação visual entre executar atividade existente e iniciar nova instância.
+
+Atividades automáticas de IA/IN/OUT não entram na fila pessoal. Entram somente quando gerarem revisão, aprovação, exceção ou fallback humano.
+
+## 17. Contrato com Sapiens
+
+O artefato `IA` é a superfície de configuração fluida do AI Task / AI Gateway com Sapiens. Ele não cria um motor paralelo:
+
+- o BPMS conserva o estado e decide transições válidas;
+- o contrato da atividade define objetivo e completion rule;
+- o artefato IA define execução, tools, autonomia, confiança e fallback;
+- o runtime packet agrega POP, FORM, CHECK, dados IN, contexto da instância e outputs anteriores;
+- o Sapiens executa via MCP tenant-safe e devolve resposta estruturada;
+- o service valida evidência e somente então conclui ou encaminha a atividade.
+
+## 18. Critérios de aceite arquitetural
+
+A evolução estará aderente quando:
+
+- os seis tipos puderem ser associados externamente ao mesmo elemento BPMN;
+- cada tipo abrir seu editor correto e publicar versão validada;
+- instâncias preservarem o snapshot da versão iniciada;
+- respostas de FORM e CHECK ficarem auditáveis por instância/atividade;
+- a conclusão respeitar todos os artefatos obrigatórios;
+- IA/IN/OUT registrarem request, output, falha e correlação;
+- assignment e consultas do Portal forem escopados por `company_id`;
+- o usuário chegar do Portal à atividade correta sem procurar manualmente a instância;
+- automações só aparecerem como trabalho humano quando houver gate ou exceção;
+- POPs atuais continuarem funcionais durante a migração.
+
+## 19. Ordem oficial de concretização
+
+1. compatibilidade de POP e modelo genérico de definição/vínculo/versionamento;
+2. editores e runtime de FORM e CHECK;
+3. execução de artefatos e gates de conclusão na shell da instância;
+4. assignment por atividade e projeção no Portal/Meu Trabalho;
+5. artefato IA integrado ao contrato MCP/Sapiens;
+6. artefatos IN/OUT e motor resiliente de integrações;
+7. telemetria, analytics e hardening multi-tenant/E2E.
+
+## 20. Estado de implementação
+
+### Fundação concluída em 2026-08-01
+
+- modelos `ProcessActivityArtifactDefinition`, `ProcessActivityArtifactLink` e `ProcessActivityArtifactExecution`;
+- migração `20260801_1500` com constraints, índices e backfill dos POPs BPMN existentes;
+- service tenant-safe de definição, vínculo, listagem, snapshot, materialização e gate;
+- adaptador de `ProcessRoutine` integrado à criação/abertura atual do POP;
+- cobertura unitária dos seis tipos, snapshot legado, gate e constraints multi-tenant.
+
+### FORM/CHECK e shell concluídos em 2026-08-01
+
+- APIs de criação, edição, publicação, arquivamento e consulta de artefatos;
+- validação específica dos schemas de FORM e CHECK;
+- telas próprias FORM/violeta e CHECK/verde;
+- materialização automática dos artefatos ao iniciar a execução da atividade;
+- preenchimento e persistência de FORM/CHECK dentro da shell da instância;
+- gate de conclusão da atividade para artefatos obrigatórios;
+- bloqueio de conclusão automática por IA quando houver artefato obrigatório pendente.
+
+### Assignment e Portal concluídos em 2026-08-01
+
+- modelo `ProcessExecutionAssignment` por execução de atividade, escopado por `company_id`;
+- alvos canônicos por colaborador, equipe ou função, com fallback governado da instância;
+- ciclo `assigned/claimed/completed/cancelled` sincronizado com a execução;
+- `Meu Trabalho` passa a respeitar primeiro o assignment da atividade e abre a shell com `execution_id`;
+- Portal mostra `N para você` no mapa e `Minhas execuções` no detalhe do processo;
+- somente atividades humanas acionáveis, gates, exceções ou fallbacks humanos entram na projeção pessoal.
+
+Ainda não fazem parte das ondas concluídas:
+
+- telas e dispatchers dos artefatos IA/IN/OUT;
+- representação/criação visual completa dos novos artefatos dentro do modelador BPMN;
+- enforcement do gate na finalização administrativa direta da instância.
+
+Esses itens devem avançar em ondas posteriores, sem reabrir o modelo canônico desta fundação.

@@ -2,6 +2,7 @@
 
 Status: canônico  
 Classe: SPEC
+Atualizado em: 2026-08-01
 
 ## 1. Objetivo
 
@@ -145,3 +146,55 @@ Exemplo:
 5. BPMS devolve evento de retorno;
 6. motor conclui a execução.
 
+## 11. Artefatos executáveis do BPMN
+
+Os artefatos `IA`, `IN` e `OUT` são configurações especializadas associadas à atividade BPMN. Eles tornam explícita a intenção da modelagem, mas não substituem o motor nem os executores de domínio.
+
+- `IA` solicita uma execução Sapiens/MCP governada pelo contrato da atividade;
+- `IN` registra e correlaciona dados recebidos com uma instância;
+- `OUT` solicita entrega de dados a um destino configurado;
+- `POP`, `FORM` e `CHECK` compõem o contexto e os gates humanos da mesma atividade.
+
+Regra de boundary:
+
+```text
+artefato define intenção e configuração
+→ BPMS materializa a execução na instância
+→ motor/dispatcher executa de forma idempotente
+→ executor de domínio preserva a regra de negócio
+→ BPMS recebe resultado e avalia a conclusão da atividade
+```
+
+O artefato nunca deve conter lógica financeira, fiscal ou contratual que pertença ao service de domínio.
+
+## 12. Envelope mínimo da execução de artefato
+
+Toda execução automática deve carregar:
+
+- `company_id`;
+- `process_instance_id`;
+- `activity_execution_id`;
+- `artifact_execution_id`;
+- `artifact_type`;
+- `artifact_version`;
+- `correlation_id`;
+- `idempotency_key`;
+- `attempt`;
+- timestamps e estado;
+- request/output ou referência segura para payload volumoso;
+- erro normalizado e decisão de retry/fallback.
+
+O estado deve ser persistido antes e depois da chamada externa. Retry não pode duplicar efeitos já confirmados.
+
+## 13. Fila humana derivada de exceções
+
+Execuções automáticas não devem aparecer como atividades pessoais comuns. O BPMS cria ou reativa assignment humano somente quando ocorrer:
+
+- human gate configurado;
+- confidence abaixo do threshold;
+- falha sem retry elegível;
+- dado obrigatório ausente;
+- aprovação ou revisão exigida;
+- exceção de negócio devolvida pelo executor.
+
+Essa projeção deve ser consumida tanto por `Meu Trabalho` quanto pelo Portal de Processos, preservando uma única fonte operacional de assignment por atividade.

@@ -19,15 +19,21 @@ from models import (
     WorkJourneyRule,
 )
 from services.process_execution_projection_service import build_operational_projection
+from services.process_assignment_service import assigned_employee_id, employee_assignment_execution_ids
 from services.routine_journey_binding_service import get_bound_block_id
 from services.work_journey_base import ACTIVE_ITEM_STATUSES, ensure_employee
 from services.work_journey_helpers import PRIORITY_ORDER, date_range, rule_matches_date
 
 
-def build_process_instance_source_url(company_id: int, instance_id: int | None) -> str | None:
+def build_process_instance_source_url(
+    company_id: int,
+    instance_id: int | None,
+    execution_id: int | None = None,
+) -> str | None:
     if not company_id or not instance_id:
         return None
-    return f'/my-work/process-instance/{instance_id}?company_id={company_id}&from=work-journey'
+    suffix = f'&execution_id={execution_id}' if execution_id else ''
+    return f'/my-work/process-instance/{instance_id}?company_id={company_id}&from=work-journey{suffix}'
 
 
 def build_project_task_source_url(project_id: int | None, task_id: int | None) -> str | None:
@@ -103,6 +109,14 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
         row.process_instance_id
         for row in ProcessInstanceCollaborator.query.filter_by(employee_id=employee_id, is_deleted=False).all()
     ]
+    assigned_execution_ids = employee_assignment_execution_ids(company_id, employee_id)
+    assigned_instance_ids = [
+        row.process_instance_id
+        for row in ProcessInstanceExecution.query.filter(
+            ProcessInstanceExecution.company_id == company_id,
+            ProcessInstanceExecution.id.in_(assigned_execution_ids or [-1]),
+        ).all()
+    ]
     query = (
         ProcessInstance.query.options(joinedload(ProcessInstance.process_rel), joinedload(ProcessInstance.routine))
         .filter(ProcessInstance.company_id == company_id)
@@ -112,6 +126,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
                 ProcessInstance.responsible_id == employee_id,
                 ProcessInstance.owner_employee_id == employee_id,
                 ProcessInstance.id.in_(collaborator_ids or [-1]),
+                ProcessInstance.id.in_(assigned_instance_ids or [-1]),
             )
         )
         .filter(
@@ -143,6 +158,9 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
     for instance in query:
         projection = build_operational_projection(instance, executions_by_instance.get(int(instance.id), []))
         current_execution = projection.get('current_execution')
+        canonical_employee_id = assigned_employee_id(company_id, current_execution.id) if current_execution else None
+        if canonical_employee_id and int(canonical_employee_id) != int(employee_id):
+            continue
         metadata = {
             'source_label': 'Instância de processo',
             'source_code': instance.instance_code,
@@ -152,7 +170,11 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
             'process_name': instance.process_rel.name if instance.process_rel else None,
             'process_code': instance.process_rel.code if instance.process_rel else None,
             'manual_assignment': current_manual_assignment(company_id, 'process_instance', instance.id),
-            'source_url': build_process_instance_source_url(company_id, instance.id),
+            'source_url': build_process_instance_source_url(
+                company_id,
+                instance.id,
+                int(current_execution.id) if current_execution else None,
+            ),
             'instance_title': instance.title,
             'instance_due_date': instance.due_date.isoformat() if instance.due_date else None,
             'instance_status': instance.status,
@@ -168,6 +190,7 @@ def sync_process_instances(company_id: int, employee_id: int, period_start: date
             'current_execution_due_at': projection.get('activity_due_at'),
             'current_execution_due_date': projection.get('activity_due_date'),
             'current_execution_is_overdue': projection.get('is_activity_overdue'),
+            'canonical_activity_assignment': bool(canonical_employee_id),
         }
         recurrence_type = getattr(instance.routine, 'schedule_type', None) if instance.routine else None
         bound_block_id = get_bound_block_id(company_id, instance.routine_id, employee_id)
@@ -301,6 +324,7 @@ def sync_process_instance_item(company_id: int, instance_id: int, preferred_empl
     )
     projection = build_operational_projection(instance, executions)
     current_execution = projection.get('current_execution')
+    canonical_employee_id = assigned_employee_id(company_id, current_execution.id) if current_execution else None
     employee_id = _resolve_process_instance_employee_id(
         company_id,
         instance,
@@ -319,7 +343,11 @@ def sync_process_instance_item(company_id: int, instance_id: int, preferred_empl
         'process_name': instance.process_rel.name if instance.process_rel else None,
         'process_code': instance.process_rel.code if instance.process_rel else None,
         'manual_assignment': current_manual_assignment(company_id, 'process_instance', instance.id),
-        'source_url': build_process_instance_source_url(company_id, instance.id),
+        'source_url': build_process_instance_source_url(
+            company_id,
+            instance.id,
+            int(current_execution.id) if current_execution else None,
+        ),
         'instance_title': instance.title,
         'instance_due_date': instance.due_date.isoformat() if instance.due_date else None,
         'instance_status': instance.status,
@@ -335,6 +363,7 @@ def sync_process_instance_item(company_id: int, instance_id: int, preferred_empl
         'current_execution_due_at': projection.get('activity_due_at'),
         'current_execution_due_date': projection.get('activity_due_date'),
         'current_execution_is_overdue': projection.get('is_activity_overdue'),
+        'canonical_activity_assignment': bool(canonical_employee_id),
     }
     recurrence_type = getattr(instance.routine, 'schedule_type', None) if instance.routine else None
     bound_block_id = get_bound_block_id(company_id, instance.routine_id, employee_id)
@@ -472,7 +501,7 @@ def upsert_source_item(**kwargs) -> None:
     if not item:
         item = WorkJourneyItem(company_id=company_id, item_type=item_type, source_id=source_id)
     manual_assignment = bool((item.metadata_json or {}).get('manual_assignment')) or bool(kwargs['metadata'].get('manual_assignment'))
-    if not manual_assignment:
+    if not manual_assignment or bool(kwargs['metadata'].get('canonical_activity_assignment')):
         item.employee_id = kwargs['employee_id']
     previous_binding_block_id = (item.metadata_json or {}).get('routine_binding_block_id')
     item.title = kwargs['title']
@@ -510,6 +539,11 @@ def _resolve_process_instance_employee_id(
     current_execution: ProcessInstanceExecution | None = None,
     preferred_employee_id: int | None = None,
 ) -> int | None:
+    if current_execution:
+        canonical_employee_id = assigned_employee_id(company_id, current_execution.id)
+        if canonical_employee_id:
+            return canonical_employee_id
+
     existing_item = WorkJourneyItem.query.filter_by(
         company_id=company_id,
         item_type='process_instance',

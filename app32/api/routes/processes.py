@@ -14,12 +14,14 @@ from datetime import datetime
 
 from database import get_db
 from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
+from services.process_artifact_service import build_definition_snapshot, get_artifact_definition
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
 from services.process_portal_service import (
     ProcessPortalAccessError,
     build_process_portal_process_detail,
     build_process_portal_summary,
+    load_employee_active_activities,
 )
 from services.strategic_management_panel_service import build_strategic_management_panel
 from utils.indicator_filters import PROCESS_SOURCE_MODULES, indicator_supports_source_context
@@ -70,6 +72,16 @@ def _build_process_map_compact_context(company_id: int, *, area_id: int | None =
     indicator_counts = {}
     spec_counts = {}
     published_flow_ids = set()
+    current_employee = _get_current_company_employee(company_id)
+    active_activities = load_employee_active_activities(
+        company_id,
+        current_employee.id if current_employee else None,
+        process_ids=process_ids,
+    )
+    active_activity_counts = {}
+    for activity in active_activities:
+        process_id = int(activity['process_id'])
+        active_activity_counts[process_id] = active_activity_counts.get(process_id, 0) + 1
 
     if process_ids:
         for process_id, total in (
@@ -175,12 +187,14 @@ def _build_process_map_compact_context(company_id: int, *, area_id: int | None =
                     'routine_count': int(routine_counts.get(process_id, 0)),
                     'indicator_count': int(indicator_counts.get(process_id, 0)),
                     'spec_count': int(spec_counts.get(process_id, 0)),
+                    'my_active_activity_count': int(active_activity_counts.get(process_id, 0)),
                 }
                 p['has_portal_assets'] = any([
                     p['portal_stats']['flow_count'] > 0,
                     p['portal_stats']['routine_count'] > 0,
                     p['portal_stats']['indicator_count'] > 0,
                     p['portal_stats']['spec_count'] > 0,
+                    p['portal_stats']['my_active_activity_count'] > 0,
                 ])
 
     return {
@@ -189,6 +203,7 @@ def _build_process_map_compact_context(company_id: int, *, area_id: int | None =
         'areas': map_data.get('areas', []),
         'now': datetime.now().strftime('%d/%m/%Y %H:%M'),
         'is_collaborator': is_collaborator_in_company(company_id),
+        'my_active_activity_count': len(active_activities),
     }
 
 
@@ -658,6 +673,69 @@ def process_bpmn_modeler(process_id):
         company=company,
         company_id=process.company_id,
         asset_version=_process_bpmn_modeler_asset_version(),
+    )
+
+
+@processes_bp.route('/processes/<int:process_id>/artifacts/new/<string:artifact_type>')
+@permission_required('processes', 'view')
+def process_artifact_new(process_id, artifact_type):
+    process = _get_process_with_access(process_id, action='view')
+    if not can_model_process(process.company_id):
+        abort(403, description="Acesso negado: Usuário sem permissão para modelar este processo.")
+    artifact_type = str(artifact_type or '').strip().lower()
+    if artifact_type not in {'form', 'check'}:
+        abort(404, description="Editor de artefato ainda não disponível.")
+    company = Company.query.get_or_404(process.company_id)
+    template = f'modules/processes/{artifact_type}_artifact_editor.html'
+    return render_template(
+        template,
+        process=process,
+        process_id=process.id,
+        company=company,
+        company_id=process.company_id,
+        artifact=None,
+        artifact_type=artifact_type,
+        bpmn_element_id=str(request.args.get('bpmn_element_id') or '').strip(),
+        bpmn_element_name=str(request.args.get('bpmn_element_name') or '').strip(),
+    )
+
+
+@processes_bp.route('/processes/<int:process_id>/artifacts/<int:artifact_id>/edit')
+@permission_required('processes', 'view')
+def process_artifact_edit(process_id, artifact_id):
+    process = _get_process_with_access(process_id, action='view')
+    if not can_model_process(process.company_id):
+        abort(403, description="Acesso negado: Usuário sem permissão para modelar este processo.")
+    try:
+        definition = get_artifact_definition(process.company_id, artifact_id)
+    except ValueError as exc:
+        abort(404, description=str(exc))
+    if definition.process_id != process.id or definition.artifact_type not in {'form', 'check'}:
+        abort(404, description="Artefato não encontrado neste processo.")
+    company = Company.query.get_or_404(process.company_id)
+    template = f'modules/processes/{definition.artifact_type}_artifact_editor.html'
+    artifact_payload = build_definition_snapshot(definition)
+    primary_link = (
+        definition.activity_links
+        .filter_by(company_id=process.company_id, process_id=process.id, is_active=True)
+        .order_by(db.text('display_order ASC'), db.text('id ASC'))
+        .first()
+    )
+    if primary_link:
+        artifact_payload['link'] = primary_link.to_dict(include_definition=False)
+    resolved_element_id = str(request.args.get('bpmn_element_id') or '').strip()
+    if not resolved_element_id and primary_link:
+        resolved_element_id = primary_link.bpmn_element_id
+    return render_template(
+        template,
+        process=process,
+        process_id=process.id,
+        company=company,
+        company_id=process.company_id,
+        artifact=artifact_payload,
+        artifact_type=definition.artifact_type,
+        bpmn_element_id=resolved_element_id,
+        bpmn_element_name=str(request.args.get('bpmn_element_name') or '').strip(),
     )
 
 
