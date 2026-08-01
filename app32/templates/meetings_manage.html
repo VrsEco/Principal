@@ -1159,45 +1159,80 @@
         }
     }
 
-    /* Workspace APP32 v2: reuniao orientada a decisoes e entregas */
+    /* Workspace APP32 v3: execucao guiada, assuntos colapsaveis e contexto lateral unico */
     .meeting-legacy-tabs,.meeting-scheduling-fields,.meeting-scheduling-only{display:none!important}
     .meeting-editor-section{margin-top:0!important}
-    .meeting-editor-header{margin:0 0 16px!important;padding:18px 20px!important;border:1px solid var(--border-color)!important;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#f8fafc 100%);gap:20px}
-    .meeting-workspace-subtitle{margin:4px 0 10px;color:var(--text-muted);font-size:.86rem}
-    .meeting-workspace-counters{display:flex;gap:8px;flex-wrap:wrap}
-    .meeting-workspace-counters span{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;color:#64748b;font-size:.75rem}
-    .meeting-workspace-counters strong{color:var(--text-main)}
-    .meeting-app32-workspace-shell{display:grid;grid-template-columns:minmax(250px,300px) minmax(0,1fr);gap:16px;align-items:start}
-    #content-agendamento,[id^="content-realiz"]{display:block!important}
-    .meeting-context-panel{position:sticky;top:84px;z-index:2}
-    .meeting-context-panel>.form-section,.meeting-execution-panel>.form-section{border:1px solid var(--border-color);border-radius:16px;background:#fff;box-shadow:0 4px 18px rgba(15,23,42,.04)}
-    .meeting-context-panel>.form-section{padding:18px}
-    .meeting-context-panel .form-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
-    .meeting-context-panel #meeting-title{font-size:1rem;font-weight:700}
-    .meeting-title-save-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:stretch}
-    .meeting-title-save-row .button{white-space:nowrap;padding:10px 16px}
-    .meeting-title-save-help{margin:7px 0 0;color:var(--text-muted);font-size:.75rem;line-height:1.4}
-    .meeting-topic-shortcuts-panel{margin-top:18px;padding-top:16px;border-top:1px solid var(--border-color)}
-    .meeting-topic-shortcuts-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-    .meeting-topic-shortcuts-heading p{margin:2px 0 0;color:var(--text-muted);font-size:.75rem;line-height:1.35}
-    .meeting-topic-shortcuts-heading .button{padding:7px 10px;font-size:.75rem;white-space:nowrap}
-    .meeting-topic-shortcuts{display:flex;flex-direction:column;gap:7px}
-    .meeting-topic-shortcut{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:var(--text-main);font:inherit;text-align:left;cursor:pointer;transition:.15s ease}
-    .meeting-topic-shortcut:hover,.meeting-topic-shortcut:focus-visible{border-color:#805ad5;background:#faf5ff;outline:none}
-    .meeting-topic-shortcut-index{display:grid;place-items:center;flex:0 0 24px;height:24px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-size:.7rem;font-weight:800}
-    .meeting-topic-shortcut-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem;font-weight:650}
-    .meeting-topic-shortcuts-empty{padding:12px;border:1px dashed #cbd5e1;border-radius:10px;color:var(--text-muted);font-size:.76rem;line-height:1.4;background:#f8fafc}
-    .meeting-execution-panel>.form-section{padding:18px}
-    .meeting-execution-panel .meeting-status-panel{margin-bottom:16px!important;padding:12px 14px!important;border-color:#dbeafe!important;background:#f7f9ff!important}
-    .meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;padding:12px;border:1px solid var(--border-color);border-radius:12px;background:#f8fafc}
-    .meeting-live-grid{grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr)!important;gap:14px!important;align-items:start}
-    .meeting-live-panel{border:1px solid var(--border-color);border-radius:14px;background:#fbfcfe;padding:14px}
-    #activities-live-panel{background:#fafbff}
-    .discussion-item{border-left:4px solid #805ad5!important;box-shadow:none!important}
-    .activity-item{box-shadow:none!important}
-    .meeting-save-bar{position:sticky;bottom:12px;z-index:8;margin:16px 0 0;border:1px solid #dbe2ef;box-shadow:0 12px 32px rgba(15,23,42,.12);backdrop-filter:blur(10px)}
-    @media(max-width:1180px){.meeting-app32-workspace-shell{grid-template-columns:1fr}.meeting-context-panel{position:static}.meeting-live-grid{grid-template-columns:1fr!important}}
-    @media(max-width:760px){.meeting-editor-header{align-items:flex-start!important;flex-direction:column}.meeting-editor-toolbar,.meeting-page-actions{width:100%;flex-wrap:wrap}.meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:1fr!important}.meeting-title-save-row{grid-template-columns:1fr}.meeting-title-save-row .button{width:100%;justify-content:center}.meeting-topic-shortcuts-heading{flex-direction:column}.meeting-topic-shortcuts-heading .button{width:100%;justify-content:center}}
+    .meeting-editor-header{margin:0!important;padding:18px 20px 12px!important;border:1px solid var(--border-color)!important;border-radius:16px 16px 0 0;background:#fff;gap:20px}
+    .meeting-workspace-subtitle{margin:4px 0 8px;color:var(--text-muted);font-size:.86rem}
+    .meeting-workspace-counters{display:none!important}
+    .meeting-editor-toolbar{align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .meeting-editor-toolbar .button{white-space:nowrap}
+    .meeting-editor-toolbar [data-ref="04"]{order:-1}
+    #btn-excluir-reuniao-editor{display:none!important}
+    #btn-finalizar-reuniao-quick{border-color:#16a34a!important;color:#15803d!important;background:#fff!important}
+    .meeting-save-bar{margin:0 0 16px;padding:10px 20px!important;border:1px solid var(--border-color);border-top:0;border-radius:0 0 16px 16px;background:#fff;box-shadow:none}
+    .meeting-save-meta{display:flex;flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap}
+    .meeting-save-status-row{display:flex;align-items:center;gap:8px}
+    .save-status-hint{display:none!important}
+    .save-status-time{font-size:.76rem;color:var(--text-muted)}
+    .meeting-app32-workspace-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(310px,350px);gap:18px;align-items:start}
+    .meeting-workspace-main{min-width:0}
+    .meeting-context-rail{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px}
+    .meeting-context-card{border:1px solid #dbe2ef;border-radius:14px;background:#fff;padding:16px;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+    .meeting-context-card h3{margin:0 0 14px;color:var(--text-main);font-size:1rem;font-weight:750}
+    .meeting-route-list{display:flex;flex-direction:column;gap:5px}
+    .meeting-route-step{display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;border-radius:10px;background:transparent;color:#334155;font:inherit;text-align:left;cursor:pointer}
+    .meeting-route-step:hover,.meeting-route-step:focus-visible{background:#f1f5f9;outline:none}
+    .meeting-route-step.is-active{background:#eaf2ff;color:#1d4ed8;font-weight:700}
+    .meeting-route-number{display:grid;place-items:center;width:25px;height:25px;border:1px solid #94a3b8;border-radius:50%;font-size:.72rem;font-weight:800;background:#fff}
+    .meeting-route-step.is-active .meeting-route-number{border-color:#2563eb;background:#2563eb;color:#fff}
+    .meeting-route-label{flex:1}
+    .meeting-route-count{min-width:24px;padding:2px 7px;border-radius:999px;background:#e2e8f0;color:#475569;font-size:.7rem;text-align:center}
+    .meeting-participants-rail .meeting-participants-entry-grid{grid-template-columns:1fr!important;gap:8px!important}
+    .meeting-participants-rail .external-participant-form{display:grid!important;grid-template-columns:1fr;gap:7px;padding:10px;border:1px solid #dbe2ef;border-radius:12px;background:#f8fafc}
+    .external-participant-form-title{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#334155;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+    .external-participant-form-title span{color:#64748b;font-size:.66rem;font-weight:600;text-transform:none;letter-spacing:0}
+    .external-participant-contact-grid{display:grid;grid-template-columns:1fr;gap:7px}
+    .external-participant-form .button{width:100%;justify-content:center}
+    .external-participant-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;color:#64748b;font-size:.7rem}
+    .external-participant-meta span{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:#ecfdf5;color:#047857}
+    .meeting-participants-rail>.form-group>.form-label,.meeting-participants-rail>.form-group>p{display:none!important}
+    .meeting-participants-rail #participants-list{grid-template-columns:1fr!important;gap:7px!important;max-height:260px;overflow:auto}
+    .meeting-participants-rail .participant-item{padding:8px 10px!important}
+    #content-agendamento{display:none!important}
+    [id^="content-realiz"]{display:block!important}
+    .meeting-execution-panel>.form-section{padding:0;border:0;background:transparent;box-shadow:none}
+    .meeting-information-card{margin-bottom:14px;padding:14px;border:1px solid #dbe2ef;border-radius:14px;background:#fff}
+    .meeting-information-card[hidden]{display:none!important}
+    .meeting-management.is-editor-open>.surface-card-meeting>.meeting-page-header{display:none}
+    .meeting-title-save-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+    .meeting-title-save-help{margin:7px 0 0;color:var(--text-muted);font-size:.74rem}
+    .meeting-execution-panel .meeting-status-panel{margin:0 0 10px!important;padding:10px 12px!important;border-color:#bbf7d0!important;background:#f0fdf4!important}
+    .meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
+    .meeting-discussions-panel{border:1px solid #dbe2ef;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.04)}
+    .meeting-discussions-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid #dbe2ef;background:#f3f7fc}
+    .meeting-discussions-header h2{margin:0;color:#0f172a;font-size:1.12rem}
+    .meeting-discussions-header p{margin:3px 0 0;color:#64748b;font-size:.78rem}
+    .meeting-discussions-body{padding:14px}
+    .discussions-list{display:flex;flex-direction:column;gap:12px}
+    .discussion-item{padding:0!important;border:1px solid #dbe2ef!important;border-left:4px solid #2563eb!important;border-radius:14px!important;background:#fff!important;box-shadow:0 4px 14px rgba(15,23,42,.06)!important;overflow:hidden}
+    .discussion-item.is-collapsed{border-left-color:#cbd5e1!important;box-shadow:0 2px 8px rgba(15,23,42,.04)!important}
+    .discussion-accordion-header{display:flex;align-items:center;gap:10px;width:100%;padding:14px 16px;border:0;background:#fff;color:#0f172a;font:inherit;text-align:left;cursor:pointer}
+    .discussion-accordion-header:hover{background:#f8fafc}
+    .discussion-chevron{display:grid;place-items:center;width:26px;height:26px;border:1px solid #cbd5e1;border-radius:50%;color:#475569;flex:0 0 26px}
+    .discussion-accordion-title{flex:1;font-weight:750}
+    .discussion-badge{padding:4px 9px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.7rem;font-weight:700}
+    .discussion-body{padding:0 16px 16px}
+    .discussion-subsection{margin-top:10px;padding:12px;border:1px solid #e2e8f0;border-radius:11px;background:#fbfdff}
+    .discussion-subsection-label{display:block;margin-bottom:8px;color:#475569;font-size:.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+    .discussion-decision-confirmed{display:flex;align-items:center;gap:7px;margin-top:8px;padding:8px 10px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:.75rem;font-weight:700}
+    .discussion-activities-list{display:flex;flex-direction:column;gap:8px}
+    .discussion-activities-empty{padding:10px;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:.76rem;text-align:center}
+    .discussion-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+    .activity-item{margin:0!important;padding:12px!important;border-radius:10px!important;box-shadow:none!important}
+    #activities-live-panel,.meeting-topic-shortcuts-panel,.meeting-form-actions,#meeting-notes-group{display:none!important}
+    @media(max-width:1180px){.meeting-app32-workspace-shell{grid-template-columns:1fr}.meeting-context-rail{position:static;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.meeting-participants-rail{grid-column:1/-1}}
+    @media(max-width:760px){.meeting-editor-header{align-items:flex-start!important;flex-direction:column}.meeting-editor-toolbar,.meeting-page-actions{width:100%;flex-wrap:wrap}.meeting-editor-toolbar .button{flex:1 1 calc(50% - 8px);justify-content:center}.meeting-execution-panel>.form-section>.meeting-form-grid-3{grid-template-columns:1fr!important}.meeting-title-save-row{grid-template-columns:1fr}.meeting-context-rail{display:flex}.meeting-discussions-header{align-items:flex-start;flex-direction:column}.meeting-discussions-header .button{width:100%;justify-content:center}.discussion-accordion-header{align-items:flex-start}.discussion-actions{flex-direction:column}.discussion-actions .button{width:100%;justify-content:center}}
 
 </style>
 {% endblock %}
@@ -1594,11 +1629,21 @@
                                     <button type="button" class="button button-primary"
                                         onclick="adicionarParticipanteEfetivo('internal')">+</button>
                                 </div>
-                                <div class="meeting-participant-entry" style="display: flex; gap: 8px;">
-                                    <input type="text" id="participant-external-input" class="form-input"
-                                        placeholder="Convidado Externo..." style="flex: 1;">
+                                <div class="meeting-participant-entry external-participant-form">
+                                    <div class="external-participant-form-title">
+                                        Convidado externo
+                                        <span>Informe ao menos um canal</span>
+                                    </div>
+                                    <input type="text" id="participant-external-name" class="form-input"
+                                        placeholder="Nome completo" autocomplete="name">
+                                    <div class="external-participant-contact-grid">
+                                        <input type="email" id="participant-external-email" class="form-input"
+                                            placeholder="E-mail" autocomplete="email">
+                                        <input type="tel" id="participant-external-whatsapp" class="form-input"
+                                            placeholder="WhatsApp com DDD" autocomplete="tel" inputmode="tel">
+                                    </div>
                                     <button type="button" class="button button-primary"
-                                        onclick="adicionarParticipanteEfetivo('external')">+</button>
+                                        onclick="adicionarParticipanteEfetivo('external')">+ Adicionar convidado</button>
                                 </div>
                             </div>
                             <div id="participants-list" class="participants-list"
@@ -1835,6 +1880,7 @@
     let participants = { internal: [], external: [] };
     let discussions = [];
     let activities = [];
+    let expandedDiscussionKey = null;
     let employeesData = [];
     const meetingsCompanyId = {{ company.id|tojson }};
 
@@ -1900,10 +1946,14 @@
     }
 
     function updateMeetingWorkspaceCounters() {
+        const participantCount = (participants?.internal || []).length + (participants?.external || []).length;
         const values = {
             'meeting-counter-topics': (discussions || []).filter(item => item && item.title?.trim()).length,
             'meeting-counter-decisions': (discussions || []).filter(item => item && item.discussion?.trim()).length,
             'meeting-counter-activities': (activities || []).filter(item => item && item.title).length,
+            'meeting-route-topics': (discussions || []).filter(item => item && item.title?.trim()).length,
+            'meeting-route-activities': (activities || []).filter(item => item && item.title).length,
+            'meeting-route-participants': participantCount,
         };
         Object.entries(values).forEach(([id, value]) => {
             const element = document.getElementById(id);
@@ -2044,17 +2094,23 @@
 
     function syncDiscussionsFromDom() {
         const discussionItems = document.querySelectorAll('#discussions-list .discussion-item');
-        discussions = Array.from(discussionItems).map((item, index) => ({
-            ...(discussions[index] || {}),
-            id: discussions[index]?.id || createWorkspaceItemId('topic'),
-            title: item.querySelector('input[type="text"]')?.value?.trim() || '',
-            discussion: item.querySelector('textarea')?.value || '',
-        })).filter((item) => item.title || item.discussion);
+        Array.from(discussionItems).forEach((item) => {
+            const index = Number(item.dataset.discussionIndex);
+            if (!Number.isInteger(index) || !discussions[index]) return;
+            discussions[index] = {
+                ...discussions[index],
+                id: discussions[index]?.id || createWorkspaceItemId('topic'),
+                title: item.querySelector('[data-discussion-field="title"]')?.value?.trim() || discussions[index].title || '',
+                discussion: item.querySelector('[data-discussion-field="discussion"]')?.value || discussions[index].discussion || '',
+            };
+        });
     }
 
     function syncActivitiesFromDom() {
-        const activityItems = document.querySelectorAll('#activities-list .activity-item');
-        activities = Array.from(activityItems).map((item, index) => {
+        const activityItems = document.querySelectorAll('.activity-item[data-activity-index]');
+        Array.from(activityItems).forEach((item) => {
+            const index = Number(item.dataset.activityIndex);
+            if (!Number.isInteger(index) || !activities[index]) return;
             const existingActivity = activities[index] || {};
             const titleInput = item.querySelector('[data-activity-field="title"]');
             const deadlineInput = item.querySelector('[data-activity-field="deadline"]');
@@ -2065,7 +2121,7 @@
             const projectSelect = item.querySelector('[data-activity-field="project_id"]');
             const prioritySelect = item.querySelector('[data-activity-field="priority"]');
 
-            return {
+            activities[index] = {
                 ...existingActivity,
                 id: existingActivity.id || createWorkspaceItemId('activity'),
                 title: titleInput ? (titleInput.value?.trim() || '') : (existingActivity.title || ''),
@@ -2080,7 +2136,7 @@
                 priority: prioritySelect ? (prioritySelect.value || 'normal') : (existingActivity.priority || 'normal'),
                 project_id: projectSelect ? (projectSelect?.value || null) : (existingActivity.project_id || null),
             };
-        }).filter((item) => item.title || item.employee_id || item.deadline || item.how || item.budget || item.estimated_hours || item.project_id);
+        });
     }
 
     function normalizeActivityUiState(activity = {}) {
@@ -2345,7 +2401,8 @@
     }
 
     function focusActivitiesPanel() {
-        document.getElementById('activities-live-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        (document.querySelector('.discussion-activities-list .activity-item') || document.getElementById('meeting-discussions-panel'))
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function setupMeetingEditorEnhancements() {
@@ -2362,28 +2419,34 @@
                     <div class="meeting-save-meta">
                         <div class="meeting-save-status-row">
                             <span id="meeting-save-status-pill" class="save-status-pill is-clean">Tudo salvo</span>
-                            <strong style="color: var(--text-main);">Salvamento manual obrigatório</strong>
                         </div>
-                        <span id="meeting-save-status-hint" class="save-status-hint">Use o botão Salvar reunião sempre que concluir um bloco importante da reunião.</span>
-                        <span id="meeting-save-status-time" class="save-status-time">Nenhum salvamento confirmado ainda nesta sessão. Horários exibidos em America/Bahia.</span>
-                    </div>
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <button type="button" class="button button-primary" id="btn-salvar-reuniao">
-                            Salvar reunião
-                        </button>
-                        <button type="button" class="button button-outline" id="btn-finalizar-reuniao-quick" style="display: none;">
-                            Finalizar reunião
-                        </button>
+                        <span id="meeting-save-status-hint" class="save-status-hint">Use Salvar reunião para confirmar as alterações.</span>
+                        <span id="meeting-save-status-time" class="save-status-time">Nenhum salvamento confirmado nesta sessão.</span>
                     </div>
                 `;
                 hiddenInput.insertAdjacentElement('afterend', saveBar);
-                saveBar.querySelector('#btn-salvar-reuniao')?.addEventListener('click', () => {
-                    salvarReuniaoCompleta();
-                });
-                saveBar.querySelector('#btn-finalizar-reuniao-quick')?.addEventListener('click', () => {
-                    finalizarReuniao();
-                });
             }
+        }
+
+        const editorToolbar = editorSection.querySelector('.meeting-editor-toolbar');
+        if (editorToolbar && !document.getElementById('btn-salvar-reuniao')) {
+            const saveButton = document.createElement('button');
+            saveButton.type = 'button';
+            saveButton.id = 'btn-salvar-reuniao';
+            saveButton.className = 'button button-primary';
+            saveButton.textContent = 'Salvar reunião';
+            saveButton.addEventListener('click', () => salvarReuniaoCompleta());
+
+            const finishButton = document.createElement('button');
+            finishButton.type = 'button';
+            finishButton.id = 'btn-finalizar-reuniao-quick';
+            finishButton.className = 'button button-outline';
+            finishButton.textContent = 'Finalizar reunião';
+            finishButton.style.display = 'none';
+            finishButton.addEventListener('click', () => finalizarReuniao());
+
+            editorToolbar.appendChild(saveButton);
+            editorToolbar.appendChild(finishButton);
         }
 
         if (!document.getElementById('meeting-save-toast')) {
@@ -2412,57 +2475,83 @@
 
         const executionContent = document.querySelector('[id^="content-realiz"]');
         const activitiesContent = document.getElementById('content-atividades');
-        if (executionContent && activitiesContent && executionContent.dataset.combinedLayout !== 'true') {
+        if (executionContent && executionContent.dataset.combinedLayout !== 'true') {
             const executionFormSection = executionContent.querySelector('.form-section');
-            const activitiesFormSection = activitiesContent.querySelector('.form-section');
+            const schedulingFormSection = schedulingContent?.querySelector('.form-section');
+            const titleGroup = document.getElementById('meeting-title')?.closest('.form-group');
+            const statusPanel = executionFormSection?.querySelector('.meeting-status-panel');
+            const detailsGrid = executionFormSection?.querySelector('.meeting-form-grid-3');
+            const participantsGroup = document.getElementById('participants-list')?.closest('.form-group');
             const discussionsGroup = document.getElementById('discussions-list')?.closest('.form-group');
             const notesGroup = document.getElementById('meeting-notes')?.closest('.form-group');
-            const actionBar = Array.from(executionFormSection?.querySelectorAll('div') || []).find((container) =>
-                container.querySelector('button[onclick*="salvarExecu"]')
-            );
 
-            if (executionFormSection && activitiesFormSection && discussionsGroup && notesGroup && actionBar) {
-                const liveGrid = document.createElement('div');
-                liveGrid.id = 'meeting-live-grid';
-                liveGrid.className = 'meeting-live-grid';
+            if (executionFormSection && schedulingFormSection && titleGroup && statusPanel && detailsGrid && participantsGroup && discussionsGroup) {
+                const shell = document.createElement('div');
+                shell.id = 'meeting-app32-workspace-shell';
+                shell.className = 'meeting-app32-workspace-shell';
 
-                const discussionsPanel = document.createElement('div');
-                discussionsPanel.className = 'meeting-live-panel';
+                const main = document.createElement('main');
+                main.className = 'meeting-workspace-main';
 
-                const activitiesPanel = document.createElement('div');
-                activitiesPanel.id = 'activities-live-panel';
-                activitiesPanel.className = 'meeting-live-panel';
+                const informationCard = document.createElement('section');
+                informationCard.id = 'meeting-information-card';
+                informationCard.className = 'meeting-information-card';
+                informationCard.appendChild(titleGroup);
+                informationCard.appendChild(statusPanel);
+                informationCard.appendChild(detailsGrid);
 
-                executionFormSection.insertBefore(liveGrid, actionBar);
-                liveGrid.appendChild(discussionsPanel);
-                liveGrid.appendChild(activitiesPanel);
+                const discussionsPanel = document.createElement('section');
+                discussionsPanel.id = 'meeting-discussions-panel';
+                discussionsPanel.className = 'meeting-discussions-panel';
+                discussionsPanel.innerHTML = `
+                    <div class="meeting-discussions-header">
+                        <div>
+                            <h2>Pauta e decisões</h2>
+                            <p>Registre o título, a decisão e as atividades geradas em cada assunto.</p>
+                        </div>
+                        <button type="button" class="button button-outline" onclick="adicionarDiscussaoEIr()">+ Nova discussão</button>
+                    </div>
+                    <div class="meeting-discussions-body"></div>
+                `;
+                discussionsPanel.querySelector('.meeting-discussions-body').appendChild(document.getElementById('discussions-list'));
 
-                discussionsPanel.appendChild(discussionsGroup);
-                discussionsPanel.appendChild(notesGroup);
-                activitiesPanel.appendChild(activitiesFormSection);
-                activitiesContent.remove();
+                const rail = document.createElement('aside');
+                rail.className = 'meeting-context-rail';
+                rail.setAttribute('aria-label', 'Contexto da reunião');
+                rail.innerHTML = `
+                    <section class="meeting-context-card" id="meeting-route-card">
+                        <h3>Roteiro da reunião</h3>
+                        <div class="meeting-route-list">
+                            <button type="button" class="meeting-route-step" onclick="focarSecaoReuniao('information')"><span class="meeting-route-number">1</span><span class="meeting-route-label">Informações</span></button>
+                            <button type="button" class="meeting-route-step" onclick="focarSecaoReuniao('participants')"><span class="meeting-route-number">2</span><span class="meeting-route-label">Participantes</span><span class="meeting-route-count" id="meeting-route-participants">0</span></button>
+                            <button type="button" class="meeting-route-step is-active" onclick="focarSecaoReuniao('discussions')"><span class="meeting-route-number">3</span><span class="meeting-route-label">Pauta e decisões</span><span class="meeting-route-count" id="meeting-route-topics">0</span></button>
+                            <button type="button" class="meeting-route-step" onclick="focarSecaoReuniao('activities')"><span class="meeting-route-number">4</span><span class="meeting-route-label">Encaminhamentos</span><span class="meeting-route-count" id="meeting-route-activities">0</span></button>
+                        </div>
+                    </section>
+                `;
 
+                const participantsCard = document.createElement('section');
+                participantsCard.id = 'meeting-participants-card';
+                participantsCard.className = 'meeting-context-card meeting-participants-rail';
+                participantsCard.innerHTML = '<h3>Participantes</h3>';
+                participantsCard.appendChild(participantsGroup);
+                rail.appendChild(participantsCard);
+
+                executionContent.insertAdjacentElement('beforebegin', shell);
+                shell.appendChild(main);
+                shell.appendChild(rail);
+                main.appendChild(informationCard);
+                main.appendChild(discussionsPanel);
+                main.appendChild(executionContent);
+
+                if (notesGroup) {
+                    notesGroup.id = 'meeting-notes-group';
+                    schedulingFormSection.appendChild(notesGroup);
+                }
+                schedulingFormSection.appendChild(discussionsGroup);
+                if (activitiesContent) activitiesContent.style.display = 'none';
                 executionContent.dataset.combinedLayout = 'true';
             }
-
-            const executionButtons = Array.from(executionFormSection?.querySelectorAll('button') || [])
-                .filter((button) => (button.getAttribute('onclick') || '').includes('salvarExecu'));
-            if (executionButtons[0]) executionButtons[0].textContent = 'Salvar reunião';
-            executionButtons.slice(1).forEach((button) => button.remove());
-
-            const syncButton = document.getElementById('sync-activities-btn');
-            if (syncButton) syncButton.textContent = 'Sincronizar com Projeto';
-        }
-
-        const contextPanel = document.getElementById('content-agendamento');
-        const executionPanel = document.querySelector('[id^="content-realiz"]');
-        if (contextPanel && executionPanel && !document.getElementById('meeting-app32-workspace-shell')) {
-            const shell = document.createElement('div');
-            shell.id = 'meeting-app32-workspace-shell';
-            shell.className = 'meeting-app32-workspace-shell';
-            contextPanel.insertAdjacentElement('beforebegin', shell);
-            shell.appendChild(contextPanel);
-            shell.appendChild(executionPanel);
         }
         mostrarWorkspaceReuniao();
 
@@ -2487,6 +2576,13 @@
                 salvarTituloReuniao();
             });
             titleInput.dataset.enterSaveBound = 'true';
+        }
+        if (titleInput && titleInput.dataset.headerTitleBound !== 'true') {
+            titleInput.addEventListener('input', () => {
+                const editorTitle = document.getElementById('meeting-editor-title');
+                if (editorTitle) editorTitle.textContent = titleInput.value.trim() || 'Nova Reunião';
+            });
+            titleInput.dataset.headerTitleBound = 'true';
         }
 
         updateSaveStatusUi();
@@ -2576,6 +2672,9 @@
         updateMeetingStatus('draft');
         document.getElementById('meetings-list-section').style.display = 'none';
         document.getElementById('meeting-editor-section').style.display = 'block';
+        document.querySelector('.meeting-management')?.classList.add('is-editor-open');
+        const informationCard = document.getElementById('meeting-information-card');
+        if (informationCard) informationCard.hidden = false;
         trocarAba('agendamento');
         maybeRestoreLocalDraft(null, null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2597,6 +2696,8 @@
                 if (!meeting) return;
 
                 document.getElementById('meeting-title').value = meeting.title || '';
+                const editorHeading = document.getElementById('meeting-editor-title');
+                if (editorHeading) editorHeading.textContent = meeting.title || 'Editar Reunião';
                 document.getElementById('meeting-scheduled-date').value = meeting.scheduled_date || '';
                 document.getElementById('meeting-scheduled-time').value = meeting.scheduled_time || '';
         document.getElementById('meeting-planned-duration').value = formatMeetingDurationValue(meeting.planned_duration_minutes || '');
@@ -2634,6 +2735,9 @@
 
                 document.getElementById('meetings-list-section').style.display = 'none';
                 document.getElementById('meeting-editor-section').style.display = 'block';
+                document.querySelector('.meeting-management')?.classList.add('is-editor-open');
+                const informationCard = document.getElementById('meeting-information-card');
+                if (informationCard) informationCard.hidden = true;
                 maybeRestoreLocalDraft(meetingId, meeting.updated_at || null);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -2681,6 +2785,7 @@
         if (!confirmEditorNavigation('Há alterações não salvas. Deseja voltar para a lista sem salvar no sistema?')) return;
         document.getElementById('meeting-editor-section').style.display = 'none';
         document.getElementById('meetings-list-section').style.display = 'block';
+        document.querySelector('.meeting-management')?.classList.remove('is-editor-open');
         limparFormulario();
     }
 
@@ -3251,8 +3356,9 @@
     }
 
     function adicionarDiscussação() {
+        const discussionId = createWorkspaceItemId('topic');
         discussions.push({
-            id: createWorkspaceItemId('topic'),
+            id: discussionId,
             title: '',
             notes: '',
             discussion: '',
@@ -3260,6 +3366,7 @@
             decisions: [],
             status: 'open',
         });
+        expandedDiscussionKey = discussionId;
         renderDiscussions();
         markMeetingDirty();
     }
@@ -3272,10 +3379,44 @@
     }
 
     function focarTemaDiscussao(index) {
-        const item = document.querySelectorAll('#discussions-list .discussion-item')[index];
+        if (!discussions[index]) return;
+        expandedDiscussionKey = getDiscussionKey(discussions[index], index);
+        renderDiscussions();
+        const item = document.querySelector(`#discussions-list .discussion-item[data-discussion-index="${index}"]`);
         if (!item) return;
         item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.querySelector('input[type="text"]')?.focus();
+        item.querySelector('[data-discussion-field="title"]')?.focus();
+    }
+
+    function getDiscussionKey(discussion, index) {
+        return String(discussion?.id || `discussion-${index}`);
+    }
+
+    function toggleDiscussao(index) {
+        if (!discussions[index]) return;
+        syncMeetingStateFromDom();
+        const key = getDiscussionKey(discussions[index], index);
+        expandedDiscussionKey = expandedDiscussionKey === key ? null : key;
+        renderDiscussions();
+    }
+
+    function focarSecaoReuniao(section) {
+        const informationCard = document.getElementById('meeting-information-card');
+        if (informationCard) {
+            if (section === 'information') informationCard.hidden = false;
+            else if (currentMeetingId) informationCard.hidden = true;
+        }
+        const targets = {
+            information: informationCard,
+            participants: document.getElementById('meeting-participants-card'),
+            discussions: document.getElementById('meeting-discussions-panel'),
+            activities: document.querySelector('.discussion-activities-list .activity-item') || document.getElementById('meeting-discussions-panel'),
+        };
+        document.querySelectorAll('.meeting-route-step').forEach((button) => button.classList.remove('is-active'));
+        const routeIndex = { information: 0, participants: 1, discussions: 2, activities: 3 }[section];
+        const routeButtons = document.querySelectorAll('.meeting-route-step');
+        if (Number.isInteger(routeIndex)) routeButtons[routeIndex]?.classList.add('is-active');
+        targets[section]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function atualizarDiscussaoCampo(index, field, value) {
@@ -3345,36 +3486,164 @@
 
         const newIndex = activities.length - 1;
         requestAnimationFrame(() => {
-            const newActivityCard = document.querySelectorAll('#activities-list .activity-item')[newIndex];
+            const newActivityCard = document.querySelector(`.activity-item[data-activity-index="${newIndex}"]`);
             if (!newActivityCard) return;
             newActivityCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             newActivityCard.querySelector('input[type="text"]')?.focus();
         });
     }
 
+    function getActivityDiscussionIndex(activity) {
+        if (Number.isInteger(activity?.source_discussion_index) && discussions[activity.source_discussion_index]) {
+            return activity.source_discussion_index;
+        }
+        const sourceTitle = String(activity?.source_discussion_title || '').trim();
+        if (sourceTitle) {
+            const titleIndex = discussions.findIndex((discussion) => String(discussion?.title || '').trim() === sourceTitle);
+            if (titleIndex >= 0) return titleIndex;
+        }
+        // Atividades legadas não possuem vínculo explícito. Mantê-las no
+        // primeiro assunto evita que migrem para toda nova discussão criada.
+        return discussions.length ? 0 : null;
+    }
+
+    function renderDiscussionActivity(rawActivity, index) {
+        const act = normalizeActivityUiState(rawActivity);
+        activities[index] = act;
+        const employeeOptions = employeesData.map(emp =>
+            `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${escapeHtml(emp.name || '')}</option>`
+        ).join('');
+
+        if (act.ui_state === 'editing') {
+            return `
+                <div class="activity-item" data-activity-index="${index}" style="border:1px solid #bfdbfe;background:#fff;">
+                    <div class="activity-edit-grid-primary" style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <input type="text" data-activity-field="title" class="form-input" placeholder="O que será feito" value="${escapeHtml(act.title || '')}" onchange="activities[${index}].title = this.value">
+                        <select data-activity-field="employee_id" class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.value ? this.options[this.selectedIndex].text : ''">
+                            <option value="">Responsável...</option>${employeeOptions}
+                        </select>
+                        <input type="date" data-activity-field="deadline" class="form-input" value="${escapeHtml(act.deadline || '')}" onchange="activities[${index}].deadline = this.value">
+                    </div>
+                    <div class="activity-edit-grid-secondary" style="display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-bottom:10px;">
+                        <textarea data-activity-field="how" class="form-textarea" rows="2" placeholder="Como será executado" onchange="activities[${index}].how = this.value">${escapeHtml(act.how || '')}</textarea>
+                        <select data-activity-field="project_id" class="form-select" onchange="activities[${index}].project_id = this.value">
+                            <option value="">Projeto padrão</option>
+                            {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="activity-edit-grid-tertiary" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <input type="text" data-activity-field="budget" class="form-input" placeholder="Orçamento / valor" value="${escapeHtml(act.budget || '')}" onchange="activities[${index}].budget = this.value">
+                        <input type="number" data-activity-field="estimated_hours" class="form-input" min="0" step="0.25" placeholder="Horas estimadas" value="${escapeHtml(act.estimated_hours || '')}" onchange="activities[${index}].estimated_hours = this.value">
+                        <select data-activity-field="priority" class="form-select" onchange="activities[${index}].priority = this.value">
+                            <option value="low" ${act.priority === 'low' ? 'selected' : ''}>Prioridade baixa</option>
+                            <option value="normal" ${act.priority === 'normal' ? 'selected' : ''}>Prioridade normal</option>
+                            <option value="high" ${act.priority === 'high' ? 'selected' : ''}>Prioridade alta</option>
+                            <option value="urgent" ${act.priority === 'urgent' ? 'selected' : ''}>Prioridade urgente</option>
+                        </select>
+                    </div>
+                    <div class="activity-edit-actions" style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button type="button" class="button button-outline" onclick="cancelarEdicaoAtividade(${index})">Cancelar</button>
+                        <button type="button" class="button button-primary" onclick="salvarAtividade(${index})">Salvar atividade</button>
+                    </div>
+                </div>`;
+        }
+
+        return `
+            <div class="activity-item" data-activity-index="${index}" style="border:1px solid #dbe2ef;background:#fff;">
+                <div class="activity-summary-row" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-weight:750;color:var(--text-main);">${escapeHtml(act.title || 'Atividade sem título')}</div>
+                        <div style="margin-top:4px;font-size:.78rem;color:var(--text-muted);">
+                            Responsável: ${escapeHtml(act.responsible || 'N/D')} · Prazo: ${escapeHtml(act.deadline || 'N/D')} · ${escapeHtml(resolveActivityProjectTitle(act, linkedProjectTitle) || 'Projeto padrão da reunião')}
+                        </div>
+                    </div>
+                    <div class="activity-summary-actions" style="display:flex;gap:8px;flex-shrink:0;">
+                        <button type="button" class="button button-sm button-outline" onclick="iniciarEdicaoAtividade(${index})">Editar</button>
+                        <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color:#ef4444;">Excluir</button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
     function renderDiscussions() {
         const container = document.getElementById('discussions-list');
-        container.innerHTML = discussions.map((disc, index) => `
-        <div class="discussion-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
-            <div class="discussion-item-row" style="display: flex; gap: 12px; margin-bottom: 12px;">
-                <input type="text" class="form-input" placeholder="Tema discutido"
-                       value="${escapeHtml(disc.title || '')}" oninput="atualizarDiscussaoCampo(${index}, 'title', this.value)" style="flex: 1;">
-                <button type="button" class="button button-sm button-outline" onclick="criarAtividadeDaDiscussao(${index})" title="Criar atividade de projeto a partir desta discussão">+ Atividade</button>
-                ${buildRemoveActionButton(`removerDiscussação(${index})`, `Excluir discussão ${disc.title || ''}`)}
-            </div>
-            <textarea class="form-textarea" rows="3" placeholder="Decisão tomada, contexto e definição..."
-                      oninput="atualizarDiscussaoCampo(${index}, 'discussion', this.value)">${escapeHtml(disc.discussion || disc.decision || '')}</textarea>
-            <div style="margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
-                Use <strong>+ Atividade</strong> para transformar o título em <strong>O que</strong> e a decisão em <strong>Como</strong> do projeto.
-            </div>
-        </div>
-    `).join('');
+        if (!container) return;
+
+        if (!discussions.length) {
+            expandedDiscussionKey = null;
+            container.innerHTML = '<div class="meeting-topic-shortcuts-empty">Nenhuma discussão registrada. Use <strong>+ Nova discussão</strong> para começar.</div>';
+            updateMeetingWorkspaceCounters();
+            renderTopicShortcuts();
+            return;
+        }
+
+        if (!expandedDiscussionKey) {
+            const newestIndex = discussions.length - 1;
+            expandedDiscussionKey = getDiscussionKey(discussions[newestIndex], newestIndex);
+        }
+
+        const orderedDiscussions = discussions.map((disc, index) => ({ disc, index })).reverse();
+        container.innerHTML = orderedDiscussions.map(({ disc, index }) => {
+            const key = getDiscussionKey(disc, index);
+            const isExpanded = expandedDiscussionKey === key;
+            const relatedActivities = activities
+                .map((activity, activityIndex) => ({ activity, activityIndex }))
+                .filter(({ activity }) => getActivityDiscussionIndex(activity) === index);
+            const decisionCount = String(disc.discussion || disc.decision || '').trim() ? 1 : 0;
+            const title = String(disc.title || '').trim() || 'Nova discussão';
+
+            return `
+                <article class="discussion-item ${isExpanded ? '' : 'is-collapsed'}" data-discussion-index="${index}">
+                    <button type="button" class="discussion-accordion-header" onclick="toggleDiscussao(${index})" aria-expanded="${isExpanded ? 'true' : 'false'}">
+                        <span class="discussion-chevron" aria-hidden="true">${isExpanded ? '⌃' : '⌄'}</span>
+                        <span class="discussion-accordion-title">${index + 1} · ${escapeHtml(title)}</span>
+                        ${isExpanded ? '<span class="discussion-badge">EM DISCUSSÃO</span>' : `<span class="discussion-badge">${decisionCount} decisão</span><span class="discussion-badge">${relatedActivities.length} atividade${relatedActivities.length === 1 ? '' : 's'}</span>`}
+                    </button>
+                    ${isExpanded ? `
+                        <div class="discussion-body">
+                            <section class="discussion-subsection">
+                                <label class="discussion-subsection-label">Título do assunto</label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="text" data-discussion-field="title" class="form-input" placeholder="Título do assunto" value="${escapeHtml(disc.title || '')}" oninput="atualizarDiscussaoCampo(${index}, 'title', this.value)" style="flex:1;">
+                                    ${buildRemoveActionButton(`removerDiscussação(${index})`, `Excluir discussão ${disc.title || ''}`)}
+                                </div>
+                            </section>
+                            <section class="discussion-subsection">
+                                <label class="discussion-subsection-label">Discussão / decisão registrada</label>
+                                <textarea data-discussion-field="discussion" class="form-textarea" rows="4" placeholder="Decisão tomada, contexto e definição..." oninput="atualizarDiscussaoCampo(${index}, 'discussion', this.value)">${escapeHtml(disc.discussion || disc.decision || '')}</textarea>
+                                ${decisionCount ? '<div class="discussion-decision-confirmed">✓ Decisão registrada</div>' : '<div class="discussion-decision-confirmed" style="opacity:.65;">Decisão ainda não registrada</div>'}
+                            </section>
+                            <section class="discussion-subsection">
+                                <label class="discussion-subsection-label">Atividades geradas</label>
+                                <div class="discussion-activities-list">
+                                    ${relatedActivities.length ? relatedActivities.map(({ activity, activityIndex }) => renderDiscussionActivity(activity, activityIndex)).join('') : '<div class="discussion-activities-empty">Nenhuma atividade gerada para este assunto.</div>'}
+                                </div>
+                                <div class="discussion-actions">
+                                    <button type="button" class="button button-outline" onclick="criarAtividadeDaDiscussao(${index})">+ Gerar atividade</button>
+                                </div>
+                            </section>
+                        </div>` : ''}
+                </article>`;
+        }).join('');
         updateMeetingWorkspaceCounters();
         renderTopicShortcuts();
     }
 
     function removerDiscussação(index) {
+        syncMeetingStateFromDom();
+        const removedKey = getDiscussionKey(discussions[index], index);
         discussions.splice(index, 1);
+        activities = activities.map((activity) => {
+            if (!Number.isInteger(activity.source_discussion_index)) return activity;
+            if (activity.source_discussion_index === index) {
+                return { ...activity, source_discussion_index: null };
+            }
+            if (activity.source_discussion_index > index) {
+                return { ...activity, source_discussion_index: activity.source_discussion_index - 1 };
+            }
+            return activity;
+        });
+        if (expandedDiscussionKey === removedKey) expandedDiscussionKey = null;
         renderDiscussions();
         markMeetingDirty();
     }
@@ -3390,6 +3659,7 @@
     }
 
     function iniciarEdicaoAtividade(index) {
+        syncDiscussionsFromDom();
         const current = normalizeActivityUiState(activities[index] || {});
         activities[index] = {
             ...current,
@@ -3400,7 +3670,7 @@
         renderActivities();
 
         requestAnimationFrame(() => {
-            const card = document.querySelectorAll('#activities-list .activity-item')[index];
+            const card = document.querySelector(`.activity-item[data-activity-index="${index}"]`);
             card?.querySelector('input[type="text"]')?.focus();
         });
     }
@@ -3448,87 +3718,10 @@
     }
 
     function renderActivities() {
-        const container = document.getElementById('activities-list');
-        container.innerHTML = activities.map((rawActivity, index) => {
-            const act = normalizeActivityUiState(rawActivity);
-            activities[index] = act;
-            const employeeOptions = employeesData.map(emp =>
-                `<option value="${emp.id}" ${act.employee_id == emp.id ? 'selected' : ''}>${escapeHtml(emp.name || '')}</option>`
-            ).join('');
-            const discussionSourceLabel = act.source_discussion_title
-                ? `Gerada da discussão: ${act.source_discussion_title}`
-                : (Number.isInteger(act.source_discussion_index)
-                    ? `Gerada da discussão ${act.source_discussion_index + 1}`
-                    : '');
-
-            if (act.ui_state === 'editing') {
-                return `
-                <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid #bfdbfe; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08); margin-bottom: 12px;">
-                    ${discussionSourceLabel ? `
-                    <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
-                        ${escapeHtml(discussionSourceLabel)}
-                    </div>` : ''}
-                    <div class="activity-edit-grid-primary" style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <input type="text" data-activity-field="title" class="form-input" placeholder="O que da atividade" value="${escapeHtml(act.title || '')}" onchange="activities[${index}].title = this.value">
-                        <select data-activity-field="employee_id" class="form-select" onchange="activities[${index}].employee_id = this.value; activities[${index}].responsible = this.value ? this.options[this.selectedIndex].text : ''">
-                            <option value="">Responsável...</option>
-                            ${employeeOptions}
-                        </select>
-                        <input type="date" data-activity-field="deadline" class="form-input" value="${escapeHtml(act.deadline || '')}" onchange="activities[${index}].deadline = this.value">
-                    </div>
-                    <div class="activity-edit-grid-secondary" style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <textarea data-activity-field="how" class="form-textarea" rows="2" placeholder="Como do projeto / detalhes da execução..." onchange="activities[${index}].how = this.value">${escapeHtml(act.how || '')}</textarea>
-                        <select data-activity-field="project_id" class="form-select" onchange="activities[${index}].project_id = this.value">
-                            <option value="">Projeto padrão</option>
-                            {% for project in projects %}<option value="{{ project.id }}" ${act.project_id == "{{ project.id }}" ? 'selected' : ''}>{{ project.name }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="activity-edit-grid-tertiary" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-                        <input type="text" data-activity-field="budget" class="form-input" placeholder="Orçamento / valor" value="${escapeHtml(act.budget || '')}" onchange="activities[${index}].budget = this.value">
-                        <input type="number" data-activity-field="estimated_hours" class="form-input" min="0" step="0.25" placeholder="Horas estimadas" value="${escapeHtml(act.estimated_hours || '')}" onchange="activities[${index}].estimated_hours = this.value">
-                        <select data-activity-field="priority" class="form-select" onchange="activities[${index}].priority = this.value">
-                            <option value="low" ${act.priority === 'low' ? 'selected' : ''}>Prioridade baixa</option>
-                            <option value="normal" ${act.priority === 'normal' ? 'selected' : ''}>Prioridade normal</option>
-                            <option value="high" ${act.priority === 'high' ? 'selected' : ''}>Prioridade alta</option>
-                            <option value="urgent" ${act.priority === 'urgent' ? 'selected' : ''}>Prioridade urgente</option>
-                        </select>
-                    </div>
-                    <div class="activity-edit-actions" style="display: flex; justify-content: flex-end; gap: 8px;">
-                        <button type="button" class="button button-outline" onclick="cancelarEdicaoAtividade(${index})">Cancelar</button>
-                        <button type="button" class="button button-primary" onclick="salvarAtividade(${index})">Salvar</button>
-                    </div>
-                </div>
-                `;
-            }
-
-            return `
-            <div class="activity-item" style="background: #fff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 12px;">
-                ${discussionSourceLabel ? `
-                <div style="margin-bottom: 12px; font-size: 0.78rem; color: #1e40af; font-weight: 600;">
-                        ${escapeHtml(discussionSourceLabel)}
-                </div>` : ''}
-                <div class="activity-summary-row" style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 4px;">${escapeHtml(act.title || 'Atividade sem título')}</div>
-                        <div style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 4px;">
-                            Responsável: ${escapeHtml(act.responsible || 'N/D')} · Prazo: ${escapeHtml(act.deadline || 'N/D')}
-                        </div>
-                        <div style="font-size: 0.86rem; color: var(--text-main); white-space: pre-wrap;">${escapeHtml(act.how || 'Sem detalhamento do como.')}</div>
-                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 6px;">
-                            Orçamento: ${escapeHtml(act.budget || 'N/D')} · Horas estimadas: ${escapeHtml(act.estimated_hours || 'N/D')} · Prioridade: ${escapeHtml(act.priority || 'normal')}
-                        </div>
-                    </div>
-                    <div class="activity-summary-actions" style="display: flex; gap: 8px; flex-shrink: 0;">
-                        <button type="button" class="button button-sm button-outline" onclick="iniciarEdicaoAtividade(${index})">Editar</button>
-                        <button type="button" class="button button-sm button-ghost" onclick="removerAtividadeComConfirmacação(${index})" style="color: #ef4444;">Excluir</button>
-                    </div>
-                </div>
-                <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 10px;">
-                    Projeto destino: ${escapeHtml(resolveActivityProjectTitle(act, linkedProjectTitle) || 'Projeto padrão da reunião')}
-                </div>
-            </div>
-            `;
-        }).join('');
+        activities = (activities || []).map((activity) => normalizeActivityUiState(activity));
+        const legacyContainer = document.getElementById('activities-list');
+        if (legacyContainer) legacyContainer.innerHTML = '';
+        renderDiscussions();
         updateMeetingWorkspaceCounters();
     }
 
@@ -3545,12 +3738,37 @@
             }
             select.value = '';
         } else {
-            const input = document.getElementById('participant-external-input');
-            const name = input.value.trim();
-            if (!name) return;
-            participants.external.push({ name: name });
+            const nameInput = document.getElementById('participant-external-name');
+            const emailInput = document.getElementById('participant-external-email');
+            const whatsappInput = document.getElementById('participant-external-whatsapp');
+            const name = nameInput?.value.trim() || '';
+            const email = (emailInput?.value.trim() || '').toLowerCase();
+            const whatsapp = whatsappInput?.value.trim() || '';
+            const whatsappDigits = whatsapp.replace(/\D/g, '');
+
+            if (!name) return alert('Informe o nome do convidado externo.');
+            if (!email && !whatsappDigits) return alert('Informe o e-mail ou o WhatsApp do convidado externo.');
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert('Informe um e-mail válido.');
+            if (whatsappDigits && (whatsappDigits.length < 10 || whatsappDigits.length > 15)) {
+                return alert('Informe um WhatsApp válido, com DDD e, quando necessário, DDI.');
+            }
+
+            const normalizedWhatsappDigits = whatsappDigits && (whatsappDigits.length === 10 || whatsappDigits.length === 11)
+                ? `55${whatsappDigits}`
+                : whatsappDigits;
+            const normalizedWhatsapp = normalizedWhatsappDigits ? `+${normalizedWhatsappDigits}` : '';
+            const duplicate = participants.external.some((participant) => {
+                const participantEmail = String(participant.email || '').trim().toLowerCase();
+                const participantWhatsapp = String(participant.whatsapp || '').replace(/\D/g, '');
+                return (email && participantEmail === email) || (whatsappDigits && participantWhatsapp === whatsappDigits);
+            });
+            if (duplicate) return alert('Este contato externo já foi adicionado à reunião.');
+
+            participants.external.push({ name, email, whatsapp: normalizedWhatsapp });
             renderParticipants();
-            input.value = '';
+            nameInput.value = '';
+            emailInput.value = '';
+            whatsappInput.value = '';
             markMeetingDirty();
         }
     }
@@ -3594,17 +3812,23 @@
         });
 
         participants.external.forEach((p, index) => {
+            const externalContactBadges = [
+                p.email ? `<span>E-mail: ${escapeHtml(p.email)}</span>` : '',
+                p.whatsapp ? `<span>WhatsApp: ${escapeHtml(p.whatsapp)}</span>` : '',
+            ].filter(Boolean).join('');
             html += `
             <div class="participant-item" style="border-left: 3px solid #10b981; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 8px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 600; font-size: 0.9rem;">${p.name}</div>
-                    <div style="font-size: 0.7rem; color: #10b981; font-weight: 600; text-transform: uppercase;">Externo</div>
+                    <div style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(p.name || '')}</div>
+                    <div style="font-size: 0.7rem; color: #10b981; font-weight: 600; text-transform: uppercase;">Externo · destinatário da ata</div>
+                    <div class="external-participant-meta">${externalContactBadges}</div>
                 </div>
                 ${buildRemoveActionButton(`removerParticipantEfetivo('external', ${index})`, `Excluir participante externo ${p.name || ''}`)}
             </div>`;
         });
 
         container.innerHTML = html;
+        updateMeetingWorkspaceCounters();
     }
 
     async function persistExecucao(options = {}) {
@@ -3749,13 +3973,13 @@
         currentMeetingServerUpdatedAt = null;
         lastSavedAt = null;
         hasUnsavedChanges = false;
-        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-planned-duration', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-actual-duration', 'meeting-notes'].forEach(id => {
+        ['meeting-title', 'meeting-scheduled-date', 'meeting-scheduled-time', 'meeting-planned-duration', 'meeting-invite-notes', 'meeting-actual-date', 'meeting-actual-time', 'meeting-actual-duration', 'meeting-notes', 'participant-external-name', 'participant-external-email', 'participant-external-whatsapp'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
         updateProjectLinkDisplay(null, null, null);
         guestsInternal = []; guestsExternal = []; agendaItems = [];
-        participants = { internal: [], external: [] }; discussions = []; activities = [];
+        participants = { internal: [], external: [] }; discussions = []; activities = []; expandedDiscussionKey = null;
         renderGuestsInternal(); renderGuestsExternal(); renderAgenda();
         renderParticipants(); renderDiscussions(); renderActivities();
         const container = document.getElementById('generated-activities-list');

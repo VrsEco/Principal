@@ -73,3 +73,84 @@ def test_meetings_workspace_preserves_mcp_stable_ids_and_project_task_link():
     assert "createWorkspaceItemId('activity')" in source
     assert "project_task_id: activity.project_task_id || null" in source
     assert "disc.discussion || disc.decision || ''" in source
+
+
+def test_execution_workspace_uses_one_context_rail_on_the_right():
+    source = _template_source()
+    assert 'className = \'meeting-context-rail\'' in source
+    assert 'Roteiro da reunião' in source
+    assert "participantsCard.className = 'meeting-context-card meeting-participants-rail'" in source
+    assert 'grid-template-columns:minmax(0,1fr) minmax(310px,350px)' in source
+
+
+def test_execution_workspace_does_not_repeat_summary_metrics_in_context_rail():
+    source = _template_source()
+    assert 'meeting-summary-grid' not in source
+    assert 'meeting-summary-topics' not in source
+    assert 'meeting-summary-decisions' not in source
+    assert 'meeting-summary-activities' not in source
+
+
+def test_execution_workspace_removes_general_notes_and_observation_actions_from_ui():
+    source = _template_source()
+    assert "notesGroup.id = 'meeting-notes-group'" in source
+    assert '#meeting-notes-group{display:none!important}' in source
+    assert 'Adicionar observação' not in source
+
+
+def test_discussions_are_newest_first_and_collapsible():
+    source = _template_source()
+    assert "orderedDiscussions = discussions.map((disc, index) => ({ disc, index })).reverse()" in source
+    assert 'function toggleDiscussao(index)' in source
+    assert 'class="discussion-accordion-header"' in source
+    assert 'aria-expanded="${isExpanded' in source
+    assert '+ Nova discussão' in source
+
+
+def test_discussion_has_visually_separated_title_decision_and_activity_blocks():
+    source = _template_source()
+    assert 'Título do assunto' in source
+    assert 'Discussão / decisão registrada' in source
+    assert 'Atividades geradas' in source
+    assert 'class="discussion-subsection"' in source
+    assert 'class="discussion-activities-list"' in source
+    assert 'function getActivityDiscussionIndex(activity)' in source
+
+
+def test_save_and_finish_actions_are_created_in_the_editor_toolbar():
+    source = _template_source()
+    toolbar_block = source[source.index("const editorToolbar"):source.index("if (!document.getElementById('meeting-save-toast')")]
+    assert "saveButton.id = 'btn-salvar-reuniao'" in toolbar_block
+    assert "finishButton.id = 'btn-finalizar-reuniao-quick'" in toolbar_block
+    assert 'editorToolbar.appendChild(saveButton)' in toolbar_block
+    assert 'editorToolbar.appendChild(finishButton)' in toolbar_block
+
+
+def test_legacy_activities_stay_on_the_first_subject_when_new_subjects_are_added():
+    source = _template_source()
+    assert 'return discussions.length ? 0 : null;' in source
+
+
+def test_information_card_is_visible_for_new_meetings_and_hidden_for_execution():
+    source = _template_source()
+    assert "if (informationCard) informationCard.hidden = false;" in source
+    assert "if (informationCard) informationCard.hidden = true;" in source
+    assert ".meeting-information-card[hidden]{display:none!important}" in source
+
+
+def test_external_participant_has_structured_contact_form_and_validation():
+    source = _template_source()
+    assert 'id="participant-external-name"' in source
+    assert 'id="participant-external-email"' in source
+    assert 'id="participant-external-whatsapp"' in source
+    assert "Informe o e-mail ou o WhatsApp do convidado externo." in source
+    assert "participants.external.push({ name, email, whatsapp: normalizedWhatsapp })" in source
+    assert "? `55${whatsappDigits}`" in source
+
+
+def test_external_participant_is_identified_as_minutes_recipient():
+    source = _template_source()
+    assert 'Externo · destinatário da ata' in source
+    assert 'external-participant-meta' in source
+    assert 'E-mail: ${escapeHtml(p.email)}' in source
+    assert 'WhatsApp: ${escapeHtml(p.whatsapp)}' in source

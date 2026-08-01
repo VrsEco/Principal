@@ -253,7 +253,7 @@ def test_meetings_template_can_create_activity_from_discussion():
 
     assert 'function criarAtividadeDaDiscussao(index)' in content
     assert 'source_discussion_title' in content
-    assert '+ Atividade' in content
+    assert '+ Gerar atividade' in content
 
 
 def test_meetings_template_keeps_finalize_button_and_timezone_label():
@@ -278,7 +278,7 @@ def test_meetings_template_has_activity_edit_delete_save_cancel_flow():
     assert '>Editar</button>' in content
     assert '>Excluir</button>' in content
     assert '>Cancelar</button>' in content
-    assert '>Salvar</button>' in content
+    assert '>Salvar atividade</button>' in content
     assert 'getPersistableActivities()' in content
 
 
@@ -383,6 +383,39 @@ def test_meeting_summary_recipients_merge_invited_and_participant_contacts(monke
     assert recipients['email:cliente@xp.com']['is_participant'] is True
 
 
+def test_external_participant_contact_is_directly_eligible_to_receive_minutes(monkeypatch):
+    meeting_payload = SimpleNamespace(
+        company_id=12,
+        guests_json=json.dumps({'internal': [], 'external': []}),
+        participants_json=json.dumps({
+            'internal': [],
+            'external': [{
+                'name': 'Consultora Externa',
+                'email': 'consultora@example.com',
+                'whatsapp': '+5571999990000',
+            }],
+        }),
+    )
+    employee_query = _FakeEmployeeQuery(employees=[])
+    monkeypatch.setattr(meeting_resource, 'Employee', SimpleNamespace(query=employee_query))
+
+    recipients = meeting_resource._build_meeting_recipients_catalog(meeting_payload)
+
+    assert employee_query.last_filter_kwargs == {'company_id': 12, 'status': 'active'}
+    assert recipients == [{
+        'key': 'email:consultora@example.com',
+        'name': 'Consultora Externa',
+        'email': 'consultora@example.com',
+        'whatsapp': '5571999990000',
+        'employee_id': None,
+        'origins': ['participante'],
+        'has_email': True,
+        'has_whatsapp': True,
+        'is_guest': False,
+        'is_participant': True,
+    }]
+
+
 def test_meeting_share_summary_sends_selected_channels(monkeypatch):
     app = _build_app()
     sent_emails = []
@@ -395,9 +428,12 @@ def test_meeting_share_summary_sends_selected_channels(monkeypatch):
         status='completed',
         guests_json=json.dumps({
             'internal': [{'id': 7, 'name': 'Ana'}],
+            'external': [],
+        }),
+        participants_json=json.dumps({
+            'internal': [],
             'external': [{'name': 'Cliente XP', 'email': 'cliente@xp.com', 'whatsapp': '71999990000'}],
         }),
-        participants_json=json.dumps({'internal': [], 'external': []}),
         agenda_json=json.dumps([{'title': 'Financeiro'}]),
         discussions_json=json.dumps([{'title': 'Receita', 'discussion': 'Revisar metas do trimestre.'}]),
         activities_json=json.dumps([{'title': 'Atualizar forecast', 'responsible': 'Ana', 'deadline': '2026-03-31'}]),
