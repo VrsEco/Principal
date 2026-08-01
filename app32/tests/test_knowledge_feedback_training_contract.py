@@ -12,8 +12,10 @@ def test_feedback_service_uses_supervised_simple_rating_and_tenant_guard():
     assert 'VALID_RATINGS = {"correct", "partial", "wrong"}' in service
     assert '"wrong_subject"' in service
     assert '"too_technical"' in service
+    assert "same_user" in service
     assert "interaction.company_id is not None" in service
     assert "interaction.company_id != company_id" in service
+    assert "and not same_user" in service
     assert "rating_status = normalized_rating" in service
 
 

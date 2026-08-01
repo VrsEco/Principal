@@ -24,7 +24,7 @@ class KnowledgeInteractionService:
     MAX_SOURCE_TYPES = 12
     PRODUCT_SOURCE_TYPES = ("product_help", "system_documentation")
     ENGINE_VERSION = "knowledge-understanding-v1"
-    PRODUCT_HELP_PATTERNS = ("como", "onde", "cadastro", "cadastrar", "publico", "publicar", "gero", "gerar", "filtro", "filtrar", "vejo", "ver")
+    PRODUCT_HELP_PATTERNS = ("como", "onde", "cadastro", "cadastrar", "lançamento", "lancamento", "lançar", "lancar", "publico", "publicar", "gero", "gerar", "filtro", "filtrar", "faço", "faco", "vejo", "ver")
     ROUTINE_ACTIVITY_TERMS = ("atividade", "atividades", "tarefa", "tarefas", "pendencia", "pendências", "pendencias", "meu", "minhas", "tenho")
 
     def __init__(self, query_service: KnowledgeQueryService | None = None) -> None:
@@ -158,7 +158,7 @@ class KnowledgeInteractionService:
                 intent = "corporate_knowledge"
                 confidence = max(confidence, 0.75)
             signals.append("meeting_terms")
-        if tokens.intersection({"financeiro", "titulos", "títulos", "bancaria", "bancária", "conciliar", "conciliação", "conciliacao"}):
+        if tokens.intersection({"financeiro", "financeira", "titulos", "títulos", "bancaria", "bancária", "conciliar", "conciliação", "conciliacao", "conta", "contas", "pagar", "pagamento", "pagamentos", "lançamento", "lancamento"}):
             domain = "finance"
             signals.append("finance_terms")
         if tokens.intersection(self.ROUTINE_ACTIVITY_TERMS):
@@ -227,6 +227,8 @@ class KnowledgeInteractionService:
         tokens = set(normalized.split())
         if understanding.get("intent") != "product_help":
             return None
+        if self._looks_like_payable_creation(tokens):
+            return self._direct_payable_creation_help()
         if not tokens.intersection({"atividade", "atividades", "tarefa", "tarefas", "pendencias", "pendências", "pendencia"}):
             return None
         if not tokens.intersection({"meu", "minhas", "tenho", "ver", "vejo", "acompanhar", "consultar"}):
@@ -266,6 +268,65 @@ class KnowledgeInteractionService:
                 "source_types": ["product_help"],
                 "strategies": ["deterministic_playbook"],
                 "entities": ["activities"],
+                "time": {"mode": "current", "from": None, "to": None},
+                "filters": {},
+                "limits": {"candidate_limit": 0, "answer_source_limit": 1},
+            },
+        }
+
+    @staticmethod
+    def _looks_like_payable_creation(tokens: set[str]) -> bool:
+        has_payable = (
+            {"pagar", "pagamento", "pagamentos"}.intersection(tokens)
+            or {"conta", "contas"}.intersection(tokens) and "pagar" in tokens
+        )
+        has_creation = {"lançamento", "lancamento", "lançar", "lancar", "fazer", "faço", "faco", "criar", "cadastrar"}.intersection(tokens)
+        return bool(has_payable and has_creation)
+
+    @staticmethod
+    def _direct_payable_creation_help() -> dict[str, Any]:
+        answer = (
+            "Para lançar uma conta a pagar:\n"
+            "1. Abra **Gestão Financeira** no menu lateral.\n"
+            "2. Acesse **Movimentos** e selecione **Agendamentos**.\n"
+            "3. Clique em **Novo**.\n"
+            "4. Escolha o tipo **Pagamento** ou **Conta a pagar**.\n"
+            "5. Preencha favorecido, histórico, valor, vencimento, competência, plano de contas e centro de resultado.\n"
+            "6. Salve o título.\n\n"
+            "Depois de salvo, ele aparecerá em **Títulos Financeiros** como conta em aberto até a baixa."
+        )
+        return {
+            "query_id": uuid.uuid4().hex,
+            "mode": "answer",
+            "knowledge_scope": "product",
+            "answer": answer,
+            "claims": [{"text": answer, "citations": []}],
+            "citations": [],
+            "warnings": [],
+            "trust_signals": ["official"],
+            "related_objects": [],
+            "actions": [
+                {
+                    "kind": "open",
+                    "label": "Novo agendamento financeiro",
+                    "target": "/financial/schedules/new",
+                    "canonical_uri": "/financial/schedules/new",
+                },
+                {
+                    "kind": "open",
+                    "label": "Abrir Títulos Financeiros",
+                    "target": "/financial/schedules",
+                    "canonical_uri": "/financial/schedules",
+                },
+            ],
+            "query_plan": {
+                "query_kind": "direct_product_help",
+                "knowledge_scope": "product",
+                "company_id": None,
+                "include_product": True,
+                "source_types": ["product_help"],
+                "strategies": ["deterministic_playbook"],
+                "entities": ["financial_payable"],
                 "time": {"mode": "current", "from": None, "to": None},
                 "filters": {},
                 "limits": {"candidate_limit": 0, "answer_source_limit": 1},

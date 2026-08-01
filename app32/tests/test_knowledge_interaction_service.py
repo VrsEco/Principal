@@ -104,6 +104,25 @@ def test_activity_how_to_question_returns_direct_user_friendly_help():
     assert payload["actions"][0]["target"] == "/my-work"
 
 
+def test_payable_creation_question_returns_direct_financial_help():
+    spy = QueryServiceSpy()
+    payload = KnowledgeInteractionService(spy).answer(
+        "Como faço para fazer o lançamento de uma conta a pagar?",
+        scope="all",
+        company_id=44,
+        user_id=7,
+    )
+
+    assert spy.calls == []
+    assert payload["understanding"]["intent"] == "product_help"
+    assert payload["understanding"]["domain"] == "finance"
+    assert payload["query_plan"]["query_kind"] == "direct_product_help"
+    assert "Gestão Financeira" in payload["answer"]
+    assert "Conta a pagar" in payload["answer"]
+    assert payload["actions"][0]["target"] == "/financial/schedules/new"
+    assert payload["actions"][1]["target"] == "/financial/schedules"
+
+
 def test_company_scope_fails_closed_without_active_company():
     with pytest.raises(KnowledgeTenantContextError):
         KnowledgeInteractionService(QueryServiceSpy()).answer(

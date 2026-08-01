@@ -51,7 +51,8 @@ class KnowledgeFeedbackService:
         ).first()
         if interaction is None:
             raise KnowledgeFeedbackError("Interação de conhecimento não encontrada.")
-        if interaction.company_id is not None and interaction.company_id != company_id:
+        same_user = interaction.user_id is not None and int(interaction.user_id) == int(user_id)
+        if interaction.company_id is not None and interaction.company_id != company_id and not same_user:
             raise KnowledgeFeedbackError("Feedback não pertence à empresa ativa.")
 
         feedback = KnowledgeFeedback(
