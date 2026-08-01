@@ -10,6 +10,7 @@ APP="${APP32_APP_DIR:-$BASE/www/app32}"
 PORT="${APP32_MCP_HTTP_PORT:-8101}"
 HOST="${APP32_MCP_HTTP_HOST:-127.0.0.1}"
 PUBLIC_BASE="${APP32_MCP_PUBLIC_BASE_URL:-https://app.gestaoversus.com.br}"
+HEALTH_ATTEMPTS="${APP32_MCP_HEALTH_ATTEMPTS:-240}"
 
 LOG_DIR="$APP/logs"
 TMP_DIR="$APP/tmp"
@@ -120,7 +121,7 @@ start_mcp() {
 
     echo "$!" > "$PID_FILE"
 
-    if ! wait_for_health 45; then
+    if ! wait_for_health "$HEALTH_ATTEMPTS"; then
         log "ERRO: MCP não respondeu ao health local após start."
         tail -n 40 "$STDERR_LOG" 2>/dev/null || true
         return 1
@@ -181,4 +182,3 @@ case "$ACTION" in
         exit 2
         ;;
 esac
-
