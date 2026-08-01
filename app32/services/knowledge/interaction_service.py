@@ -25,6 +25,7 @@ class KnowledgeInteractionService:
     PRODUCT_SOURCE_TYPES = ("product_help", "system_documentation")
     ENGINE_VERSION = "knowledge-understanding-v1"
     PRODUCT_HELP_PATTERNS = ("como", "onde", "cadastro", "cadastrar", "publico", "publicar", "gero", "gerar", "filtro", "filtrar", "vejo", "ver")
+    ROUTINE_ACTIVITY_TERMS = ("atividade", "atividades", "tarefa", "tarefas", "pendencia", "pendências", "pendencias", "meu", "minhas", "tenho")
 
     def __init__(self, query_service: KnowledgeQueryService | None = None) -> None:
         self.query_service = query_service or KnowledgeQueryService()
@@ -73,6 +74,24 @@ class KnowledgeInteractionService:
             requested_scope=normalized_scope,
             source_types=normalized_types,
         )
+        direct_payload = self._direct_product_help(question, understanding)
+        if direct_payload is not None:
+            payload = direct_payload
+            payload["requested_scope"] = normalized_scope
+            payload["understanding"] = understanding
+            payload["presentation"] = self._presentation(payload, normalized_scope)
+            interaction = self._record_interaction(
+                question=question,
+                payload=payload,
+                requested_scope=normalized_scope,
+                company_id=query_company_id,
+                user_id=int(user_id),
+                employee_id=employee_id,
+                understanding=understanding,
+            )
+            payload["interaction_id"] = interaction.interaction_uuid
+            return payload
+
         payload = self.query_service.answer(
             question,
             company_id=query_company_id,
@@ -142,6 +161,9 @@ class KnowledgeInteractionService:
         if tokens.intersection({"financeiro", "titulos", "títulos", "bancaria", "bancária", "conciliar", "conciliação", "conciliacao"}):
             domain = "finance"
             signals.append("finance_terms")
+        if tokens.intersection(self.ROUTINE_ACTIVITY_TERMS):
+            domain = "routine"
+            signals.append("activity_terms")
         if tokens.intersection({"processo", "pop", "portal"}):
             domain = "processes"
             signals.append("process_terms")
@@ -195,6 +217,60 @@ class KnowledgeInteractionService:
         text = str(question or "").strip().lower()
         text = re.sub(r"[^a-záàâãéêíóôõúç0-9]+", " ", text)
         return " ".join(text.split())
+
+    def _direct_product_help(
+        self,
+        question: str,
+        understanding: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        normalized = self._normalize_question(question)
+        tokens = set(normalized.split())
+        if understanding.get("intent") != "product_help":
+            return None
+        if not tokens.intersection({"atividade", "atividades", "tarefa", "tarefas", "pendencias", "pendências", "pendencia"}):
+            return None
+        if not tokens.intersection({"meu", "minhas", "tenho", "ver", "vejo", "acompanhar", "consultar"}):
+            return None
+
+        answer = (
+            "Para ver suas atividades:\n"
+            "1. Abra **Meu Trabalho** no menu lateral.\n"
+            "2. A tela já inicia na visão das suas atividades.\n"
+            "3. Se necessário, use os filtros de empresa, status, prazo ou responsável.\n"
+            "4. Para abrir uma atividade, clique no card ou na linha correspondente.\n\n"
+            "Se você quiser ver atividades de processos, elas também aparecem no Meu Trabalho quando estiverem atribuídas a você."
+        )
+        return {
+            "query_id": uuid.uuid4().hex,
+            "mode": "answer",
+            "knowledge_scope": "product",
+            "answer": answer,
+            "claims": [{"text": answer, "citations": []}],
+            "citations": [],
+            "warnings": [],
+            "trust_signals": ["official"],
+            "related_objects": [],
+            "actions": [
+                {
+                    "kind": "open",
+                    "label": "Abrir Meu Trabalho",
+                    "target": "/my-work",
+                    "canonical_uri": "/my-work",
+                }
+            ],
+            "query_plan": {
+                "query_kind": "direct_product_help",
+                "knowledge_scope": "product",
+                "company_id": None,
+                "include_product": True,
+                "source_types": ["product_help"],
+                "strategies": ["deterministic_playbook"],
+                "entities": ["activities"],
+                "time": {"mode": "current", "from": None, "to": None},
+                "filters": {},
+                "limits": {"candidate_limit": 0, "answer_source_limit": 1},
+            },
+        }
 
     @staticmethod
     def _presentation(payload: dict[str, Any], scope: str) -> dict[str, Any]:

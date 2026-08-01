@@ -401,12 +401,36 @@ class KnowledgeQueryService:
             ]
             if non_technical:
                 hits = non_technical
+            else:
+                hits = [
+                    hit for hit in hits if not cls._looks_like_technical_source(hit)
+                ]
 
         product_help = [hit for hit in hits if hit.get("source_type") == "product_help"]
         if product_help and hits[0].get("source_type") == "product_help":
             # Um manual oficial completo é mais claro que a concatenação de documentos.
             return [product_help[0]]
         return hits[:3]
+
+    @staticmethod
+    def _looks_like_technical_source(hit: dict[str, Any]) -> bool:
+        text = " ".join(
+            str(hit.get(field) or "").lower()
+            for field in ("title", "source_ref", "content", "source_span")
+        )
+        technical_markers = (
+            "paper",
+            "spec",
+            "mcp",
+            "api",
+            "cli/ia",
+            "arquitetura",
+            "sapiens on",
+            "adapter",
+            "migration",
+            "runtime",
+        )
+        return any(marker in text for marker in technical_markers)
 
     @staticmethod
     def _navigation_actions(hit: dict[str, Any]) -> list[dict[str, Any]]:

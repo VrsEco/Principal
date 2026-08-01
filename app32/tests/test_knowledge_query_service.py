@@ -331,6 +331,44 @@ def test_technical_question_can_use_system_documentation():
     assert selected == hits
 
 
+def test_non_technical_question_drops_technical_system_documentation_only_hits():
+    hits = [
+        {
+            "source_type": "system_documentation",
+            "title": "Paper Sapiens MCP",
+            "source_ref": "paper.sapiens",
+            "content": "Paper v0.0 sobre MCP, runtime, adapters e arquitetura.",
+            "source_span": "paper",
+        }
+    ]
+
+    selected = KnowledgeQueryService._select_answer_hits(
+        "como faço para ver as atividades que tenho?",
+        hits,
+    )
+
+    assert selected == []
+
+
+def test_non_technical_question_can_use_non_technical_system_documentation():
+    hits = [
+        {
+            "source_type": "system_documentation",
+            "title": "Manual de uso",
+            "source_ref": "manual.atividades",
+            "content": "Para ver suas atividades, abra Meu Trabalho no menu lateral.",
+            "source_span": "manual",
+        }
+    ]
+
+    selected = KnowledgeQueryService._select_answer_hits(
+        "como faço para ver as atividades que tenho?",
+        hits,
+    )
+
+    assert selected == hits
+
+
 def test_company_evidence_is_not_replaced_by_lower_ranked_product_help():
     hits = [
         {"source_type": "meeting", "source_ref": "meeting-1"},

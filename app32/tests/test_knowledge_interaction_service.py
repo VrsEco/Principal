@@ -85,6 +85,25 @@ def test_how_to_create_question_does_not_turn_into_operational_action():
     assert understanding["clarification_required"] is False
 
 
+def test_activity_how_to_question_returns_direct_user_friendly_help():
+    spy = QueryServiceSpy()
+    payload = KnowledgeInteractionService(spy).answer(
+        "como faço para ver as atividades que tenho?",
+        scope="all",
+        company_id=44,
+        user_id=7,
+    )
+
+    assert spy.calls == []
+    assert payload["understanding"]["intent"] == "product_help"
+    assert payload["understanding"]["domain"] == "routine"
+    assert payload["query_plan"]["query_kind"] == "direct_product_help"
+    assert "Meu Trabalho" in payload["answer"]
+    assert "Paper" not in payload["answer"]
+    assert "MCP" not in payload["answer"]
+    assert payload["actions"][0]["target"] == "/my-work"
+
+
 def test_company_scope_fails_closed_without_active_company():
     with pytest.raises(KnowledgeTenantContextError):
         KnowledgeInteractionService(QueryServiceSpy()).answer(
