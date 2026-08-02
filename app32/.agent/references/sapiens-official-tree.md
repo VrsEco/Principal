@@ -65,6 +65,13 @@ Consolidar a estrutura oficial do Sapiens para menu, roteamento, contexto e evol
   - `182` Capacidade da equipe
   - `183` Capacidade da empresa
 
+## Sapiens
+- `41` Árvore Estratégica
+  - domínio canônico: `knowledge`
+  - capability: `strategic_tree`
+  - escopo: empresa ativa
+  - escrita: contribuição humana confirmada, sem promoção canônica automática
+
 ## Escopos canônicos
 - pessoal: `11x`
 - equipe: `15x`

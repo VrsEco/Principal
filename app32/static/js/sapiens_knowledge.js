@@ -53,6 +53,7 @@
         all: 'Todos',
         company: 'Minha empresa',
         product: 'Como usar o APP Versus',
+        strategic_tree: 'Árvore Estratégica',
     };
     const trustLabels = {
         official: 'Conteúdo oficial',
@@ -63,7 +64,7 @@
     };
 
     function setScope(scope) {
-        activeScope = ['all', 'company', 'product'].includes(scope) ? scope : 'all';
+        activeScope = ['all', 'company', 'product', 'strategic_tree'].includes(scope) ? scope : 'all';
         elements.scopeButtons.forEach((button) => {
             const active = button.dataset.scope === activeScope;
             button.classList.toggle('is-active', active);
@@ -77,6 +78,7 @@
             elements.question.placeholder = 'Ex.: O que foi decidido na última reunião?';
             elements.sourceType.disabled = false;
         }
+        root.dispatchEvent(new CustomEvent('sapiens:scope-change', { detail: { scope: activeScope } }));
     }
 
     function resizeQuestion() {

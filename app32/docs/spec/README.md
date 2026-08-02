@@ -10,6 +10,7 @@ Ver: `C:\GestaoVersus\app32\app32\docs\governance\governanca_documental_oficial_
 - `C:\GestaoVersus\app32\app32\docs\spec\modulo_leiloes_imobiliarios_multi_tenant_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\arquitetura_oficial_sipoc_processos_multi_tenant_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\arquitetura_oficial_estrutura_recursos_processos_v1.md`
+- `C:\GestaoVersus\app32\app32\docs\spec\arvore_estrategica_sapiens_conhecimento_consultivo_v1.md`
 
 ## Squad Cliente
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\arquitetura_oficial_squad_cliente_v1.md`

@@ -177,7 +177,17 @@ def _render_agent_surface_wrapper(surface_key: str):
 @login_required
 def sapiens_page():
     """Interface unificada estilo WhatsApp para todos os agentes de IA"""
-    return render_template('sapiens.html')
+    import secrets
+    from flask import session
+    from services.knowledge.strategic_tree_service import StrategicTreeService
+
+    company_id = session.get('active_company_id')
+    session.setdefault('strategic_tree_csrf_token', secrets.token_urlsafe(32))
+    return render_template(
+        'sapiens.html',
+        strategic_tree_enabled=StrategicTreeService.is_enabled(company_id),
+        strategic_tree_csrf_token=session.get('strategic_tree_csrf_token'),
+    )
 
 
 @agents_bp.route('/sapiens/training')

@@ -66,10 +66,10 @@ DOMAIN_MATRIX = {
         "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
     },
     "knowledge": {
-        "colaborador": {"discover", "read", "list", "search", "analyze"},
-        "cliente": {"discover", "read", "list", "search", "analyze"},
-        "administrador": {"discover", "read", "list", "search", "analyze", "audit"},
-        "administrador_tecnico": {"discover", "read", "list", "search", "analyze", "audit"},
+        "colaborador": {"discover", "read", "list", "search", "analyze", "create"},
+        "cliente": {"discover", "read", "list", "search", "analyze", "create"},
+        "administrador": {"discover", "read", "list", "search", "analyze", "create", "audit"},
+        "administrador_tecnico": {"discover", "read", "list", "search", "analyze", "create", "audit"},
     },
     "real_estate_auctions": {
         "colaborador": READ_ACTIONS | {"create", "update"},

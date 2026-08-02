@@ -220,6 +220,40 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "tags": ("read", "bpmn", "copilot", "automation"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    "strategic_tree_list": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "strategic_tree", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "strategic_tree_get": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "strategic_tree", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "strategic_tree_get_branch": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("knowledge.read",),
+        "tags": ("read", "strategic_tree", "tenant_safe", "sensitive_filtering"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "strategic_tree_add_contribution": {
+        "domain": "knowledge",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.MEDIUM,
+        "permissions": ("knowledge.create",),
+        "human_gate": True,
+        "human_gate_reason": "Registrar fala ou conhecimento exige confirmação humana explícita.",
+        "tags": ("mutation", "create", "strategic_tree", "tenant_safe", "no_canonical_write"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "list_process_improvement_requests_tool": {
         "domain": "processes",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
@@ -1818,6 +1852,9 @@ def _expand_domain_aliases(domains: set[str]) -> set[str]:
 def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
     lowered = str(tool_name or "").strip().lower()
     normalized_domain = normalize_tool_domain(domain) if domain else None
+
+    if normalized_domain == "knowledge" and lowered.startswith("strategic_tree_"):
+        return "create" if lowered == "strategic_tree_add_contribution" else "read"
 
     if lowered in {
         "delete_meeting_topic",

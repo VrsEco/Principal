@@ -1219,6 +1219,7 @@ def register_blueprints(app):
     from api.routes.dev import dev_bp
     from api.notes import notes_bp
     from api.routes.agents import agents_bp
+    from api.routes.strategic_tree import strategic_tree_bp
     from api.routes.configs import configs_bp
     from api.routes.integrations import integrations_bp
     from api.routes.portfolios import portfolios_bp
@@ -1252,6 +1253,7 @@ def register_blueprints(app):
         app.register_blueprint(dev_bp)
     app.register_blueprint(notes_bp)
     app.register_blueprint(agents_bp)
+    app.register_blueprint(strategic_tree_bp)
     app.register_blueprint(configs_bp)
     app.register_blueprint(integrations_bp)
     app.register_blueprint(portfolios_bp)

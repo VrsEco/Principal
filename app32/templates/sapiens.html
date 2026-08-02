@@ -8,6 +8,7 @@
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/sapiens_knowledge.css') }}?v=20260801-1">
+{% if strategic_tree_enabled %}<link rel="stylesheet" href="{{ url_for('static', filename='css/strategic_tree.css') }}?v=20260802-1">{% endif %}
 <style>
     /* THEME TELEGRAM PREMIUM - SQUAD ENGENHARIA ELITE */
     :root {
@@ -983,7 +984,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="kv-page" id="knowledgeExperience" data-company-id="{{ session.get('active_company_id') or '' }}">
+<main class="kv-page" id="knowledgeExperience" data-company-id="{{ session.get('active_company_id') or '' }}" data-strategic-tree-enabled="{{ 'true' if strategic_tree_enabled else 'false' }}" data-strategic-tree-csrf="{{ strategic_tree_csrf_token or '' }}">
     <div class="kv-shell">
         <header class="kv-header">
             <div class="kv-brand">
@@ -1024,6 +1025,11 @@
                     <button type="button" class="kv-scope-button" data-scope="product" aria-pressed="false">
                         <i class="far fa-circle-question" aria-hidden="true"></i> Como usar o APP Versus
                     </button>
+                    {% if strategic_tree_enabled %}
+                    <button type="button" class="kv-scope-button" data-scope="strategic_tree" aria-pressed="false">
+                        <i class="fas fa-sitemap" aria-hidden="true"></i> Árvore Estratégica
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
@@ -1064,6 +1070,67 @@
                 <button type="button" data-question="Existe algo definido sobre responsabilidade de manutenção elétrica dos prédios?">Buscar uma definição</button>
             </div>
         </section>
+
+        {% if strategic_tree_enabled %}
+        <section class="st-workspace" id="strategicTreeWorkspace" hidden aria-labelledby="strategicTreeTitle">
+            <header class="st-header">
+                <div>
+                    <p class="kv-eyebrow">Árvore Estratégica</p>
+                    <h2 id="strategicTreeTitle">Organize e amadureça o conhecimento da empresa</h2>
+                    <p>Registre livremente. O Sapiens classifica o assunto e preserva a informação original.</p>
+                </div>
+                <label class="st-tree-select-wrap">
+                    <span>Árvore ativa</span>
+                    <select id="strategicTreeSelect" aria-label="Selecionar árvore estratégica"></select>
+                </label>
+            </header>
+
+            <div class="st-status" id="strategicTreeStatus" role="status" aria-live="polite" hidden></div>
+
+            <div class="st-empty" id="strategicTreeEmpty" hidden>
+                <div class="st-empty-icon"><i class="fas fa-seedling" aria-hidden="true"></i></div>
+                <h3>Comece pela primeira árvore</h3>
+                <p>Ela receberá ideias, percepções, evidências e discussões sem alterar automaticamente nenhum dado oficial da empresa.</p>
+                <button type="button" class="st-primary" id="strategicTreeCreate">Criar árvore da empresa</button>
+            </div>
+
+            <div class="st-layout" id="strategicTreeLayout" hidden>
+                <aside class="st-tree-panel" aria-label="Ramos da árvore estratégica">
+                    <div class="st-panel-heading">
+                        <div><span>Mapa</span><strong id="strategicTreeName">Árvore</strong></div>
+                        <button type="button" id="strategicTreeCollapse" aria-label="Recolher mapa"><i class="fas fa-bars"></i></button>
+                    </div>
+                    <nav class="st-tree-nav" id="strategicTreeNav"></nav>
+                </aside>
+
+                <section class="st-branch-panel" aria-labelledby="strategicBranchTitle">
+                    <div class="st-breadcrumb" id="strategicTreeBreadcrumb"></div>
+                    <header class="st-branch-header">
+                        <div>
+                            <span class="st-state" id="strategicBranchState">Coletando informações</span>
+                            <h3 id="strategicBranchTitle">Selecione um tema</h3>
+                        </div>
+                        <span class="st-count" id="strategicContributionCount">0 registros</span>
+                    </header>
+
+                    <div class="st-contributions" id="strategicTreeContributions"></div>
+
+                    <form class="st-composer" id="strategicTreeComposer">
+                        <label for="strategicTreeContent">O que você quer registrar ou discutir?</label>
+                        <textarea id="strategicTreeContent" rows="3" maxlength="10000" placeholder="Escreva como você explicaria isso em uma conversa..."></textarea>
+                        <div class="st-composer-options">
+                            <label><input type="checkbox" id="strategicTreeConfidential"> Informação confidencial</label>
+                            <span>O conteúdo original será preservado e rastreável.</span>
+                        </div>
+                        <div class="st-composer-actions">
+                            <span id="strategicTreeNextAction">Adicionar informação</span>
+                            <button type="submit" class="st-primary"><i class="fas fa-plus"></i> Registrar</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </section>
+        {% endif %}
 
         <section class="kv-status" id="knowledgeStatus" role="status" aria-live="polite" hidden></section>
 
@@ -2198,4 +2265,5 @@
     });
 </script>
 <script src="{{ url_for('static', filename='js/sapiens_knowledge.js') }}?v=20260801-1"></script>
+{% if strategic_tree_enabled %}<script src="{{ url_for('static', filename='js/strategic_tree.js') }}?v=20260802-1"></script>{% endif %}
 {% endblock %}

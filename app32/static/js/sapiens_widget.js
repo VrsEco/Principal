@@ -13,13 +13,29 @@
     const form = document.getElementById('sapiens-widget-form');
     const input = document.getElementById('sapiens-widget-input');
     const submit = form.querySelector('button[type="submit"]');
+    const strategicTreeLink = root.querySelector('[data-sapiens-tree-link]');
     let activeScope = 'all';
+    let strategicTreeChecked = false;
 
     function setOpen(open) {
         panel.hidden = !open;
         launcher.setAttribute('aria-expanded', String(open));
         launcher.setAttribute('aria-label', open ? 'Fechar Sapiens' : 'Abrir Sapiens');
-        if (open) window.setTimeout(() => input.focus(), 0);
+        if (open) {
+            window.setTimeout(() => input.focus(), 0);
+            checkStrategicTreeAvailability();
+        }
+    }
+
+    async function checkStrategicTreeAvailability() {
+        if (strategicTreeChecked || !strategicTreeLink) return;
+        strategicTreeChecked = true;
+        try {
+            const response = await fetch('/api/knowledge/strategic-trees', { credentials: 'same-origin' });
+            strategicTreeLink.hidden = !response.ok;
+        } catch (_) {
+            strategicTreeLink.hidden = true;
+        }
     }
 
     function setScope(scope) {

@@ -33,6 +33,7 @@ from src.core.mcp_incentive_tools import register_incentive_tools
 from src.core.mcp_integration_request_tools import register_integration_request_tools
 from src.core.mcp_instruction_registry_tools import register_instruction_registry_tools
 from src.core.mcp_knowledge_tools import register_knowledge_tools
+from src.core.mcp_strategic_tree_tools import register_strategic_tree_tools
 from src.core.mcp_operational_readiness_tools import register_operational_readiness_tools
 from src.core.mcp_operation_router_tools import register_operation_router_tools
 from src.core.mcp_permission_matrix_tools import register_permission_matrix_tools
@@ -262,6 +263,10 @@ class ToolCatalog:
 
 
 _supplemental_mcp_tools = (
+    SimpleNamespace(name="strategic_tree_list", description="Lista Árvores Estratégicas autorizadas do tenant."),
+    SimpleNamespace(name="strategic_tree_get", description="Obtém a estrutura de uma Árvore Estratégica do tenant."),
+    SimpleNamespace(name="strategic_tree_get_branch", description="Lê ramo e contribuições autorizadas de uma Árvore Estratégica."),
+    SimpleNamespace(name="strategic_tree_add_contribution", description="Registra contribuição humana confirmada na Árvore Estratégica, sem escrita canônica."),
     SimpleNamespace(
         name="correct_plan_global_okrs_tool",
         description="Corrige os dois OKRs Globais do plano e refaz seus vínculos setoriais com confirmação humana.",
@@ -802,6 +807,7 @@ catalog = ToolCatalog(
         register_integration_request_tools,
         register_instruction_registry_tools,
         register_knowledge_tools,
+        register_strategic_tree_tools,
         register_operational_readiness_tools,
         register_operation_router_tools,
         register_permission_matrix_tools,

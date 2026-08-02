@@ -49,6 +49,28 @@ python -m pytest `
 
 Adicionar golden questions, precisão de citações, abstenção, conflitos, ACL revogada, temporalidade e prompt injection conforme novos adapters e retrieval forem habilitados.
 
+## Suíte Árvore Estratégica P0
+
+- feature flag é resolvida por empresa;
+- árvore, nó, contribuição e auditoria são tenant-owned;
+- ID de outro tenant retorna ausência controlada;
+- conteúdo confidencial não é serializado para colaborador sem autorização;
+- retry com a mesma idempotency key não duplica contribuição;
+- API usa a empresa da sessão e rejeita override do cliente;
+- escrita web exige CSRF;
+- escrita MCP exige `company_id`, `idempotency_key` e confirmação humana;
+- tools aparecem no domínio canônico `knowledge` e não promovem dado canônico.
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+python -m pytest `
+  .\app32\tests\test_strategic_tree_service.py `
+  .\app32\tests\test_strategic_tree_routes.py `
+  .\app32\tests\test_core_mcp_strategic_tree_tools.py `
+  .\app32\tests\test_strategic_tree_ui_contract.py `
+  -q
+```
+
 ## Suíte de linguagem simples e atalho global
 
 - orientação funcional prioriza um manual oficial e não concatena SPEC técnica;

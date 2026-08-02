@@ -36,6 +36,18 @@ Ao incluir ou alterar uma família de fontes da Camada de Conhecimento.
 
 Não registrar adapter se tenant, ACL, vigência, exclusão ou rollback forem ambíguos.
 
+## Regra específica da Árvore Estratégica
+
+A Árvore Estratégica pertence ao domínio `knowledge`, mas não é um adapter de fonte canônica:
+
+- contribuição bruta é preservada em `strategic_tree_contributions`;
+- classificação e síntese não sobrescrevem a fala original;
+- toda escrita exige `company_id`, ator autenticado, auditoria e idempotência;
+- contribuição MCP exige confirmação humana explícita;
+- conteúdo confidencial respeita policy antes da serialização;
+- a árvore não alimenta automaticamente `knowledge_sources`;
+- promoção para estratégia, processos, projetos ou outro domínio canônico permanece fora do P0.
+
 ## Gate para habilitar uma fonte na busca
 
 1. confirmar que o adapter resolve `knowledge_scope` e `company_id`;

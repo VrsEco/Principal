@@ -226,3 +226,17 @@
     #sapiens-launcher span { display: none; }
     #sapiens-launcher { min-width: 58px; padding: 0; }
 }
+.sapiens-widget-tree-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 6px 9px;
+    color: #087f72;
+    background: #eaf8f3;
+    font-size: 11px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.sapiens-widget-tree-link[hidden] { display: none !important; }

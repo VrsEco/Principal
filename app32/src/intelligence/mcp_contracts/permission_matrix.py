@@ -502,7 +502,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordena reuniões e follow-up do cliente."]),
                     _rule("strategy", ["discover", "read", "create", "update", "analyze", "review"], denied=["delete", "audit"], human_gate_for_actions=["create", "update"], notes=["Criação/correção estratégica somente por capability transacional explícita e human-gated; sem delete genérico."]),
                     _rule("consultive", ["discover", "read", "analyze", "review"], denied=["create", "update", "delete", "audit"], human_gate_for_actions=["review"], notes=["Roteiros e diagnósticos do Cockpit em modo leitura/análise para o Squad Cliente."]),
-                    _rule("knowledge", ["discover", "read", "analyze"], denied=["create", "update", "delete", "audit"], notes=["Busca citada e manual do produto pela porta de entrada do Sapiens."]),
+                    _rule("knowledge", ["discover", "read", "analyze", "create"], denied=["update", "delete", "audit"], human_gate_for_actions=["create"], notes=["Busca citada e contribuição confirmada na Árvore Estratégica; sem promoção canônica."]),
                     _rule("governance", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Bootstrap, capabilities e instruction bundle em leitura; sem mutação de governança."]),
                     _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Self-service só para contexto do próprio usuário."]),
                 ],
