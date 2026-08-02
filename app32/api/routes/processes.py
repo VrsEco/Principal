@@ -880,6 +880,61 @@ def bpms_analysis_save(company_id):
         analysis_id=analysis_id,
     ))
 
+
+@processes_bp.route('/companies/<int:company_id>/bpms-analysis/request', methods=['POST'])
+@permission_required('processes', 'edit')
+def bpms_analysis_request(company_id):
+    from services.process_bpms_analysis_service import create_improvement_request
+
+    if is_collaborator_in_company(company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem registrar análises.")
+
+    try:
+        analysis = create_improvement_request(
+            company_id=company_id,
+            form_data=request.form.to_dict(flat=True),
+            actor_user_id=current_user.id if current_user.is_authenticated else None,
+        )
+        flash('Solicitação registrada. O Squad Cliente já pode analisá-la via MCP.', 'success')
+        return redirect(url_for(
+            'processes.bpms_analysis_page',
+            company_id=company_id,
+            analysis_id=analysis.id,
+            process_id=analysis.process_id,
+        ))
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+    except Exception:
+        current_app.logger.exception('Falha ao registrar melhoria para company_id=%s', company_id)
+        flash('Não foi possível registrar a solicitação agora.', 'error')
+    return redirect(url_for('processes.bpms_analysis_page', company_id=company_id))
+
+
+@processes_bp.route('/companies/<int:company_id>/bpms-analysis/<int:analysis_id>/review', methods=['POST'])
+@permission_required('processes', 'edit')
+def bpms_analysis_review(company_id, analysis_id):
+    from services.process_bpms_analysis_service import review_squad_analysis
+
+    if is_collaborator_in_company(company_id):
+        abort(403, description="Acesso negado: Colaboradores não podem decidir análises.")
+    try:
+        analysis = review_squad_analysis(
+            company_id=company_id,
+            analysis_id=analysis_id,
+            decision=request.form.get('decision', ''),
+            actor_user_id=current_user.id if current_user.is_authenticated else None,
+        )
+        flash('Decisão registrada na Central de Melhorias.', 'success')
+        return redirect(url_for(
+            'processes.bpms_analysis_page',
+            company_id=company_id,
+            analysis_id=analysis.id,
+            process_id=analysis.process_id,
+        ))
+    except ValueError as exc:
+        flash(str(exc), 'warning')
+    return redirect(url_for('processes.bpms_analysis_page', company_id=company_id, analysis_id=analysis_id))
+
 @processes_bp.route('/companies/<int:company_id>/processes/<int:process_id>/bpms-analysis')
 @permission_required('processes', 'view')
 def bpms_analysis_for_process(company_id, process_id):

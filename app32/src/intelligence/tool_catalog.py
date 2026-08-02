@@ -41,6 +41,7 @@ from src.core.mcp_plan_global_okr_tools import register_plan_global_okr_tools
 from src.core.mcp_plan_global_okr_correction_tools import register_plan_global_okr_correction_tools
 from src.core.mcp_plan_participant_tools import register_plan_participant_tools
 from src.core.mcp_process_flow_tools import register_process_flow_tools
+from src.core.mcp_process_improvement_tools import register_process_improvement_tools
 from src.core.mcp_process_pop_tools import register_process_pop_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
 from src.core.mcp_real_estate_auction_tools import register_real_estate_auction_tools
@@ -289,6 +290,18 @@ _supplemental_mcp_tools = (
     SimpleNamespace(
         name="suggest_process_flow_activity_automation_tool",
         description="Sugere rascunhos de automação, conexão APP32/MCP/API e intervenção humana para uma atividade BPMN específica.",
+    ),
+    SimpleNamespace(
+        name="list_process_improvement_requests_tool",
+        description="Lista solicitações e análises da Central de Melhorias no tenant ativo.",
+    ),
+    SimpleNamespace(
+        name="get_process_improvement_analysis_context_tool",
+        description="Obtém briefing, contexto do processo e contrato estruturado para análise do Squad Cliente.",
+    ),
+    SimpleNamespace(
+        name="submit_process_improvement_analysis_tool",
+        description="Grava a sugestão estruturada do Squad Cliente após confirmação humana explícita.",
     ),
     SimpleNamespace(
         name="get_process_pop_step_media_context_tool",
@@ -797,6 +810,7 @@ catalog = ToolCatalog(
         register_plan_global_okr_correction_tools,
         register_plan_participant_tools,
         register_process_flow_tools,
+        register_process_improvement_tools,
         register_process_pop_tools,
         register_profile_contract_tools,
         register_real_estate_auction_tools,

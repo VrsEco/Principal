@@ -49,7 +49,7 @@
             {% if request.args.get('from_modeler') == '1' %}
             <a href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}" class="btn btn-secondary">← Voltar ao Modeler</a>
             {% endif %}
-            <a href="{{ url_for('processes.bpms_analysis_for_process', company_id=company.id, process_id=process_id) }}" class="btn btn-primary" onclick="setTimeout(() => this.blur(), 150)">🧠 Análise BPMS deste Processo</a>
+            <a href="{{ url_for('processes.bpms_analysis_for_process', company_id=company.id, process_id=process_id) }}" class="btn btn-primary" onclick="setTimeout(() => this.blur(), 150)"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Relatar problema ou melhoria</a>
             <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
         </div>
     </section>

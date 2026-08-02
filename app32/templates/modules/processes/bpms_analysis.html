@@ -1,417 +1,333 @@
 {% extends "layouts/workspace.html" %}
 
-{% block title %}Análise BPMS | Versus{% endblock %}
+{% block title %}Central de Melhorias e Diagnósticos | Versus{% endblock %}
 
 {% set analysis = selected_analysis or {} %}
 {% set selected_process = selected_process or None %}
 {% set is_collaborator = is_collaborator or False %}
+{% set status_labels = {
+    'draft': 'Rascunho', 'queued': 'Aguardando análise', 'analyzing': 'Em análise',
+    'needs_input': 'Aguardando informações', 'ready': 'Pronta para decisão',
+    'approved': 'Aprovada', 'archived': 'Arquivada'
+} %}
+{% set status_tones = {
+    'draft': 'neutral', 'queued': 'info', 'analyzing': 'primary',
+    'needs_input': 'warning', 'ready': 'success', 'approved': 'success', 'archived': 'neutral'
+} %}
 
 {% block breadcrumb %}
 <a href="{{ url_for('my_work.my_work') }}">Meu Trabalho</a>
 <span class="sep">/</span>
 <a href="{{ url_for('processes.processes_list') }}">Processos</a>
 <span class="sep">/</span>
-<span class="current">Análise BPMS</span>
+<span class="current">Central de Melhorias</span>
 {% endblock %}
 
 {% block workspace_content %}
-<div class="space-y-6">
-    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div class="space-y-3">
-                <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">BPMN · BPMS · Aderência</span>
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-900">Análise BPMS</h1>
-                    <p class="mt-2 max-w-3xl text-sm text-slate-600">
-                        Use esta análise para decidir com rigor o que é implantação, parametrização, customização ou desenvolvimento novo.
-                    </p>
-                </div>
-                {% if selected_process %}
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                    Processo vinculado: <strong>{{ selected_process.label }}</strong>
-                </div>
-                {% endif %}
-            </div>
-            <div class="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 lg:w-[28rem]">
-                <div>
-                    <strong class="block text-slate-900">Como usar</strong>
-                    <span>1. Defina objetivo e meta. 2. Descreva AS-IS/TO-BE. 3. Varra o app. 4. Classifique gaps. 5. Encaminhe ao especialista correto.</span>
-                </div>
-                <div>
-                    <strong class="block text-slate-900">Local no sidebar</strong>
-                    <span>Gestão da Rotina &gt; Gestão de Processos &gt; Análise BPMS</span>
-                </div>
-                {% if selected_process %}
-                <div>
-                    <strong class="block text-slate-900">Entrada por processo</strong>
-                    <span>Detalhes do Processo &gt; 🧠 Análise BPMS deste Processo</span>
-                </div>
-                {% endif %}
+<div class="improvement-shell" id="improvementHub">
+    <section class="improvement-hero workspace-header fade-in" aria-labelledby="improvementTitle">
+        <div class="improvement-hero__content">
+            <span class="improvement-eyebrow"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> Diagnóstico assistido</span>
+            <h1 class="text-h1" id="improvementTitle">Central de Melhorias e Diagnósticos</h1>
+            <p class="text-secondary">
+                Conte o que está acontecendo em linguagem simples. O Squad Cliente consulta o contexto autorizado via MCP e devolve recomendações para sua decisão.
+            </p>
+            <div class="improvement-hero__signal">
+                <span class="improvement-signal-dot" aria-hidden="true"></span>
+                <span>MCP First · análise tenant-safe · decisão sempre humana</span>
             </div>
         </div>
+        <aside class="improvement-hero__context" aria-label="Contexto da solicitação">
+            <span class="improvement-context__label">Contexto ativo</span>
+            <strong>{{ selected_process.label if selected_process else 'Análise geral da empresa' }}</strong>
+            <small>Empresa {{ company.name }} · company_id {{ company.id }}</small>
+        </aside>
     </section>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            {% if is_collaborator %}
-            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                Você está em modo colaborador. A visualização está liberada, mas a edição da análise BPMS é restrita.
-            </div>
-            {% endif %}
+    <section class="improvement-flow" aria-label="Etapas do diagnóstico">
+        <article class="improvement-flow__step is-active">
+            <span class="improvement-flow__number">1</span>
+            <div><strong>Relate</strong><small>Problema ou oportunidade</small></div>
+        </article>
+        <span class="improvement-flow__line" aria-hidden="true"></span>
+        <article class="improvement-flow__step">
+            <span class="improvement-flow__number"><i class="fas fa-brain" aria-hidden="true"></i></span>
+            <div><strong>Squad analisa</strong><small>Contexto e evidências via MCP</small></div>
+        </article>
+        <span class="improvement-flow__line" aria-hidden="true"></span>
+        <article class="improvement-flow__step">
+            <span class="improvement-flow__number"><i class="fas fa-check" aria-hidden="true"></i></span>
+            <div><strong>Você decide</strong><small>Aprova, ajusta ou arquiva</small></div>
+        </article>
+    </section>
 
-            <form method="post" action="{{ url_for('processes.bpms_analysis_save', company_id=company.id) }}" class="mt-6 space-y-8" id="bpmsAnalysisForm">
-                <input type="hidden" name="analysis_id" value="{{ analysis.id or '' }}">
-                <input type="hidden" name="app_adherence_json" id="appAdherenceJson" value='{{ (analysis.app_adherence_json or [])|tojson|safe }}'>
-                <input type="hidden" name="gap_classification_json" id="gapClassificationJson" value='{{ (analysis.gap_classification_json or [])|tojson|safe }}'>
-                <input type="hidden" name="prioritization_json" id="prioritizationJson" value='{{ (analysis.prioritization_json or [])|tojson|safe }}'>
-
-                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <div class="xl:col-span-2">
-                        <label class="mb-2 block text-sm font-medium text-slate-700">Título</label>
-                        <input type="text" name="title" value="{{ analysis.title or '' }}" class="form-control w-full" placeholder="Ex.: Análise BPMS - Onboarding Comercial" {% if is_collaborator %}disabled{% endif %}>
-                    </div>
+    <div class="improvement-layout">
+        <main class="improvement-main">
+            <section class="improvement-card improvement-intake" aria-labelledby="newRequestTitle">
+                <header class="improvement-card__header">
                     <div>
-                        <label class="mb-2 block text-sm font-medium text-slate-700">Processo</label>
-                        <select name="process_id" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
-                            <option value="">Sem vínculo específico</option>
+                        <span class="improvement-section-kicker">Nova solicitação</span>
+                        <h2 id="newRequestTitle">O que você observou?</h2>
+                        <p>Não prepare uma análise técnica. Descreva apenas a situação real e o resultado que espera.</p>
+                    </div>
+                    <span class="improvement-time-hint"><i class="far fa-clock" aria-hidden="true"></i> 2 min</span>
+                </header>
+
+                {% if is_collaborator %}
+                <div class="improvement-alert improvement-alert--warning" role="status">
+                    <i class="fas fa-lock" aria-hidden="true"></i>
+                    <div><strong>Visualização liberada</strong><span>O registro de solicitações exige permissão de edição.</span></div>
+                </div>
+                {% else %}
+                <form method="post" action="{{ url_for('processes.bpms_analysis_request', company_id=company.id) }}" class="improvement-form">
+                    <fieldset class="improvement-fieldset">
+                        <legend>Como você classificaria esta situação?</legend>
+                        <div class="improvement-type-grid">
+                            <label class="improvement-type-option">
+                                <input type="radio" name="request_type" value="problem" checked>
+                                <span class="improvement-type-option__visual">
+                                    <span class="improvement-type-option__icon is-problem"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i></span>
+                                    <span><strong>Problema</strong><small>Algo não funciona como deveria</small></span>
+                                    <i class="fas fa-circle-check improvement-type-option__check" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <label class="improvement-type-option">
+                                <input type="radio" name="request_type" value="opportunity">
+                                <span class="improvement-type-option__visual">
+                                    <span class="improvement-type-option__icon is-opportunity"><i class="fas fa-lightbulb" aria-hidden="true"></i></span>
+                                    <span><strong>Oportunidade</strong><small>Existe um ganho ainda não explorado</small></span>
+                                    <i class="fas fa-circle-check improvement-type-option__check" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <label class="improvement-type-option">
+                                <input type="radio" name="request_type" value="improvement">
+                                <span class="improvement-type-option__visual">
+                                    <span class="improvement-type-option__icon is-improvement"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></span>
+                                    <span><strong>Melhoria</strong><small>Já sabemos o que queremos evoluir</small></span>
+                                    <i class="fas fa-circle-check improvement-type-option__check" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <label class="improvement-field">
+                        <span>Processo relacionado <small>opcional</small></span>
+                        <select name="process_id" class="form-control">
+                            <option value="">Ainda não sei ou não se aplica</option>
                             {% for option in process_options %}
-                            <option value="{{ option.id }}" {% if analysis.process_id == option.id %}selected{% endif %}>{{ option.label }}</option>
+                            <option value="{{ option.id }}" {% if selected_process_id == option.id %}selected{% endif %}>{{ option.label }}</option>
                             {% endfor %}
                         </select>
-                    </div>
-                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-slate-700">Status</label>
-                            <select name="status" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
-                                <option value="draft" {% if (analysis.status or 'draft') == 'draft' %}selected{% endif %}>Rascunho</option>
-                                <option value="ready" {% if analysis.status == 'ready' %}selected{% endif %}>Pronta para decisão</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-slate-700">Escopo</label>
-                            <select name="scope" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
-                                <option value="pessoal" {% if analysis.scope == 'pessoal' %}selected{% endif %}>Pessoal</option>
-                                <option value="equipe" {% if analysis.scope == 'equipe' %}selected{% endif %}>Equipe</option>
-                                <option value="empresa" {% if (analysis.scope or 'empresa') == 'empresa' %}selected{% endif %}>Empresa</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+                        <small>Vincular o processo ajuda o Squad a encontrar rotinas, fluxos e indicadores relevantes.</small>
+                    </label>
 
-                <div class="grid gap-6 lg:grid-cols-2">
-                    <div class="space-y-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Objetivo, meta e problema</h2>
-                        <textarea name="objective" class="form-control min-h-[120px] w-full" placeholder="Objetivo estratégico da análise" {% if is_collaborator %}disabled{% endif %}>{{ analysis.objective or '' }}</textarea>
-                        <textarea name="goal" class="form-control min-h-[100px] w-full" placeholder="Meta ou resultado-alvo" {% if is_collaborator %}disabled{% endif %}>{{ analysis.goal or '' }}</textarea>
-                        <textarea name="problem_statement" class="form-control min-h-[100px] w-full" placeholder="Problema central / hipótese" {% if is_collaborator %}disabled{% endif %}>{{ analysis.problem_statement or '' }}</textarea>
-                        <textarea name="expected_result" class="form-control min-h-[100px] w-full" placeholder="Resultado esperado" {% if is_collaborator %}disabled{% endif %}>{{ analysis.expected_result or '' }}</textarea>
-                    </div>
-                    <div class="space-y-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Indicadores</h2>
-                        <textarea name="current_indicators" class="form-control min-h-[110px] w-full" placeholder="Indicadores atuais" {% if is_collaborator %}disabled{% endif %}>{{ analysis.current_indicators or '' }}</textarea>
-                        <textarea name="missing_indicators" class="form-control min-h-[110px] w-full" placeholder="Indicadores faltantes" {% if is_collaborator %}disabled{% endif %}>{{ analysis.missing_indicators or '' }}</textarea>
-                        <textarea name="success_measurement" class="form-control min-h-[110px] w-full" placeholder="Como medir sucesso / SLA / ganho esperado" {% if is_collaborator %}disabled{% endif %}>{{ analysis.success_measurement or '' }}</textarea>
-                    </div>
-                </div>
+                    <label class="improvement-field">
+                        <span>Descreva a situação <b>*</b></span>
+                        <textarea name="problem_statement" required maxlength="4000" class="form-control improvement-form__main-text" placeholder="Ex.: Após as reuniões, as ações ficam espalhadas e não conseguimos acompanhar responsáveis e prazos."></textarea>
+                        <small>Inclua quem é afetado, quando acontece e qual consequência você percebe.</small>
+                    </label>
 
-                <div class="grid gap-6 lg:grid-cols-2">
-                    <div class="space-y-4">
-                        <h2 class="text-lg font-semibold text-slate-900">AS-IS</h2>
-                        <textarea name="as_is_summary" class="form-control min-h-[90px] w-full" placeholder="Resumo do fluxo atual" {% if is_collaborator %}disabled{% endif %}>{{ analysis.as_is_summary or '' }}</textarea>
-                        <textarea name="as_is_steps" class="form-control min-h-[120px] w-full" placeholder="Etapas atuais" {% if is_collaborator %}disabled{% endif %}>{{ analysis.as_is_steps or '' }}</textarea>
-                        <textarea name="as_is_exceptions" class="form-control min-h-[100px] w-full" placeholder="Exceções / desvios" {% if is_collaborator %}disabled{% endif %}>{{ analysis.as_is_exceptions or '' }}</textarea>
-                        <textarea name="bottlenecks" class="form-control min-h-[100px] w-full" placeholder="Gargalos" {% if is_collaborator %}disabled{% endif %}>{{ analysis.bottlenecks or '' }}</textarea>
-                        <textarea name="operational_risks" class="form-control min-h-[100px] w-full" placeholder="Riscos operacionais" {% if is_collaborator %}disabled{% endif %}>{{ analysis.operational_risks or '' }}</textarea>
-                        <textarea name="dependencies" class="form-control min-h-[100px] w-full" placeholder="Dependências" {% if is_collaborator %}disabled{% endif %}>{{ analysis.dependencies or '' }}</textarea>
-                    </div>
-                    <div class="space-y-4">
-                        <h2 class="text-lg font-semibold text-slate-900">TO-BE</h2>
-                        <textarea name="to_be_summary" class="form-control min-h-[90px] w-full" placeholder="Resumo do fluxo futuro" {% if is_collaborator %}disabled{% endif %}>{{ analysis.to_be_summary or '' }}</textarea>
-                        <textarea name="to_be_steps" class="form-control min-h-[120px] w-full" placeholder="Etapas futuras" {% if is_collaborator %}disabled{% endif %}>{{ analysis.to_be_steps or '' }}</textarea>
-                        <textarea name="controls" class="form-control min-h-[100px] w-full" placeholder="Controles, POPs, checkpoints" {% if is_collaborator %}disabled{% endif %}>{{ analysis.controls or '' }}</textarea>
-                        <textarea name="expected_automation" class="form-control min-h-[100px] w-full" placeholder="Automação esperada / BPMS / integrações" {% if is_collaborator %}disabled{% endif %}>{{ analysis.expected_automation or '' }}</textarea>
-                        <textarea name="desired_indicators" class="form-control min-h-[100px] w-full" placeholder="Indicadores desejados" {% if is_collaborator %}disabled{% endif %}>{{ analysis.desired_indicators or '' }}</textarea>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Aderência do app</h2>
-                        {% if not is_collaborator %}
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="bpmsRepeaters.add('appAdherence')">Adicionar linha</button>
-                        {% endif %}
-                    </div>
-                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Etapa</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Existe?</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Onde?</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Observação</th>
-                                    {% if not is_collaborator %}<th class="px-4 py-3"></th>{% endif %}
-                                </tr>
-                            </thead>
-                            <tbody id="appAdherenceRows" class="divide-y divide-slate-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Gaps e classificação</h2>
-                        {% if not is_collaborator %}
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="bpmsRepeaters.add('gapClassification')">Adicionar gap</button>
-                        {% endif %}
-                    </div>
-                    <textarea name="identified_gaps" class="form-control min-h-[100px] w-full" placeholder="Resumo dos gaps identificados" {% if is_collaborator %}disabled{% endif %}>{{ analysis.identified_gaps or '' }}</textarea>
-                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Gap</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Classificação</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Justificativa</th>
-                                    {% if not is_collaborator %}<th class="px-4 py-3"></th>{% endif %}
-                                </tr>
-                            </thead>
-                            <tbody id="gapClassificationRows" class="divide-y divide-slate-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between gap-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Priorização</h2>
-                        {% if not is_collaborator %}
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="bpmsRepeaters.add('prioritization')">Adicionar item</button>
-                        {% endif %}
-                    </div>
-                    <div class="overflow-x-auto rounded-2xl border border-slate-200">
-                        <table class="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Item</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Impacto</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Esforço</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Risco</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Prioridade</th>
-                                    {% if not is_collaborator %}<th class="px-4 py-3"></th>{% endif %}
-                                </tr>
-                            </thead>
-                            <tbody id="prioritizationRows" class="divide-y divide-slate-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="grid gap-6 lg:grid-cols-2">
-                    <div class="space-y-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Arquitetura e governança</h2>
-                        <textarea name="architectural_impact" class="form-control min-h-[110px] w-full" placeholder="Impactos em arquitetura, multi-tenancy, dados, segurança" {% if is_collaborator %}disabled{% endif %}>{{ analysis.architectural_impact or '' }}</textarea>
-                        <textarea name="governance_notes" class="form-control min-h-[110px] w-full" placeholder="Governança, auditoria, compliance, ownership" {% if is_collaborator %}disabled{% endif %}>{{ analysis.governance_notes or '' }}</textarea>
-                        <div class="grid gap-3 md:grid-cols-2">
-                            {% for field, label in [
-                                ('requires_architect', '@ARQUITETO'),
-                                ('requires_backend_service', '@BACKEND_SERVICE'),
-                                ('requires_backend_api', '@BACKEND_API'),
-                                ('requires_ai_engineer', '@AI_ENGINEER'),
-                                ('requires_dba', '@DBA'),
-                                ('requires_qa_automation', '@QA_AUTOMATION')
-                            ] %}
-                            <label class="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-                                <input type="checkbox" name="{{ field }}" value="1" {% if analysis[field] %}checked{% endif %} {% if is_collaborator %}disabled{% endif %}>
-                                <span>Acionar {{ label }}</span>
+                    <details class="improvement-optional">
+                        <summary><span><i class="fas fa-plus" aria-hidden="true"></i> Adicionar mais contexto</span><small>Opcional, mas melhora a análise</small></summary>
+                        <div class="improvement-optional__body">
+                            <label class="improvement-field">
+                                <span>Resultado esperado</span>
+                                <textarea name="expected_result" maxlength="2500" class="form-control" placeholder="Como seria uma situação melhor? Qual ganho você espera?"></textarea>
                             </label>
-                            {% endfor %}
+                            <label class="improvement-field">
+                                <span>Evidências ou restrições</span>
+                                <textarea name="evidence" maxlength="4000" class="form-control" placeholder="Exemplos, frequência, números, prazo, pessoas afetadas ou limitações conhecidas."></textarea>
+                            </label>
                         </div>
-                    </div>
-                    <div class="space-y-4">
-                        <h2 class="text-lg font-semibold text-slate-900">Recomendação final</h2>
-                        <textarea name="recommendation_summary" class="form-control min-h-[90px] w-full" placeholder="Síntese executiva da recomendação" {% if is_collaborator %}disabled{% endif %}>{{ analysis.recommendation_summary or '' }}</textarea>
-                        <textarea name="implement_now" class="form-control min-h-[80px] w-full" placeholder="O que é só implantar agora" {% if is_collaborator %}disabled{% endif %}>{{ analysis.implement_now or '' }}</textarea>
-                        <textarea name="parameterize_now" class="form-control min-h-[80px] w-full" placeholder="O que é parametrizar/customizar leve" {% if is_collaborator %}disabled{% endif %}>{{ analysis.parameterize_now or '' }}</textarea>
-                        <textarea name="customize_later" class="form-control min-h-[80px] w-full" placeholder="O que é customizar depois" {% if is_collaborator %}disabled{% endif %}>{{ analysis.customize_later or '' }}</textarea>
-                        <textarea name="develop_for_real" class="form-control min-h-[80px] w-full" placeholder="O que é desenvolvimento real" {% if is_collaborator %}disabled{% endif %}>{{ analysis.develop_for_real or '' }}</textarea>
-                        <textarea name="not_now" class="form-control min-h-[80px] w-full" placeholder="O que não fazer agora" {% if is_collaborator %}disabled{% endif %}>{{ analysis.not_now or '' }}</textarea>
-                        <textarea name="next_action" class="form-control min-h-[80px] w-full" placeholder="Próxima ação recomendada" {% if is_collaborator %}disabled{% endif %}>{{ analysis.next_action or '' }}</textarea>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-slate-700">Especialista líder</label>
-                                <select name="lead_specialist" class="form-control w-full" {% if is_collaborator %}disabled{% endif %}>
-                                    <option value="">Definir depois</option>
-                                    {% for option in lead_specialist_options %}
-                                    <option value="{{ option.value }}" {% if analysis.lead_specialist == option.value %}selected{% endif %}>{{ option.label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-slate-700">Dependências antes da execução</label>
-                                <textarea name="dependencies_before_execution" class="form-control min-h-[80px] w-full" placeholder="Migração, dados, processo, treinamento..." {% if is_collaborator %}disabled{% endif %}>{{ analysis.dependencies_before_execution or '' }}</textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </details>
 
-                <div class="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-6">
-                    {% if not is_collaborator %}
-                    <button type="submit" class="btn btn-primary">Salvar análise BPMS</button>
-                    {% endif %}
-                    <a href="{{ url_for('processes.bpms_analysis_page', company_id=company.id, process_id=selected_process_id) }}" class="btn btn-secondary">Nova análise</a>
-                </div>
-            </form>
-        </section>
-
-        <aside class="space-y-6">
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 class="text-lg font-semibold text-slate-900">Análises salvas</h2>
-                <div class="mt-4 space-y-3">
-                    {% if analyses %}
-                        {% for item in analyses %}
-                        <a href="{{ url_for('processes.bpms_analysis_page', company_id=company.id, analysis_id=item.id, process_id=item.process_id) }}" class="block rounded-xl border border-slate-200 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50/40">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <strong class="block text-sm text-slate-900">{{ item.title }}</strong>
-                                    <span class="mt-1 block text-xs text-slate-500">{{ item.process_label }}</span>
-                                </div>
-                                <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-600">{{ item.status }}</span>
-                            </div>
-                            <div class="mt-2 text-xs text-slate-500">Escopo: {{ item.scope }} · Atualizada em {{ item.updated_at or '—' }}</div>
-                        </a>
-                        {% endfor %}
-                    {% else %}
-                        <div class="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                            Nenhuma análise BPMS salva ainda para este contexto.
+                    <input type="hidden" name="scope" value="empresa">
+                    <footer class="improvement-form__footer">
+                        <div class="improvement-privacy-note">
+                            <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                            <span>Dados restritos à empresa ativa e submetidos à revisão humana.</span>
                         </div>
+                        <button type="submit" class="btn btn-primary improvement-submit">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar para o Squad Cliente
+                        </button>
+                    </footer>
+                </form>
+                {% endif %}
+            </section>
+
+            {% if analysis.id %}
+            <section class="improvement-card improvement-analysis" aria-labelledby="analysisTitle">
+                <header class="improvement-card__header improvement-card__header--analysis">
+                    <div>
+                        <span class="improvement-section-kicker">Análise #{{ analysis.id }}</span>
+                        <h2 id="analysisTitle">{{ analysis.title }}</h2>
+                        <p>{{ selected_process.label if selected_process else 'Sem processo específico' }}</p>
+                    </div>
+                    <span class="improvement-status is-{{ status_tones.get(analysis.status, 'neutral') }}">
+                        <span class="improvement-status__dot" aria-hidden="true"></span>{{ status_labels.get(analysis.status, analysis.status) }}
+                    </span>
+                </header>
+
+                <article class="improvement-briefing">
+                    <span class="improvement-briefing__icon"><i class="far fa-message" aria-hidden="true"></i></span>
+                    <div>
+                        <span class="improvement-label">Briefing registrado</span>
+                        <p>{{ analysis.problem_statement or '—' }}</p>
+                        {% if analysis.expected_result %}<div class="improvement-briefing__meta"><strong>Resultado esperado</strong><span>{{ analysis.expected_result }}</span></div>{% endif %}
+                        {% if analysis.dependencies %}<div class="improvement-briefing__meta"><strong>Evidências e restrições</strong><span>{{ analysis.dependencies }}</span></div>{% endif %}
+                    </div>
+                </article>
+
+                {% if analysis.status in ['queued', 'analyzing'] %}
+                <div class="improvement-progress" role="status">
+                    <span class="improvement-progress__icon"><i class="fas fa-brain" aria-hidden="true"></i></span>
+                    <div><strong>Solicitação disponível para o Squad Cliente</strong><span>O diagnóstico será construído via MCP e aparecerá neste repositório.</span></div>
+                    <span class="improvement-progress__pulse" aria-hidden="true"></span>
+                </div>
+                {% elif analysis.status == 'needs_input' %}
+                <div class="improvement-alert improvement-alert--warning" role="status">
+                    <i class="fas fa-circle-question" aria-hidden="true"></i>
+                    <div><strong>O Squad precisa de mais informações</strong><span>Revise a recomendação e complemente o contexto antes de uma nova análise.</span></div>
+                </div>
+                {% endif %}
+
+                {% if analysis.recommendation_summary or analysis.as_is_summary %}
+                <div class="improvement-result-grid">
+                    <article class="improvement-result-card">
+                        <span class="improvement-result-card__icon is-diagnosis"><i class="fas fa-stethoscope" aria-hidden="true"></i></span>
+                        <span class="improvement-label">Diagnóstico</span>
+                        <p>{{ analysis.as_is_summary or 'Não informado.' }}</p>
+                    </article>
+                    <article class="improvement-result-card is-featured">
+                        <span class="improvement-result-card__icon is-recommendation"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span>
+                        <span class="improvement-label">Recomendação do Squad</span>
+                        <p>{{ analysis.recommendation_summary or 'Não informada.' }}</p>
+                    </article>
+                    {% if analysis.identified_gaps %}
+                    <article class="improvement-result-card">
+                        <span class="improvement-result-card__icon is-gap"><i class="fas fa-puzzle-piece" aria-hidden="true"></i></span>
+                        <span class="improvement-label">Gaps encontrados</span>
+                        <p>{{ analysis.identified_gaps }}</p>
+                    </article>
+                    {% endif %}
+                    {% if analysis.to_be_summary %}
+                    <article class="improvement-result-card">
+                        <span class="improvement-result-card__icon is-future"><i class="fas fa-route" aria-hidden="true"></i></span>
+                        <span class="improvement-label">Cenário sugerido</span>
+                        <p>{{ analysis.to_be_summary }}</p>
+                    </article>
                     {% endif %}
                 </div>
+                {% if analysis.next_action %}
+                <div class="improvement-next-action"><span><i class="fas fa-arrow-right" aria-hidden="true"></i></span><div><strong>Próxima ação sugerida</strong><p>{{ analysis.next_action }}</p></div></div>
+                {% endif %}
+                {% endif %}
+
+                {% if analysis.status == 'ready' and not is_collaborator %}
+                <footer class="improvement-decision">
+                    <div><strong>Sua decisão</strong><span>A aprovação não executa mudanças automaticamente.</span></div>
+                    <div class="improvement-decision__actions">
+                        <form method="post" action="{{ url_for('processes.bpms_analysis_review', company_id=company.id, analysis_id=analysis.id) }}">
+                            <input type="hidden" name="decision" value="archived"><button type="submit" class="btn btn-secondary">Arquivar</button>
+                        </form>
+                        <form method="post" action="{{ url_for('processes.bpms_analysis_review', company_id=company.id, analysis_id=analysis.id) }}">
+                            <input type="hidden" name="decision" value="approved"><button type="submit" class="btn btn-primary"><i class="fas fa-check" aria-hidden="true"></i> Aprovar recomendação</button>
+                        </form>
+                    </div>
+                </footer>
+                {% endif %}
+            </section>
+            {% endif %}
+        </main>
+
+        <aside class="improvement-sidebar" aria-labelledby="historyTitle">
+            <section class="improvement-card improvement-history">
+                <header class="improvement-history__header">
+                    <div><span class="improvement-section-kicker">Repositório</span><h2 id="historyTitle">Análises registradas</h2></div>
+                    <span class="improvement-counter">{{ analyses|length }}</span>
+                </header>
+                {% if analyses %}
+                <label class="improvement-search">
+                    <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                    <input id="improvementSearch" type="search" placeholder="Buscar análise" autocomplete="off">
+                </label>
+                <div class="improvement-history__list" id="improvementHistoryList">
+                    {% for item in analyses %}
+                    <a href="{{ url_for('processes.bpms_analysis_page', company_id=company.id, analysis_id=item.id, process_id=item.process_id) }}"
+                       class="improvement-history-item {{ 'is-selected' if analysis.id == item.id }}"
+                       data-search="{{ (item.title ~ ' ' ~ item.process_label ~ ' ' ~ status_labels.get(item.status, item.status))|lower }}">
+                        <span class="improvement-history-item__top">
+                            <span class="improvement-status is-{{ status_tones.get(item.status, 'neutral') }}"><span class="improvement-status__dot"></span>{{ status_labels.get(item.status, item.status) }}</span>
+                            <small>#{{ item.id }}</small>
+                        </span>
+                        <strong>{{ item.title }}</strong>
+                        <span class="improvement-history-item__process"><i class="fas fa-diagram-project" aria-hidden="true"></i>{{ item.process_label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                <p class="improvement-empty" id="improvementSearchEmpty" hidden>Nenhuma análise corresponde à busca.</p>
+                {% else %}
+                <div class="improvement-empty">
+                    <span><i class="far fa-folder-open" aria-hidden="true"></i></span>
+                    <strong>Nenhuma análise ainda</strong>
+                    <p>Sua primeira solicitação aparecerá aqui.</p>
+                </div>
+                {% endif %}
             </section>
         </aside>
     </div>
 </div>
 
+<style>
+    .improvement-shell{max-width:1380px;margin:0 auto;padding:0 1.25rem 4rem;display:flex;flex-direction:column;gap:1rem;color:var(--text-primary)}
+    .improvement-hero{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(260px,.65fr);gap:1.25rem;padding:1.5rem;border:1px solid var(--border);border-radius:24px;background:linear-gradient(135deg,rgba(37,99,235,.09),rgba(99,102,241,.04) 52%,var(--surface-primary));box-shadow:var(--shadow-sm)}
+    .improvement-hero__content h1{margin:.3rem 0 .5rem}.improvement-hero__content p{max-width:76ch;margin:0;line-height:1.65}
+    .improvement-eyebrow,.improvement-section-kicker,.improvement-label{display:block;font-size:.72rem;font-weight:800;letter-spacing:.075em;text-transform:uppercase;color:var(--primary)}
+    .improvement-eyebrow i{margin-right:.35rem}.improvement-hero__signal{display:flex;align-items:center;gap:.55rem;margin-top:1rem;color:var(--text-secondary);font-size:.84rem}
+    .improvement-signal-dot{width:8px;height:8px;border-radius:999px;background:#10b981;box-shadow:0 0 0 5px rgba(16,185,129,.12)}
+    .improvement-hero__context{display:flex;flex-direction:column;justify-content:center;gap:.38rem;padding:1.1rem 1.2rem;border:1px solid rgba(37,99,235,.14);border-radius:18px;background:rgba(255,255,255,.74);backdrop-filter:blur(8px)}
+    .improvement-context__label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-tertiary)}.improvement-hero__context strong{font-size:1.02rem}.improvement-hero__context small{color:var(--text-secondary)}
+    .improvement-flow{display:grid;grid-template-columns:auto 1fr auto 1fr auto;align-items:center;padding:.9rem 1.1rem;border:1px solid var(--border);border-radius:18px;background:var(--surface-primary)}
+    .improvement-flow__step{display:flex;align-items:center;gap:.7rem;color:var(--text-secondary)}.improvement-flow__step strong,.improvement-flow__step small{display:block}.improvement-flow__step strong{font-size:.86rem;color:var(--text-primary)}.improvement-flow__step small{font-size:.75rem;margin-top:.12rem}
+    .improvement-flow__number{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--border);border-radius:12px;background:var(--surface-secondary);font-size:.78rem;font-weight:800}.improvement-flow__step.is-active .improvement-flow__number{color:#fff;background:var(--primary);border-color:var(--primary);box-shadow:0 7px 16px rgba(37,99,235,.2)}
+    .improvement-flow__line{height:1px;margin:0 1rem;background:linear-gradient(90deg,var(--border),rgba(37,99,235,.3),var(--border))}
+    .improvement-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:1rem;align-items:start}.improvement-main{display:flex;flex-direction:column;gap:1rem}.improvement-sidebar{position:sticky;top:88px}
+    .improvement-card{border:1px solid var(--border);border-radius:22px;background:var(--surface-primary);box-shadow:var(--shadow-sm)}.improvement-intake,.improvement-analysis{padding:1.35rem}
+    .improvement-card__header,.improvement-history__header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}.improvement-card__header h2,.improvement-history__header h2{margin:.22rem 0 .25rem;font-size:1.2rem}.improvement-card__header p{margin:0;color:var(--text-secondary);font-size:.9rem;line-height:1.55}
+    .improvement-time-hint,.improvement-counter{display:inline-flex;align-items:center;gap:.35rem;flex:0 0 auto;border:1px solid var(--border);border-radius:999px;padding:.38rem .68rem;background:var(--surface-secondary);color:var(--text-secondary);font-size:.76rem;font-weight:700}.improvement-counter{min-width:32px;justify-content:center;color:var(--primary)}
+    .improvement-form{display:flex;flex-direction:column;gap:1.15rem;margin-top:1.25rem}.improvement-fieldset{padding:0;border:0;margin:0}.improvement-fieldset legend,.improvement-field>span{display:block;margin-bottom:.55rem;font-size:.84rem;font-weight:750;color:var(--text-primary)}.improvement-field>span small{font-weight:500;color:var(--text-tertiary)}.improvement-field>span b{color:#dc2626}.improvement-field>small{display:block;margin-top:.38rem;color:var(--text-tertiary);font-size:.76rem}
+    .improvement-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}.improvement-type-option{cursor:pointer}.improvement-type-option input{position:absolute;opacity:0;pointer-events:none}.improvement-type-option__visual{position:relative;display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:.65rem;min-height:76px;padding:.75rem;border:1px solid var(--border);border-radius:16px;background:var(--surface-primary);transition:.18s ease}.improvement-type-option:hover .improvement-type-option__visual{border-color:rgba(37,99,235,.38);transform:translateY(-1px)}.improvement-type-option input:checked+.improvement-type-option__visual{border-color:var(--primary);background:rgba(37,99,235,.045);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+    .improvement-type-option__icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px}.improvement-type-option__icon.is-problem{color:#dc2626;background:#fef2f2}.improvement-type-option__icon.is-opportunity{color:#b45309;background:#fffbeb}.improvement-type-option__icon.is-improvement{color:#047857;background:#ecfdf5}.improvement-type-option__visual strong,.improvement-type-option__visual small{display:block}.improvement-type-option__visual strong{font-size:.84rem}.improvement-type-option__visual small{margin-top:.18rem;color:var(--text-secondary);font-size:.7rem;line-height:1.3}.improvement-type-option__check{opacity:0;color:var(--primary);transition:.18s}.improvement-type-option input:checked+.improvement-type-option__visual .improvement-type-option__check{opacity:1}
+    .improvement-form .form-control{width:100%;border-radius:14px;border-color:var(--border);background:var(--surface-primary);padding:.8rem .9rem;color:var(--text-primary);transition:.18s ease}.improvement-form .form-control:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);outline:none}.improvement-form textarea{min-height:92px;resize:vertical;line-height:1.55}.improvement-form textarea.improvement-form__main-text{min-height:142px}
+    .improvement-optional{border:1px dashed var(--border);border-radius:16px;background:var(--surface-secondary)}.improvement-optional summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.85rem 1rem;cursor:pointer;list-style:none;color:var(--primary);font-size:.84rem;font-weight:700}.improvement-optional summary::-webkit-details-marker{display:none}.improvement-optional summary small{color:var(--text-tertiary);font-weight:500}.improvement-optional summary i{margin-right:.35rem;transition:.18s}.improvement-optional[open] summary i{transform:rotate(45deg)}.improvement-optional__body{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:0 1rem 1rem}
+    .improvement-form__footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-top:1rem;border-top:1px solid var(--border)}.improvement-privacy-note{display:flex;align-items:center;gap:.55rem;color:var(--text-tertiary);font-size:.76rem}.improvement-privacy-note i{color:#10b981}.improvement-submit{display:inline-flex;align-items:center;gap:.5rem;border-radius:12px!important;padding:.8rem 1.05rem!important}
+    .improvement-history{padding:1.05rem}.improvement-search{display:flex;align-items:center;gap:.55rem;margin-top:.9rem;padding:.62rem .75rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-secondary);color:var(--text-tertiary)}.improvement-search input{width:100%;border:0;outline:0;background:transparent;color:var(--text-primary);font-size:.82rem}.improvement-history__list{display:flex;flex-direction:column;gap:.55rem;margin-top:.75rem;max-height:620px;overflow:auto;padding-right:.15rem}.improvement-history-item{display:flex;flex-direction:column;gap:.5rem;padding:.8rem;border:1px solid var(--border);border-radius:15px;color:inherit;text-decoration:none;transition:.18s ease}.improvement-history-item:hover{border-color:rgba(37,99,235,.35);transform:translateY(-1px);box-shadow:0 8px 18px rgba(15,23,42,.06)}.improvement-history-item.is-selected{border-color:var(--primary);background:rgba(37,99,235,.045)}.improvement-history-item__top{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.improvement-history-item__top small{color:var(--text-tertiary)}.improvement-history-item>strong{font-size:.84rem;line-height:1.35}.improvement-history-item__process{display:flex;align-items:flex-start;gap:.4rem;color:var(--text-secondary);font-size:.72rem;line-height:1.4}
+    .improvement-status{display:inline-flex;align-items:center;gap:.38rem;width:max-content;border-radius:999px;padding:.3rem .55rem;font-size:.68rem;font-weight:800}.improvement-status__dot{width:6px;height:6px;border-radius:999px;background:currentColor}.improvement-status.is-neutral{color:#64748b;background:#f1f5f9}.improvement-status.is-info{color:#1d4ed8;background:#eff6ff}.improvement-status.is-primary{color:#6d28d9;background:#f5f3ff}.improvement-status.is-warning{color:#b45309;background:#fffbeb}.improvement-status.is-success{color:#047857;background:#ecfdf5}
+    .improvement-card__header--analysis{padding-bottom:1rem;border-bottom:1px solid var(--border)}.improvement-briefing{display:grid;grid-template-columns:42px 1fr;gap:.85rem;margin-top:1rem;padding:1rem;border-radius:16px;background:var(--surface-secondary);border:1px solid var(--border)}.improvement-briefing__icon,.improvement-progress__icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:rgba(37,99,235,.1);color:var(--primary)}.improvement-briefing p,.improvement-result-card p{margin:.4rem 0 0;white-space:pre-line;color:var(--text-secondary);font-size:.86rem;line-height:1.65}.improvement-briefing__meta{display:grid;gap:.18rem;margin-top:.8rem}.improvement-briefing__meta strong{font-size:.75rem}.improvement-briefing__meta span{color:var(--text-secondary);font-size:.82rem}
+    .improvement-progress,.improvement-alert{display:flex;align-items:center;gap:.8rem;margin-top:1rem;padding:.9rem 1rem;border-radius:15px}.improvement-progress{position:relative;border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af}.improvement-progress strong,.improvement-progress span,.improvement-alert strong,.improvement-alert span{display:block}.improvement-progress span,.improvement-alert span{margin-top:.15rem;font-size:.78rem}.improvement-progress__pulse{position:absolute!important;right:1rem;width:9px;height:9px;border-radius:999px;background:#3b82f6;box-shadow:0 0 0 7px rgba(59,130,246,.12)}.improvement-alert--warning{border:1px solid #fde68a;background:#fffbeb;color:#92400e}
+    .improvement-result-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:1rem}.improvement-result-card{position:relative;padding:1rem;border:1px solid var(--border);border-radius:17px;background:var(--surface-primary)}.improvement-result-card.is-featured{border-color:rgba(37,99,235,.25);background:linear-gradient(135deg,rgba(37,99,235,.055),rgba(99,102,241,.025))}.improvement-result-card__icon{display:grid;place-items:center;width:36px;height:36px;margin-bottom:.7rem;border-radius:11px}.improvement-result-card__icon.is-diagnosis{color:#1d4ed8;background:#eff6ff}.improvement-result-card__icon.is-recommendation{color:#6d28d9;background:#f5f3ff}.improvement-result-card__icon.is-gap{color:#b45309;background:#fffbeb}.improvement-result-card__icon.is-future{color:#047857;background:#ecfdf5}.improvement-next-action{display:flex;gap:.75rem;margin-top:.75rem;padding:1rem;border:1px solid #a7f3d0;border-radius:16px;background:#ecfdf5;color:#065f46}.improvement-next-action>span{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:#d1fae5}.improvement-next-action p{margin:.2rem 0 0;font-size:.84rem}
+    .improvement-decision{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}.improvement-decision>div>strong,.improvement-decision>div>span{display:block}.improvement-decision>div>span{margin-top:.18rem;color:var(--text-secondary);font-size:.76rem}.improvement-decision__actions{display:flex;gap:.55rem}.improvement-decision__actions form{margin:0}
+    .improvement-empty{padding:1.5rem .75rem;text-align:center;color:var(--text-secondary)}.improvement-empty>span{display:grid;place-items:center;width:44px;height:44px;margin:0 auto .7rem;border-radius:14px;background:var(--surface-secondary);color:var(--text-tertiary)}.improvement-empty strong{display:block;color:var(--text-primary);font-size:.85rem}.improvement-empty p{margin:.25rem 0 0;font-size:.76rem}
+    @media(max-width:1080px){.improvement-layout{grid-template-columns:1fr}.improvement-sidebar{position:static}.improvement-history__list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:none}}
+    @media(max-width:760px){.improvement-shell{padding:0 .75rem 3rem}.improvement-hero{grid-template-columns:1fr;padding:1.15rem}.improvement-flow{grid-template-columns:1fr;gap:.55rem}.improvement-flow__line{display:none}.improvement-flow__step{padding:.25rem}.improvement-type-grid,.improvement-optional__body,.improvement-result-grid,.improvement-history__list{grid-template-columns:1fr}.improvement-form__footer,.improvement-decision{align-items:stretch;flex-direction:column}.improvement-submit{justify-content:center}.improvement-decision__actions{display:grid;grid-template-columns:1fr 1fr}.improvement-decision__actions button{width:100%}}
+    @media(prefers-reduced-motion:reduce){.improvement-type-option__visual,.improvement-history-item{transition:none!important}}
+</style>
+
 <script>
 (() => {
-    const isCollaborator = {{ 'true' if is_collaborator else 'false' }};
-    const configs = {
-        appAdherence: {
-            hiddenId: 'appAdherenceJson',
-            tbodyId: 'appAdherenceRows',
-            fields: ['stage', 'exists', 'where', 'observation'],
-            createRow(data = {}) {
-                return `
-                    <tr>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="stage" value="${escapeHtml(data.stage || '')}" class="form-control w-full" placeholder="Etapa do processo"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="exists" value="${escapeHtml(data.exists || '')}" class="form-control w-full" placeholder="Já existe / parcial / não existe"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="where" value="${escapeHtml(data.where || '')}" class="form-control w-full" placeholder="Tela / módulo / serviço"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="observation" value="${escapeHtml(data.observation || '')}" class="form-control w-full" placeholder="Observação"></td>
-                        ${isCollaborator ? '' : '<td class="px-4 py-3 text-right"><button type="button" class="btn btn-ghost btn-sm" data-remove-row>Remover</button></td>'}
-                    </tr>
-                `;
-            }
-        },
-        gapClassification: {
-            hiddenId: 'gapClassificationJson',
-            tbodyId: 'gapClassificationRows',
-            fields: ['gap', 'classification', 'justification'],
-            createRow(data = {}) {
-                return `
-                    <tr>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="gap" value="${escapeHtml(data.gap || '')}" class="form-control w-full" placeholder="Gap"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="classification" value="${escapeHtml(data.classification || '')}" class="form-control w-full" placeholder="Implantar / parametrizar / customizar / desenvolver / adiar"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="justification" value="${escapeHtml(data.justification || '')}" class="form-control w-full" placeholder="Justificativa"></td>
-                        ${isCollaborator ? '' : '<td class="px-4 py-3 text-right"><button type="button" class="btn btn-ghost btn-sm" data-remove-row>Remover</button></td>'}
-                    </tr>
-                `;
-            }
-        },
-        prioritization: {
-            hiddenId: 'prioritizationJson',
-            tbodyId: 'prioritizationRows',
-            fields: ['item', 'impact', 'effort', 'risk', 'priority'],
-            createRow(data = {}) {
-                return `
-                    <tr>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="item" value="${escapeHtml(data.item || '')}" class="form-control w-full" placeholder="Item"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="impact" value="${escapeHtml(data.impact || '')}" class="form-control w-full" placeholder="Alto / médio / baixo"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="effort" value="${escapeHtml(data.effort || '')}" class="form-control w-full" placeholder="Alto / médio / baixo"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="risk" value="${escapeHtml(data.risk || '')}" class="form-control w-full" placeholder="Risco"></td>
-                        <td class="px-4 py-3"><input ${isCollaborator ? 'disabled' : ''} type="text" data-field="priority" value="${escapeHtml(data.priority || '')}" class="form-control w-full" placeholder="P1 / P2 / P3"></td>
-                        ${isCollaborator ? '' : '<td class="px-4 py-3 text-right"><button type="button" class="btn btn-ghost btn-sm" data-remove-row>Remover</button></td>'}
-                    </tr>
-                `;
-            }
-        }
-    };
-
-    function escapeHtml(value) {
-        return String(value || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    function parseRows(hiddenId) {
-        const raw = document.getElementById(hiddenId)?.value || '[]';
-        try {
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) && parsed.length ? parsed : [{}];
-        } catch {
-            return [{}];
-        }
-    }
-
-    function serialize(type) {
-        const config = configs[type];
-        const tbody = document.getElementById(config.tbodyId);
-        const rows = [...tbody.querySelectorAll('tr')].map((tr) => {
-            const row = {};
-            config.fields.forEach((field) => {
-                row[field] = tr.querySelector(`[data-field="${field}"]`)?.value?.trim() || '';
-            });
-            return row;
-        }).filter((row) => Object.values(row).some(Boolean));
-        document.getElementById(config.hiddenId).value = JSON.stringify(rows);
-    }
-
-    function render(type) {
-        const config = configs[type];
-        const tbody = document.getElementById(config.tbodyId);
-        tbody.innerHTML = parseRows(config.hiddenId).map((row) => config.createRow(row)).join('');
-        bind(type);
-        serialize(type);
-    }
-
-    function bind(type) {
-        const config = configs[type];
-        const tbody = document.getElementById(config.tbodyId);
-        tbody.querySelectorAll('[data-remove-row]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                btn.closest('tr')?.remove();
-                if (!tbody.querySelector('tr')) {
-                    tbody.innerHTML = config.createRow({});
-                    bind(type);
-                }
-                serialize(type);
-            });
+    const search = document.getElementById('improvementSearch');
+    const list = document.getElementById('improvementHistoryList');
+    const empty = document.getElementById('improvementSearchEmpty');
+    if (!search || !list) return;
+    search.addEventListener('input', () => {
+        const term = search.value.trim().toLocaleLowerCase('pt-BR');
+        let visible = 0;
+        list.querySelectorAll('[data-search]').forEach((item) => {
+            const matches = !term || item.dataset.search.includes(term);
+            item.hidden = !matches;
+            if (matches) visible += 1;
         });
-        tbody.querySelectorAll('input').forEach((input) => input.addEventListener('input', () => serialize(type)));
-    }
-
-    window.bpmsRepeaters = {
-        add(type) {
-            const config = configs[type];
-            const tbody = document.getElementById(config.tbodyId);
-            tbody.insertAdjacentHTML('beforeend', config.createRow({}));
-            bind(type);
-            serialize(type);
-        }
-    };
-
-    Object.keys(configs).forEach(render);
-    document.getElementById('bpmsAnalysisForm')?.addEventListener('submit', () => {
-        Object.keys(configs).forEach(serialize);
+        if (empty) empty.hidden = visible > 0;
     });
 })();
 </script>

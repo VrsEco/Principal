@@ -5,7 +5,15 @@ from typing import Any
 
 from models import db, Company, Process, ProcessBpmsAnalysis
 
-VALID_ANALYSIS_STATUSES = {"draft", "ready"}
+VALID_ANALYSIS_STATUSES = {
+    "draft",
+    "queued",
+    "analyzing",
+    "needs_input",
+    "ready",
+    "approved",
+    "archived",
+}
 VALID_SCOPES = {"pessoal", "equipe", "empresa"}
 VALID_LEAD_SPECIALISTS = {"arquiteto", "backend_service", "backend_api", "ai_engineer", "dba", "qa_automation"}
 
@@ -40,6 +48,158 @@ def list_bpms_analyses(company_id: int, process_id: int | None = None) -> list[d
         }
         for item in analyses
     ]
+
+
+def create_improvement_request(
+    *, company_id: int, form_data: dict[str, Any], actor_user_id: int | None
+) -> ProcessBpmsAnalysis:
+    """Registra um briefing curto para posterior análise do Squad Cliente."""
+    if Company.query.filter_by(id=company_id).first() is None:
+        raise ValueError("Empresa não encontrada.")
+    process_id = _coerce_int(form_data.get("process_id"))
+    process = Process.query.filter_by(company_id=company_id, id=process_id).first() if process_id else None
+    if process_id and not process:
+        raise ValueError("Processo vinculado não encontrado para a empresa ativa.")
+
+    problem = _clean_text(form_data.get("problem_statement"))
+    if not problem:
+        raise ValueError("Descreva o problema, oportunidade ou melhoria desejada.")
+
+    request_type = str(form_data.get("request_type") or "problem").strip().lower()
+    if request_type not in {"problem", "opportunity", "improvement"}:
+        raise ValueError("Tipo de solicitação inválido.")
+
+    title = _clean_text(form_data.get("title"))
+    if not title:
+        title = problem[:120]
+
+    analysis = ProcessBpmsAnalysis(
+        company_id=company_id,
+        process_id=process_id,
+        title=title,
+        status="queued",
+        scope=str(form_data.get("scope") or "empresa").strip().lower(),
+        problem_statement=problem,
+        objective=_clean_text(form_data.get("objective")),
+        expected_result=_clean_text(form_data.get("expected_result")),
+        dependencies=_clean_text(form_data.get("evidence")),
+        governance_notes=f"request_type={request_type}; origin=improvement_hub",
+        created_by_user_id=actor_user_id,
+        updated_by_user_id=actor_user_id,
+    )
+    if analysis.scope not in VALID_SCOPES:
+        raise ValueError("Escopo da solicitação inválido.")
+    db.session.add(analysis)
+    db.session.commit()
+    return analysis
+
+
+def build_squad_analysis_context(*, company_id: int, analysis_id: int) -> dict[str, Any]:
+    """Entrega ao MCP um contrato estruturado, sem transformar prompt em integração."""
+    analysis = get_bpms_analysis(company_id, analysis_id)
+    if not analysis:
+        raise ValueError("Solicitação de análise não encontrada para a empresa ativa.")
+    process = analysis.process
+    return {
+        "request": {
+            "id": analysis.id,
+            "company_id": company_id,
+            "status": analysis.status,
+            "scope": analysis.scope,
+            "title": analysis.title,
+            "problem_or_opportunity": analysis.problem_statement,
+            "objective": analysis.objective,
+            "expected_result": analysis.expected_result,
+            "evidence_and_constraints": analysis.dependencies,
+        },
+        "process": (
+            {
+                "id": process.id,
+                "code": process.code,
+                "name": process.name,
+                "description": process.description,
+                "responsible": process.responsible,
+                "kanban_stage": process.kanban_stage,
+                "structuring_level": process.structuring_level,
+                "performance_level": process.performance_level,
+            }
+            if process
+            else None
+        ),
+        "analysis_contract": {
+            "required_sections": [
+                "diagnosis",
+                "evidence",
+                "as_is",
+                "gaps",
+                "to_be",
+                "recommendations",
+                "prioritization",
+                "risks",
+                "next_action",
+            ],
+            "rules": [
+                "Diferenciar fatos consultados de inferências.",
+                "Indicar lacunas de informação em vez de inventar contexto.",
+                "Manter toda consulta operacional escopada pelo company_id recebido.",
+                "Submeter o resultado para revisão humana; não executar recomendações automaticamente.",
+            ],
+        },
+    }
+
+
+def submit_squad_analysis(
+    *, company_id: int, analysis_id: int, payload: dict[str, Any], actor_user_id: int | None
+) -> ProcessBpmsAnalysis:
+    """Persiste a sugestão estruturada do Squad Cliente para revisão humana."""
+    analysis = get_bpms_analysis(company_id, analysis_id)
+    if not analysis:
+        raise ValueError("Solicitação de análise não encontrada para a empresa ativa.")
+    if analysis.status in {"approved", "archived"}:
+        raise ValueError("Análises aprovadas ou arquivadas não podem ser sobrescritas pelo Squad.")
+    if not isinstance(payload, dict):
+        raise ValueError("Resultado da análise deve ser um objeto.")
+
+    diagnosis = _clean_text(payload.get("diagnosis"))
+    recommendations = _clean_text(payload.get("recommendations") or payload.get("recommendation_summary"))
+    if not diagnosis or not recommendations:
+        raise ValueError("A análise precisa conter diagnóstico e recomendações.")
+
+    analysis.as_is_summary = diagnosis
+    analysis.as_is_steps = _clean_text(payload.get("as_is"))
+    analysis.identified_gaps = _clean_text(payload.get("gaps"))
+    analysis.to_be_summary = _clean_text(payload.get("to_be"))
+    analysis.recommendation_summary = recommendations
+    analysis.operational_risks = _clean_text(payload.get("risks"))
+    analysis.next_action = _clean_text(payload.get("next_action"))
+    analysis.app_adherence_json = _coerce_json_list(payload.get("evidence"))
+    analysis.gap_classification_json = _coerce_json_list(payload.get("gap_classification"))
+    analysis.prioritization_json = _coerce_json_list(payload.get("prioritization"))
+    analysis.lead_specialist = str(payload.get("lead_specialist") or "").strip().lower() or None
+    if analysis.lead_specialist and analysis.lead_specialist not in VALID_LEAD_SPECIALISTS:
+        raise ValueError("Especialista líder inválido.")
+    analysis.status = "needs_input" if payload.get("needs_more_information") else "ready"
+    analysis.updated_by_user_id = actor_user_id
+    db.session.commit()
+    return analysis
+
+
+def review_squad_analysis(
+    *, company_id: int, analysis_id: int, decision: str, actor_user_id: int | None
+) -> ProcessBpmsAnalysis:
+    """Registra a decisão humana sobre a sugestão apresentada pelo Squad."""
+    analysis = get_bpms_analysis(company_id, analysis_id)
+    if not analysis:
+        raise ValueError("Análise não encontrada para a empresa ativa.")
+    normalized = str(decision or "").strip().lower()
+    if normalized not in {"approved", "archived"}:
+        raise ValueError("Decisão de revisão inválida.")
+    if normalized == "approved" and analysis.status != "ready":
+        raise ValueError("Somente análises prontas podem ser aprovadas.")
+    analysis.status = normalized
+    analysis.updated_by_user_id = actor_user_id
+    db.session.commit()
+    return analysis
 
 
 def build_bpms_analysis_page_context(*, company_id: int, selected_analysis_id: int | None = None, selected_process_id: int | None = None) -> dict[str, Any]:
