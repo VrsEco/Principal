@@ -179,6 +179,20 @@ def sapiens_page():
     """Interface unificada estilo WhatsApp para todos os agentes de IA"""
     return render_template('sapiens.html')
 
+
+@agents_bp.route('/sapiens/training')
+@login_required
+def sapiens_training_page():
+    """Curadoria supervisionada para evoluir respostas do Sapiens."""
+    from flask import session
+
+    if not _has_operational_full_access(session.get('active_company_id')):
+        return render_template(
+            'sapiens_training.html',
+            access_denied=True,
+        ), 403
+    return render_template('sapiens_training.html', access_denied=False)
+
 @agents_bp.route('/agents/board')
 @login_required
 def ai_board():
@@ -312,6 +326,99 @@ def register_sapiens_knowledge_feedback():
         db.session.rollback()
         logging.getLogger(__name__).exception(
             "Erro ao registrar feedback de conhecimento para user_id=%s",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@agents_bp.route('/api/agents/knowledge/training/overview', methods=['GET'])
+@login_required
+def sapiens_knowledge_training_overview():
+    """Lista lacunas, feedbacks e propostas sem aceitar company_id do cliente."""
+    from flask import session
+    from services.knowledge.training_review_service import KnowledgeTrainingReviewService
+
+    company_id = session.get("active_company_id")
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para curadoria do Sapiens."}), 403
+    try:
+        limit = request.args.get("limit", 50)
+        result = KnowledgeTrainingReviewService().overview(company_id=company_id, limit=limit)
+        return jsonify({"success": True, **result})
+    except Exception:
+        from models import db
+        import logging
+
+        db.session.rollback()
+        logging.getLogger(__name__).exception(
+            "Erro ao consultar treinamento do Sapiens para user_id=%s",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@agents_bp.route('/api/agents/knowledge/training/proposals/build', methods=['POST'])
+@login_required
+def sapiens_knowledge_training_build_proposals():
+    """Gera propostas auditáveis a partir do feedback da empresa ativa."""
+    from flask import session
+    from services.knowledge.training_review_service import KnowledgeTrainingReviewService
+
+    company_id = session.get("active_company_id")
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para treinar o Sapiens."}), 403
+    data = request.get_json(silent=True) or {}
+    try:
+        result = KnowledgeTrainingReviewService().build_proposals(
+            company_id=company_id,
+            min_evidence=data.get("min_evidence", 1),
+            limit=data.get("limit", 100),
+        )
+        return jsonify({"success": True, **result})
+    except Exception:
+        from models import db
+        import logging
+
+        db.session.rollback()
+        logging.getLogger(__name__).exception(
+            "Erro ao gerar propostas de treinamento do Sapiens para user_id=%s",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@agents_bp.route('/api/agents/knowledge/training/proposals/<string:proposal_id>/decision', methods=['POST'])
+@login_required
+def sapiens_knowledge_training_decide_proposal(proposal_id):
+    """Aprova ou rejeita proposta sem aplicar automaticamente no produto."""
+    from flask import session
+    from services.knowledge.training_review_service import (
+        KnowledgeTrainingReviewError,
+        KnowledgeTrainingReviewService,
+    )
+
+    company_id = session.get("active_company_id")
+    if not _has_operational_full_access(company_id):
+        return jsonify({"success": False, "error": "Sem permissão para revisar propostas do Sapiens."}), 403
+    data = request.get_json(silent=True) or {}
+    try:
+        result = KnowledgeTrainingReviewService().decide_proposal(
+            company_id=company_id,
+            proposal_id=proposal_id,
+            decision=data.get("decision"),
+            note=data.get("note"),
+            user_id=int(current_user.id),
+        )
+        return jsonify({"success": True, **result})
+    except KnowledgeTrainingReviewError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        from models import db
+        import logging
+
+        db.session.rollback()
+        logging.getLogger(__name__).exception(
+            "Erro ao revisar proposta de treinamento do Sapiens para user_id=%s",
             getattr(current_user, "id", None),
         )
         return jsonify({"success": False, "error": PUBLIC_ERROR_MESSAGE}), 500

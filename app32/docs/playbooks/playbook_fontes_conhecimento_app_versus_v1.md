@@ -62,3 +62,31 @@ Não registrar adapter se tenant, ACL, vigência, exclusão ou rollback forem am
 - autorizar apenas participantes e convidados internos ativos e identificáveis;
 - sem identificador interno, manter a fonte irrecuperável;
 - apontar a citação para o relatório oficial da reunião.
+
+## Playbook de curadoria do Sapiens
+
+Use quando usuários marcarem respostas como `Parcial` ou `Errado`, ou quando a
+tela `/sapiens/training` indicar lacuna.
+
+Fluxo:
+
+1. abrir `/sapiens/training`;
+2. revisar `Feedbacks negativos` e `Perguntas sem boa resposta`;
+3. rodar o `Robô Treinador` para consolidar padrões;
+4. aprovar ou rejeitar propostas;
+5. quando aprovada, transformar a proposta em uma das ações oficiais:
+   - ajustar artigo `product_help`;
+   - criar novo playbook de uso;
+   - corrigir ranking/fonte;
+   - adicionar alias de intenção;
+   - melhorar pergunta de esclarecimento;
+6. testar a pergunta original e uma variação equivalente;
+7. só então publicar/deployar a melhoria.
+
+Regras:
+
+- a proposta aprovada não altera comportamento automaticamente;
+- não registrar solução baseada apenas em uma resposta técnica interna;
+- sempre preferir linguagem simples para usuário final;
+- nunca usar feedback de uma empresa para revelar fonte de outra empresa;
+- toda melhoria em fonte tenant-owned preserva `company_id` e grants.

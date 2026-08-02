@@ -68,6 +68,24 @@ python -m pytest `
   -q
 ```
 
+## Suíte de treinamento supervisionado
+
+- feedback usa escala simples e motivos controlados;
+- service de curadoria é tenant-safe;
+- rotas de treinamento usam `company_id` da sessão;
+- payload do cliente não injeta empresa;
+- tela `/sapiens/training` expõe feedbacks, lacunas, propostas e playbooks;
+- robô treinador cria propostas revisáveis sem aplicação automática.
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+$env:PYTHONPATH='app32'
+python -m pytest `
+  .\app32\tests\test_knowledge_feedback_training_contract.py `
+  .\app32\tests\test_sapiens_knowledge_ui.py `
+  -q
+```
+
 ## Suíte busca citada
 
 - pergunta de ajuda retorna claim e citação;

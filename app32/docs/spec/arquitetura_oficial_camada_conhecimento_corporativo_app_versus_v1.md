@@ -1284,3 +1284,24 @@ proposta vira ajuste oficial.
 - testes de isolamento por `company_id`;
 - testes de contrato para motivos controlados;
 - job/service do Robô Treinador consolidando propostas sem aplicá-las.
+
+### 43.4 Esteira de curadoria supervisionada
+
+Implementado em 2026-08-02 como MVP operacional:
+
+- tela `/sapiens/training` para usuários com acesso operacional completo;
+- visão de feedbacks negativos, lacunas, propostas do robô e playbooks sugeridos;
+- endpoint `GET /api/agents/knowledge/training/overview`;
+- endpoint `POST /api/agents/knowledge/training/proposals/build`;
+- endpoint `POST /api/agents/knowledge/training/proposals/<proposal_id>/decision`;
+- todos os endpoints usam `company_id` da sessão autenticada;
+- payload do cliente não pode definir `company_id`;
+- propostas podem ser `approved` ou `rejected`;
+- aprovação humana não aplica automaticamente ranking, artigo, alias ou policy.
+
+Regra oficial:
+
+1. feedback real alimenta evidência;
+2. o robô treinador agrupa padrões e sugere melhoria;
+3. a curadoria humana decide;
+4. a aplicação da melhoria ocorre em mudança posterior, com SPEC/Playbook/Teste quando alterar comportamento oficial.

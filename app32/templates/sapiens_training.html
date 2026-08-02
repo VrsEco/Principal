@@ -1,0 +1,90 @@
+{% extends "layouts/app.html" %}
+
+{% block body_class %}{{ super() }} page-sapiens-training{% endblock %}
+{% block page_title %}Treinamento do Sapiens{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/sapiens_training.css') }}?v=20260802-1">
+{% endblock %}
+
+{% block content %}
+<main class="st-page" id="sapiensTraining" data-access-denied="{{ '1' if access_denied else '0' }}">
+    <header class="st-hero">
+        <div>
+            <p class="st-eyebrow">Sapiens</p>
+            <h1>Treinamento e curadoria</h1>
+            <p>Transforme feedbacks reais em melhorias revisadas, sem aplicar mudanças automaticamente.</p>
+        </div>
+        <div class="st-actions">
+            <a class="st-button st-button-light" href="{{ url_for('agents.sapiens_page') }}">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Sapiens
+            </a>
+            {% if not access_denied %}
+            <button type="button" class="st-button" id="buildTrainingProposals">
+                <i class="fas fa-robot" aria-hidden="true"></i> Rodar robô treinador
+            </button>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if access_denied %}
+    <section class="st-denied">
+        <h2>Acesso restrito</h2>
+        <p>Somente usuários com acesso operacional completo podem revisar treinamento do Sapiens.</p>
+    </section>
+    {% else %}
+    <section class="st-status" id="trainingStatus" hidden></section>
+
+    <section class="st-summary" aria-label="Resumo do treinamento">
+        <article><span>Feedbacks críticos</span><strong id="metricNegative">0</strong></article>
+        <article><span>Lacunas</span><strong id="metricGaps">0</strong></article>
+        <article><span>Propostas pendentes</span><strong id="metricPending">0</strong></article>
+        <article><span>Aprovadas</span><strong id="metricApproved">0</strong></article>
+    </section>
+
+    <nav class="st-tabs" aria-label="Áreas de curadoria">
+        <button type="button" class="is-active" data-tab="feedback">Feedbacks negativos</button>
+        <button type="button" data-tab="gaps">Perguntas sem boa resposta</button>
+        <button type="button" data-tab="proposals">Sugestões do robô</button>
+        <button type="button" data-tab="playbooks">Playbooks sugeridos</button>
+    </nav>
+
+    <section class="st-panel is-active" id="tab-feedback">
+        <div class="st-panel-head">
+            <h2>Feedbacks negativos</h2>
+            <p>Onde o usuário marcou “Parcial” ou “Errado”.</p>
+        </div>
+        <div class="st-list" id="feedbackList"></div>
+    </section>
+
+    <section class="st-panel" id="tab-gaps">
+        <div class="st-panel-head">
+            <h2>Perguntas sem boa resposta</h2>
+            <p>Interações em que o Sapiens indicou falta de evidência autorizada.</p>
+        </div>
+        <div class="st-list" id="gapList"></div>
+    </section>
+
+    <section class="st-panel" id="tab-proposals">
+        <div class="st-panel-head">
+            <h2>Sugestões do robô</h2>
+            <p>Propostas auditáveis para melhorar intenção, fonte, linguagem ou playbook.</p>
+        </div>
+        <div class="st-list" id="proposalList"></div>
+    </section>
+
+    <section class="st-panel" id="tab-playbooks">
+        <div class="st-panel-head">
+            <h2>Playbooks sugeridos</h2>
+            <p>Assuntos que merecem documentação simples para o usuário final.</p>
+        </div>
+        <div class="st-list" id="playbookList"></div>
+    </section>
+    {% endif %}
+</main>
+
+{% if not access_denied %}
+<script src="{{ url_for('static', filename='js/sapiens_training.js') }}?v=20260802-1"></script>
+{% endif %}
+{% endblock %}

@@ -43,6 +43,32 @@ def test_sapiens_knowledge_client_uses_structured_tenant_safe_endpoint():
     assert "submitFeedback" in script
 
 
+def test_sapiens_page_links_to_training_curatorship():
+    template = (ROOT / "templates" / "sapiens.html").read_text(encoding="utf-8")
+
+    assert "sapiens_training_page" in template
+    assert "Treinamento do Sapiens" in template
+
+
+def test_sapiens_training_page_is_simple_and_review_driven():
+    template = (ROOT / "templates" / "sapiens_training.html").read_text(encoding="utf-8")
+    script = (ROOT / "static" / "js" / "sapiens_training.js").read_text(encoding="utf-8")
+    style = (ROOT / "static" / "css" / "sapiens_training.css").read_text(encoding="utf-8")
+
+    assert 'id="sapiensTraining"' in template
+    assert "Feedbacks negativos" in template
+    assert "Perguntas sem boa resposta" in template
+    assert "Sugestões do robô" in template
+    assert "Playbooks sugeridos" in template
+    assert "Rodar robô treinador" in template
+    assert "/api/agents/knowledge/training/overview" in script
+    assert "/api/agents/knowledge/training/proposals/build" in script
+    assert "/api/agents/knowledge/training/proposals/" in script
+    assert "company_id" not in script
+    assert "Aplicação automática: <strong>não</strong>" in script
+    assert ".st-summary" in style
+
+
 def test_knowledge_route_never_accepts_company_id_from_payload():
     routes = (ROOT / "api" / "routes" / "agents.py").read_text(encoding="utf-8")
     route_block = routes.split("def answer_sapiens_knowledge():", 1)[1].split(
