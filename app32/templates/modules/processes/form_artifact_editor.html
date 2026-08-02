@@ -2,9 +2,9 @@
 
 {% block title %}Editor FORM | {{ process.name }}{% endblock %}
 
-{% block extra_head %}
+{% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/process_artifact_editor.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/process_artifact_editor.css', v=static_asset_version('css/process_artifact_editor.css')) }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -18,33 +18,33 @@
   <header class="artifact-editor__hero">
     <div class="artifact-editor__identity">
       <div class="artifact-editor__badge">FORM</div>
-      <div>
+      <div class="artifact-editor__heading">
+        <span class="artifact-editor__eyebrow">Artefato de coleta</span>
         <h1>Editor de formulário</h1>
-        <p>{{ process.code or '' }}{% if process.code %} · {% endif %}{{ process.name }}</p>
+        <p>{{ process.code or '' }}{% if process.code %} · {% endif %}{{ process.name }} <span>•</span> {{ bpmn_element_id or 'Sem vínculo BPMN' }}</p>
       </div>
     </div>
     <div class="artifact-editor__actions">
-      <button class="artifact-btn" type="button" onclick="history.back()">Voltar ao fluxo</button>
-      <button class="artifact-btn artifact-btn--primary" id="saveArtifactBtn" type="button">Salvar rascunho</button>
-      <button class="artifact-btn" id="publishArtifactBtn" type="button">Publicar versão</button>
+      <a class="artifact-btn artifact-btn--ghost" href="{{ url_for('processes.process_bpmn_modeler', process_id=process.id) }}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Modeler</a>
+      <span class="artifact-status" id="artifactStatus">Rascunho</span>
+      <button class="artifact-btn artifact-btn--primary" id="saveArtifactBtn" type="button"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
+      <button class="artifact-btn" id="publishArtifactBtn" type="button"><i class="fas fa-paper-plane" aria-hidden="true"></i> Publicar</button>
     </div>
   </header>
 
   <div class="artifact-editor__grid">
     <section class="artifact-editor__panel">
       <div class="artifact-editor__section-title">
-        <h2>Estrutura do formulário</h2>
-        <span>Organize campos em seções reutilizáveis</span>
+        <div><span class="artifact-editor__section-kicker">Conteúdo</span><h2>Estrutura do formulário</h2><p>Organize os campos em seções claras e reutilizáveis.</p></div>
+        <button class="artifact-add artifact-add--compact" id="addSectionBtn" type="button"><i class="fas fa-plus" aria-hidden="true"></i> Adicionar seção</button>
       </div>
       <div id="formSections"></div>
-      <button class="artifact-add" id="addSectionBtn" type="button">+ Adicionar seção</button>
     </section>
 
     <aside class="artifact-editor__sidebar">
+      <div class="artifact-editor__sidebar-head"><span>Configurações</span><p>Identificação e comportamento do formulário</p></div>
       <div class="artifact-context">
-        <strong>Atividade BPMN</strong><br>
-        {{ bpmn_element_name or 'Atividade selecionada' }}<br>
-        <small>{{ bpmn_element_id or 'Vínculo será informado pelo modelador' }}</small>
+        <i class="fas fa-diagram-project" aria-hidden="true"></i><div><strong>Atividade BPMN</strong><span>{{ bpmn_element_name or 'Atividade selecionada' }}</span><small>{{ bpmn_element_id or 'Vínculo será informado pelo modelador' }}</small></div>
       </div>
       <div class="artifact-field">
         <label for="artifactName">Nome do formulário</label>
@@ -58,14 +58,9 @@
         <label for="submitLabel">Texto do botão de envio</label>
         <input id="submitLabel" maxlength="60" value="Enviar formulário">
       </div>
-      <div class="artifact-field">
-        <label><input id="allowDraft" type="checkbox" checked> Permitir salvar parcialmente</label>
-      </div>
-      <div class="artifact-field">
-        <label><input id="requiredArtifact" type="checkbox" checked> Obrigatório para concluir atividade</label>
-      </div>
-      <p class="artifact-help">As respostas serão persistidas por empresa, instância e execução da atividade. Uma versão publicada fica imutável para preservar o histórico.</p>
-      <span class="artifact-status" id="artifactStatus">Rascunho</span>
+      <div class="artifact-field artifact-switch"><label><input id="allowDraft" type="checkbox" checked><span>Permitir salvar parcialmente</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="requiredArtifact" type="checkbox" checked><span>Obrigatório para concluir atividade</span></label></div>
+      <p class="artifact-help"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Respostas são persistidas por empresa, instância e execução. A versão publicada preserva o histórico.</span></p>
     </aside>
   </div>
 </main>

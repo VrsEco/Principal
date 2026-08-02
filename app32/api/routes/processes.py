@@ -683,10 +683,14 @@ def process_artifact_new(process_id, artifact_type):
     if not can_model_process(process.company_id):
         abort(403, description="Acesso negado: Usuário sem permissão para modelar este processo.")
     artifact_type = str(artifact_type or '').strip().lower()
-    if artifact_type not in {'form', 'check'}:
+    if artifact_type not in {'form', 'check', 'data_in', 'data_out'}:
         abort(404, description="Editor de artefato ainda não disponível.")
     company = Company.query.get_or_404(process.company_id)
-    template = f'modules/processes/{artifact_type}_artifact_editor.html'
+    template = (
+        'modules/processes/data_artifact_editor.html'
+        if artifact_type in {'data_in', 'data_out'}
+        else f'modules/processes/{artifact_type}_artifact_editor.html'
+    )
     return render_template(
         template,
         process=process,
@@ -710,10 +714,14 @@ def process_artifact_edit(process_id, artifact_id):
         definition = get_artifact_definition(process.company_id, artifact_id)
     except ValueError as exc:
         abort(404, description=str(exc))
-    if definition.process_id != process.id or definition.artifact_type not in {'form', 'check'}:
+    if definition.process_id != process.id or definition.artifact_type not in {'form', 'check', 'data_in', 'data_out'}:
         abort(404, description="Artefato não encontrado neste processo.")
     company = Company.query.get_or_404(process.company_id)
-    template = f'modules/processes/{definition.artifact_type}_artifact_editor.html'
+    template = (
+        'modules/processes/data_artifact_editor.html'
+        if definition.artifact_type in {'data_in', 'data_out'}
+        else f'modules/processes/{definition.artifact_type}_artifact_editor.html'
+    )
     artifact_payload = build_definition_snapshot(definition)
     primary_link = (
         definition.activity_links

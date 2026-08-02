@@ -152,7 +152,7 @@ Regras oficiais:
 - sua representação visual parte da mesma base hoje usada pelo POP, alterando cor, ícone e nome;
 - uma atividade aceita zero ou vários artefatos, inclusive mais de um do mesmo tipo quando houver finalidade distinta;
 - o vínculo não altera a semântica nativa do elemento BPMN;
-- cada artefato abre diretamente seu editor especializado;
+- criar o marcador não abre nem redireciona para o editor; dois cliques no artefato abrem diretamente seu editor especializado;
 - POP, FORM e CHECK podem coexistir com IA, IN e OUT na mesma atividade.
 
 ## 11. Modelo canônico de definição e vínculo
@@ -372,10 +372,40 @@ A evolução estará aderente quando:
 - Portal mostra `N para você` no mapa e `Minhas execuções` no detalhe do processo;
 - somente atividades humanas acionáveis, gates, exceções ou fallbacks humanos entram na projeção pessoal.
 
+### Linguagem visual do modelador concluída em 2026-08-01
+
+- seletor de cor contextual para tarefas, subprocessos, gateways, eventos, pools/lanes, dados, anotações e conexões;
+- paleta curta com preenchimentos claros e contornos contrastantes;
+- padrão semântico por tipo, opção de personalização e restauração sem cor;
+- persistência via `modeling.setColor` no XML BPMN/DI, mantendo exportação e reabertura;
+- artefatos POP/FORM/CHECK/IA/IN/OUT preservam suas cores canônicas;
+- estado de execução permanece uma camada separada, por overlay/contorno/badge, sem sobrescrever a cor autoral.
+- o Book reaplica as cores canônicas de POP, FORM, CHECK, IA, IN e OUT ao snapshot SVG com base nos IDs e nomes do XML BPMN, inclusive para snapshots anteriores;
+- novos salvamentos persistem as cores dos artefatos no BPMN DI por `modeling.setColor`, reduzindo divergência entre Modeler, exportação e Book.
+
+### 12.7 Visão integrada no detalhe do processo
+
+O detalhe do processo deve disponibilizar uma navegação plana, em uma única linha, com as visões `SIPOC`, `Recursos`, `Fluxo`, `POP`, `Formulários`, `Checklists`, `IA`, `Rotinas` e `Indicadores`. Em larguras reduzidas, a linha é preservada com rolagem horizontal, sem transformar os artefatos em um segundo nível de menu.
+
+- `Formulários` e `Checklists` listam definições versionadas do processo e suas atividades BPMN vinculadas;
+- a edição abre o editor especializado do tipo de artefato;
+- a criação continua no Modeler, pois o vínculo com uma atividade ou gateway é obrigatório e contextual;
+- `IA` apresenta os contratos ativos de AI Task e AI Gateway e direciona sua configuração ao elemento correspondente no Modeler;
+- todas as consultas permanecem delimitadas por `company_id` e `process_id`.
+
+### Shell UI dos editores concluída em 2026-08-01
+
+- FORM, CHECK, IN e OUT usam uma shell responsiva comum;
+- cabeçalho reúne tipo, processo, elemento BPMN, status, retorno ao Modeler, salvar e publicar;
+- painel principal concentra conteúdo/contrato e a lateral concentra identificação, vínculo e governança;
+- cores canônicas permanecem por tipo: FORM violeta, CHECK verde, IN ciano e OUT rosa;
+- folha de estilo é carregada pelo bloco `head` do layout com versionamento de asset.
+- o POP aberto pelo marcador BPMN entra em modo focado, ocultando resumo e abas do processo, mas preservando o editor legado e o retorno direto ao Modeler;
+- o Modeler usa cabeçalho e ribbon compactos, mantendo arquivo, visualização, modelagem e orientação contextual sem reduzir desnecessariamente o canvas.
+
 Ainda não fazem parte das ondas concluídas:
 
-- telas e dispatchers dos artefatos IA/IN/OUT;
-- representação/criação visual completa dos novos artefatos dentro do modelador BPMN;
+- dispatchers operacionais dos artefatos IA/IN/OUT;
 - enforcement do gate na finalização administrativa direta da instância.
 
 Esses itens devem avançar em ondas posteriores, sem reabrir o modelo canônico desta fundação.

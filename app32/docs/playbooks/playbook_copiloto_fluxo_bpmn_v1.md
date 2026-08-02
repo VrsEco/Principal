@@ -112,3 +112,38 @@ O card do Portal representa a atividade acionável. A instância fornece o conte
 - matriz de migração e feature flag;
 - cenários E2E para POP, FORM, CHECK, combinação dos três, IA, IN, OUT e fallback humano;
 - testes negativos de cross-tenant e tentativa de contornar completion rules.
+
+## 11. Uso de cores no modelador
+
+- usar o padrão do tipo como ponto de partida: tarefa azul, gateway âmbar, início verde, intermediário laranja e fim vermelho;
+- personalizar apenas quando a cor melhorar a leitura do fluxo;
+- não usar cor como única representação de regra, responsabilidade, criticidade ou estado;
+- manter os artefatos nas cores canônicas e vinculados por associação BPMN;
+- validar contraste e legibilidade antes de publicar;
+- preservar no runtime a cor do modelo e representar execução por overlay, contorno ou badge.
+- validar no Book/PDF que todos os marcadores externos mantêm cor de contorno, preenchimento e rótulo correspondente ao tipo.
+
+## 12. Detalhe do processo e artefatos
+
+- manter todos os acessos principais em uma única linha: SIPOC, Recursos, Fluxo, POP, Formulários, Checklists, IA, Rotinas e Indicadores;
+- em telas estreitas, usar rolagem horizontal em vez de quebrar a navegação em múltiplas linhas;
+- usar Formulários e Checklists como visões de consulta e edição; criar/vincular novos artefatos pelo Modeler;
+- configurar AI Task e AI Gateway no Modeler, preservando o contexto do elemento BPMN;
+- validar vazio, carregado, rascunho, publicado e arquivado, sem expor dados de outra empresa.
+
+## 12. Criação e edição de artefatos no modelador
+
+- adicionar o marcador com `+ Artefato` sem interromper a modelagem nem abrir outra tela;
+- configurar posteriormente com dois cliques no marcador POP, FORM, CHECK, IA, IN ou OUT;
+- manter visíveis no próprio diagrama os artefatos vinculados à atividade;
+- não criar uma visão geral paralela quando os marcadores e seus editores diretos já atendem à navegação.
+
+## 13. Padrão de tela dos editores
+
+- manter o cabeçalho compacto, com cor e identificação inequívoca do artefato;
+- exibir retorno direto ao Modeler e ações de salvar/publicar no mesmo nível;
+- reservar a área maior para conteúdo e contrato; usar a lateral para vínculo BPMN e regras;
+- preservar a ordem, os rótulos e o comportamento das ações entre FORM, CHECK, IN e OUT;
+- validar em desktop e largura reduzida, sem rolagem horizontal nem perda de contexto.
+- ao abrir POP pelo diagrama, usar o modo focado e retornar pelo botão `Voltar ao Modeler`;
+- no Modeler, preservar o canvas como área dominante e manter cabeçalho/ribbon em altura compacta.

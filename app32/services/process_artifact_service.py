@@ -296,7 +296,11 @@ def list_process_artifact_definitions(
 ) -> list[dict[str, Any]]:
     _get_process(company_id, process_id)
     if bpmn_element_id:
-        return list_activity_artifacts(company_id, process_id, bpmn_element_id)
+        artifacts = list_activity_artifacts(company_id, process_id, bpmn_element_id)
+        if artifact_type:
+            normalized_type = normalize_artifact_type(artifact_type)
+            artifacts = [item for item in artifacts if item.get("artifact_type") == normalized_type]
+        return artifacts
     query = ProcessActivityArtifactDefinition.query.filter_by(company_id=company_id, process_id=process_id)
     if artifact_type:
         query = query.filter(ProcessActivityArtifactDefinition.artifact_type == normalize_artifact_type(artifact_type))
@@ -365,6 +369,15 @@ def link_artifact_to_activity(
 def build_definition_snapshot(definition: ProcessActivityArtifactDefinition) -> dict[str, Any]:
     """Gera o snapshot imutável usado por uma instância futura."""
     payload = definition.to_dict()
+    activity_links = getattr(definition, "activity_links", None)
+    if activity_links is not None:
+        active_links = activity_links.filter_by(is_active=True).order_by(
+            ProcessActivityArtifactLink.display_order.asc(),
+            ProcessActivityArtifactLink.id.asc(),
+        ).all()
+        payload["activity_links"] = [link.to_dict(include_definition=False) for link in active_links]
+    else:
+        payload["activity_links"] = []
     legacy_routine = getattr(definition, "legacy_process_routine", None)
     if definition.artifact_type == "pop" and legacy_routine:
         payload["name"] = legacy_routine.name

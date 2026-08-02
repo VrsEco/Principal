@@ -608,6 +608,19 @@
       text-rendering: geometricPrecision;
     }
 
+    .flow-frame .bpmn-svg svg .app32-artifact-pop text,
+    .flow-frame .bpmn-svg svg .app32-artifact-pop tspan { fill: #2563eb !important; }
+    .flow-frame .bpmn-svg svg .app32-artifact-form text,
+    .flow-frame .bpmn-svg svg .app32-artifact-form tspan { fill: #7c3aed !important; }
+    .flow-frame .bpmn-svg svg .app32-artifact-check text,
+    .flow-frame .bpmn-svg svg .app32-artifact-check tspan { fill: #059669 !important; }
+    .flow-frame .bpmn-svg svg .app32-artifact-ai text,
+    .flow-frame .bpmn-svg svg .app32-artifact-ai tspan { fill: #ea580c !important; }
+    .flow-frame .bpmn-svg svg .app32-artifact-data-in text,
+    .flow-frame .bpmn-svg svg .app32-artifact-data-in tspan { fill: #0891b2 !important; }
+    .flow-frame .bpmn-svg svg .app32-artifact-data-out text,
+    .flow-frame .bpmn-svg svg .app32-artifact-data-out tspan { fill: #e11d48 !important; }
+
     .empty-state {
       width: 100%;
       text-align: center;
@@ -1313,11 +1326,6 @@
               <div class="detail-card"><span class="detail-label">Macroprocesso</span><div class="detail-value">{{ first_page.macro_name }}</div></div>
               <div class="detail-card"><span class="detail-label">Dono</span><div class="detail-value">{{ first_page.owner_name }}</div></div>
               <div class="detail-card"><span class="detail-label">Responsável</span><div class="detail-value">{{ first_page.responsible_name }}</div></div>
-              <div class="detail-card"><span class="detail-label">Estruturação</span><div class="detail-value">{{ first_page.structuring_label }}</div></div>
-              <div class="detail-card"><span class="detail-label">Desempenho</span><div class="detail-value">{{ first_page.performance_label }}</div></div>
-              {% for stat in first_page.stats %}
-              <div class="detail-card"><span class="detail-label">{{ stat.label }}</span><div class="detail-value">{{ stat.value }}</div></div>
-              {% endfor %}
             </div>
             {% if first_page.notes %}
             <div class="detail-card" style="margin-top: 8px;">

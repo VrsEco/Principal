@@ -23,25 +23,10 @@ from models import (
     Routine,
     RoutineCollaborator,
 )
-from services.process_bpmn_service import sanitize_svg_snapshot
+from services.process_bpmn_service import colorize_bpmn_artifact_svg
 from services.process_sipoc_service import build_book_sipoc_context
 from utils.indicator_filters import PROCESS_SOURCE_MODULES, build_indicator_process_filter
 
-
-STRUCTURING_LABELS = {
-    "inbox": "Inbox",
-    "initiated": "Iniciado",
-    "in_progress": "Em estruturação",
-    "structured": "Estruturado",
-    "stabilized": "Estabilizado",
-    "stable": "Estável",
-}
-
-PERFORMANCE_LABELS = {
-    "critical": "Crítico",
-    "below": "Abaixo do esperado",
-    "satisfactory": "Satisfatório",
-}
 
 SCHEDULE_LABELS = {
     "daily": "Diária",
@@ -144,9 +129,6 @@ def build_process_book_context(process_id: int, company_id: int, request_root: s
             company=company,
             generated_at=generated_at,
             root_url=root_url,
-            pop_count=len(pop_activities),
-            routine_count=len(routines),
-            indicator_count=len(indicators),
         ),
         process_map=_build_process_map_context(
             current_process_id=process.id,
@@ -249,9 +231,6 @@ def _build_first_page(
     company: Company,
     generated_at: str,
     root_url: str,
-    pop_count: int,
-    routine_count: int,
-    indicator_count: int,
 ) -> dict[str, Any]:
     macro = getattr(process, "macro", None)
     area = getattr(macro, "area", None) if macro else None
@@ -269,20 +248,15 @@ def _build_first_page(
         "macro_name": _compose_process_title(getattr(macro, "code", None), getattr(macro, "name", None), fallback="Não definido"),
         "owner_name": getattr(macro, "owner", None) or "Não definido",
         "responsible_name": process.responsible or "Não definido",
-        "structuring_label": STRUCTURING_LABELS.get((process.structuring_level or "").lower(), "Não informado"),
-        "performance_label": PERFORMANCE_LABELS.get((process.performance_level or "").lower(), "Não informado"),
         "notes": process.notes,
         "flow_url": flow_url,
         "flow_is_image": flow_extension in {"png", "jpg", "jpeg", "webp", "gif", "svg"},
         "flow_is_pdf": flow_extension == "pdf",
-        "bpmn_svg": sanitize_svg_snapshot(bpmn_diagram.svg_snapshot) if bpmn_diagram and bpmn_diagram.svg_snapshot else None,
+        "bpmn_svg": colorize_bpmn_artifact_svg(bpmn_diagram.svg_snapshot, bpmn_diagram.bpmn_xml)
+        if bpmn_diagram and bpmn_diagram.svg_snapshot
+        else None,
         "bpmn_status": bpmn_diagram.status if bpmn_diagram else None,
         "bpmn_version": bpmn_diagram.version if bpmn_diagram else None,
-        "stats": [
-            {"label": "Atividades POP", "value": pop_count},
-            {"label": "Rotinas", "value": routine_count},
-            {"label": "Indicadores", "value": indicator_count},
-        ],
     }
 
 

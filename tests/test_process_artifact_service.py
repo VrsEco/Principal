@@ -352,6 +352,164 @@ def test_artifact_editor_and_runtime_routes_are_registered_in_app_source():
     assert "/api/process-artifact-executions/<int:artifact_execution_id>" in app_source
     assert "/processes/<int:process_id>/artifacts/new/<string:artifact_type>" in routes_source
     assert "/processes/<int:process_id>/artifacts/<int:artifact_id>/edit" in routes_source
-    assert 'data-artifact-new="form"' in modeler_source
-    assert 'data-artifact-new="check"' in modeler_source
+    assert "App32ArtifactContextPadProvider" in modeler_source
+    assert "openArtifactQuickMenu" in modeler_source
+    assert "['pop', 'form', 'check', 'ai', 'data_in', 'data_out']" in modeler_source
+    assert "openAiDialog" in modeler_source
+    assert "openArtifactEditorFromMarker" in modeler_source
+    assert "element.dblclick" in modeler_source
+    assert "name: item.marker" in modeler_source
     assert "/api/process-artifact-executions/${artifactExecutionId}" in runtime_source
+
+
+def test_modeler_uses_contextual_artifact_menu_and_on_demand_ai_dialog():
+    template_source = (APP_DIR / "templates" / "modules" / "processes" / "bpmn_modeler.html").read_text(encoding="utf-8")
+    editor_source = (APP_DIR / "templates" / "modules" / "processes" / "data_artifact_editor.html").read_text(encoding="utf-8")
+    routes_source = (APP_DIR / "api" / "routes" / "processes.py").read_text(encoding="utf-8")
+
+    assert 'id="bpmnArtifactQuickMenu"' in template_source
+    assert 'id="bpmnAiDialog" hidden' in template_source
+    assert "bpmn-ai-sidebar" not in template_source
+    assert "data_artifact_editor.html" in routes_source
+    assert "{'form', 'check', 'data_in', 'data_out'}" in routes_source
+    assert "artifact-editor--{{ 'data-in' if is_input else 'data-out' }}" in editor_source
+    assert "completion_policy_json:{mode:'successful_transfer'" in editor_source
+
+
+def test_artifact_editors_have_direct_return_to_modeler():
+    for template_name in ("form_artifact_editor.html", "check_artifact_editor.html", "data_artifact_editor.html"):
+        source = (APP_DIR / "templates" / "modules" / "processes" / template_name).read_text(encoding="utf-8")
+        assert "processes.process_bpmn_modeler" in source
+        assert "Voltar ao Modeler" in source
+        assert "history.back()" not in source
+
+
+def test_artifact_editors_use_shared_responsive_ui_shell():
+    template_names = (
+        "form_artifact_editor.html",
+        "check_artifact_editor.html",
+        "data_artifact_editor.html",
+    )
+    for template_name in template_names:
+        source = (APP_DIR / "templates" / "modules" / "processes" / template_name).read_text(encoding="utf-8")
+        assert "{% block head %}" in source
+        assert "{% block extra_head %}" not in source
+        assert "static_asset_version('css/process_artifact_editor.css')" in source
+        assert "artifact-editor__eyebrow" in source
+        assert "artifact-editor__sidebar-head" in source
+        assert "artifact-status" in source
+
+    css_source = (APP_DIR / "static" / "css" / "process_artifact_editor.css").read_text(encoding="utf-8")
+    assert ".artifact-editor--check" in css_source
+    assert ".artifact-editor--data-in" in css_source
+    assert ".artifact-editor--data-out" in css_source
+    assert ".artifact-row--check" in css_source
+    assert "@media (max-width: 900px)" in css_source
+
+
+def test_pop_focus_and_modeler_follow_compact_artifact_ui_pattern():
+    details_source = (APP_DIR / "templates" / "modules" / "processes" / "process_details_v2.html").read_text(encoding="utf-8")
+    modeler_template = (APP_DIR / "templates" / "modules" / "processes" / "bpmn_modeler.html").read_text(encoding="utf-8")
+    modeler_css = (APP_DIR / "static" / "css" / "process_bpmn_modeler.css").read_text(encoding="utf-8")
+
+    assert "process-details--pop-focus" in details_source
+    assert "pop-artifact-focus-hero" in details_source
+    assert "Editor de POP" in details_source
+    assert "Voltar ao Modeler" in details_source
+    assert "popFocusRoutineContext" in details_source
+    assert "bpmn-modeler-hero__identity" in modeler_template
+    assert "bpmn-modeler-hero__badge" in modeler_template
+    assert 'data-action="save"><i class="fas fa-save"' in modeler_template
+    assert "bpmn-tool-btn--icon" in modeler_template
+    assert "grid-template-columns: minmax(390px, 1.4fr)" in modeler_css
+    assert "@media (max-width: 680px)" in modeler_css
+
+
+def test_new_bpmn_tasks_use_the_defined_minimum_size_as_default():
+    modeler_source = (APP_DIR / "static" / "js" / "process_bpmn_modeler.js").read_text(encoding="utf-8")
+
+    assert "const OPERATIONAL_ACTIVITY_MIN_WIDTH = 240;" in modeler_source
+    assert "const OPERATIONAL_ACTIVITY_MIN_HEIGHT = 72;" in modeler_source
+    assert "applyOperationalActivityDefaultSize(shape);" in modeler_source
+    assert "width: OPERATIONAL_ACTIVITY_MIN_WIDTH" in modeler_source
+    assert "height: OPERATIONAL_ACTIVITY_MIN_HEIGHT" in modeler_source
+
+
+def test_modeler_has_persistent_contextual_color_palette_for_bpmn_elements():
+    modeler_source = (APP_DIR / "static" / "js" / "process_bpmn_modeler.js").read_text(encoding="utf-8")
+    template_source = (APP_DIR / "templates" / "modules" / "processes" / "bpmn_modeler.html").read_text(encoding="utf-8")
+    css_source = (APP_DIR / "static" / "css" / "process_bpmn_modeler.css").read_text(encoding="utf-8")
+
+    assert "const BPMN_COLOR_PALETTE" in modeler_source
+    assert "app32-color-element" in modeler_source
+    assert "modeling.setColor([element], value);" in modeler_source
+    assert "applyDefaultBpmnColor(shape)" in modeler_source
+    assert "bpmn:StartEvent" in modeler_source
+    assert "bpmn:EndEvent" in modeler_source
+    assert 'id="bpmnColorMenu" hidden' in template_source
+    assert 'id="bpmnColorSwatches"' in template_source
+    assert "app32-color-entry" in css_source
+
+
+def test_artifact_creation_stays_in_modeler_until_double_click():
+    modeler_source = (APP_DIR / "static" / "js" / "process_bpmn_modeler.js").read_text(encoding="utf-8")
+    template_source = (APP_DIR / "templates" / "modules" / "processes" / "bpmn_modeler.html").read_text(encoding="utf-8")
+    configure_source = modeler_source.split("async function configureContextArtifact", 1)[1].split("function installAiInspector", 1)[0]
+
+    assert "modeler.get('selection')?.select(marker);" in configure_source
+    assert "Dê dois cliques no artefato para configurá-lo" in configure_source
+    assert "openAiDialog(target)" not in configure_source
+    assert "window.location.href" not in configure_source
+    assert "openArtifactEditorFromMarker" in modeler_source
+    assert "element.dblclick" in modeler_source
+    assert "Visão geral dos artefatos" not in template_source
+    assert 'data-action="inspect-elements"' not in template_source
+    assert 'id="bpmnPopBindingPanel"' not in template_source
+
+
+def test_list_process_artifacts_filters_type_when_activity_is_provided(monkeypatch):
+    monkeypatch.setattr(service, "_get_process", lambda company_id, process_id: object())
+    monkeypatch.setattr(
+        service,
+        "list_activity_artifacts",
+        lambda company_id, process_id, bpmn_element_id: [
+            {"id": 1, "artifact_type": "form"},
+            {"id": 2, "artifact_type": "data_in"},
+        ],
+    )
+
+    result = service.list_process_artifact_definitions(
+        9,
+        2,
+        artifact_type="data_in",
+        bpmn_element_id="Activity_1",
+    )
+
+    assert result == [{"id": 2, "artifact_type": "data_in"}]
+
+
+def test_process_details_exposes_artifact_views_in_one_flat_navigation_line():
+    source = (APP_DIR / "templates" / "modules" / "processes" / "process_details_v2.html").read_text(encoding="utf-8")
+
+    nav = source.split('<div class="tabs-nav process-tabs-nav"', 1)[1].split('</div>', 1)[0]
+    expected_tabs = ("sipoc", "resources", "modeling", "pops", "forms", "checks", "ai", "routine", "indicators")
+    for tab in expected_tabs:
+        assert f"switchTab('{tab}')" in nav
+    assert "flex-wrap: nowrap" in source
+    assert "overflow-x: auto" in source
+    assert "flex-wrap: wrap" not in source.split(".process-tabs-nav", 2)[2].split("}", 1)[0]
+
+
+def test_process_details_loads_and_renders_forms_checks_and_ai_contracts():
+    source = (APP_DIR / "templates" / "modules" / "processes" / "process_details_v2.html").read_text(encoding="utf-8")
+
+    assert 'id="tab-forms"' in source
+    assert 'id="tab-checks"' in source
+    assert 'id="tab-ai"' in source
+    assert "/api/processes/${processId}/activity-artifacts" in source
+    assert "/api/processes/${processId}/activity-execution-contracts" in source
+    assert "renderArtifactOverview('form')" in source
+    assert "renderArtifactOverview('check')" in source
+    assert "renderAiOverview()" in source
+    assert "Adicionar no Modeler" in source
+    assert "Configurar no Modeler" in source

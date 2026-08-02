@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-js.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bpmn-js/18.6.3/dist/assets/bpmn-font/css/bpmn-embedded.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/process_artifact_editor.css', v=static_asset_version('css/process_artifact_editor.css')) }}">
 {% endblock %}
 
 {% block breadcrumb %}
@@ -24,7 +25,7 @@
 
 
 {% block workspace_content %}
-<div class="process-page-shell process-details-container" id="processDetails">
+<div class="process-page-shell process-details-container{% if request.args.get('from_modeler') == '1' and request.args.get('tab') == 'pops' %} process-details--pop-focus{% endif %}" id="processDetails">
     <section class="process-hero workspace-header fade-in" aria-labelledby="detName">
         <div class="process-hero__content">
             <div class="process-meta-chips">
@@ -40,11 +41,14 @@
             <p class="text-secondary process-hero__description" id="detDescription">Aguarde enquanto carregamos as informações.</p>
             <div class="process-hero__signal">
                 <span class="process-hero__signal-dot" aria-hidden="true"></span>
-                <span>Workspace APP32 · Processo estruturado por SIPOC, recursos, fluxo, POP, rotinas e indicadores.</span>
+                <span>Workspace APP32 · Processo, artefatos operacionais e desempenho em uma única visão.</span>
             </div>
         </div>
         <div class="process-hero__actions">
             <a href="{{ url_for('processes.processes_list', company_id=company.id) }}" class="btn btn-ghost" onclick="setTimeout(() => this.blur(), 150)">← Voltar ao Kanban</a>
+            {% if request.args.get('from_modeler') == '1' %}
+            <a href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}" class="btn btn-secondary">← Voltar ao Modeler</a>
+            {% endif %}
             <a href="{{ url_for('processes.bpms_analysis_for_process', company_id=company.id, process_id=process_id) }}" class="btn btn-primary" onclick="setTimeout(() => this.blur(), 150)">🧠 Análise BPMS deste Processo</a>
             <a href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank" class="btn btn-secondary" onclick="setTimeout(() => this.blur(), 150)">🖨️ Versão de Impressão</a>
         </div>
@@ -83,9 +87,12 @@
 
     <div class="tabs-nav process-tabs-nav" aria-label="Navegação do detalhe do processo">
         <button class="tab-btn process-tab-btn active" onclick="switchTab('sipoc')"><span class="process-tab-btn__icon">🧩</span><span>SIPOC</span></button>
-        <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧱</span><span>Estrutura/Recursos</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧱</span><span>Recursos</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
-        <button class="tab-btn process-tab-btn" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
+        <button class="tab-btn process-tab-btn process-tab-btn--pop" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
+        <button class="tab-btn process-tab-btn process-tab-btn--form" onclick="switchTab('forms')"><span class="process-tab-btn__icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span><span>Formulários</span></button>
+        <button class="tab-btn process-tab-btn process-tab-btn--check" onclick="switchTab('checks')"><span class="process-tab-btn__icon"><i class="fas fa-list-check" aria-hidden="true"></i></span><span>Checklists</span></button>
+        <button class="tab-btn process-tab-btn process-tab-btn--ai" onclick="switchTab('ai')"><span class="process-tab-btn__icon"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span><span>IA</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('routine')"><span class="process-tab-btn__icon">📅</span><span>Rotinas</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('indicators')"><span class="process-tab-btn__icon">📊</span><span>Indicadores</span></button>
     </div>
@@ -209,7 +216,24 @@
     </div>
 
     <div id="tab-pops" class="tab-content">
-        <section class="process-section mt-4">
+        {% if request.args.get('from_modeler') == '1' %}
+        <header class="artifact-editor__hero pop-artifact-focus-hero">
+            <div class="artifact-editor__identity">
+                <div class="artifact-editor__badge">POP</div>
+                <div class="artifact-editor__heading">
+                    <span class="artifact-editor__eyebrow">Procedimento operacional</span>
+                    <h1>Editor de POP</h1>
+                    <p><span id="popFocusProcessCode">Processo</span> <span>•</span> <span id="popFocusRoutineContext">Atividade vinculada ao BPMN</span></p>
+                </div>
+            </div>
+            <div class="artifact-editor__actions">
+                <a class="artifact-btn artifact-btn--ghost" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Modeler</a>
+                <span class="artifact-status artifact-status--published">Vinculado</span>
+                <a class="artifact-btn" href="{{ url_for('processes.process_book', process_id=process_id) }}" target="_blank"><i class="fas fa-book-open" aria-hidden="true"></i> Visualizar no Book</a>
+            </div>
+        </header>
+        {% endif %}
+        <section class="process-section mt-4 pop-artifact-panel">
             <div class="process-section__header">
                 <div>
                     <span class="process-section__eyebrow">Execução padrão</span>
@@ -248,6 +272,54 @@
             </div>
         </div>
             </div>
+        </section>
+    </div>
+
+    <div id="tab-forms" class="tab-content">
+        <section class="process-section process-artifact-section process-artifact-section--form mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Coleta estruturada</span>
+                    <h2 class="text-h2">Formulários do Processo</h2>
+                    <p class="process-section__description">Consulte e edite os formulários vinculados às atividades BPMN deste processo.</p>
+                </div>
+                <div class="process-section__actions">
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Adicionar no Modeler</a>
+                </div>
+            </div>
+            <div class="process-section__body"><div id="processFormsList" class="process-artifact-overview"></div></div>
+        </section>
+    </div>
+
+    <div id="tab-checks" class="tab-content">
+        <section class="process-section process-artifact-section process-artifact-section--check mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Controle operacional</span>
+                    <h2 class="text-h2">Checklists do Processo</h2>
+                    <p class="process-section__description">Acompanhe listas de verificação, versões e atividades BPMN vinculadas.</p>
+                </div>
+                <div class="process-section__actions">
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Adicionar no Modeler</a>
+                </div>
+            </div>
+            <div class="process-section__body"><div id="processChecksList" class="process-artifact-overview"></div></div>
+        </section>
+    </div>
+
+    <div id="tab-ai" class="tab-content">
+        <section class="process-section process-artifact-section process-artifact-section--ai mt-4">
+            <div class="process-section__header">
+                <div>
+                    <span class="process-section__eyebrow">Automação inteligente</span>
+                    <h2 class="text-h2">IA do Processo</h2>
+                    <p class="process-section__description">Visualize os contratos de AI Task e AI Gateway; a configuração permanece contextual ao elemento BPMN.</p>
+                </div>
+                <div class="process-section__actions">
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Configurar no Modeler</a>
+                </div>
+            </div>
+            <div class="process-section__body"><div id="processAiList" class="process-artifact-overview"></div></div>
         </section>
     </div>
 
@@ -636,8 +708,8 @@
     .process-tabs-nav {
         display: flex;
         flex-wrap: nowrap;
-        gap: 0.55rem;
-        padding: 0.55rem;
+        gap: 0.35rem;
+        padding: 0.45rem;
         border-radius: 18px;
         border: 1px solid var(--border);
         background: rgba(255, 255, 255, 0.9);
@@ -654,9 +726,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.55rem;
-        padding: 0.75rem 0.95rem;
+        gap: 0.42rem;
+        padding: 0.68rem 0.78rem;
         min-height: 42px;
+        flex: 1 0 auto;
         border: 1px solid transparent;
         border-radius: 13px;
         background: transparent;
@@ -681,6 +754,40 @@
         border-color: rgba(37, 99, 235, 0.14);
         box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08), 0 8px 18px rgba(37, 99, 235, 0.08);
     }
+
+    .process-tab-btn--form.active { background: #f3e8ff; color: #7e22ce; border-color: rgba(126, 34, 206, 0.18); }
+    .process-tab-btn--check.active { background: #dcfce7; color: #15803d; border-color: rgba(21, 128, 61, 0.18); }
+    .process-tab-btn--ai.active { background: #ffedd5; color: #c2410c; border-color: rgba(194, 65, 12, 0.18); }
+
+    .process-artifact-overview { display: grid; gap: 0.75rem; }
+
+    .process-artifact-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.95rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        background: var(--surface);
+        transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    }
+
+    .process-artifact-row:hover { border-color: rgba(37, 99, 235, 0.28); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07); transform: translateY(-1px); }
+    .process-artifact-row__badge { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 13px; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.05em; }
+    .process-artifact-row--form .process-artifact-row__badge { background: #f3e8ff; color: #7e22ce; }
+    .process-artifact-row--check .process-artifact-row__badge { background: #dcfce7; color: #15803d; }
+    .process-artifact-row--ai .process-artifact-row__badge { background: #ffedd5; color: #c2410c; }
+    .process-artifact-row__main { min-width: 0; }
+    .process-artifact-row__main strong { display: block; color: var(--text-primary); font-size: 0.95rem; }
+    .process-artifact-row__main span { display: block; margin-top: 0.22rem; color: var(--text-tertiary); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .process-artifact-row__meta { color: var(--text-secondary); font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+    .process-artifact-row__action { white-space: nowrap; }
+    .process-artifact-empty { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.2rem; border: 1px dashed var(--border-strong, #cbd5e1); border-radius: 15px; background: var(--surface-secondary); color: var(--text-secondary); }
+    .process-artifact-empty strong { display: block; color: var(--text-primary); margin-bottom: 0.2rem; }
+    .process-artifact-section--form .process-section__eyebrow { color: #7e22ce; }
+    .process-artifact-section--check .process-section__eyebrow { color: #15803d; }
+    .process-artifact-section--ai .process-section__eyebrow { color: #c2410c; }
 
     .process-section {
         border: 1px solid var(--border);
@@ -1527,12 +1634,12 @@
 
         .process-tabs-nav {
             position: static;
-            flex-wrap: wrap;
-            overflow-x: visible;
+            flex-wrap: nowrap;
+            overflow-x: auto;
         }
 
         .process-tab-btn {
-            flex: 1 1 calc(50% - 0.5rem);
+            flex: 0 0 auto;
         }
     }
 
@@ -1556,8 +1663,11 @@
         }
 
         .process-tab-btn {
-            flex: 1 1 100%;
+            flex: 0 0 auto;
         }
+
+        .process-artifact-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+        .process-artifact-row__meta { display: none; }
 
         .process-indicators-list .compact-row {
             flex-direction: column;
@@ -1615,6 +1725,55 @@
     .workspace-main {
         max-width: 100%;
     }
+
+    .process-details--pop-focus {
+        --artifact-accent: #2563eb;
+        --artifact-accent-dark: #1d4ed8;
+        --artifact-soft: #eff6ff;
+        --artifact-soft-strong: #dbeafe;
+        width: min(1560px, 100%);
+        margin: 0 auto;
+    }
+
+    .process-details--pop-focus > .process-hero,
+    .process-details--pop-focus > .process-kpis,
+    .process-details--pop-focus > .process-tabs-nav,
+    .process-details--pop-focus > .tab-content:not(#tab-pops) {
+        display: none !important;
+    }
+
+    .process-details--pop-focus #tab-pops {
+        display: block !important;
+        opacity: 1 !important;
+    }
+
+    .pop-artifact-focus-hero { display: none; }
+    .process-details--pop-focus .pop-artifact-focus-hero { display: flex; }
+    .process-details--pop-focus .pop-artifact-panel {
+        margin-top: 18px !important;
+        overflow: hidden;
+        border: 1px solid #dbe3ef;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 10px 28px rgba(15, 23, 42, .06);
+    }
+    .process-details--pop-focus .pop-artifact-panel > .process-section__header {
+        padding: 18px 22px;
+        border-bottom: 1px solid #e6ebf2;
+        background: #f8fafc;
+    }
+    .process-details--pop-focus .pop-artifact-panel > .process-section__body { padding: 20px 22px; }
+    .process-details--pop-focus .pop-create-form {
+        border: 1px solid #bfdbfe;
+        border-radius: 13px;
+        background: #eff6ff;
+        box-shadow: none;
+    }
+
+    @media (max-width: 760px) {
+        .process-details--pop-focus .pop-artifact-focus-hero { align-items: flex-start; }
+        .process-details--pop-focus .pop-artifact-panel > .process-section__body { padding: 14px; }
+    }
 </style>
 
 <script>
@@ -1630,7 +1789,9 @@
         routines: [],
         indicators: [],
         schedules: [],
-        employees: []
+        employees: [],
+        artifacts: [],
+        aiContracts: []
     };
     let activeStepEditId = null;
 
@@ -1768,12 +1929,14 @@
                 fetchProcessResources(),
                 fetchRoutines(),
                 fetchIndicators(),
-                fetchSchedules()
+                fetchSchedules(),
+                fetchArtifacts(),
+                fetchAiContracts()
             ]);
 
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
-                    const loaders = ['sipoc', 'catálogo de recursos', 'estrutura/recursos', 'roteiros', 'indicadores', 'agendamentos'];
+                    const loaders = ['sipoc', 'catálogo de recursos', 'estrutura/recursos', 'roteiros', 'indicadores', 'agendamentos', 'artefatos', 'contratos de IA'];
                     console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
                 }
             });
@@ -1785,6 +1948,9 @@
             renderRoutines();
             renderIndicators();
             renderInstances();
+            renderArtifactOverview('form');
+            renderArtifactOverview('check');
+            renderAiOverview();
             applyNavigationTargetFromUrl();
         } catch (error) {
             console.error("Error loading process details:", error);
@@ -1823,6 +1989,20 @@
             console.error('Erro ao buscar roteiros:', e);
             state.routines = [];
         }
+    }
+
+    async function fetchArtifacts() {
+        const res = await fetch(`/api/processes/${processId}/activity-artifacts`);
+        if (!res.ok) throw new Error('Falha ao carregar artefatos do processo');
+        const data = await res.json();
+        state.artifacts = Array.isArray(data) ? data : (data.artifacts || []);
+    }
+
+    async function fetchAiContracts() {
+        const res = await fetch(`/api/processes/${processId}/activity-execution-contracts`);
+        if (!res.ok) throw new Error('Falha ao carregar contratos de IA do processo');
+        const data = await res.json();
+        state.aiContracts = Array.isArray(data) ? data : (data.contracts || []);
     }
 
     async function fetchSipoc() {
@@ -2832,6 +3012,82 @@
         return encodeURI(`/uploads/${normalized}`);
     }
 
+    function artifactActivityLabel(artifact) {
+        const links = Array.isArray(artifact.activity_links) ? artifact.activity_links : [];
+        const elementIds = [...new Set(links.map(link => link.bpmn_element_id).filter(Boolean))];
+        if (!elementIds.length && artifact.legacy_pop?.bpmn_element_id) elementIds.push(artifact.legacy_pop.bpmn_element_id);
+        if (!elementIds.length) return 'Ainda sem vínculo com atividade BPMN';
+        if (elementIds.length === 1) return `Atividade ${elementIds[0]}`;
+        return `${elementIds.length} atividades vinculadas`;
+    }
+
+    function artifactStatusLabel(status) {
+        return ({ draft: 'Rascunho', published: 'Publicado', archived: 'Arquivado' })[status] || 'Rascunho';
+    }
+
+    function renderArtifactOverview(type) {
+        const config = {
+            form: { hostId: 'processFormsList', badge: 'FORM', empty: 'Nenhum formulário vinculado' },
+            check: { hostId: 'processChecksList', badge: 'CHECK', empty: 'Nenhum checklist vinculado' }
+        }[type];
+        if (!config) return;
+        const host = document.getElementById(config.hostId);
+        if (!host) return;
+        const items = (state.artifacts || []).filter(item => item.artifact_type === type && item.status !== 'archived');
+        const modelerUrl = `/processes/${processId}/bpmn-modeler`;
+
+        if (!items.length) {
+            host.innerHTML = `
+                <div class="process-artifact-empty">
+                    <div><strong>${config.empty}</strong><span>Adicione o artefato à atividade certa diretamente no fluxo.</span></div>
+                    <a class="btn btn-secondary btn-sm" href="${modelerUrl}">Abrir Modeler</a>
+                </div>`;
+            return;
+        }
+
+        host.innerHTML = items.map(item => `
+            <article class="process-artifact-row process-artifact-row--${type}">
+                <span class="process-artifact-row__badge">${config.badge}</span>
+                <div class="process-artifact-row__main">
+                    <strong>${escapeHtml(item.name || config.badge)}</strong>
+                    <span>${escapeHtml(artifactActivityLabel(item))}${item.description ? ` · ${escapeHtml(item.description)}` : ''}</span>
+                </div>
+                <span class="process-artifact-row__meta">v${Number(item.version || 1)} · ${artifactStatusLabel(item.status)}</span>
+                <a class="btn btn-secondary btn-sm process-artifact-row__action" href="/processes/${processId}/artifacts/${Number(item.id)}/edit">Editar</a>
+            </article>`).join('');
+    }
+
+    function renderAiOverview() {
+        const host = document.getElementById('processAiList');
+        if (!host) return;
+        const modelerUrl = `/processes/${processId}/bpmn-modeler`;
+        const contracts = (state.aiContracts || []).filter(item => item.is_active !== false);
+        if (!contracts.length) {
+            host.innerHTML = `
+                <div class="process-artifact-empty">
+                    <div><strong>Nenhuma IA configurada</strong><span>Selecione uma AI Task ou AI Gateway no fluxo para criar seu contrato.</span></div>
+                    <a class="btn btn-secondary btn-sm" href="${modelerUrl}">Abrir Modeler</a>
+                </div>`;
+            return;
+        }
+
+        host.innerHTML = contracts.map(contract => {
+            const aiConfig = contract.ai_config_json || {};
+            const name = aiConfig.name || aiConfig.title || contract.capability_key || contract.bpmn_element_id || 'Contrato de IA';
+            const mode = contract.execution_mode === 'ai_gateway' || contract.interaction_mode === 'gateway' ? 'AI Gateway' : 'AI Task';
+            return `
+                <article class="process-artifact-row process-artifact-row--ai">
+                    <span class="process-artifact-row__badge">IA</span>
+                    <div class="process-artifact-row__main">
+                        <strong>${escapeHtml(name)}</strong>
+                        <span>${escapeHtml(mode)} · Elemento ${escapeHtml(contract.bpmn_element_id || 'não informado')}</span>
+                    </div>
+                    <span class="process-artifact-row__meta">v${Number(contract.version || 1)} · Ativo</span>
+                    <a class="btn btn-secondary btn-sm process-artifact-row__action" href="${modelerUrl}">Configurar</a>
+                </article>`;
+        }).join('');
+    }
+
     function switchTab(tab, triggerElement) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -2848,8 +3104,11 @@
         const targetTab = params.get('tab');
         const routineId = params.get('routine_id') || (window.location.hash || '').replace('#routine-', '');
 
-        if (targetTab === 'pops' || routineId) {
+        const allowedTabs = ['sipoc', 'resources', 'modeling', 'pops', 'forms', 'checks', 'ai', 'routine', 'indicators'];
+        if (routineId) {
             switchTab('pops');
+        } else if (allowedTabs.includes(targetTab)) {
+            switchTab(targetTab);
         }
 
         if (routineId) {
@@ -2864,6 +3123,14 @@
         // Update code base for creation form
         const codeBase = state.process.code ? state.process.code + '.' : '';
         document.getElementById('routineCodeBase').textContent = codeBase;
+        const popFocusProcessCode = document.getElementById('popFocusProcessCode');
+        if (popFocusProcessCode) popFocusProcessCode.textContent = `${state.process.code || 'Processo'} · ${state.process.name || ''}`;
+        const requestedRoutineId = new URLSearchParams(window.location.search).get('routine_id');
+        const requestedRoutine = state.routines.find((item) => String(item.id) === String(requestedRoutineId));
+        const popFocusRoutineContext = document.getElementById('popFocusRoutineContext');
+        if (popFocusRoutineContext && requestedRoutine) {
+            popFocusRoutineContext.textContent = `${requestedRoutine.code || ''}${requestedRoutine.code ? ' - ' : ''}${requestedRoutine.name || 'Atividade POP'}`;
+        }
 
         // Auto-fill suffix if empty
         const suffixInput = document.getElementById('newRoutineSuffix');

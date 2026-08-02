@@ -11,6 +11,14 @@ from models import Company, db, Process, ProcessBpmnDiagram
 
 VALID_BPMN_STATUSES = {"draft", "published", "archived"}
 SVG_NS = "http://www.w3.org/2000/svg"
+ARTIFACT_VISUALS = {
+    "pop": {"markers": ("[POP]",), "stroke": "#2563eb", "fill": "#eff6ff"},
+    "form": {"markers": ("[FORM]",), "stroke": "#7c3aed", "fill": "#f5f3ff"},
+    "check": {"markers": ("[CHECK]",), "stroke": "#059669", "fill": "#ecfdf5"},
+    "ai": {"markers": ("[IA]",), "stroke": "#ea580c", "fill": "#fff7ed"},
+    "data-in": {"markers": ("[DADOS IN]",), "stroke": "#0891b2", "fill": "#ecfeff"},
+    "data-out": {"markers": ("[DADOS OUT]",), "stroke": "#e11d48", "fill": "#fff1f2"},
+}
 
 
 def sanitize_svg_snapshot(svg: str | None) -> str | None:
@@ -22,6 +30,64 @@ def sanitize_svg_snapshot(svg: str | None) -> str | None:
     cleaned = re.sub(r"\s+on[a-zA-Z]+\s*=\s*(['\"]).*?\1", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
     cleaned = re.sub(r"javascript:", "", cleaned, flags=re.IGNORECASE)
     return cleaned
+
+
+def colorize_bpmn_artifact_svg(svg: str | None, bpmn_xml: str | None) -> str | None:
+    """Aplica a identidade canônica dos artefatos a snapshots antigos e novos do Book."""
+    cleaned = sanitize_svg_snapshot(svg)
+    if not cleaned or not bpmn_xml:
+        return cleaned
+
+    try:
+        root = ET.fromstring(str(bpmn_xml))
+    except ET.ParseError:
+        return cleaned
+
+    artifact_by_element_id: dict[str, str] = {}
+    for element in root.iter():
+        if not str(element.tag).endswith("dataObjectReference"):
+            continue
+        element_id = str(element.attrib.get("id") or "").strip()
+        name = str(element.attrib.get("name") or "").strip().upper()
+        if not element_id or not name:
+            continue
+        for artifact_type, visual in ARTIFACT_VISUALS.items():
+            if any(name.startswith(marker) for marker in visual["markers"]):
+                artifact_by_element_id[element_id] = artifact_type
+                break
+
+    if not artifact_by_element_id:
+        return cleaned
+
+    def add_artifact_class(match: re.Match[str]) -> str:
+        tag = match.group(0)
+        id_match = re.search(r"\bdata-element-id=(['\"])(.*?)\1", tag, flags=re.IGNORECASE)
+        if not id_match:
+            return tag
+        raw_id = id_match.group(2)
+        base_id = raw_id[:-6] if raw_id.endswith("_label") else raw_id
+        artifact_type = artifact_by_element_id.get(base_id)
+        if not artifact_type:
+            return tag
+        class_name = f"app32-artifact-{artifact_type}"
+        class_match = re.search(r"\bclass=(['\"])(.*?)\1", tag, flags=re.IGNORECASE)
+        if class_match:
+            classes = class_match.group(2).split()
+            if class_name in classes:
+                return tag
+            replacement = f'class={class_match.group(1)}{class_match.group(2)} {class_name}{class_match.group(1)}'
+            return tag[:class_match.start()] + replacement + tag[class_match.end():]
+        return tag[:-1] + f' class="{class_name}">'
+
+    colored = re.sub(r"<g\b[^>]*>", add_artifact_class, cleaned, flags=re.IGNORECASE)
+    rules = []
+    for artifact_type, visual in ARTIFACT_VISUALS.items():
+        rules.append(
+            f".app32-artifact-{artifact_type} .djs-visual>path"
+            f"{{fill:{visual['fill']}!important;stroke:{visual['stroke']}!important}}"
+        )
+    style = f'<style id="app32-artifact-colors">{"".join(rules)}</style>'
+    return re.sub(r"(<svg\b[^>]*>)", rf"\1{style}", colored, count=1, flags=re.IGNORECASE)
 
 
 def _parse_svg_dimension(value: str | None, fallback: float) -> float:

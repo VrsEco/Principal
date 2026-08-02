@@ -1,0 +1,147 @@
+{% extends "layouts/workspace.html" %}
+
+{% set is_input = artifact_type == 'data_in' %}
+{% set artifact_label = 'DADOS RECEBIDOS' if is_input else 'DADOS ENVIADOS' %}
+
+{% block title %}Editor {{ artifact_label }} | {{ process.name }}{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/process_artifact_editor.css', v=static_asset_version('css/process_artifact_editor.css')) }}">
+{% endblock %}
+
+{% block breadcrumb %}
+<a href="/processes">Processos</a><span class="sep">/</span>
+<a href="{{ url_for('processes.process_details', process_id=process.id) }}">{{ process.code or process.name }}</a><span class="sep">/</span>
+<span class="current">{{ artifact_label }}</span>
+{% endblock %}
+
+{% block workspace_content %}
+<main class="artifact-editor artifact-editor--{{ 'data-in' if is_input else 'data-out' }}" id="dataArtifactEditor">
+  <header class="artifact-editor__hero">
+    <div class="artifact-editor__identity">
+      <div class="artifact-editor__badge">{{ 'IN' if is_input else 'OUT' }}</div>
+      <div class="artifact-editor__heading">
+        <span class="artifact-editor__eyebrow">Artefato de integração</span>
+        <h1>Editor de dados {{ 'recebidos' if is_input else 'enviados' }}</h1>
+        <p>{{ process.code or '' }}{% if process.code %} · {% endif %}{{ process.name }} <span>•</span> {{ bpmn_element_id or 'Sem vínculo BPMN' }}</p>
+      </div>
+    </div>
+    <div class="artifact-editor__actions">
+      <a class="artifact-btn artifact-btn--ghost" href="{{ url_for('processes.process_bpmn_modeler', process_id=process.id) }}"><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao Modeler</a>
+      <span class="artifact-status" id="artifactStatus">Rascunho</span>
+      <button class="artifact-btn artifact-btn--primary" id="saveArtifactBtn" type="button"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
+      <button class="artifact-btn" id="publishArtifactBtn" type="button"><i class="fas fa-paper-plane" aria-hidden="true"></i> Publicar</button>
+    </div>
+  </header>
+
+  <div class="artifact-editor__grid">
+    <section class="artifact-editor__panel">
+      <div class="artifact-editor__section-title">
+        <div><span class="artifact-editor__section-kicker">Contrato operacional</span><h2>Configuração da conexão</h2><p>Defina sistema, transporte, formato e mapeamento dos dados.</p></div>
+      </div>
+      <div class="artifact-integration-grid">
+        <div class="artifact-field">
+          <label for="systemKey">{{ 'Sistema de origem' if is_input else 'Sistema de destino' }}</label>
+          <input id="systemKey" maxlength="120" placeholder="Ex.: crm, erp, webhook_cliente">
+        </div>
+        <div class="artifact-field">
+          <label for="transport">Transporte</label>
+          <select id="transport">
+            <option value="api_rest">API REST</option>
+            <option value="webhook">Webhook</option>
+            <option value="database">Banco de dados</option>
+            <option value="file">Arquivo</option>
+            <option value="email">E-mail</option>
+            <option value="manual">Entrada manual</option>
+            <option value="mcp">MCP</option>
+          </select>
+        </div>
+        <div class="artifact-field">
+          <label for="dataFormat">Formato</label>
+          <select id="dataFormat">
+            <option value="json">JSON</option><option value="csv">CSV</option><option value="xml">XML</option>
+            <option value="xlsx">XLSX</option><option value="pdf">PDF</option><option value="text">Texto</option><option value="binary">Binário</option>
+          </select>
+        </div>
+        <div class="artifact-field">
+          <label for="operationKey">Operação / endpoint</label>
+          <input id="operationKey" maxlength="255" placeholder="Ex.: GET /clientes/{id}">
+        </div>
+      </div>
+      <div class="artifact-field">
+        <label for="schemaJson">Schema do payload (JSON)</label>
+        <textarea class="artifact-code" id="schemaJson" spellcheck="false" placeholder='{"type":"object","properties":{}}'></textarea>
+      </div>
+      <div class="artifact-field">
+        <label for="mappingJson">Mapeamento para variáveis da instância (JSON)</label>
+        <textarea class="artifact-code" id="mappingJson" spellcheck="false" placeholder='{"cliente_id":"$.cliente.id"}'></textarea>
+      </div>
+    </section>
+
+    <aside class="artifact-editor__sidebar">
+      <div class="artifact-editor__sidebar-head"><span>Configurações</span><p>Identificação e governança da conexão</p></div>
+      <div class="artifact-context">
+        <i class="fas fa-diagram-project" aria-hidden="true"></i><div><strong>Elemento BPMN</strong><span>{{ bpmn_element_name or 'Atividade selecionada' }}</span><small>{{ bpmn_element_id or 'Vínculo será informado pelo modelador' }}</small></div>
+      </div>
+      <div class="artifact-field">
+        <label for="artifactName">Nome da conexão</label>
+        <input id="artifactName" maxlength="255" placeholder="Ex.: {{ 'Receber cadastro aprovado' if is_input else 'Enviar confirmação ao CRM' }}">
+      </div>
+      <div class="artifact-field">
+        <label for="artifactDescription">Objetivo e regra de uso</label>
+        <textarea id="artifactDescription" rows="5" placeholder="Descreva quando a conexão é acionada e o resultado esperado"></textarea>
+      </div>
+      <div class="artifact-field artifact-switch"><label><input id="requiredArtifact" type="checkbox" checked><span>Obrigatório para concluir atividade</span></label></div>
+      <p class="artifact-help"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>O contrato publicado fica versionado. Dados, respostas e falhas serão auditados por empresa, instância e atividade.</span></p>
+    </aside>
+  </div>
+</main>
+<div class="artifact-toast" id="artifactToast" role="status"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+  const state = {
+    processId: {{ process.id }}, artifactType: {{ artifact_type|tojson }}, artifact: {{ artifact|tojson }},
+    bpmnElementId: {{ bpmn_element_id|tojson }}, bpmnElementName: {{ bpmn_element_name|tojson }}
+  };
+  const $ = id => document.getElementById(id);
+  const toast = (message, error=false) => {
+    const el=$('artifactToast'); el.textContent=message; el.className=`artifact-toast is-visible${error?' is-error':''}`;
+    setTimeout(() => { el.className='artifact-toast'; }, 2800);
+  };
+  const config=state.artifact?.configuration_json||{};
+  $('artifactName').value=state.artifact?.name||state.bpmnElementName||(state.artifactType==='data_in'?'Nova entrada de dados':'Nova saída de dados');
+  $('artifactDescription').value=state.artifact?.description||'';
+  $('systemKey').value=config.system_key||''; $('transport').value=config.transport||'api_rest';
+  $('dataFormat').value=config.format||'json'; $('operationKey').value=config.operation_key||'';
+  $('schemaJson').value=JSON.stringify(config.schema||{},null,2); $('mappingJson').value=JSON.stringify(config.mapping||{},null,2);
+  const linkedRequired=state.artifact?.link?.is_required;
+  $('requiredArtifact').checked=linkedRequired===undefined?true:Boolean(linkedRequired);
+
+  function parseJson(id,label){const raw=$(id).value.trim();if(!raw)return {};try{return JSON.parse(raw);}catch(_){throw new Error(`${label} precisa ser um JSON válido.`);}}
+  function payload(){
+    const name=$('artifactName').value.trim();if(!name)throw new Error('Informe o nome da conexão.');
+    return {artifact_type:state.artifactType,name,description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,
+      is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'successful_transfer',allow_skip:false},
+      configuration_json:{direction:state.artifactType==='data_in'?'inbound':'outbound',system_key:$('systemKey').value.trim(),
+        transport:$('transport').value,format:$('dataFormat').value,operation_key:$('operationKey').value.trim(),
+        schema:parseJson('schemaJson','O schema'),mapping:parseJson('mappingJson','O mapeamento')}};
+  }
+  async function save(){
+    const editing=Boolean(state.artifact?.id),url=editing?`/api/process-activity-artifacts/${state.artifact.id}`:`/api/processes/${state.processId}/activity-artifacts`;
+    const response=await fetch(url,{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível salvar.');state.artifact=data;toast('Rascunho salvo.');
+    if(!editing)location.href=`/processes/${state.processId}/artifacts/${data.id}/edit?bpmn_element_id=${encodeURIComponent(state.bpmnElementId)}&bpmn_element_name=${encodeURIComponent(state.bpmnElementName)}`;return data;
+  }
+  async function publish(){if(!state.artifact?.id)await save();const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível publicar.');state.artifact=data;setStatus();toast('Versão publicada.');}
+  function setStatus(){const published=state.artifact?.status==='published';$('artifactStatus').textContent=published?'Publicado':'Rascunho';$('artifactStatus').className=`artifact-status${published?' artifact-status--published':''}`;$('saveArtifactBtn').disabled=published;$('publishArtifactBtn').disabled=published;}
+  $('saveArtifactBtn').addEventListener('click',()=>save().catch(error=>toast(error.message,true)));
+  $('publishArtifactBtn').addEventListener('click',()=>publish().catch(error=>toast(error.message,true)));
+  setStatus();
+})();
+</script>
+{% endblock %}

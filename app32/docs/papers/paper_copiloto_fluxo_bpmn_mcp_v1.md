@@ -93,7 +93,7 @@ A evolução deve preservar a linguagem já compreendida no APP32 para o POP:
 - artefato externo ligado à atividade por associação BPMN pontilhada;
 - mesma base geométrica/visual do artefato atual;
 - cor e nome próprios para distinguir `POP`, `FORM`, `CHECK`, `IA`, `IN` e `OUT`;
-- clique no artefato abre diretamente seu editor especializado;
+- a criação do artefato permanece no modelador; dois cliques no marcador abrem seu editor especializado quando o usuário decidir configurá-lo;
 - uma atividade pode exibir um, vários ou todos os artefatos, sem inflar o retângulo da tarefa.
 
 O BPMN permanece legível e padronizado; a riqueza operacional fica nos objetos associados.
@@ -142,6 +142,16 @@ Essa abordagem preserva três perspectivas complementares:
 2. `Meu Trabalho`: fila pessoal consolidada entre processos;
 3. `Instância`: execução detalhada da atividade e de seus artefatos.
 
-## 13. Hipótese de valor consolidada
+## 13. Cores como linguagem visual do modelo
+
+Além das cores semânticas fixas dos artefatos, o modelador deve permitir que o usuário aplique cores aos elementos BPMN sem alterar sua semântica. A cor é uma camada de leitura: ajuda a destacar tarefas, eventos, gateways, raias e conexões, mas não substitui tipo, nome, contrato ou estado de execução.
+
+A experiência aprovada é contextual, semelhante ao padrão do Bizagi: ao selecionar um elemento, o usuário abre uma paleta curta, aplica uma cor ou restaura o padrão do tipo. A escolha deve ser gravada no próprio XML BPMN para sobreviver a salvamento, exportação, Book e reabertura. No runtime, o estado da instância deve aparecer por contorno, badge ou overlay, preservando a cor autoral do modelo.
+
+## 14. Hipótese de valor consolidada
 
 A composição `BPMN + artefatos + contrato + runtime` transforma o fluxo de desenho estático em sistema operacional de processos. O ganho não está apenas em anexar documentos: está em tornar cada atividade verificável, orientada por dados, integrável e acionável pelo humano ou pelo Sapiens, com a mesma trilha de governança.
+
+## 15. Experiência visual unificada dos editores
+
+Os editores especializados compartilham a mesma shell: cabeçalho compacto com identidade e cor do tipo, status e ações; conteúdo principal; painel lateral de contexto BPMN e governança. A consistência reduz a curva de aprendizado sem apagar a semântica de `FORM`, `CHECK`, `IN` e `OUT`. O POP permanece como referência canônica, enquanto IA evolui na mesma linguagem visual dentro de sua configuração sob demanda.

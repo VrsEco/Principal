@@ -39,12 +39,13 @@
   data-process-code="{{ process.code or '' }}"
 >
   <section class="bpmn-modeler-hero">
-    <div>
+    <div class="bpmn-modeler-hero__identity">
+      <div class="bpmn-modeler-hero__badge"><i class="fas fa-project-diagram" aria-hidden="true"></i></div>
+      <div>
       <span class="bpmn-eyebrow">APP32 BPMN Modeler</span>
       <h1>{{ process.code or 'Processo' }} - {{ process.name }}</h1>
-      <p>
-        Modele o fluxo BPMN 2.0 do processo.
-      </p>
+      <p>Modele o fluxo BPMN 2.0 e conecte os artefatos operacionais.</p>
+      </div>
     </div>
     <div class="bpmn-status-panel">
       <span class="bpmn-status-label">Status do diagrama</span>
@@ -57,25 +58,24 @@
     <div class="bpmn-ribbon-group">
       <span class="bpmn-ribbon-title">Arquivo</span>
       <input type="file" id="bpmnImportInput" accept=".bpmn,.xml" hidden>
-      <button type="button" class="bpmn-tool-btn" data-action="import">Importar .bpmn</button>
-      <button type="button" class="bpmn-tool-btn bpmn-tool-btn-primary" data-action="save">Salvar rascunho</button>
-      <button type="button" class="bpmn-tool-btn" data-action="publish">Publicar versão</button>
-      <button type="button" class="bpmn-tool-btn" data-action="export">Exportar .bpmn</button>
+      <button type="button" class="bpmn-tool-btn" data-action="import"><i class="fas fa-file-import" aria-hidden="true"></i> Importar</button>
+      <button type="button" class="bpmn-tool-btn bpmn-tool-btn-primary" data-action="save"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
+      <button type="button" class="bpmn-tool-btn" data-action="publish"><i class="fas fa-paper-plane" aria-hidden="true"></i> Publicar</button>
+      <button type="button" class="bpmn-tool-btn" data-action="export"><i class="fas fa-file-export" aria-hidden="true"></i> Exportar</button>
     </div>
     <div class="bpmn-ribbon-group">
       <span class="bpmn-ribbon-title">Visualização</span>
-      <button type="button" class="bpmn-tool-btn" data-action="zoom-in">Zoom +</button>
-      <button type="button" class="bpmn-tool-btn" data-action="zoom-out">Zoom -</button>
-      <button type="button" class="bpmn-tool-btn" data-action="fit">Ajustar</button>
-      <button type="button" class="bpmn-tool-btn" data-action="svg">Baixar SVG</button>
+      <button type="button" class="bpmn-tool-btn bpmn-tool-btn--icon" data-action="zoom-in" aria-label="Aumentar zoom"><i class="fas fa-search-plus" aria-hidden="true"></i></button>
+      <button type="button" class="bpmn-tool-btn bpmn-tool-btn--icon" data-action="zoom-out" aria-label="Reduzir zoom"><i class="fas fa-search-minus" aria-hidden="true"></i></button>
+      <button type="button" class="bpmn-tool-btn" data-action="fit"><i class="fas fa-expand" aria-hidden="true"></i> Ajustar</button>
+      <button type="button" class="bpmn-tool-btn" data-action="svg"><i class="fas fa-image" aria-hidden="true"></i> SVG</button>
     </div>
     <div class="bpmn-ribbon-group">
-      <span class="bpmn-ribbon-title">Artefatos</span>
-      <button type="button" class="bpmn-tool-btn" data-action="normalize-codes">Codificar atividades</button>
-      <button type="button" class="bpmn-tool-btn" data-action="inspect-elements">Configurar POP / FORM / CHECK</button>
+      <span class="bpmn-ribbon-title">Modelagem</span>
+      <button type="button" class="bpmn-tool-btn" data-action="normalize-codes"><i class="fas fa-list-ol" aria-hidden="true"></i> Codificar</button>
     </div>
     <div class="bpmn-ribbon-hint">
-      Elementos BPMN disponíveis na paleta lateral: eventos, tarefas, gateways, subprocessos, conexões e anotações. O APP32 adiciona AI Task e AI Gateway no Change Element e no painel assistido pelo Sapiens.
+      <i class="fas fa-lightbulb" aria-hidden="true"></i><span>Selecione uma atividade ou gateway, use <strong>+ Artefato</strong> e abra a configuração com <strong>dois cliques</strong>.</span>
     </div>
   </section>
 
@@ -84,34 +84,48 @@
       <div id="bpmnCanvas" class="bpmn-canvas"></div>
       <div id="bpmnLoading" class="bpmn-loading">Carregando modeler BPMN...</div>
     </div>
-    <aside class="bpmn-ai-sidebar surface-card" id="bpmnAiSidebar">
-      <div class="bpmn-ai-sidebar__header">
-        <span class="bpmn-eyebrow">AI Task / AI Gateway</span>
-        <h2>Configuração fluida com Sapiens</h2>
-        <p>Selecione uma task ou gateway para configurar IA, visualizar o contrato e pedir apoio do Sapiens.</p>
-      </div>
-      <div id="bpmnAiInspector" class="bpmn-ai-inspector">
-        <div class="bpmn-ai-empty">
-          <strong>Nenhum elemento selecionado</strong>
-          <p>Selecione uma task ou gateway no diagrama para abrir o formulário assistido.</p>
-        </div>
-      </div>
-    </aside>
   </section>
 
-  <section class="bpmn-pop-binding-panel" id="bpmnPopBindingPanel" hidden>
-    <div>
-      <span class="bpmn-eyebrow">Artefatos externos da atividade</span>
-      <h2>Configurar POP, FORM e CHECK</h2>
-      <p>
-        FORM e CHECK podem ser configurados em qualquer atividade executável. O POP continua usando
-        <strong>Data Object Reference</strong> como marcador compatível com a modelagem atual. As atividades operacionais são
-        codificadas automaticamente no padrão <strong>código do processo + .NN</strong>, por exemplo
-        <strong>{{ process.code or 'AA.C.1.1.2' }}.04</strong>.
-      </p>
+  <div class="bpmn-artifact-quick-menu" id="bpmnArtifactQuickMenu" hidden role="dialog" aria-label="Adicionar artefato">
+    <div class="bpmn-artifact-quick-menu__head">
+      <div>
+        <span>Artefatos externos</span>
+        <strong id="bpmnArtifactTargetName">Atividade selecionada</strong>
+      </div>
+      <button type="button" data-artifact-menu-close aria-label="Fechar">×</button>
     </div>
-    <div id="bpmnElementList" class="bpmn-element-list"></div>
-  </section>
+    <div class="bpmn-artifact-quick-menu__items" id="bpmnArtifactQuickMenuItems"></div>
+  </div>
+
+  <div class="bpmn-color-menu" id="bpmnColorMenu" hidden role="dialog" aria-label="Alterar cor do elemento">
+    <div class="bpmn-artifact-quick-menu__head">
+      <div>
+        <span>Cor do elemento</span>
+        <strong id="bpmnColorTargetName">Elemento selecionado</strong>
+      </div>
+      <button type="button" data-bpmn-color-close aria-label="Fechar">×</button>
+    </div>
+    <div class="bpmn-color-menu__body">
+      <button type="button" class="bpmn-color-menu__action" data-bpmn-color-default>Padrão do tipo</button>
+      <div class="bpmn-color-swatches" id="bpmnColorSwatches" aria-label="Paleta de cores"></div>
+      <button type="button" class="bpmn-color-menu__action bpmn-color-menu__action--muted" data-bpmn-color-reset>Restaurar sem cor</button>
+    </div>
+  </div>
+
+  <div class="bpmn-ai-dialog" id="bpmnAiDialog" hidden>
+    <section class="bpmn-ai-dialog__surface" role="dialog" aria-modal="true" aria-labelledby="bpmnAiDialogTitle">
+      <header class="bpmn-ai-dialog__header">
+        <div>
+          <span class="bpmn-eyebrow">Artefato IA</span>
+          <h2 id="bpmnAiDialogTitle">AI Task / AI Gateway</h2>
+          <p>Configure o contrato operacional e peça apoio do Sapiens sem reduzir a área do diagrama.</p>
+        </div>
+        <button type="button" class="bpmn-ai-dialog__close" data-ai-dialog-close aria-label="Fechar configuração de IA">×</button>
+      </header>
+      <div id="bpmnAiInspector" class="bpmn-ai-inspector"></div>
+    </section>
+  </div>
+
 </div>
 {% endblock %}
 
