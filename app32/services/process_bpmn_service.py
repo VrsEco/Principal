@@ -367,6 +367,11 @@ def upsert_process_bpmn_diagram(
     diagram.updated_at = datetime.utcnow()
 
     if status == "published":
+        # A nova linha precisa ter um ID antes do UPDATE em lote. Sem o flush,
+        # o autoflush disparado pela query pode inserir o próprio diagrama e o
+        # filtro `id != 0` acaba arquivando a versão recém-publicada.
+        if diagram.id is None:
+            db.session.flush()
         (
             ProcessBpmnDiagram.query.filter_by(
                 process_id=process.id,

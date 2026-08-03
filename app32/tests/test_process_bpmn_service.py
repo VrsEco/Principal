@@ -48,6 +48,7 @@ class _FakeSession:
     def __init__(self):
         self.added: list[object] = []
         self.committed = False
+        self.flushed = False
         self.no_autoflush = _FakeNoAutoflush()
 
     def add(self, obj):
@@ -55,6 +56,11 @@ class _FakeSession:
 
     def commit(self):
         self.committed = True
+
+    def flush(self):
+        self.flushed = True
+        if self.added and getattr(self.added[-1], "id", None) is None:
+            self.added[-1].id = 321
 
     def query(self, _field):
         session = self
@@ -119,7 +125,7 @@ def test_upsert_process_bpmn_diagram_sets_required_fields_before_company_lookup(
     payload = {
         "status": "draft",
         "name": "Tráfego Pago",
-        "bpmn_xml": "<bpmn:definitions id='Defs_1' />",
+        "bpmn_xml": "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL' id='Defs_1' />",
         "svg_snapshot": None,
         "metadata_json": {"source": "test"},
     }
@@ -135,3 +141,38 @@ def test_upsert_process_bpmn_diagram_sets_required_fields_before_company_lookup(
     assert saved.process_id == 526
     assert saved.name == "Tráfego Pago"
     assert saved.bpmn_xml == "<bpmn:definitions id='synced' />"
+
+
+def test_upsert_new_published_diagram_flushes_before_archiving_previous_versions(monkeypatch):
+    fake_session = _FakeSession()
+
+    monkeypatch.setattr(process_bpmn_service, "ProcessBpmnDiagram", _FakeDiagram)
+    monkeypatch.setattr(process_bpmn_service, "_next_version", lambda process_id, company_id: 2)
+    monkeypatch.setattr(
+        process_bpmn_service,
+        "sync_bpmn_participant_metadata",
+        lambda xml, **_kwargs: xml,
+    )
+    monkeypatch.setattr(process_bpmn_service, "db", SimpleNamespace(session=fake_session))
+    monkeypatch.setattr(
+        process_bpmn_service,
+        "Company",
+        SimpleNamespace(name="name", id=_FakeComparable()),
+    )
+
+    process = SimpleNamespace(id=2, company_id=9, code="AA.C.1.1.2", name="Identidade Organizacional")
+    saved = process_bpmn_service.upsert_process_bpmn_diagram(
+        process=process,
+        payload={
+            "status": "published",
+            "name": process.name,
+            "bpmn_xml": "<bpmn:definitions xmlns:bpmn='http://www.omg.org/spec/BPMN/20100524/MODEL' id='Defs_2' />",
+            "metadata_json": {},
+        },
+        user_id=3,
+    )
+
+    assert fake_session.flushed is True
+    assert saved.id == 321
+    assert saved.status == "published"
+    assert fake_session.committed is True
