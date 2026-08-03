@@ -308,6 +308,10 @@
         <input type="hidden" name="company_id" value="{{ company_id }}">
         <div class="filter-group"><label class="filter-label">Buscar</label><input type="search" name="search" value="{{ filters.search or '' }}" placeholder="Faturamento, contrato, cliente ou documento"></div>
         <div class="filter-group">
+            <label class="filter-label">Data do faturamento</label>
+            <input type="date" name="billing_date" value="{{ filters.billing_date or '' }}">
+        </div>
+        <div class="filter-group">
             <label class="filter-label">Status fiscal</label>
             <select name="fiscal_status">
                 <option value="active" {% if filters.fiscal_status == 'active' %}selected{% endif %}>Ativas exceto excluídas</option>

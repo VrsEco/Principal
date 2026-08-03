@@ -31,6 +31,61 @@ def test_contracts_billing_filters_from_request_reads_issuer_legal_entity():
     }
 
 
+def test_fiscal_invoice_filters_from_request_reads_billing_date():
+    app = Flask(__name__)
+
+    with app.test_request_context(
+        "/contracts/invoices?company_id=1&billing_date=2026-08-03&fiscal_status=pending"
+    ):
+        filters = contracts_route._fiscal_invoice_filters_from_request()
+
+    assert filters["billing_date"] == "2026-08-03"
+    assert filters["fiscal_status"] == "pending"
+
+
+def test_fiscal_invoice_template_renders_billing_date_filter():
+    app = Flask(__name__)
+    app.secret_key = "test"
+    app.jinja_env.filters["format_currency_br"] = _format_currency_br
+    app.jinja_loader = ChoiceLoader(
+        [
+            DictLoader(
+                {
+                    "layouts/base.html": "{% block layout %}{% endblock %}",
+                    "layouts/workspace.html": "{% block workspace_content %}{% endblock %}{% block sidebar_right %}{% endblock %}{% block scripts %}{% endblock %}",
+                    "modules/contracts/_styles.html": "",
+                }
+            ),
+            FileSystemLoader(str(Path(__file__).resolve().parents[1] / "templates")),
+        ]
+    )
+
+    contracts_bp = Blueprint("contracts", __name__)
+
+    @contracts_bp.route("/contracts/invoices")
+    def contracts_fiscal_invoices():
+        return ""
+
+    app.register_blueprint(contracts_bp)
+
+    with app.test_request_context("/contracts/invoices?company_id=1&billing_date=2026-08-03"):
+        html = render_template(
+            "modules/contracts/contracts_fiscal_invoices.html",
+            company_id=1,
+            company=SimpleNamespace(id=1),
+            invoice_rows=[],
+            invoice_batches=[],
+            invoice_kpis={"total": 0, "pending": 0, "batched": 0, "emitted": 0},
+            parties=[],
+            issuing_legal_entities=[],
+            filters={"billing_date": "2026-08-03", "fiscal_status": "active"},
+        )
+
+    assert "Data do faturamento" in html
+    assert 'name="billing_date"' in html
+    assert 'value="2026-08-03"' in html
+
+
 def test_contract_billing_template_renders_issuer_filter():
     app = Flask(__name__)
     app.secret_key = "test"

@@ -113,6 +113,7 @@ def _billing_done_filters_from_request() -> dict:
 def _fiscal_invoice_filters_from_request() -> dict:
     return {
         "search": request.args.get("search"),
+        "billing_date": request.args.get("billing_date"),
         "party_id": request.args.get("party_id", type=int),
         "issuer_legal_entity_id": request.args.get("issuer_legal_entity_id", type=int),
         "fiscal_status": request.args.get("fiscal_status") or "active",

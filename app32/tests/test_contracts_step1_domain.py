@@ -458,6 +458,68 @@ def test_fiscal_invoice_workspace_filters_by_issuer_legal_entity(monkeypatch):
     assert [row["billing"].id for row in workspace["rows"]] == [1]
     assert workspace["kpis"]["total"] == 1
     assert workspace["kpis"]["pending"] == 1
+
+
+def test_list_fiscal_invoice_billings_filters_by_billing_issue_date(monkeypatch):
+    class _FakeField:
+        def __init__(self, name):
+            self.name = name
+
+        def __eq__(self, value):
+            return (self.name, "eq", value)
+
+        def __ne__(self, value):
+            return (self.name, "ne", value)
+
+        def desc(self):
+            return (self.name, "desc")
+
+    class _FakeQuery:
+        def __init__(self):
+            self.criteria = []
+
+        def filter(self, *criteria):
+            self.criteria.extend(criteria)
+            return self
+
+        def outerjoin(self, *args):
+            return self
+
+        def order_by(self, *args):
+            return self
+
+        def all(self):
+            return []
+
+    query = _FakeQuery()
+
+    class _FakeNativeBilling:
+        company_id = _FakeField("company_id")
+        status = _FakeField("status")
+        contract_id = _FakeField("contract_id")
+        party_id = _FakeField("party_id")
+        issue_date = _FakeField("issue_date")
+        competence_start = _FakeField("competence_start")
+        id = _FakeField("id")
+
+    _FakeNativeBilling.query = query
+
+    class _FakeContract:
+        id = _FakeField("contract.id")
+
+    class _FakeParty:
+        id = _FakeField("party.id")
+
+    monkeypatch.setattr(contracts_service_module, "ContractNativeBilling", _FakeNativeBilling)
+    monkeypatch.setattr(contracts_service_module, "Contract", _FakeContract)
+    monkeypatch.setattr(contracts_service_module, "ContractParty", _FakeParty)
+
+    result = ContractService._list_fiscal_invoice_billings(1, {"billing_date": "2026-08-03"})
+
+    assert result == []
+    assert ("issue_date", "eq", date(2026, 8, 3)) in query.criteria
+
+
 def test_build_fiscal_invoice_nfse_row_prioritizes_catalog_for_service_code_and_normalizes_nbs():
     class _FakeItemsQuery:
         def __init__(self, items):

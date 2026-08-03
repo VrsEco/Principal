@@ -3185,6 +3185,9 @@ class ContractService:
         party_id = ContractService._normalize_int(filters.get("party_id"))
         if party_id:
             query = query.filter(ContractNativeBilling.party_id == party_id)
+        billing_date = ContractService._normalize_date(filters.get("billing_date"))
+        if billing_date:
+            query = query.filter(ContractNativeBilling.issue_date == billing_date)
         search = ContractService._normalize_text(filters.get("search"))
         if search:
             pattern = f"%{search}%"
