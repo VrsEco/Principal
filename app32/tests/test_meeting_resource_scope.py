@@ -246,6 +246,87 @@ def test_meetings_template_uses_execucao_endpoint_without_accent():
     assert '/execucação?company_id=${meetingsCompanyId}' not in content
 
 
+def test_meeting_execution_auto_syncs_activities_with_tenant_scope(monkeypatch):
+    app = _build_app()
+    fake_session = _FakeSession()
+    fake_meeting = SimpleNamespace(
+        id=27,
+        company_id=8,
+        actual_date=None,
+        actual_time=None,
+        actual_duration_minutes=None,
+        meeting_notes='',
+        participants_json='[]',
+        discussions_json='[]',
+        activities_json='[]',
+        updated_at=None,
+    )
+    captured = {}
+
+    monkeypatch.setattr(meeting_resource, 'get_meeting_or_404', lambda meeting_id: (fake_meeting, None))
+    monkeypatch.setattr(meeting_resource.db, 'session', fake_session)
+    monkeypatch.setattr(meeting_resource, '_sync_meeting_work_journey_item', lambda meeting: None)
+
+    def _sync_activities(**kwargs):
+        captured.update(kwargs)
+        return {'created_tasks': 1, 'updated_tasks': 0}, None
+
+    monkeypatch.setattr(meeting_resource.MeetingMCPService, 'sync_activities', _sync_activities)
+
+    with app.test_request_context(
+        '/meetings/api/meeting/27/execucao?company_id=8',
+        method='PUT',
+        json={'activities': [{'id': 'a-1', 'title': 'Plano de ação', 'project_id': 22}]},
+    ):
+        response = meeting_resource.MeetingExecutionResource().put.__wrapped__(
+            meeting_resource.MeetingExecutionResource(), 27
+        )
+
+    assert response['success'] is True
+    assert response['activity_sync']['created_tasks'] == 1
+    assert captured == {'company_id': 8, 'meeting_id': 27}
+    assert json.loads(fake_meeting.activities_json)[0]['title'] == 'Plano de ação'
+    assert fake_session.committed == 0
+
+
+def test_meeting_execution_rejects_activity_sync_error(monkeypatch):
+    app = _build_app()
+    fake_session = _FakeSession()
+    fake_meeting = SimpleNamespace(
+        id=27,
+        company_id=8,
+        actual_date=None,
+        actual_time=None,
+        actual_duration_minutes=None,
+        meeting_notes='',
+        participants_json='[]',
+        discussions_json='[]',
+        activities_json='[]',
+        updated_at=None,
+    )
+
+    monkeypatch.setattr(meeting_resource, 'get_meeting_or_404', lambda meeting_id: (fake_meeting, None))
+    monkeypatch.setattr(meeting_resource.db, 'session', fake_session)
+    monkeypatch.setattr(
+        meeting_resource.MeetingMCPService,
+        'sync_activities',
+        lambda **kwargs: (None, 'Projeto da atividade não pertence à empresa informada.'),
+    )
+
+    with app.test_request_context(
+        '/meetings/api/meeting/27/execucao?company_id=8',
+        method='PUT',
+        json={'activities': [{'id': 'a-1', 'title': 'Plano de ação', 'project_id': 999}]},
+    ):
+        response, status = meeting_resource.MeetingExecutionResource().put.__wrapped__(
+            meeting_resource.MeetingExecutionResource(), 27
+        )
+
+    assert status == 400
+    assert response['success'] is False
+    assert fake_session.rolled_back is True
+
+
 def test_meetings_template_can_create_activity_from_discussion():
     template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'meetings_manage.html'))
     with open(template_path, 'r', encoding='utf-8') as handle:

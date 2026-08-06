@@ -8,6 +8,7 @@ import json
 import logging
 import re
 from services.email_service import email_service
+from services.meeting_mcp_service import MeetingMCPService
 from services.work_journey_sync import sync_meeting_item
 from services.whatsapp_service import whatsapp_service
 
@@ -640,9 +641,23 @@ class MeetingExecutionResource(Resource):
             if 'meeting_notes' in data: meeting.meeting_notes = data['meeting_notes']
             if 'participants' in data: meeting.participants_json = json.dumps(data['participants'])
             if 'discussions' in data: meeting.discussions_json = json.dumps(data['discussions'])
-            if 'activities' in data: meeting.activities_json = json.dumps(data['activities'])
-            
-            db.session.commit()
+            activity_sync = None
+            if 'activities' in data:
+                meeting.activities_json = json.dumps(data['activities'])
+
+            # A atividade definida na reunião é um item operacional. Ao salvar a
+            # execução, materialize-a no projeto de destino na mesma operação,
+            # evitando depender de um segundo clique no frontend.
+            if data.get('activities'):
+                activity_sync, sync_error = MeetingMCPService.sync_activities(
+                    company_id=meeting.company_id,
+                    meeting_id=meeting.id,
+                )
+                if sync_error:
+                    db.session.rollback()
+                    return {"success": False, "message": sync_error}, 400
+            else:
+                db.session.commit()
             try:
                 _sync_meeting_work_journey_item(meeting)
             except Exception as sync_exc:
@@ -653,6 +668,7 @@ class MeetingExecutionResource(Resource):
                 "message": "Execução salva!",
                 "meeting_id": meeting.id,
                 "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+                "activity_sync": activity_sync,
             }
         except Exception as e:
             db.session.rollback()
