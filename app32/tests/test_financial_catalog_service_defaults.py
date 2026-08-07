@@ -189,6 +189,37 @@ def test_prepare_counterparty_payload_maps_customer_zip_code_to_fiscal_aliases()
     assert payload["metadata_json"]["origin"] == "manual"
 
 
+def test_prepare_counterparty_payload_maps_full_address_to_fiscal_aliases():
+    payload = FinancialCatalogService._prepare_catalog_payload(
+        catalog_type="counterparties",
+        company_id=9,
+        data={
+            "company_id": 9,
+            "name": "Cliente Teste",
+            "address_line": "Rua das Flores",
+            "address_number": "120",
+            "complement": "Sala 4",
+            "district": "Centro",
+            "city_name": "Salvador",
+            "city_code_ibge": "2927408",
+            "uf": "ba",
+            "country_code": "bra",
+            "metadata_json": {"origin": "manual"},
+        },
+    )
+
+    metadata = payload["metadata_json"]
+    assert metadata["address_line"] == "Rua das Flores"
+    assert metadata["Endereco_Logradouro"] == "Rua das Flores"
+    assert metadata["Endereco_Numero"] == "120"
+    assert metadata["Endereco_Complemento"] == "Sala 4"
+    assert metadata["Endereco_Bairro"] == "Centro"
+    assert metadata["Endereco_Cidade_Nome"] == "Salvador"
+    assert metadata["Endereco_Cidade_Codigo"] == "2927408"
+    assert metadata["Endereco_Estado"] == "BA"
+    assert metadata["Endereco_Pais"] == "BRA"
+
+
 def test_financial_counterparty_to_dict_exposes_zip_code_from_metadata():
     counterparty = FinancialCounterparty(
         company_id=9,
@@ -201,6 +232,35 @@ def test_financial_counterparty_to_dict_exposes_zip_code_from_metadata():
 
     assert payload["zip_code"] == "41820021"
     assert payload["metadata_json"]["Endereco_Cep"] == "41820021"
+
+
+def test_financial_counterparty_to_dict_exposes_full_address_from_metadata():
+    counterparty = FinancialCounterparty(
+        company_id=9,
+        code="001",
+        name="Cliente Teste",
+        metadata_json={
+            "Endereco_Logradouro": "Rua das Flores",
+            "Endereco_Numero": "120",
+            "Endereco_Complemento": "Sala 4",
+            "Endereco_Bairro": "Centro",
+            "Endereco_Cidade_Nome": "Salvador",
+            "Endereco_Cidade_Codigo": "2927408",
+            "Endereco_Estado": "BA",
+            "Endereco_Pais": "BRA",
+        },
+    )
+
+    payload = counterparty.to_dict()
+
+    assert payload["address_line"] == "Rua das Flores"
+    assert payload["address_number"] == "120"
+    assert payload["complement"] == "Sala 4"
+    assert payload["district"] == "Centro"
+    assert payload["city_name"] == "Salvador"
+    assert payload["city_code_ibge"] == "2927408"
+    assert payload["uf"] == "BA"
+    assert payload["country_code"] == "BRA"
 
 
 def test_validate_related_scope_requires_counterparty_role_flag():

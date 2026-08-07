@@ -814,6 +814,14 @@ class FinancialCounterpartyInput(BaseModel):
     email: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=50)
     zip_code: Optional[str] = Field(None, max_length=20)
+    address_line: Optional[str] = Field(None, max_length=255)
+    address_number: Optional[str] = Field(None, max_length=30)
+    complement: Optional[str] = Field(None, max_length=120)
+    district: Optional[str] = Field(None, max_length=120)
+    city_name: Optional[str] = Field(None, max_length=120)
+    city_code_ibge: Optional[str] = Field(None, max_length=20)
+    uf: Optional[str] = Field(None, max_length=2)
+    country_code: Optional[str] = Field("BRA", max_length=3)
     pix_key: Optional[str] = Field(None, max_length=120)
     notes: Optional[str] = None
     is_active: bool = True
@@ -848,6 +856,14 @@ class FinancialCounterpartyUpdateInput(BaseModel):
     email: Optional[str] = Field(None, max_length=255)
     phone: Optional[str] = Field(None, max_length=50)
     zip_code: Optional[str] = Field(None, max_length=20)
+    address_line: Optional[str] = Field(None, max_length=255)
+    address_number: Optional[str] = Field(None, max_length=30)
+    complement: Optional[str] = Field(None, max_length=120)
+    district: Optional[str] = Field(None, max_length=120)
+    city_name: Optional[str] = Field(None, max_length=120)
+    city_code_ibge: Optional[str] = Field(None, max_length=20)
+    uf: Optional[str] = Field(None, max_length=2)
+    country_code: Optional[str] = Field(None, max_length=3)
     pix_key: Optional[str] = Field(None, max_length=120)
     notes: Optional[str] = None
     is_active: Optional[bool] = None

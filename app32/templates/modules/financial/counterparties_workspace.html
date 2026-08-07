@@ -124,6 +124,23 @@
                         </div>
                     </section>
 
+                    <section class="cp-form-section" data-section="address">
+                        <div class="section-title">
+                            <h3>Endereço fiscal</h3>
+                        </div>
+                        <div class="form-grid">
+                            <label class="col-span-2"><span>Logradouro</span><input name="address_line" maxlength="255" placeholder="Rua, avenida, rodovia..."></label>
+                            <label><span>Número</span><input name="address_number" maxlength="30" placeholder="Ex.: 120 ou s/n"></label>
+                            <label><span>Complemento</span><input name="complement" maxlength="120" placeholder="Sala, bloco, andar..."></label>
+                            <label><span>Bairro</span><input name="district" maxlength="120"></label>
+                            <label><span>Cidade</span><input name="city_name" maxlength="120"></label>
+                            <label><span>Código IBGE da cidade</span><input name="city_code_ibge" inputmode="numeric" maxlength="20"></label>
+                            <label><span>UF</span><input name="uf" maxlength="2" placeholder="BA"></label>
+                            <label><span>País</span><input name="country_code" maxlength="3" value="BRA" placeholder="BRA"></label>
+                        </div>
+                        <small class="field-hint">Estes dados alimentam diretamente as colunas de endereço da planilha fiscal/NFS-e.</small>
+                    </section>
+
                     <section class="cp-form-section" data-section="defaults">
                         <div class="section-title">
                             <h3>Defaults financeiros</h3>
@@ -559,6 +576,7 @@
     const sections = [
         { key: 'main', label: 'Dados principais' },
         { key: 'contacts', label: 'Contatos e recebimento' },
+        { key: 'address', label: 'Endereço fiscal' },
         { key: 'defaults', label: 'Defaults financeiros' },
         { key: 'notes', label: 'Notas' },
     ];

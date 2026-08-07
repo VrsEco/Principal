@@ -540,8 +540,18 @@ class ContractService:
                 "phone": counterparty.phone,
                 "metadata_json": {
                     key: metadata.get(key)
-                    for key in ("zip_code", "Endereco_Cep", "endereco_cep", "cep")
-                    if metadata.get(key)
+                    for key in (
+                        "zip_code", "Endereco_Cep", "endereco_cep", "cep",
+                        "address_line", "Endereco_Logradouro",
+                        "address_number", "Endereco_Numero",
+                        "complement", "Endereco_Complemento",
+                        "district", "Endereco_Bairro",
+                        "city_name", "Endereco_Cidade_Nome",
+                        "city_code_ibge", "Endereco_Cidade_Codigo",
+                        "uf", "Endereco_Estado",
+                        "country_code", "Endereco_Pais",
+                    )
+                    if metadata.get(key) not in (None, "")
                 },
                 "is_customer": is_customer,
                 "is_supplier": is_supplier,

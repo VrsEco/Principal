@@ -284,8 +284,18 @@ class FinancialCatalogService:
             "phone": counterparty.phone,
             "metadata_json": {
                 key: metadata.get(key)
-                for key in ("zip_code", "Endereco_Cep", "endereco_cep", "cep")
-                if metadata.get(key)
+                for key in (
+                    "zip_code", "Endereco_Cep", "endereco_cep", "cep",
+                    "address_line", "Endereco_Logradouro",
+                    "address_number", "Endereco_Numero",
+                    "complement", "Endereco_Complemento",
+                    "district", "Endereco_Bairro",
+                    "city_name", "Endereco_Cidade_Nome",
+                    "city_code_ibge", "Endereco_Cidade_Codigo",
+                    "uf", "Endereco_Estado",
+                    "country_code", "Endereco_Pais",
+                )
+                if metadata.get(key) not in (None, "")
             },
             "is_customer": is_customer,
             "is_supplier": is_supplier,
@@ -456,6 +466,25 @@ class FinancialCatalogService:
                 metadata["Endereco_Cep"] = zip_code or None
                 metadata["endereco_cep"] = zip_code or None
                 metadata["cep"] = zip_code or None
+            address_aliases = {
+                "address_line": "Endereco_Logradouro",
+                "address_number": "Endereco_Numero",
+                "complement": "Endereco_Complemento",
+                "district": "Endereco_Bairro",
+                "city_name": "Endereco_Cidade_Nome",
+                "city_code_ibge": "Endereco_Cidade_Codigo",
+                "uf": "Endereco_Estado",
+                "country_code": "Endereco_Pais",
+            }
+            for field_name, fiscal_alias in address_aliases.items():
+                if field_name not in prepared:
+                    continue
+                raw_value = prepared.pop(field_name)
+                value = str(raw_value or "").strip() or None
+                if field_name in {"uf", "country_code"} and value:
+                    value = value.upper()
+                metadata[field_name] = value
+                metadata[fiscal_alias] = value
             for field_name in ("is_customer", "is_supplier"):
                 if field_name in prepared:
                     metadata[field_name] = bool(prepared.pop(field_name))
@@ -1027,6 +1056,10 @@ class FinancialCatalogService:
                 return None, default_rule_error
 
         try:
+            if catalog_type == "counterparties" and "metadata_json" in data:
+                merged_metadata = dict(item.metadata_json or {})
+                merged_metadata.update(dict(data.get("metadata_json") or {}))
+                data["metadata_json"] = FinancialCatalogService._sanitize_metadata_json(merged_metadata)
             for key, value in data.items():
                 setattr(item, key, value)
             if catalog_type == "counterparties":

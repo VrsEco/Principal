@@ -355,6 +355,14 @@ class FinancialCounterparty(db.Model):
             or metadata.get("endereco_cep")
             or metadata.get("cep")
         )
+        address_line = metadata.get("address_line") or metadata.get("Endereco_Logradouro") or metadata.get("logradouro")
+        address_number = metadata.get("address_number") or metadata.get("Endereco_Numero") or metadata.get("numero")
+        complement = metadata.get("complement") or metadata.get("Endereco_Complemento") or metadata.get("complemento")
+        district = metadata.get("district") or metadata.get("Endereco_Bairro") or metadata.get("bairro")
+        city_name = metadata.get("city_name") or metadata.get("Endereco_Cidade_Nome") or metadata.get("cidade")
+        city_code_ibge = metadata.get("city_code_ibge") or metadata.get("Endereco_Cidade_Codigo") or metadata.get("codigo_ibge")
+        uf = metadata.get("uf") or metadata.get("Endereco_Estado") or metadata.get("estado")
+        country_code = metadata.get("country_code") or metadata.get("Endereco_Pais") or metadata.get("pais") or "BRA"
         return {
             "id": self.id,
             "company_id": self.company_id,
@@ -368,6 +376,14 @@ class FinancialCounterparty(db.Model):
             "email": self.email,
             "phone": self.phone,
             "zip_code": zip_code,
+            "address_line": address_line,
+            "address_number": address_number,
+            "complement": complement,
+            "district": district,
+            "city_name": city_name,
+            "city_code_ibge": city_code_ibge,
+            "uf": uf,
+            "country_code": country_code,
             "pix_key": self.pix_key,
             "notes": self.notes,
             "is_active": self.is_active,
