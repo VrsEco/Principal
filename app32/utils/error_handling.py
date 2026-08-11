@@ -5,7 +5,7 @@ from typing import Any
 
 from flask import jsonify, request
 from pydantic import ValidationError
-from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 
 DEFAULT_PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
 PRODUCTION_FIRST_INVESTIGATION_STEPS = (
@@ -114,6 +114,13 @@ def log_and_build_public_error_response(
 
 def register_global_error_handlers(app) -> None:
     logger = logging.getLogger(__name__)
+
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_request_entity_too_large(exc):
+        message = "O arquivo enviado excede o limite de 100 MB."
+        if is_api_like_request():
+            return build_public_error_response(message=message, status_code=413)
+        return message, 413
 
     @app.errorhandler(Exception)
     def handle_unexpected_exception(exc):

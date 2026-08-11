@@ -82,7 +82,9 @@ class Config:
     EMAIL_AUTO_REPLY = os.environ.get("EMAIL_AUTO_REPLY", "false").lower() == "true"
 
     # File Uploads
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
+    # Limite de entrada HTTP. Vídeos POP são validados e reduzidos pelo service
+    # para aproximadamente 10 MB/minuto antes do armazenamento definitivo.
+    MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH") or 100 * 1024 * 1024)
     UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER") or "uploads"
     ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "gif"}
 

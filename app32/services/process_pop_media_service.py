@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -15,14 +16,18 @@ from werkzeug.utils import secure_filename
 from utils.gcs_utils import get_gcs_config, upload_to_gcs
 
 
-POP_VIDEO_MAX_DURATION_SECONDS = 120
-POP_VIDEO_MAX_FILE_BYTES = 25 * 1024 * 1024
+POP_VIDEO_MAX_DURATION_SECONDS = 150
+POP_VIDEO_TARGET_BYTES_PER_MINUTE = 10_000_000
+POP_VIDEO_MAX_OUTPUT_BYTES = 25_000_000
+POP_VIDEO_MAX_SOURCE_FILE_BYTES = 100 * 1024 * 1024
 POP_VIDEO_ALLOWED_EXTENSIONS = {".mp4", ".webm"}
 POP_VIDEO_ALLOWED_MIME_PREFIXES = ("video/mp4", "video/webm")
 POP_VIDEO_TRANSCODE_FPS = 15
 POP_VIDEO_TRANSCODE_HEIGHT = 720
-POP_VIDEO_TRANSCODE_CRF = 30
 POP_VIDEO_TRANSCODE_AUDIO_BITRATE = "64k"
+POP_VIDEO_TRANSCODE_AUDIO_BITRATE_BPS = 64_000
+POP_VIDEO_TARGET_SAFETY_FACTOR = 0.92
+POP_VIDEO_TRANSCODE_TIMEOUT_SECONDS = 120
 
 
 def coerce_video_duration_seconds(value: Any) -> int | None:
@@ -56,39 +61,147 @@ def validate_step_video_upload(
         raise ValueError("Tipo MIME de vídeo não suportado. Envie MP4 ou WebM.")
 
     if duration_seconds is not None and duration_seconds > POP_VIDEO_MAX_DURATION_SECONDS:
-        raise ValueError("O vídeo do POP deve ter no máximo 120 segundos.")
+        raise ValueError("O vídeo do POP deve ter no máximo 2 minutos e 30 segundos.")
 
-    if content_length and int(content_length) > POP_VIDEO_MAX_FILE_BYTES:
-        raise ValueError("O vídeo do POP excede o limite de 25 MB.")
+    if content_length and int(content_length) > POP_VIDEO_MAX_SOURCE_FILE_BYTES:
+        raise ValueError("O arquivo original do vídeo excede o limite de 100 MB.")
 
 
 def resolve_ffmpeg_binary() -> str | None:
-    return shutil.which("ffmpeg")
+    system_binary = shutil.which("ffmpeg")
+    if system_binary:
+        return system_binary
+    try:
+        import imageio_ffmpeg
+
+        bundled_binary = imageio_ffmpeg.get_ffmpeg_exe()
+        return bundled_binary if bundled_binary and os.path.exists(bundled_binary) else None
+    except (ImportError, OSError):
+        return None
 
 
-def transcode_pop_video_to_mp4(source_path: str, target_path: str, *, ffmpeg_bin: str | None = None) -> bool:
+def probe_video_duration_seconds(source_path: str, *, ffmpeg_bin: str | None = None) -> float | None:
+    ffmpeg_cmd = ffmpeg_bin or resolve_ffmpeg_binary()
+    if not ffmpeg_cmd:
+        return None
+
+    try:
+        result = subprocess.run(
+            [ffmpeg_cmd, "-hide_banner", "-i", source_path],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+    match = re.search(r"Duration:\s*(\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)", result.stderr or "")
+    if not match:
+        return None
+    hours, minutes, seconds = match.groups()
+    return (int(hours) * 3600) + (int(minutes) * 60) + float(seconds)
+
+
+def calculate_pop_video_target_bytes(duration_seconds: float) -> int:
+    if duration_seconds <= 0:
+        raise ValueError("Duração do vídeo inválida.")
+    proportional_bytes = round(
+        (float(duration_seconds) / 60.0) * POP_VIDEO_TARGET_BYTES_PER_MINUTE
+    )
+    return min(POP_VIDEO_MAX_OUTPUT_BYTES, max(1_000_000, proportional_bytes))
+
+
+def calculate_pop_video_bitrate_bps(duration_seconds: float) -> int:
+    target_bytes = calculate_pop_video_target_bytes(duration_seconds)
+    safe_total_bps = int(
+        (target_bytes * 8 / float(duration_seconds)) * POP_VIDEO_TARGET_SAFETY_FACTOR
+    )
+    return max(250_000, safe_total_bps - POP_VIDEO_TRANSCODE_AUDIO_BITRATE_BPS)
+
+
+def transcode_pop_video_to_mp4(
+    source_path: str,
+    target_path: str,
+    *,
+    duration_seconds: float | None = None,
+    ffmpeg_bin: str | None = None,
+) -> bool:
     ffmpeg_cmd = ffmpeg_bin or resolve_ffmpeg_binary()
     if not ffmpeg_cmd:
         return False
 
-    command = [
-        ffmpeg_cmd,
-        "-y",
-        "-i", source_path,
+    measured_duration = duration_seconds or probe_video_duration_seconds(
+        source_path,
+        ffmpeg_bin=ffmpeg_cmd,
+    )
+    if not measured_duration or measured_duration <= 0:
+        return False
+
+    video_bitrate = str(calculate_pop_video_bitrate_bps(measured_duration))
+    target_bytes = calculate_pop_video_target_bytes(measured_duration)
+    passlogfile = os.path.join(os.path.dirname(target_path), "ffmpeg-pass")
+    common_video_args = [
         "-vf", f"scale=-2:'min({POP_VIDEO_TRANSCODE_HEIGHT},ih)'",
         "-r", str(POP_VIDEO_TRANSCODE_FPS),
         "-c:v", "libx264",
         "-preset", "veryfast",
-        "-crf", str(POP_VIDEO_TRANSCODE_CRF),
+        "-b:v", video_bitrate,
         "-pix_fmt", "yuv420p",
-        "-movflags", "+faststart",
+    ]
+
+    first_pass = [
+        ffmpeg_cmd,
+        "-y",
+        "-i", source_path,
+        "-map", "0:v:0",
+        *common_video_args,
+        "-pass", "1",
+        "-passlogfile", passlogfile,
+        "-an",
+        "-f", "null",
+        os.devnull,
+    ]
+
+    second_pass = [
+        ffmpeg_cmd,
+        "-y",
+        "-i", source_path,
+        "-map", "0:v:0",
+        "-map", "0:a:0?",
+        *common_video_args,
+        "-pass", "2",
+        "-passlogfile", passlogfile,
         "-c:a", "aac",
         "-b:a", POP_VIDEO_TRANSCODE_AUDIO_BITRATE,
+        "-movflags", "+faststart",
         target_path,
     ]
 
-    result = subprocess.run(command, capture_output=True, text=True, check=False)
-    return result.returncode == 0 and os.path.exists(target_path) and os.path.getsize(target_path) > 0
+    try:
+        first_result = subprocess.run(
+            first_pass,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=POP_VIDEO_TRANSCODE_TIMEOUT_SECONDS,
+        )
+        if first_result.returncode != 0:
+            return False
+        second_result = subprocess.run(
+            second_pass,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=POP_VIDEO_TRANSCODE_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+    if second_result.returncode != 0 or not os.path.exists(target_path):
+        return False
+    output_bytes = os.path.getsize(target_path)
+    return 0 < output_bytes <= int(target_bytes * 1.03)
 
 
 def save_pop_video(file_storage, *, subfolder: str = "pop/video") -> str | None:
@@ -110,24 +223,33 @@ def save_pop_video(file_storage, *, subfolder: str = "pop/video") -> str | None:
         transcoded_path = os.path.join(temp_dir, final_name)
         file_storage.save(source_path)
 
+        ffmpeg_bin = resolve_ffmpeg_binary()
+        if not ffmpeg_bin:
+            raise ValueError("O otimizador de vídeo não está disponível no servidor.")
+
+        duration_seconds = probe_video_duration_seconds(source_path, ffmpeg_bin=ffmpeg_bin)
+        if not duration_seconds:
+            raise ValueError("Não foi possível validar a duração do vídeo enviado.")
+        validate_step_video_upload(
+            file_storage,
+            duration_seconds=int(duration_seconds + 0.999),
+            content_length=os.path.getsize(source_path),
+        )
+
         final_local_path = os.path.join(target_dir, final_name)
-        transcoded = transcode_pop_video_to_mp4(source_path, transcoded_path)
+        transcoded = transcode_pop_video_to_mp4(
+            source_path,
+            transcoded_path,
+            duration_seconds=duration_seconds,
+            ffmpeg_bin=ffmpeg_bin,
+        )
 
-        if transcoded:
-            if get_gcs_config():
-                with open(transcoded_path, "rb") as handle:
-                    gcs_path = upload_to_gcs(handle, final_name, subfolder=subfolder)
-                    if gcs_path:
-                        return gcs_path
-            shutil.copyfile(transcoded_path, final_local_path)
-            return os.path.join(subfolder, final_name).replace("\\", "/") if subfolder else final_name
-
-        fallback_name = f"{unique_base}{original_ext}"
-        fallback_local_path = os.path.join(target_dir, fallback_name)
+        if not transcoded:
+            raise ValueError("Não foi possível otimizar o vídeo. Verifique o arquivo e tente novamente.")
         if get_gcs_config():
-            with open(source_path, "rb") as handle:
-                gcs_path = upload_to_gcs(handle, fallback_name, subfolder=subfolder)
+            with open(transcoded_path, "rb") as handle:
+                gcs_path = upload_to_gcs(handle, final_name, subfolder=subfolder)
                 if gcs_path:
                     return gcs_path
-        shutil.copyfile(source_path, fallback_local_path)
-        return os.path.join(subfolder, fallback_name).replace("\\", "/") if subfolder else fallback_name
+        shutil.copyfile(transcoded_path, final_local_path)
+        return os.path.join(subfolder, final_name).replace("\\", "/") if subfolder else final_name

@@ -3222,7 +3222,7 @@
                             <div class="step-video-status" id="step-video-status-${s.id}" style="font-size: 0.78rem; color: var(--text-tertiary); margin: 0.4rem 0 0.75rem 0;">
                                 ${s.video_path
                                     ? `Vídeo curto vinculado (${escapeHtml(formatVideoDuration(s.video_duration_seconds))}).`
-                                    : `Você também pode anexar um vídeo curto (MP4/WebM, até 2 minutos) para representar este passo.`}
+                                    : `Anexe MP4/WebM de até 2min30s e 100 MB. O sistema otimiza automaticamente para cerca de 10 MB por minuto, em qualidade adequada para telas de até 42”.`}
                             </div>
 
                             <div class="step-video-shell" style="border: 1px dashed var(--border); border-radius: 10px; padding: 0.9rem; background: #f8fafc; margin-bottom: 0.85rem;">
@@ -3540,6 +3540,12 @@
 
     async function uploadStepVideoFile(id, file, options = {}) {
         try {
+            const maxSourceBytes = 100 * 1024 * 1024;
+            if (!file) throw new Error('Selecione um vídeo MP4 ou WebM.');
+            if (file.size > maxSourceBytes) {
+                throw new Error('O arquivo original deve ter no máximo 100 MB.');
+            }
+
             let metadata = null;
             try {
                 metadata = await readVideoMetadata(file);
@@ -3547,17 +3553,17 @@
                 console.warn('Não foi possível ler metadados do vídeo no navegador. Prosseguindo com o envio.', metadataError);
             }
 
-            if (metadata && metadata.durationSeconds > 120) {
-                throw new Error('O vídeo do POP deve ter no máximo 2 minutos.');
+            if (metadata && metadata.durationSeconds > 150) {
+                throw new Error('O vídeo do POP deve ter no máximo 2 minutos e 30 segundos.');
             }
 
             const formData = new FormData();
             formData.append('video', file);
             if (metadata && Number.isFinite(metadata.durationSeconds)) {
                 formData.append('video_duration_seconds', String(metadata.durationSeconds));
-                updateStepVideoStatus(id, `Enviando vídeo (${formatVideoDuration(metadata.durationSeconds)})...`);
+                updateStepVideoStatus(id, `Enviando e otimizando vídeo (${formatVideoDuration(metadata.durationSeconds)}; alvo de ~10 MB/min)...`);
             } else {
-                updateStepVideoStatus(id, 'Enviando vídeo sem validação local da duração...');
+                updateStepVideoStatus(id, 'Enviando e validando o vídeo no servidor...');
             }
 
             const res = await fetch(`/api/process-steps/${id}`, {
@@ -3573,7 +3579,7 @@
             renderRoutines();
             setTimeout(() => {
                 enableStepEdit(id);
-                updateStepVideoStatus(id, 'Vídeo anexado. Posicione no frame desejado e use “Usar frame atual”.');
+                updateStepVideoStatus(id, 'Vídeo otimizado e anexado. Posicione no frame desejado e use “Usar frame atual”.');
             }, 120);
         } catch (err) {
             console.error(err);
@@ -3696,7 +3702,12 @@
     }
 
     async function safeJson(res) {
-        try { return await res.json(); } catch (_) { return {}; }
+        try { return await res.json(); } catch (_) {
+            if (res.status === 413) {
+                return { message: 'O arquivo excede o limite permitido de 100 MB.' };
+            }
+            return { message: `Falha no servidor (HTTP ${res.status}).` };
+        }
     }
 
     async function removeStepVideo(id) {

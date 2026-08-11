@@ -51,6 +51,9 @@ playwright
 babel
 openpyxl
 
+# Video optimization (bundled FFmpeg binary for environments without apt/root)
+imageio-ffmpeg>=0.6.0,<1.0.0
+
 # Testing
 pytest
 

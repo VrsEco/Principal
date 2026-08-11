@@ -8,6 +8,7 @@ from flask import request, current_app, session, Response
 from flask_restful import Resource
 from flask_login import current_user
 from marshmallow import ValidationError
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 from schemas.process import (
     process_area_schema, process_areas_schema,
@@ -541,6 +542,35 @@ def _get_process_with_access(process_id: int, action: str = 'view', sync_session
         session['active_company_id'] = process.company_id
 
     return process
+
+
+def _get_process_routine_with_access(routine_id: int, action: str = 'view'):
+    """Resolve uma rotina POP no tenant autorizado do usuário."""
+    active_company_id = session.get('active_company_id')
+    routine_queries = (ProcessRoutine.query, Routine.query)
+
+    if active_company_id:
+        for query in routine_queries:
+            routine = query.filter_by(id=routine_id, company_id=active_company_id).first()
+            if routine and has_permission(active_company_id, 'processes', action):
+                return routine
+
+    for query in routine_queries:
+        routine = query.filter_by(id=routine_id).first()
+        company_id = getattr(routine, 'company_id', None)
+        if company_id and has_permission(company_id, 'processes', action):
+            return routine
+
+    return None
+
+
+def _get_process_step_with_access(step_id: int, action: str = 'view'):
+    """Resolve o tenant do passo via rotina e nega acesso cruzado por ID."""
+    step = ProcessStep.query.get_or_404(step_id)
+    if _get_process_routine_with_access(step.routine_id, action=action):
+        return step
+
+    return None
 
 
 def _get_macro_process_with_access(macro_id: int, action: str = 'view', sync_session: bool = False):
@@ -3037,6 +3067,8 @@ class ProcessStepListResource(Resource):
         routine_id = request.args.get('routine_id')
         if not routine_id:
             return [], 200
+        if not _get_process_routine_with_access(routine_id, action='view'):
+            return {"error": "Permission denied: view on processes"}, 403
             
         query = ProcessStep.query.filter_by(routine_id=routine_id)
         steps = query.order_by(ProcessStep.order_index).all()
@@ -3056,6 +3088,8 @@ class ProcessStepListResource(Resource):
                 order_index = request.form.get('order_index', 0)
                 video_duration_seconds = coerce_video_duration_seconds(request.form.get('video_duration_seconds'))
                 video_narration = request.form.get('video_narration')
+                if not _get_process_routine_with_access(routine_id, action='create'):
+                    return {"error": "Permission denied: create on processes"}, 403
                 
                 step = ProcessStep(
                     routine_id=routine_id,
@@ -3088,6 +3122,9 @@ class ProcessStepListResource(Resource):
             else:
                 # Handle standard JSON
                 data = request.get_json()
+                routine_id = data.get('routine_id') if data else None
+                if not _get_process_routine_with_access(routine_id, action='create'):
+                    return {"error": "Permission denied: create on processes"}, 403
                 step = process_step_schema.load(data)
                 db.session.add(step)
                 db.session.commit()
@@ -3097,6 +3134,9 @@ class ProcessStepListResource(Resource):
         except ValueError as err:
             db.session.rollback()
             return {"error": str(err)}, 400
+        except RequestEntityTooLarge:
+            db.session.rollback()
+            raise
         except Exception as e:
             db.session.rollback()
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
@@ -3104,12 +3144,16 @@ class ProcessStepListResource(Resource):
 class ProcessStepResource(Resource):
     @permission_required('processes', 'view')
     def get(self, step_id):
-        step = ProcessStep.query.get_or_404(step_id)
+        step = _get_process_step_with_access(step_id, action='view')
+        if not step:
+            return {"error": "Permission denied: view on processes"}, 403
         return process_step_schema.dump(step), 200
 
     @permission_required('processes', 'edit')
     def put(self, step_id):
-        step = ProcessStep.query.get_or_404(step_id)
+        step = _get_process_step_with_access(step_id, action='edit')
+        if not step:
+            return {"error": "Permission denied: edit on processes"}, 403
         try:
             if request.mimetype == 'multipart/form-data':
                 # Handle form data (with optional file)
@@ -3150,9 +3194,11 @@ class ProcessStepResource(Resource):
                         duration_seconds=step.video_duration_seconds,
                         content_length=request.content_length,
                     )
-                    if step.video_path:
-                        delete_file(step.video_path)
-                    step.video_path = save_pop_video(video_file, subfolder='pop/video')
+                    previous_video_path = step.video_path
+                    optimized_video_path = save_pop_video(video_file, subfolder='pop/video')
+                    step.video_path = optimized_video_path
+                    if previous_video_path:
+                        delete_file(previous_video_path)
                 
                 db.session.commit()
                 return process_step_schema.dump(step), 200
@@ -3167,13 +3213,19 @@ class ProcessStepResource(Resource):
         except ValueError as err:
             db.session.rollback()
             return {"error": str(err)}, 400
+        except RequestEntityTooLarge:
+            db.session.rollback()
+            raise
         except Exception as e:
             db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar vídeo POP step_id=%s", step_id)
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
     @permission_required('processes', 'delete')
     def delete(self, step_id):
-        step = ProcessStep.query.get_or_404(step_id)
+        step = _get_process_step_with_access(step_id, action='delete')
+        if not step:
+            return {"error": "Permission denied: delete on processes"}, 403
         try:
             if step.image_path:
                 delete_file(step.image_path)

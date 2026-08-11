@@ -44,6 +44,7 @@ def test_process_step_put_accepts_video_upload(monkeypatch):
     )
 
     monkeypatch.setattr(process_resource, 'ProcessStep', SimpleNamespace(query=_FakeStepQuery(step)))
+    monkeypatch.setattr(process_resource, '_get_process_step_with_access', lambda step_id, action='view': step)
     monkeypatch.setattr(process_resource, 'save_pop_video', lambda file, subfolder='': saved_paths.append((file.filename, subfolder)) or f'{subfolder}/passo-comprimido.mp4')
     monkeypatch.setattr(process_resource, 'delete_file', lambda path: True)
     monkeypatch.setattr(process_resource.db.session, 'commit', lambda: committed.__setitem__('value', True))
@@ -87,11 +88,12 @@ def test_process_step_put_rejects_video_above_limit(monkeypatch):
     )
 
     monkeypatch.setattr(process_resource, 'ProcessStep', SimpleNamespace(query=_FakeStepQuery(step)))
+    monkeypatch.setattr(process_resource, '_get_process_step_with_access', lambda step_id, action='view': step)
     monkeypatch.setattr(process_resource, 'save_file', lambda file, subfolder='': f'{subfolder}/{file.filename}')
     monkeypatch.setattr(process_resource.db.session, 'rollback', lambda: rolled_back.__setitem__('value', True))
 
     data = {
-        'video_duration_seconds': '121',
+        'video_duration_seconds': '151',
         'video': (io.BytesIO(b'video-bytes'), 'passo.mp4'),
     }
 
@@ -99,7 +101,7 @@ def test_process_step_put_rejects_video_above_limit(monkeypatch):
         response, status = process_resource.ProcessStepResource().put.__wrapped__(process_resource.ProcessStepResource(), 20)
 
     assert status == 400
-    assert 'máximo 120 segundos' in response['error']
+    assert '2 minutos e 30 segundos' in response['error']
     assert rolled_back['value'] is True
 
 
@@ -115,6 +117,7 @@ def test_process_step_delete_uses_process_step_resource(monkeypatch):
     )
 
     monkeypatch.setattr(process_resource, 'ProcessStep', SimpleNamespace(query=_FakeStepQuery(step)))
+    monkeypatch.setattr(process_resource, '_get_process_step_with_access', lambda step_id, action='view': step)
     monkeypatch.setattr(process_resource, 'delete_file', lambda path: deleted_paths.append(path) or True)
     monkeypatch.setattr(process_resource.db.session, 'delete', lambda current: deleted_step.__setitem__('value', current))
     monkeypatch.setattr(process_resource.db.session, 'commit', lambda: committed.__setitem__('value', True))
@@ -127,3 +130,21 @@ def test_process_step_delete_uses_process_step_resource(monkeypatch):
     assert deleted_paths == ['pop/imagem.png', 'pop/video/passo.mp4']
     assert deleted_step['value'] is step
     assert committed['value'] is True
+
+
+def test_process_step_get_denies_cross_tenant_access(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(
+        process_resource,
+        '_get_process_step_with_access',
+        lambda step_id, action='view': None,
+    )
+
+    with app.test_request_context('/api/process-steps/99', method='GET'):
+        response, status = process_resource.ProcessStepResource().get.__wrapped__(
+            process_resource.ProcessStepResource(),
+            99,
+        )
+
+    assert status == 403
+    assert 'Permission denied' in response['error']

@@ -10,6 +10,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from services.process_pop_media_service import (
     POP_VIDEO_MAX_DURATION_SECONDS,
+    POP_VIDEO_MAX_SOURCE_FILE_BYTES,
+    calculate_pop_video_bitrate_bps,
+    calculate_pop_video_target_bytes,
     coerce_video_duration_seconds,
     save_pop_video,
     transcode_pop_video_to_mp4,
@@ -40,13 +43,28 @@ def test_validate_step_video_upload_accepts_short_mp4():
 
 
 def test_validate_step_video_upload_rejects_long_video():
-    with pytest.raises(ValueError, match='máximo 120 segundos'):
-        validate_step_video_upload(_video_file(), duration_seconds=121)
+    with pytest.raises(ValueError, match='2 minutos e 30 segundos'):
+        validate_step_video_upload(_video_file(), duration_seconds=151)
 
 
 def test_validate_step_video_upload_rejects_unsupported_extension():
     with pytest.raises(ValueError, match='MP4 ou WebM'):
         validate_step_video_upload(_video_file(filename='passo.avi', mime_type='video/avi'))
+
+
+def test_validate_step_video_upload_rejects_source_above_100_mb():
+    with pytest.raises(ValueError, match='100 MB'):
+        validate_step_video_upload(
+            _video_file(),
+            duration_seconds=60,
+            content_length=POP_VIDEO_MAX_SOURCE_FILE_BYTES + 1,
+        )
+
+
+def test_target_size_is_ten_mb_per_minute_with_25_mb_cap():
+    assert calculate_pop_video_target_bytes(60) == 10_000_000
+    assert calculate_pop_video_target_bytes(150) == 25_000_000
+    assert calculate_pop_video_bitrate_bps(60) > 1_000_000
 
 
 def test_transcode_pop_video_to_mp4_returns_false_when_ffmpeg_missing(tmp_path):
@@ -57,7 +75,7 @@ def test_transcode_pop_video_to_mp4_returns_false_when_ffmpeg_missing(tmp_path):
     assert transcode_pop_video_to_mp4(str(source), str(target), ffmpeg_bin=None) is False
 
 
-def test_save_pop_video_falls_back_to_original_when_ffmpeg_unavailable(tmp_path, monkeypatch):
+def test_save_pop_video_rejects_when_ffmpeg_unavailable(tmp_path, monkeypatch):
     from flask import Flask
 
     app = Flask(__name__)
@@ -66,13 +84,8 @@ def test_save_pop_video_falls_back_to_original_when_ffmpeg_unavailable(tmp_path,
     monkeypatch.setattr('services.process_pop_media_service.resolve_ffmpeg_binary', lambda: None)
     monkeypatch.setattr('services.process_pop_media_service.get_gcs_config', lambda: None)
 
-    with app.app_context():
-        stored_path = save_pop_video(_video_file(filename='passo.webm', mime_type='video/webm'))
-
-    assert stored_path is not None
-    assert stored_path.startswith('pop/video/')
-    assert stored_path.endswith('.webm')
-    assert (tmp_path / stored_path).exists()
+    with app.app_context(), pytest.raises(ValueError, match='otimizador de vídeo'):
+        save_pop_video(_video_file(filename='passo.webm', mime_type='video/webm'))
 
 
 def test_save_pop_video_uses_transcoded_mp4_when_ffmpeg_succeeds(tmp_path, monkeypatch):
@@ -82,8 +95,10 @@ def test_save_pop_video_uses_transcoded_mp4_when_ffmpeg_succeeds(tmp_path, monke
     app.config['UPLOAD_FOLDER'] = str(tmp_path)
 
     monkeypatch.setattr('services.process_pop_media_service.get_gcs_config', lambda: None)
+    monkeypatch.setattr('services.process_pop_media_service.resolve_ffmpeg_binary', lambda: 'ffmpeg')
+    monkeypatch.setattr('services.process_pop_media_service.probe_video_duration_seconds', lambda *args, **kwargs: 60.0)
 
-    def _fake_transcode(source_path, target_path, *, ffmpeg_bin=None):
+    def _fake_transcode(source_path, target_path, *, duration_seconds=None, ffmpeg_bin=None):
         Path(target_path).write_bytes(b'compressed-video')
         return True
 
