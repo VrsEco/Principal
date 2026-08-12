@@ -214,6 +214,24 @@ Nesta fase, a formação iniciada anteriormente deve avançar para maior autonom
 
 ## 5. O motor de execução
 
+### 5.0 Princípio canônico — Processos e Projetos
+
+> **Processos fazem a empresa operar e gerar valor. Projetos criam, corrigem, melhoram, expandem ou transformam os processos e as capacidades que os sustentam.**
+
+Esta formulação estabelece a linguagem oficial do método:
+
+- **processo:** estrutura permanente pela qual a empresa opera e gera valor;
+- **instância de processo:** ocorrência concreta do trabalho previsto em um processo;
+- **rotina:** mecanismo de planejamento, execução e controle das instâncias dos processos;
+- **projeto:** esforço temporário, mensurável e deliberadamente gerido para alterar processos ou as capacidades que os sustentam.
+
+Regras de aplicação:
+
+1. toda execução relevante deve estar vinculada a um processo ou a um projeto;
+2. todo projeto deve identificar os processos e as capacidades impactados;
+3. a carga de processos e de projetos deve ser considerada conjuntamente na análise de capacidade das pessoas e dos demais recursos;
+4. um projeto somente conclui sua transformação quando realiza o *handover* para o processo permanente, com responsável, rotina de sustentação, indicador e evidência definidos.
+
 Todas as fases da `Estruturação Empresarial` avançam pelo mesmo loop fechado:
 
 > indicador revela o gap -> projeto ataca o gap -> follow-up verifica se o número chega.
@@ -235,8 +253,8 @@ Esses papéis devem ser distintos sempre que possível:
 
 ### 5.2 Projetos
 
-Projeto existe para colocar o número no lugar.
-Não é uma lista genérica de iniciativas.
+Projeto existe para criar, corrigir, melhorar, expandir ou transformar processos e capacidades, colocando o número no lugar.
+Não é uma lista genérica de iniciativas nem uma forma de ocultar trabalho recorrente.
 
 Todo projeto do método deve ter no mínimo:
 
@@ -246,6 +264,27 @@ Todo projeto do método deve ter no mínimo:
 - conexão com processo;
 - conexão com indicador;
 - evidência de avanço.
+
+#### 5.2.1 Cadeia de valor — Desenvolver, Implantar e Expandir Empreendimentos
+
+Para organizações que realizam investimentos estruturantes de forma recorrente, o método reconhece uma cadeia permanente para governar as instâncias temporárias de projeto:
+
+> **Desenvolver, Implantar e Expandir Empreendimentos** é a cadeia de processos responsável por identificar oportunidades, desenvolver soluções, aprovar investimentos, implantar novos empreendimentos, expandir capacidades existentes e transferir os resultados para a operação permanente.
+
+Seus macroprocessos de referência são:
+
+1. gerir portfólio e oportunidades;
+2. planejar e desenvolver o empreendimento — FEL;
+3. aprovar investimento e autorizar execução — FID;
+4. implantar o empreendimento ou a expansão;
+5. preparar a operação — Prontidão Operacional;
+6. comissionar e realizar a partida;
+7. estabilizar e realizar o *ramp-up*;
+8. transferir para a operação e encerrar o projeto.
+
+A cadeia admite, com governança proporcional a porte, risco e complexidade, projetos de novo empreendimento, expansão, ampliação, modernização, desgargalamento e adequação. A Prontidão Operacional inicia no planejamento e atua transversalmente até a operação estável; não deve ser reduzida a uma etapa imediatamente anterior ao *start-up*.
+
+Regra conceitual: a cadeia é permanente; cada empreendimento ou expansão é uma instância temporária de projeto; e o seu resultado deve ser incorporado aos processos permanentes da empresa por meio de *handover* formal.
 
 ### 5.3 Follow-up
 
@@ -875,6 +914,11 @@ Sem análise profunda:
 
 ### 10.1 Glossário mínimo
 
+**Processo:** estrutura permanente pela qual a empresa opera e gera valor.
+**Instância de processo:** ocorrência concreta da execução de um processo.
+**Rotina:** planejamento, execução e controle recorrente das instâncias dos processos.
+**Projeto:** esforço temporário e mensurável que cria, corrige, melhora, expande ou transforma processos e capacidades.
+
 **Restrição:** principal gargalo que limita o desempenho da empresa no ciclo atual.
 **Árvore de indicadores:** estrutura causal que conecta a dor principal aos seus drivers.
 **Responsável de preenchimento:** quem mede, coleta ou registra o dado.
@@ -941,13 +985,14 @@ Após validação deste paper, os desdobramentos naturais são:
 
 O `Método Versus de Estruturação Evolutiva` não é uma promessa de reorganização total imediata. É um sistema disciplinado para produzir controle, responsabilização, estabilidade e evolução em camadas.
 
-Sua força está em cinco decisões:
+Sua força está em seis decisões:
 
-1. começar pela dor real;
-2. estabilizar antes de sofisticar;
-3. usar poucos números com cadência forte;
-4. transformar gap em projeto;
-5. avançar de fase apenas por funcionamento comprovado.
+1. adotar Processos e Projetos como linguagem integrada de operação e transformação;
+2. começar pela dor real;
+3. estabilizar antes de sofisticar;
+4. usar poucos números com cadência forte;
+5. transformar gap em projeto;
+6. avançar de fase apenas por funcionamento comprovado.
 
 ---
 
