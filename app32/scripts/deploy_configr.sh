@@ -38,6 +38,15 @@ echo "📦 Atualizando dependências Python..."
 $PIP install -r requirements.txt --quiet
 echo "✅ Dependências em conformidade."
 
+# Protege contra instalações parciais em virtualenv persistente. O pacote
+# langgraph-prebuilt pode manter metadata válida mesmo com o namespace
+# langgraph.prebuilt sem os módulos físicos, derrubando o boot do Flask.
+if ! $PYTHON -c "from langgraph.prebuilt import ToolNode" >/dev/null 2>&1; then
+    echo "⚠️  langgraph-prebuilt inconsistente; reparando instalação..."
+    $PIP install --force-reinstall --no-deps 'langgraph-prebuilt>=1.1.0,<2.0.0' --quiet
+fi
+$PYTHON -c "from langgraph.prebuilt import ToolNode; print('✅ LangGraph ToolNode disponível.')"
+
 # 2.1 Assets canônicos de portfólio de processos
 echo "🖼️  Sincronizando assets canônicos do portfólio de processos..."
 $PYTHON scripts/sync_process_portfolio_assets.py
@@ -66,7 +75,8 @@ set -e
 if [ $EXIT_CODE -eq 0 ]; then
     echo "✅ Migrations aplicadas/verificadas com sucesso."
 else
-    echo "⚠️  Nota: Migrations falharam ou não há mudanças pendentes."
+    echo "❌ ERRO: migrations falharam; deploy interrompido antes do restart."
+    exit $EXIT_CODE
 fi
 
 # 3.1 Runtime uWSGI: buffering de POST + resiliência básica
