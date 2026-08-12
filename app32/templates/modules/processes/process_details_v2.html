@@ -3566,10 +3566,13 @@
                 updateStepVideoStatus(id, 'Enviando e validando o vídeo no servidor...');
             }
 
-            const res = await fetch(`/api/process-steps/${id}`, {
-                method: 'PUT',
-                body: formData
-            });
+            const chunkUploadThreshold = 40 * 1024 * 1024;
+            const res = file.size > chunkUploadThreshold
+                ? await uploadStepVideoInChunks(id, file, metadata)
+                : await fetch(`/api/process-steps/${id}`, {
+                    method: 'PUT',
+                    body: formData
+                });
             if (!res.ok) {
                 const err = await safeJson(res);
                 throw new Error(err.error || err.message || 'Falha ao enviar vídeo');
@@ -3588,6 +3591,46 @@
         } finally {
             if (options.input) options.input.value = '';
         }
+    }
+
+    async function uploadStepVideoInChunks(id, file, metadata = null) {
+        const chunkSize = 8 * 1024 * 1024;
+        const totalChunks = Math.ceil(file.size / chunkSize);
+        const uploadId = crypto.randomUUID();
+        let finalResponse = null;
+
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+            const start = chunkIndex * chunkSize;
+            const end = Math.min(file.size, start + chunkSize);
+            const formData = new FormData();
+            formData.append('chunk', file.slice(start, end), `${file.name}.part-${chunkIndex}`);
+            formData.append('upload_id', uploadId);
+            formData.append('chunk_index', String(chunkIndex));
+            formData.append('total_chunks', String(totalChunks));
+            formData.append('total_size', String(file.size));
+            formData.append('filename', file.name);
+            formData.append('mimetype', file.type || 'video/mp4');
+            if (metadata && Number.isFinite(metadata.durationSeconds)) {
+                formData.append('video_duration_seconds', String(metadata.durationSeconds));
+            }
+
+            updateStepVideoStatus(
+                id,
+                `Enviando vídeo em blocos seguros (${chunkIndex + 1}/${totalChunks})...`
+            );
+            const response = await fetch(`/api/process-steps/${id}/video-chunks`, {
+                method: 'POST',
+                body: formData
+            });
+            if (!response.ok) {
+                const err = await safeJson(response);
+                throw new Error(err.error || err.message || 'Falha ao enviar bloco do vídeo');
+            }
+            finalResponse = response;
+        }
+
+        updateStepVideoStatus(id, 'Otimizando vídeo para cerca de 10 MB por minuto...');
+        return finalResponse;
     }
 
     function readVideoMetadata(file) {

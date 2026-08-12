@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,9 @@ POP_VIDEO_TRANSCODE_AUDIO_BITRATE = "64k"
 POP_VIDEO_TRANSCODE_AUDIO_BITRATE_BPS = 64_000
 POP_VIDEO_TARGET_SAFETY_FACTOR = 0.92
 POP_VIDEO_TRANSCODE_TIMEOUT_SECONDS = 120
+POP_VIDEO_CHUNK_SIZE_BYTES = 8 * 1024 * 1024
+POP_VIDEO_MAX_CHUNKS = 13
+POP_VIDEO_CHUNK_TTL_SECONDS = 24 * 60 * 60
 
 
 def coerce_video_duration_seconds(value: Any) -> int | None:
@@ -253,3 +257,89 @@ def save_pop_video(file_storage, *, subfolder: str = "pop/video") -> str | None:
                     return gcs_path
         shutil.copyfile(transcoded_path, final_local_path)
         return os.path.join(subfolder, final_name).replace("\\", "/") if subfolder else final_name
+
+
+def _resolve_pop_video_chunk_root() -> Path:
+    configured_root = current_app.config.get("POP_VIDEO_CHUNK_ROOT")
+    return Path(configured_root or tempfile.gettempdir()) / "gv_pop_video_chunks"
+
+
+def _cleanup_stale_pop_video_chunks(root: Path) -> None:
+    if not root.exists():
+        return
+    cutoff = time.time() - POP_VIDEO_CHUNK_TTL_SECONDS
+    for candidate in root.glob("*/*/*"):
+        try:
+            if candidate.is_dir() and candidate.stat().st_mtime < cutoff:
+                shutil.rmtree(candidate, ignore_errors=True)
+        except OSError:
+            continue
+
+
+def save_pop_video_chunk(
+    chunk_storage,
+    *,
+    company_id: int,
+    step_id: int,
+    upload_id: str,
+    chunk_index: int,
+    total_chunks: int,
+    total_size: int,
+    original_filename: str,
+    original_mimetype: str,
+    subfolder: str = "pop/video",
+) -> str | None:
+    """Persiste um bloco tenant-safe e otimiza quando todos os blocos chegaram."""
+    try:
+        normalized_upload_id = str(uuid.UUID(str(upload_id)))
+    except (TypeError, ValueError, AttributeError):
+        raise ValueError("Identificador do upload inválido.")
+
+    if not company_id or not step_id:
+        raise ValueError("Contexto da empresa e do passo é obrigatório.")
+    if total_chunks < 1 or total_chunks > POP_VIDEO_MAX_CHUNKS:
+        raise ValueError("Quantidade de blocos do vídeo inválida.")
+    if chunk_index < 0 or chunk_index >= total_chunks:
+        raise ValueError("Índice do bloco do vídeo inválido.")
+    if total_size <= 0 or total_size > POP_VIDEO_MAX_SOURCE_FILE_BYTES:
+        raise ValueError("O arquivo original do vídeo excede o limite de 100 MB.")
+    if not chunk_storage or not getattr(chunk_storage, "filename", None):
+        raise ValueError("Bloco do vídeo não informado.")
+
+    root = _resolve_pop_video_chunk_root()
+    _cleanup_stale_pop_video_chunks(root)
+    upload_dir = root / str(int(company_id)) / str(int(step_id)) / normalized_upload_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = upload_dir / f"{chunk_index:03d}.part"
+    chunk_storage.save(chunk_path)
+    if chunk_path.stat().st_size > POP_VIDEO_CHUNK_SIZE_BYTES:
+        chunk_path.unlink(missing_ok=True)
+        raise ValueError("Bloco do vídeo excede o limite de 8 MB.")
+
+    if chunk_index < total_chunks - 1:
+        return None
+
+    expected_chunks = [upload_dir / f"{index:03d}.part" for index in range(total_chunks)]
+    if not all(path.exists() for path in expected_chunks):
+        raise ValueError("Upload incompleto. Envie novamente o vídeo.")
+
+    safe_name = secure_filename(original_filename or "video.mp4") or "video.mp4"
+    extension = Path(safe_name).suffix.lower() or ".mp4"
+    assembled_path = upload_dir / f"assembled{extension}"
+    try:
+        with assembled_path.open("wb") as assembled:
+            for path in expected_chunks:
+                with path.open("rb") as chunk_handle:
+                    shutil.copyfileobj(chunk_handle, assembled)
+        if assembled_path.stat().st_size != total_size:
+            raise ValueError("O tamanho final do upload não confere. Envie novamente o vídeo.")
+
+        with assembled_path.open("rb") as assembled_handle:
+            assembled_storage = FileStorage(
+                stream=assembled_handle,
+                filename=safe_name,
+                content_type=original_mimetype or "video/mp4",
+            )
+            return save_pop_video(assembled_storage, subfolder=subfolder)
+    finally:
+        shutil.rmtree(upload_dir, ignore_errors=True)

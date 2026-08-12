@@ -70,6 +70,7 @@ from services.process_pop_media_service import (
     POP_VIDEO_MAX_DURATION_SECONDS,
     coerce_video_duration_seconds,
     save_pop_video,
+    save_pop_video_chunk,
     validate_step_video_upload,
 )
 from utils.indicator_filters import build_indicator_process_filter
@@ -3236,6 +3237,83 @@ class ProcessStepResource(Resource):
             return {"message": "Step deleted successfully"}, 200
         except Exception as e:
             db.session.rollback()
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessStepVideoChunkResource(Resource):
+    @permission_required('processes', 'edit')
+    def post(self, step_id):
+        step = _get_process_step_with_access(step_id, action='edit')
+        if not step:
+            return {"error": "Permission denied: edit on processes"}, 403
+
+        routine = _get_process_routine_with_access(step.routine_id, action='edit')
+        company_id = getattr(routine, 'company_id', None)
+        if not company_id:
+            return {"error": "Contexto da empresa não encontrado."}, 400
+
+        try:
+            chunk = request.files.get('chunk')
+            chunk_index = int(request.form.get('chunk_index', -1))
+            total_chunks = int(request.form.get('total_chunks', 0))
+            total_size = int(request.form.get('total_size', 0))
+            duration_seconds = coerce_video_duration_seconds(
+                request.form.get('video_duration_seconds')
+            )
+            validate_step_video_upload(
+                type(
+                    'ChunkedVideoMetadata',
+                    (),
+                    {
+                        'filename': request.form.get('filename'),
+                        'mimetype': request.form.get('mimetype'),
+                    },
+                )(),
+                duration_seconds=duration_seconds,
+                content_length=total_size,
+            )
+
+            optimized_video_path = save_pop_video_chunk(
+                chunk,
+                company_id=company_id,
+                step_id=step.id,
+                upload_id=request.form.get('upload_id'),
+                chunk_index=chunk_index,
+                total_chunks=total_chunks,
+                total_size=total_size,
+                original_filename=request.form.get('filename'),
+                original_mimetype=request.form.get('mimetype'),
+                subfolder='pop/video',
+            )
+            if not optimized_video_path:
+                return {
+                    "completed": False,
+                    "received_chunk": chunk_index,
+                    "total_chunks": total_chunks,
+                }, 202
+
+            previous_video_path = step.video_path
+            step.video_path = optimized_video_path
+            step.video_duration_seconds = duration_seconds
+            db.session.commit()
+            if previous_video_path:
+                delete_file(previous_video_path)
+            payload = process_step_schema.dump(step)
+            payload['completed'] = True
+            return payload, 200
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except RequestEntityTooLarge:
+            db.session.rollback()
+            raise
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception(
+                "Erro no upload em blocos do vídeo POP step_id=%s company_id=%s",
+                step_id,
+                company_id,
+            )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
 
 
