@@ -57,6 +57,8 @@ app31/
 
 # Configr / produção - artefatos temporários e de restart
 **/.codex_temp*
+/.codex_publish_*/
+/.codex_tmp*/
 **/tmp/
 **/tmp_*
 **/tmp_edge_profile/

@@ -48,6 +48,15 @@ def load_private_key():
     checked_paths: list[str] = []
     for path in _candidate_key_paths():
         checked_paths.append(str(path))
+        # Paramiko 5+ reconhece o algoritmo OpenSSH diretamente pelo arquivo e
+        # evita ambiguidades de parsing que podem ocorrer ao tentar loaders
+        # específicos em sequência.
+        from_path = getattr(paramiko.PKey, "from_path", None)
+        if callable(from_path):
+            try:
+                return from_path(path)
+            except (FileNotFoundError, PermissionError, OSError, paramiko.SSHException):
+                pass
         try:
             key_bytes = path.read_bytes()
         except (FileNotFoundError, PermissionError, OSError):

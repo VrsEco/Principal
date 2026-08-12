@@ -787,6 +787,9 @@
 }
 
 .settlement-composition-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 0;
   min-height: 0;
 }
@@ -795,9 +798,13 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem 1rem;
+  flex: 1 1 auto;
   min-height: 0;
-  max-height: calc(90vh - 176px);
-  overflow: hidden;
+  max-height: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .settlement-modal-footer {
@@ -1334,6 +1341,12 @@
   .sched-grid { grid-template-columns: 1fr; }
   .modal-body { padding: 1rem; }
   .modal-footer { padding: 1rem; }
+  .modal-card--settlement {
+    width: calc(100vw - 1rem);
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    margin: 0.5rem auto;
+  }
   .settlement-modal-header { padding: 1rem; }
   .settlement-modal-close {
     width: 38px !important;
@@ -1354,6 +1367,32 @@
   .calc-log-summary,
   .calc-log-grid { grid-template-columns: 1fr; }
   .settlement-toolbar { grid-template-columns: 1fr; }
+  .settlement-modal-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .settlement-panel--data,
+  .settlement-panel--before,
+  .settlement-panel--composition,
+  .settlement-panel--after {
+    grid-column: 1;
+  }
+  .settlement-panel input,
+  .settlement-panel select {
+    min-height: 48px;
+    max-width: 100%;
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+  .settlement-panel input[type="date"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+  }
+  .settlement-panel select {
+    appearance: auto;
+    -webkit-appearance: menulist;
+    background-image: none;
+    padding-right: 0.9rem;
+  }
   .sched-summary-strip,
   .sched-summary-row { grid-template-columns: 1fr; }
   .field-counterparty,
