@@ -90,8 +90,8 @@
         <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧱</span><span>Recursos</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
         <button class="tab-btn process-tab-btn process-tab-btn--pop" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
-        <button class="tab-btn process-tab-btn process-tab-btn--form" onclick="switchTab('forms')"><span class="process-tab-btn__icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span><span>Formulários</span></button>
-        <button class="tab-btn process-tab-btn process-tab-btn--check" onclick="switchTab('checks')"><span class="process-tab-btn__icon"><i class="fas fa-list-check" aria-hidden="true"></i></span><span>Checklists</span></button>
+        <button class="tab-btn process-tab-btn process-tab-btn--form" onclick="switchTab('forms')"><span class="process-tab-btn__icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span><span>Modelos FORM</span></button>
+        <button class="tab-btn process-tab-btn process-tab-btn--check" onclick="switchTab('checks')"><span class="process-tab-btn__icon"><i class="fas fa-list-check" aria-hidden="true"></i></span><span>Modelos CHECK</span></button>
         <button class="tab-btn process-tab-btn process-tab-btn--ai" onclick="switchTab('ai')"><span class="process-tab-btn__icon"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span><span>IA</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('routine')"><span class="process-tab-btn__icon">📅</span><span>Rotinas</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('indicators')"><span class="process-tab-btn__icon">📊</span><span>Indicadores</span></button>
@@ -280,11 +280,11 @@
             <div class="process-section__header">
                 <div>
                     <span class="process-section__eyebrow">Coleta estruturada</span>
-                    <h2 class="text-h2">Formulários do Processo</h2>
-                    <p class="process-section__description">Consulte e edite os formulários vinculados às atividades BPMN deste processo.</p>
+                    <h2 class="text-h2">Modelos de formulário</h2>
+                    <p class="process-section__description">Área de configuração. O preenchimento acontece somente durante a execução de uma atividade.</p>
                 </div>
                 <div class="process-section__actions">
-                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Adicionar no Modeler</a>
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Configurar no Modeler</a>
                 </div>
             </div>
             <div class="process-section__body"><div id="processFormsList" class="process-artifact-overview"></div></div>
@@ -296,11 +296,11 @@
             <div class="process-section__header">
                 <div>
                     <span class="process-section__eyebrow">Controle operacional</span>
-                    <h2 class="text-h2">Checklists do Processo</h2>
-                    <p class="process-section__description">Acompanhe listas de verificação, versões e atividades BPMN vinculadas.</p>
+                    <h2 class="text-h2">Modelos de checklist</h2>
+                    <p class="process-section__description">Área de configuração. As verificações são respondidas na atividade da instância.</p>
                 </div>
                 <div class="process-section__actions">
-                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Adicionar no Modeler</a>
+                    <a class="btn btn-secondary btn-sm" href="{{ url_for('processes.process_bpmn_modeler', process_id=process_id) }}">Configurar no Modeler</a>
                 </div>
             </div>
             <div class="process-section__body"><div id="processChecksList" class="process-artifact-overview"></div></div>
@@ -3027,8 +3027,8 @@
 
     function renderArtifactOverview(type) {
         const config = {
-            form: { hostId: 'processFormsList', badge: 'FORM', empty: 'Nenhum formulário vinculado' },
-            check: { hostId: 'processChecksList', badge: 'CHECK', empty: 'Nenhum checklist vinculado' }
+            form: { hostId: 'processFormsList', badge: 'FORM', empty: 'Nenhum modelo de formulário configurado' },
+            check: { hostId: 'processChecksList', badge: 'CHECK', empty: 'Nenhum modelo de checklist configurado' }
         }[type];
         if (!config) return;
         const host = document.getElementById(config.hostId);
@@ -3039,7 +3039,7 @@
         if (!items.length) {
             host.innerHTML = `
                 <div class="process-artifact-empty">
-                    <div><strong>${config.empty}</strong><span>Adicione o artefato à atividade certa diretamente no fluxo.</span></div>
+                    <div><strong>${config.empty}</strong><span>Configure e publique o modelo na atividade correta do fluxo.</span></div>
                     <a class="btn btn-secondary btn-sm" href="${modelerUrl}">Abrir Modeler</a>
                 </div>`;
             return;
@@ -3052,8 +3052,8 @@
                     <strong>${escapeHtml(item.name || config.badge)}</strong>
                     <span>${escapeHtml(artifactActivityLabel(item))}${item.description ? ` · ${escapeHtml(item.description)}` : ''}</span>
                 </div>
-                <span class="process-artifact-row__meta">v${Number(item.version || 1)} · ${artifactStatusLabel(item.status)}</span>
-                <a class="btn btn-secondary btn-sm process-artifact-row__action" href="/processes/${processId}/artifacts/${Number(item.id)}/edit">Editar</a>
+                <span class="process-artifact-row__meta">Modelo v${Number(item.version || 1)} · ${artifactStatusLabel(item.status)}</span>
+                <a class="btn btn-secondary btn-sm process-artifact-row__action" href="/processes/${processId}/artifacts/${Number(item.id)}/edit">Configurar modelo</a>
             </article>`).join('');
     }
 

@@ -778,7 +778,7 @@ def register_api_resources(api):
         ProcessInstanceTimelineResource, ProcessInstanceOverlayResource,
         ProcessInstancePauseResource, ProcessInstanceResumeResource,
         ProcessInstanceExecutionListResource, ProcessInstanceExecutionResource,
-        ProcessArtifactExecutionResource,
+        ProcessArtifactExecutionResource, ProcessArtifactExecutionFileResource,
         ActivityWorkLogItemResource
     )
     from api.resources.okr import (
@@ -994,6 +994,11 @@ def register_api_resources(api):
     api.add_resource(ProcessInstanceExecutionListResource, '/api/process-instances/<int:instance_id>/executions')
     api.add_resource(ProcessInstanceExecutionResource, '/api/process-instances/<int:instance_id>/executions/<int:execution_id>')
     api.add_resource(ProcessArtifactExecutionResource, '/api/process-artifact-executions/<int:artifact_execution_id>')
+    api.add_resource(
+        ProcessArtifactExecutionFileResource,
+        '/api/process-artifact-executions/<int:artifact_execution_id>/files',
+        '/api/process-artifact-executions/<int:artifact_execution_id>/files/<string:file_key>',
+    )
     api.add_resource(ActivityWorkLogItemResource, '/api/activity-work-logs/<int:log_id>')
     api.add_resource(OKRGlobalListResource, '/api/okrs-global')
     api.add_resource(OKRGlobalResource, '/api/okrs-global/<int:okr_id>')

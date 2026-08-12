@@ -783,10 +783,10 @@
             const myActivities = data.my_active_activities || [];
             actionButtons.innerHTML = `
                 <button class="action-btn" data-action="start-instance">▶️ Iniciar instância</button>
-                <button class="action-btn" ${myActivities.length ? '' : 'disabled'} data-action="my-activities">✅ Minhas execuções (${myActivities.length})</button>
+                <button class="action-btn" ${myActivities.length ? '' : 'disabled'} data-action="my-activities">✅ Minhas pendências (${myActivities.length})</button>
                 <button class="action-btn" ${hasPop ? '' : 'disabled'} data-action="pop">📋 POP Publicado</button>
-                <button class="action-btn" ${hasForms ? '' : 'disabled'} data-action="forms">📝 Formulários</button>
-                <button class="action-btn" ${hasChecks ? '' : 'disabled'} data-action="checks">☑️ Checklists</button>
+                <button class="action-btn" ${hasForms ? '' : 'disabled'} data-action="forms">📝 Modelos FORM</button>
+                <button class="action-btn" ${hasChecks ? '' : 'disabled'} data-action="checks">☑️ Modelos CHECK</button>
                 <button class="action-btn" ${hasVideos ? '' : 'disabled'} data-action="videos">🎬 Vídeos</button>
                 <button class="action-btn" ${hasRoutines ? '' : 'disabled'} data-action="routines">📅 Rotinas</button>
                 <button class="action-btn" ${hasIndicators ? '' : 'disabled'} data-action="indicators">📈 Indicadores</button>
@@ -909,9 +909,10 @@
                 <article class="portal-content-card">
                     <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;">
                         <div><h4>${esc(artifact.name || 'Artefato')}</h4><p>${esc(artifact.description || '')}</p></div>
-                        <span class="chip">${artifact.artifact_type === 'form' ? 'FORM' : 'CHECK'} v${esc(artifact.version || 1)}</span>
+                        <span class="chip">MODELO ${artifact.artifact_type === 'form' ? 'FORM' : 'CHECK'} v${esc(artifact.version || 1)}</span>
                     </div>
-                    <p style="margin-top:.6rem;"><strong>${required ? 'Obrigatório' : 'Opcional'}</strong> · ${esc(artifactActivityLabels(artifact))}</p>
+                    <p style="margin-top:.6rem;"><strong>${required ? 'Obrigatório na execução' : 'Opcional na execução'}</strong> · ${esc(artifactActivityLabels(artifact))}</p>
+                    ${compact ? '' : '<p style="margin-top:.45rem;color:#64748b;"><strong>Somente visualização do modelo.</strong> O preenchimento ocorre em Minhas pendências.</p>'}
                     ${compact ? '' : `<div class="portal-grid" style="margin-top:.8rem;">${body || '<div class="portal-empty">Sem conteúdo publicado.</div>'}</div>`}
                 </article>
             `;
@@ -971,9 +972,9 @@
                     <p>${esc(item.instance_code || '')}${item.instance_code ? ' · ' : ''}${esc(item.instance_title || 'Instância')}</p>
                     <p style="margin-top:.6rem;"><strong>Status:</strong> ${esc(labels[item.status] || item.status || 'Pendente')}</p>
                     <p><strong>Prazo:</strong> ${esc(item.due_date || 'Não definido')}</p>
-                    <p><strong>Artefatos:</strong> ${esc((item.artifact_types || []).map(type => type.toUpperCase()).join(', ') || 'Nenhum')}</p>
-                    ${item.required_artifacts_pending ? `<p style="color:#b45309;"><strong>${esc(item.required_artifacts_pending)}</strong> obrigatório(s) pendente(s)</p>` : ''}
-                    <a class="action-btn" style="margin-top:.8rem; text-decoration:none; display:inline-flex; width:auto;" href="${esc(item.execution_url)}">Executar atividade →</a>
+                    <p><strong>Documentos da atividade:</strong> ${esc((item.documents || []).map(document => document.name).join(', ') || 'Nenhum')}</p>
+                    ${item.required_artifacts_pending ? `<p style="color:#b45309;"><strong>${esc(item.required_artifacts_pending)}</strong> pendência(s) obrigatória(s)</p>` : '<p style="color:#047857;"><strong>Sem documentos obrigatórios pendentes</strong></p>'}
+                    <a class="action-btn" style="margin-top:.8rem; text-decoration:none; display:inline-flex; width:auto;" href="${esc(item.execution_url)}">Abrir pendências →</a>
                 </article>
             `).join('')}</div>`;
         }
@@ -1115,11 +1116,11 @@
             const data = state.current;
             if (action === 'start-instance') { startInstance(); return; }
             if (action === 'pop') showModal('POP Publicado', 'Atividades e passos operacionais', renderPopActivities(data.pop_activities || []));
-            if (action === 'forms') showModal('Formulários do Processo', 'Modelos publicados por atividade', renderOperationalArtifacts(data.operational_artifacts || [], 'form'));
-            if (action === 'checks') showModal('Checklists do Processo', 'Controles publicados por atividade', renderOperationalArtifacts(data.operational_artifacts || [], 'check'));
+            if (action === 'forms') showModal('Modelos de formulário', 'Consulta dos modelos publicados; o preenchimento acontece na execução', renderOperationalArtifacts(data.operational_artifacts || [], 'form'));
+            if (action === 'checks') showModal('Modelos de checklist', 'Consulta dos controles publicados; a verificação acontece na execução', renderOperationalArtifacts(data.operational_artifacts || [], 'check'));
             if (action === 'videos') showModal('Vídeos do Processo', 'Clipes operacionais publicados', renderVideos(data.videos || []));
             if (action === 'routines') showModal('Rotinas do Processo', 'Agenda operacional vinculada', renderRoutines(data.routines || []));
-            if (action === 'my-activities') showModal('Minhas execuções neste processo', 'Atividades acionáveis atribuídas a você', renderMyActivities(data.my_active_activities || []));
+            if (action === 'my-activities') showModal('Minhas pendências neste processo', 'Atividades e documentos operacionais atribuídos a você', renderMyActivities(data.my_active_activities || []));
             if (action === 'indicators') showModal('Indicadores do Processo', 'Medição e acompanhamento', renderIndicators(data.indicators || []));
             if (action === 'resources') showModal('Estrutura/Recursos', 'Capacidade, custo e alocação publicada', renderResources(data.resources || {}));
             if (action === 'specs') showModal('SPEC para IA', 'Contratos e leitura do copiloto de fluxo', renderSpecs(data.ai_specs || {}));

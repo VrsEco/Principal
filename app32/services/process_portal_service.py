@@ -410,10 +410,21 @@ def load_employee_active_activities(
         instance = execution.process_instance
         artifacts = artifacts_by_execution.get(int(execution.id), [])
         required_pending = 0
+        document_items = []
         for artifact in artifacts:
             link = dict((artifact.definition_snapshot_json or {}).get("link") or {})
             if link.get("is_required") and artifact.status not in {"completed", "skipped"}:
                 required_pending += 1
+            snapshot = artifact.definition_snapshot_json or {}
+            document_items.append(
+                {
+                    "id": int(artifact.id),
+                    "type": str(artifact.artifact_type),
+                    "name": snapshot.get("name") or str(artifact.artifact_type).upper(),
+                    "status": str(artifact.status),
+                    "is_required": bool(link.get("is_required")),
+                }
+            )
         payload.append(
             {
                 "execution_id": int(execution.id),
@@ -428,6 +439,7 @@ def load_employee_active_activities(
                 "priority": instance.priority,
                 "due_date": instance.due_date.isoformat() if instance.due_date else None,
                 "artifact_types": sorted({str(item.artifact_type) for item in artifacts}),
+                "documents": document_items,
                 "required_artifacts_pending": required_pending,
                 "execution_url": (
                     f"/my-work/process-instance/{instance.id}"

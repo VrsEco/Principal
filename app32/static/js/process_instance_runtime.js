@@ -4,6 +4,7 @@
 
   const instanceId = root.dataset.instanceId;
   const processId = root.dataset.processId;
+  const companyId = root.dataset.companyId;
   const focusedExecutionId = new URLSearchParams(window.location.search).get('execution_id');
 
   const runtimeStatusLabel = document.getElementById('runtimeStatusLabel');
@@ -15,6 +16,7 @@
   const runtimeFlowMeta = document.getElementById('runtimeFlowMeta');
   const runtimeFlowEmpty = document.getElementById('runtimeFlowEmpty');
   const runtimeProcessIndicators = document.getElementById('runtimeProcessIndicators');
+  const runtimeDocumentHistory = document.getElementById('runtimeDocumentHistory');
 
   const btnPause = document.getElementById('btnPauseRuntime');
   const btnResume = document.getElementById('btnResumeRuntime');
@@ -206,6 +208,30 @@
     `).join('');
   }
 
+  function renderDocumentHistory(runtime) {
+    if (!runtimeDocumentHistory) return;
+    const documents = Array.isArray(runtime?.document_history) ? runtime.document_history : [];
+    if (!documents.length) {
+      runtimeDocumentHistory.innerHTML = '<div class="bpms-support-empty">Nenhum formulário ou checklist concluído nesta instância.</div>';
+      return;
+    }
+    runtimeDocumentHistory.innerHTML = documents.map(document => `
+      <button type="button" class="bpms-document-history__item bpms-artifact-card--${escapeHtml(document.artifact_type)}" data-history-document-id="${escapeHtml(document.id)}">
+        <span class="bpms-artifact-card__type">${escapeHtml(document.artifact_type === 'form' ? 'FORMULÁRIO' : 'CHECKLIST')}</span>
+        <span><strong>${escapeHtml(document.name || 'Documento')}</strong><small>${escapeHtml(document.activity_name || 'Atividade')} · v${escapeHtml(document.artifact_version || 1)}</small></span>
+        <span><strong>${escapeHtml(document.performed_by_name || 'Executor da atividade')}</strong><small>${escapeHtml(formatDateTime(document.completed_at))}</small></span>
+        <span class="bpms-artifact-card__action">Ver resultado ›</span>
+      </button>
+    `).join('');
+    runtimeDocumentHistory.querySelectorAll('[data-history-document-id]').forEach(button => {
+      button.addEventListener('click', () => {
+        const document = documents.find(item => String(item.id) === String(button.dataset.historyDocumentId));
+        if (document?.artifact_type === 'form') openFormArtifactModal(document);
+        if (document?.artifact_type === 'check') openCheckArtifactModal(document);
+      });
+    });
+  }
+
   function renderCurrentActivity(runtime) {
     if (!runtimeCurrentActivity) return;
     const payload = runtime?.current_activity || {};
@@ -214,6 +240,7 @@
     const materials = payload.support_materials || {};
     const artifactsPayload = payload.artifacts || {};
     const artifacts = Array.isArray(artifactsPayload.items) ? artifactsPayload.items : [];
+    const operationalDocuments = artifacts.filter((artifact) => artifact.artifact_type === 'form' || artifact.artifact_type === 'check');
     const artifactCompletion = artifactsPayload.completion || {};
     const quickSteps = Array.isArray(materials.quick_steps) ? materials.quick_steps : [];
 
@@ -259,20 +286,15 @@
           `).join('')}
         </div>
 
-        <div class="bpms-artifact-runtime">
+        <div class="bpms-artifact-runtime bpms-document-worklist">
           <div class="bpms-artifact-runtime__head">
-            <h4>Artefatos da atividade</h4>
+            <div><span class="bpms-document-worklist__eyebrow">Documentos operacionais</span><h4>Pendências para concluir</h4></div>
             <span>${escapeHtml(`${artifactCompletion.required_completed || 0}/${artifactCompletion.required_total || 0} obrigatórios concluídos`)}</span>
           </div>
-          ${artifacts.length ? `<div class="bpms-artifact-runtime__list">
-            ${artifacts.map((artifact) => `
-              <button type="button" class="bpms-artifact-card bpms-artifact-card--${escapeHtml(artifact.artifact_type || 'generic')}" data-artifact-id="${artifact.id || ''}" data-artifact-type="${escapeHtml(artifact.artifact_type || '')}">
-                <span class="bpms-artifact-card__type">${escapeHtml(artifactTypeLabel(artifact.artifact_type))}</span>
-                <span class="bpms-artifact-card__body"><strong>${escapeHtml(artifact.name || 'Artefato')}</strong><small>${artifact.is_required ? 'Obrigatório' : 'Opcional'} · ${escapeHtml(artifactStatusLabel(artifact.status))}</small></span>
-                <span class="bpms-artifact-card__state">${artifact.status === 'completed' ? '✓' : '›'}</span>
-              </button>
-            `).join('')}
-          </div>` : '<div class="bpms-support-empty">Nenhum artefato publicado para esta atividade.</div>'}
+          ${operationalDocuments.length ? `<div class="bpms-artifact-runtime__list">
+            ${operationalDocuments.map(renderOperationalDocumentCard).join('')}
+          </div>` : '<div class="bpms-support-empty">Esta atividade não possui formulário ou checklist vinculado.</div>'}
+          ${execution && artifactCompletion.activity_may_complete === false ? '<div class="bpms-document-gate"><strong>Conclusão bloqueada</strong><span>Finalize os documentos obrigatórios indicados acima.</span></div>' : ''}
         </div>
 
         <div class="bpms-activity-steps">
@@ -293,7 +315,7 @@
           ${hasOpenAction
             ? `<a class="btn btn-secondary" href="${escapeHtml(openActionHref)}" ${openActionTarget}>${escapeHtml(action.action_label || 'Abrir tela operacional')}</a>`
             : ''}
-          <button type="button" class="btn btn-primary" data-runtime-action="complete" ${(action.can_complete || action.can_start) ? '' : 'disabled'}>${execution ? 'Concluir atividade' : 'Iniciar atividade'}</button>
+          <button type="button" class="btn btn-primary" data-runtime-action="complete" ${(action.can_complete || action.can_start) && (!execution || artifactCompletion.activity_may_complete !== false) ? '' : 'disabled'}>${execution ? 'Concluir atividade' : 'Iniciar atividade'}</button>
         </div>
       </div>
     `;
@@ -354,6 +376,39 @@
     return ({ pending: 'Pendente', in_progress: 'Em andamento', waiting_external: 'Aguardando', waiting_human: 'Revisão humana', completed: 'Concluído', failed: 'Falhou', skipped: 'Dispensado' })[status] || status || 'Pendente';
   }
 
+  function artifactProgress(artifact) {
+    const config = artifact?.configuration_json || {};
+    const answers = artifact?.output_json?.answers || {};
+    if (artifact?.artifact_type === 'form') {
+      const fields = (config.sections || []).flatMap(section => section.fields || []);
+      const answered = fields.filter(field => {
+        const value = answers[field.id];
+        return value !== undefined && value !== null && value !== '' && (!Array.isArray(value) || value.length > 0);
+      }).length;
+      return { answered, total: fields.length, unit: fields.length === 1 ? 'campo' : 'campos' };
+    }
+    const items = config.items || [];
+    const answered = items.filter(item => Boolean(answers[item.id]?.status)).length;
+    return { answered, total: items.length, unit: items.length === 1 ? 'item' : 'itens' };
+  }
+
+  function renderOperationalDocumentCard(artifact) {
+    const progress = artifactProgress(artifact);
+    const percentage = progress.total ? Math.round((progress.answered / progress.total) * 100) : 0;
+    const actionLabel = artifact.status === 'completed' ? 'Ver resultado' : artifact.status === 'in_progress' ? 'Continuar' : 'Preencher';
+    return `
+      <button type="button" class="bpms-artifact-card bpms-artifact-card--${escapeHtml(artifact.artifact_type || 'generic')} bpms-artifact-card--status-${escapeHtml(artifact.status || 'pending')}" data-artifact-id="${artifact.id || ''}" data-artifact-type="${escapeHtml(artifact.artifact_type || '')}">
+        <span class="bpms-artifact-card__type">${escapeHtml(artifact.artifact_type === 'form' ? 'FORMULÁRIO' : 'CHECKLIST')}</span>
+        <span class="bpms-artifact-card__body">
+          <strong>${escapeHtml(artifact.name || 'Documento')}</strong>
+          <small>${artifact.is_required ? 'Obrigatório' : 'Opcional'} · ${escapeHtml(artifactStatusLabel(artifact.status))}</small>
+          <span class="bpms-document-progress"><i style="width:${percentage}%"></i></span>
+          <small>${progress.answered}/${progress.total} ${escapeHtml(progress.unit)} preenchidos</small>
+        </span>
+        <span class="bpms-artifact-card__action">${escapeHtml(actionLabel)} ${artifact.status === 'completed' ? '✓' : '›'}</span>
+      </button>`;
+  }
+
   async function openArtifactExecution(artifact, currentActivity, execution, action) {
     if (!artifact) return;
     if (artifact.artifact_type === 'pop') {
@@ -361,15 +416,22 @@
       return;
     }
     if (!execution?.id || !artifact.id) {
-      await createExecution({
-        bpmn_element_id: currentActivity.element_id,
-        bpmn_element_name: currentActivity.element_name,
-        bpmn_element_type: currentActivity.element_type,
-        execution_mode: action.execution_mode || 'human_task',
-        status: 'in_progress'
-      });
-      await refreshRuntime();
-      window.alert('Atividade iniciada. Abra novamente o artefato para preencher.');
+      if (!execution?.id) {
+        await createExecution({
+          bpmn_element_id: currentActivity.element_id,
+          bpmn_element_name: currentActivity.element_name,
+          bpmn_element_type: currentActivity.element_type,
+          execution_mode: action.execution_mode || 'human_task',
+          status: 'in_progress'
+        });
+      }
+      const runtime = await refreshRuntime();
+      const refreshedActivity = runtime?.current_activity || {};
+      const refreshedArtifact = (refreshedActivity.artifacts?.items || []).find(item =>
+        Number(item.artifact_definition_id) === Number(artifact.artifact_definition_id)
+      );
+      if (!refreshedArtifact?.id) throw new Error('Documento não foi materializado para esta atividade.');
+      await openArtifactExecution(refreshedArtifact, refreshedActivity, refreshedActivity.execution, refreshedActivity.action || action);
       return;
     }
     if (artifact.artifact_type === 'form') openFormArtifactModal(artifact);
@@ -377,58 +439,145 @@
     else window.alert(`${artifactTypeLabel(artifact.artifact_type)} será executado automaticamente pelo runtime configurado.`);
   }
 
-  function fieldInputHtml(field, value) {
+  function fieldInputHtml(field, value, { readOnly = false } = {}) {
     const id = escapeHtml(field.id || 'field');
     const label = escapeHtml(field.label || field.id || 'Campo');
-    const required = field.required ? 'required' : '';
+    const required = field.required && !readOnly ? 'required' : '';
+    const disabled = readOnly ? 'disabled' : '';
     const current = value ?? '';
-    if (field.type === 'textarea') return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><textarea data-form-field="${id}" ${required}>${escapeHtml(current)}</textarea></label>`;
-    if (field.type === 'checkbox') return `<label class="bpms-runtime-form-field bpms-runtime-form-field--check"><input type="checkbox" data-form-field="${id}" ${current ? 'checked' : ''}> <span>${label}</span></label>`;
+    if (field.type === 'file') {
+      const currentFile = current && typeof current === 'object' ? current : null;
+      const currentLink = currentFile?.download_url
+        ? `<a class="bpms-document-file-link" href="${escapeHtml(currentFile.download_url)}">Baixar ${escapeHtml(currentFile.name || 'arquivo')}</a>`
+        : current ? `<span class="bpms-document-file-link">${escapeHtml(current)}</span>` : '<span class="bpms-document-file-empty">Nenhum arquivo enviado</span>';
+      if (readOnly) return `<div class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span>${currentLink}</div>`;
+      return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><input type="file" data-form-field="${id}" data-document-file accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx" ${field.required && !currentFile ? 'required' : ''}><small data-file-name>${currentFile ? `Arquivo atual: ${escapeHtml(currentFile.name || 'arquivo')}` : 'Limite de 10 MB'}</small></label>`;
+    }
+    if (field.type === 'textarea') return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><textarea data-form-field="${id}" ${required} ${disabled}>${escapeHtml(current)}</textarea></label>`;
+    if (field.type === 'checkbox') return `<label class="bpms-runtime-form-field bpms-runtime-form-field--check"><input type="checkbox" data-form-field="${id}" ${current ? 'checked' : ''} ${disabled}> <span>${label}</span></label>`;
     if (field.type === 'select' || field.type === 'multiselect') {
       const selected = Array.isArray(current) ? current.map(String) : [String(current)];
       const options = (field.options || []).map(option => typeof option === 'object' ? option : { value: option, label: option });
-      return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><select data-form-field="${id}" ${field.type === 'multiselect' ? 'multiple' : ''} ${required}>${options.map(option => `<option value="${escapeHtml(option.value)}" ${selected.includes(String(option.value)) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
+      return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><select data-form-field="${id}" ${field.type === 'multiselect' ? 'multiple' : ''} ${required} ${disabled}>${options.map(option => `<option value="${escapeHtml(option.value)}" ${selected.includes(String(option.value)) ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`;
     }
     const htmlType = ({number:'number',date:'date',datetime:'datetime-local',email:'email',phone:'tel'})[field.type] || 'text';
-    return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><input type="${htmlType}" data-form-field="${id}" value="${escapeHtml(current)}" ${required}></label>`;
+    return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><input type="${htmlType}" data-form-field="${id}" value="${escapeHtml(current)}" ${required} ${disabled}></label>`;
   }
 
   function openFormArtifactModal(artifact) {
     const config = artifact.configuration_json || {};
     const answers = artifact.output_json?.answers || {};
-    const html = `<form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id])).join('')}</fieldset>`).join('')}<div class="bpms-runtime-form__actions"><button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar progresso</button><button type="submit" class="btn btn-primary">Concluir formulário</button></div></form>`;
-    window.openRuntimeSupportModal(`FORM · ${artifact.name || 'Formulário'}`, 'Dados persistidos nesta execução da atividade.', html);
+    const readOnly = artifact.status === 'completed';
+    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${section.description ? `<p class="bpms-document-section-help">${escapeHtml(section.description)}</p>` : ''}${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id], { readOnly })).join('')}</fieldset>`).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? '<button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>' : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir formulário</button>'}</div></form>`;
+    window.openRuntimeSupportModal(`${readOnly ? 'Resultado do formulário' : 'Preencher formulário'} · ${artifact.name || 'Formulário'}`, readOnly ? `Concluído em ${formatDateTime(artifact.completed_at)}.` : 'Preencha os campos e salve um rascunho quando necessário.', html);
     const form = document.getElementById('runtimeArtifactForm');
+    if (readOnly) { form.querySelector('[data-document-close]')?.addEventListener('click', closeDocumentModal); return; }
+    bindDocumentFileInputs(form, artifact, answers);
     const collect = () => {
       const values = {};
       form.querySelectorAll('[data-form-field]').forEach(input => {
-        if (input.type === 'checkbox') values[input.dataset.formField] = input.checked;
+        if (input.type === 'file') values[input.dataset.formField] = parseFilePayload(input) || answers[input.dataset.formField] || null;
+        else if (input.type === 'checkbox') values[input.dataset.formField] = input.checked;
         else if (input.multiple) values[input.dataset.formField] = Array.from(input.selectedOptions).map(option => option.value);
         else values[input.dataset.formField] = input.value;
       });
       return values;
     };
-    form.querySelector('[data-artifact-save]').addEventListener('click', () => saveArtifactExecution(artifact.id, 'in_progress', { answers: collect() }, {}).catch(error => window.alert(error.message)));
-    form.addEventListener('submit', event => { event.preventDefault(); saveArtifactExecution(artifact.id, 'completed', { answers: collect() }, {}).catch(error => window.alert(error.message)); });
+    form.querySelector('[data-artifact-save]').addEventListener('click', () => submitDocument(form, () => saveArtifactExecution(artifact.id, 'in_progress', { answers: collect() }, {}), 'Rascunho salvo. Você pode continuar depois.'));
+    form.addEventListener('submit', event => { event.preventDefault(); submitDocument(form, () => saveArtifactExecution(artifact.id, 'completed', { answers: collect() }, {}), 'Formulário concluído.'); });
   }
 
   function openCheckArtifactModal(artifact) {
     const config = artifact.configuration_json || {};
     const answers = artifact.output_json?.answers || {};
     const evidence = artifact.evidence_json || {};
-    const html = `<form id="runtimeArtifactCheck" class="bpms-runtime-check">${(config.items || []).map(item => { const answer=answers[item.id]||{}; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><select data-check-status="${escapeHtml(item.id)}"><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário"><input type="text" data-check-evidence="${escapeHtml(item.id)}" value="${escapeHtml(evidence[item.id] || '')}" placeholder="${item.evidence_required?'Evidência obrigatória':'Evidência opcional'}"></article>`; }).join('')}<div class="bpms-runtime-form__actions"><button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar progresso</button><button type="submit" class="btn btn-primary">Concluir checklist</button></div></form>`;
-    window.openRuntimeSupportModal(`CHECK · ${artifact.name || 'Checklist'}`, 'Verifique cada item e registre as evidências.', html);
+    const readOnly = artifact.status === 'completed';
+    const disabled = readOnly ? 'disabled' : '';
+    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactCheck" class="bpms-runtime-check"><div class="bpms-runtime-check__columns"><span>Critério</span><span>Resultado</span><span>Comentário</span><span>Evidência</span></div>${(config.items || []).map(item => { const answer=answers[item.id]||{}; const evidenceValue=evidence[item.id]; const evidenceFile=evidenceValue&&typeof evidenceValue==='object'?evidenceValue:null; const evidenceControl=readOnly?(evidenceFile?.download_url?`<a class="bpms-document-file-link" href="${escapeHtml(evidenceFile.download_url)}">Baixar ${escapeHtml(evidenceFile.name||'evidência')}</a>`:`<span>${escapeHtml(evidenceValue||'Sem evidência')}</span>`):`<input type="file" data-check-evidence="${escapeHtml(item.id)}" data-document-file accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx"><small data-file-name>${evidenceFile?`Arquivo atual: ${escapeHtml(evidenceFile.name||'evidência')}`:(item.evidence_required?'Evidência obrigatória':'Evidência opcional')}</small>`; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><label><span class="bpms-mobile-label">Resultado</span><select data-check-status="${escapeHtml(item.id)}" ${disabled}><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select></label><label><span class="bpms-mobile-label">Comentário</span><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário" ${disabled}></label><label><span class="bpms-mobile-label">Evidência</span>${evidenceControl}</label></article>`; }).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? '<button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>' : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir checklist</button>'}</div></form>`;
+    window.openRuntimeSupportModal(`${readOnly ? 'Resultado do checklist' : 'Executar checklist'} · ${artifact.name || 'Checklist'}`, readOnly ? `Concluído em ${formatDateTime(artifact.completed_at)}.` : 'Verifique cada critério antes de concluir.', html);
     const form=document.getElementById('runtimeArtifactCheck');
-    const collect=()=>{const output={};const evidencePayload={};form.querySelectorAll('[data-check-status]').forEach(select=>{const id=select.dataset.checkStatus;output[id]={status:select.value,comment:form.querySelector(`[data-check-comment="${CSS.escape(id)}"]`)?.value||''};evidencePayload[id]=form.querySelector(`[data-check-evidence="${CSS.escape(id)}"]`)?.value||'';});return {output,evidencePayload};};
-    form.querySelector('[data-artifact-save]').addEventListener('click',()=>{const data=collect();saveArtifactExecution(artifact.id,'in_progress',{answers:data.output},data.evidencePayload).catch(error=>window.alert(error.message));});
-    form.addEventListener('submit',event=>{event.preventDefault();const data=collect();saveArtifactExecution(artifact.id,'completed',{answers:data.output},data.evidencePayload).catch(error=>window.alert(error.message));});
+    if (readOnly) { form.querySelector('[data-document-close]')?.addEventListener('click', closeDocumentModal); return; }
+    bindDocumentFileInputs(form, artifact, evidence);
+    const collect=()=>{const output={};const evidencePayload={};form.querySelectorAll('[data-check-status]').forEach(select=>{const id=select.dataset.checkStatus;output[id]={status:select.value,comment:form.querySelector(`[data-check-comment="${CSS.escape(id)}"]`)?.value||''};const evidenceInput=form.querySelector(`[data-check-evidence="${CSS.escape(id)}"]`);evidencePayload[id]=parseFilePayload(evidenceInput)||evidence[id]||'';});return {output,evidencePayload};};
+    form.querySelector('[data-artifact-save]').addEventListener('click',()=>{const data=collect();submitDocument(form,()=>saveArtifactExecution(artifact.id,'in_progress',{answers:data.output},data.evidencePayload),'Rascunho salvo. Você pode continuar depois.');});
+    form.addEventListener('submit',event=>{event.preventDefault();const data=collect();submitDocument(form,()=>saveArtifactExecution(artifact.id,'completed',{answers:data.output},data.evidencePayload),'Checklist concluído.');});
+  }
+
+  function closeDocumentModal() {
+    const modal = document.getElementById('resourceContentModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function parseFilePayload(input) {
+    if (!input?.dataset?.filePayload) return null;
+    try { return JSON.parse(input.dataset.filePayload); } catch (_) { return null; }
+  }
+
+  function bindDocumentFileInputs(form, artifact, currentValues = {}) {
+    form.querySelectorAll('[data-document-file]').forEach(input => {
+      const key = input.dataset.formField || input.dataset.checkEvidence;
+      if (currentValues[key] && typeof currentValues[key] === 'object') {
+        input.dataset.filePayload = JSON.stringify(currentValues[key]);
+      }
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const name = input.parentElement?.querySelector('[data-file-name]');
+        input.disabled = true;
+        input.dataset.uploading = 'true';
+        if (name) name.textContent = 'Enviando arquivo...';
+        try {
+          const body = new FormData();
+          body.append('file', file);
+          const response = await fetch(`/api/process-artifact-executions/${artifact.id}/files?company_id=${encodeURIComponent(companyId)}`, { method:'POST', body });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || 'Falha ao enviar arquivo.');
+          input.dataset.filePayload = JSON.stringify(data);
+          if (name) name.textContent = `${data.name} enviado. Salve o documento para vinculá-lo.`;
+          setDocumentFeedback(form, 'Arquivo enviado. Salve o rascunho ou conclua o documento.', false);
+        } catch (error) {
+          input.value = '';
+          if (name) name.textContent = error.message || 'Falha ao enviar arquivo.';
+          setDocumentFeedback(form, error.message || 'Falha ao enviar arquivo.', true);
+        } finally {
+          input.disabled = false;
+          input.dataset.uploading = 'false';
+        }
+      });
+    });
+  }
+
+  function setDocumentFeedback(form, message, isError = false) {
+    const feedback = form?.querySelector('[data-document-feedback]');
+    if (!feedback) return;
+    feedback.textContent = message || '';
+    feedback.className = `bpms-document-feedback${isError ? ' is-error' : ' is-success'}`;
+  }
+
+  async function submitDocument(form, action, successMessage) {
+    if (form.querySelector('[data-uploading="true"]')) {
+      setDocumentFeedback(form, 'Aguarde o término do envio do arquivo.', true);
+      return;
+    }
+    const buttons = form.querySelectorAll('button');
+    buttons.forEach(button => { button.disabled = true; });
+    setDocumentFeedback(form, 'Salvando...', false);
+    try {
+      await action();
+      setDocumentFeedback(form, successMessage, false);
+    } catch (error) {
+      setDocumentFeedback(form, error.message || 'Não foi possível salvar.', true);
+    } finally {
+      buttons.forEach(button => { button.disabled = false; });
+    }
   }
 
   async function saveArtifactExecution(artifactExecutionId, status, outputJson, evidenceJson) {
-    const response = await fetch(`/api/process-artifact-executions/${artifactExecutionId}`, { method:'PUT', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({status,output_json:outputJson,evidence_json:evidenceJson}) });
+    const response = await fetch(`/api/process-artifact-executions/${artifactExecutionId}`, { method:'PUT', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({company_id:Number(companyId),status,output_json:outputJson,evidence_json:evidenceJson}) });
     const data = await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data.error || `Falha ao salvar artefato (${response.status})`);
-    if(status === 'completed') { document.getElementById('resourceContentModal').style.display='none'; await refreshRuntime(); }
+    await refreshRuntime();
+    if(status === 'completed') closeDocumentModal();
     return data;
   }
 
@@ -613,6 +762,7 @@
     renderCurrentActivity(runtime);
     renderTimeline(runtime);
     renderIndicators(runtime);
+    renderDocumentHistory(runtime);
 
     if (runtime.diagram?.bpmn_xml) {
       await ensureViewer(runtime.diagram.bpmn_xml);

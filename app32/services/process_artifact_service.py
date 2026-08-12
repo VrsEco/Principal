@@ -754,6 +754,8 @@ def update_artifact_execution(
 ) -> ProcessActivityArtifactExecution:
     execution = get_artifact_execution(company_id, artifact_execution_id)
     status = normalize_execution_status(payload.get("status") or execution.status)
+    if execution.status in {"completed", "skipped"}:
+        raise ProcessArtifactValidationError("Documento concluído é somente leitura e não pode ser alterado.")
     output = payload.get("output_json") if "output_json" in payload else execution.output_json or {}
     evidence = payload.get("evidence_json") if "evidence_json" in payload else execution.evidence_json or {}
     if not isinstance(output, dict) or not isinstance(evidence, dict):

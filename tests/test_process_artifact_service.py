@@ -1,4 +1,5 @@
 import sys
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,6 +17,9 @@ from models.process_artifact import (  # noqa: E402
     ProcessActivityArtifactLink,
 )
 from services import process_artifact_service as service  # noqa: E402
+from services import process_artifact_file_service as file_service  # noqa: E402
+from flask import Flask  # noqa: E402
+from werkzeug.datastructures import FileStorage  # noqa: E402
 
 
 def test_artifact_models_require_company_id_and_expected_constraints():
@@ -75,6 +79,47 @@ def test_validate_check_configuration_requires_unique_item_ids():
     }
     with pytest.raises(service.ProcessArtifactValidationError, match="IDs duplicados"):
         service.validate_artifact_configuration("check", config)
+
+
+def test_completed_artifact_execution_is_immutable(monkeypatch):
+    execution = SimpleNamespace(status="completed")
+    monkeypatch.setattr(service, "get_artifact_execution", lambda company_id, artifact_execution_id: execution)
+
+    with pytest.raises(service.ProcessArtifactValidationError, match="somente leitura"):
+        service.update_artifact_execution(9, 81, {"status": "in_progress", "output_json": {"answers": {}}})
+
+
+def test_artifact_file_service_stores_private_tenant_scoped_file(tmp_path, monkeypatch):
+    execution = SimpleNamespace(
+        id=81,
+        process_instance_id=33,
+        status="in_progress",
+        output_json={},
+        evidence_json={},
+    )
+    monkeypatch.setattr(file_service, "get_artifact_execution", lambda company_id, artifact_execution_id: execution)
+    app = Flask(__name__, instance_path=str(tmp_path / "instance"))
+    storage = FileStorage(stream=BytesIO(b"document-content"), filename="evidencia.pdf", content_type="application/pdf")
+
+    with app.app_context():
+        metadata = file_service.save_artifact_execution_file(9, 81, storage)
+        execution.evidence_json = {"item": metadata}
+        path, original_name, mime_type = file_service.resolve_artifact_execution_file(9, 81, metadata["file_key"])
+
+    assert path.is_file()
+    assert "private_process_artifacts" in str(path)
+    assert original_name == "evidencia.pdf"
+    assert mime_type == "application/pdf"
+    assert "company_id=9" in metadata["download_url"]
+
+
+def test_artifact_file_service_rejects_unlinked_file(tmp_path, monkeypatch):
+    execution = SimpleNamespace(id=81, process_instance_id=33, status="in_progress", output_json={}, evidence_json={})
+    monkeypatch.setattr(file_service, "get_artifact_execution", lambda company_id, artifact_execution_id: execution)
+    app = Flask(__name__, instance_path=str(tmp_path / "instance"))
+
+    with app.app_context(), pytest.raises(service.ProcessArtifactValidationError, match="não vinculado"):
+        file_service.resolve_artifact_execution_file(9, 81, "unknown.pdf")
 
 
 def test_build_definition_snapshot_hydrates_legacy_pop_without_mutating_definition():
@@ -350,6 +395,7 @@ def test_artifact_editor_and_runtime_routes_are_registered_in_app_source():
     assert "/api/processes/<int:process_id>/activity-artifacts" in app_source
     assert "/api/process-activity-artifacts/<int:artifact_id>/publish" in app_source
     assert "/api/process-artifact-executions/<int:artifact_execution_id>" in app_source
+    assert "/api/process-artifact-executions/<int:artifact_execution_id>/files/<string:file_key>" in app_source
     assert "/processes/<int:process_id>/artifacts/new/<string:artifact_type>" in routes_source
     assert "/processes/<int:process_id>/artifacts/<int:artifact_id>/edit" in routes_source
     assert "App32ArtifactContextPadProvider" in modeler_source
@@ -360,6 +406,42 @@ def test_artifact_editor_and_runtime_routes_are_registered_in_app_source():
     assert "element.dblclick" in modeler_source
     assert "name: item.marker" in modeler_source
     assert "/api/process-artifact-executions/${artifactExecutionId}" in runtime_source
+
+
+def test_runtime_presents_forms_and_checks_as_operational_pending_documents():
+    runtime_source = (APP_DIR / "static" / "js" / "process_instance_runtime.js").read_text(encoding="utf-8")
+    runtime_css = (APP_DIR / "static" / "css" / "process_instance_runtime.css").read_text(encoding="utf-8")
+
+    assert "Pendências para concluir" in runtime_source
+    assert "renderOperationalDocumentCard" in runtime_source
+    assert "Preencher" in runtime_source
+    assert "Continuar" in runtime_source
+    assert "Ver resultado" in runtime_source
+    assert "Rascunho salvo. Você pode continuar depois." in runtime_source
+    assert "Abra novamente o artefato" not in runtime_source
+    assert "bpms-document-gate" in runtime_css
+    assert "bpms-document-feedback" in runtime_css
+
+
+def test_runtime_exposes_read_only_document_history_with_explicit_tenant():
+    runtime_source = (APP_DIR / "static" / "js" / "process_instance_runtime.js").read_text(encoding="utf-8")
+    runtime_template = (APP_DIR / "templates" / "modules" / "processes" / "process_instance_v2.html").read_text(encoding="utf-8")
+    runtime_service = (APP_DIR / "services" / "process_execution_runtime_service.py").read_text(encoding="utf-8")
+    resource_source = (APP_DIR / "api" / "resources" / "process.py").read_text(encoding="utf-8")
+    execution_resource = resource_source.split("class ProcessArtifactExecutionResource", 1)[1].split(
+        "class ProcessActivityArtifactListResource", 1
+    )[0]
+
+    assert 'data-company-id="{{ instance.company_id }}"' in runtime_template
+    assert 'id="runtimeDocumentHistory"' in runtime_template
+    assert "Registros da execução" in runtime_template
+    assert "renderDocumentHistory(runtime)" in runtime_source
+    assert "company_id:Number(companyId)" in runtime_source
+    assert '"document_history": build_instance_document_history(instance)' in runtime_service
+    assert "document_completed" in runtime_service
+    assert execution_resource.count("company_id = get_request_company_id()") == 4
+    assert "company_id = get_default_company_id()" not in execution_resource
+    assert "/api/process-artifact-executions/${artifact.id}/files?company_id=" in runtime_source
 
 
 def test_modeler_uses_contextual_artifact_menu_and_on_demand_ai_dialog():
@@ -515,6 +597,20 @@ def test_process_details_exposes_artifact_views_in_one_flat_navigation_line():
     assert "flex-wrap: wrap" not in source.split(".process-tabs-nav", 2)[2].split("}", 1)[0]
 
 
+def test_process_artifact_surfaces_distinguish_models_from_execution():
+    details_source = (APP_DIR / "templates" / "modules" / "processes" / "process_details_v2.html").read_text(encoding="utf-8")
+    portal_source = (APP_DIR / "templates" / "modules" / "processes" / "process_portal_process_detail.html").read_text(encoding="utf-8")
+    portal_service_source = (APP_DIR / "services" / "process_portal_service.py").read_text(encoding="utf-8")
+
+    assert "Modelos de formulário" in details_source
+    assert "Modelos de checklist" in details_source
+    assert "Configurar modelo" in details_source
+    assert "Minhas pendências" in portal_source
+    assert "Somente visualização do modelo" in portal_source
+    assert "Abrir pendências" in portal_source
+    assert '"documents": document_items' in portal_service_source
+
+
 def test_process_details_loads_and_renders_forms_checks_and_ai_contracts():
     source = (APP_DIR / "templates" / "modules" / "processes" / "process_details_v2.html").read_text(encoding="utf-8")
 
@@ -526,5 +622,5 @@ def test_process_details_loads_and_renders_forms_checks_and_ai_contracts():
     assert "renderArtifactOverview('form')" in source
     assert "renderArtifactOverview('check')" in source
     assert "renderAiOverview()" in source
-    assert "Adicionar no Modeler" in source
+    assert "Configurar no Modeler" in source
     assert "Configurar no Modeler" in source
