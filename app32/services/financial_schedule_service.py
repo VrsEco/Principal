@@ -271,6 +271,8 @@ class FinancialScheduleService:
         company_id: int,
         allowed_company_ids: Optional[Sequence[int]] = None,
         status: Optional[str] = None,
+        due_date_from: Optional[date] = None,
+        due_date_to: Optional[date] = None,
     ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -282,6 +284,10 @@ class FinancialScheduleService:
         )
         if status:
             query = query.filter(FinancialSchedule.status == status)
+        if due_date_from:
+            query = query.filter(FinancialSchedule.next_due_date >= due_date_from)
+        if due_date_to:
+            query = query.filter(FinancialSchedule.next_due_date <= due_date_to)
 
         schedules = query.order_by(FinancialSchedule.next_due_date.asc(), FinancialSchedule.id.desc()).all()
         counterparty_names = FinancialScheduleService._build_counterparty_name_lookup(

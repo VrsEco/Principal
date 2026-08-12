@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block workspace_content %}
-<div class="sched-list-page" data-company-id="{{ company_id or '' }}">
+<div class="sched-list-page" data-company-id="{{ company_id or '' }}" data-user-id="{{ current_user.id or '' }}">
     <header class="sched-list-header">
         <div>
             <h1>Títulos Financeiros</h1>
@@ -164,5 +164,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260612a') }}"></script>
+<script src="{{ url_for('static', filename='js/financial_schedules_list.js', v='20260812a') }}"></script>
 {% endblock %}
