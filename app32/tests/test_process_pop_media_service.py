@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,7 @@ from services.process_pop_media_service import (
     calculate_pop_video_target_bytes,
     coerce_video_duration_seconds,
     save_pop_video,
+    save_pop_video_chunk,
     transcode_pop_video_to_mp4,
     validate_step_video_upload,
 )
@@ -111,3 +113,46 @@ def test_save_pop_video_uses_transcoded_mp4_when_ffmpeg_succeeds(tmp_path, monke
     assert stored_path.startswith('pop/video/')
     assert stored_path.endswith('.mp4')
     assert (tmp_path / stored_path).exists()
+
+
+def test_chunked_upload_reassembles_inside_tenant_and_optimizes(tmp_path, monkeypatch):
+    from flask import Flask
+
+    app = Flask(__name__)
+    app.config['POP_VIDEO_CHUNK_ROOT'] = str(tmp_path)
+    upload_id = str(uuid.uuid4())
+    assembled_payloads = []
+
+    def _fake_save(file_storage, *, subfolder='pop/video'):
+        assembled_payloads.append(file_storage.stream.read())
+        return f'{subfolder}/optimized.mp4'
+
+    monkeypatch.setattr('services.process_pop_media_service.save_pop_video', _fake_save)
+
+    with app.app_context():
+        first_result = save_pop_video_chunk(
+            _video_file(filename='chunk-0.part', mime_type='application/octet-stream'),
+            company_id=10,
+            step_id=87,
+            upload_id=upload_id,
+            chunk_index=0,
+            total_chunks=2,
+            total_size=len(b'video-bytes') * 2,
+            original_filename='passo.mp4',
+            original_mimetype='video/mp4',
+        )
+        final_result = save_pop_video_chunk(
+            _video_file(filename='chunk-1.part', mime_type='application/octet-stream'),
+            company_id=10,
+            step_id=87,
+            upload_id=upload_id,
+            chunk_index=1,
+            total_chunks=2,
+            total_size=len(b'video-bytes') * 2,
+            original_filename='passo.mp4',
+            original_mimetype='video/mp4',
+        )
+
+    assert first_result is None
+    assert final_result == 'pop/video/optimized.mp4'
+    assert assembled_payloads == [b'video-bytesvideo-bytes']

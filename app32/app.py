@@ -772,7 +772,7 @@ def register_api_resources(api):
         ProcessResourceLinkListResource, ProcessResourceLinkResource,
         ProcessRoutineListResource, ProcessRoutineResource,
         ProcessScheduleListResource,
-        ProcessStepListResource, ProcessStepResource, ProcessStepAIDraftResource,
+        ProcessStepListResource, ProcessStepResource, ProcessStepVideoChunkResource, ProcessStepAIDraftResource,
         ProcessInstanceListResource, ProcessInstanceResource,
         ProcessInstanceWorkLogResource, ProcessInstanceRuntimeResource,
         ProcessInstanceTimelineResource, ProcessInstanceOverlayResource,
@@ -981,6 +981,7 @@ def register_api_resources(api):
     api.add_resource(ProcessScheduleListResource, '/api/process-schedules')
     api.add_resource(ProcessStepListResource, '/api/process-steps')
     api.add_resource(ProcessStepResource, '/api/process-steps/<int:step_id>')
+    api.add_resource(ProcessStepVideoChunkResource, '/api/process-steps/<int:step_id>/video-chunks')
     api.add_resource(ProcessStepAIDraftResource, '/api/process-steps/<int:step_id>/ai-draft')
     api.add_resource(ProcessInstanceListResource, '/api/process-instances', '/api/companies/<int:company_id>/process-instances')
     api.add_resource(ProcessInstanceResource, '/api/process-instances/<int:instance_id>')
