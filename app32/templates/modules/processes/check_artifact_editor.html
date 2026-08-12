@@ -70,7 +70,7 @@
 {{ super() }}
 <script>
 (() => {
-  const state={processId:{{ process.id }},artifact:{{ artifact|tojson }},bpmnElementId:{{ bpmn_element_id|tojson }},bpmnElementName:{{ bpmn_element_name|tojson }},items:[]};
+  const state={processId:{{ process.id }},companyId:{{ company_id }},artifact:{{ artifact|tojson }},bpmnElementId:{{ bpmn_element_id|tojson }},bpmnElementName:{{ bpmn_element_name|tojson }},items:[]};
   const $=id=>document.getElementById(id);
   const uid=prefix=>`${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`;
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -96,13 +96,13 @@
     });
     if(!state.items.length)host.innerHTML='<div class="artifact-empty">Adicione um item para começar o checklist.</div>';
   }
-  function payload(){return {artifact_type:'check',name:$('artifactName').value.trim(),description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'all_required_accepted',allow_skip:false},configuration_json:{items:state.items,failure_behavior:$('failureBehavior').value}};}
+  function payload(){return {company_id:state.companyId,artifact_type:'check',name:$('artifactName').value.trim(),description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'all_required_accepted',allow_skip:false},configuration_json:{items:state.items,failure_behavior:$('failureBehavior').value}};}
   async function save(){
     const editing=Boolean(state.artifact?.id);const url=editing?`/api/process-activity-artifacts/${state.artifact.id}`:`/api/processes/${state.processId}/activity-artifacts`;
     const response=await fetch(url,{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível salvar.');
     state.artifact=data;toast('Rascunho salvo.');if(!editing)location.href=`/processes/${state.processId}/artifacts/${data.id}/edit?bpmn_element_id=${encodeURIComponent(state.bpmnElementId)}&bpmn_element_name=${encodeURIComponent(state.bpmnElementName)}`;return data;
   }
-  async function publish(){if(!state.artifact?.id)await save();const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível publicar.');state.artifact=data;setStatus();toast('Versão publicada.');}
+  async function publish(){if(!state.artifact?.id)await save();const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish?company_id=${encodeURIComponent(state.companyId)}`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível publicar.');state.artifact=data;setStatus();toast('Versão publicada.');}
   function setStatus(){const published=state.artifact?.status==='published';$('artifactStatus').textContent=published?'Publicado':'Rascunho';$('artifactStatus').className=`artifact-status${published?' artifact-status--published':''}`;$('saveArtifactBtn').disabled=published;$('publishArtifactBtn').disabled=published;}
   $('addItemBtn').addEventListener('click',()=>{state.items.push({id:uid('item'),label:'Novo item de verificação',required:true,evidence_required:false,allow_na:false});render();});
   $('saveArtifactBtn').addEventListener('click',()=>save().catch(error=>toast(error.message,true)));$('publishArtifactBtn').addEventListener('click',()=>publish().catch(error=>toast(error.message,true)));

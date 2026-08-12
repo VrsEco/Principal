@@ -2325,7 +2325,7 @@ class ProcessActivityArtifactListResource(Resource):
 class ProcessActivityArtifactResource(Resource):
     @permission_required('processes', 'view')
     def get(self, artifact_id):
-        company_id = get_default_company_id()
+        company_id = get_request_company_id()
         try:
             definition = get_artifact_definition(company_id, artifact_id)
             process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
@@ -2337,7 +2337,7 @@ class ProcessActivityArtifactResource(Resource):
 
     @permission_required('processes', 'view')
     def put(self, artifact_id):
-        company_id = get_default_company_id()
+        company_id = get_request_company_id()
         try:
             definition = get_artifact_definition(company_id, artifact_id)
             process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
@@ -2376,7 +2376,7 @@ class ProcessActivityArtifactResource(Resource):
 
     @permission_required('processes', 'view')
     def delete(self, artifact_id):
-        company_id = get_default_company_id()
+        company_id = get_request_company_id()
         try:
             definition = get_artifact_definition(company_id, artifact_id)
             process = _get_process_with_access(definition.process_id, action='view', sync_session=True)
@@ -2392,7 +2392,7 @@ class ProcessActivityArtifactResource(Resource):
 class ProcessActivityArtifactPublishResource(Resource):
     @permission_required('processes', 'view')
     def post(self, artifact_id):
-        company_id = get_default_company_id()
+        company_id = get_request_company_id()
         try:
             definition = get_artifact_definition(company_id, artifact_id)
             process = _get_process_with_access(definition.process_id, action='view', sync_session=True)

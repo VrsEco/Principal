@@ -407,6 +407,21 @@ def test_artifact_editors_use_shared_responsive_ui_shell():
     assert "@media (max-width: 900px)" in css_source
 
 
+def test_artifact_editors_send_explicit_tenant_context_on_save_and_publish():
+    for template_name in ("form_artifact_editor.html", "check_artifact_editor.html", "data_artifact_editor.html"):
+        source = (APP_DIR / "templates" / "modules" / "processes" / template_name).read_text(encoding="utf-8")
+        assert "companyId:" in source
+        assert "company_id:state.companyId" in source
+        assert "publish?company_id=${encodeURIComponent(state.companyId)}" in source
+
+    resource_source = (APP_DIR / "api" / "resources" / "process.py").read_text(encoding="utf-8")
+    artifact_resource_source = resource_source.split("class ProcessActivityArtifactResource", 1)[1].split(
+        "class MacroProcessSipocSnapshotResource", 1
+    )[0]
+    assert artifact_resource_source.count("company_id = get_request_company_id()") == 4
+    assert "company_id = get_default_company_id()" not in artifact_resource_source
+
+
 def test_pop_focus_and_modeler_follow_compact_artifact_ui_pattern():
     details_source = (APP_DIR / "templates" / "modules" / "processes" / "process_details_v2.html").read_text(encoding="utf-8")
     modeler_template = (APP_DIR / "templates" / "modules" / "processes" / "bpmn_modeler.html").read_text(encoding="utf-8")

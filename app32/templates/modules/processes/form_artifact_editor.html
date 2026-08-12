@@ -73,6 +73,7 @@
 (() => {
   const state = {
     processId: {{ process.id }},
+    companyId: {{ company_id }},
     artifact: {{ artifact|tojson }},
     bpmnElementId: {{ bpmn_element_id|tojson }},
     bpmnElementName: {{ bpmn_element_name|tojson }},
@@ -119,6 +120,7 @@
 
   function payload() {
     return {
+      company_id:state.companyId,
       artifact_type:'form',
       name:$('artifactName').value.trim(),
       description:$('artifactDescription').value.trim(),
@@ -140,7 +142,7 @@
   }
   async function publish() {
     if(!state.artifact?.id) await save();
-    const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish`,{method:'POST'});
+    const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish?company_id=${encodeURIComponent(state.companyId)}`,{method:'POST'});
     const data=await response.json(); if(!response.ok) throw new Error(data.error||'Não foi possível publicar.');
     state.artifact=data; setStatus(); toast('Versão publicada.');
   }

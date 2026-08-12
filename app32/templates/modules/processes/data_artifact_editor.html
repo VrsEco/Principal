@@ -105,7 +105,7 @@
 <script>
 (() => {
   const state = {
-    processId: {{ process.id }}, artifactType: {{ artifact_type|tojson }}, artifact: {{ artifact|tojson }},
+    processId: {{ process.id }}, companyId: {{ company_id }}, artifactType: {{ artifact_type|tojson }}, artifact: {{ artifact|tojson }},
     bpmnElementId: {{ bpmn_element_id|tojson }}, bpmnElementName: {{ bpmn_element_name|tojson }}
   };
   const $ = id => document.getElementById(id);
@@ -125,7 +125,7 @@
   function parseJson(id,label){const raw=$(id).value.trim();if(!raw)return {};try{return JSON.parse(raw);}catch(_){throw new Error(`${label} precisa ser um JSON válido.`);}}
   function payload(){
     const name=$('artifactName').value.trim();if(!name)throw new Error('Informe o nome da conexão.');
-    return {artifact_type:state.artifactType,name,description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,
+    return {company_id:state.companyId,artifact_type:state.artifactType,name,description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,
       is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'successful_transfer',allow_skip:false},
       configuration_json:{direction:state.artifactType==='data_in'?'inbound':'outbound',system_key:$('systemKey').value.trim(),
         transport:$('transport').value,format:$('dataFormat').value,operation_key:$('operationKey').value.trim(),
@@ -137,7 +137,7 @@
     const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível salvar.');state.artifact=data;toast('Rascunho salvo.');
     if(!editing)location.href=`/processes/${state.processId}/artifacts/${data.id}/edit?bpmn_element_id=${encodeURIComponent(state.bpmnElementId)}&bpmn_element_name=${encodeURIComponent(state.bpmnElementName)}`;return data;
   }
-  async function publish(){if(!state.artifact?.id)await save();const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível publicar.');state.artifact=data;setStatus();toast('Versão publicada.');}
+  async function publish(){if(!state.artifact?.id)await save();const response=await fetch(`/api/process-activity-artifacts/${state.artifact.id}/publish?company_id=${encodeURIComponent(state.companyId)}`,{method:'POST'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível publicar.');state.artifact=data;setStatus();toast('Versão publicada.');}
   function setStatus(){const published=state.artifact?.status==='published';$('artifactStatus').textContent=published?'Publicado':'Rascunho';$('artifactStatus').className=`artifact-status${published?' artifact-status--published':''}`;$('saveArtifactBtn').disabled=published;$('publishArtifactBtn').disabled=published;}
   $('saveArtifactBtn').addEventListener('click',()=>save().catch(error=>toast(error.message,true)));
   $('publishArtifactBtn').addEventListener('click',()=>publish().catch(error=>toast(error.message,true)));
