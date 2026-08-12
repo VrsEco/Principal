@@ -434,6 +434,8 @@
 
   function openSupportMaterialModal(type, currentActivity) {
     const materials = currentActivity?.support_materials || {};
+    const linkedArtifacts = (currentActivity?.artifacts?.items || [])
+      .filter((item) => item.artifact_type === 'form' || item.artifact_type === 'check');
     let title = 'Conteúdo da atividade';
     let subtitle = currentActivity?.element_name || 'Material de apoio';
     let html = '<div class="bpms-support-empty">Sem conteúdo disponível.</div>';
@@ -451,6 +453,25 @@
             </article>
           `).join('')}</div>`
         : '<div class="bpms-support-empty">Nenhum POP vinculado a esta atividade.</div>';
+      if (linkedArtifacts.length) {
+        html += `
+          <section class="bpms-artifact-runtime" style="margin-top:1rem;">
+            <div class="bpms-artifact-runtime__head">
+              <h4>Formulários e checklists vinculados</h4>
+              <span>${linkedArtifacts.length} artefato(s)</span>
+            </div>
+            <div class="bpms-artifact-runtime__list">
+              ${linkedArtifacts.map((artifact) => `
+                <button type="button" class="bpms-artifact-card bpms-artifact-card--${escapeHtml(artifact.artifact_type)}" data-pop-artifact-id="${escapeHtml(artifact.id || '')}">
+                  <span class="bpms-artifact-card__type">${escapeHtml(artifactTypeLabel(artifact.artifact_type))}</span>
+                  <span class="bpms-artifact-card__body"><strong>${escapeHtml(artifact.name || 'Artefato')}</strong><small>${artifact.is_required ? 'Obrigatório' : 'Opcional'} · ${escapeHtml(artifactStatusLabel(artifact.status))}</small></span>
+                  <span class="bpms-artifact-card__state">${artifact.status === 'completed' ? '✓' : '›'}</span>
+                </button>
+              `).join('')}
+            </div>
+          </section>
+        `;
+      }
     } else if (type === 'video') {
       title = 'Vídeos da atividade';
       const entries = materials.video?.entries || [];
@@ -478,6 +499,19 @@
 
     if (typeof window.openRuntimeSupportModal === 'function') {
       window.openRuntimeSupportModal(title, subtitle, html);
+      if (type === 'pop') {
+        document.querySelectorAll('[data-pop-artifact-id]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const artifact = linkedArtifacts.find(item => String(item.id || '') === String(button.dataset.popArtifactId || ''));
+            openArtifactExecution(
+              artifact,
+              currentActivity,
+              currentActivity?.execution,
+              currentActivity?.action || {},
+            ).catch(error => window.alert(error.message || 'Erro ao abrir artefato.'));
+          });
+        });
+      }
     }
   }
 

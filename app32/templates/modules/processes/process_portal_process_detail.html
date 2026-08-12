@@ -748,6 +748,8 @@
                 <div class="hero-stat"><strong>${cardValue(stats.routine_count)}</strong><span>Rotinas</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.indicator_count)}</strong><span>Indicadores</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.resource_count)}</strong><span>Recursos</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.form_count)}</strong><span>Formulários</span></div>
+                <div class="hero-stat"><strong>${cardValue(stats.check_count)}</strong><span>Checklists</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.spec_count)}</strong><span>SPEC IA</span></div>
                 <div class="hero-stat"><strong>${cardValue(stats.my_active_activity_count)}</strong><span>Para você</span></div>
             `;
@@ -774,12 +776,17 @@
             const hasRoutines = (data.routines || []).length > 0;
             const hasIndicators = (data.indicators || []).length > 0;
             const hasResources = ((data.resources || {}).links || []).length > 0;
+            const operationalArtifacts = data.operational_artifacts || [];
+            const hasForms = operationalArtifacts.some(item => item.artifact_type === 'form');
+            const hasChecks = operationalArtifacts.some(item => item.artifact_type === 'check');
             const hasSpecs = (data.ai_specs?.contracts || []).length > 0 || !!data.ai_specs?.flow_copilot_analysis;
             const myActivities = data.my_active_activities || [];
             actionButtons.innerHTML = `
                 <button class="action-btn" data-action="start-instance">▶️ Iniciar instância</button>
                 <button class="action-btn" ${myActivities.length ? '' : 'disabled'} data-action="my-activities">✅ Minhas execuções (${myActivities.length})</button>
                 <button class="action-btn" ${hasPop ? '' : 'disabled'} data-action="pop">📋 POP Publicado</button>
+                <button class="action-btn" ${hasForms ? '' : 'disabled'} data-action="forms">📝 Formulários</button>
+                <button class="action-btn" ${hasChecks ? '' : 'disabled'} data-action="checks">☑️ Checklists</button>
                 <button class="action-btn" ${hasVideos ? '' : 'disabled'} data-action="videos">🎬 Vídeos</button>
                 <button class="action-btn" ${hasRoutines ? '' : 'disabled'} data-action="routines">📅 Rotinas</button>
                 <button class="action-btn" ${hasIndicators ? '' : 'disabled'} data-action="indicators">📈 Indicadores</button>
@@ -867,8 +874,65 @@
                             </div>
                         `).join('')}
                     </div>
+                    ${renderPopArtifacts(activity.artifacts || [])}
                 </article>
             `).join('')}</div>`;
+        }
+
+        function artifactActivityLabels(artifact) {
+            return (artifact.activity_links || [])
+                .map(link => link.bpmn_element_id)
+                .filter(Boolean)
+                .join(', ') || 'Sem atividade vinculada';
+        }
+
+        function renderArtifactDefinition(artifact, { compact = false } = {}) {
+            const config = artifact.configuration_json || {};
+            const required = (artifact.is_required || (artifact.activity_links || []).some(link => link.is_required));
+            let body = '';
+            if (artifact.artifact_type === 'form') {
+                body = (config.sections || []).map(section => `
+                    <div class="portal-spec-block">
+                        <strong>${esc(section.title || 'Seção')}</strong>
+                        <p>${esc((section.fields || []).map(field => `${field.label || field.id}${field.required ? ' *' : ''}`).join(' · ') || 'Sem campos publicados')}</p>
+                    </div>
+                `).join('');
+            } else {
+                body = (config.items || []).map((item, index) => `
+                    <div class="portal-spec-block">
+                        <strong>${index + 1}. ${esc(item.label || 'Item')}${item.required ? ' *' : ''}</strong>
+                        <p>${item.evidence_required ? 'Exige evidência' : 'Evidência opcional'}${item.allow_na ? ' · Permite N/A' : ''}</p>
+                    </div>
+                `).join('');
+            }
+            return `
+                <article class="portal-content-card">
+                    <div style="display:flex;justify-content:space-between;gap:.75rem;align-items:flex-start;">
+                        <div><h4>${esc(artifact.name || 'Artefato')}</h4><p>${esc(artifact.description || '')}</p></div>
+                        <span class="chip">${artifact.artifact_type === 'form' ? 'FORM' : 'CHECK'} v${esc(artifact.version || 1)}</span>
+                    </div>
+                    <p style="margin-top:.6rem;"><strong>${required ? 'Obrigatório' : 'Opcional'}</strong> · ${esc(artifactActivityLabels(artifact))}</p>
+                    ${compact ? '' : `<div class="portal-grid" style="margin-top:.8rem;">${body || '<div class="portal-empty">Sem conteúdo publicado.</div>'}</div>`}
+                </article>
+            `;
+        }
+
+        function renderOperationalArtifacts(items, type) {
+            const filtered = (items || []).filter(item => item.artifact_type === type);
+            if (!filtered.length) return `<div class="portal-empty" style="min-height:180px;">Nenhum ${type === 'form' ? 'formulário' : 'checklist'} publicado neste processo.</div>`;
+            return `<div class="portal-grid">${filtered.map(item => renderArtifactDefinition(item)).join('')}</div>`;
+        }
+
+        function renderPopArtifacts(items) {
+            if (!items.length) return '';
+            return `
+                <section style="margin-top:1rem;">
+                    <h4>Formulários e checklists desta atividade</h4>
+                    <div class="portal-grid portal-grid--cards" style="margin-top:.75rem;">
+                        ${items.map(item => renderArtifactDefinition(item, { compact: true })).join('')}
+                    </div>
+                </section>
+            `;
         }
 
         function renderVideos(items) {
@@ -1051,6 +1115,8 @@
             const data = state.current;
             if (action === 'start-instance') { startInstance(); return; }
             if (action === 'pop') showModal('POP Publicado', 'Atividades e passos operacionais', renderPopActivities(data.pop_activities || []));
+            if (action === 'forms') showModal('Formulários do Processo', 'Modelos publicados por atividade', renderOperationalArtifacts(data.operational_artifacts || [], 'form'));
+            if (action === 'checks') showModal('Checklists do Processo', 'Controles publicados por atividade', renderOperationalArtifacts(data.operational_artifacts || [], 'check'));
             if (action === 'videos') showModal('Vídeos do Processo', 'Clipes operacionais publicados', renderVideos(data.videos || []));
             if (action === 'routines') showModal('Rotinas do Processo', 'Agenda operacional vinculada', renderRoutines(data.routines || []));
             if (action === 'my-activities') showModal('Minhas execuções neste processo', 'Atividades acionáveis atribuídas a você', renderMyActivities(data.my_active_activities || []));

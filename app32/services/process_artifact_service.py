@@ -312,6 +312,46 @@ def list_process_artifact_definitions(
     return [build_definition_snapshot(definition) for definition in definitions]
 
 
+def list_published_process_artifacts(
+    company_id: int,
+    process_id: int,
+    *,
+    artifact_types: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Lista a versao publicada mais recente de cada artefato do processo.
+
+    Esta leitura e destinada a superficies operacionais/publicadas. Rascunhos e
+    versoes arquivadas nunca devem chegar ao Portal do Processo ou ao POP.
+    """
+    _get_process(company_id, process_id)
+    normalized_types = None
+    if artifact_types is not None:
+        normalized_types = {normalize_artifact_type(value) for value in artifact_types}
+
+    query = ProcessActivityArtifactDefinition.query.filter_by(
+        company_id=company_id,
+        process_id=process_id,
+        status="published",
+    )
+    if normalized_types:
+        query = query.filter(ProcessActivityArtifactDefinition.artifact_type.in_(normalized_types))
+
+    definitions = query.order_by(
+        ProcessActivityArtifactDefinition.artifact_key.asc(),
+        ProcessActivityArtifactDefinition.version.desc(),
+        ProcessActivityArtifactDefinition.id.desc(),
+    ).all()
+    latest_by_key: dict[str, ProcessActivityArtifactDefinition] = {}
+    for definition in definitions:
+        latest_by_key.setdefault(str(definition.artifact_key), definition)
+
+    selected = sorted(
+        latest_by_key.values(),
+        key=lambda item: (item.artifact_type, item.name.lower(), -item.version, -item.id),
+    )
+    return [build_definition_snapshot(definition) for definition in selected]
+
+
 def link_artifact_to_activity(
     company_id: int,
     process_id: int,
@@ -371,7 +411,11 @@ def build_definition_snapshot(definition: ProcessActivityArtifactDefinition) -> 
     payload = definition.to_dict()
     activity_links = getattr(definition, "activity_links", None)
     if activity_links is not None:
-        active_links = activity_links.filter_by(is_active=True).order_by(
+        active_links = activity_links.filter_by(
+            is_active=True,
+            company_id=definition.company_id,
+            process_id=definition.process_id,
+        ).order_by(
             ProcessActivityArtifactLink.display_order.asc(),
             ProcessActivityArtifactLink.id.asc(),
         ).all()
