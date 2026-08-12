@@ -143,6 +143,24 @@ def employee_has_assignment_for_instance(company_id: int, employee_id: int, inst
     )
 
 
+def employee_can_execute_activity(
+    company_id: int,
+    employee_id: int,
+    instance: ProcessInstance,
+    activity_execution_id: int,
+) -> bool:
+    """Autoriza operação humana apenas no tenant e na atividade atribuída/dirigida."""
+    if not instance or int(instance.company_id) != int(company_id):
+        return False
+    if employee_id in {
+        instance.owner_employee_id,
+        instance.responsible_id,
+        instance.executor_id,
+    }:
+        return True
+    return int(activity_execution_id) in employee_assignment_execution_ids(company_id, employee_id)
+
+
 def assigned_employee_id(company_id: int, execution_id: int) -> int | None:
     row = (
         ProcessExecutionAssignment.query.filter_by(

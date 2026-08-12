@@ -159,6 +159,7 @@ from services.process_ai_runtime_service import (
 )
 from services.work_journey_sync import sync_process_instance_item
 from services.process_assignment_service import (
+    employee_can_execute_activity,
     employee_has_assignment_for_instance,
     ensure_execution_assignment,
     extract_assignment_payload,
@@ -2231,7 +2232,7 @@ class ProcessArtifactExecutionResource(Resource):
         except ProcessArtifactValidationError as exc:
             return {"error": str(exc)}, 404
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def put(self, artifact_execution_id):
         company_id = get_default_company_id()
         try:
@@ -2240,8 +2241,22 @@ class ProcessArtifactExecutionResource(Resource):
                 id=artifact_execution.process_instance_id,
                 company_id=company_id,
             ).first()
-            if not instance or not has_permission(company_id, 'processes', 'edit'):
-                return {"error": "Permission denied: edit on processes"}, 403
+            if not instance:
+                return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            if not has_company_full_access(company_id):
+                from models.employee import Employee
+                employee = Employee.query.filter_by(
+                    user_id=current_user.id,
+                    company_id=company_id,
+                    status='active',
+                ).first()
+                if not employee or not employee_can_execute_activity(
+                    company_id,
+                    employee.id,
+                    instance,
+                    artifact_execution.activity_execution_id,
+                ):
+                    return {"error": "Acesso negado à execução deste artefato."}, 403
             artifact_execution = update_artifact_execution(
                 company_id,
                 artifact_execution_id,

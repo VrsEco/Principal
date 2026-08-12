@@ -7,6 +7,7 @@ from flask import Flask, session
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from api.routes import processes as process_routes
+from services.process_portal_service import _attach_artifacts_to_pop_activities
 
 
 class _FakeCompanyQuery:
@@ -35,6 +36,11 @@ def test_process_portal_page_syncs_active_company(monkeypatch):
     monkeypatch.setattr(process_routes, 'Company', SimpleNamespace(query=_FakeCompanyQuery(fake_company)))
     monkeypatch.setattr(process_routes, '_get_current_company_employee', lambda company_id: SimpleNamespace(id=91))
     monkeypatch.setattr(process_routes, 'is_collaborator_in_company', lambda company_id: False)
+    monkeypatch.setattr(
+        process_routes,
+        '_build_process_map_compact_context',
+        lambda company_id: {'company': fake_company, 'company_id': company_id},
+    )
     monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
 
     with app.test_request_context('/companies/22/process-portal'):
@@ -128,3 +134,60 @@ def test_process_portal_template_contains_visual_portal_sections():
     assert 'Biblioteca do Processo' in content
     assert 'processPortalModal' in content
     assert 'data-summary-url' in content
+
+
+def test_portal_attaches_only_artifacts_linked_to_same_bpmn_activity():
+    pop_activities = [
+        {'id': 1, 'bpmn_element_id': 'Task_A'},
+        {'id': 2, 'bpmn_element_id': 'Task_B'},
+    ]
+    artifacts = [
+        {
+            'id': 10,
+            'artifact_type': 'form',
+            'name': 'Formulário A',
+            'activity_links': [
+                {
+                    'id': 100,
+                    'bpmn_element_id': 'Task_A',
+                    'is_required': True,
+                    'completion_policy_json': {'allow_skip': False},
+                }
+            ],
+        },
+        {
+            'id': 11,
+            'artifact_type': 'check',
+            'name': 'Checklist B',
+            'activity_links': [
+                {'id': 101, 'bpmn_element_id': 'Task_B', 'is_required': False}
+            ],
+        },
+    ]
+
+    _attach_artifacts_to_pop_activities(pop_activities, artifacts)
+
+    assert [item['id'] for item in pop_activities[0]['artifacts']] == [10]
+    assert pop_activities[0]['artifacts'][0]['is_required'] is True
+    assert pop_activities[0]['artifacts'][0]['activity_link']['id'] == 100
+    assert [item['id'] for item in pop_activities[1]['artifacts']] == [11]
+
+
+def test_process_portal_detail_exposes_forms_checks_and_pop_integration():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'templates',
+            'modules',
+            'processes',
+            'process_portal_process_detail.html',
+        )
+    )
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'data-action="forms"' in content
+    assert 'data-action="checks"' in content
+    assert 'renderOperationalArtifacts' in content
+    assert 'renderPopArtifacts(activity.artifacts || [])' in content

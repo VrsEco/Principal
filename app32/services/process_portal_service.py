@@ -30,6 +30,7 @@ from services.process_book_service import (
     _join_non_empty,
 )
 from services.process_bpmn_service import sanitize_svg_snapshot, serialize_flow_snapshot
+from services.process_artifact_service import list_published_process_artifacts
 from services.process_flow_copilot_service import build_process_flow_copilot_analysis
 from services.process_resource_service import build_process_resources_bundle
 from services.process_assignment_service import employee_assignment_execution_ids, is_execution_actionable
@@ -268,6 +269,12 @@ def build_process_portal_process_detail(
         process_id=process.id,
         request_root=request_root,
     )
+    operational_artifacts = list_published_process_artifacts(
+        company_id,
+        process.id,
+        artifact_types=("form", "check"),
+    )
+    _attach_artifacts_to_pop_activities(pop_activities, operational_artifacts)
     pop_by_bpmn = _index_pop_activities_by_bpmn(company_id=company_id, process_id=process.id)
     pop_bindings = []
     pop_candidates = ((diagram.metadata_json or {}).get("pop_candidates") or []) if diagram else []
@@ -332,9 +339,12 @@ def build_process_portal_process_detail(
             "spec_count": len(contract_payload),
             "video_count": len(videos),
             "resource_count": len(resources.get("links") or []),
+            "form_count": sum(1 for item in operational_artifacts if item.get("artifact_type") == "form"),
+            "check_count": sum(1 for item in operational_artifacts if item.get("artifact_type") == "check"),
             "my_active_activity_count": len(my_active_activities),
         },
         "pop_activities": pop_activities,
+        "operational_artifacts": operational_artifacts,
         "routines": routines,
         "indicators": indicators,
         "resources": resources,
@@ -426,6 +436,31 @@ def load_employee_active_activities(
             }
         )
     return payload
+
+
+def _attach_artifacts_to_pop_activities(
+    pop_activities: list[dict[str, Any]],
+    artifacts: list[dict[str, Any]],
+) -> None:
+    """Anexa referencias publicadas ao POP usando o elemento BPMN como fonte unica."""
+    artifacts_by_element: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for artifact in artifacts:
+        for link in artifact.get("activity_links") or []:
+            element_id = str(link.get("bpmn_element_id") or "").strip()
+            if not element_id:
+                continue
+            artifacts_by_element[element_id].append(
+                {
+                    **artifact,
+                    "activity_link": link,
+                    "is_required": bool(link.get("is_required")),
+                    "completion_policy_json": link.get("completion_policy_json") or {},
+                }
+            )
+
+    for activity in pop_activities:
+        element_id = str(activity.get("bpmn_element_id") or "").strip()
+        activity["artifacts"] = list(artifacts_by_element.get(element_id, []))
 
 
 def _count_activities_by_process(activities: list[dict[str, Any]]) -> dict[int, int]:
