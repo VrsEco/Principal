@@ -638,6 +638,8 @@ class FinancialScheduleListResource(Resource):
         result, error = FinancialScheduleService.list_schedules(
             company_id=company_id,
             status=request.args.get("status"),
+            due_date_from=_get_optional_iso_date_arg("due_date_from"),
+            due_date_to=_get_optional_iso_date_arg("due_date_to"),
             allowed_company_ids=get_accessible_company_ids(),
         )
         if error:

@@ -4,6 +4,7 @@
     if (!page) return;
 
     const companyId = Number(page.dataset.companyId || 0);
+    const userId = Number(page.dataset.userId || 0);
     const tbody = document.getElementById('schedule-table-body');
     const kpis = Array.from(document.querySelectorAll('#schedule-kpis .sched-kpi'));
     const filtersCount = document.getElementById('schedule-filters-count');
@@ -24,8 +25,20 @@
 
     if (!tbody || !filters.search) return;
 
-    const storageKey = `gestao_versus:financial_schedules:list_filters:v1:company:${companyId || 'none'}:path:${window.location.pathname}`;
+    const storageKey = `gestao_versus:financial_schedules:list_filters:v2:user:${userId || 'none'}:company:${companyId || 'none'}:path:${window.location.pathname}`;
     const persistableFilters = Object.entries(filters).filter(([, input]) => Boolean(input));
+    const filterQueryNames = {
+      search: 'search',
+      type: 'type',
+      settlement: 'settlement',
+      bordero: 'bordero',
+      counterparty: 'counterparty',
+      dueDateFrom: 'due_date_from',
+      dueDateTo: 'due_date_to',
+      competenceDateFrom: 'competence_date_from',
+      competenceDateTo: 'competence_date_to',
+      titleAmount: 'title_amount',
+    };
 
     function readFilterValue(input) {
       if (!input) return '';
@@ -62,12 +75,52 @@
     function restoreFiltersState() {
       try {
         const raw = window.localStorage.getItem(storageKey);
-        if (!raw) return;
+        if (!raw) return false;
         const payload = JSON.parse(raw);
         persistableFilters.forEach(([name, input]) => writeFilterValue(input, payload[name]));
+        return true;
       } catch (error) {
         console.warn('Não foi possível restaurar filtros de títulos financeiros.', error);
+        return false;
       }
+    }
+
+    function restoreFiltersFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const hasExplicitFilters = Object.values(filterQueryNames).some((name) => params.has(name));
+      if (!hasExplicitFilters) return false;
+
+      persistableFilters.forEach(([name, input]) => {
+        writeFilterValue(input, params.get(filterQueryNames[name]) || '');
+      });
+      return true;
+    }
+
+    function formatLocalIsoDate(value) {
+      const year = value.getFullYear();
+      const month = String(value.getMonth() + 1).padStart(2, '0');
+      const day = String(value.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function applyCurrentMonthDueDateRange() {
+      const now = new Date();
+      writeFilterValue(filters.dueDateFrom, formatLocalIsoDate(new Date(now.getFullYear(), now.getMonth(), 1)));
+      writeFilterValue(filters.dueDateTo, formatLocalIsoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)));
+    }
+
+    function syncFiltersToUrl() {
+      const url = new URL(window.location.href);
+      persistableFilters.forEach(([name, input]) => {
+        const queryName = filterQueryNames[name];
+        const value = readFilterValue(input);
+        if (Array.isArray(value) ? value.length : String(value || '').trim()) {
+          url.searchParams.set(queryName, Array.isArray(value) ? value.join(',') : value);
+        } else {
+          url.searchParams.delete(queryName);
+        }
+      });
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
     }
 
     function clearFiltersState() {
@@ -295,7 +348,13 @@
     }
 
     async function loadSchedules() {
-      schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}`);
+      const scheduleParams = new URLSearchParams({ company_id: String(companyId) });
+      const dueDateFrom = String(filters.dueDateFrom?.value || '').trim();
+      const dueDateTo = String(filters.dueDateTo?.value || '').trim();
+      if (dueDateFrom) scheduleParams.set('due_date_from', dueDateFrom);
+      if (dueDateTo) scheduleParams.set('due_date_to', dueDateTo);
+
+      schedules = await fetchJson(`/api/financial/schedules?${scheduleParams.toString()}`);
       borderos = await fetchJson(`/api/financial/borderos?company_id=${companyId}`);
       rebuildScheduleItems();
       renderTable();
@@ -315,21 +374,35 @@
     persistableFilters.forEach(([, input]) => input?.addEventListener('input', () => {
       updateFiltersCount();
       saveFiltersState();
+      syncFiltersToUrl();
       renderTable();
     }));
-    persistableFilters.forEach(([, input]) => input?.addEventListener('change', () => {
+    persistableFilters.forEach(([name, input]) => input?.addEventListener('change', async () => {
       updateFiltersCount();
       saveFiltersState();
-      renderTable();
+      syncFiltersToUrl();
+      if (name === 'dueDateFrom' || name === 'dueDateTo') {
+        try {
+          await loadSchedules();
+        } catch (error) {
+          tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${error.message}</td></tr>`;
+        }
+      } else {
+        renderTable();
+      }
     }));
 
     const clearAllFilters = () => {
       persistableFilters.forEach(([, input]) => {
         writeFilterValue(input, '');
       });
+      applyCurrentMonthDueDateRange();
       clearFiltersState();
       updateFiltersCount();
-      renderTable();
+      syncFiltersToUrl();
+      loadSchedules().catch((error) => {
+        tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${error.message}</td></tr>`;
+      });
     };
 
     clearFiltersButton?.addEventListener('click', clearAllFilters);
@@ -351,7 +424,10 @@
     });
 
     try {
-      restoreFiltersState();
+      const restoredFromUrl = restoreFiltersFromUrl();
+      const restoredFromStorage = restoredFromUrl ? false : restoreFiltersState();
+      if (!restoredFromUrl && !restoredFromStorage) applyCurrentMonthDueDateRange();
+      if (restoredFromUrl) saveFiltersState();
       updateFiltersCount();
       await loadSchedules();
     } catch (error) {

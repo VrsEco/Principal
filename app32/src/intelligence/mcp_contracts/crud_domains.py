@@ -437,7 +437,7 @@ def build_app32_crud_contracts_manifest() -> CRUDContractsManifest:
                         action="analyze",
                         entity="auction_property",
                         description="Cruza pipeline de leilões em leitura analítica tenant-safe.",
-                        roles=all_roles,
+                        roles=operational_roles,
                         permission="real_estate_auctions.analyze",
                         surface="mcp_analytics",
                         implementation_status="implemented",
