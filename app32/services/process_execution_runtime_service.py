@@ -10,10 +10,12 @@ from models import (
     IndicatorEntityLink,
     IndicatorGoal,
     ProcessBpmnDiagram,
+    ProcessActivityArtifactExecution,
     ProcessInstance,
     ProcessInstanceExecution,
     ProcessRoutine,
     ProcessStep,
+    User,
     db,
 )
 from services.process_bpmn_graph_service import parse_bpmn_graph
@@ -220,7 +222,57 @@ def build_runtime_payload(
         "current_activity": current_activity,
         "process_indicators": _build_process_indicators_payload(instance),
         "timeline": build_instance_timeline(instance),
+        "document_history": build_instance_document_history(instance),
     }
+
+
+def build_instance_document_history(instance: ProcessInstance) -> list[dict[str, Any]]:
+    """Projeta resultados tenant-safe dos documentos operacionais da instância."""
+    rows = (
+        ProcessActivityArtifactExecution.query
+        .join(
+            ProcessInstanceExecution,
+            ProcessInstanceExecution.id == ProcessActivityArtifactExecution.activity_execution_id,
+        )
+        .filter(
+            ProcessActivityArtifactExecution.company_id == instance.company_id,
+            ProcessActivityArtifactExecution.process_instance_id == instance.id,
+            ProcessActivityArtifactExecution.artifact_type.in_(["form", "check"]),
+            ProcessActivityArtifactExecution.status == "completed",
+            ProcessInstanceExecution.company_id == instance.company_id,
+            ProcessInstanceExecution.process_instance_id == instance.id,
+        )
+        .order_by(ProcessActivityArtifactExecution.completed_at.desc(), ProcessActivityArtifactExecution.id.desc())
+        .all()
+    )
+    performer_ids = {
+        int(row.activity_execution.performed_by_user_id)
+        for row in rows
+        if row.activity_execution and row.activity_execution.performed_by_user_id
+    }
+    performer_names = {
+        int(user.id): (getattr(user, "name", None) or getattr(user, "email", None) or f"Usuário {user.id}")
+        for user in User.query.filter(User.id.in_(performer_ids)).all()
+    } if performer_ids else {}
+
+    payload = []
+    for row in rows:
+        snapshot = row.definition_snapshot_json or {}
+        activity = row.activity_execution
+        performer_id = getattr(activity, "performed_by_user_id", None)
+        payload.append(
+            {
+                **row.to_dict(),
+                "name": snapshot.get("name") or row.artifact_type.upper(),
+                "description": snapshot.get("description"),
+                "configuration_json": snapshot.get("configuration_json") or {},
+                "is_required": bool((snapshot.get("link") or {}).get("is_required")),
+                "activity_name": getattr(activity, "bpmn_element_name", None) or getattr(activity, "bpmn_element_id", None),
+                "performed_by_user_id": performer_id,
+                "performed_by_name": performer_names.get(int(performer_id)) if performer_id else None,
+            }
+        )
+    return payload
 
 
 def build_instance_timeline(instance: ProcessInstance) -> list[dict[str, Any]]:
@@ -266,6 +318,24 @@ def build_instance_timeline(instance: ProcessInstance) -> list[dict[str, Any]]:
                     "execution_mode": execution.execution_mode,
                 },
             })
+    for document in (
+        ProcessActivityArtifactExecution.query
+        .filter_by(process_instance_id=instance.id, company_id=instance.company_id, status="completed")
+        .filter(ProcessActivityArtifactExecution.artifact_type.in_(["form", "check"]))
+        .order_by(ProcessActivityArtifactExecution.completed_at.asc(), ProcessActivityArtifactExecution.id.asc())
+        .all()
+    ):
+        snapshot = document.definition_snapshot_json or {}
+        timeline.append({
+            "kind": "document_completed",
+            "timestamp": document.completed_at.isoformat() if document.completed_at else document.updated_at.isoformat(),
+            "label": f"{snapshot.get('name') or document.artifact_type.upper()} concluído",
+            "details": {
+                "artifact_execution_id": document.id,
+                "artifact_type": document.artifact_type,
+                "artifact_version": document.artifact_version,
+            },
+        })
     if instance.completed_at:
         timeline.append({
             "kind": "instance_completed",

@@ -39,7 +39,8 @@
         <div id="processRuntimeShell"
              class="runtime-shell"
              data-instance-id="{{ instance.id }}"
-             data-process-id="{{ instance.process_id }}">
+             data-process-id="{{ instance.process_id }}"
+             data-company-id="{{ instance.company_id }}">
             <section class="bpms-runtime-grid">
                 <article class="surface-card bpms-card bpms-card--flow">
                     <div class="bpms-card__head">
@@ -126,6 +127,17 @@
                         </button>
                     </div>
                 </article>
+            </section>
+
+            <section class="surface-card bpms-card bpms-card--documents">
+                <div class="bpms-card__head bpms-card__head--compact">
+                    <div>
+                        <span class="bpms-card__eyebrow">Rastreabilidade operacional</span>
+                        <h2 class="text-h3">Registros da execução</h2>
+                        <p class="text-secondary">Formulários e checklists concluídos, preservados na versão utilizada.</p>
+                    </div>
+                </div>
+                <div id="runtimeDocumentHistory" class="bpms-document-history"></div>
             </section>
         </div>
     </section>

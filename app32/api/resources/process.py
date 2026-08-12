@@ -4,7 +4,7 @@ import uuid
 import json
 from datetime import datetime, date
 from decimal import Decimal
-from flask import request, current_app, session, Response
+from flask import request, current_app, session, Response, send_file
 from flask_restful import Resource
 from flask_login import current_user
 from marshmallow import ValidationError
@@ -140,6 +140,7 @@ from services.process_artifact_service import (
     update_artifact_execution,
     evaluate_required_artifacts,
 )
+from services.process_artifact_file_service import resolve_artifact_execution_file, save_artifact_execution_file
 from services.macro_process_sipoc_service import (
     archive_sipoc_snapshot as archive_macro_process_sipoc_snapshot,
     create_regulatory_item as create_macro_process_regulatory_item,
@@ -2214,7 +2215,7 @@ class ProcessBpmnAiAssistantResource(Resource):
 class ProcessArtifactExecutionResource(Resource):
     @permission_required('processes', 'view')
     def get(self, artifact_execution_id):
-        company_id = get_default_company_id()
+        company_id = get_request_company_id()
         try:
             artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
             instance = ProcessInstance.query.filter_by(
@@ -2234,7 +2235,7 @@ class ProcessArtifactExecutionResource(Resource):
 
     @permission_required('processes', 'view')
     def put(self, artifact_execution_id):
-        company_id = get_default_company_id()
+        company_id = get_request_company_id()
         try:
             artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
             instance = ProcessInstance.query.filter_by(
@@ -2257,6 +2258,14 @@ class ProcessArtifactExecutionResource(Resource):
                     artifact_execution.activity_execution_id,
                 ):
                     return {"error": "Acesso negado à execução deste artefato."}, 403
+            activity_execution = ProcessInstanceExecution.query.filter_by(
+                id=artifact_execution.activity_execution_id,
+                process_instance_id=instance.id,
+                company_id=company_id,
+            ).first()
+            if activity_execution:
+                activity_execution.performed_by_user_id = getattr(current_user, 'id', None)
+                activity_execution.performer_type = activity_execution.performer_type or 'user'
             artifact_execution = update_artifact_execution(
                 company_id,
                 artifact_execution_id,
@@ -2274,6 +2283,54 @@ class ProcessArtifactExecutionResource(Resource):
                 company_id,
             )
             return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessArtifactExecutionFileResource(Resource):
+    @permission_required('processes', 'view')
+    def post(self, artifact_execution_id, file_key=None):
+        company_id = get_request_company_id()
+        try:
+            artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
+            instance = ProcessInstance.query.filter_by(
+                id=artifact_execution.process_instance_id,
+                company_id=company_id,
+            ).first()
+            if not instance:
+                return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            if not has_company_full_access(company_id):
+                from models.employee import Employee
+                employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+                if not employee or not employee_can_execute_activity(
+                    company_id, employee.id, instance, artifact_execution.activity_execution_id
+                ):
+                    return {"error": "Acesso negado à execução deste artefato."}, 403
+            uploaded = request.files.get('file')
+            if not uploaded:
+                return {"error": "Arquivo é obrigatório."}, 400
+            return save_artifact_execution_file(company_id, artifact_execution_id, uploaded), 201
+        except ProcessArtifactValidationError as exc:
+            return {"error": str(exc)}, 400
+
+    @permission_required('processes', 'view')
+    def get(self, artifact_execution_id, file_key=None):
+        company_id = get_request_company_id()
+        try:
+            artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
+            instance = ProcessInstance.query.filter_by(
+                id=artifact_execution.process_instance_id,
+                company_id=company_id,
+            ).first()
+            if not instance:
+                return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            if not has_company_full_access(company_id):
+                from models.employee import Employee
+                employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
+                if not employee or not _instance_visible_to_employee(instance, employee.id):
+                    return {"error": "Acesso negado à instância."}, 403
+            path, original_name, mime_type = resolve_artifact_execution_file(company_id, artifact_execution_id, file_key)
+            return send_file(path, mimetype=mime_type, as_attachment=True, download_name=original_name)
+        except ProcessArtifactValidationError as exc:
+            return {"error": str(exc)}, 404
 
 
 class ProcessActivityArtifactListResource(Resource):
