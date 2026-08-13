@@ -27,7 +27,7 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
 
 ## Regra mandatória para 3+ etapas
 - quebrar a execução em passos antes de codar
-- criar ou atualizar um único card da entrega em `AA.J.2 (Produção)` no padrão `[<nome da entrega>]`
+- criar ou atualizar um único card da entrega no projeto operacional de engenharia vigente no padrão `[<nome da entrega>]`
 - registrar os passos como checklist e evidências no card da entrega
 - executar, testar e corrigir um passo por vez
 - concluir o card somente após a validação final da entrega

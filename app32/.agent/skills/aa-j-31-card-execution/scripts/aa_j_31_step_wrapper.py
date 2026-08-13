@@ -99,7 +99,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest='command', required=True)
 
     materialize = sub.add_parser('materialize')
-    materialize.add_argument('--project-code', default='AA.J.2')
+    materialize.add_argument('--project-code', default='AA.ENGINEERING.CURRENT')
     materialize.add_argument('--stage-name', required=True)
     materialize.add_argument('--steps', nargs='+', required=True)
     materialize.add_argument('--due-date')
@@ -108,7 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
     materialize.set_defaults(func=cmd_materialize)
 
     complete = sub.add_parser('complete-step')
-    complete.add_argument('--project-code', default='AA.J.2')
+    complete.add_argument('--project-code', default='AA.ENGINEERING.CURRENT')
     complete.add_argument('--stage-name', required=True)
     complete.add_argument('--step-number', type=int, required=True)
     complete.add_argument('--total-steps', type=int, required=True)
@@ -118,7 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     complete.set_defaults(func=cmd_complete_step)
 
     status = sub.add_parser('status')
-    status.add_argument('--project-code', default='AA.J.2')
+    status.add_argument('--project-code', default='AA.ENGINEERING.CURRENT')
     status.add_argument('--stage-name', required=True)
     status.set_defaults(func=cmd_status)
 

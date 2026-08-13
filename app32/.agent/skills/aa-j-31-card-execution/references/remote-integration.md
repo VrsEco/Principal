@@ -1,7 +1,7 @@
 # Integração remota com o projeto operacional de engenharia
 
 ## Alvo confirmado em produção
-- projeto vigente: `AA.J.2`
+- projeto vigente: resolvido pelo marcador `ENGINEERING_OPERATIONAL_CURRENT=1`
 - projeto histórico: `AA.J.1`
 - empresa: `AA - Versus Gestao Corporativa`
 - company_id: `9`

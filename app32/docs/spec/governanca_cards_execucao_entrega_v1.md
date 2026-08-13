@@ -19,10 +19,11 @@ O modelo anterior, de um card por passo, levou o projeto `AA.J.1` a 3.084 cards.
 - materialização deve ser idempotente por `project_id + título normalizado`;
 - duplicidade detectada deve ser reportada, nunca recriada silenciosamente.
 
-## Transição AA.J.1 → AA.J.2
+## Transição AA.J.1 → novo ciclo operacional
 
 - `AA.J.1` será preservado como histórico e arquivado;
-- somente backlog ainda válido será levado ao `AA.J.2`;
+- somente backlog ainda válido será levado ao novo projeto operacional;
+- o código será alocado pela próxima sequência livre, sem reutilizar códigos de projetos existentes;
 - séries abertas no padrão `Passo X de N` serão consolidadas em uma entrega;
 - evidências e referências aos códigos originais serão preservadas nas notas;
 - nenhuma leitura ou escrita pode atravessar o `company_id=9`.
@@ -35,4 +36,3 @@ O modelo anterior, de um card por passo, levou o projeto `AA.J.1` a 3.084 cards.
 - mutações atualizam apenas o card afetado;
 - contagens são agregadas no banco, sem depender da materialização integral do quadro;
 - o frontend não deve criar milhares de nós DOM de uma só vez.
-

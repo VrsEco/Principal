@@ -1,4 +1,4 @@
-"""Consolida o backlog do AA.J.1 em um card por entrega no AA.J.2.
+"""Consolida o backlog do AA.J.1 em um card por entrega no novo ciclo.
 
 Dry-run é o padrão. A mutação exige ``--execute`` e ocorre em uma transação.
 """
@@ -23,11 +23,13 @@ from app import create_app
 from models import db
 from models.company import Company
 from models.project import Project, ProjectTask
+from sqlalchemy import text
 
 
 COMPANY_ID = 9
 SOURCE_SEQUENCE = 1
-TARGET_SEQUENCE = 2
+TARGET_NAME = "DEV APP Gestão Versus — Ciclo 2"
+TARGET_MARKER = "ENGINEERING_OPERATIONAL_CURRENT=1"
 TRANSITION_TITLE_FRAGMENT = "Reestruturar governanca e performance AA.J.1"
 STEP_RE = re.compile(r"^\s*\[(?P<delivery>.*?)\s*-\s*Passo\s+\d+\s+de\s+\d+\]\s*(?P<suffix>.*)$", re.I)
 
@@ -99,10 +101,10 @@ def _resolve_projects() -> tuple[Project, Project | None]:
     ).first()
     if not source:
         raise RuntimeError("Projeto fonte AA.J.1 não encontrado para company_id=9.")
-    target = Project.query.filter_by(
-        company_id=COMPANY_ID,
-        code_sequence=TARGET_SEQUENCE,
-        is_deleted=False,
+    target = Project.query.filter(
+        Project.company_id == COMPANY_ID,
+        Project.is_deleted.is_(False),
+        Project.notes.ilike(f"%{TARGET_MARKER}%"),
     ).first()
     return source, target
 
@@ -149,7 +151,12 @@ def build_plan() -> dict:
     return {
         "company_id": COMPANY_ID,
         "source": {"id": source.id, "code": source.code, "status": source.status},
-        "target": {"id": target.id, "code": target.code, "status": target.status} if target else None,
+        "target": {"id": target.id, "code": target.code, "name": target.name, "status": target.status} if target else None,
+        "target_proposed_sequence": None if target else int(
+            db.session.query(db.func.coalesce(db.func.max(Project.code_sequence), 0))
+            .filter(Project.company_id == COMPANY_ID)
+            .scalar()
+        ) + 1,
         "source_open_considered": len(tasks),
         "consolidated_deliveries": len(grouped),
         "cards_to_create": sum(1 for row in planned if not row["already_migrated"]),
@@ -163,17 +170,26 @@ def execute_transition(*, archive_source: bool) -> dict:
         raise RuntimeError("Empresa company_id=9 não encontrada.")
     source, target = _resolve_projects()
     if not target:
+        db.session.execute(
+            text("SELECT pg_advisory_xact_lock(:lock_key, :company_id)"),
+            {"lock_key": 1001, "company_id": COMPANY_ID},
+        )
+        target_sequence = int(
+            db.session.query(db.func.coalesce(db.func.max(Project.code_sequence), 0))
+            .filter(Project.company_id == COMPANY_ID)
+            .scalar()
+        ) + 1
         target = Project(
             company_id=COMPANY_ID,
-            code_sequence=TARGET_SEQUENCE,
-            name="DEV APP Gestão Versus — Ciclo 2",
+            code_sequence=target_sequence,
+            name=TARGET_NAME,
             description="Projeto operacional enxuto, regido por um card por entrega.",
             owner=source.owner,
             status="in_progress",
             start_date=date.today(),
             priority=source.priority,
             portfolio_id=source.portfolio_id,
-            notes="Sucessor operacional do AA.J.1. Backlog consolidado em 13/08/2026.",
+            notes=f"{TARGET_MARKER}\nSucessor operacional do AA.J.1. Backlog consolidado em 13/08/2026.",
         )
         db.session.add(target)
         db.session.flush()

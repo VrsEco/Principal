@@ -26,4 +26,4 @@ As respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minut
 As respostas devem ser curtas e objetivas, com alvo de leitura entre 1 e 5 minutos, salvo quando o usuário pedir aprofundamento.
 
 ## Regra mandatória
-Se houver 3 ou mais etapas, a execução deve começar por `aa-j-31-card-execution`, com um card real por entrega em `AA.J.2 (Produção)`, checklist interno e fechamento após a validação final.
+Se houver 3 ou mais etapas, a execução deve começar por `aa-j-31-card-execution`, com um card real por entrega no projeto operacional de engenharia vigente, checklist interno e fechamento após a validação final.

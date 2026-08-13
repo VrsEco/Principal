@@ -14,7 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from app32.scripts.deploy.configr_remote_helper import APP_DIR, BASE_DIR, connect_ssh, run_command
 
-DEFAULT_PROJECT_CODE = 'AA.J.2'
+DEFAULT_PROJECT_CODE = 'AA.ENGINEERING.CURRENT'
 DEFAULT_COMPANY_CODE = 'AA'
 DEFAULT_RESPONSIBLE = 'Codex'
 REMOTE_PYTHON = f"{BASE_DIR}/.virtualenv/3.12/bin/python"
@@ -47,7 +47,7 @@ from models import db
 from models.company import Company
 from models.project import Project, ProjectTask
 
-DEFAULT_PROJECT_CODE = "AA.J.2"
+DEFAULT_PROJECT_CODE = "AA.ENGINEERING.CURRENT"
 DEFAULT_COMPANY_CODE = "AA"
 DEFAULT_RESPONSIBLE = "Codex"
 
@@ -80,6 +80,16 @@ def resolve_project(project_code: str):
         if project:
             return project
     normalized_code = project_code or DEFAULT_PROJECT_CODE
+    if normalized_code == DEFAULT_PROJECT_CODE:
+        return (
+            Project.query.join(Company, Company.id == Project.company_id)
+            .filter(
+                Company.client_code == DEFAULT_COMPANY_CODE,
+                Project.notes.ilike('%ENGINEERING_OPERATIONAL_CURRENT=1%'),
+            )
+            .order_by(Project.id.desc())
+            .first()
+        )
     company_code = normalized_code.split('.J.')[0].strip().upper()
     query = (
         Project.query.join(Company, Company.id == Project.company_id)

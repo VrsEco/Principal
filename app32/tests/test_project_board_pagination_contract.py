@@ -128,7 +128,7 @@ def test_card_wrapper_uses_one_card_and_internal_checklist(monkeypatch):
         "implementar",
         "validar",
     ])
-    assert args.project_code == "AA.J.2"
+    assert args.project_code == "AA.ENGINEERING.CURRENT"
 
 
 def test_transition_groups_step_cards_into_single_delivery():
