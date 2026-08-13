@@ -50,6 +50,12 @@ class ProjectListSchema(ma.SQLAlchemyAutoSchema):
     updated_at = fields.String(dump_only=True)
     deadline = fields.Date(attribute="deadline", allow_none=True)
     portfolio_id = fields.Integer(allow_none=True)
+    task_stats = fields.Method("get_task_stats", dump_only=True)
+
+    def get_task_stats(self, project):
+        from services.project_task_stats_service import ProjectTaskStatsService
+
+        return getattr(project, "_list_task_stats", ProjectTaskStatsService.empty())
 
 project_schema = ProjectSchema()
 projects_schema = ProjectListSchema(many=True)

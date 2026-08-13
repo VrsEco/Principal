@@ -4,6 +4,7 @@ from models import db, Project
 from models.workflow_gap import WorkflowGapCandidate
 from schemas.project import project_schema, projects_schema
 from utils.permissions import get_default_company_id, has_company_full_access, has_permission, is_platform_admin, permission_required, can_create_projects
+from services.project_task_stats_service import ProjectTaskStatsService
 
 
 def _get_current_company_employee(company_id):
@@ -164,6 +165,15 @@ class ProjectListResource(Resource):
             query = query.filter_by(plan_id=plan_id)
             
         projects = query.all()
+        stats_by_project = ProjectTaskStatsService.build_for_projects(
+            company_id=company_id,
+            project_ids=[project.id for project in projects],
+        )
+        for project in projects:
+            project._list_task_stats = stats_by_project.get(
+                int(project.id),
+                ProjectTaskStatsService.empty(),
+            )
         return projects_schema.dump(projects), 200
 
     @permission_required('projects', 'create')

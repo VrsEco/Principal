@@ -9,16 +9,32 @@ from schemas.project import projects_schema
 from services.project_board_capacity_service import ProjectBoardCapacityService
 
 
-def test_project_collection_schema_does_not_embed_tasks(monkeypatch):
+def test_project_collection_schema_keeps_aggregate_stats_without_embedding_tasks(monkeypatch):
     monkeypatch.setattr(Project, "company_code", property(lambda self: "AA"))
     project = Project(id=31, company_id=9, name="DEV APP Gestão Versus")
+    project._list_task_stats = {"total": 162, "open": 160, "completed": 2, "delayed": 1, "progress": 1}
 
     payload = projects_schema.dump([project])[0]
 
     assert payload["id"] == 31
     assert payload["code"] == "AA.J.31"
     assert "tasks" not in payload
-    assert "task_stats" not in payload
+    assert payload["task_stats"] == project._list_task_stats
+
+
+def test_project_collection_schema_defaults_to_zero_stats(monkeypatch):
+    monkeypatch.setattr(Project, "company_code", property(lambda self: "AA"))
+    project = Project(id=32, company_id=9, name="Projeto sem atividades")
+
+    payload = projects_schema.dump([project])[0]
+
+    assert payload["task_stats"] == {
+        "total": 0,
+        "open": 0,
+        "completed": 0,
+        "delayed": 0,
+        "progress": 0,
+    }
 
 
 def test_project_detail_schema_does_not_embed_tasks(monkeypatch):
