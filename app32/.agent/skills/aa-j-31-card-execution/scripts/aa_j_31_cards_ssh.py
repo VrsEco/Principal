@@ -14,7 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from app32.scripts.deploy.configr_remote_helper import APP_DIR, BASE_DIR, connect_ssh, run_command
 
-DEFAULT_PROJECT_CODE = 'AA.J.31'
+DEFAULT_PROJECT_CODE = 'AA.J.2'
 DEFAULT_COMPANY_CODE = 'AA'
 DEFAULT_RESPONSIBLE = 'Codex'
 REMOTE_PYTHON = f"{BASE_DIR}/.virtualenv/3.12/bin/python"
@@ -47,7 +47,7 @@ from models import db
 from models.company import Company
 from models.project import Project, ProjectTask
 
-DEFAULT_PROJECT_CODE = "AA.J.31"
+DEFAULT_PROJECT_CODE = "AA.J.2"
 DEFAULT_COMPANY_CODE = "AA"
 DEFAULT_RESPONSIBLE = "Codex"
 
@@ -79,14 +79,19 @@ def resolve_project(project_code: str):
         project = Project.query.filter(Project.id == project_id).first()
         if project:
             return project
-    company_code = (project_code or DEFAULT_PROJECT_CODE).split('.J.')[0].strip().upper()
-    return (
+    normalized_code = project_code or DEFAULT_PROJECT_CODE
+    company_code = normalized_code.split('.J.')[0].strip().upper()
+    query = (
         Project.query.join(Company, Company.id == Project.company_id)
-        .filter(Project.id == 31 if project_code == DEFAULT_PROJECT_CODE else True)
         .filter(Company.client_code == company_code)
-        .order_by(Project.id.asc())
-        .first()
     )
+    try:
+        sequence = int(normalized_code.rsplit('.J.', 1)[1])
+    except (IndexError, ValueError):
+        sequence = None
+    if sequence is not None:
+        query = query.filter(Project.code_sequence == sequence)
+    return query.order_by(Project.id.asc()).first()
 
 
 def project_payload(project):
@@ -198,6 +203,25 @@ def complete_task(identifier: str, completion_date_raw: str | None, evidence: st
     return {'ok': True, 'task': task_payload(task)}
 
 
+def update_task_notes(identifier: str, notes: str, dry_run: bool):
+    raw_identifier = str(identifier or '').strip()
+    task = None
+    task_id = extract_id(raw_identifier)
+    if task_id:
+        task = ProjectTask.query.filter(ProjectTask.id == task_id).first()
+    if task is None and raw_identifier:
+        task = ProjectTask.query.filter(ProjectTask.what == raw_identifier).order_by(ProjectTask.id.desc()).first()
+    if not task:
+        return {'ok': False, 'error': f'Atividade {identifier} não encontrada.'}
+    updated = task_payload(task)
+    updated['notes'] = (notes or '').strip() or None
+    if dry_run:
+        return {'ok': True, 'dry_run': True, 'task': updated}
+    task.notes = updated['notes']
+    db.session.commit()
+    return {'ok': True, 'task': task_payload(task)}
+
+
 def ensure_steps(project_code: str, stage_name: str, total_steps: int, titles: list[str], due_date_raw: str | None, responsible: str | None, dry_run: bool):
     project = resolve_project(project_code)
     if not project:
@@ -264,6 +288,11 @@ def main():
     complete_parser.add_argument('--evidence')
     complete_parser.add_argument('--dry-run', action='store_true')
 
+    notes_parser = sub.add_parser('update-notes')
+    notes_parser.add_argument('--identifier', required=True)
+    notes_parser.add_argument('--notes', required=True)
+    notes_parser.add_argument('--dry-run', action='store_true')
+
     ensure_parser = sub.add_parser('ensure-steps')
     ensure_parser.add_argument('--project-code', default=DEFAULT_PROJECT_CODE)
     ensure_parser.add_argument('--stage-name', required=True)
@@ -283,6 +312,8 @@ def main():
             payload = create_task(args.project_code, args.title, args.due_date, args.responsible, args.notes, args.priority, args.dry_run)
         elif args.command == 'complete':
             payload = complete_task(args.identifier, args.completion_date, args.evidence, args.dry_run)
+        elif args.command == 'update-notes':
+            payload = update_task_notes(args.identifier, args.notes, args.dry_run)
         elif args.command == 'ensure-steps':
             payload = ensure_steps(args.project_code, args.stage_name, args.total_steps, args.titles or [], args.due_date, args.responsible, args.dry_run)
         else:
@@ -350,6 +381,15 @@ def cmd_complete(args: argparse.Namespace) -> None:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
+def cmd_update_notes(args: argparse.Namespace) -> None:
+    payload = _run_remote('update-notes', [
+        '--identifier', args.identifier,
+        '--notes', args.notes,
+        *(['--dry-run'] if args.dry_run else []),
+    ])
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
 def cmd_ensure_steps(args: argparse.Namespace) -> None:
     cli_args: List[str] = [
         '--project-code', args.project_code,
@@ -395,6 +435,12 @@ def build_parser() -> argparse.ArgumentParser:
     complete_parser.add_argument('--evidence')
     complete_parser.add_argument('--dry-run', action='store_true')
     complete_parser.set_defaults(func=cmd_complete)
+
+    notes_parser = sub.add_parser('update-notes')
+    notes_parser.add_argument('--identifier', required=True)
+    notes_parser.add_argument('--notes', required=True)
+    notes_parser.add_argument('--dry-run', action='store_true')
+    notes_parser.set_defaults(func=cmd_update_notes)
 
     ensure_parser = sub.add_parser('ensure-steps')
     ensure_parser.add_argument('--project-code', default=DEFAULT_PROJECT_CODE)

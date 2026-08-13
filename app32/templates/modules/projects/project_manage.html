@@ -969,6 +969,11 @@
         </div>
         {% endfor %}
     </div>
+    <div style="display:flex; justify-content:center; padding:1rem 0;">
+        <button class="btn btn-secondary" id="btnLoadMoreTasks" onclick="loadMoreTasks()" style="display:none;">
+            Carregar mais atividades
+        </button>
+    </div>
 </div>
 
 <!-- Task Modal -->
@@ -1224,6 +1229,11 @@
     const IS_COLLABORATOR = {{ 'true' if is_collaborator else 'false' }};
     const CAN_EDIT_TASKS = {{ 'true' if can_edit_tasks else 'false' }};
     let allTasks = [];
+    let tasksPage = 1;
+    let tasksHasMore = false;
+    let taskStageCounts = {};
+    let taskTotalAll = 0;
+    let taskSearchTimer = null;
     let employeeNames = {}; // Global mapping for backup
     let draggedTaskId = null;
 
@@ -1376,16 +1386,60 @@
         }
     });
 
-    async function loadTasks() {
+    async function loadTasks({ append = false } = {}) {
         try {
-            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks`);
-            allTasks = await response.json();
+            if (!append) tasksPage = 1;
+            const params = new URLSearchParams({
+                paginated: 'true',
+                compact: 'true',
+                include_completed: document.getElementById('filterIncludeCompleted')?.checked ? 'true' : 'false',
+                page: String(tasksPage),
+                per_page: '150'
+            });
+            const responsibleId = document.getElementById('filterResponsible')?.value;
+            const deadline = document.getElementById('filterDeadline')?.value;
+            const search = document.getElementById('filterSearch')?.value?.trim();
+            if (responsibleId) params.set('employee_id', responsibleId);
+            if (deadline) params.set('due_date', deadline);
+            if (search) params.set('search', search);
+
+            const response = await fetch(`/api/projects/${PROJECT_ID}/tasks?${params.toString()}`);
+            const payload = await response.json();
+            if (!response.ok || !Array.isArray(payload.items)) {
+                throw new Error(payload.error || 'Resposta inválida ao carregar atividades');
+            }
+            if (append) {
+                const knownIds = new Set(allTasks.map(task => Number(task.id)));
+                allTasks = allTasks.concat(payload.items.filter(task => !knownIds.has(Number(task.id))));
+            } else {
+                allTasks = payload.items;
+            }
+            tasksHasMore = Boolean(payload.has_more);
+            taskStageCounts = payload.stage_counts || {};
+            taskTotalAll = Number(payload.total_all || 0);
+            const loadMoreButton = document.getElementById('btnLoadMoreTasks');
+            if (loadMoreButton) {
+                loadMoreButton.style.display = tasksHasMore ? 'inline-flex' : 'none';
+                loadMoreButton.disabled = false;
+                loadMoreButton.textContent = `Carregar mais (${allTasks.length} de ${payload.total})`;
+            }
             renderKanban();
             updateStats(getBacklogHumanGateVisibleTasks(allTasks));
             maybeOpenTaskFromShortcut();
         } catch (error) {
             console.error('Erro ao carregar atividades:', error);
         }
+    }
+
+    async function loadMoreTasks() {
+        if (!tasksHasMore) return;
+        const button = document.getElementById('btnLoadMoreTasks');
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'Carregando...';
+        }
+        tasksPage += 1;
+        await loadTasks({ append: true });
     }
 
     function renderKanban(tasksToRender = null) {
@@ -1442,40 +1496,21 @@
     }
 
     function applyKanbanFilters() {
-        const responsibleId = document.getElementById('filterResponsible').value;
-        const deadline = document.getElementById('filterDeadline').value;
-        const search = document.getElementById('filterSearch').value.toLowerCase();
+        loadTasks();
+    }
 
-        const filteredTasks = allTasks.filter(task => {
-            // Filter by Responsible
-            if (responsibleId && task.employee_id != responsibleId) return false;
-
-            // Filter by Deadline
-            if (deadline) {
-                if (!task.due_date) return false;
-                const taskDate = task.due_date.split('T')[0]; // Normalize ISO or string
-                if (taskDate !== deadline) return false;
-            }
-
-            // Filter by Search (Livre)
-            if (search) {
-                const content = `${task.what} ${task.how} ${task.notes} ${task.id} ${task.code || ''}`.toLowerCase();
-                if (!content.includes(search)) return false;
-            }
-
-            return true;
-        });
-
-        renderKanban(filteredTasks);
-        updateStats(getBacklogHumanGateVisibleTasks(filteredTasks));
+    function scheduleKanbanReload() {
+        window.clearTimeout(taskSearchTimer);
+        taskSearchTimer = window.setTimeout(() => loadTasks(), 300);
     }
 
     function resetKanbanFilters() {
         document.getElementById('filterResponsible').value = '';
         document.getElementById('filterDeadline').value = '';
         document.getElementById('filterSearch').value = '';
-        renderKanban(allTasks);
-        updateStats(getBacklogHumanGateVisibleTasks(allTasks));
+        const includeCompleted = document.getElementById('filterIncludeCompleted');
+        if (includeCompleted) includeCompleted.checked = false;
+        loadTasks();
     }
 
     function createCard(task) {
@@ -1645,8 +1680,8 @@
 
     function updateStats(tasksToCount = null) {
         const tasks = tasksToCount || allTasks;
-        const total = tasks.length;
-        const completed = tasks.filter(t => t.stage === 'completed').length;
+        const total = taskTotalAll || tasks.length;
+        const completed = Number(taskStageCounts.completed || 0);
         const estHours = tasks.reduce((sum, t) => sum + (parseFloat(t.estimated_hours) || 0), 0);
         const workedHours = tasks.reduce((sum, t) => sum + (parseFloat(t.worked_hours) || 0), 0);
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -1720,6 +1755,9 @@
                 task.completion_date = date;
                 task.logs = updatedLogs;
                 task.status = 'completed';
+                if (!document.getElementById('filterIncludeCompleted')?.checked) {
+                    allTasks = allTasks.filter(item => Number(item.id) !== Number(taskId));
+                }
                 renderKanban();
                 updateStats();
                 document.getElementById('completionPopup').classList.remove('open');
@@ -2037,7 +2075,7 @@
         window.location.href = `/my-work/project-task/${taskId}?from=project`;
     }
 
-    function openTaskModal(taskId = null, options = {}) {
+    async function openTaskModal(taskId = null, options = {}) {
         if (!CAN_EDIT_TASKS && !taskId) {
             alert('Você não tem permissão para criar novas atividades nesta tela.');
             return;
@@ -2058,6 +2096,21 @@
                 alert('Atividade não encontrada na memória da tela.');
                 return;
             }
+            if (!Object.prototype.hasOwnProperty.call(currentTask, 'logs')) {
+                try {
+                    const detailResponse = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}`);
+                    const detail = await detailResponse.json();
+                    if (!detailResponse.ok) throw new Error(detail.error || detail.message || 'Falha ao carregar detalhe');
+                    currentTask = { ...currentTask, ...detail };
+                    const taskIndex = allTasks.findIndex(item => Number(item.id) === Number(taskId));
+                    if (taskIndex >= 0) allTasks[taskIndex] = currentTask;
+                } catch (error) {
+                    console.error(error);
+                    alert('Não foi possível carregar os detalhes da atividade.');
+                    return;
+                }
+            }
+            currentTaskLogs = Array.isArray(currentTask.logs) ? [...currentTask.logs] : [];
             isHumanGateTask = isBacklogHumanGateTask(currentTask);
             title.textContent = isHumanGateTask
                 ? `Cockpit HITL · ${currentTask.code || '#' + currentTask.id}`
@@ -2152,8 +2205,13 @@
                 body: JSON.stringify(payload)
             });
             if (response.ok) {
+                const savedTask = await response.json();
+                const existingIndex = allTasks.findIndex(task => Number(task.id) === Number(savedTask.id));
+                if (existingIndex >= 0) allTasks[existingIndex] = savedTask;
+                else allTasks.unshift(savedTask);
                 closeTaskModal();
-                loadTasks();
+                renderKanban();
+                updateStats();
             } else {
                 alert('Erro ao salvar atividade.');
             }
@@ -2177,7 +2235,11 @@
             const response = await fetch(`/api/projects/${PROJECT_ID}/tasks/${taskId}`, {
                 method: 'DELETE'
             });
-            if (response.ok) loadTasks();
+            if (response.ok) {
+                allTasks = allTasks.filter(item => Number(item.id) !== Number(taskId));
+                renderKanban();
+                updateStats();
+            }
         } catch (error) {
             console.error(error);
         }
@@ -2599,7 +2661,14 @@
         <div class="form-group">
             <label class="form-label" style="font-size: 0.75rem;">Livre (O que | Como | Obs)</label>
             <input type="text" id="filterSearch" class="form-input" placeholder="Pesquisar..."
-                onkeyup="applyKanbanFilters()">
+                oninput="scheduleKanbanReload()">
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex; align-items:center; gap:0.55rem; cursor:pointer; font-size:0.82rem;">
+                <input type="checkbox" id="filterIncludeCompleted" onchange="applyKanbanFilters()">
+                Mostrar atividades concluídas
+            </label>
         </div>
 
         <div id="backlogHumanGateFilterSection"></div>

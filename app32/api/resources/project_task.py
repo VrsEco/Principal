@@ -1,7 +1,7 @@
 from flask import current_app, request
 from flask_restful import Resource
 from marshmallow import ValidationError
-from sqlalchemy import text
+from sqlalchemy import func, or_, text
 from sqlalchemy.exc import IntegrityError
 from models import db, ProjectTask, Project, Indicator, Process
 from models.workflow_gap import WorkflowGapCandidate
@@ -73,6 +73,44 @@ def _serialize_task_list(tasks, *, project_id: int | None = None, company_id: in
         task_context = context_map.get(int(item.get("id", 0) or 0))
         if task_context:
             item["backlog_human_gate"] = task_context
+    return payload
+
+
+def _serialize_task_list_compact(tasks, *, project, company_id: int | None = None):
+    """Serializa o suficiente para o Kanban sem propriedades relacionais N+1."""
+    project_code = project.code
+    payload = []
+    for task in tasks:
+        sequence = task.code_sequence or task.id
+        due_date = task.due_date.isoformat() if task.due_date else None
+        completion_date = task.completion_date.isoformat() if task.completion_date else None
+        payload.append({
+            'id': task.id,
+            'code': f'{project_code}.{sequence}',
+            'project_id': task.project_id,
+            'what': task.what,
+            'who': task.who,
+            'employee_id': task.employee_id,
+            'employee_name': task.employee.name if task.employee else (task.who or 'Sem responsável'),
+            'due_date': due_date,
+            'completion_date': completion_date,
+            'how': task.how,
+            'amount': task.amount,
+            'status': task.status,
+            'stage': 'inbox' if task.stage == 'todo' else task.stage,
+            'priority': task.priority,
+            'notes': task.notes,
+            'score_weight': float(task.score_weight or 1),
+            'estimated_hours': float(task.estimated_hours or 0),
+            'worked_hours': float(task.worked_hours or 0),
+        })
+
+    context_map = ProjectTaskDueDateChangeService.build_task_context_map(
+        [int(task.id) for task in tasks],
+        company_id=company_id,
+    )
+    for item in payload:
+        item.update(context_map.get(item['id'], ProjectTaskDueDateChangeService.empty_context()))
     return payload
 
 
@@ -232,17 +270,55 @@ class ProjectTaskListResource(Resource):
     @permission_required('projects', 'view')
     def get(self, project_id):
         """List all tasks for a project with dependency status."""
-        from flask import session
         from services.task_dependency_service import TaskDependencyService
         from models.project import ProjectTaskDependency
+        from sqlalchemy.orm import joinedload
 
         from .project import get_request_company_id
         company_id = get_request_company_id()
-            
-        query = ProjectTask.query.filter_by(project_id=project_id, is_deleted=False).order_by(ProjectTask.id.asc())
+        if not company_id:
+            return {"items": [], "total": 0, "page": 1, "per_page": 0, "has_more": False}, 200
+
+        project = Project.query.filter_by(id=project_id, company_id=company_id, is_deleted=False).first_or_404()
+        include_completed = request.args.get('include_completed', 'true').lower() == 'true'
+        paginated = request.args.get('paginated', 'false').lower() == 'true'
+        compact = request.args.get('compact', 'false').lower() == 'true'
+        page = max(request.args.get('page', 1, type=int) or 1, 1)
+        per_page = min(max(request.args.get('per_page', 150, type=int) or 150, 1), 250)
+        stage = (request.args.get('stage') or '').strip()
+        search = (request.args.get('search') or '').strip()
+        employee_id = request.args.get('employee_id', type=int)
+        due_date = (request.args.get('due_date') or '').strip()
+
+        query = ProjectTask.query.filter_by(project_id=project.id, is_deleted=False)
         query = apply_task_employee_filter(query, company_id)
-        tasks = query.all()
-        dumped_tasks = _serialize_task_list(tasks, project_id=project_id, company_id=company_id)
+        if not include_completed:
+            query = query.filter(ProjectTask.stage != 'completed')
+        if stage:
+            query = query.filter(ProjectTask.stage == stage)
+        if search:
+            pattern = f'%{search}%'
+            query = query.filter(or_(ProjectTask.what.ilike(pattern), ProjectTask.notes.ilike(pattern)))
+        if employee_id:
+            query = query.filter(ProjectTask.employee_id == employee_id)
+        if due_date:
+            try:
+                parsed_due_date = datetime.strptime(due_date, '%Y-%m-%d').date()
+            except ValueError:
+                return {'error': 'due_date deve usar o formato YYYY-MM-DD'}, 400
+            query = query.filter(ProjectTask.due_date == parsed_due_date)
+
+        total = query.order_by(None).count()
+        ordered_query = query.options(joinedload(ProjectTask.employee)).order_by(ProjectTask.id.desc())
+        if paginated:
+            tasks = ordered_query.offset((page - 1) * per_page).limit(per_page).all()
+        else:
+            tasks = ordered_query.all()
+        dumped_tasks = (
+            _serialize_task_list_compact(tasks, project=project, company_id=company_id)
+            if compact
+            else _serialize_task_list(tasks, project_id=project_id, company_id=company_id)
+        )
         
         # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
         # Filtra por company_id para respeitar multi-tenancy no mapeamento de dependências
@@ -282,7 +358,27 @@ class ProjectTaskListResource(Resource):
             task_data['is_blocked'] = len(blocking) > 0
             task_data['blocked_by'] = blocking
             
-        return dumped_tasks, 200
+        if not paginated:
+            return dumped_tasks, 200
+
+        stage_rows = (
+            db.session.query(ProjectTask.stage, func.count(ProjectTask.id))
+            .filter(
+                ProjectTask.project_id == project.id,
+                ProjectTask.is_deleted.is_(False),
+            )
+        )
+        stage_rows = apply_task_employee_filter(stage_rows, company_id)
+        stage_counts = {str(key or 'inbox'): int(value) for key, value in stage_rows.group_by(ProjectTask.stage).all()}
+        return {
+            'items': dumped_tasks,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'has_more': page * per_page < total,
+            'stage_counts': stage_counts,
+            'total_all': sum(stage_counts.values()),
+        }, 200
 
     @permission_required('projects', 'view')
     def post(self, project_id):

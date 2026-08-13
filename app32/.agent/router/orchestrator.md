@@ -14,7 +14,7 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
    - preferir respostas em 3 a 7 bullets quando o formato permitir
    - evitar blocos longos de texto; quebrar em bullets curtos ou seções mínimas
    - abrir pela decisão, conclusão ou próximo passo antes do contexto
-3. Se a execução tiver 3 ou mais etapas, ativar obrigatoriamente `aa-j-31-card-execution` antes de começar qualquer implementação.
+3. Se a execução tiver 3 ou mais etapas, ativar obrigatoriamente `aa-j-31-card-execution` antes de começar qualquer implementação, materializando um card por entrega com checklist interno.
 4. Escolher o fluxo principal:
    - incidente/bug -> `gestao-versus-incident-response`
    - workflow conversacional/V3 -> `workflow-factory-versus`
@@ -27,9 +27,11 @@ Interpretar a solicitação, classificar o tipo de trabalho e decidir qual skill
 
 ## Regra mandatória para 3+ etapas
 - quebrar a execução em passos antes de codar
-- criar ou atualizar os cards em `AA.J.1 (Produção)` no padrão `[<nome da etapa> - Passo X de N]`
-- executar, testar, corrigir e concluir um passo por vez
-- não abrir frente paralela sem o card correspondente
+- criar ou atualizar um único card da entrega em `AA.J.2 (Produção)` no padrão `[<nome da entrega>]`
+- registrar os passos como checklist e evidências no card da entrega
+- executar, testar e corrigir um passo por vez
+- concluir o card somente após a validação final da entrega
+- não abrir frente paralela sem uma entrega independente correspondente
 
 ## Prioridade de especialistas
 1. `arquiteto.md` para desenho, auditoria, boundary e segurança

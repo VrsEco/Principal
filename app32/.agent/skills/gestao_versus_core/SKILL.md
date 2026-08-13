@@ -35,7 +35,8 @@ Skill obrigatória de governança do projeto.
 - evitar blocos longos de texto; quebrar em bullets curtos ou seções mínimas
 - abrir pela decisão, conclusão ou próximo passo antes do contexto
 - sem documentação longa dentro desta skill
-- sem execução 3+ etapas sem cards reais em `AA.J.1`
+- sem execução 3+ etapas sem um card real por entrega no projeto operacional vigente
+- passos de uma mesma entrega devem ser checklist/evidência; é proibido criar um card por passo
 - para Sapiens: arvore oficial por dominio, nao por estrutura legada
 - para Sapiens: codigos de menu sem ponto, ex: `111`, `145`, `183`
 - para Sapiens: escopo operacional explicito entre pessoal, equipe e empresa

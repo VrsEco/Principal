@@ -34,9 +34,24 @@ class ProjectSchema(ma.SQLAlchemyAutoSchema):
     deadline = fields.Date(attribute="deadline", allow_none=True)
     portfolio_id = fields.Integer(allow_none=True)  # Explicitly include portfolio_id
     
-    tasks = fields.Nested(ProjectTaskSchema, many=True, dump_only=True)
+    # Atividades são carregadas pelo endpoint paginado específico do projeto.
+
+
+class ProjectListSchema(ma.SQLAlchemyAutoSchema):
+    """Contrato leve para coleções; atividades possuem endpoint próprio."""
+
+    class Meta:
+        model = Project
+        load_instance = False
+        include_fk = True
+
+    code = fields.String(dump_only=True)
+    created_at = fields.String(dump_only=True)
+    updated_at = fields.String(dump_only=True)
+    deadline = fields.Date(attribute="deadline", allow_none=True)
+    portfolio_id = fields.Integer(allow_none=True)
 
 project_schema = ProjectSchema()
-projects_schema = ProjectSchema(many=True)
+projects_schema = ProjectListSchema(many=True)
 project_task_schema = ProjectTaskSchema()
 project_tasks_schema = ProjectTaskSchema(many=True)

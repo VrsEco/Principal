@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import UniqueConstraint, event, func, select, text
+from sqlalchemy import UniqueConstraint, event, func, inspect, select, text
 
 from . import db
 
@@ -52,21 +52,30 @@ class Project(db.Model):
 
     @property
     def task_stats(self):
-        """Calculate task statistics for this project"""
-        # We can't use self.tasks.filter... because it's lazy="dynamic"
-        # and we want to avoid multiple queries if possible, but for properties it's okay
-        all_tasks = self.tasks.all()
+        """Calculate task statistics without materializing every project task."""
+        if not inspect(self).persistent:
+            return {"total": 0, "open": 0, "completed": 0, "delayed": 0, "progress": 0}
         now = datetime.now().date()
-        
-        visible_tasks = [t for t in all_tasks if not getattr(t, "is_deleted", False)]
-        total = len(visible_tasks)
-        completed = len([t for t in visible_tasks if t.stage == 'completed'])
+        row = (
+            db.session.query(
+                func.count(ProjectTask.id).label("total"),
+                func.count(ProjectTask.id).filter(ProjectTask.stage == "completed").label("completed"),
+                func.count(ProjectTask.id).filter(
+                    ProjectTask.stage != "completed",
+                    ProjectTask.due_date.isnot(None),
+                    ProjectTask.due_date < now,
+                ).label("delayed"),
+            )
+            .filter(
+                ProjectTask.project_id == self.id,
+                ProjectTask.is_deleted.is_(False),
+            )
+            .one()
+        )
+        total = int(row.total or 0)
+        completed = int(row.completed or 0)
         open_tasks = total - completed
-        
-        delayed = len([t for t in visible_tasks 
-                      if t.stage != 'completed' 
-                      and t.due_date 
-                      and (t.due_date.date() if isinstance(t.due_date, datetime) else t.due_date) < now])
+        delayed = int(row.delayed or 0)
         
         return {
             "total": total,
