@@ -6,6 +6,7 @@ import importlib.util
 from api.resources import project_task as project_task_resource
 from models.project import Project
 from schemas.project import projects_schema
+from services.project_board_capacity_service import ProjectBoardCapacityService
 
 
 def test_project_collection_schema_does_not_embed_tasks(monkeypatch):
@@ -93,6 +94,27 @@ def test_project_manage_uses_incremental_board_contract():
     assert "filterIncludeCompleted" in template
     assert "loadMoreTasks()" in template
     assert "Object.prototype.hasOwnProperty.call(currentTask, 'logs')" in template
+    assert "kanbanCapacityGuardrail" in template
+    assert "payload.capacity" in template
+
+
+def test_project_board_capacity_guardrail_thresholds():
+    healthy = ProjectBoardCapacityService.build({"inbox": 499, "completed": 100})
+    attention = ProjectBoardCapacityService.build({"inbox": 501, "completed": 100})
+    critical = ProjectBoardCapacityService.build({"inbox": 1001, "completed": 100})
+
+    assert healthy == {
+        "status": "healthy",
+        "open_count": 499,
+        "soft_limit": 500,
+        "hard_limit": 1000,
+        "utilization_pct": 100,
+        "rollover_recommended": False,
+    }
+    assert attention["status"] == "attention"
+    assert attention["rollover_recommended"] is False
+    assert critical["status"] == "critical"
+    assert critical["rollover_recommended"] is True
 
 
 def test_card_wrapper_uses_one_card_and_internal_checklist(monkeypatch):

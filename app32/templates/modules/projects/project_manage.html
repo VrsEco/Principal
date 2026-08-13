@@ -948,6 +948,7 @@
     </div>
 
     <!-- Kanban Board Workspace Style -->
+    <div id="kanbanCapacityGuardrail" role="status" style="display:none; margin-bottom:1rem; padding:0.8rem 1rem; border:1px solid var(--border-light); border-radius:12px; font-size:0.82rem;"></div>
     <div class="kanban-board-ws no-scrollbar" id="kanbanBoard">
         {% for stage in stages %}
         <div class="kanban-column-ws" data-stage="{{ stage.slug }}" id="col-{{ stage.slug }}">
@@ -1233,6 +1234,7 @@
     let tasksHasMore = false;
     let taskStageCounts = {};
     let taskTotalAll = 0;
+    let taskCapacity = null;
     let taskSearchTimer = null;
     let employeeNames = {}; // Global mapping for backup
     let draggedTaskId = null;
@@ -1417,6 +1419,8 @@
             tasksHasMore = Boolean(payload.has_more);
             taskStageCounts = payload.stage_counts || {};
             taskTotalAll = Number(payload.total_all || 0);
+            taskCapacity = payload.capacity || null;
+            renderKanbanCapacity();
             const loadMoreButton = document.getElementById('btnLoadMoreTasks');
             if (loadMoreButton) {
                 loadMoreButton.style.display = tasksHasMore ? 'inline-flex' : 'none';
@@ -1440,6 +1444,28 @@
         }
         tasksPage += 1;
         await loadTasks({ append: true });
+    }
+
+    function renderKanbanCapacity() {
+        const guardrail = document.getElementById('kanbanCapacityGuardrail');
+        if (!guardrail || !taskCapacity) return;
+
+        const status = taskCapacity.status || 'healthy';
+        const palette = {
+            healthy: { background: '#f0fdf4', border: '#86efac', color: '#166534' },
+            attention: { background: '#fffbeb', border: '#fcd34d', color: '#92400e' },
+            critical: { background: '#fef2f2', border: '#fca5a5', color: '#991b1b' }
+        }[status];
+        const messages = {
+            healthy: `Capacidade saudável: ${taskCapacity.open_count} cards abertos de ${taskCapacity.soft_limit}.`,
+            attention: `Atenção: ${taskCapacity.open_count} cards abertos. Planeje a consolidação antes de ${taskCapacity.hard_limit}.`,
+            critical: `Capacidade crítica: ${taskCapacity.open_count} cards abertos. Recomenda-se encerrar o ciclo e iniciar um novo projeto.`
+        };
+        guardrail.style.display = 'block';
+        guardrail.style.background = palette.background;
+        guardrail.style.borderColor = palette.border;
+        guardrail.style.color = palette.color;
+        guardrail.textContent = messages[status];
     }
 
     function renderKanban(tasksToRender = null) {

@@ -12,6 +12,7 @@ from services.project_task_due_date_change_service import (
     ProjectTaskDueDateChangeService,
 )
 from services.project_task_service import ProjectTaskService
+from services.project_board_capacity_service import ProjectBoardCapacityService
 from utils.error_handling import log_and_build_public_error_response
 
 PUBLIC_ERROR_MESSAGE = "Erro interno do servidor. Tente novamente ou contate o suporte."
@@ -322,30 +323,34 @@ class ProjectTaskListResource(Resource):
         
         # Otimização: Busca todas as dependências do projeto de uma vez para evitar N+1 queries
         # Filtra por company_id para respeitar multi-tenancy no mapeamento de dependências
+        task_ids = [int(task_data['id']) for task_data in dumped_tasks]
         all_deps = []
-        if company_id:
-            all_deps = ProjectTaskDependency.query.filter_by(
-                project_id=project_id, 
-                company_id=company_id
-            ).all()
+        if company_id and task_ids:
+            all_deps = (
+                ProjectTaskDependency.query
+                .options(joinedload(ProjectTaskDependency.predecessor))
+                .filter(
+                    ProjectTaskDependency.project_id == project.id,
+                    ProjectTaskDependency.company_id == company_id,
+                    ProjectTaskDependency.successor_task_id.in_(task_ids),
+                )
+                .all()
+            )
         
         # Mapa de bloqueio por sucessora
         # Uma tarefa está bloqueada se tiver alguma predecessora com stage != 'completed'
         blocked_map = {} # task_id -> list of blocking predecessors
         
-        # Mapeamento rápido de ID para tarefa dumpada (para pegar o what/stage)
-        tasks_by_id = {t['id']: t for t in dumped_tasks}
-        
         for dep in all_deps:
-            pred = tasks_by_id.get(dep.predecessor_task_id)
-            if pred and pred.get('stage') != 'completed':
+            pred = dep.predecessor
+            if pred and pred.stage != 'completed':
                 if dep.successor_task_id not in blocked_map:
                     blocked_map[dep.successor_task_id] = []
                 blocked_map[dep.successor_task_id].append({
                     "id": dep.id,
                     "predecessor_task_id": dep.predecessor_task_id,
-                    "predecessor_what": pred.get('what'),
-                    "predecessor_stage": pred.get('stage')
+                    "predecessor_what": pred.what,
+                    "predecessor_stage": pred.stage,
                 })
 
         for task_data in dumped_tasks:
@@ -378,6 +383,7 @@ class ProjectTaskListResource(Resource):
             'has_more': page * per_page < total,
             'stage_counts': stage_counts,
             'total_all': sum(stage_counts.values()),
+            'capacity': ProjectBoardCapacityService.build(stage_counts),
         }, 200
 
     @permission_required('projects', 'view')
