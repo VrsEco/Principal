@@ -9,9 +9,15 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from collections import defaultdict
 from datetime import date
+from pathlib import Path
 from typing import Iterable
+
+APP_ROOT = Path(__file__).resolve().parents[1]
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
 
 from app import create_app
 from models import db
