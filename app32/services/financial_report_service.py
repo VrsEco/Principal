@@ -7301,7 +7301,7 @@ class FinancialReportService:
                 center_style=table_center_style,
             )
         )
-        elements.append(Spacer(1, 10))
+        elements.append(PageBreak())
         elements.append(Paragraph("Contas a receber selecionadas", section_title_style))
         elements.append(
             FinancialReportService._build_cash_flow_pdf_titles_table(
