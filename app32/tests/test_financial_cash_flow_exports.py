@@ -153,6 +153,8 @@ def test_cash_flow_export_pdf_contains_executive_sections():
     assert content.startswith(b"%PDF")
 
     reader = PdfReader(io.BytesIO(content))
+    first_page = reader.pages[0]
+    assert float(first_page.mediabox.width) < float(first_page.mediabox.height)
     text = "\n".join((page.extract_text() or "") for page in reader.pages)
 
     assert "Fluxo de Caixa" in text

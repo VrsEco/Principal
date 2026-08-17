@@ -6534,7 +6534,11 @@ class FinancialReportService:
             return FinancialReportService._export_bank_statement_dossier_pdf(report_payload)
 
         buffer = io.BytesIO()
-        pagesize = landscape(A4) if report_payload.get("orientation", "landscape") == "landscape" else A4
+        pagesize = (
+            A4
+            if report_payload.get("report_type") == "cash_flow"
+            else (landscape(A4) if report_payload.get("orientation", "landscape") == "landscape" else A4)
+        )
         doc = SimpleDocTemplate(buffer, pagesize=pagesize, leftMargin=24, rightMargin=24, topMargin=26, bottomMargin=36)
         styles = getSampleStyleSheet()
         available_width = pagesize[0] - doc.leftMargin - doc.rightMargin
