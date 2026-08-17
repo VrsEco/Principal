@@ -616,7 +616,16 @@ def test_cash_flow_build_includes_schedule_titles_when_entries_do_not_exist(monk
     assert result["selected_receivables"][0]["counterparty"] == "Cliente Teste"
     assert result["selected_payables"][0]["counterparty"] == "Fornecedor Teste"
     assert result["rows"][1]["entrada"] == "R$ 1.250,00"
-    assert result["rows"][1]["saida"] == "R$ 1.050,00"
+    assert result["rows"][1]["saida"] == "R$ -1.050,00"
+    assert result["selected_receivables"][0]["title_amount_value"] == 1250.0
+    assert result["selected_receivables"][0]["open_amount_value"] == 1250.0
+    assert result["selected_payables"][0]["title_amount"] == "R$ -1.050,00"
+    assert result["selected_payables"][0]["title_amount_value"] == -1050.0
+    assert result["selected_payables"][0]["open_amount"] == "R$ -1.050,00"
+    assert result["selected_payables"][0]["open_amount_value"] == -1050.0
+    assert result["selected_payables_totals"]["title_amount_value"] == -1050.0
+    assert result["selected_payables_totals"]["open_amount_value"] == -1050.0
+    assert result["totals"]["flow_out_total"] == -1050.0
     assert result["cash_flow_header_cards"][0]["title"] == "Período e projeção"
     assert result["cash_flow_header_cards"][0]["lines"][1]["value"] == "Com correção financeira"
     assert result["cash_flow_header_cards"][2]["lines"][0]["value"] == "Não"

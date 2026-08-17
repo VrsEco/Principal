@@ -3828,16 +3828,18 @@ class FinancialReportService:
                 )
                 entry_projection_ref = FinancialReportService._cash_flow_projection_ref("entry", entry.id)
                 is_excluded = entry_projection_ref in excluded_projection_ref_set
+                signed_title_amount = title_amount if entry.movement_nature == "credit" else -abs(title_amount)
+                signed_open_amount = outstanding if entry.movement_nature == "credit" else -abs(outstanding)
                 title_row = {
                     "id": entry.id,
                     "projection_ref": entry_projection_ref,
                     "entry_code": serialized["entry_code"],
                     "type_code": FinancialReportService._cash_flow_entry_type_code(entry),
                     "type_label": "Recebimento" if entry.movement_nature == "credit" else "Pagamento",
-                    "title_amount": FinancialReportService._format_currency(title_amount),
-                    "title_amount_value": FinancialReportService._serialize_money(title_amount),
-                    "open_amount": FinancialReportService._format_currency(outstanding),
-                    "open_amount_value": FinancialReportService._serialize_money(outstanding),
+                    "title_amount": FinancialReportService._format_currency(signed_title_amount),
+                    "title_amount_value": FinancialReportService._serialize_money(signed_title_amount),
+                    "open_amount": FinancialReportService._format_currency(signed_open_amount),
+                    "open_amount_value": FinancialReportService._serialize_money(signed_open_amount),
                     "projected_amount_mode": filters.projected_values_mode,
                     "counterparty": serialized["counterparty"],
                     "due_date": FinancialReportService._format_date_br(entry.due_date),
@@ -3915,16 +3917,18 @@ class FinancialReportService:
                 )
                 schedule_projection_ref = FinancialReportService._cash_flow_projection_ref("schedule", schedule.id)
                 is_excluded = schedule_projection_ref in excluded_projection_ref_set
+                signed_title_amount = title_amount if schedule.movement_nature == "credit" else -abs(title_amount)
+                signed_open_amount = open_amount if schedule.movement_nature == "credit" else -abs(open_amount)
                 title_row = {
                     "id": schedule.id,
                     "projection_ref": schedule_projection_ref,
                     "entry_code": getattr(schedule, "schedule_code", None) or str(schedule.id),
                     "type_code": FinancialReportService._cash_flow_entry_type_code(schedule),
                     "type_label": "Recebimento" if schedule.movement_nature == "credit" else "Pagamento",
-                    "title_amount": FinancialReportService._format_currency(title_amount),
-                    "title_amount_value": FinancialReportService._serialize_money(title_amount),
-                    "open_amount": FinancialReportService._format_currency(open_amount),
-                    "open_amount_value": FinancialReportService._serialize_money(open_amount),
+                    "title_amount": FinancialReportService._format_currency(signed_title_amount),
+                    "title_amount_value": FinancialReportService._serialize_money(signed_title_amount),
+                    "open_amount": FinancialReportService._format_currency(signed_open_amount),
+                    "open_amount_value": FinancialReportService._serialize_money(signed_open_amount),
                     "projected_amount_mode": filters.projected_values_mode,
                     "counterparty": counterparty_label,
                     "due_date": FinancialReportService._format_date_br(due_date),
@@ -4005,7 +4009,7 @@ class FinancialReportService:
                     "data_final": FinancialReportService._format_date_br(bucket["end"]),
                     "saldo_inicial": FinancialReportService._format_currency(opening),
                     "entrada": FinancialReportService._format_currency(inflow_amount),
-                    "saida": FinancialReportService._format_currency(outflow_amount),
+                    "saida": FinancialReportService._format_currency(-abs(outflow_amount)),
                     "saldo_final": FinancialReportService._format_currency(closing),
                     "limite": FinancialReportService._format_currency(overdraft_limit),
                     "disponivel_total_final": FinancialReportService._format_currency(available_total),
@@ -4150,7 +4154,7 @@ class FinancialReportService:
                 ),
                 FinancialReportService._report_card(
                     "Saídas no fluxo",
-                    FinancialReportService._format_currency(flow_out_total),
+                    FinancialReportService._format_currency(-abs(flow_out_total)),
                     "negative" if flow_out_total > 0 else "neutral",
                 ),
                 FinancialReportService._report_card(
@@ -4207,7 +4211,7 @@ class FinancialReportService:
             totals={
                 "opening_balance": FinancialReportService._serialize_money(initial_balance),
                 "flow_in_total": FinancialReportService._serialize_money(flow_in_total),
-                "flow_out_total": FinancialReportService._serialize_money(flow_out_total),
+                "flow_out_total": FinancialReportService._serialize_money(-abs(flow_out_total)),
                 "final_balance": FinancialReportService._serialize_money(final_balance),
                 "overdraft_limit": FinancialReportService._serialize_money(overdraft_limit),
                 "final_with_limit": FinancialReportService._serialize_money(final_with_limit),
@@ -4238,10 +4242,10 @@ class FinancialReportService:
                 },
                 "selected_payables_totals": {
                     "count": len(selected_payables),
-                    "title_amount": FinancialReportService._format_currency(payable_title_total),
-                    "title_amount_value": FinancialReportService._serialize_money(payable_title_total),
-                    "open_amount": FinancialReportService._format_currency(payable_open_total),
-                    "open_amount_value": FinancialReportService._serialize_money(payable_open_total),
+                    "title_amount": FinancialReportService._format_currency(-abs(payable_title_total)),
+                    "title_amount_value": FinancialReportService._serialize_money(-abs(payable_title_total)),
+                    "open_amount": FinancialReportService._format_currency(-abs(payable_open_total)),
+                    "open_amount_value": FinancialReportService._serialize_money(-abs(payable_open_total)),
                 },
                 "excluded_titles": excluded_titles,
                 "cash_flow_header_cards": cash_flow_header_cards,
