@@ -18,6 +18,8 @@ def _cash_flow_report_payload():
         "subtitle": "Fluxo diário com saldo inicial, realizado, projeções abertas e saldo acumulado.",
         "company_name": "Versus Gestao Corporativa",
         "generated_at": "23/04/2026 20:00",
+        "period_start": "2026-05-01",
+        "period_end": "2026-05-31",
         "filters": [
             {"label": "Janela analisada", "value": "01/05/2026 até 31/05/2026"},
             {"label": "Contas correntes", "value": "Inter Versus, Efi Banco - Conta 01"},
@@ -155,9 +157,12 @@ def test_cash_flow_export_pdf_contains_executive_sections():
 
     assert "Fluxo de Caixa" in text
     assert "Versus Gestao Corporativa" in text
+    assert "Resumo executivo" in text
     assert "Contas correntes" in text
     assert "Fluxo do período" in text
     assert "Contas a receber selecionadas" in text
     assert "Contas a pagar selecionadas" in text
     assert "Cliente Teste 01" in text
     assert "Fornecedor Teste 02" in text
+    assert "Documento gerencial confidencial" in text
+    assert "Página 1" in text

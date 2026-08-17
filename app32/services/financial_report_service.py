@@ -7258,20 +7258,25 @@ class FinancialReportService:
         )
 
         company_name = str(report_payload.get("company_name") or "Versus Gestão Corporativa")
-        hero_left = [
-            Paragraph(report_payload.get("title", "Fluxo de Caixa"), title_style),
-            Paragraph(company_name, subtitle_style),
-            Paragraph(str(report_payload.get("subtitle") or ""), subtitle_style),
-        ]
-        top_panel = FinancialReportService._build_cash_flow_pdf_header_accounts_panel(
-            hero_left=hero_left,
+        hero = FinancialReportService._build_cash_flow_pdf_hero(
             report_payload=report_payload,
+            company_name=company_name,
             available_width=available_width,
-            header_style=table_header_style,
-            cell_style=table_cell_style,
+            title_style=title_style,
+            subtitle_style=subtitle_style,
         )
 
-        elements: List[Any] = [top_panel, Spacer(1, 10)]
+        elements: List[Any] = [hero, Spacer(1, 10)]
+        elements.append(Paragraph("Resumo executivo", section_title_style))
+        elements.append(
+            FinancialReportService._build_cash_flow_pdf_summary_cards(
+                report_payload=report_payload,
+                available_width=available_width,
+                label_style=stat_label_style,
+                value_style=stat_value_style,
+            )
+        )
+        elements.append(Spacer(1, 10))
         elements.append(Paragraph("Contas correntes", section_title_style))
         elements.append(
             FinancialReportService._build_cash_flow_pdf_accounts_table(
@@ -7495,19 +7500,65 @@ class FinancialReportService:
         return table
 
     @staticmethod
-    def _build_cash_flow_pdf_header_accounts_panel(*, hero_left: List[Any], report_payload: Dict[str, Any], available_width: float, header_style, cell_style) -> Table:
-        accounts_table = FinancialReportService._build_cash_flow_pdf_accounts_table(
-            report_payload=report_payload,
-            available_width=available_width * 0.72,
-            header_style=header_style,
-            cell_style=cell_style,
+    def _build_cash_flow_pdf_hero(
+        *,
+        report_payload: Dict[str, Any],
+        company_name: str,
+        available_width: float,
+        title_style,
+        subtitle_style,
+    ) -> Table:
+        period_start = str(report_payload.get("period_start") or "").strip()
+        period_end = str(report_payload.get("period_end") or "").strip()
+        try:
+            period_start = FinancialReportService._format_date_br(date.fromisoformat(period_start))
+            period_end = FinancialReportService._format_date_br(date.fromisoformat(period_end))
+        except (TypeError, ValueError):
+            period_start = period_start or "-"
+            period_end = period_end or "-"
+
+        meta_label_style = ParagraphStyle(
+            "CashFlowPdfHeroMetaLabel",
+            parent=subtitle_style,
+            fontSize=7,
+            leading=9,
+            fontName="Helvetica-Bold",
+            textColor=colors.HexColor("#93C5FD"),
+            alignment=TA_RIGHT,
         )
-        hero_card = Table([[hero_left]], colWidths=[available_width * 0.28], hAlign="LEFT")
-        hero_card.setStyle(
+        meta_value_style = ParagraphStyle(
+            "CashFlowPdfHeroMetaValue",
+            parent=subtitle_style,
+            fontSize=9,
+            leading=11,
+            fontName="Helvetica-Bold",
+            textColor=colors.white,
+            alignment=TA_RIGHT,
+        )
+        hero_left = [
+            Paragraph(str(report_payload.get("title") or "Fluxo de Caixa"), title_style),
+            Spacer(1, 3),
+            Paragraph(company_name, subtitle_style),
+            Paragraph(str(report_payload.get("subtitle") or ""), subtitle_style),
+        ]
+        hero_right = [
+            Paragraph("PERÍODO ANALISADO", meta_label_style),
+            Paragraph(f"{period_start} a {period_end}", meta_value_style),
+            Spacer(1, 7),
+            Paragraph("EMISSÃO", meta_label_style),
+            Paragraph(FinancialReportService._pdf_generated_at_label(report_payload), meta_value_style),
+        ]
+        hero = Table(
+            [[hero_left, hero_right]],
+            colWidths=[available_width * 0.68, available_width * 0.32],
+            hAlign="LEFT",
+        )
+        hero.setStyle(
             TableStyle(
                 [
                     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0F172A")),
                     ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#0F172A")),
+                    ("LINEBEFORE", (1, 0), (1, 0), 0.6, colors.HexColor("#334155")),
                     ("LEFTPADDING", (0, 0), (-1, -1), 14),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 14),
                     ("TOPPADDING", (0, 0), (-1, -1), 12),
@@ -7516,23 +7567,56 @@ class FinancialReportService:
                 ]
             )
         )
-        panel = Table(
-            [[hero_card, accounts_table]],
-            colWidths=[available_width * 0.28, available_width * 0.72],
+        return hero
+
+    @staticmethod
+    def _build_cash_flow_pdf_summary_cards(*, report_payload: Dict[str, Any], available_width: float, label_style, value_style) -> Table:
+        cards = list(report_payload.get("summary_cards") or [])[:6]
+        if not cards:
+            cards = [{"label": "Resumo", "value": "Sem indicadores", "tone": "neutral"}]
+
+        tone_colors = {
+            "positive": colors.HexColor("#2563EB"),
+            "negative": colors.HexColor("#DC2626"),
+            "primary": colors.HexColor("#1D4ED8"),
+            "neutral": colors.HexColor("#334155"),
+        }
+        cells: List[Any] = []
+        for index, card in enumerate(cards):
+            tone = str(card.get("tone") or "neutral").lower()
+            card_value_style = ParagraphStyle(
+                f"CashFlowPdfStatValue{index}",
+                parent=value_style,
+                textColor=tone_colors.get(tone, tone_colors["neutral"]),
+            )
+            cells.append(
+                [
+                    Paragraph(str(card.get("label") or "Indicador"), label_style),
+                    Spacer(1, 3),
+                    Paragraph(str(card.get("value") or "0,00"), card_value_style),
+                ]
+            )
+
+        table = Table(
+            [cells],
+            colWidths=[available_width / len(cells)] * len(cells),
             hAlign="LEFT",
         )
-        panel.setStyle(
+        table.setStyle(
             TableStyle(
                 [
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                    ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#E2E8F0")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("TOPPADDING", (0, 0), (-1, -1), 7),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
                 ]
             )
         )
-        return panel
+        return table
 
     @staticmethod
     def _build_cash_flow_pdf_accounts_table(*, report_payload: Dict[str, Any], available_width: float, header_style, cell_style) -> Table:
@@ -7721,12 +7805,14 @@ class FinancialReportService:
         canvas.setLineWidth(0.6)
         canvas.line(doc.leftMargin, line_y, width - doc.rightMargin, line_y)
         canvas.setFillColor(colors.HexColor("#0f172a"))
-        canvas.setFont("Helvetica", 8)
-        canvas.drawString(doc.leftMargin, footer_y, "Versus Gestão Corporativa - Todos os direitos reservados.")
+        canvas.setFont("Helvetica", 7.5)
+        canvas.drawString(doc.leftMargin, footer_y, "Versus Gestão Corporativa - Documento gerencial confidencial.")
+        canvas.setFillColor(colors.HexColor("#475569"))
+        canvas.drawCentredString(width / 2, footer_y, f"Página {doc.page}")
         canvas.drawRightString(
             width - doc.rightMargin,
             footer_y,
-            f"Emitido em: {FinancialReportService._pdf_generated_at_label(report_payload)}",
+            f"Emitido em {FinancialReportService._pdf_generated_at_label(report_payload)}",
         )
         canvas.restoreState()
 

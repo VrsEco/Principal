@@ -214,7 +214,8 @@ def test_cash_flow_report_partial_contains_expected_sections():
     assert "Contas a Pagar Selecionadas" in template
     assert "Voltar</a>" in template
     assert ">Filtros</a>" not in template
-    assert "Exportar PDF" not in template
+    assert "Exportar PDF" in template
+    assert "/export-pdf" in template
     assert "cash_flow_header_cards" in template
     assert "Relatório de Fluxo de Caixa" in template
     assert "cashflow-header-card" in template
