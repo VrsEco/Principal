@@ -2,6 +2,7 @@ import re
 import os
 import uuid
 import json
+from io import BytesIO
 from datetime import datetime, date
 from decimal import Decimal
 from flask import request, current_app, session, Response, send_file
@@ -80,6 +81,7 @@ from services.process_bpmn_pop_binding_service import (
 )
 from services.process_pop_copilot_service import suggest_process_pop_step_description
 from services.process_execution_runtime_service import (
+    advance_instance_after_execution,
     apply_runtime_defaults,
     build_instance_timeline,
     build_runtime_overlay,
@@ -141,6 +143,7 @@ from services.process_artifact_service import (
     evaluate_required_artifacts,
 )
 from services.process_artifact_file_service import resolve_artifact_execution_file, save_artifact_execution_file
+from services.process_artifact_pdf_service import generate_process_artifact_pdf_bytes
 from services.macro_process_sipoc_service import (
     archive_sipoc_snapshot as archive_macro_process_sipoc_snapshot,
     create_regulatory_item as create_macro_process_regulatory_item,
@@ -303,6 +306,29 @@ def _instance_visible_to_employee(instance, employee_id):
                 except (TypeError, ValueError):
                     continue
     return False
+
+
+def _user_can_execute_instance_activity(instance, activity_execution_id=None):
+    """Autoriza gestores ou executores vinculados, sempre dentro do tenant."""
+    if not instance:
+        return False
+    if has_permission(instance.company_id, 'processes', 'edit'):
+        return True
+    employee = Employee.query.filter_by(
+        user_id=getattr(current_user, 'id', None),
+        company_id=instance.company_id,
+        status='active',
+    ).first()
+    if not employee:
+        return False
+    if activity_execution_id is None:
+        return _instance_visible_to_employee(instance, employee.id)
+    return employee_can_execute_activity(
+        instance.company_id,
+        employee.id,
+        instance,
+        int(activity_execution_id),
+    )
 
 def apply_instance_employee_filter(query, company_id):
     from flask_login import current_user
@@ -1265,13 +1291,14 @@ class ProcessInstanceExecutionListResource(Resource):
         )
         return process_instance_executions_schema.dump(executions), 200
 
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def post(self, instance_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
-        if not has_permission(instance.company_id, 'processes', 'edit'):
-            return {"error": "Permission denied: edit on processes"}, 403
+        if not _user_can_execute_instance_activity(instance):
+            return {"error": "Acesso negado à execução desta atividade."}, 403
         try:
             payload = request.get_json(silent=True) or {}
+            requested_next_element_id = payload.pop('next_bpmn_element_id', None)
             assignment_payload = extract_assignment_payload(payload)
             contract = resolve_activity_execution_contract(
                 company_id=instance.company_id,
@@ -1308,7 +1335,7 @@ class ProcessInstanceExecutionListResource(Resource):
                 execution.status = 'in_progress'
                 execution.completed_at = None
                 execution.started_at = execution.started_at or datetime.utcnow()
-            if execution.bpmn_element_id:
+            if execution.bpmn_element_id and execution.status != 'completed':
                 instance.current_bpmn_element_id = execution.bpmn_element_id
             if instance.status == 'pending':
                 instance.status = 'in_progress'
@@ -1335,6 +1362,12 @@ class ProcessInstanceExecutionListResource(Resource):
                 assignment_payload=assignment_payload,
                 assigned_by_user_id=getattr(current_user, 'id', None),
             )
+            if execution.status == 'completed':
+                advance_instance_after_execution(
+                    instance=instance,
+                    execution=execution,
+                    requested_next_element_id=requested_next_element_id,
+                )
             sync_execution_assignment_status(instance.company_id, execution)
             db.session.commit()
             try:
@@ -1364,7 +1397,7 @@ class ProcessInstanceExecutionListResource(Resource):
 
 
 class ProcessInstanceExecutionResource(Resource):
-    @permission_required('processes', 'edit')
+    @permission_required('processes', 'view')
     def put(self, instance_id, execution_id):
         instance = ProcessInstance.query.get_or_404(instance_id)
         execution = ProcessInstanceExecution.query.filter_by(
@@ -1372,10 +1405,11 @@ class ProcessInstanceExecutionResource(Resource):
             process_instance_id=instance.id,
             company_id=instance.company_id,
         ).first_or_404()
-        if not has_permission(instance.company_id, 'processes', 'edit'):
-            return {"error": "Permission denied: edit on processes"}, 403
+        if not _user_can_execute_instance_activity(instance, execution.id):
+            return {"error": "Acesso negado à execução desta atividade."}, 403
         try:
             payload = request.get_json(silent=True) or {}
+            requested_next_element_id = payload.pop('next_bpmn_element_id', None)
             assignment_payload = extract_assignment_payload(payload)
             run_now = bool(payload.pop('run_now', False))
             if payload.get('status') is not None:
@@ -1407,10 +1441,8 @@ class ProcessInstanceExecutionResource(Resource):
             if execution.status == 'completed' and execution.started_at and not execution.duration_seconds:
                 execution.duration_seconds = int((execution.completed_at - execution.started_at).total_seconds())
 
-            if execution.bpmn_element_id:
+            if execution.bpmn_element_id and execution.status != 'completed':
                 instance.current_bpmn_element_id = execution.bpmn_element_id
-            if execution.status == 'completed':
-                instance.status = 'in_progress'
             if should_auto_run_ai_execution(
                 execution_mode=execution.execution_mode,
                 status=execution.status,
@@ -1445,6 +1477,12 @@ class ProcessInstanceExecutionResource(Resource):
                 assignment_payload=assignment_payload,
                 assigned_by_user_id=getattr(current_user, 'id', None),
             )
+            if execution.status == 'completed':
+                advance_instance_after_execution(
+                    instance=instance,
+                    execution=execution,
+                    requested_next_element_id=requested_next_element_id,
+                )
             sync_execution_assignment_status(instance.company_id, execution)
             db.session.commit()
             try:
@@ -2279,6 +2317,52 @@ class ProcessArtifactExecutionResource(Resource):
             db.session.rollback()
             current_app.logger.exception(
                 "Erro ao atualizar execução de artefato artifact_execution_id=%s company_id=%s",
+                artifact_execution_id,
+                company_id,
+            )
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class ProcessArtifactExecutionPdfResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, artifact_execution_id):
+        company_id = get_request_company_id()
+        try:
+            artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
+            instance = ProcessInstance.query.filter_by(
+                id=artifact_execution.process_instance_id,
+                company_id=company_id,
+            ).first()
+            if not instance:
+                return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            if not has_company_full_access(company_id):
+                from models.employee import Employee
+                employee = Employee.query.filter_by(
+                    user_id=current_user.id,
+                    company_id=company_id,
+                    status='active',
+                ).first()
+                if not employee or not _instance_visible_to_employee(instance, employee.id):
+                    return {"error": "Acesso negado à instância."}, 403
+            if artifact_execution.artifact_type not in {'form', 'check'}:
+                return {"error": "A emissão em PDF está disponível para formulário e checklist."}, 400
+
+            pdf_bytes = generate_process_artifact_pdf_bytes(
+                artifact_execution,
+                instance=instance,
+            )
+            safe_key = re.sub(r'[^a-zA-Z0-9_-]+', '-', artifact_execution.artifact_key or str(artifact_execution.id)).strip('-')
+            return send_file(
+                BytesIO(pdf_bytes),
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'{safe_key or "registro"}-{artifact_execution.id}.pdf',
+            )
+        except ProcessArtifactValidationError as exc:
+            return {"error": str(exc)}, 404
+        except Exception:
+            current_app.logger.exception(
+                "Erro ao emitir PDF do artefato artifact_execution_id=%s company_id=%s",
                 artifact_execution_id,
                 company_id,
             )

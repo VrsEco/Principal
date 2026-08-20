@@ -159,3 +159,45 @@ def test_load_indicators_supports_process_source_link_and_measured_fields(monkey
         ),
     )
     assert record_query.order_by_args == (("desc", "measured_date"), ("desc", "created_at"))
+
+
+def test_load_operational_artifacts_includes_only_published_book_models(monkeypatch):
+    monkeypatch.setattr(
+        process_book_service,
+        "list_published_process_artifacts",
+        lambda company_id, process_id, artifact_types: [
+            {
+                "id": 30,
+                "artifact_type": "check",
+                "name": "Entrevista inicial",
+                "description": "Validar critérios mínimos.",
+                "version": 2,
+                "configuration_json": {
+                    "items": [{"id": "fit", "label": "Perfil aderente", "required": True}]
+                },
+                "activity_links": [
+                    {"bpmn_element_id": "task_7", "is_required": True, "is_active": True}
+                ],
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        process_book_service,
+        "_load_book_bpmn_diagram",
+        lambda **_: SimpleNamespace(bpmn_xml="<definitions />"),
+    )
+    monkeypatch.setattr(
+        process_book_service,
+        "parse_bpmn_graph",
+        lambda _: {"node_index": {"task_7": {"name": "Fazer entrevista"}}},
+    )
+
+    payload = process_book_service._load_operational_artifacts(process_id=545, company_id=10)
+
+    assert payload[0]["type_label"] == "Checklist"
+    assert payload[0]["activities"] == [
+        {"element_id": "task_7", "element_name": "Fazer entrevista", "is_required": True}
+    ]
+    assert payload[0]["fields"] == [
+        {"label": "Perfil aderente", "required": True, "type": "check"}
+    ]

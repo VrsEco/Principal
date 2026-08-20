@@ -727,6 +727,25 @@
   stroke-width: 3px !important;
 }
 
+.bpms-runtime-next-path {
+  display: grid;
+  gap: 0.35rem;
+  flex: 1 1 100%;
+  color: var(--text-secondary, #475569);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.bpms-runtime-next-path select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 10px;
+  background: var(--surface-primary, #fff);
+  color: var(--text-primary, #0f172a);
+  padding: 0.65rem 0.75rem;
+}
+
 @media (max-width: 1280px) {
   .bpms-runtime-grid,
   .bpms-runtime-bottom {

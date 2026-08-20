@@ -26,6 +26,7 @@
   let viewer = null;
   let appliedMarkers = [];
   let latestRuntime = null;
+  let autoOpenedArtifactKey = null;
 
   const currentMarkerMap = {
     in_progress: 'is-active',
@@ -243,6 +244,7 @@
     const operationalDocuments = artifacts.filter((artifact) => artifact.artifact_type === 'form' || artifact.artifact_type === 'check');
     const artifactCompletion = artifactsPayload.completion || {};
     const quickSteps = Array.isArray(materials.quick_steps) ? materials.quick_steps : [];
+    const nextCandidates = Array.isArray(payload.next_candidates) ? payload.next_candidates : [];
 
     if (!payload.element_id && !execution && !payload.routine) {
       runtimeCurrentActivity.innerHTML = `
@@ -312,6 +314,15 @@
         </div>
 
         <div class="bpms-activity-actions">
+          ${execution && nextCandidates.length > 1 ? `
+            <label class="bpms-runtime-next-path">
+              <span>Próximo caminho</span>
+              <select data-runtime-next-element required>
+                <option value="">Selecione o resultado desta decisão</option>
+                ${nextCandidates.map(candidate => `<option value="${escapeHtml(candidate.element_id)}">${escapeHtml(candidate.path_label ? `${candidate.path_label} · ${candidate.element_name}` : candidate.element_name)}</option>`).join('')}
+              </select>
+            </label>
+          ` : ''}
           ${hasOpenAction
             ? `<a class="btn btn-secondary" href="${escapeHtml(openActionHref)}" ${openActionTarget}>${escapeHtml(action.action_label || 'Abrir tela operacional')}</a>`
             : ''}
@@ -338,6 +349,20 @@
       });
     });
 
+    const autoArtifact = operationalDocuments
+      .filter(artifact => artifact.status !== 'completed' && artifact.status !== 'skipped')
+      .sort((left, right) => Number(Boolean(right.is_required)) - Number(Boolean(left.is_required)))[0];
+    const autoArtifactKey = autoArtifact
+      ? `${payload.element_id || 'activity'}:${autoArtifact.artifact_definition_id || autoArtifact.id || autoArtifact.artifact_key}`
+      : null;
+    if (autoArtifact && !focusedExecutionId && autoOpenedArtifactKey !== autoArtifactKey) {
+      autoOpenedArtifactKey = autoArtifactKey;
+      window.setTimeout(() => {
+        openArtifactExecution(autoArtifact, payload, execution, action)
+          .catch(error => window.alert(error.message || 'Erro ao abrir o documento obrigatório.'));
+      }, 0);
+    }
+
     const concludeButton = runtimeCurrentActivity.querySelector('[data-runtime-action="complete"]');
     if (concludeButton) {
       concludeButton.addEventListener('click', async () => {
@@ -355,7 +380,12 @@
               status: 'in_progress'
             });
           } else {
-            await handleCompleteCurrentActivity(payload, execution, action);
+            const nextElement = runtimeCurrentActivity.querySelector('[data-runtime-next-element]')?.value || null;
+            if (nextCandidates.length > 1 && !nextElement) {
+              window.alert('Selecione o próximo caminho antes de concluir a atividade.');
+              return;
+            }
+            await handleCompleteCurrentActivity(payload, execution, action, nextElement);
           }
           await refreshRuntime();
         } catch (error) {
@@ -468,7 +498,7 @@
     const config = artifact.configuration_json || {};
     const answers = artifact.output_json?.answers || {};
     const readOnly = artifact.status === 'completed';
-    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${section.description ? `<p class="bpms-document-section-help">${escapeHtml(section.description)}</p>` : ''}${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id], { readOnly })).join('')}</fieldset>`).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? '<button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>' : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir formulário</button>'}</div></form>`;
+    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${section.description ? `<p class="bpms-document-section-help">${escapeHtml(section.description)}</p>` : ''}${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id], { readOnly })).join('')}</fieldset>`).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? `<a class="btn btn-primary" href="/api/process-artifact-executions/${artifact.id}/pdf?company_id=${encodeURIComponent(companyId)}" target="_blank" rel="noopener">Emitir PDF</a><button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>` : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir formulário</button>'}</div></form>`;
     window.openRuntimeSupportModal(`${readOnly ? 'Resultado do formulário' : 'Preencher formulário'} · ${artifact.name || 'Formulário'}`, readOnly ? `Concluído em ${formatDateTime(artifact.completed_at)}.` : 'Preencha os campos e salve um rascunho quando necessário.', html);
     const form = document.getElementById('runtimeArtifactForm');
     if (readOnly) { form.querySelector('[data-document-close]')?.addEventListener('click', closeDocumentModal); return; }
@@ -493,7 +523,7 @@
     const evidence = artifact.evidence_json || {};
     const readOnly = artifact.status === 'completed';
     const disabled = readOnly ? 'disabled' : '';
-    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactCheck" class="bpms-runtime-check"><div class="bpms-runtime-check__columns"><span>Critério</span><span>Resultado</span><span>Comentário</span><span>Evidência</span></div>${(config.items || []).map(item => { const answer=answers[item.id]||{}; const evidenceValue=evidence[item.id]; const evidenceFile=evidenceValue&&typeof evidenceValue==='object'?evidenceValue:null; const evidenceControl=readOnly?(evidenceFile?.download_url?`<a class="bpms-document-file-link" href="${escapeHtml(evidenceFile.download_url)}">Baixar ${escapeHtml(evidenceFile.name||'evidência')}</a>`:`<span>${escapeHtml(evidenceValue||'Sem evidência')}</span>`):`<input type="file" data-check-evidence="${escapeHtml(item.id)}" data-document-file accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx"><small data-file-name>${evidenceFile?`Arquivo atual: ${escapeHtml(evidenceFile.name||'evidência')}`:(item.evidence_required?'Evidência obrigatória':'Evidência opcional')}</small>`; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><label><span class="bpms-mobile-label">Resultado</span><select data-check-status="${escapeHtml(item.id)}" ${disabled}><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select></label><label><span class="bpms-mobile-label">Comentário</span><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário" ${disabled}></label><label><span class="bpms-mobile-label">Evidência</span>${evidenceControl}</label></article>`; }).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? '<button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>' : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir checklist</button>'}</div></form>`;
+    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactCheck" class="bpms-runtime-check"><div class="bpms-runtime-check__columns"><span>Critério</span><span>Resultado</span><span>Comentário</span><span>Evidência</span></div>${(config.items || []).map(item => { const answer=answers[item.id]||{}; const evidenceValue=evidence[item.id]; const evidenceFile=evidenceValue&&typeof evidenceValue==='object'?evidenceValue:null; const evidenceControl=readOnly?(evidenceFile?.download_url?`<a class="bpms-document-file-link" href="${escapeHtml(evidenceFile.download_url)}">Baixar ${escapeHtml(evidenceFile.name||'evidência')}</a>`:`<span>${escapeHtml(evidenceValue||'Sem evidência')}</span>`):`<input type="file" data-check-evidence="${escapeHtml(item.id)}" data-document-file accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx"><small data-file-name>${evidenceFile?`Arquivo atual: ${escapeHtml(evidenceFile.name||'evidência')}`:(item.evidence_required?'Evidência obrigatória':'Evidência opcional')}</small>`; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><label><span class="bpms-mobile-label">Resultado</span><select data-check-status="${escapeHtml(item.id)}" ${disabled}><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select></label><label><span class="bpms-mobile-label">Comentário</span><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário" ${disabled}></label><label><span class="bpms-mobile-label">Evidência</span>${evidenceControl}</label></article>`; }).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? `<a class="btn btn-primary" href="/api/process-artifact-executions/${artifact.id}/pdf?company_id=${encodeURIComponent(companyId)}" target="_blank" rel="noopener">Emitir PDF</a><button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>` : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir checklist</button>'}</div></form>`;
     window.openRuntimeSupportModal(`${readOnly ? 'Resultado do checklist' : 'Executar checklist'} · ${artifact.name || 'Checklist'}`, readOnly ? `Concluído em ${formatDateTime(artifact.completed_at)}.` : 'Verifique cada critério antes de concluir.', html);
     const form=document.getElementById('runtimeArtifactCheck');
     if (readOnly) { form.querySelector('[data-document-close]')?.addEventListener('click', closeDocumentModal); return; }
@@ -664,7 +694,7 @@
     }
   }
 
-  async function handleCompleteCurrentActivity(currentPayload, execution, actionMeta) {
+  async function handleCompleteCurrentActivity(currentPayload, execution, actionMeta, nextElementId = null) {
     const payload = currentPayload || {};
     const now = new Date().toISOString();
     const executionPayload = {
@@ -690,7 +720,8 @@
     await updateExecution(execution.id, {
       status: 'completed',
       started_at: execution.started_at || now,
-      completed_at: now
+      completed_at: now,
+      next_bpmn_element_id: nextElementId
     });
   }
 

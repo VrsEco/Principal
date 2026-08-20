@@ -45,3 +45,6 @@ def test_runtime_pop_exposes_linked_forms_and_checklists():
     assert 'Formulários e checklists vinculados' in content
     assert 'data-pop-artifact-id' in content
     assert 'openArtifactExecution' in content
+    assert 'autoOpenedArtifactKey' in content
+    assert 'data-runtime-next-element' in content
+    assert '/pdf?company_id=' in content

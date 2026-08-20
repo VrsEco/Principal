@@ -24,6 +24,8 @@ from models import (
     RoutineCollaborator,
 )
 from services.process_bpmn_service import colorize_bpmn_artifact_svg
+from services.process_artifact_service import list_published_process_artifacts
+from services.process_bpmn_graph_service import parse_bpmn_graph
 from services.process_sipoc_service import build_book_sipoc_context
 from utils.indicator_filters import PROCESS_SOURCE_MODULES, build_indicator_process_filter
 
@@ -82,6 +84,7 @@ class ProcessBookContext:
     process_map: dict[str, Any]
     sipoc: dict[str, Any] | None
     pop_activities: list[dict[str, Any]]
+    operational_artifacts: list[dict[str, Any]]
     routines: list[dict[str, Any]]
     indicators: list[dict[str, Any]]
 
@@ -94,6 +97,7 @@ class ProcessBookContext:
             "process_map": self.process_map,
             "sipoc": self.sipoc,
             "pop_activities": self.pop_activities,
+            "operational_artifacts": self.operational_artifacts,
             "routines": self.routines,
             "indicators": self.indicators,
         }
@@ -116,6 +120,7 @@ def build_process_book_context(process_id: int, company_id: int, request_root: s
     generated_at = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     pop_activities = _load_pop_activities(process_id=process.id, company_id=company_id, root_url=root_url)
+    operational_artifacts = _load_operational_artifacts(process_id=process.id, company_id=company_id)
     routines = _load_routines(process_id=process.id, company_id=company_id)
     indicators = _load_indicators(process_id=process.id, company_id=company_id)
     sipoc = build_book_sipoc_context(process_id=process.id, company_id=company_id)
@@ -136,10 +141,65 @@ def build_process_book_context(process_id: int, company_id: int, request_root: s
         ),
         sipoc=sipoc,
         pop_activities=pop_activities,
+        operational_artifacts=operational_artifacts,
         routines=routines,
         indicators=indicators,
     )
     return context.to_dict()
+
+
+def _load_operational_artifacts(*, process_id: int, company_id: int) -> list[dict[str, Any]]:
+    """Inclui no BOOK os formulários/checklists publicados do processo."""
+    artifacts = list_published_process_artifacts(
+        company_id,
+        process_id,
+        artifact_types=("form", "check"),
+    )
+    diagram = _load_book_bpmn_diagram(process_id=process_id, company_id=company_id)
+    node_index = (parse_bpmn_graph(diagram.bpmn_xml).get("node_index") or {}) if diagram else {}
+    payload: list[dict[str, Any]] = []
+    for artifact in artifacts:
+        config = artifact.get("configuration_json") or {}
+        links = [link for link in artifact.get("activity_links") or [] if link.get("is_active", True)]
+        activities = []
+        for link in links:
+            element_id = str(link.get("bpmn_element_id") or "").strip()
+            node = node_index.get(element_id) or {}
+            activities.append({
+                "element_id": element_id,
+                "element_name": node.get("name") or element_id,
+                "is_required": bool(link.get("is_required")),
+            })
+        if artifact.get("artifact_type") == "form":
+            fields = [
+                {
+                    "label": field.get("label") or field.get("id") or "Campo",
+                    "required": bool(field.get("required")),
+                    "type": field.get("type") or "text",
+                }
+                for section in config.get("sections") or []
+                for field in section.get("fields") or []
+            ]
+        else:
+            fields = [
+                {
+                    "label": item.get("label") or item.get("id") or "Critério",
+                    "required": bool(item.get("required")),
+                    "type": "check",
+                }
+                for item in config.get("items") or []
+            ]
+        payload.append({
+            "id": artifact.get("id"),
+            "artifact_type": artifact.get("artifact_type"),
+            "type_label": "Formulário" if artifact.get("artifact_type") == "form" else "Checklist",
+            "name": artifact.get("name"),
+            "description": artifact.get("description"),
+            "version": artifact.get("version"),
+            "activities": activities,
+            "fields": fields,
+        })
+    return payload
 
 
 def _build_process_map_context(*, current_process_id: int, company_id: int) -> dict[str, Any]:

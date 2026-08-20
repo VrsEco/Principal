@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from xml.etree import ElementTree as ET
 
 from models import (
     Indicator,
@@ -208,6 +207,9 @@ def build_runtime_payload(
         diagram=diagram,
         execution_id=execution_id,
     )
+    overlay = build_runtime_overlay(instance)
+    if current_activity.get("element_id"):
+        overlay["current_bpmn_element_id"] = current_activity.get("element_id")
 
     return {
         "instance": instance.to_dict(),
@@ -218,7 +220,7 @@ def build_runtime_payload(
             "bpmn_xml": diagram.bpmn_xml if diagram else None,
             "svg_snapshot": diagram.svg_snapshot if diagram else None,
         },
-        "overlay": build_runtime_overlay(instance),
+        "overlay": overlay,
         "current_activity": current_activity,
         "process_indicators": _build_process_indicators_payload(instance),
         "timeline": build_instance_timeline(instance),
@@ -375,13 +377,40 @@ def build_current_activity_payload(
         current_execution = next((item for item in executions if int(item.id) == int(execution_id)), None)
         if current_execution:
             current_element_id = current_execution.bpmn_element_id
-    if current_element_id:
-        current_execution = current_execution or next(
-            (item for item in executions if item.bpmn_element_id == current_element_id),
-            None,
-        )
-    if not current_execution:
-        current_execution = next((item for item in executions if item.status == "in_progress"), None)
+    else:
+        active_statuses = {"pending", "ready", "in_progress", "paused", "waiting_external"}
+        current_execution = next((item for item in executions if item.status in active_statuses), None)
+        if current_execution:
+            current_element_id = current_execution.bpmn_element_id
+
+        graph = parse_bpmn_graph(diagram.bpmn_xml if diagram else None)
+        graph_nodes = graph.get("node_index") or {}
+        current_node = graph_nodes.get(str(current_element_id or ""))
+        if not current_execution and current_node and current_node.get("is_executable_activity"):
+            pointer_execution = next(
+                (item for item in executions if item.bpmn_element_id == current_element_id),
+                None,
+            )
+            if pointer_execution and pointer_execution.status == "completed":
+                navigation = resolve_next_executable_candidates(
+                    diagram.bpmn_xml if diagram else None,
+                    current_element_id,
+                )
+                candidates = navigation.get("candidates") or []
+                if len(candidates) == 1:
+                    current_element_id = candidates[0].get("element_id")
+                else:
+                    current_execution = pointer_execution
+            else:
+                current_execution = pointer_execution
+        elif not current_execution:
+            initial = resolve_initial_executable_activity(diagram.bpmn_xml if diagram else None)
+            if initial:
+                current_element_id = initial.get("element_id")
+
+    current_node = (parse_bpmn_graph(diagram.bpmn_xml if diagram else None).get("node_index") or {}).get(
+        str(current_element_id or "")
+    ) or {}
 
     routine = None
     if current_element_id:
@@ -427,15 +456,17 @@ def build_current_activity_payload(
         "element_name": (
             getattr(current_execution, "bpmn_element_name", None)
             or getattr(routine, "name", None)
+            or current_node.get("name")
             or action.get("element_name")
             or current_element_id
         ),
         "element_type": (
             getattr(current_execution, "bpmn_element_type", None)
             or getattr(routine, "bpmn_element_type", None)
+            or current_node.get("type")
             or action.get("element_type")
         ),
-        "status": getattr(current_execution, "status", None) or getattr(instance, "status", None) or "pending",
+        "status": getattr(current_execution, "status", None) or ("pending" if current_element_id else getattr(instance, "status", None)) or "pending",
         "lane_name": activity_graph.get("lane_name"),
         "lane_id": activity_graph.get("lane_id"),
         "execution": current_execution.to_dict() if current_execution else None,
@@ -580,6 +611,134 @@ def _resolve_internal_action_url(
     return None
 
 
+def resolve_initial_executable_activity(bpmn_xml: str | None) -> dict[str, Any] | None:
+    """Resolve a primeira atividade executável do fluxo publicado.
+
+    O fallback pelo grafo é indispensável para instâncias antigas cujo vínculo
+    ``ProcessRoutine.bpmn_element_id`` ficou defasado após uma republicação.
+    """
+    graph = parse_bpmn_graph(bpmn_xml)
+    starts = [node for node in graph.get("events", []) if node.get("type") == "startEvent"]
+    if not starts:
+        activities = graph.get("activities", [])
+        return dict(activities[0]) if activities else None
+    candidates = resolve_next_executable_candidates(bpmn_xml, starts[0].get("id"))
+    items = candidates.get("candidates") or []
+    return dict(items[0]) if items else None
+
+
+def resolve_next_executable_candidates(
+    bpmn_xml: str | None,
+    source_element_id: str | None,
+) -> dict[str, Any]:
+    """Percorre eventos/gateways até as próximas atividades executáveis."""
+    graph = parse_bpmn_graph(bpmn_xml)
+    node_index = graph.get("node_index") or {}
+    source = node_index.get(str(source_element_id or ""))
+    if not source:
+        return {"candidates": [], "reached_end": False, "source_found": False}
+
+    queue: list[tuple[str, str | None]] = []
+    for edge in source.get("outgoing_edges") or []:
+        queue.append((str(edge.get("target_ref") or ""), edge.get("name")))
+
+    candidates: list[dict[str, Any]] = []
+    reached_end = False
+    visited: set[tuple[str, str | None]] = set()
+    while queue:
+        target_id, path_label = queue.pop(0)
+        marker = (target_id, path_label)
+        if not target_id or marker in visited:
+            continue
+        visited.add(marker)
+        node = node_index.get(target_id) or {}
+        if not node:
+            continue
+        if node.get("is_executable_activity"):
+            candidates.append({
+                "element_id": node.get("id"),
+                "element_name": node.get("name") or node.get("id"),
+                "element_type": node.get("type"),
+                "lane_id": node.get("lane_id"),
+                "lane_name": node.get("lane_name"),
+                "path_label": path_label,
+            })
+            continue
+        if node.get("type") == "endEvent":
+            reached_end = True
+            continue
+        for edge in node.get("outgoing_edges") or []:
+            queue.append((
+                str(edge.get("target_ref") or ""),
+                edge.get("name") or path_label,
+            ))
+
+    unique: dict[str, dict[str, Any]] = {}
+    for candidate in candidates:
+        unique.setdefault(str(candidate.get("element_id")), candidate)
+    return {
+        "candidates": list(unique.values()),
+        "reached_end": reached_end,
+        "source_found": True,
+    }
+
+
+def advance_instance_after_execution(
+    *,
+    instance: ProcessInstance,
+    execution: ProcessInstanceExecution,
+    diagram: ProcessBpmnDiagram | None = None,
+    requested_next_element_id: str | None = None,
+) -> dict[str, Any]:
+    """Avança o ponteiro da instância após concluir uma atividade.
+
+    Em bifurcações, o próximo elemento precisa ser escolhido explicitamente e
+    sempre é validado contra o BPMN publicado do mesmo tenant/processo.
+    """
+    if not diagram:
+        if getattr(instance, "process_bpmn_diagram_id", None):
+            diagram = ProcessBpmnDiagram.query.filter_by(
+                id=instance.process_bpmn_diagram_id,
+                process_id=instance.process_id,
+                company_id=instance.company_id,
+            ).first()
+        if not diagram:
+            diagram = get_published_diagram_for_process(
+                process_id=instance.process_id,
+                company_id=instance.company_id,
+            )
+    navigation = resolve_next_executable_candidates(
+        getattr(diagram, "bpmn_xml", None),
+        execution.bpmn_element_id,
+    )
+    candidates = navigation.get("candidates") or []
+    candidate_by_id = {str(item.get("element_id")): item for item in candidates}
+    requested = str(requested_next_element_id or "").strip() or None
+
+    if requested and requested not in candidate_by_id:
+        raise ValueError("Próxima atividade inválida para o fluxo BPMN publicado.")
+    if len(candidates) > 1 and not requested:
+        raise ValueError("Selecione o próximo caminho antes de concluir a atividade.")
+
+    selected = candidate_by_id.get(requested) if requested else (candidates[0] if candidates else None)
+    if selected:
+        instance.current_bpmn_element_id = selected.get("element_id")
+        instance.status = "in_progress"
+        instance.completed_at = None
+        return {"completed": False, "next_activity": selected, **navigation}
+
+    if navigation.get("reached_end"):
+        instance.current_bpmn_element_id = None
+        instance.status = "completed"
+        instance.completed_at = datetime.utcnow()
+        return {"completed": True, "next_activity": None, **navigation}
+
+    # Fluxos legados sem grafo continuam operáveis sem concluir a instância por engano.
+    instance.current_bpmn_element_id = execution.bpmn_element_id
+    instance.status = "in_progress"
+    return {"completed": False, "next_activity": None, **navigation}
+
+
 def _resolve_external_action_url(
     instance: ProcessInstance,
     contract,
@@ -640,43 +799,11 @@ def _format_runtime_url_template(template: str, context: dict[str, Any]) -> str:
 
 
 def _build_diagram_navigation(bpmn_xml: str | None, current_element_id: str | None) -> dict[str, Any]:
-    if not bpmn_xml:
-        return {"next_candidates": []}
-    try:
-        root = ET.fromstring(bpmn_xml)
-    except ET.ParseError:
-        return {"next_candidates": []}
-
-    elements_by_id: dict[str, dict[str, str | None]] = {}
-    sequence_targets: dict[str, list[str]] = {}
-
-    for element in root.iter():
-        tag_name = _strip_namespace(element.tag)
-        element_id = element.attrib.get("id")
-        if not element_id:
-            continue
-        if tag_name == "sequenceFlow":
-            source_ref = element.attrib.get("sourceRef")
-            target_ref = element.attrib.get("targetRef")
-            if source_ref and target_ref:
-                sequence_targets.setdefault(source_ref, []).append(target_ref)
-            continue
-        if tag_name.endswith("Process") or tag_name in {"definitions", "lane", "laneSet"}:
-            continue
-        elements_by_id[element_id] = {
-            "element_id": element_id,
-            "element_name": element.attrib.get("name"),
-            "element_type": tag_name,
-        }
-
-    candidates = []
-    for target_id in sequence_targets.get(current_element_id or "", []):
-        candidate = dict(elements_by_id.get(target_id) or {"element_id": target_id})
-        if not candidate.get("element_name"):
-            candidate["element_name"] = target_id
-        candidates.append(candidate)
-
-    return {"next_candidates": candidates}
+    navigation = resolve_next_executable_candidates(bpmn_xml, current_element_id)
+    return {
+        "next_candidates": navigation.get("candidates") or [],
+        "reached_end": bool(navigation.get("reached_end")),
+    }
 
 
 def _build_current_activity_graph_context(
