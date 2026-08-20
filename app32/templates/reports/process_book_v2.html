@@ -1362,60 +1362,6 @@
       <div class="page-inner">
         <div class="section-header">
           <div class="section-title-wrap">
-            <h2>Formulários e checklists operacionais</h2>
-            <p>Documentos publicados que devem ser preenchidos durante a execução das atividades.</p>
-          </div>
-          <div class="section-badge">{{ operational_artifacts|length }} documento(s)</div>
-        </div>
-
-        {% if operational_artifacts %}
-          {% for artifact in operational_artifacts %}
-          <article class="activity-card">
-            <div class="activity-top">
-              <div>
-                <span class="activity-code">{{ artifact.type_label }} · versão {{ artifact.version }}</span>
-                <h3 class="activity-name">{{ artifact.name }}</h3>
-                {% if artifact.description %}<div class="activity-description">{{ artifact.description }}</div>{% endif %}
-              </div>
-            </div>
-
-            {% if artifact.activities %}
-            <div class="indicator-meta-grid">
-              {% for activity in artifact.activities %}
-              <div class="detail-card">
-                <span class="detail-label">Atividade vinculada{% if activity.is_required %} · obrigatório{% endif %}</span>
-                <div class="detail-value">{{ activity.element_name }}</div>
-              </div>
-              {% endfor %}
-            </div>
-            {% endif %}
-
-            {% if artifact.fields %}
-            <table class="collaborators-table">
-              <thead><tr><th>Campo / critério</th><th>Tipo</th><th>Obrigatoriedade</th></tr></thead>
-              <tbody>
-                {% for field in artifact.fields %}
-                <tr>
-                  <td><strong>{{ field.label }}</strong></td>
-                  <td>{{ field.type }}</td>
-                  <td>{{ 'Obrigatório' if field.required else 'Opcional' }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-            {% endif %}
-          </article>
-          {% endfor %}
-        {% else %}
-          <div class="empty-state">Nenhum formulário ou checklist publicado para este processo.</div>
-        {% endif %}
-      </div>
-    </section>
-
-    <section class="page section-page">
-      <div class="page-inner">
-        <div class="section-header">
-          <div class="section-title-wrap">
             <h2>Mapa de processos</h2>
             <p>Visão da arquitetura de processos da empresa, com o processo deste book em destaque.</p>
           </div>
@@ -1670,6 +1616,60 @@
           {% endfor %}
         {% else %}
           <div class="empty-state">Nenhuma atividade POP cadastrada para este processo.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="page section-page">
+      <div class="page-inner">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>Formulários e checklists operacionais</h2>
+            <p>Documentos publicados que devem ser preenchidos durante a execução das atividades.</p>
+          </div>
+          <div class="section-badge">{{ operational_artifacts|length }} documento(s)</div>
+        </div>
+
+        {% if operational_artifacts %}
+          {% for artifact in operational_artifacts %}
+          <article class="activity-card">
+            <div class="activity-top">
+              <div>
+                <span class="activity-code">{{ artifact.type_label }} · versão {{ artifact.version }}</span>
+                <h3 class="activity-name">{{ artifact.name }}</h3>
+                {% if artifact.description %}<div class="activity-description">{{ artifact.description }}</div>{% endif %}
+              </div>
+            </div>
+
+            {% if artifact.activities %}
+            <div class="indicator-meta-grid">
+              {% for activity in artifact.activities %}
+              <div class="detail-card">
+                <span class="detail-label">Atividade vinculada{% if activity.is_required %} · obrigatório{% endif %}</span>
+                <div class="detail-value">{{ activity.element_name }}</div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if artifact.fields %}
+            <table class="collaborators-table">
+              <thead><tr><th>Campo / critério</th><th>Tipo</th><th>Obrigatoriedade</th></tr></thead>
+              <tbody>
+                {% for field in artifact.fields %}
+                <tr>
+                  <td><strong>{{ field.label }}</strong></td>
+                  <td>{{ field.type }}</td>
+                  <td>{{ 'Obrigatório' if field.required else 'Opcional' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% endif %}
+          </article>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">Nenhum formulário ou checklist publicado para este processo.</div>
         {% endif %}
       </div>
     </section>

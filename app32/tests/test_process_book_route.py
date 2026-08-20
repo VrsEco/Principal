@@ -106,3 +106,23 @@ def test_process_book_template_keeps_published_snapshot_without_runtime_bpmn_mut
     assert '.section-flow + .section-page {' in content
     assert '<h2>Fluxo do processo</h2>' not in content
     assert 'Fluxo em página exclusiva, em paisagem, para melhor leitura e impressão.' not in content
+
+
+def test_process_book_places_operational_artifacts_between_pop_and_routines():
+    template_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'templates',
+            'reports',
+            'process_book_v2.html',
+        )
+    )
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    pop_idx = content.index('<h2>POP - Procedimento Operacional Padrão</h2>')
+    artifacts_idx = content.index('<h2>Formulários e checklists operacionais</h2>')
+    routines_idx = content.index('<h2>Rotinas</h2>')
+
+    assert pop_idx < artifacts_idx < routines_idx
