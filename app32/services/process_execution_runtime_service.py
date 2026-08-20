@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from models import (
@@ -49,6 +49,18 @@ EXECUTION_ALLOWED_STATUSES = {
     "failed",
     "skipped",
 }
+
+
+def calculate_execution_duration_seconds(started_at: datetime, completed_at: datetime) -> int:
+    """Calcula duração com segurança entre timestamps aware e naive."""
+
+    def _utc_naive(value: datetime) -> datetime:
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
+
+    duration = (_utc_naive(completed_at) - _utc_naive(started_at)).total_seconds()
+    return max(0, int(duration))
 
 EXECUTION_MODE_LABELS = {
     "manual_external": "Controle manual externo",

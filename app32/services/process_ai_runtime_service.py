@@ -13,6 +13,7 @@ from services.process_ai_execution_service import (
     is_ai_execution_mode,
     normalize_ai_contract_config,
 )
+from services.process_execution_runtime_service import calculate_execution_duration_seconds
 from src.intelligence.llm import llm_expert, llm_router
 from src.intelligence.tool_catalog import catalog
 from src.intelligence.tool_context import reset_sapiens_context, set_sapiens_context
@@ -103,7 +104,10 @@ def _apply_ai_result(
         execution.waiting_since = None
         execution.error_payload_json = {}
         if execution.started_at and not execution.duration_seconds:
-            execution.duration_seconds = int((execution.completed_at - execution.started_at).total_seconds())
+            execution.duration_seconds = calculate_execution_duration_seconds(
+                execution.started_at,
+                execution.completed_at,
+            )
         _advance_instance_pointer(instance=instance, execution=execution, contract=contract, ai_config=ai_config, result=result)
     else:
         if fallback_action == "human_review":

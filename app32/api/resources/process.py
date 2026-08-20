@@ -86,6 +86,7 @@ from services.process_execution_runtime_service import (
     build_instance_timeline,
     build_runtime_overlay,
     build_runtime_payload,
+    calculate_execution_duration_seconds,
     pause_instance,
     resume_instance,
     validate_execution_status,
@@ -1439,7 +1440,10 @@ class ProcessInstanceExecutionResource(Resource):
             if execution.status == 'waiting_external' and not execution.waiting_since:
                 execution.waiting_since = datetime.utcnow()
             if execution.status == 'completed' and execution.started_at and not execution.duration_seconds:
-                execution.duration_seconds = int((execution.completed_at - execution.started_at).total_seconds())
+                execution.duration_seconds = calculate_execution_duration_seconds(
+                    execution.started_at,
+                    execution.completed_at,
+                )
 
             if execution.bpmn_element_id and execution.status != 'completed':
                 instance.current_bpmn_element_id = execution.bpmn_element_id
