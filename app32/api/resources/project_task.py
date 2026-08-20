@@ -882,7 +882,10 @@ class ProjectAllTasksResource(Resource):
             # Efficiently fetch tasks for projects of the current company
             from models import Project
             query = ProjectTask.query.join(Project, ProjectTask.project_id == Project.id)\
-                                     .filter(Project.company_id == company_id)
+                                     .filter(
+                                         Project.company_id == company_id,
+                                         ProjectTask.is_deleted.is_(False),
+                                     )
             
             if not show_inactive:
                 query = query.filter(Project.status.not_in(['completed', 'cancelled', 'archived']))

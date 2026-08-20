@@ -1,4 +1,5 @@
 from datetime import date
+import inspect
 from pathlib import Path
 from types import SimpleNamespace
 import importlib.util
@@ -112,6 +113,25 @@ def test_project_manage_uses_incremental_board_contract():
     assert "Object.prototype.hasOwnProperty.call(currentTask, 'logs')" in template
     assert "kanbanCapacityGuardrail" in template
     assert "payload.capacity" in template
+
+
+def test_project_analysis_all_tasks_excludes_soft_deleted_cards():
+    source = inspect.getsource(project_task_resource.ProjectAllTasksResource.get)
+
+    assert "ProjectTask.is_deleted.is_(False)" in source
+
+
+def test_project_analysis_reports_completion_api_failure():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "projects"
+        / "project_analysis.html"
+    ).read_text(encoding="utf-8")
+
+    assert "Erro ao concluir atividade: " in template
+    assert "errorPayload.error || errorPayload.message || 'Falha ao concluir atividade'" in template
 
 
 def test_project_board_capacity_guardrail_thresholds():

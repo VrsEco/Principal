@@ -792,8 +792,8 @@
             <textarea id="completionNoteInput" rows="2"></textarea>
         </div>
         <div class="confirmation-popup-actions">
-            <button class="btn btn-secondary w-100" onclick="cancelCompletionPopup()">Cancelar</button>
-            <button class="btn btn-primary w-100" onclick="confirmCompletionPopup()">Concluir</button>
+            <button type="button" class="btn btn-secondary w-100" onclick="cancelCompletionPopup()">Cancelar</button>
+            <button type="button" class="btn btn-primary w-100" onclick="confirmCompletionPopup()">Concluir</button>
         </div>
     </div>
 </div>
@@ -1223,9 +1223,23 @@
 
     async function confirmCompletionPopup() {
         const date = document.getElementById('completionDateInput').value;
-        const note = document.getElementById('completionNoteInput').value;
+        const note = document.getElementById('completionNoteInput').value.trim();
+        if (!date) {
+            alert('Por favor, informe a data de conclusão.');
+            return;
+        }
+        if (!pendingDrop) {
+            alert('Não foi possível identificar a atividade movida. Tente novamente.');
+            renderKanban();
+            return;
+        }
         const { taskId, targetStage } = pendingDrop;
         const task = allTasks.find(t => t.id == taskId);
+        if (!task) {
+            alert('Atividade não encontrada. Atualize a tela e tente novamente.');
+            cancelCompletionPopup();
+            return;
+        }
 
         const newLog = {
             timestamp: new Date().toISOString(),
@@ -1247,9 +1261,17 @@
 
             if (response.ok) {
                 document.getElementById('completionPopup').classList.remove('open');
-                loadTasks();
+                pendingDrop = null;
+                await loadTasks();
+            } else {
+                const errorPayload = await response.json().catch(() => ({}));
+                throw new Error(errorPayload.error || errorPayload.message || 'Falha ao concluir atividade');
             }
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao concluir atividade: ' + error.message);
+            renderKanban();
+        }
     }
 
     function openCancellationPopup(taskId, targetStage) {
