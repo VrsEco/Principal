@@ -1107,8 +1107,8 @@
         height: calc(210mm - 16mm);
         max-height: calc(210mm - 16mm);
         overflow: hidden;
-        break-before: auto !important;
-        page-break-before: auto !important;
+        break-before: page !important;
+        page-break-before: always !important;
         break-after: auto !important;
         page-break-after: auto !important;
         break-inside: avoid;
@@ -1169,8 +1169,8 @@
         max-height: 100%;
       }
       .section-page {
-        break-before: page;
-        page-break-before: always;
+        break-before: page !important;
+        page-break-before: always !important;
       }
       .mp2-view { font-size: 8.5pt; }
       .mp2-macros-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1255,10 +1255,6 @@
       .section-sipoc-sheet .sipoc-regulatory-table td {
         font-size: 8px;
         line-height: 1.28;
-      }
-      .section-flow + .section-page {
-        break-before: auto;
-        page-break-before: auto;
       }
       .panel, .detail-card, .mini-item, .activity-card, .routine-card, .indicator-card, .step-card {
         box-shadow: none !important;

@@ -91,6 +91,14 @@ def test_process_book_template_keeps_published_snapshot_without_runtime_bpmn_mut
     with open(template_path, 'r', encoding='utf-8') as handle:
         content = handle.read()
 
+    print_start = content.index('@media print')
+    print_end = content.index('@media screen and (max-width: 900px)', print_start)
+    print_css = content[print_start:print_end]
+    section_flow_start = print_css.index('.section-flow {')
+    section_flow_css = print_css[section_flow_start:print_css.index('}', section_flow_start)]
+    section_page_start = print_css.index('.section-page {')
+    section_page_css = print_css[section_page_start:print_css.index('}', section_page_start)]
+
     assert '@page process-flow-landscape' in content
     assert 'margin: 8mm' in content
     assert '{{ first_page.bpmn_svg|safe }}' in content
@@ -103,7 +111,11 @@ def test_process_book_template_keeps_published_snapshot_without_runtime_bpmn_mut
     assert 'height: calc(210mm - 16mm);' in content
     assert 'display: block;' in content
     assert 'max-height: 100%;' in content
-    assert '.section-flow + .section-page {' in content
+    assert '.section-flow + .section-page {' not in content
+    assert 'break-before: page !important;' in section_flow_css
+    assert 'page-break-before: always !important;' in section_flow_css
+    assert 'break-before: page !important;' in section_page_css
+    assert 'page-break-before: always !important;' in section_page_css
     assert '<h2>Fluxo do processo</h2>' not in content
     assert 'Fluxo em página exclusiva, em paisagem, para melhor leitura e impressão.' not in content
 
