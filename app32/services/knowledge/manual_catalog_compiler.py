@@ -52,7 +52,6 @@ class ManualCatalogCompiler:
         (("/calendar", "/work-journey", "/my-work", "/efficiency-analysis"), "routine", "Gestão da Rotina"),
         (("/internal-audit",), "internal_audit", "Auditoria Interna"),
         (("/consultive", "/structuring-journey"), "consultive", "Consultivo"),
-        (("/real-estate-auctions",), "real_estate_auctions", "Leilões Imobiliários"),
         (("/sapiens",), "knowledge", "Sapiens"),
         (("/ai", "/api-mcp", "/tools", "/workflow", "/channels", "/qa", "/companies"), "system", "Sistema"),
         (("/portal",), "portal", "Portal"),

@@ -16,7 +16,6 @@ def test_app32_crud_contracts_cover_required_domains_and_crud_guidance():
         "projects",
         "processes",
         "meetings",
-        "real_estate_auctions",
         "finance",
         "strategy",
         "governance",

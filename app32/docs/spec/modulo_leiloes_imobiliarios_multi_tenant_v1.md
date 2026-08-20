@@ -1,7 +1,9 @@
 # SPEC — Módulo Multi-tenant de Leilões Imobiliários v1
 
-Status: especificação inicial para implementação
+Status: **RETIRADO em 2026-08-20 — módulo descontinuado antes da entrada em operação**
 Escopo: APP32, módulo de Leilões Imobiliários, GanduInvest como primeiro tenant/piloto, reutilização futura por outros clientes
+
+> Documento preservado somente como registro histórico. Rotas, models, services, templates, RBAC e tools MCP foram removidos. A migration original permanece exclusivamente para preservar a cadeia histórica do Alembic e não autoriza reativação do módulo.
 
 ## 1. Decisão oficial
 

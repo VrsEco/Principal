@@ -207,13 +207,6 @@ def _resolve_batch_id(resolver: DynamicFixtureResolver) -> int | None:
 
 
 @_with_db
-def _resolve_property_id(resolver: DynamicFixtureResolver) -> int | None:
-    from models.real_estate_auction import RealEstateAuctionProperty  # type: ignore
-
-    return resolver._first_id(RealEstateAuctionProperty)
-
-
-@_with_db
 def _resolve_project_id(resolver: DynamicFixtureResolver) -> int | None:
     from models.project import Project  # type: ignore
 
@@ -292,7 +285,6 @@ _DB_RESOLVERS: dict[str, Callable[[DynamicFixtureResolver], int | str | None]] =
     "entry_id": _resolve_entry_id,
     "bordero_id": _resolve_bordero_id,
     "batch_id": _resolve_batch_id,
-    "property_id": _resolve_property_id,
     "project_id": _resolve_project_id,
     "indicator_id": _resolve_indicator_id,
     "rule_set_id": _resolve_rule_set_id,

@@ -552,23 +552,6 @@ def create_app(config_name=None):
         def current_access_profile(company_id=None):
             return get_access_profile(_resolve_company_id(company_id))
 
-        def real_estate_auctions_enabled(company_id=None):
-            cid = _resolve_company_id(company_id)
-            if not cid:
-                return False
-            try:
-                from models import db
-                from services.real_estate_auction_service import RealEstateAuctionService
-
-                settings = RealEstateAuctionService.get_tenant_settings(int(cid))
-                return bool(settings.get("module_enabled"))
-            except Exception:
-                try:
-                    db.session.rollback()
-                except Exception:
-                    pass
-                return False
-
         return dict(
             has_permission=check_perm,
             current_access_profile=current_access_profile,
@@ -577,7 +560,6 @@ def create_app(config_name=None):
             is_administrator=lambda company_id=None: is_administrator(_resolve_company_id(company_id)),
             has_company_full_access=lambda company_id=None: has_company_full_access(_resolve_company_id(company_id)),
             is_collaborator_in_company=lambda company_id=None: is_collaborator_in_company(_resolve_company_id(company_id)),
-            real_estate_auctions_enabled=real_estate_auctions_enabled,
         )
 
     @app.context_processor
@@ -768,6 +750,7 @@ def register_api_resources(api):
         ProcessActivityArtifactListResource, ProcessActivityArtifactResource, ProcessActivityArtifactPublishResource,
         ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
         ProcessBpmnAiAssistantResource,
+        CapabilityDimensionListResource, CapabilityDimensionResource,
         ResourceCatalogListResource, ResourceCatalogResource,
         ProcessResourceLinkListResource, ProcessResourceLinkResource,
         ProcessRoutineListResource, ProcessRoutineResource,
@@ -972,10 +955,12 @@ def register_api_resources(api):
     api.add_resource(ProcessBpmnAiAssistantResource, '/api/processes/<int:process_id>/bpmn-ai-assistant')
     api.add_resource(ProcessActivityExecutionContractListResource, '/api/processes/<int:process_id>/activity-execution-contracts')
     api.add_resource(ProcessActivityExecutionContractResource, '/api/process-activity-execution-contracts/<int:contract_id>')
-    api.add_resource(ResourceCatalogListResource, '/api/resources')
-    api.add_resource(ResourceCatalogResource, '/api/resources/<int:resource_id>')
-    api.add_resource(ProcessResourceLinkListResource, '/api/processes/<int:process_id>/resources')
-    api.add_resource(ProcessResourceLinkResource, '/api/processes/<int:process_id>/resources/<int:link_id>')
+    api.add_resource(CapabilityDimensionListResource, '/api/capability-dimensions')
+    api.add_resource(CapabilityDimensionResource, '/api/capability-dimensions/<int:dimension_id>')
+    api.add_resource(ResourceCatalogListResource, '/api/capabilities', '/api/resources')
+    api.add_resource(ResourceCatalogResource, '/api/capabilities/<int:resource_id>', '/api/resources/<int:resource_id>')
+    api.add_resource(ProcessResourceLinkListResource, '/api/processes/<int:process_id>/capabilities', '/api/processes/<int:process_id>/resources')
+    api.add_resource(ProcessResourceLinkResource, '/api/processes/<int:process_id>/capabilities/<int:link_id>', '/api/processes/<int:process_id>/resources/<int:link_id>')
     api.add_resource(ProcessRoutineListResource, '/api/process-routines')
     api.add_resource(ProcessRoutineResource, '/api/process-routines/<int:routine_id>')
     api.add_resource(ProcessScheduleListResource, '/api/process-schedules')
@@ -1232,7 +1217,6 @@ def register_blueprints(app):
     from api.routes.portfolios import portfolios_bp
     from api.routes.financial import financial_bp
     from api.routes.financial_automation import financial_automation_bp
-    from api.routes.real_estate_auctions import real_estate_auctions_bp
     from api.routes.contracts import contracts_bp
     from api.routes.internal_audit import internal_audit_bp
     import api.routes.financial_reports  # noqa: F401
@@ -1266,7 +1250,6 @@ def register_blueprints(app):
     app.register_blueprint(portfolios_bp)
     app.register_blueprint(financial_bp)
     app.register_blueprint(financial_automation_bp)
-    app.register_blueprint(real_estate_auctions_bp)
     app.register_blueprint(contracts_bp)
     app.register_blueprint(internal_audit_bp)
     app.register_blueprint(user_employee_bp)

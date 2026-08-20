@@ -45,7 +45,6 @@ from src.core.mcp_process_flow_tools import register_process_flow_tools
 from src.core.mcp_process_improvement_tools import register_process_improvement_tools
 from src.core.mcp_process_pop_tools import register_process_pop_tools
 from src.core.mcp_profile_contract_tools import register_profile_contract_tools
-from src.core.mcp_real_estate_auction_tools import register_real_estate_auction_tools
 from src.core.mcp_release_checklist_tools import register_release_checklist_tools
 from src.core.mcp_sector_strategy_tools import register_sector_strategy_tools
 from src.core.mcp_sapiens_activation_tools import register_sapiens_activation_tools
@@ -403,82 +402,6 @@ _supplemental_mcp_tools = (
         description="Alias canônico consultivo para executar a Análise N1 de alinhamento estratégico.",
     ),
     SimpleNamespace(
-        name="get_real_estate_auction_settings_tool",
-        description="Lê a configuração do módulo Leilões Imobiliários para a empresa.",
-    ),
-    SimpleNamespace(
-        name="upsert_real_estate_auction_settings_tool",
-        description="Habilita/desabilita e configura o módulo Leilões Imobiliários para a empresa.",
-    ),
-    SimpleNamespace(
-        name="get_real_estate_auction_workspace_tool",
-        description="Retorna workspace/resumo do módulo Leilões Imobiliários no tenant.",
-    ),
-    SimpleNamespace(
-        name="list_real_estate_auction_properties_tool",
-        description="Lista imóveis/leilões do módulo, sempre escopando por company_id.",
-    ),
-    SimpleNamespace(
-        name="get_real_estate_auction_property_tool",
-        description="Retorna detalhe de um imóvel/leilão com ficha financeira, diligência, eventos e anexos.",
-    ),
-    SimpleNamespace(
-        name="create_real_estate_auction_property_tool",
-        description="Cria um imóvel/leilão no tenant habilitado.",
-    ),
-    SimpleNamespace(
-        name="update_real_estate_auction_property_tool",
-        description="Atualiza um imóvel/leilão dentro do tenant.",
-    ),
-    SimpleNamespace(
-        name="archive_real_estate_auction_property_tool",
-        description="Arquiva logicamente um imóvel/leilão dentro do tenant.",
-    ),
-    SimpleNamespace(
-        name="list_real_estate_auction_sources_tool",
-        description="Lista fontes de captação/importação do tenant para o módulo Leilões Imobiliários.",
-    ),
-    SimpleNamespace(
-        name="create_real_estate_auction_source_tool",
-        description="Cria uma fonte de importação/captação do módulo no tenant.",
-    ),
-    SimpleNamespace(
-        name="update_real_estate_auction_source_tool",
-        description="Atualiza uma fonte de importação/captação do módulo no tenant.",
-    ),
-    SimpleNamespace(
-        name="delete_real_estate_auction_source_tool",
-        description="Remove logicamente uma fonte do módulo dentro do tenant.",
-    ),
-    SimpleNamespace(
-        name="create_real_estate_auction_event_tool",
-        description="Cria um evento de leilão vinculado a um imóvel do tenant.",
-    ),
-    SimpleNamespace(
-        name="update_real_estate_auction_event_tool",
-        description="Atualiza um evento de leilão existente no tenant.",
-    ),
-    SimpleNamespace(
-        name="delete_real_estate_auction_event_tool",
-        description="Remove um evento de leilão do imóvel dentro do tenant.",
-    ),
-    SimpleNamespace(
-        name="upsert_real_estate_auction_financial_sheet_tool",
-        description="Cria ou atualiza a ficha financeira de um imóvel do tenant.",
-    ),
-    SimpleNamespace(
-        name="upsert_real_estate_auction_due_diligence_tool",
-        description="Cria ou atualiza a ficha de diligência/posse/riscos do imóvel.",
-    ),
-    SimpleNamespace(
-        name="create_real_estate_auction_attachment_tool",
-        description="Registra metadado de anexo para um imóvel/leilão do tenant.",
-    ),
-    SimpleNamespace(
-        name="delete_real_estate_auction_attachment_tool",
-        description="Remove metadado de anexo de um imóvel/leilão no tenant.",
-    ),
-    SimpleNamespace(
         name="get_work_journey_board_tool",
         description="Retorna o quadro operacional da jornada por blocos de um colaborador.",
     ),
@@ -819,7 +742,6 @@ catalog = ToolCatalog(
         register_process_improvement_tools,
         register_process_pop_tools,
         register_profile_contract_tools,
-        register_real_estate_auction_tools,
         register_release_checklist_tools,
         register_sector_strategy_tools,
         register_sapiens_activation_tools,

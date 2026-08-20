@@ -71,12 +71,6 @@ DOMAIN_MATRIX = {
         "administrador": {"discover", "read", "list", "search", "analyze", "create", "audit"},
         "administrador_tecnico": {"discover", "read", "list", "search", "analyze", "create", "audit"},
     },
-    "real_estate_auctions": {
-        "colaborador": READ_ACTIONS | {"create", "update"},
-        "cliente": {"discover", "read", "list", "search", "analyze"},
-        "administrador": READ_ACTIONS | WRITE_ACTIONS,
-        "administrador_tecnico": READ_ACTIONS | WRITE_ACTIONS,
-    },
     "finance": {
         "colaborador": set(),
         "cliente": set(),

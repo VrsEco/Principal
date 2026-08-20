@@ -11,19 +11,12 @@ TOOL_CATALOG = REPO_ROOT / "app32/src/intelligence/tool_catalog.py"
 
 P0_MCP_SAPIENS_TOOLS = [
     "analyze_process_flow_copilot_tool",
-    "archive_real_estate_auction_property_tool",
-    "create_real_estate_auction_attachment_tool",
-    "create_real_estate_auction_event_tool",
     "create_work_calendar_event_tool",
     "create_work_journey_manual_task_tool",
-    "delete_real_estate_auction_attachment_tool",
-    "delete_real_estate_auction_event_tool",
-    "delete_real_estate_auction_source_tool",
     "delete_work_calendar_event_tool",
     "generate_work_journey_agenda_tool",
     "get_efficiency_collaborators_analysis_tool",
     "get_process_routines_analysis_tool",
-    "get_real_estate_auction_property_tool",
     "get_work_journey_agenda_tool",
     "get_work_journey_board_tool",
     "get_work_journey_capacity_report_tool",
@@ -41,12 +34,8 @@ P0_MCP_SAPIENS_TOOLS = [
     "save_work_journey_rule_tool",
     "suggest_process_flow_activity_automation_tool",
     "unlock_work_journey_agenda_tool",
-    "update_real_estate_auction_event_tool",
-    "update_real_estate_auction_property_tool",
-    "update_real_estate_auction_source_tool",
     "update_work_calendar_event_tool",
     "update_work_journey_item_tool",
-    "upsert_real_estate_auction_due_diligence_tool",
 ]
 
 P0_MCP_SAPIENS_ROUTES = [

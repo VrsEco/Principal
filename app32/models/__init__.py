@@ -24,7 +24,13 @@ from .okr_area import OKRArea, KeyResultArea
 from .portfolio import Portfolio
 from .project import Project, ProjectTask, ProjectTaskDependency, ProjectActivityCollaborator
 from .process import ProcessArea, MacroProcess, Process, ProcessBpmnDiagram, ProcessBpmsAnalysis, ProcessSipocSnapshot, ProcessSipocItem, ProcessSipocRegulatoryItem, MacroProcessSipocSnapshot, MacroProcessSipocItem, MacroProcessSipocRegulatoryItem, ProcessRoutine, ProcessStep, ProcessInstance, ProcessInstanceCollaborator, ProcessInstanceExecution, ProcessActivityExecutionContract
-from .process_resource import ResourceCatalog, ProcessResourceLink
+from .process_resource import (
+    CapabilityDimension,
+    EnablingCapability,
+    ProcessCapabilityLink,
+    ResourceCatalog,
+    ProcessResourceLink,
+)
 from .process_artifact import (
     ProcessActivityArtifactDefinition,
     ProcessActivityArtifactExecution,
@@ -115,18 +121,6 @@ from .automation import (
     AutomationExecution,
     AutomationBpmsLink,
 )
-from .real_estate_auction import (
-    RealEstateAuctionAttachment,
-    RealEstateAuctionDueDiligence,
-    RealEstateAuctionEvent,
-    RealEstateAuctionFinancialSheet,
-    RealEstateAuctionImportJob,
-    RealEstateAuctionImportJobItem,
-    RealEstateAuctionProperty,
-    RealEstateAuctionSource,
-    RealEstateAuctionTenantSettings,
-)
-
 from .internal_audit import (
     AuditArea,
     AuditAuditor,
@@ -210,7 +204,7 @@ __all__ = [
     'Indicator', 'IndicatorEntityLink', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
-    'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'MacroProcessSipocSnapshot', 'MacroProcessSipocItem', 'MacroProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessActivityArtifactDefinition', 'ProcessActivityArtifactLink', 'ProcessActivityArtifactExecution', 'ProcessExecutionAssignment', 'ResourceCatalog', 'ProcessResourceLink', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
+    'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'MacroProcessSipocSnapshot', 'MacroProcessSipocItem', 'MacroProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessActivityArtifactDefinition', 'ProcessActivityArtifactLink', 'ProcessActivityArtifactExecution', 'ProcessExecutionAssignment', 'CapabilityDimension', 'EnablingCapability', 'ProcessCapabilityLink', 'ResourceCatalog', 'ProcessResourceLink', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
     'OrganizationalIdentity', 'ProcessStrategyProfile', 'ProcessStrategicAlignmentLink', 'IndicatorLineOfSight', 'StrategyMaturationItem',
     'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCustomerPortfolio', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialManualDomain', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialSatellitePolicy', 'FinancialScheduleLink', 'FinancialSatelliteExecution', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
@@ -219,7 +213,6 @@ __all__ = [
     'FinancialBudgetCycle', 'FinancialBudgetVersion', 'FinancialBudgetLine', 'FinancialBudgetAmount', 'FinancialBudgetContract', 'FinancialBudgetDocument',
     'AutomationRegistry', 'AutomationRule', 'AutomationExecution', 'AutomationBpmsLink',
     'AuditArea', 'AuditAuditor', 'AuditChecklist', 'AuditChecklistItem', 'AuditSchedule', 'AuditExecution', 'AuditExecutionItem', 'AuditPoint', 'AuditWorkpaper', 'AuditFinding', 'AuditEvidenceLink', 'AuditReport', 'AuditFollowUp',
-    'RealEstateAuctionProperty', 'RealEstateAuctionEvent', 'RealEstateAuctionFinancialSheet', 'RealEstateAuctionDueDiligence', 'RealEstateAuctionAttachment', 'RealEstateAuctionSource', 'RealEstateAuctionImportJob', 'RealEstateAuctionImportJobItem', 'RealEstateAuctionTenantSettings',
     'Contract', 'ContractCatalogItem', 'ContractParty', 'ContractingLegalEntity', 'ContractItem', 'ContractBillingItem', 'ContractNativeBilling', 'ContractNativeBillingItem', 'ContractFinancialTerm', 'ContractFiscalTerm', 'ContractRetention', 'ContractTrigger', 'ContractDocument', 'ContractClause', 'ContractNote', 'ContractEvent',
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'CompanyRolePermissionPreset', 'AppComplianceReport', 'AppComplianceReportItem',

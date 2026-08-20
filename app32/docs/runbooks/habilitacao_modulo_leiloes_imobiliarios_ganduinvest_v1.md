@@ -1,8 +1,10 @@
 # Runbook — Habilitação do Módulo Leilões Imobiliários para GanduInvest v1
 
-Status: pronto para homologação
+Status: **RETIRADO em 2026-08-20 — não habilitar**
 Classe documental: Runbook
 SPEC: `C:\GestaoVersus\app32\app32\docs\spec\modulo_leiloes_imobiliarios_multi_tenant_v1.md`
+
+> Runbook histórico. O módulo foi descontinuado antes da entrada em operação; não existem mais rota, service, UI ou surface MCP para habilitação.
 
 ## Decisão
 

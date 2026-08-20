@@ -30,7 +30,6 @@ def _build_app():
     app.jinja_env.globals["static_asset_version"] = lambda path: "test"
     app.jinja_env.globals["has_permission"] = lambda *args, **kwargs: False
     app.jinja_env.globals["is_platform_admin"] = lambda: False
-    app.jinja_env.globals["real_estate_auctions_enabled"] = lambda: False
     login_manager = LoginManager(app)
 
     @login_manager.user_loader
@@ -1505,7 +1504,7 @@ def test_consultive_cockpit_operational_metadata_has_semantic_colors():
     assert "field-value" in body
 
 
-def test_standard_sidebar_exposes_consultive_cockpit_entry():
+def test_standard_sidebar_preserves_consultive_and_uses_approved_macro_navigation():
     sidebar_path = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -1518,6 +1517,8 @@ def test_standard_sidebar_exposes_consultive_cockpit_entry():
     with open(sidebar_path, "r", encoding="utf-8") as handle:
         body = handle.read()
 
+    assert "_strategic_planning.html" in body
+    assert "_strategic_management.html" in body
     assert "Consultivo" in body
     assert "/consultive/cockpit" in body
     assert "Cockpit do Consultor" in body
@@ -1525,9 +1526,10 @@ def test_standard_sidebar_exposes_consultive_cockpit_entry():
     assert "Jornada do Cliente" in body
     assert "/consultive/protocols" in body
     assert "Protocolos Consultivos" in body
-    assert "request.path.startswith('/consultive') or request.path.startswith('/structuring-journey')" in body
-    assert body.index("Módulos") < body.index("Consultivo")
-    assert "Jornada do Consultor" not in body
+    assert "Módulos" not in body
+    assert body.index("Consultivo") < body.index("_strategic_planning.html")
+    assert body.index("_strategic_planning.html") < body.index("_strategic_management.html")
+    assert body.index("_strategic_management.html") < body.index("Gestão Comercial")
 
 
 def test_business_review_read_model_is_resilient_to_missing_rollout_tables():

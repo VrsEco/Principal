@@ -30,7 +30,6 @@ def test_full_coverage_autocorrect_builds_coverage_matrix_for_m1():
     assert report["coverage_matrix"]["get_report_download_contract_generated_total"] >= 0
     assert report["coverage_matrix"]["ai_validation_guard_contract_generated_total"] >= 0
     assert report["coverage_matrix"]["consultive_tenant_contract_covered_total"] >= 0
-    assert report["coverage_matrix"]["real_estate_tenant_contract_covered_total"] >= 0
     assert report["coverage_matrix"]["contracts_tenant_contract_covered_total"] >= 0
     assert report["coverage_matrix"]["workspace_tenant_contract_covered_total"] >= 0
     assert report["coverage_matrix"]["route_mutation_existing_adapter_covered_total"] >= 0
@@ -63,7 +62,6 @@ def test_full_coverage_autocorrect_writes_summary_manifest_and_artifact(tmp_path
     assert any(action["action_id"] == "ui_human_gate_existing_adapters_covered" for action in log["actions"])
     assert any(action["action_id"] == "ai_validation_guard_contracts_generated" for action in log["actions"])
     assert any(action["action_id"] == "consultive_tenant_contracts_covered" for action in log["actions"])
-    assert any(action["action_id"] == "real_estate_tenant_contracts_covered" for action in log["actions"])
     assert any(action["action_id"] == "contracts_tenant_contracts_covered" for action in log["actions"])
     assert any(action["action_id"] == "workspace_tenant_contracts_covered" for action in log["actions"])
     assert manifest["suite_id"] == "full_coverage_autocorrect_audit"
@@ -144,7 +142,6 @@ def test_full_coverage_autocorrect_maps_generic_api_routes_to_existing_adapter_d
     assert _route_module("/api/indicator-data") == "processes"
     assert _route_module("/api/usuarios") == "admin"
     assert _route_module("/api/consultive/business-reviews") == "consultive"
-    assert _route_module("/api/real-estate-auctions/properties") == "real_estate"
     assert _route_module("/api/ai/board/start") == "ai"
     assert _route_module("/api/v2/chat") == "ai"
     assert _route_module("/main") == "workspace"
@@ -165,16 +162,6 @@ def test_full_coverage_autocorrect_consultive_routes_are_tenant_contract_covered
     suites = {"consultive_tenant_contract_probe"}
     assert _is_consultive_tenant_contract_covered("/api/consultive/business-reviews", {"GET", "POST"}, suites) is True
     assert _is_consultive_tenant_contract_covered("/api/consultive/urgent-needs/<urgent_need_id>/status", {"POST"}, suites) is True
-    assert _is_consultive_tenant_contract_covered("/api/real-estate-auctions/properties", {"GET", "POST"}, suites) is False
-
-
-def test_full_coverage_autocorrect_real_estate_routes_are_tenant_contract_covered():
-    from app32.tests.e2e.core.full_coverage_autocorrect import _is_real_estate_tenant_contract_covered
-
-    suites = {"real_estate_tenant_contract_probe"}
-    assert _is_real_estate_tenant_contract_covered("/api/real-estate-auctions/properties", {"GET", "POST"}, suites) is True
-    assert _is_real_estate_tenant_contract_covered("/api/real-estate-auctions/properties/<property_id>/events/<event_id>", {"PATCH", "DELETE"}, suites) is True
-    assert _is_real_estate_tenant_contract_covered("/api/consultive/business-reviews", {"GET", "POST"}, suites) is False
 
 
 def test_full_coverage_autocorrect_contracts_and_workspace_are_tenant_contract_covered():

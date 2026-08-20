@@ -73,23 +73,22 @@ def test_internal_audit_routes_expose_phase01_catalogs():
     assert "app.register_blueprint(internal_audit_bp)" in app_py
 
 
-def test_internal_audit_sidebar_is_below_finance_and_before_sapiens():
+def test_internal_audit_sidebar_is_nested_in_strategic_governance():
     sidebar = _read("templates/partials/sidebar_standard.html")
+    strategic = _read("templates/partials/sidebar/_strategic_management.html")
 
-    finance_index = sidebar.index("Gestão Financeira")
-    audit_index = sidebar.index("Auditoria Interna")
-    sapiens_index = sidebar.index("Sapiens")
-
-    assert finance_index < audit_index < sapiens_index
-    assert 'href="/internal-audit/checklists"' in sidebar
-    assert 'href="/internal-audit/areas"' in sidebar
-    assert 'href="/internal-audit/auditors"' in sidebar
-    assert 'href="/internal-audit/executions"' in sidebar
-    assert 'href="/internal-audit/points"' in sidebar
-    assert 'href="/internal-audit/workpapers"' in sidebar
-    assert 'href="/internal-audit/findings"' in sidebar
-    assert 'href="/internal-audit/reports"' in sidebar
-    assert 'href="/internal-audit/follow-ups"' in sidebar
+    assert sidebar.index("_strategic_management.html") < sidebar.index("Gestão Financeira")
+    assert "Governança" in strategic
+    assert "Auditoria Interna" in strategic
+    assert 'href="/internal-audit/checklists"' in strategic
+    assert 'href="/internal-audit/areas"' in strategic
+    assert 'href="/internal-audit/auditors"' in strategic
+    assert 'href="/internal-audit/executions"' in strategic
+    assert 'href="/internal-audit/points"' in strategic
+    assert 'href="/internal-audit/workpapers"' in strategic
+    assert 'href="/internal-audit/findings"' in strategic
+    assert 'href="/internal-audit/reports"' in strategic
+    assert 'href="/internal-audit/follow-ups"' in strategic
 
 
 def test_internal_audit_wave2_service_generates_points_from_exceptions():

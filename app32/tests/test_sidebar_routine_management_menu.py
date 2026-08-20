@@ -76,6 +76,10 @@ def _build_app():
     def efficiency_analysis():
         return "ok"
 
+    @main_bp.route("/companies/<int:company_id>/efficiency-analysis")
+    def efficiency_analysis_company(company_id):
+        return "ok"
+
     app.register_blueprint(processes_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(portfolios_bp)

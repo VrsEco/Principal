@@ -33,14 +33,13 @@ def test_commercial_mcp_registrar_exposes_new_billing_and_dashboard_tools():
     }.issubset(mcp.registered)
 
 
-def test_tool_first_catalog_maps_commercial_finance_auctions_work_journey_and_mcp_governance():
+def test_tool_first_catalog_maps_commercial_finance_work_journey_and_mcp_governance():
     payload = ToolFirstCatalogService.build_catalog(None, include_backlog=False)
     domains = {domain["key"]: domain for domain in payload["domains"]}
 
     assert {
         "commercial_contracts",
         "finance",
-        "real_estate_auctions",
         "work_journey",
         "mcp_governance",
     }.issubset(domains)

@@ -349,22 +349,6 @@ SUITE_CATALOG: dict[str, E2ESuiteDefinition] = {
         destructive=False,
         summary="Valida rotas consultive com company_id ativo, write-gate, MCP-first e services mockados sem mutação persistente.",
     ),
-    "real_estate_tenant_contract_probe": E2ESuiteDefinition(
-        suite_id="real_estate_tenant_contract_probe",
-        label="Contrato tenant-safe real estate",
-        domain="real_estate",
-        environments=("DEV_FULL",),
-        command_kind="pytest",
-        command_args=(
-            "app32/tests/test_real_estate_auction_routes.py",
-            "app32/tests/test_real_estate_auction_domain.py",
-            "app32/tests/test_real_estate_auction_service_mcp.py",
-            "app32/tests/test_robot_real_estate_p1_coverage_contract.py",
-            "-q",
-        ),
-        destructive=False,
-        summary="Valida rotas, templates, domínio, service/MCP e cobertura P1 de leilões imobiliários com services mockados e sem mutação persistente.",
-    ),
     "reports_functional_probe": E2ESuiteDefinition(
         suite_id="reports_functional_probe",
         label="Probe funcional de relatórios",

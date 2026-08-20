@@ -4,8 +4,10 @@
 {% set _routine_occurrences_active = '/process-occurrences' in request.path %}
 {% set _routine_journey_active = '/work-journey' in request.path or '/calendar' in request.path or '/process-routines/analysis' in request.path or '/efficiency-analysis' in request.path %}
 {% set _routine_root_active = _routine_projects_active or _routine_processes_active or _routine_meetings_active or _routine_occurrences_active or _routine_journey_active %}
+{% set _routine_embedded = _routine_embedded|default(false) %}
 
 <!-- Gestão da Rotina -->
+{% if not _routine_embedded %}
 <div class="sidebar-group {{ 'open' if _routine_root_active }}">
     <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -19,6 +21,7 @@
         </svg>
     </button>
     <div class="sub-menu">
+{% endif %}
         <div class="sidebar-subgroup {{ 'open' if _routine_processes_active }}">
             <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
                 Gestão de Processos
@@ -134,5 +137,7 @@
                 </a>
             </div>
         </div>
+{% if not _routine_embedded %}
     </div>
 </div>
+{% endif %}

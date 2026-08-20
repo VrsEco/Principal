@@ -11,7 +11,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 P0_FINANCE_ROUTE_CONTRACTS = [
-    ("app32/api/routes/real_estate_auctions.py", "/api/real-estate-auctions/properties/<int:property_id>/financial-sheet"),
     ("app32/api/routes/contracts.py", "/contracts/billing/done"),
     ("app32/api/routes/financial.py", "/financial/automation-audit"),
     ("app32/api/routes/financial.py", "/financial/borderos/<int:bordero_id>"),
@@ -43,7 +42,6 @@ P0_FINANCE_ROUTE_CONTRACTS = [
     ("app32/api/routes/financial_reports.py", "/financial/reports/<report_slug>/view"),
     ("app32/api/routes/financial.py", "/financial/schedules/<int:schedule_id>/settle"),
     ("app32/api/routes/financial.py", "/financial/schedules/new"),
-    ("app32/api/routes/real_estate_auctions.py", "/real-estate-auctions/properties/<int:property_id>/financial-sheet"),
 ]
 
 P0_FINANCE_TEMPLATE_CONTRACTS = [

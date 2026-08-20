@@ -1,0 +1,39 @@
+{% set _planning_company_id = session.get('active_company_id') %}
+{% set _planning_identity_path = '/companies/%s/identity' % _planning_company_id if _planning_company_id else '/companies' %}
+{% set _planning_identity_active = '/companies/' in request.path and '/identity' in request.path %}
+{% set _planning_active = _planning_identity_active or '/plans' in request.path %}
+
+<!-- Planejamento Estratégico -->
+<div class="sidebar-group {{ 'open' if _planning_active }}">
+    <button class="nav-button" onclick="return toggleSidebarGroup(this, event)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19V5"></path>
+            <path d="M4 19h16"></path>
+            <path d="M8 15l3-4 3 2 4-7"></path>
+            <circle cx="8" cy="15" r="1"></circle>
+            <circle cx="11" cy="11" r="1"></circle>
+            <circle cx="14" cy="13" r="1"></circle>
+            <circle cx="18" cy="6" r="1"></circle>
+        </svg>
+        Planejamento Estratégico
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+    </button>
+    <div class="sub-menu">
+        {% if has_permission('companies', 'view') %}
+        <a href="{{ _planning_identity_path }}"
+            class="sub-nav-link {{ 'active' if _planning_identity_active and request.args.get('section') != 'organograma' }}">
+            Identidade Organizacional
+        </a>
+        <a href="{{ _planning_identity_path }}?section=organograma#organograma"
+            class="sub-nav-link {{ 'active' if _planning_identity_active and request.args.get('section') == 'organograma' }}">
+            Organograma
+        </a>
+        {% endif %}
+        <a href="{{ url_for('plans.plans_list') }}"
+            class="sub-nav-link {{ 'active' if '/plans' in request.path }}">
+            Planos Estratégicos
+        </a>
+    </div>
+</div>

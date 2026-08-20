@@ -8,7 +8,7 @@ def test_financial_operations_menu_prioritizes_automation_center():
     sidebar = (BASE_DIR / "templates" / "partials" / "sidebar_standard.html").read_text(encoding="utf-8")
 
     operation_marker = """<button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
-                    Operação"""
+                    Movimentos"""
     operation_start = sidebar.index(operation_marker)
     operation_end = sidebar.index("<div class=\"sidebar-subgroup {{ 'open' if request.path == '/financial'", operation_start)
     operation_block = sidebar[operation_start:operation_end]

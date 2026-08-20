@@ -53,7 +53,6 @@ FULL_APP_DEPENDENCIES = {
     "contracts_tenant_contract_probe",
     "workspace_tenant_contract_probe",
     "consultive_tenant_contract_probe",
-    "real_estate_tenant_contract_probe",
     "reports_functional_probe",
     "admin_functional_probe",
     "mcp_http_health_probe",

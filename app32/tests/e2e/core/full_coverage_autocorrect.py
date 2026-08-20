@@ -23,7 +23,7 @@ from app32.tests.e2e.catalog.ui_inventory_discovery import discover_ui_inventory
 
 AAJ1_PROJECT_CODE = "AA.J.1"
 MUTATION_ADAPTER_MODULES = {"admin", "financial", "integrations", "meetings", "processes", "work_journey"}
-DEDICATED_ADAPTER_REQUIRED_MODULES = {"ai", "consultive", "contracts", "real_estate", "workspace"}
+DEDICATED_ADAPTER_REQUIRED_MODULES = {"ai", "consultive", "contracts", "workspace"}
 
 
 CLASSIFIED_BACKLOG_GAP_TYPES = {
@@ -75,8 +75,6 @@ def _route_module(route: str) -> str:
         return "ai"
     if normalized.startswith("/api/consultive"):
         return "consultive"
-    if normalized.startswith("/api/real-estate-auctions"):
-        return "real_estate"
     if normalized.startswith("/api/financial") or normalized.startswith("/api/incentive") or normalized.startswith("/api/v1/incentives"):
         return "financial"
     if normalized.startswith("/api/integrations") or normalized.startswith("/api-mcp") or normalized.startswith("/channels"):
@@ -132,8 +130,6 @@ def _route_module(route: str) -> str:
         return "financial"
     if normalized.startswith("/contracts"):
         return "contracts"
-    if normalized.startswith("/real-estate-auctions"):
-        return "real_estate"
     if normalized.startswith("/api-mcp") or normalized.startswith("/channels") or normalized.startswith("/integrations"):
         return "integrations"
     if (
@@ -350,17 +346,6 @@ def _is_consultive_tenant_contract_covered(route: str, methods: set[str] | None,
     return bool(effective) and effective.issubset({"GET", "POST"})
 
 
-def _is_real_estate_tenant_contract_covered(route: str, methods: set[str] | None, suites: set[str]) -> bool:
-    """Cobertura real_estate por harness P1 tenant-safe, routes/templates/MCP, sem persistência."""
-    if "real_estate_tenant_contract_probe" not in suites:
-        return False
-    normalized = normalize_route(route)
-    if _route_module(normalized) != "real_estate" or not methods:
-        return False
-    effective = {method for method in methods if method not in {"HEAD", "OPTIONS"}}
-    return bool(effective) and effective.issubset({"GET", "POST", "PUT", "PATCH", "DELETE"})
-
-
 def _is_contracts_tenant_contract_covered(route: str, methods: set[str] | None, suites: set[str]) -> bool:
     """Cobertura contracts por harness P1 tenant-safe e probes funcionais sem mutação persistente."""
     if "contracts_tenant_contract_probe" not in suites:
@@ -490,7 +475,6 @@ def build_autocorrection_execution_log(report: dict[str, Any]) -> dict[str, Any]
     get_report_download_generated = int(matrix.get("get_report_download_contract_generated_total") or 0)
     ai_validation_guard_generated = int(matrix.get("ai_validation_guard_contract_generated_total") or 0)
     consultive_tenant_contract_covered = int(matrix.get("consultive_tenant_contract_covered_total") or 0)
-    real_estate_tenant_contract_covered = int(matrix.get("real_estate_tenant_contract_covered_total") or 0)
     contracts_tenant_contract_covered = int(matrix.get("contracts_tenant_contract_covered_total") or 0)
     workspace_tenant_contract_covered = int(matrix.get("workspace_tenant_contract_covered_total") or 0)
     route_mutation_adapter_covered = int(matrix.get("route_mutation_existing_adapter_covered_total") or 0)
@@ -563,13 +547,6 @@ def build_autocorrection_execution_log(report: dict[str, Any]) -> dict[str, Any]
             "items_total": consultive_tenant_contract_covered,
             "evidence": "Rotas consultive GET/POST foram cobertas por harness tenant-safe com company_id ativo, write-gate e services mockados, sem mutação persistente.",
             "next_executor": "consultive_tenant_contract_probe",
-        },
-        {
-            "action_id": "real_estate_tenant_contracts_covered",
-            "status": "applied_with_tenant_safe_contract",
-            "items_total": real_estate_tenant_contract_covered,
-            "evidence": "Rotas real_estate foram cobertas por harness P1 tenant-safe de rotas/templates/service/MCP com services mockados, sem mutação persistente.",
-            "next_executor": "real_estate_tenant_contract_probe",
         },
         {
             "action_id": "contracts_tenant_contracts_covered",
@@ -653,7 +630,6 @@ def build_autocorrection_execution_log(report: dict[str, Any]) -> dict[str, Any]
         + get_report_download_generated
         + ai_validation_guard_generated
         + consultive_tenant_contract_covered
-        + real_estate_tenant_contract_covered
         + contracts_tenant_contract_covered
         + workspace_tenant_contract_covered
         + route_mutation_adapter_covered
@@ -758,7 +734,6 @@ def build_full_coverage_audit(*, company_id: int | None = None, run_id: str | No
         "get_report_download_contract_generated_total": 0,
         "ai_validation_guard_contract_generated_total": 0,
         "consultive_tenant_contract_covered_total": 0,
-        "real_estate_tenant_contract_covered_total": 0,
         "contracts_tenant_contract_covered_total": 0,
         "workspace_tenant_contract_covered_total": 0,
         "route_mutation_existing_adapter_covered_total": 0,
@@ -794,9 +769,6 @@ def build_full_coverage_audit(*, company_id: int | None = None, run_id: str | No
             continue
         if _is_consultive_tenant_contract_covered(normalized, methods, suites):
             coverage_tiers["consultive_tenant_contract_covered_total"] += 1
-            continue
-        if _is_real_estate_tenant_contract_covered(normalized, methods, suites):
-            coverage_tiers["real_estate_tenant_contract_covered_total"] += 1
             continue
         if _is_contracts_tenant_contract_covered(normalized, methods, suites):
             coverage_tiers["contracts_tenant_contract_covered_total"] += 1
@@ -900,9 +872,6 @@ def build_full_coverage_audit(*, company_id: int | None = None, run_id: str | No
                     continue
                 if route and _has_existing_mutation_adapter(route):
                     coverage_tiers["ui_human_gate_existing_adapter_covered_total"] += 1
-                    continue
-                if route and _route_module(route) == "real_estate" and "real_estate_tenant_contract_probe" in suites:
-                    coverage_tiers["real_estate_tenant_contract_covered_total"] += 1
                     continue
                 if route and _is_contracts_tenant_contract_covered(route, {"POST"}, suites):
                     coverage_tiers["contracts_tenant_contract_covered_total"] += 1

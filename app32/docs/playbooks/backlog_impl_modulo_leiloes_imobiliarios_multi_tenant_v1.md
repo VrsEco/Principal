@@ -1,9 +1,11 @@
 # Playbook — Backlog Técnico do Módulo Multi-tenant de Leilões Imobiliários v1
 
-Status: pronto para execução técnica
+Status: **RETIRADO em 2026-08-20 — não executar**
 Classe documental: Playbook
 SPEC de origem: `C:\GestaoVersus\app32\app32\docs\spec\modulo_leiloes_imobiliarios_multi_tenant_v1.md`
 Escopo: implementação do módulo `Leilões Imobiliários` no APP32, com GanduInvest como primeiro tenant/piloto
+
+> Playbook histórico. O módulo foi descontinuado antes da entrada em operação e seu código executável foi removido do APP32.
 
 ## 1. Decisão operacional
 
