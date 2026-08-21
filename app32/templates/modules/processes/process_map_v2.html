@@ -34,7 +34,7 @@
         <button class="arch-tab" onclick="switchTab('macros')">📊 Macroprocessos</button>
         <button class="arch-tab" onclick="switchTab('macro-books')">📚 Books dos Macroprocessos</button>
         <button class="arch-tab" onclick="switchTab('macro-sipoc')">🧩 SIPOC de Macroprocesso</button>
-        <button class="arch-tab" onclick="switchTab('resources')">🧱 Recursos</button>
+        <button class="arch-tab" onclick="switchTab('resources')">🧩 Recursos Habilitadores</button>
         <button class="arch-tab" onclick="switchTab('processes')">⚙️ Processos</button>
         {% endif %}
     </div>
@@ -305,39 +305,64 @@
         </div>
     </div>
 
-    <!-- Painel: Catálogo Geral de Recursos -->
+    <!-- Painel: Dimensões e Recursos Habilitadores por Macroprocesso -->
     <div id="panel-resources" class="arch-panel">
         <div class="grid-form-list">
             <div class="card p-5" style="padding: 2.5rem !important;">
                 <div class="process-section__header" style="margin-bottom: 1rem;">
                     <div>
-                        <span class="process-section__eyebrow">Catálogo geral</span>
-                        <h2 class="text-h2">Recursos da Arquitetura de Processos</h2>
-                        <p class="process-section__description">Cadastre a capacidade disponível da empresa para reutilização em múltiplos processos.</p>
+                        <span class="process-section__eyebrow">Arquitetura habilitadora</span>
+                        <h2 class="text-h2">Dimensões e Recursos Habilitadores</h2>
+                        <p class="process-section__description">Mantenha o catálogo corporativo da empresa. Os processos selecionarão e alocarão estes recursos conforme sua necessidade.</p>
                     </div>
                 </div>
-                <form id="formResourceCatalog" class="arch-form">
+                <div style="display:flex; gap:.5rem; margin-bottom:1.5rem;">
+                    <button type="button" id="btnEnablingDimensions" class="btn btn-primary btn-sm" onclick="showEnablingSection('dimensions')">1. Dimensões</button>
+                    <button type="button" id="btnEnablingResources" class="btn btn-secondary btn-sm" onclick="showEnablingSection('resources')">2. Recursos Habilitadores</button>
+                </div>
+                <div id="enablingDimensionsFormSection">
+                <form id="formCapabilityDimension" class="arch-form">
                     <input type="hidden" name="id">
+                    <h3 class="text-h3 mb-3">Dimensão Habilitadora</h3>
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Tipo *</label>
-                            <select name="type" class="form-control" required>
-                                <option value="people">Pessoas</option>
-                                <option value="inputs">Insumos</option>
-                                <option value="facilities">Imóveis / Instalações</option>
-                                <option value="digital_it">TI / Digital</option>
-                                <option value="equipment_tools">Equipamentos / Ferramentas</option>
-                                <option value="other">Outros</option>
-                            </select>
+                            <label class="form-label">Nome *</label>
+                            <input name="name" class="form-control" placeholder="Ex: Pessoas, Papéis e Competências" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Subtipo *</label>
-                            <input name="subtype" class="form-control" placeholder="Ex: equipe, licença, máquina" required>
+                            <label class="form-label">Ordem</label>
+                            <input name="order_index" type="number" min="0" class="form-control" value="0">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Nome do item *</label>
-                        <input name="item_name" class="form-control" placeholder="Ex: Licença Power BI, Equipe Fiscal" required>
+                        <label class="form-label">Descrição</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-actions-row">
+                        <button type="reset" class="btn btn-secondary btn-sm">Limpar</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Salvar Dimensão</button>
+                    </div>
+                </form>
+                </div>
+                <div id="enablingResourcesFormSection" style="display:none;">
+                <form id="formResourceCatalog" class="arch-form">
+                    <input type="hidden" name="id">
+                    <h3 class="text-h3 mb-3">Recurso Habilitador</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Dimensão *</label>
+                            <select name="dimension_id" id="capabilityDimensionId" class="form-control" required>
+                                <option value="">Selecione uma dimensão...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subtipo</label>
+                            <input name="subtype" class="form-control" placeholder="Ex: papel, equipe, sistema, documento">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nome do recurso *</label>
+                        <input name="name" class="form-control" placeholder="Ex: Analista Fiscal, Time Fiscal, Sistema Fiscal Licenciado" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -365,16 +390,35 @@
                             <input name="monthly_recurring_amount" type="number" min="0" step="0.01" class="form-control">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Capacidade operacional</label>
+                            <label class="form-label">Capacidade operacional e unidade</label>
                             <div style="display:flex; gap:.5rem;">
                                 <input name="operational_capacity_value" type="number" min="0" step="0.01" class="form-control">
                                 <select name="operational_capacity_unit" class="form-control">
                                     <option value="">Unid.</option>
                                     <option value="hour">Hora</option>
-                                    <option value="day">Dia</option>
-                                    <option value="month">Mês</option>
+                                    <option value="unit">Unidade</option>
+                                    <option value="transaction">Transação</option>
+                                    <option value="license">Licença</option>
+                                    <option value="person">Pessoa</option>
+                                    <option value="item">Item</option>
                                 </select>
                             </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Período da capacidade</label>
+                            <select name="operational_capacity_period" class="form-control">
+                                <option value="day">Por dia</option>
+                                <option value="week">Por semana</option>
+                                <option value="month" selected>Por mês</option>
+                                <option value="quarter">Por trimestre</option>
+                                <option value="year">Por ano</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Utilização máxima recomendada (%)</label>
+                            <input name="max_recommended_utilization_pct" type="number" min="0" max="100" step="0.01" value="100" class="form-control">
                         </div>
                     </div>
                     <div class="form-group">
@@ -390,17 +434,22 @@
                         <button type="submit" class="btn btn-primary btn-sm">Salvar Recurso</button>
                     </div>
                 </form>
+                </div>
             </div>
-            <div class="card p-0 overflow-hidden">
+            <div id="enablingDimensionsListCard" class="card p-5">
+                <h3 class="text-h3 mb-3">Dimensões do catálogo corporativo</h3>
+                <div id="capabilityDimensionsList"></div>
+            </div>
+            <div id="enablingResourcesTable" class="card p-0 overflow-hidden" style="display:none;">
                 <table class="arch-table">
                     <thead>
                         <tr>
                             <th>Recurso</th>
-                            <th>Tipo</th>
+                            <th>Dimensão</th>
                             <th>Total</th>
                             <th>Usado</th>
                             <th>Disponível</th>
-                            <th>Alocações</th>
+                            <th>Utilização planejada / real</th>
                             <th>Ações</th>
                         </tr>
                     </thead>

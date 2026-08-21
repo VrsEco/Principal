@@ -120,10 +120,16 @@ from services.process_resource_service import (
     ProcessResourceValidationError,
     build_resource_catalog_bundle,
     build_process_resources_bundle,
+    create_capability_dimension,
     create_process_resource_link,
     create_resource,
+    deactivate_capability_dimension,
     deactivate_process_resource_link,
     deactivate_resource,
+    list_capability_dimensions,
+    get_process_execution_plan,
+    upsert_process_execution_plan,
+    update_capability_dimension,
     update_process_resource_link,
     update_resource,
 )
@@ -3603,6 +3609,106 @@ class ProcessScheduleListResource(Resource):
                 conn.close()
 
 
+class ProcessExecutionPlanResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            plan = get_process_execution_plan(process.company_id, process.id)
+            return {"plan": plan.to_dict() if plan else None}, 200
+        except ProcessResourceValidationError as err:
+            return {"error": str(err)}, 400
+
+    @permission_required('processes', 'edit')
+    def put(self, process_id):
+        process = _get_process_with_access(process_id, action='edit', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            plan = upsert_process_execution_plan(process.company_id, process.id, request.get_json(silent=True) or {})
+            return {"plan": plan.to_dict()}, 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao salvar planejamento de execução process_id=%s", process_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class CapabilityDimensionListResource(Resource):
+    @permission_required('processes', 'view')
+    def get(self):
+        company_id = request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(company_id, 'processes', 'view'):
+            return {"error": "Permission denied: view on processes"}, 403
+        try:
+            dimensions = list_capability_dimensions(
+                company_id,
+                active_only=request.args.get('active_only', '').lower() in ('1', 'true', 'yes'),
+            )
+            return {"dimensions": [item.to_dict() for item in dimensions]}, 200
+        except ProcessResourceValidationError as err:
+            return {"error": str(err)}, 400
+        except Exception:
+            current_app.logger.exception("Erro ao listar dimensões habilitadoras company_id=%s", company_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            dimension = create_capability_dimension(int(company_id), data)
+            return dimension.to_dict(), 201
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao criar dimensão habilitadora company_id=%s", company_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
+class CapabilityDimensionResource(Resource):
+    @permission_required('processes', 'edit')
+    def put(self, dimension_id):
+        data = request.get_json(silent=True) or {}
+        company_id = data.get('company_id') or request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            dimension = update_capability_dimension(int(company_id), int(dimension_id), data)
+            return dimension.to_dict(), 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao atualizar dimensão habilitadora dimension_id=%s", dimension_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+    @permission_required('processes', 'edit')
+    def delete(self, dimension_id):
+        company_id = request.args.get('company_id', type=int) or get_default_company_id()
+        if not company_id or not has_permission(int(company_id), 'processes', 'edit'):
+            return {"error": "Permission denied: edit on processes"}, 403
+        try:
+            dimension = deactivate_capability_dimension(int(company_id), int(dimension_id))
+            return dimension.to_dict(), 200
+        except ProcessResourceValidationError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
+        except Exception:
+            db.session.rollback()
+            current_app.logger.exception("Erro ao inativar dimensão habilitadora dimension_id=%s", dimension_id)
+            return {"error": PUBLIC_ERROR_MESSAGE}, 500
+
+
 class ResourceCatalogListResource(Resource):
     @permission_required('processes', 'view')
     def get(self):
@@ -3613,6 +3719,7 @@ class ResourceCatalogListResource(Resource):
             return build_resource_catalog_bundle(
                 company_id,
                 resource_type=request.args.get('type'),
+                dimension_id=request.args.get('dimension_id', type=int),
                 active_only=request.args.get('active_only', '').lower() in ('1', 'true', 'yes'),
             ), 200
         except ProcessResourceValidationError as err:

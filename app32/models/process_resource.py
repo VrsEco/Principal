@@ -12,11 +12,45 @@ RESOURCE_TYPE_VALUES = (
     "other",
 )
 
-RESOURCE_CAPACITY_UNIT_VALUES = ("hour", "day", "month")
+RESOURCE_CAPACITY_UNIT_VALUES = ("hour", "unit", "transaction", "license", "person", "item")
+RESOURCE_CAPACITY_PERIOD_VALUES = ("day", "week", "month", "quarter", "year")
+CAPABILITY_CRITICALITY_VALUES = ("low", "medium", "high", "critical")
+
+
+class CapabilityDimension(db.Model):
+    """Dimensão habilitadora do catálogo corporativo do tenant."""
+
+    __tablename__ = "capability_dimensions"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "name", name="uq_capability_dimensions_company_name"),
+        db.Index("ix_capability_dimensions_company_order", "company_id", "order_index"),
+        {"extend_existing": True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    name = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    order_index = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "name": self.name,
+            "description": self.description,
+            "order_index": self.order_index,
+            "is_active": bool(self.is_active),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 
 class ResourceCatalog(db.Model):
-    """Catálogo tenant-safe de recursos operacionais."""
+    """Recurso habilitador tenant-safe (tabela legada preservada)."""
 
     __tablename__ = "resource_catalog"
     __table_args__ = (
@@ -25,8 +59,16 @@ class ResourceCatalog(db.Model):
             name="ck_resource_catalog_type",
         ),
         db.CheckConstraint(
-            "operational_capacity_unit IS NULL OR operational_capacity_unit IN ('hour', 'day', 'month')",
+            "operational_capacity_unit IS NULL OR operational_capacity_unit IN ('hour', 'unit', 'transaction', 'license', 'person', 'item')",
             name="ck_resource_catalog_capacity_unit",
+        ),
+        db.CheckConstraint(
+            "operational_capacity_period IS NULL OR operational_capacity_period IN ('day', 'week', 'month', 'quarter', 'year')",
+            name="ck_resource_catalog_capacity_period",
+        ),
+        db.CheckConstraint(
+            "max_recommended_utilization_pct IS NULL OR (max_recommended_utilization_pct >= 0 AND max_recommended_utilization_pct <= 100)",
+            name="ck_resource_catalog_max_utilization",
         ),
         db.CheckConstraint("unit_value IS NULL OR unit_value >= 0", name="ck_resource_catalog_unit_value_non_negative"),
         db.CheckConstraint("quantity IS NULL OR quantity >= 0", name="ck_resource_catalog_quantity_non_negative"),
@@ -44,11 +86,18 @@ class ResourceCatalog(db.Model):
         ),
         db.Index("ix_resource_catalog_company_type", "company_id", "type"),
         db.Index("ix_resource_catalog_company_subtype", "company_id", "subtype"),
+        db.Index("ix_resource_catalog_company_dimension", "company_id", "dimension_id"),
         {"extend_existing": True},
     )
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    dimension_id = db.Column(
+        db.Integer,
+        db.ForeignKey("capability_dimensions.id"),
+        nullable=False,
+        index=True,
+    )
     type = db.Column(db.String(40), nullable=False)
     subtype = db.Column(db.String(120), nullable=False)
     item_name = db.Column(db.String(255), nullable=False)
@@ -59,6 +108,8 @@ class ResourceCatalog(db.Model):
     monthly_recurring_amount = db.Column(db.Numeric(14, 2), nullable=True)
     operational_capacity_value = db.Column(db.Numeric(14, 2), nullable=True)
     operational_capacity_unit = db.Column(db.String(20), nullable=True)
+    operational_capacity_period = db.Column(db.String(20), nullable=True, default="month")
+    max_recommended_utilization_pct = db.Column(db.Numeric(5, 2), nullable=True, default=100)
     estimated_useful_life = db.Column(db.String(120), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
@@ -71,6 +122,10 @@ class ResourceCatalog(db.Model):
         lazy="dynamic",
         cascade="all, delete-orphan",
     )
+    dimension = db.relationship(
+        "CapabilityDimension",
+        backref=db.backref("capabilities", lazy="dynamic"),
+    )
 
     def to_dict(self):
         def num(value):
@@ -79,9 +134,12 @@ class ResourceCatalog(db.Model):
         return {
             "id": self.id,
             "company_id": self.company_id,
+            "dimension_id": self.dimension_id,
+            "dimension": self.dimension.to_dict() if self.dimension else None,
             "type": self.type,
             "subtype": self.subtype,
             "item_name": self.item_name,
+            "name": self.item_name,
             "unit_value": num(self.unit_value),
             "quantity": num(self.quantity),
             "acquisition_total_amount": num(self.acquisition_total_amount),
@@ -89,6 +147,8 @@ class ResourceCatalog(db.Model):
             "monthly_recurring_amount": num(self.monthly_recurring_amount),
             "operational_capacity_value": num(self.operational_capacity_value),
             "operational_capacity_unit": self.operational_capacity_unit,
+            "operational_capacity_period": self.operational_capacity_period,
+            "max_recommended_utilization_pct": num(self.max_recommended_utilization_pct),
             "estimated_useful_life": self.estimated_useful_life,
             "notes": self.notes,
             "is_active": bool(self.is_active),
@@ -98,7 +158,7 @@ class ResourceCatalog(db.Model):
 
 
 class ProcessResourceLink(db.Model):
-    """Vínculo tenant-safe entre recurso e processo/atividade/elemento BPMN."""
+    """Vínculo tenant-safe entre capacidade e processo/atividade/elemento BPMN."""
 
     __tablename__ = "process_resource_links"
     __table_args__ = (
@@ -126,9 +186,10 @@ class ProcessResourceLink(db.Model):
             "monthly_used_quantity IS NULL OR monthly_used_quantity >= 0",
             name="ck_process_resource_links_monthly_used_non_negative",
         ),
+        db.CheckConstraint("usage_percentage IS NULL OR usage_percentage >= 0", name="ck_process_resource_links_usage_percentage_non_negative"),
         db.CheckConstraint(
-            "usage_percentage IS NULL OR (usage_percentage >= 0 AND usage_percentage <= 100)",
-            name="ck_process_resource_links_usage_percentage_range",
+            "criticality IS NULL OR criticality IN ('low', 'medium', 'high', 'critical')",
+            name="ck_process_resource_links_criticality",
         ),
         db.Index("ix_process_resource_links_company_process", "company_id", "process_id"),
         db.Index("ix_process_resource_links_company_resource", "company_id", "resource_id"),
@@ -149,6 +210,9 @@ class ProcessResourceLink(db.Model):
     allocated_monthly_cost = db.Column(db.Numeric(14, 2), nullable=True)
     estimated_cost_per_execution = db.Column(db.Numeric(14, 2), nullable=True)
     capacity_bottleneck_notes = db.Column(db.Text, nullable=True)
+    required_condition = db.Column(db.Text, nullable=True)
+    criticality = db.Column(db.String(20), nullable=True)
+    gap_notes = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
@@ -175,10 +239,69 @@ class ProcessResourceLink(db.Model):
             "allocated_monthly_cost": num(self.allocated_monthly_cost),
             "estimated_cost_per_execution": num(self.estimated_cost_per_execution),
             "capacity_bottleneck_notes": self.capacity_bottleneck_notes,
+            "required_condition": self.required_condition,
+            "criticality": self.criticality,
+            "gap_notes": self.gap_notes,
             "is_active": bool(self.is_active),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_resource:
             payload["resource"] = self.resource.to_dict() if self.resource else None
+            payload["enabling_resource"] = payload["resource"]
+            payload["capability"] = payload["resource"]
         return payload
+
+
+# Aliases canônicos para código novo, preservando consumidores legados.
+EnablingResource = ResourceCatalog
+ProcessEnablingResourceLink = ProcessResourceLink
+# Aliases transitórios da primeira nomenclatura proposta.
+EnablingCapability = ResourceCatalog
+ProcessCapabilityLink = ProcessResourceLink
+
+
+class ProcessExecutionPlan(db.Model):
+    """Planejamento único de recorrência do processo, normalizado para análise mensal."""
+
+    __tablename__ = "process_execution_plans"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "process_id", name="uq_process_execution_plans_company_process"),
+        db.CheckConstraint("frequency_period IN ('day', 'week', 'month', 'quarter', 'year')", name="ck_process_execution_plans_period"),
+        db.CheckConstraint("frequency_count >= 0", name="ck_process_execution_plans_count"),
+        db.CheckConstraint("working_days_per_month > 0", name="ck_process_execution_plans_working_days"),
+        {"extend_existing": True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    process_id = db.Column(db.Integer, db.ForeignKey("processes.id"), nullable=False, index=True)
+    frequency_count = db.Column(db.Numeric(14, 2), nullable=False, default=1)
+    frequency_period = db.Column(db.String(20), nullable=False, default="month")
+    working_days_per_month = db.Column(db.Numeric(6, 2), nullable=False, default=22)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def monthly_instances(self):
+        count = float(self.frequency_count or 0)
+        factors = {
+            "day": float(self.working_days_per_month or 22),
+            "week": 52.0 / 12.0,
+            "month": 1.0,
+            "quarter": 1.0 / 3.0,
+            "year": 1.0 / 12.0,
+        }
+        return count * factors.get(self.frequency_period, 1.0)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "process_id": self.process_id,
+            "frequency_count": float(self.frequency_count or 0),
+            "frequency_period": self.frequency_period,
+            "working_days_per_month": float(self.working_days_per_month or 22),
+            "planned_monthly_instances": self.monthly_instances(),
+            "notes": self.notes,
+        }

@@ -750,7 +750,9 @@ def register_api_resources(api):
         ProcessActivityArtifactListResource, ProcessActivityArtifactResource, ProcessActivityArtifactPublishResource,
         ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
         ProcessBpmnAiAssistantResource,
+        CapabilityDimensionListResource, CapabilityDimensionResource,
         ResourceCatalogListResource, ResourceCatalogResource,
+        ProcessExecutionPlanResource,
         ProcessResourceLinkListResource, ProcessResourceLinkResource,
         ProcessRoutineListResource, ProcessRoutineResource,
         ProcessScheduleListResource,
@@ -954,10 +956,13 @@ def register_api_resources(api):
     api.add_resource(ProcessBpmnAiAssistantResource, '/api/processes/<int:process_id>/bpmn-ai-assistant')
     api.add_resource(ProcessActivityExecutionContractListResource, '/api/processes/<int:process_id>/activity-execution-contracts')
     api.add_resource(ProcessActivityExecutionContractResource, '/api/process-activity-execution-contracts/<int:contract_id>')
-    api.add_resource(ResourceCatalogListResource, '/api/resources')
-    api.add_resource(ResourceCatalogResource, '/api/resources/<int:resource_id>')
-    api.add_resource(ProcessResourceLinkListResource, '/api/processes/<int:process_id>/resources')
-    api.add_resource(ProcessResourceLinkResource, '/api/processes/<int:process_id>/resources/<int:link_id>')
+    api.add_resource(CapabilityDimensionListResource, '/api/enabling-dimensions', '/api/capability-dimensions')
+    api.add_resource(CapabilityDimensionResource, '/api/enabling-dimensions/<int:dimension_id>', '/api/capability-dimensions/<int:dimension_id>')
+    api.add_resource(ResourceCatalogListResource, '/api/enabling-resources', '/api/capabilities', '/api/resources')
+    api.add_resource(ResourceCatalogResource, '/api/enabling-resources/<int:resource_id>', '/api/capabilities/<int:resource_id>', '/api/resources/<int:resource_id>')
+    api.add_resource(ProcessExecutionPlanResource, '/api/processes/<int:process_id>/execution-plan')
+    api.add_resource(ProcessResourceLinkListResource, '/api/processes/<int:process_id>/enabling-resources', '/api/processes/<int:process_id>/capabilities', '/api/processes/<int:process_id>/resources')
+    api.add_resource(ProcessResourceLinkResource, '/api/processes/<int:process_id>/enabling-resources/<int:link_id>', '/api/processes/<int:process_id>/capabilities/<int:link_id>', '/api/processes/<int:process_id>/resources/<int:link_id>')
     api.add_resource(ProcessRoutineListResource, '/api/process-routines')
     api.add_resource(ProcessRoutineResource, '/api/process-routines/<int:routine_id>')
     api.add_resource(ProcessScheduleListResource, '/api/process-schedules')

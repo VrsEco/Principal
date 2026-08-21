@@ -87,7 +87,7 @@
 
     <div class="tabs-nav process-tabs-nav" aria-label="Navegação do detalhe do processo">
         <button class="tab-btn process-tab-btn active" onclick="switchTab('sipoc')"><span class="process-tab-btn__icon">🧩</span><span>SIPOC</span></button>
-        <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧱</span><span>Recursos</span></button>
+        <button class="tab-btn process-tab-btn" onclick="switchTab('resources')"><span class="process-tab-btn__icon">🧩</span><span>Recursos Habilitadores</span></button>
         <button class="tab-btn process-tab-btn" onclick="switchTab('modeling')"><span class="process-tab-btn__icon">📐</span><span>Fluxo</span></button>
         <button class="tab-btn process-tab-btn process-tab-btn--pop" onclick="switchTab('pops')"><span class="process-tab-btn__icon">📋</span><span>POP</span></button>
         <button class="tab-btn process-tab-btn process-tab-btn--form" onclick="switchTab('forms')"><span class="process-tab-btn__icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span><span>Modelos FORM</span></button>
@@ -121,12 +121,12 @@
         <section class="process-section mt-4">
             <div class="process-section__header">
                 <div>
-                    <span class="process-section__eyebrow">Capacidade operacional</span>
-                    <h2 class="text-h2">Utilização de Recursos no Processo</h2>
-                    <p class="process-section__description">Vincule um ou mais recursos já cadastrados, informando uso por instância e instâncias mensais estimadas; o sistema calcula consumo mensal, custo e saldo de capacidade.</p>
+                    <span class="process-section__eyebrow">Habilitação do processo</span>
+                    <h2 class="text-h2">Recursos Habilitadores do Processo</h2>
+                    <p class="process-section__description">Planeje a frequência de execução e informe o consumo de cada recurso por instância. O APP32 calcula demanda e utilização.</p>
                 </div>
                 <div class="process-section__actions">
-                    <a class="btn btn-secondary btn-sm" href="/process-map?tab=resources">🧱 Gerenciar catálogo geral</a>
+                    <a class="btn btn-secondary btn-sm" href="/process-map?tab=resources">🧩 Gerenciar catálogo corporativo</a>
                 </div>
             </div>
             <div class="process-section__body">
@@ -154,27 +154,59 @@
                     </article>
                 </div>
 
+                <form id="processExecutionPlanForm" class="pop-create-form" onsubmit="saveProcessExecutionPlan(event)" style="align-items:flex-end; flex-wrap:wrap; margin-bottom:1rem; padding:1rem; border:1px solid var(--border); border-radius:12px;">
+                    <div style="min-width:220px; flex:1;">
+                        <label class="pop-field-label">Execuções planejadas *</label>
+                        <input id="executionFrequencyCount" type="number" min="0" step="0.01" class="form-control" placeholder="Ex: 15" required>
+                    </div>
+                    <div style="min-width:180px;">
+                        <label class="pop-field-label">A cada período *</label>
+                        <select id="executionFrequencyPeriod" class="form-control" required>
+                            <option value="day">Dia</option><option value="week">Semana</option><option value="month">Mês</option><option value="quarter">Trimestre</option><option value="year">Ano</option>
+                        </select>
+                    </div>
+                    <div style="min-width:180px;">
+                        <label class="pop-field-label">Dias úteis/mês</label>
+                        <input id="executionWorkingDays" type="number" min="1" step="0.01" value="22" class="form-control">
+                    </div>
+                    <div style="min-width:220px;">
+                        <label class="pop-field-label">Equivalência mensal</label>
+                        <strong id="plannedMonthlyInstances" style="display:block; padding:.65rem;">Não planejada</strong>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Salvar planejamento</button>
+                </form>
+
                 <form id="processResourceForm" class="pop-create-form" onsubmit="createProcessResource(event)" style="align-items:flex-end; flex-wrap:wrap;">
                     <div style="min-width:320px; flex:1;">
-                        <label class="pop-field-label">Recurso a ser incluído *</label>
+                        <label class="pop-field-label">Recurso habilitador *</label>
                         <select id="existingResourceId" class="form-control" required>
-                            <option value="">Selecione um recurso cadastrado...</option>
+                            <option value="">Carregando catálogo corporativo...</option>
                         </select>
+                        <small id="resourceCatalogStatus" class="text-tertiary" style="display:block; margin-top:.35rem;"></small>
                     </div>
                     <div style="width:170px;">
                         <label class="pop-field-label">Uso por instância</label>
                         <input id="resourceUsedPerExecution" type="text" inputmode="decimal" class="form-control app32-decimal-input" placeholder="0,00" autocomplete="off">
                     </div>
+                    <div style="min-width:220px; flex:1;">
+                        <label class="pop-field-label">Condição requerida</label>
+                        <input id="capabilityRequiredCondition" class="form-control" placeholder="Ex: licença ativa e parametrizada">
+                    </div>
                     <div style="width:170px;">
-                        <label class="pop-field-label">Instâncias/mês</label>
-                        <input id="resourceEstimatedInstances" type="text" inputmode="decimal" class="form-control app32-decimal-input" placeholder="0,00" autocomplete="off">
+                        <label class="pop-field-label">Criticidade</label>
+                        <select id="capabilityCriticality" class="form-control">
+                            <option value="">Não informada</option>
+                            <option value="low">Baixa</option>
+                            <option value="medium">Média</option>
+                            <option value="high">Alta</option>
+                            <option value="critical">Crítica</option>
+                        </select>
                     </div>
                     <div style="min-width:220px; flex:1;">
-                        <label class="pop-field-label">Notas de capacidade/gargalo</label>
+                        <label class="pop-field-label">Gap / gargalo</label>
                         <input id="resourceBottleneckNotes" class="form-control" placeholder="Opcional">
                     </div>
                     <button class="btn btn-primary" type="submit">Vincular recurso</button>
-                    <a class="btn btn-secondary" href="/process-map?tab=resources">Cadastrar / alterar recursos</a>
                 </form>
 
                 <div id="processResourcesList" style="margin-top:1rem;"></div>
@@ -841,6 +873,227 @@
     .process-section__body {
         padding: 1.35rem;
     }
+
+    .resource-dimension-group {
+        margin-top: 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: var(--surface-secondary);
+        overflow: hidden;
+    }
+
+    .resource-dimension-group__header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.15rem;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(255, 255, 255, 0.96));
+    }
+
+    .resource-dimension-group__header h3 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    .resource-dimension-group__eyebrow,
+    .resource-dimension-group__count {
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    .resource-dimension-group__eyebrow {
+        padding: 0.3rem 0.55rem;
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary);
+        text-transform: uppercase;
+    }
+
+    .resource-dimension-group__count {
+        margin-left: auto;
+        padding: 0.35rem 0.65rem;
+        background: var(--surface);
+        color: var(--text-tertiary);
+        border: 1px solid var(--border);
+    }
+
+    .resource-capacity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .resource-capacity-card {
+        border: 1px solid var(--border);
+        border-left: 4px solid #10b981;
+        border-radius: 16px;
+        background: var(--surface);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+
+    .resource-capacity-card--warning { border-left-color: #f59e0b; }
+    .resource-capacity-card--danger { border-left-color: #ef4444; }
+    .resource-capacity-card--neutral { border-left-color: #94a3b8; }
+
+    .resource-capacity-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.1rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .resource-capacity-card__identity {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        min-width: 0;
+    }
+
+    .resource-capacity-card__identity h4 {
+        margin: 0 0 0.25rem;
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
+    .resource-capacity-card__icon {
+        display: grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        border-radius: 13px;
+        background: var(--primary-light);
+        font-size: 1.1rem;
+    }
+
+    .resource-capacity-card__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 0.8rem;
+        color: var(--text-tertiary);
+        font-size: 0.75rem;
+    }
+
+    .resource-capacity-status,
+    .resource-criticality,
+    .resource-gap {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 800;
+    }
+
+    .resource-capacity-status { padding: 0.4rem 0.65rem; white-space: nowrap; }
+    .resource-capacity-status--success,
+    .resource-criticality--success,
+    .resource-gap--ok { background: #ecfdf5; color: #047857; }
+    .resource-capacity-status--warning,
+    .resource-criticality--warning,
+    .resource-gap--warning { background: #fffbeb; color: #b45309; }
+    .resource-capacity-status--danger,
+    .resource-criticality--danger { background: #fef2f2; color: #b91c1c; }
+    .resource-capacity-status--neutral,
+    .resource-criticality--neutral { background: var(--surface-secondary); color: var(--text-tertiary); }
+
+    .resource-capacity-card__summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(130px, 0.75fr)) minmax(240px, 1.5fr);
+        gap: 0.75rem;
+        padding: 1rem 1.1rem;
+        background: rgba(248, 250, 252, 0.72);
+    }
+
+    .resource-capacity-metric,
+    .resource-capacity-meter {
+        min-width: 0;
+        padding: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+    }
+
+    .resource-capacity-metric span,
+    .resource-capacity-meter__labels span,
+    .resource-capacity-meter small {
+        color: var(--text-tertiary);
+        font-size: 0.7rem;
+    }
+
+    .resource-capacity-metric strong {
+        display: block;
+        margin-top: 0.3rem;
+        color: var(--text-primary);
+        font-size: 0.96rem;
+    }
+
+    .resource-capacity-meter__labels {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .resource-capacity-meter__labels strong { color: var(--text-primary); font-size: 1rem; }
+
+    .resource-capacity-meter__track {
+        height: 8px;
+        margin: 0.55rem 0 0.4rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+
+    .resource-capacity-meter__bar {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: #10b981;
+    }
+
+    .resource-capacity-meter__bar--warning { background: #f59e0b; }
+    .resource-capacity-meter__bar--danger { background: #ef4444; }
+    .resource-capacity-meter__bar--neutral { background: #94a3b8; }
+
+    .resource-allocation-table-wrap { overflow-x: auto; }
+
+    .resource-allocation-table {
+        width: 100%;
+        min-width: 980px;
+        border-collapse: collapse;
+    }
+
+    .resource-allocation-table th,
+    .resource-allocation-table td {
+        padding: 0.85rem 1rem;
+        border-top: 1px solid var(--border);
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.78rem;
+    }
+
+    .resource-allocation-table th {
+        border-top: 0;
+        background: var(--surface);
+        color: var(--text-tertiary);
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.045em;
+        text-transform: uppercase;
+    }
+
+    .resource-allocation-table td strong { display: block; color: var(--text-primary); }
+    .resource-allocation-table td small { display: block; margin-top: 0.25rem; color: var(--text-tertiary); }
+    .resource-allocation-table td .resource-criticality { display: inline-flex; margin-top: 0.35rem; padding: 0.25rem 0.45rem; }
+    .resource-allocation-table td .resource-gap { padding: 0.3rem 0.5rem; }
 
     .process-indicators-list {
         display: flex;
@@ -1613,6 +1866,10 @@
         .process-kpis {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+
+        .resource-capacity-card__summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     @media (max-width: 840px) {
@@ -1661,6 +1918,16 @@
         .process-section__header {
             padding: 1rem;
         }
+
+        .resource-dimension-group__header,
+        .resource-capacity-card__header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .resource-dimension-group__count { margin-left: 0; }
+        .resource-capacity-card__summary { grid-template-columns: 1fr; }
+        .resource-capacity-list { padding: 0.75rem; }
 
         .process-tab-btn {
             flex: 0 0 auto;
@@ -1936,15 +2203,15 @@
 
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
-                    const loaders = ['sipoc', 'catálogo de recursos', 'estrutura/recursos', 'roteiros', 'indicadores', 'agendamentos', 'artefatos', 'contratos de IA'];
+                    const loaders = ['sipoc', 'catálogo corporativo de recursos', 'recursos do processo', 'roteiros', 'indicadores', 'agendamentos', 'artefatos', 'contratos de IA'];
                     console.warn(`Falha parcial ao carregar ${loaders[index]} do processo ${processId}:`, result.reason);
                 }
             });
 
             renderProcess();
             renderSipoc();
-            populateResourceCatalogSelect();
             renderProcessResources();
+            renderProcessExecutionPlan();
             renderRoutines();
             renderIndicators();
             renderInstances();
@@ -2018,23 +2285,39 @@
 
     async function fetchProcessResources() {
         try {
-            const res = await fetch(`/api/processes/${processId}/resources`);
-            if (!res.ok) throw new Error('Falha ao carregar Estrutura/Recursos');
+            const res = await fetch(`/api/processes/${processId}/enabling-resources`);
+            if (!res.ok) throw new Error('Falha ao carregar recursos habilitadores');
             state.resources = await res.json();
         } catch (e) {
-            console.warn('Erro ao buscar Estrutura/Recursos:', e);
+            console.warn('Erro ao buscar recursos habilitadores:', e);
             state.resources = null;
         }
     }
 
     async function fetchResourceCatalog() {
+        const tenantCompanyId = Number(state.process?.company_id || companyId || 0);
+        const select = document.getElementById('existingResourceId');
+        const status = document.getElementById('resourceCatalogStatus');
+        if (select) {
+            select.disabled = true;
+            select.innerHTML = '<option value="">Carregando catálogo corporativo...</option>';
+        }
+        if (status) status.textContent = '';
+
         try {
-            const res = await fetch(`/api/resources?company_id=${companyId}&active_only=true`);
-            if (!res.ok) throw new Error('Falha ao carregar catálogo de recursos');
-            state.resourceCatalog = await res.json();
+            if (!tenantCompanyId) throw new Error('Empresa do processo não identificada.');
+            const res = await fetch(`/api/enabling-resources?company_id=${tenantCompanyId}&active_only=true`, {
+                cache: 'no-store',
+                headers: { Accept: 'application/json' }
+            });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(payload.error || 'Falha ao carregar o catálogo corporativo de recursos');
+            state.resourceCatalog = Array.isArray(payload) ? { resources: payload } : payload;
+            populateResourceCatalogSelect();
         } catch (e) {
-            console.warn('Erro ao buscar catálogo de recursos:', e);
+            console.warn('Erro ao buscar o catálogo corporativo de recursos:', e);
             state.resourceCatalog = { resources: [] };
+            populateResourceCatalogSelect(e.message || 'Não foi possível carregar o catálogo corporativo.');
         }
     }
 
@@ -2131,19 +2414,64 @@
     }
 
     function formatCapacityUnit(unit) {
-        return ({ hour: 'h/mês', day: 'dia/mês', month: 'mês' })[unit] || '';
+        return ({ hour: 'h', unit: 'un.', transaction: 'transações', license: 'licenças', person: 'pessoas', item: 'itens' })[unit] || '';
     }
 
-    function populateResourceCatalogSelect() {
+    function renderProcessExecutionPlan() {
+        const plan = state.resources?.execution_plan;
+        if (!plan) {
+            setElementText('plannedMonthlyInstances', 'Não planejada');
+            return;
+        }
+        document.getElementById('executionFrequencyCount').value = Number(plan.frequency_count || 0);
+        document.getElementById('executionFrequencyPeriod').value = plan.frequency_period || 'month';
+        document.getElementById('executionWorkingDays').value = plan.working_days_per_month || 22;
+        setElementText('plannedMonthlyInstances', `${formatNumberBR(plan.planned_monthly_instances)} execuções/mês`);
+    }
+
+    async function saveProcessExecutionPlan(event) {
+        event.preventDefault();
+        const res = await fetch(`/api/processes/${processId}/execution-plan`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                frequency_count: Number(document.getElementById('executionFrequencyCount').value || 0),
+                frequency_period: document.getElementById('executionFrequencyPeriod').value,
+                working_days_per_month: Number(document.getElementById('executionWorkingDays').value || 22)
+            })
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) return alert(payload.error || 'Falha ao salvar planejamento de execução.');
+        await fetchProcessResources();
+        await fetchResourceCatalog();
+        renderProcessExecutionPlan();
+        renderProcessResources();
+    }
+
+    function populateResourceCatalogSelect(loadError = '') {
         const select = document.getElementById('existingResourceId');
         if (!select) return;
+        const status = document.getElementById('resourceCatalogStatus');
         const resources = (state.resourceCatalog && state.resourceCatalog.resources) || [];
-        select.innerHTML = '<option value="">Selecione um recurso cadastrado...</option>' + resources.map(resource => {
+        select.disabled = Boolean(loadError) || resources.length === 0;
+        if (loadError) {
+            select.innerHTML = '<option value="">Catálogo indisponível</option>';
+            if (status) status.textContent = loadError;
+            return;
+        }
+        if (!resources.length) {
+            select.innerHTML = '<option value="">Nenhum recurso habilitador ativo cadastrado</option>';
+            if (status) status.textContent = 'Cadastre um recurso no catálogo corporativo para vinculá-lo ao processo.';
+            return;
+        }
+        if (status) status.textContent = `${resources.length} recurso(s) habilitador(es) disponível(is) para este processo.`;
+        select.innerHTML = '<option value="">Selecione um recurso do catálogo corporativo...</option>' + resources.map(resource => {
             const usage = resource.usage || {};
             const capacity = usage.capacity_total ?? resource.operational_capacity_value ?? resource.quantity ?? '--';
-            const available = usage.available_quantity ?? '--';
+            const available = usage.remaining_planned_capacity ?? usage.available_quantity ?? '--';
             const unit = formatCapacityUnit(resource.operational_capacity_unit);
-            return `<option value="${resource.id}">${escapeHtml(resourceTypeLabels[resource.type] || resource.type)} · ${escapeHtml(resource.subtype || '--')} · ${escapeHtml(resource.item_name || '--')} · disponível: ${formatNumberBR(available)} ${unit} / total: ${formatNumberBR(capacity)} ${unit}</option>`;
+            const dimension = resource.dimension?.name || resourceTypeLabels[resource.type] || resource.type;
+            return `<option value="${resource.id}">${escapeHtml(dimension)} · ${escapeHtml(resource.name || resource.item_name || '--')} · disponível: ${formatNumberBR(available)} ${unit} / total: ${formatNumberBR(capacity)} ${unit}</option>`;
         }).join('');
     }
 
@@ -2163,57 +2491,136 @@
             host.innerHTML = `
                 <div class="sipoc-empty-state">
                     <div style="font-size:2rem;">🧱</div>
-                    <h3 style="margin:0 0 0.5rem 0;">Nenhum recurso vinculado</h3>
-                    <p style="margin:0;">Cadastre o primeiro recurso para medir custo, capacidade e gargalos deste processo.</p>
+                    <h3 style="margin:0 0 0.5rem 0;">Nenhum recurso habilitador vinculado</h3>
+                    <p style="margin:0;">Vincule um recurso disponível no catálogo corporativo.</p>
                 </div>
             `;
             return;
         }
 
-        host.innerHTML = Object.entries(resourceTypeLabels).map(([type, label]) => {
-            const items = grouped[type] || [];
+        const dimensionGroups = Array.isArray(bundle.grouped_by_dimension) ? bundle.grouped_by_dimension : [];
+        host.innerHTML = dimensionGroups.map(group => {
+            const label = group.dimension?.name || 'Sem dimensão';
+            const items = group.enabling_resources || group.capabilities || [];
             if (!items.length) return '';
+
+            const resources = items.reduce((catalog, link) => {
+                const resource = link.resource || {};
+                const key = String(resource.id || link.resource_id || `link-${link.id}`);
+                if (!catalog.has(key)) catalog.set(key, { resource, allocations: [] });
+                catalog.get(key).allocations.push(link);
+                return catalog;
+            }, new Map());
+
             return `
-                <section class="card" style="padding:1rem; margin-bottom:1rem;">
-                    <h3 style="margin:0 0 0.75rem 0;">${label}</h3>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Subtipo</th>
-                                    <th>Uso por instância</th>
-                                    <th>Instâncias/mês</th>
-                                    <th>Uso mensal / Capacidade</th>
-                                    <th>Disponível</th>
-                                    <th>Custo mensal</th>
-                                    <th>Custo/instância</th>
-                                    <th>Capacidade/Gargalo</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${items.map(link => {
-                                    const resource = link.resource || {};
-                                    const usage = resource.usage || {};
-                                    const unit = formatCapacityUnit(resource.operational_capacity_unit);
-                                    const capacityTotal = usage.capacity_total ?? resource.operational_capacity_value ?? resource.quantity;
-                                    const available = usage.available_quantity;
-                                    return `
-                                        <tr>
-                                            <td><strong>${escapeHtml(resource.item_name || '--')}</strong></td>
-                                            <td>${escapeHtml(resource.subtype || '--')}</td>
-                                            <td>${formatNumberBR(link.used_quantity_per_execution)} ${unit}</td>
-                                            <td>${formatNumberBR(link.estimated_monthly_instances)}</td>
-                                            <td>${formatNumberBR(link.monthly_used_quantity ?? link.used_quantity)} ${unit} / ${formatNumberBR(capacityTotal)} ${unit}<br><small>${formatNumberBR(link.usage_percentage)}% deste recurso</small></td>
-                                            <td>${formatNumberBR(available)} ${unit}</td>
-                                            <td>${formatCurrencyBR(link.allocated_monthly_cost)}</td>
-                                            <td>${formatCurrencyBR(link.estimated_cost_per_execution)}</td>
-                                            <td>${escapeHtml(link.capacity_bottleneck_notes || 'Sem notas')}</td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
+                <section class="resource-dimension-group">
+                    <div class="resource-dimension-group__header">
+                        <span class="resource-dimension-group__eyebrow">Dimensão habilitadora</span>
+                        <h3>${escapeHtml(label)}</h3>
+                        <span class="resource-dimension-group__count">${resources.size} recurso(s)</span>
+                    </div>
+                    <div class="resource-capacity-list">
+                        ${Array.from(resources.values()).map(({ resource, allocations }) => {
+                            const usage = resource.usage || {};
+                            const unit = formatCapacityUnit(resource.operational_capacity_unit);
+                            const capacityTotal = usage.capacity_total ?? resource.operational_capacity_value ?? resource.quantity;
+                            const plannedUtilization = Number(usage.planned_utilization_percentage || 0);
+                            const actualUtilization = Number(usage.actual_utilization_percentage || 0);
+                            const progressWidth = Math.min(Math.max(plannedUtilization, 0), 100);
+                            const capacityStatus = capacityTotal === null || capacityTotal === undefined
+                                ? { css: 'neutral', label: 'Capacidade não informada' }
+                                : usage.is_overloaded
+                                    ? { css: 'danger', label: 'Sobrecarga' }
+                                    : usage.is_above_recommended
+                                        ? { css: 'warning', label: 'Acima do recomendado' }
+                                        : { css: 'success', label: 'Capacidade disponível' };
+                            return `
+                                <article class="resource-capacity-card resource-capacity-card--${capacityStatus.css}">
+                                    <div class="resource-capacity-card__header">
+                                        <div class="resource-capacity-card__identity">
+                                            <span class="resource-capacity-card__icon">⚙️</span>
+                                            <div>
+                                                <h4>${escapeHtml(resource.name || resource.item_name || '--')}</h4>
+                                                <div class="resource-capacity-card__meta">
+                                                    <span>${escapeHtml(resource.subtype || 'Sem subtipo')}</span>
+                                                    <span>${allocations.length} alocação(ões) neste processo</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span class="resource-capacity-status resource-capacity-status--${capacityStatus.css}">${capacityStatus.label}</span>
+                                    </div>
+
+                                    <div class="resource-capacity-card__summary">
+                                        <div class="resource-capacity-metric">
+                                            <span>Capacidade mensal</span>
+                                            <strong>${formatNumberBR(capacityTotal)} ${unit}</strong>
+                                        </div>
+                                        <div class="resource-capacity-metric">
+                                            <span>Demanda planejada total</span>
+                                            <strong>${formatNumberBR(usage.planned_demand)} ${unit}</strong>
+                                        </div>
+                                        <div class="resource-capacity-metric">
+                                            <span>Saldo planejado</span>
+                                            <strong>${formatNumberBR(usage.remaining_planned_capacity)} ${unit}</strong>
+                                        </div>
+                                        <div class="resource-capacity-meter">
+                                            <div class="resource-capacity-meter__labels">
+                                                <span>Utilização compartilhada</span>
+                                                <strong>${formatNumberBR(plannedUtilization)}%</strong>
+                                            </div>
+                                            <div class="resource-capacity-meter__track" role="progressbar" aria-label="Utilização planejada do recurso" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(progressWidth)}">
+                                                <span class="resource-capacity-meter__bar resource-capacity-meter__bar--${capacityStatus.css}" style="width:${progressWidth}%;"></span>
+                                            </div>
+                                            <small>${formatNumberBR(actualUtilization)}% real · limite recomendado ${formatNumberBR(usage.max_recommended_utilization_pct)}%</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="resource-allocation-table-wrap">
+                                        <table class="resource-allocation-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Alocação / condição</th>
+                                                    <th>Consumo por execução</th>
+                                                    <th>Execuções/mês</th>
+                                                    <th>Demanda do processo</th>
+                                                    <th>Custos</th>
+                                                    <th>Gap / gargalo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${allocations.map((link, index) => {
+                                                    const criticality = ({low:'Baixa',medium:'Média',high:'Alta',critical:'Crítica'})[link.criticality] || 'Não informada';
+                                                    const criticalityCss = ({low:'success',medium:'warning',high:'warning',critical:'danger'})[link.criticality] || 'neutral';
+                                                    return `
+                                                        <tr>
+                                                            <td>
+                                                                <strong>Alocação ${index + 1}</strong>
+                                                                <span class="resource-criticality resource-criticality--${criticalityCss}">${escapeHtml(criticality)}</span>
+                                                                <small>${escapeHtml(link.required_condition || 'Sem condição específica')}</small>
+                                                            </td>
+                                                            <td><strong>${formatNumberBR(link.used_quantity_per_execution)} ${unit}</strong></td>
+                                                            <td>${formatNumberBR(link.estimated_monthly_instances)}</td>
+                                                            <td>
+                                                                <strong>${formatNumberBR(link.monthly_used_quantity ?? link.used_quantity)} ${unit}/mês</strong>
+                                                                <small>${formatNumberBR(link.usage_percentage)}% da capacidade total</small>
+                                                            </td>
+                                                            <td>
+                                                                <strong>${formatCurrencyBR(link.allocated_monthly_cost)}/mês</strong>
+                                                                <small>${formatCurrencyBR(link.estimated_cost_per_execution)}/execução</small>
+                                                            </td>
+                                                            <td>${link.gap_notes || link.capacity_bottleneck_notes
+                                                                ? `<span class="resource-gap resource-gap--warning">${escapeHtml(link.gap_notes || link.capacity_bottleneck_notes)}</span>`
+                                                                : '<span class="resource-gap resource-gap--ok">Sem gap informado</span>'}
+                                                            </td>
+                                                        </tr>
+                                                    `;
+                                                }).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </article>
+                            `;
+                        }).join('')}
                     </div>
                 </section>
             `;
@@ -2225,18 +2632,20 @@
         const form = event.target;
         const selectedResourceId = document.getElementById('existingResourceId').value;
         if (!selectedResourceId) {
-            alert('Selecione um recurso já cadastrado no catálogo geral.');
+            alert('Selecione um recurso habilitador do catálogo corporativo.');
             return;
         }
 
         try {
-            const linkRes = await fetch(`/api/processes/${processId}/resources`, {
+            const linkRes = await fetch(`/api/processes/${processId}/enabling-resources`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     resource_id: Number(selectedResourceId),
                     used_quantity_per_execution: parseApp32Decimal(document.getElementById('resourceUsedPerExecution').value),
-                    estimated_monthly_instances: parseApp32Decimal(document.getElementById('resourceEstimatedInstances').value),
+                    required_condition: document.getElementById('capabilityRequiredCondition').value || null,
+                    criticality: document.getElementById('capabilityCriticality').value || null,
+                    gap_notes: document.getElementById('resourceBottleneckNotes').value || null,
                     capacity_bottleneck_notes: document.getElementById('resourceBottleneckNotes').value || null
                 })
             });
@@ -2246,11 +2655,10 @@
             form.reset();
             await fetchResourceCatalog();
             await fetchProcessResources();
-            populateResourceCatalogSelect();
             renderProcessResources();
         } catch (err) {
-            console.error('Erro ao criar recurso do processo:', err);
-            alert(err.message || 'Erro ao criar recurso do processo.');
+            console.error('Erro ao vincular recurso ao processo:', err);
+            alert(err.message || 'Erro ao vincular recurso ao processo.');
         }
     }
 

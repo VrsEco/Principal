@@ -68,6 +68,8 @@ database.db
 pevapp*.db
 backup_*.db
 *.sql
+!migrations/20260820_capability_dimensions.sql
+!migrations/20260821_enabling_resources_global_catalog.sql
 *.dump
 
 # ==========================================
