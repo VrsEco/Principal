@@ -519,13 +519,24 @@
 
     function outputForMode(config, mode) {
         if (!config) return '';
+        const needsToken = Boolean(config.token_required) && !latestMcpPlaintextToken;
+        const blockedMessage = [
+            'Token MCP obrigatório para concluir a instalação.',
+            '',
+            'Clique em Criar token ou Renovar, copie o token exibido uma única vez e use o comando final gerado logo depois.',
+            'Por segurança, o APP32 não exibe comando executável com token placeholder.'
+        ].join('\n');
+        if (needsToken) return blockedMessage;
         if (mode === 'powershell') {
-            return config.advanced_install_text || config.advanced_install_command || config.powershell_install_command || config.copy_install_command_text || config.install_command || config.guided_install_text || config.instruction_text || '';
+            const output = config.advanced_install_text || config.advanced_install_command || config.powershell_install_command || config.copy_install_command_text || config.install_command || config.guided_install_text || config.instruction_text || '';
+            return output;
         }
         if (mode === 'technical') {
-            return config.technical_config_text || `${config.text || ''}\n\nJSON:\n${JSON.stringify(config.json || {}, null, 2)}`;
+            const output = config.technical_config_text || `${config.text || ''}\n\nJSON:\n${JSON.stringify(config.json || {}, null, 2)}`;
+            return output;
         }
-        return config.normal_install_text || config.normal_install_command || config.activation_prompt || config.guided_install_text || config.cli_install_text || config.instruction_text || '';
+        const output = config.normal_install_text || config.normal_install_command || config.activation_prompt || config.guided_install_text || config.cli_install_text || config.instruction_text || '';
+        return output;
     }
 
     function renderMcpStatus(status) {

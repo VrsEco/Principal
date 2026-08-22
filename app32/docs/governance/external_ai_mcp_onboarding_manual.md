@@ -51,6 +51,8 @@ Toda IA externa deve consultar:
   1. no Usuário Normal, `install-sapiens-claude-desktop-windows.ps1` + smoke `initialize`;
   2. no Usuário Avançado, `claude mcp add ...` + validação com `claude mcp list`;
   3. prompt de bootstrap/ativação.
+- O APP32 não deve exibir comando executável quando o token ainda for placeholder; o usuário precisa clicar em **Criar token** ou **Renovar** e copiar o comando final com token real.
+- O instalador Desktop deve rejeitar explicitamente `TOKEN_GERADO_APENAS_NA_RENOVACAO` para evitar falsa instalação e erro genérico no Claude.
 - Slash commands personalizados podem existir, mas são **opcionais**.
 
 ## Regra de permissão real do usuário

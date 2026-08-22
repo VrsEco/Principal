@@ -242,6 +242,7 @@ Toda conexão MCP pessoal deve exibir ou permitir verificar:
 Mensagens desejadas:
 
 - “Token expirado ou revogado — gere novo token e atualize seu runtime.”
+- “Token MCP obrigatório para concluir a instalação — crie ou renove o token e copie o comando final.”
 - “MCP público fora do ar — acione Engenharia.”
 - “Conectado, mas sem empresa ativa — selecione empresa padrão.”
 - “Runtime configurado, mas sem chamada recente — execute teste no CLI.”

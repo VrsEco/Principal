@@ -407,6 +407,9 @@ if ([string]::IsNullOrWhiteSpace($ServerUrl)) {
 if ([string]::IsNullOrWhiteSpace($BearerToken)) {
     throw "BearerToken é obrigatório."
 }
+if ($BearerToken -match "TOKEN_GERADO_APENAS_NA_RENOVACAO") {
+    throw "BearerToken ainda está como placeholder. Volte ao APP32, clique em Criar/Renovar token e copie o comando final gerado após a renovação."
+}
 
 Write-Step "Instalação do $ExperienceLabel no Claude Windows Desktop"
 $nodePath = Resolve-NodePath
