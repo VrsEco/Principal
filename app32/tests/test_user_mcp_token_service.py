@@ -267,6 +267,29 @@ def test_build_client_config_resolves_claude_squad_cliente_installer(monkeypatch
     assert "install-sapiens-runtime.ps1" in advanced_decoded
     assert "-ClientRuntime 'claude'" in advanced_decoded
     assert "Usuário Normal" in config["instruction_text"]
+
+
+def test_build_client_config_marks_placeholder_as_not_executable(monkeypatch):
+    service = token_service_module.user_mcp_token_service
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_ensure_app_context", staticmethod(lambda: __import__("contextlib").nullcontext()))
+    monkeypatch.setattr(token_service_module, "User", SimpleNamespace(query=SimpleNamespace(get=lambda _id: SimpleNamespace(id=7, is_active=True))))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_normalize_surface", staticmethod(lambda surface: "user"))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "_resolve_explicit_company_id_for_user", staticmethod(lambda user, company_id: 10))
+    monkeypatch.setattr(token_service_module.UserMcpTokenService, "list_accessible_companies", staticmethod(lambda user: [{"id": 10, "label": "M1 - Empresa Laboratorio"}]))
+    monkeypatch.setenv("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
+
+    config = service.build_client_config(
+        user_id=7,
+        company_id=10,
+        runtime="claude",
+        squad="squad_cliente",
+    )
+
+    assert config["has_plaintext_token"] is False
+    assert config["token_required"] is True
+    assert config["token_placeholder"] == "TOKEN_GERADO_APENAS_NA_RENOVACAO"
+    decoded = base64.b64decode(config["normal_install_command"].split(" -EncodedCommand ", 1)[1]).decode("utf-16le")
+    assert "TOKEN_GERADO_APENAS_NA_RENOVACAO" in decoded
     assert "Usuário Avançado" in config["instruction_text"]
     assert "Claude CLI/registry HTTP" in config["instruction_text"]
     assert "proxy stdio" in config["instruction_text"]

@@ -23,6 +23,8 @@ def test_claude_desktop_windows_installer_uses_custom_stdio_proxy():
     assert '$ProxyVersion = "1.1.0"' in content
     assert "protocolVersion\":\"2025-03-26" in content
     assert "WaitForExit(190000)" in content
+    assert "TOKEN_GERADO_APENAS_NA_RENOVACAO" in content
+    assert "BearerToken ainda está como placeholder" in content
 
 
 def test_claude_desktop_windows_installer_preserves_existing_config():

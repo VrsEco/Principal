@@ -69,5 +69,16 @@ def test_connections_page_contains_mcp_unified_entrypoint():
     assert "Reparar runtime MCP" in template
     assert "/api/integrations/mcp-runtime/repair" in template
     assert "repairConnectionsMcpRuntime" in template
+    assert "Token MCP obrigatório para concluir a instalação." in template
+    assert "normal_install_command" in template
+    assert "advanced_install_command" in template
+
+
+def test_profile_mcp_page_blocks_placeholder_command_copy():
+    template = (ROOT / "templates" / "auth" / "profile.html").read_text(encoding="utf-8")
+
+    assert "Token MCP obrigatório para concluir a instalação." in template
+    assert "Por segurança, o APP32 não exibe comando executável com token placeholder." in template
+    assert "token_required" in template
 
 

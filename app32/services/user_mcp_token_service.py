@@ -1725,7 +1725,9 @@ class UserMcpTokenService:
                 resolved_company_id=resolved_company_id,
                 company_label=display_name,
             )
-            token_value = plaintext_token or "TOKEN_GERADO_APENAS_NA_RENOVACAO"
+            has_plaintext_token = bool(str(plaintext_token or "").strip())
+            token_placeholder = "TOKEN_GERADO_APENAS_NA_RENOVACAO"
+            token_value = plaintext_token or token_placeholder
             url = f"{public_base}/mcp/{resolved_surface}/"
             if resolved_surface != "user" and resolved_company_id:
                 url = f"{url}?company_id={resolved_company_id}"
@@ -1979,6 +1981,9 @@ class UserMcpTokenService:
                 "fallback_runtime": runtime_config["fallback_runtime"],
                 "fallback_runtime_label": runtime_config["fallback_runtime_label"],
                 "requires_company_selection": runtime_config["requires_company_selection"],
+                "has_plaintext_token": has_plaintext_token,
+                "token_required": not has_plaintext_token and runtime_config["supports_personal_token"],
+                "token_placeholder": token_placeholder,
                 "install_command": installation_command,
                 "copy_install_command_text": copy_install_command_text,
                 "powershell_install_command": installation_command,
