@@ -32,7 +32,10 @@ def test_claude_desktop_windows_installer_preserves_existing_config():
     content = script_path.read_text(encoding="utf-8")
 
     assert "Read-JsonConfig" in content
-    assert "ConvertTo-HashtableCompat" in content
+    assert "ConvertTo-HashtableCompat" not in content
+    assert "Set-McpServer" in content
+    assert "PSObject.Properties[\"mcpServers\"]" in content
+    assert "arrays vazios como `{}`" in content
     assert "Backup-IfExists" in content
     assert "mcpServers" in content
     assert "ConvertTo-Json -Depth 40" in content

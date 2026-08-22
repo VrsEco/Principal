@@ -38,34 +38,6 @@ function Backup-IfExists([string]$Path) {
     return $backupPath
 }
 
-function ConvertTo-HashtableCompat($InputObject) {
-    if ($null -eq $InputObject) {
-        return $null
-    }
-    if ($InputObject -is [System.Collections.IDictionary]) {
-        $hash = [ordered]@{}
-        foreach ($key in $InputObject.Keys) {
-            $hash[$key] = ConvertTo-HashtableCompat $InputObject[$key]
-        }
-        return $hash
-    }
-    if ($InputObject -is [System.Collections.IEnumerable] -and -not ($InputObject -is [string])) {
-        $items = @()
-        foreach ($item in $InputObject) {
-            $items += ,(ConvertTo-HashtableCompat $item)
-        }
-        return $items
-    }
-    if ($InputObject.PSObject -and $InputObject.PSObject.Properties.Count -gt 0 -and $InputObject.GetType().FullName -like "System.Management.Automation.PSCustomObject*") {
-        $hash = [ordered]@{}
-        foreach ($property in $InputObject.PSObject.Properties) {
-            $hash[$property.Name] = ConvertTo-HashtableCompat $property.Value
-        }
-        return $hash
-    }
-    return $InputObject
-}
-
 function Read-JsonConfig([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
         return [ordered]@{ mcpServers = [ordered]@{} }
@@ -75,14 +47,31 @@ function Read-JsonConfig([string]$Path) {
         return [ordered]@{ mcpServers = [ordered]@{} }
     }
     $parsed = $raw | ConvertFrom-Json
-    $root = ConvertTo-HashtableCompat $parsed
+    # Não converta recursivamente o JSON do Claude para hashtables. Em Windows
+    # PowerShell essa conversão pode serializar arrays vazios como `{}`, deixando
+    # preferências internas incompatíveis e impedindo o Desktop de abrir.
+    $root = $parsed
     if ($null -eq $root) {
         $root = [ordered]@{}
     }
-    if (-not $root.Contains("mcpServers") -or $null -eq $root.mcpServers) {
-        $root.mcpServers = [ordered]@{}
+    $mcpProperty = $root.PSObject.Properties["mcpServers"]
+    if ($null -eq $mcpProperty -or $null -eq $mcpProperty.Value) {
+        if ($root -is [System.Collections.IDictionary]) {
+            $root["mcpServers"] = [ordered]@{}
+        } else {
+            $root | Add-Member -NotePropertyName "mcpServers" -NotePropertyValue ([ordered]@{}) -Force
+        }
     }
     return $root
+}
+
+function Set-McpServer($Root, [string]$Name, $Definition) {
+    $servers = $Root.mcpServers
+    if ($servers -is [System.Collections.IDictionary]) {
+        $servers[$Name] = $Definition
+        return
+    }
+    $servers | Add-Member -NotePropertyName $Name -NotePropertyValue $Definition -Force
 }
 
 function Resolve-NodePath {
@@ -339,7 +328,7 @@ function Merge-ClaudeConfig(
     [string]$ProxyPath
 ) {
     $root = Read-JsonConfig -Path $Path
-    $root.mcpServers[$ServerName] = [ordered]@{
+    $serverDefinition = [ordered]@{
         command = $NodePath
         args = @($ProxyPath)
         env = [ordered]@{
@@ -358,6 +347,7 @@ function Merge-ClaudeConfig(
             command_alias = $CommandAlias
         }
     }
+    Set-McpServer -Root $root -Name $ServerName -Definition $serverDefinition
     Ensure-ParentDirectory -Path $Path
     $json = $root | ConvertTo-Json -Depth 40
     [System.IO.File]::WriteAllText($Path, $json, [System.Text.UTF8Encoding]::new($false))
