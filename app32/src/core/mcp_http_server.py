@@ -4,6 +4,7 @@ from contextlib import AsyncExitStack, asynccontextmanager
 import os
 import sys
 from typing import Any
+from urllib.parse import urlparse
 
 # O runtime MCP HTTP não deve inicializar workers/scheduler Flask ao resolver
 # tokens pessoais DB-backed. Esse processo precisa ser stateless e enxuto;
@@ -50,6 +51,10 @@ from src.core.mcp_surface_registry import (  # noqa: E402
     build_ops_mcp_server,
     build_user_mcp_server,
 )
+try:  # compatibilidade com o pacote MCP usado por testes legados locais
+    from mcp.server.transport_security import TransportSecuritySettings  # noqa: E402
+except ImportError:  # pragma: no cover - runtime antigo sem proteção configurável
+    TransportSecuritySettings = None  # type: ignore[assignment,misc]
 
 try:  # pragma: no cover - dependência opcional em ambiente de teste
     import uvicorn
@@ -70,6 +75,40 @@ def _env_flag(name: str, default: bool) -> bool:
 
 
 DEFAULT_STATELESS_HTTP = _env_flag("APP32_MCP_HTTP_STATELESS", True)
+
+
+def _build_transport_security_settings() -> Any | None:
+    """Permite apenas o host público HTTPS e o loopback do proxy reverso.
+
+    O FastMCP ativa proteção contra DNS rebinding automaticamente quando o
+    runtime escuta em 127.0.0.1. Como o nginx encaminha o Host público ao
+    runtime, a allowlist padrão apenas de loopback retorna 421 ao Claude/Node.
+    """
+    if TransportSecuritySettings is None:
+        return None
+    parsed = urlparse(DEFAULT_PUBLIC_BASE_URL)
+    public_host = parsed.hostname
+    if not public_host:
+        raise ValueError("APP32_MCP_PUBLIC_BASE_URL deve conter host válido.")
+    public_port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    public_netloc = parsed.netloc
+    public_origin = f"{parsed.scheme}://{public_netloc}"
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            public_netloc,
+            f"{public_host}:{public_port}",
+            f"{DEFAULT_HOST}:*",
+            "localhost:*",
+            "[::1]:*",
+        ],
+        allowed_origins=[
+            public_origin,
+            f"http://{DEFAULT_HOST}:*",
+            "http://localhost:*",
+            "http://[::1]:*",
+        ],
+    )
 
 
 def _surface_mount_path(surface: str) -> str:
@@ -96,6 +135,9 @@ def build_surface_http_app(surface: str):
 
     mcp.settings.host = DEFAULT_HOST
     mcp.settings.port = DEFAULT_PORT
+    transport_security = _build_transport_security_settings()
+    if transport_security is not None:
+        mcp.settings.transport_security = transport_security
     mcp.settings.streamable_http_path = "/"
     mcp.settings.mount_path = "/"
     mcp.settings.stateless_http = DEFAULT_STATELESS_HTTP
