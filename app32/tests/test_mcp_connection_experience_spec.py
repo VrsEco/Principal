@@ -81,6 +81,7 @@ def test_profile_mcp_page_blocks_placeholder_command_copy():
     assert "token_required" in template
     assert "const needsToken = Boolean(config.token_required);" in template
     assert "injectLatestTokenIntoConfig" not in template
+    assert "return resolvedData;" not in template
     token_action = template.split("async function runMcpTokenAction", 1)[1].split("function copyText", 1)[0]
     assert "await buildMcpConfig(false).catch(() => {});" not in token_action
 

@@ -576,7 +576,7 @@
         if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao montar configuração MCP.');
         renderMcpConfig(data.data);
         if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, 'Comando atualizado.');
-        return resolvedData;
+        return data.data;
     }
 
     function openMcpTokenModal(token) {
