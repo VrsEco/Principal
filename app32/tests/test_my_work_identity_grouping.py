@@ -70,7 +70,12 @@ const result = vm.runInContext(`
     {{ id: 202, user_id: 7, name: 'Ana', company_id: 2, company_name: 'Empresa B' }},
     {{ id: 303, user_id: null, name: 'Terceiro', company_id: 1, company_name: 'Empresa A' }}
   ];
-  JSON.stringify(getCollaboratorOptions());
+  state.selectedResponsibleIds = [101];
+  state.selectedExecutorIds = [101];
+  JSON.stringify({{
+    options: getCollaboratorOptions(),
+    reportFilters: buildReportFiltersPayload()
+  }});
 `, sandbox);
 process.stdout.write(result);
 """
@@ -81,7 +86,8 @@ process.stdout.write(result);
         capture_output=True,
         text=True,
     )
-    options = json.loads(completed.stdout)
+    result = json.loads(completed.stdout)
+    options = result["options"]
 
     ana = next(option for option in options if option["label"] == "Ana")
     third_party = next(option for option in options if option["label"] == "Terceiro")
@@ -90,3 +96,5 @@ process.stdout.write(result);
     assert "2 empresas" in ana["helper"]
     assert third_party["id"] == "employee:303"
     assert third_party["valueIds"] == [303]
+    assert result["reportFilters"]["responsible_ids"] == [101]
+    assert result["reportFilters"]["executor_ids"] == [101]

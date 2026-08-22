@@ -4038,7 +4038,13 @@ function buildReportFiltersPayload() {
   const toIntSet = (values) =>
     new Set((values || []).map(v => parseInt(v, 10)).filter(v => Number.isInteger(v)));
   const getSelectedFromAvailable = (selectedValues, availableOptions) => {
-    const availableIds = toIntSet((availableOptions || []).map(option => option.id));
+    const availableIds = toIntSet(
+      (availableOptions || []).flatMap(option =>
+        Array.isArray(option?.valueIds) && option.valueIds.length
+          ? option.valueIds
+          : [option?.id]
+      )
+    );
     const selectedIds = (selectedValues || [])
       .map(v => parseInt(v, 10))
       .filter(v => Number.isInteger(v) && availableIds.has(v));
