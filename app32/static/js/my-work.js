@@ -522,6 +522,22 @@ function setupMultiselect(config) {
   const selectAllInput = document.getElementById(config.selectAllId);
 
   const getOptions = () => (typeof config.optionsProvider === 'function' ? config.optionsProvider() : []) || [];
+  const getOptionValueIds = option => {
+    const ids = Array.isArray(option?.valueIds) && option.valueIds.length
+      ? option.valueIds
+      : [option?.id];
+    return ids.filter(id => id !== null && id !== undefined);
+  };
+  const isOptionSelected = (option, selectedSet) => {
+    const valueIds = getOptionValueIds(option);
+    return valueIds.length > 0 && valueIds.every(id => selectedSet.has(id));
+  };
+  const addOptionValues = (option, selectedSet) => {
+    getOptionValueIds(option).forEach(id => selectedSet.add(id));
+  };
+  const removeOptionValues = (option, selectedSet) => {
+    getOptionValueIds(option).forEach(id => selectedSet.delete(id));
+  };
 
   if (!trigger || !dropdown || !labelEl || !listEl) return;
 
@@ -535,7 +551,7 @@ function setupMultiselect(config) {
 
   function reSync() {
     currentOptions = getOptions();
-    const validIds = new Set(currentOptions.map(o => o.id));
+    const validIds = new Set(currentOptions.flatMap(getOptionValueIds));
 
     // Sincronizar Set local com o estado global, mas apenas IDs válidos para a nova lista
     const persisted = state[config.stateKey] || [];
@@ -547,7 +563,7 @@ function setupMultiselect(config) {
     // Se a lista mudou e ficou vazia após o filtro, e as opções originais tinham algo
     // e o componente exige seleção, ou se queremos auto-selecionar tudo por padrão
     if (config.selectAllByDefault && !selectedSet.size && currentOptions.length > 0) {
-      currentOptions.forEach(opt => selectedSet.add(opt.id));
+      currentOptions.forEach(opt => addOptionValues(opt, selectedSet));
     }
 
     state[config.stateKey] = Array.from(selectedSet);
@@ -561,7 +577,7 @@ function setupMultiselect(config) {
 
   // Inicialização (se houver opções e o estado estiver vazio)
   if (config.selectAllByDefault && !selectedSet.size && currentOptions.length > 0) {
-    currentOptions.forEach(opt => selectedSet.add(opt.id));
+    currentOptions.forEach(opt => addOptionValues(opt, selectedSet));
     state[config.stateKey] = Array.from(selectedSet);
   }
 
@@ -573,11 +589,12 @@ function setupMultiselect(config) {
       return;
     }
     // "Ativo" se não estiver tudo selecionado
-    let isActive = selectedSet.size < total;
+    const selectedCount = currentOptions.filter(option => isOptionSelected(option, selectedSet)).length;
+    let isActive = selectedCount < total;
 
     // Se não for obrigatório ter seleção (ex: Status), "Ativo" se nada ou nem tudo
     if (!config.requireSelection) {
-      isActive = selectedSet.size === 0 || selectedSet.size < total;
+      isActive = selectedCount === 0 || selectedCount < total;
     }
 
     toggleFilterHighlight(trigger, isActive);
@@ -586,7 +603,8 @@ function setupMultiselect(config) {
   function updateLabel() {
     updateTriggerHighlight();
     const total = currentOptions.length;
-    const selectedCount = selectedSet.size;
+    const selectedOptions = currentOptions.filter(option => isOptionSelected(option, selectedSet));
+    const selectedCount = selectedOptions.length;
     if (!total) {
       labelEl.textContent = 'Sem opções';
       return;
@@ -600,7 +618,7 @@ function setupMultiselect(config) {
       return;
     }
     if (selectedCount === 1) {
-      const option = currentOptions.find(opt => selectedSet.has(opt.id));
+      const option = selectedOptions[0];
       labelEl.textContent = option?.label || '1 item';
       return;
     }
@@ -614,7 +632,7 @@ function setupMultiselect(config) {
   function updateSelectAll() {
     if (!selectAllInput) return;
     const total = currentOptions.length;
-    const selectedCount = selectedSet.size;
+    const selectedCount = currentOptions.filter(option => isOptionSelected(option, selectedSet)).length;
     selectAllInput.checked = total > 0 && selectedCount === total;
     selectAllInput.indeterminate = selectedCount > 0 && selectedCount < total;
   }
@@ -642,17 +660,20 @@ function setupMultiselect(config) {
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.value = option.id;
-      checkbox.checked = selectedSet.has(option.id);
+      const optionValueIds = getOptionValueIds(option);
+      const selectedValueCount = optionValueIds.filter(id => selectedSet.has(id)).length;
+      checkbox.checked = selectedValueCount === optionValueIds.length;
+      checkbox.indeterminate = selectedValueCount > 0 && selectedValueCount < optionValueIds.length;
 
       checkbox.addEventListener('change', () => {
         if (checkbox.checked) {
-          selectedSet.add(option.id);
+          addOptionValues(option, selectedSet);
         } else {
-          selectedSet.delete(option.id);
+          removeOptionValues(option, selectedSet);
         }
 
         if (config.requireSelection && !selectedSet.size && currentOptions.length > 0) {
-          currentOptions.forEach(opt => selectedSet.add(opt.id));
+          currentOptions.forEach(opt => addOptionValues(opt, selectedSet));
         }
 
         state[config.stateKey] = Array.from(selectedSet);
@@ -676,9 +697,9 @@ function setupMultiselect(config) {
   if (selectAllInput) {
     selectAllInput.addEventListener('change', () => {
       if (selectAllInput.checked) {
-        currentOptions.forEach(opt => selectedSet.add(opt.id));
+        currentOptions.forEach(opt => addOptionValues(opt, selectedSet));
       } else if (config.requireSelection) {
-        currentOptions.forEach(opt => selectedSet.add(opt.id));
+        currentOptions.forEach(opt => addOptionValues(opt, selectedSet));
         selectAllInput.checked = true;
       } else {
         selectedSet.clear();
@@ -729,13 +750,40 @@ function buildCompanyLabel(company) {
 
 function getCollaboratorOptions() {
   const selectedCids = new Set(state.selectedCompanyIds || []);
-  return (state.collaborators || [])
-    .filter(c => selectedCids.has(c.company_id))
-    .map(collaborator => ({
-      id: collaborator.id,
-      label: collaborator.name || 'Colaborador sem nome',
-      helper: collaborator.company_name || ''
-    }));
+  const groups = new Map();
+
+  (state.collaborators || [])
+    .filter(collaborator => selectedCids.has(collaborator.company_id))
+    .forEach(collaborator => {
+      const identityKey = collaborator.user_id
+        ? `user:${collaborator.user_id}`
+        : `employee:${collaborator.id}`;
+      const current = groups.get(identityKey) || {
+        id: identityKey,
+        label: collaborator.name || 'Colaborador sem nome',
+        valueIds: [],
+        companyNames: []
+      };
+
+      if (!current.valueIds.includes(collaborator.id)) {
+        current.valueIds.push(collaborator.id);
+      }
+      if (collaborator.company_name && !current.companyNames.includes(collaborator.company_name)) {
+        current.companyNames.push(collaborator.company_name);
+      }
+      groups.set(identityKey, current);
+    });
+
+  return Array.from(groups.values())
+    .map(group => ({
+      id: group.id,
+      label: group.label,
+      valueIds: group.valueIds,
+      helper: group.companyNames.length > 1
+        ? `${group.companyNames.length} empresas: ${group.companyNames.join(', ')}`
+        : (group.companyNames[0] || '')
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label, 'pt-BR'));
 }
 
 function getProjectOptions() {

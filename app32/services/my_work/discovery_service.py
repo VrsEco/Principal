@@ -51,7 +51,9 @@ def _get_active_associated_companies(user_id: int) -> List[Dict[str, Any]]:
     associated = get_user_associated_companies(user_id)
     return [
         company for company in associated
-        if company.get('company_id') and company.get('is_active') is not False
+        if company.get('company_id')
+        and company.get('is_active') is not False
+        and str(company.get('employee_status') or 'active').strip().lower() == 'active'
     ]
 
 
@@ -132,6 +134,7 @@ def get_filter_options_v2(user_id: int) -> Dict[str, List[Dict[str, Any]]]:
                 "id": employee_id,
                 "name": company.get('employee_name') or 'Colaborador',
                 "email": company.get('employee_email'),
+                "user_id": user_id,
                 "company_id": company.get('company_id'),
                 "company_name": company.get('company_name') or 'Empresa',
             })
