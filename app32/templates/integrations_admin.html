@@ -2452,33 +2452,8 @@
       }
     }
 
-    function injectConnectionsToken(config) {
-      if (!config || !connectionsLatestMcpToken) return config;
-      const replace = (value) => String(value || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', connectionsLatestMcpToken);
-      const rawJson = config.json && typeof config.json === 'object' ? { ...config.json, token: connectionsLatestMcpToken } : config.json;
-      const installProfiles = config.install_profiles && typeof config.install_profiles === 'object'
-        ? JSON.parse(replace(JSON.stringify(config.install_profiles)))
-        : config.install_profiles;
-      return {
-        ...config,
-        text: replace(config.text),
-        json: rawJson,
-        install_command: replace(config.install_command),
-        powershell_install_command: replace(config.powershell_install_command),
-        normal_install_command: replace(config.normal_install_command),
-        normal_install_text: replace(config.normal_install_text),
-        advanced_install_command: replace(config.advanced_install_command),
-        advanced_install_text: replace(config.advanced_install_text),
-        install_profiles: installProfiles,
-        technical_config_text: replace(config.technical_config_text),
-        activation_prompt: replace(config.activation_prompt),
-        guided_install_text: replace(config.guided_install_text),
-        copy_install_command_text: replace(config.copy_install_command_text)
-      };
-    }
-
     function connectionsOutputForConfig(config) {
-      const resolved = injectConnectionsToken(config);
+      const resolved = config;
       if (!resolved) return '';
       const output = resolved.normal_install_text
         || resolved.copy_install_command_text
@@ -2487,7 +2462,7 @@
         || resolved.install_command
         || resolved.text
         || JSON.stringify(resolved.json || {}, null, 2);
-      if (resolved.token_required && !connectionsLatestMcpToken) {
+      if (resolved.token_required) {
         return [
           'Token MCP obrigatório para concluir a instalação.',
           '',
@@ -2538,8 +2513,6 @@
         if (data.data && data.data.config) {
           const output = document.getElementById('connectionsMcpConfigOutput');
           if (output) output.value = connectionsOutputForConfig(data.data.config);
-        } else {
-          await buildConnectionsMcpConfig(false).catch(() => null);
         }
         addLog(`✅ ${successMessage || data.message || 'Operação MCP concluída.'}`, 'success');
       } catch (error) {

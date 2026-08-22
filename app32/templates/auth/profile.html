@@ -490,36 +490,11 @@
         return buildMcpConfigPayload();
     }
 
-    function injectLatestTokenIntoConfig(config) {
-        if (!config || !latestMcpPlaintextToken) return config;
-        const replacePlaceholder = (value) => String(value || '').replaceAll('TOKEN_GERADO_APENAS_NA_RENOVACAO', latestMcpPlaintextToken);
-        const rawJson = config.json && typeof config.json === 'object' ? { ...config.json, token: latestMcpPlaintextToken } : config.json;
-        const installProfiles = config.install_profiles && typeof config.install_profiles === 'object'
-            ? JSON.parse(replacePlaceholder(JSON.stringify(config.install_profiles)))
-            : config.install_profiles;
-        return {
-            ...config,
-            text: replacePlaceholder(config.text),
-            json: rawJson,
-            install_command: replacePlaceholder(config.install_command),
-            powershell_install_command: replacePlaceholder(config.powershell_install_command),
-            normal_install_command: replacePlaceholder(config.normal_install_command),
-            normal_install_text: replacePlaceholder(config.normal_install_text),
-            advanced_install_command: replacePlaceholder(config.advanced_install_command),
-            advanced_install_text: replacePlaceholder(config.advanced_install_text),
-            install_profiles: installProfiles,
-            cli_install_text: replacePlaceholder(config.cli_install_text),
-            technical_config_text: replacePlaceholder(config.technical_config_text),
-            activation_prompt: replacePlaceholder(config.activation_prompt),
-            guided_install_text: replacePlaceholder(config.guided_install_text),
-            onboarding_summary_text: replacePlaceholder(config.onboarding_summary_text),
-            copy_install_command_text: replacePlaceholder(config.copy_install_command_text),
-        };
-    }
-
     function outputForMode(config, mode) {
         if (!config) return '';
-        const needsToken = Boolean(config.token_required) && !latestMcpPlaintextToken;
+        // O EncodedCommand carrega o token em Base64 UTF-16LE. Ele nunca pode
+        // ser reescrito no browser; só o backend emite o comando final válido.
+        const needsToken = Boolean(config.token_required);
         const blockedMessage = [
             'Token MCP obrigatório para concluir a instalação.',
             '',
@@ -551,7 +526,7 @@
     }
 
     function renderMcpConfig(config) {
-        const resolvedConfig = injectLatestTokenIntoConfig(config);
+        const resolvedConfig = config;
         if (!resolvedConfig) {
             if (mcpConfigOutput) mcpConfigOutput.value = '';
             return;
@@ -599,8 +574,7 @@
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao montar configuração MCP.');
-        const resolvedData = injectLatestTokenIntoConfig(data.data);
-        renderMcpConfig(resolvedData);
+        renderMcpConfig(data.data);
         if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, 'Comando atualizado.');
         return resolvedData;
     }
@@ -629,8 +603,9 @@
         latestMcpPlaintextToken = data.data && data.data.token ? data.data.token : latestMcpPlaintextToken;
         if (data.data && data.data.token) openMcpTokenModal(data.data.token);
         if (data.data && data.data.status) renderMcpStatus(data.data.status);
+        // A resposta de criar/renovar já foi montada no backend com o token
+        // real. Reconstruí-la chamaria a rota que só pode devolver placeholder.
         if (data.data && data.data.config) renderMcpConfig(data.data.config);
-        await buildMcpConfig(false).catch(() => {});
         renderAlert('mcp-token-alert-container', true, successMessage || data.message || 'Operação concluída.');
     }
 

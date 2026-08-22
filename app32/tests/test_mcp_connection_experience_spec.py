@@ -70,8 +70,7 @@ def test_connections_page_contains_mcp_unified_entrypoint():
     assert "/api/integrations/mcp-runtime/repair" in template
     assert "repairConnectionsMcpRuntime" in template
     assert "Token MCP obrigatório para concluir a instalação." in template
-    assert "normal_install_command" in template
-    assert "advanced_install_command" in template
+    assert "injectConnectionsToken" not in template
 
 
 def test_profile_mcp_page_blocks_placeholder_command_copy():
@@ -80,5 +79,16 @@ def test_profile_mcp_page_blocks_placeholder_command_copy():
     assert "Token MCP obrigatório para concluir a instalação." in template
     assert "Por segurança, o APP32 não exibe comando executável com token placeholder." in template
     assert "token_required" in template
+    assert "const needsToken = Boolean(config.token_required);" in template
+    assert "injectLatestTokenIntoConfig" not in template
+    token_action = template.split("async function runMcpTokenAction", 1)[1].split("function copyText", 1)[0]
+    assert "await buildMcpConfig(false).catch(() => {});" not in token_action
+
+
+def test_connections_mcp_page_never_replaces_encoded_command_token_in_browser():
+    template = (ROOT / "templates" / "integrations_admin.html").read_text(encoding="utf-8")
+
+    assert "injectConnectionsToken" not in template
+    assert "if (resolved.token_required)" in template
 
 

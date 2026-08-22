@@ -52,6 +52,7 @@ Toda IA externa deve consultar:
   2. no Usuário Avançado, `claude mcp add ...` + validação com `claude mcp list`;
   3. prompt de bootstrap/ativação.
 - O APP32 não deve exibir comando executável quando o token ainda for placeholder; o usuário precisa clicar em **Criar token** ou **Renovar** e copiar o comando final com token real.
+- O comando final, especialmente `-EncodedCommand`, é emitido integralmente pelo backend no ato de criar/renovar: o frontend não pode substituir token em texto/Base64 nem reconstruir esse comando após a emissão.
 - O instalador Desktop deve rejeitar explicitamente `TOKEN_GERADO_APENAS_NA_RENOVACAO` para evitar falsa instalação e erro genérico no Claude.
 - Slash commands personalizados podem existir, mas são **opcionais**.
 
