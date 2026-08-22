@@ -203,8 +203,11 @@ def test_meeting_crud_tools_are_in_sapiens_and_mcp_catalogs():
 
     scheduling = catalog.get_tool_capability("schedule_meeting")
     assert scheduling is not None
-    assert ToolScope.SAPIENS.value not in scheduling.scopes
-    assert ToolScope.MCP_USER.value not in scheduling.scopes
+    assert ToolScope.SAPIENS.value in scheduling.scopes
+    assert ToolScope.MCP_USER.value in scheduling.scopes
+    assert ToolScope.MCP_ADMIN.value in scheduling.scopes
+    assert "deprecated" not in scheduling.tags
+    assert "tenant_safe" in scheduling.tags
 
 
 def test_nested_meeting_removal_is_governed_as_meeting_update():

@@ -810,7 +810,7 @@ def schedule_meeting(
     title: str,
     date: str,
     time: str,
-    guests: str,
+    guests: str = "",
     agenda_items: str = None,
     notes: str = None,
     company_id: int = None,
@@ -820,7 +820,7 @@ def schedule_meeting(
     :param title: Título/Assunto da reunião. Ex: 'Revisão de Metas Q1'
     :param date: Data da reunião no formato YYYY-MM-DD. Ex: '2026-03-01'
     :param time: Horário no formato HH:MM. Ex: '14:30'
-    :param guests: Lista de e-mails ou nomes dos convidados, separados por vírgula.
+    :param guests: Lista opcional de e-mails ou nomes dos convidados, separados por vírgula.
     :param agenda_items: Pautas separadas por ponto-e-vírgula.
     :param notes: Observações ou pauta livre para o convite.
     :param company_id: Opcional. Se informado, força a escrita tenant-safe nessa empresa.

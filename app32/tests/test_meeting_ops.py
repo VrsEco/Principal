@@ -231,6 +231,61 @@ def test_schedule_meeting_uses_explicit_company_id(monkeypatch) -> None:
     assert "criada com sucesso" in result
 
 
+def test_schedule_meeting_accepts_empty_optional_guests(monkeypatch) -> None:
+    created = {}
+
+    class _FakeMeeting:
+        id = 34
+        query = _FakeQuery()
+
+        def __init__(self, **kwargs):
+            created.update(kwargs)
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+            self.id = 34
+
+    _FakeMeeting.query.value = _FakeMeeting(company_id=10, title="persisted")
+    created.clear()
+
+    class _FakeSession:
+        def add(self, obj):
+            return None
+
+        def commit(self):
+            return None
+
+        def rollback(self):
+            return None
+
+    allowed = SimpleNamespace(allowed=True, resolved_company_id=10)
+    monkeypatch.setattr(
+        meeting_ops,
+        "_authorize_meeting_mcp",
+        lambda **kwargs: ({"user_id": 3}, allowed),
+    )
+    monkeypatch.setattr(
+        meeting_ops,
+        "evaluate_mutation_limit",
+        lambda **kwargs: SimpleNamespace(allowed=True, reason="ok"),
+    )
+    monkeypatch.setattr(meeting_ops, "record_mutation_success", lambda **kwargs: kwargs)
+    monkeypatch.setattr(meeting_ops, "db", SimpleNamespace(session=_FakeSession()))
+
+    with patch("models.meeting.Meeting", _FakeMeeting), patch(
+        "services.email_service.email_service",
+        SimpleNamespace(send_email=lambda **kwargs: True),
+    ):
+        result = meeting_ops.schedule_meeting(
+            title="Planejamento",
+            date="2026-05-20",
+            time="09:00",
+            company_id=10,
+        )
+
+    assert created["guests_json"] == "{}"
+    assert "criada com sucesso" in result
+
+
 def test_start_meeting_uses_explicit_company_id(monkeypatch) -> None:
     meeting = SimpleNamespace(
         id=42,

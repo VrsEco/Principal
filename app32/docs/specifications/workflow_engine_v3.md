@@ -237,6 +237,12 @@ No domínio de projetos, a execução de `project_task.create` também já saiu 
 No domínio de reuniões, a execução de `meeting.schedule` já delega para
 `MeetingScheduleExecutionHandler`.
 
+O agendamento também é capability canônica `schedule_meeting` nas surfaces
+`SAPIENS`, `MCP_USER` e `MCP_ADMIN`. A operação exige `user_id`, `company_id`
+e a permissão `meeting.schedule`; convidados são opcionais, em coerência com
+o item `142` da árvore oficial do Sapiens. A capability não é legada nem
+depreciada, e toda escrita permanece tenant-safe e sujeita à quota de mutação.
+
 Também já foram extraídos:
 
 - `MeetingStartExecutionHandler`
