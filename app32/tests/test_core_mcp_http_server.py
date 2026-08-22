@@ -3,10 +3,23 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 
 import src.core.mcp_http_server as http_server
+
+
+def test_transport_security_allows_public_reverse_proxy_host_and_local_runtime():
+    settings = http_server._build_transport_security_settings()
+    if settings is None:
+        pytest.skip("Pacote MCP local ainda não expõe TransportSecuritySettings.")
+
+    assert settings.enable_dns_rebinding_protection is True
+    assert "app.gestaoversus.com.br" in settings.allowed_hosts
+    assert "app.gestaoversus.com.br:443" in settings.allowed_hosts
+    assert "127.0.0.1:*" in settings.allowed_hosts
+    assert "https://app.gestaoversus.com.br" in settings.allowed_origins
 
 
 def test_create_http_app_mounts_expected_surfaces(monkeypatch):
