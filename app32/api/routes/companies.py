@@ -13,6 +13,10 @@ from services.identity.user_employee_orchestrator_service import (
 )
 from services.company_onboarding_service import CompanyOnboardingService
 from services.company_identity_service import CompanyIdentityService
+from services.company_role_hierarchy_service import (
+    CompanyRoleHierarchyService,
+    RoleHierarchyValidationError,
+)
 from services.company_role_permission_preset_service import (
     CompanyRolePermissionPresetService,
 )
@@ -167,7 +171,15 @@ def get_company_identity_summary(company_id):
         {
             "success": True,
             "company": summary.company,
-            "metrics": summary.metrics,
+            "metrics": {
+                **summary.metrics,
+                "org_chart_created_at": summary.metrics["org_chart_created_at"].isoformat()
+                if summary.metrics.get("org_chart_created_at")
+                else None,
+                "org_chart_updated_at": summary.metrics["org_chart_updated_at"].isoformat()
+                if summary.metrics.get("org_chart_updated_at")
+                else None,
+            },
             "roles": summary.roles,
             "employees": summary.employees,
         }
@@ -274,13 +286,12 @@ def add_company_role(company_id):
     if denied:
         return denied
     try:
-        data = request.json
-        data['permissions'] = RbacPermissionCatalogService.normalize_payload(data.get('permissions'))
-        role = Role(company_id=company_id, **data)
-        db.session.add(role)
-        db.session.commit()
+        role = CompanyRoleHierarchyService.create(company_id, request.get_json(silent=True))
         return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True)), 201
-    except Exception as e:
+    except RoleHierarchyValidationError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
         db.session.rollback()
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
@@ -290,18 +301,19 @@ def update_company_role(company_id, role_id):
     denied = _ensure_company_access(company_id)
     if denied:
         return denied
-    role = Role.query.filter_by(id=role_id, company_id=company_id).first_or_404()
     if request.method == 'GET':
+        role = Role.query.filter_by(id=role_id, company_id=company_id).first_or_404()
         return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True))
     
-    data = request.json
-    for key, value in data.items():
-        if hasattr(role, key) and key not in ['id', 'company_id']:
-            if key == 'permissions':
-                value = RbacPermissionCatalogService.normalize_payload(value)
-            setattr(role, key, value)
-    db.session.commit()
-    return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True))
+    try:
+        role = CompanyRoleHierarchyService.update(company_id, role_id, request.get_json(silent=True))
+        return jsonify(RbacPermissionCatalogService.serialize_role(role, include_tree=True))
+    except RoleHierarchyValidationError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>', methods=['DELETE'])
 @permission_required('companies', 'edit')

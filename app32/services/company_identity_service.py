@@ -61,6 +61,14 @@ class CompanyIdentityService:
             "departments_total": len(departments),
             "employees_without_role_total": len(employees_without_role),
             "planned_headcount_total": sum(int(role.headcount_planned or 0) for role in roles),
+            "org_chart_created_at": min(
+                (role.created_at for role in roles if role.created_at),
+                default=None,
+            ),
+            "org_chart_updated_at": max(
+                ((role.updated_at or role.created_at) for role in roles if role.updated_at or role.created_at),
+                default=None,
+            ),
         }
 
         return IdentitySummary(
