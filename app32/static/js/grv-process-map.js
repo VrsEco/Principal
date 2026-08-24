@@ -296,11 +296,7 @@
         window.showMessage('Informe o nome do macroprocesso','error');
         return;
       }
-      if(!owner){
-        window.showMessage('Informe o dono do processo','error');
-        return;
-      }
-      if(!orderIndex || Number(orderIndex) < 1){
+if(!orderIndex || Number(orderIndex) < 1){
         window.showMessage('Informe uma sequência válida (número maior que 0)','error');
         return;
       }
