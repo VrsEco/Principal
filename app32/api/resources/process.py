@@ -1702,7 +1702,7 @@ class MacroProcessListResource(Resource):
             if not area:
                 return {"error": "Área de processo não encontrada na empresa informada."}, 400
 
-            owner_error = _normalize_macro_owner_from_employee(data, data.get('company_id'), required=True)
+            owner_error = _normalize_macro_owner_from_employee(data, data.get('company_id'), required=False)
             if owner_error:
                 return {"error": owner_error}, 400
                 
