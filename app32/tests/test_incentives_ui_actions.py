@@ -38,6 +38,12 @@ def test_indicator_list_keeps_edit_and_delete_actions():
     assert "soft delete" in content
 
 
+def test_indicator_list_displays_code_before_name():
+    content = _read_template("indicator_list.html")
+
+    assert "(ind.full_code or ind.code) ~ ' - '" in content
+
+
 def test_closings_list_keeps_action_column_for_historical_records():
     content = _read_template("closings_list.html")
 

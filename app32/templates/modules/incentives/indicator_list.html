@@ -204,7 +204,7 @@
                             <i class="fas fa-chart-line" style="color:{% if ind.is_active %}var(--success){% else %}var(--text-tertiary){% endif %}; font-size:0.8rem;"></i>
                             
                             <div class="ind-main-info">
-                                <div class="ind-name">{{ ind.name }}</div>
+                                <div class="ind-name">{{ (ind.full_code or ind.code) ~ ' - ' if (ind.full_code or ind.code) else '' }}{{ ind.name }}</div>
                                 <div class="ind-meta-row">
                                     <div class="ind-meta-item">
                                         <strong>Módulo:</strong> {{ ind.source_module }}
