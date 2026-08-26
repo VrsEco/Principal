@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash, jsonify, abort
 from utils.indicator_ranges import normalize_performance_ranges
+from utils.catalog_sort import sort_catalog_entries
 from utils.permissions import permission_required
 from models import db, Company, Indicator, IndicatorTree, IndicatorGoal, IndicatorData, Employee, Team, Routine
+from services.indicator_service import IndicatorGoalService
 import json
 
 
@@ -18,7 +20,9 @@ def _get_form_context(company_id):
     from models import OrganizationalIdentity, Project, Process, OKRGlobal, OKRArea, Routine
 
     # Todos os nós da empresa
-    all_tree_nodes = IndicatorTree.query.filter_by(company_id=company_id).order_by(IndicatorTree.code).all()
+    all_tree_nodes = sort_catalog_entries(
+        IndicatorTree.query.filter_by(company_id=company_id).all()
+    )
 
     # Identificar IDs que são "pais" (têm subníveis) — não podem receber indicadores
     parent_ids = set(
@@ -37,13 +41,16 @@ def _get_form_context(company_id):
     try:
         projects = Project.query.filter_by(company_id=company_id).filter(
             Project.status.notin_(['completed', 'cancelled', 'archived'])
-        ).order_by(Project.name).all()
+        ).all()
+        projects = sort_catalog_entries(projects)
         projects_json = json.dumps([{'id': p.id, 'name': p.name, 'code': getattr(p, 'code', '')} for p in projects])
     except Exception:
         projects_json = '[]'
 
     try:
-        processes = Process.query.filter_by(company_id=company_id, is_active=True).order_by(Process.name).all()
+        processes = sort_catalog_entries(
+            Process.query.filter_by(company_id=company_id, is_active=True).all()
+        )
         processes_json = json.dumps([{'id': p.id, 'name': p.name, 'code': getattr(p, 'code', '')} for p in processes])
     except Exception:
         processes_json = '[]'
@@ -51,13 +58,13 @@ def _get_form_context(company_id):
     try:
         okrs_global = OKRGlobal.query.filter_by(company_id=company_id).all()
         okrs_area = OKRArea.query.filter_by(company_id=company_id).all()
-        okrs_combined = [
+        okrs_combined = sort_catalog_entries([
             {'id': o.id, 'name': f'[Global] {o.objective}', 'target_type': 'okr_global'}
             for o in okrs_global
         ] + [
             {'id': o.id, 'name': f'[Área] {o.objective}', 'target_type': 'okr_area'}
             for o in okrs_area
-        ]
+        ])
         okrs_json = json.dumps(okrs_combined)
     except Exception:
         okrs_json = '[]'
@@ -73,12 +80,15 @@ def _get_form_context(company_id):
                 key = str(item or idx + 1)
                 name = str(item or key)
             strategic_objectives.append({'id': key, 'name': name, 'target_type': 'strategic_objective'})
+        strategic_objectives = sort_catalog_entries(strategic_objectives)
         strategic_objectives_json = json.dumps(strategic_objectives)
     except Exception:
         strategic_objectives_json = '[]'
 
     try:
-        routines = Routine.query.filter_by(company_id=company_id, is_active=True).order_by(Routine.name).all()
+        routines = sort_catalog_entries(
+            Routine.query.filter_by(company_id=company_id, is_active=True).all()
+        )
         routines_json = json.dumps([{'id': r.id, 'name': r.name, 'code': getattr(r, 'code', '')} for r in routines])
     except Exception:
         routines_json = '[]'
@@ -145,7 +155,6 @@ def indicators_list():
     ).outerjoin(goals_count_sq, Indicator.id == goals_count_sq.c.indicator_id)\
      .outerjoin(data_count_sq, Indicator.id == data_count_sq.c.indicator_id)\
      .filter(Indicator.company_id == int(company_id))\
-     .order_by(Indicator.is_active.desc(), Indicator.source_module, Indicator.name)\
      .all()
 
     # Attach counts to objects for easy access in Jinja
@@ -154,13 +163,18 @@ def indicators_list():
         ind.goals_count = gc
         ind.data_count = dc
         final_indicators.append(ind)
+    final_indicators = sort_catalog_entries(final_indicators)
 
     
     employees = Employee.query.filter_by(company_id=int(company_id), status='active').order_by(Employee.name).all()
-    tree_nodes = IndicatorTree.query.filter_by(company_id=int(company_id)).order_by(IndicatorTree.code).all()
+    tree_nodes = sort_catalog_entries(
+        IndicatorTree.query.filter_by(company_id=int(company_id)).all()
+    )
     teams = Team.query.filter_by(company_id=int(company_id), is_active=True).order_by(Team.name).all()
     
-    routines = Routine.query.filter_by(company_id=int(company_id), is_active=True).all()
+    routines = sort_catalog_entries(
+        Routine.query.filter_by(company_id=int(company_id), is_active=True).all()
+    )
     import json
     routines_json = json.dumps([{"id": r.id, "name": r.name} for r in routines])
     
@@ -216,7 +230,9 @@ def indicator_tree():
     if not company_id: return redirect(url_for('auth.portal'))
     
     # We'll use IndicatorTree model for the hierarchy
-    nodes = IndicatorTree.query.filter_by(company_id=int(company_id)).order_by(IndicatorTree.code).all()
+    nodes = sort_catalog_entries(
+        IndicatorTree.query.filter_by(company_id=int(company_id)).all()
+    )
     
     # Calcular quais nós têm indicadores para bloquear visualmente
     from sqlalchemy import func
@@ -345,7 +361,7 @@ def indicator_tree_form(node_id=None):
     # Excluir nós travados da lista de opções de pai
     if locked_ids:
         parents_query = parents_query.filter(~IndicatorTree.id.in_(locked_ids))
-    parents = parents_query.order_by(IndicatorTree.code).all()
+    parents = sort_catalog_entries(parents_query.all())
     
     # Pre-select parent from query string if provided (for adding sub-nodes)
     pre_selected_parent_id = request.args.get('parent_id', type=int)
@@ -397,29 +413,47 @@ def indicator_tree_delete(node_id):
 @permission_required('indicators', 'view')
 def indicator_goals():
     """List of indicator goals"""
+    import datetime
     company_id = session.get('active_company_id')
     if not company_id: return redirect(url_for('auth.portal'))
     
-    indicators = (
+    indicators = sort_catalog_entries(
         Indicator.query
         .filter_by(company_id=int(company_id))
         .filter(Indicator.is_active.isnot(False))
-        .order_by(Indicator.name)
         .all()
     )
-    goals = IndicatorGoal.query.filter_by(company_id=int(company_id)).order_by(IndicatorGoal.goal_date.desc()).all()
+    goals = IndicatorGoal.query.filter_by(company_id=int(company_id)).order_by(
+        IndicatorGoal.period_start.desc()
+    ).all()
+    goals = sort_catalog_entries(
+        goals,
+        code=lambda goal: (
+            getattr(getattr(goal, 'indicator', None), 'code', None)
+            or getattr(goal, 'code', None)
+        ),
+        name=lambda goal: (
+            getattr(getattr(goal, 'indicator', None), 'name', None)
+            or getattr(goal, 'name', None)
+        ),
+    )
     
     ctx = _get_form_context(int(company_id))
     
     # Criar mapeamento de IDs de rotina para nomes para exibição rápida na lista
     from models import Routine
-    all_routines = Routine.query.filter_by(company_id=int(company_id)).all()
+    all_routines = sort_catalog_entries(
+        Routine.query.filter_by(company_id=int(company_id)).all()
+    )
     routines_map = {r.id: f"{r.code or 'OP'} - {r.name}" for r in all_routines}
+    employees = json.loads(ctx.get('employees_json') or '[]')
 
     return render_template('modules/indicators/indicator_goals.html', 
                          goals=goals, 
                          indicators=indicators,
+                         employees=employees,
                          routines_map=routines_map,
+                         today=datetime.date.today(),
                          **ctx)
 
 @indicators_bp.route('/indicators/measurement-routines')
@@ -432,7 +466,12 @@ def measurement_routines():
     from models import Routine, IndicatorGoal, ProcessInstance
     active_goals = IndicatorGoal.query.filter_by(company_id=int(company_id), status='active').filter(IndicatorGoal.routine_id.isnot(None)).all()
     routine_ids = set(g.routine_id for g in active_goals)
-    routines = Routine.query.filter(Routine.id.in_(routine_ids)).all()
+    routines = sort_catalog_entries(
+        Routine.query.filter(
+            Routine.company_id == int(company_id),
+            Routine.id.in_(routine_ids),
+        ).all()
+    )
     
     # Para cada rotina, buscar instância de processo ativa
     routines_data = []
@@ -498,6 +537,11 @@ def routine_execution(routine_id):
                 "indicator": ind,
                 "goal": g
             })
+    indicators_meta = sort_catalog_entries(
+        indicators_meta,
+        code=lambda item: item["indicator"].code,
+        name=lambda item: item["indicator"].name,
+    )
     import datetime
     now_date = datetime.datetime.now().strftime('%Y-%m-%d')
             
@@ -517,18 +561,44 @@ def indicator_data_list():
     company_id = session.get('active_company_id')
     if not company_id: return redirect(url_for('auth.portal'))
     
-    goals = IndicatorGoal.query.filter_by(
-        company_id=int(company_id),
-        status='active'
+    goals = IndicatorGoal.query.filter(
+        IndicatorGoal.company_id == int(company_id),
+        IndicatorGoal.status != 'inactive',
     ).order_by(
-        IndicatorGoal.goal_date.desc(),
+        IndicatorGoal.period_start.desc(),
         IndicatorGoal.created_at.desc()
     ).all()
-    data_records = IndicatorData.query.filter_by(company_id=int(company_id)).order_by(IndicatorData.measured_date.desc()).all()
+    # Campanhas aditivas reutilizam os fatos da meta-base; exibi-las aqui
+    # incentivaria lançamento duplicado e inflaria o realizado da competência.
+    goals = [
+        goal for goal in goals
+        if goal.goal_kind == 'base' or goal.composition_mode == 'independent'
+    ]
+    goals = sort_catalog_entries(
+        goals,
+        code=lambda goal: (
+            getattr(getattr(goal, 'indicator', None), 'code', None)
+            or getattr(goal, 'code', None)
+        ),
+        name=lambda goal: (
+            getattr(getattr(goal, 'indicator', None), 'name', None)
+            or getattr(goal, 'name', None)
+        ),
+    )
+    data_records = IndicatorData.query.filter_by(company_id=int(company_id)).order_by(
+        IndicatorData.measured_date.desc()
+    ).all()
+    data_records = sort_catalog_entries(
+        data_records,
+        code=lambda record: getattr(getattr(record, 'indicator', None), 'code', None),
+        name=lambda record: getattr(getattr(record, 'indicator', None), 'name', None),
+    )
+    employees = Employee.query.filter_by(company_id=int(company_id), status='active').order_by(Employee.name).all()
     
     return render_template('modules/indicators/indicator_data_list.html', 
                          data_records=data_records,
-                         goals=goals)
+                         goals=goals,
+                         employees=employees)
 
 # --- Analysis (Dashboard) ---
 
@@ -536,102 +606,63 @@ def indicator_data_list():
 @permission_required('indicators', 'view')
 def indicator_dashboard():
     """Indicator analysis dashboard — dados reais com status de desempenho"""
-    from sqlalchemy import func, text
     import datetime
 
     company_id = session.get('active_company_id')
     if not company_id: return redirect(url_for('auth.portal'))
     cid = int(company_id)
 
-    indicators = Indicator.query.filter_by(company_id=cid, is_active=True).order_by(
-        Indicator.indicator_type, Indicator.name
-    ).all()
+    indicators = sort_catalog_entries(
+        Indicator.query.filter_by(company_id=cid, is_active=True).all()
+    )
 
     hoje = datetime.date.today()
-
-    # Mapas auxiliares para evitar N+1
-    # Metas ativas: pega a primeira meta ativa por indicador
-    active_goals_raw = IndicatorGoal.query.filter_by(
-        company_id=cid, status='active'
-    ).order_by(IndicatorGoal.indicator_id, IndicatorGoal.created_at.desc()).all()
-
-    active_goal_map = {}
-    for g in active_goals_raw:
-        if g.indicator_id not in active_goal_map:
-            active_goal_map[g.indicator_id] = g
-
-    # Último registro de dados por indicador (mês atual)
-    last_data_map = {}
-    all_data = IndicatorData.query.filter_by(company_id=cid).order_by(
-        IndicatorData.indicator_id, IndicatorData.measured_date.desc()
-    ).all()
-    for d in all_data:
-        if d.indicator_id not in last_data_map:
-            last_data_map[d.indicator_id] = d
 
     # Calcular status para cada indicador
     kpi_data = []
     count_on_target = 0
     count_below = 0
     count_no_data = 0
+    dashboard_employees = {}
 
     for ind in indicators:
-        goal = active_goal_map.get(ind.id)
-        last = last_data_map.get(ind.id)
-        
-        # Performance calculation
-        performance = None
-        status_class = 'no_data'
-        performance_pct = None
-
-        if goal and last:
-            goal_val = float(goal.goal_value) if goal.goal_value else None
-            realized = float(last.measured_value)
-            
-            if goal_val and goal_val != 0:
-                performance_pct = round((realized / goal_val) * 100, 1)
-                
-                # Ranges de performance (com defaults)
-                ranges = normalize_performance_ranges(goal.performance_ranges)
-                red_max = ranges.get('red', 80)
-                yellow_max = ranges.get('yellow', 90)
-                green_max = ranges.get('green', 110)
-                
-                if ind.polarity == 'negative':
-                    # Para indicadores negativos (ex: custo), menor é melhor
-                    if realized <= goal_val * (red_max / 100):
-                        status_class = 'on_target'
-                        count_on_target += 1
-                    elif realized <= goal_val * (yellow_max / 100):
-                        status_class = 'alert'
-                        count_below += 1
-                    else:
-                        status_class = 'below'
-                        count_below += 1
-                else:
-                    if performance_pct >= green_max:
-                        status_class = 'exceeded'
-                        count_on_target += 1
-                    elif performance_pct >= yellow_max:
-                        status_class = 'on_target'
-                        count_on_target += 1
-                    elif performance_pct >= red_max:
-                        status_class = 'alert'
-                        count_below += 1
-                    else:
-                        status_class = 'below'
-                        count_below += 1
-        elif not last:
-            status_class = 'no_data'
+        context = IndicatorGoalService.consolidated_performance_context(cid, ind, hoje)
+        individual_contexts = context.get('individual_contexts') or []
+        for individual in individual_contexts:
+            employee = individual.get('responsible')
+            if employee:
+                dashboard_employees[employee.id] = employee
+        goal = context['base'] or next(
+            (item.get('base') for item in individual_contexts if item.get('base')),
+            None,
+        )
+        realized_value = context['realized_value']
+        target_value = context['target_value']
+        classification = IndicatorGoalService.classify_performance(
+            ind, goal, target_value, realized_value
+        )
+        status_class = classification['status_class']
+        performance_pct = classification['performance_pct']
+        if status_class in {'exceeded', 'on_target'}:
+            count_on_target += 1
+        elif status_class in {'alert', 'below'}:
+            count_below += 1
+        elif status_class == 'no_data':
             count_no_data += 1
-        else:
-            # tem dado mas sem meta
-            status_class = 'no_goal'
 
         kpi_data.append({
             'indicator': ind,
             'goal': goal,
-            'last_data': last,
+            'realized_value': realized_value,
+            'target_value': target_value,
+            'cycle_start': context['cycle_start'],
+            'cycle_end': context['cycle_end'],
+            'additive_campaigns': context['additive_campaigns'],
+            'independent_campaigns': context['independent_campaigns'],
+            'individual_contexts': individual_contexts,
+            'individual_target_sum': context.get('individual_target_sum'),
+            'allocation_gap': context.get('allocation_gap'),
+            'target_source': context.get('target_source'),
             'performance_pct': performance_pct,
             'status_class': status_class,
         })
@@ -644,7 +675,9 @@ def indicator_dashboard():
     }
 
     # Pegar grupos (IndicatorTree) da empresa para filtro
-    tree_nodes = IndicatorTree.query.filter_by(company_id=cid).order_by(IndicatorTree.code).all()
+    tree_nodes = sort_catalog_entries(
+        IndicatorTree.query.filter_by(company_id=cid).all()
+    )
 
     return render_template(
         'modules/indicators/indicator_dashboard.html',
@@ -655,6 +688,7 @@ def indicator_dashboard():
         count_on_target=count_on_target,
         count_below=count_below,
         count_no_data=count_no_data,
+        dashboard_employees=sorted(dashboard_employees.values(), key=lambda employee: employee.name),
         hoje=hoje,
     )
 
@@ -679,10 +713,9 @@ def indicator_analysis():
 
     cid = int(company_id)
 
-    indicators = Indicator.query.filter_by(
-        company_id=cid,
-        is_active=True
-    ).order_by(Indicator.code.asc(), Indicator.name.asc()).all()
+    indicators = sort_catalog_entries(
+        Indicator.query.filter_by(company_id=cid, is_active=True).all()
+    )
 
     indicator_ids = [indicator.id for indicator in indicators]
     goals = []
@@ -699,13 +732,12 @@ def indicator_analysis():
             IndicatorGoal.created_at.desc()
         ).all()
 
-        goal_ids = [goal.id for goal in goals]
-        if goal_ids:
+        if goals:
             data_records = IndicatorData.query.filter(
                 IndicatorData.company_id == cid,
-                IndicatorData.goal_id.in_(goal_ids)
+                IndicatorData.indicator_id.in_(indicator_ids)
             ).order_by(
-                IndicatorData.goal_id.asc(),
+                IndicatorData.indicator_id.asc(),
                 IndicatorData.measured_date.asc(),
                 IndicatorData.created_at.asc()
             ).all()
@@ -726,12 +758,16 @@ def indicator_analysis():
             'id': goal.id,
             'indicator_id': goal.indicator_id,
             'code': goal.code,
+            'name': goal.name,
             'goal_value': float(goal.goal_value) if goal.goal_value is not None else None,
             'goal_date': goal.goal_date.isoformat() if goal.goal_date else None,
             'period_start': goal.period_start.isoformat() if goal.period_start else None,
             'period_end': goal.period_end.isoformat() if goal.period_end else None,
             'status': goal.status,
             'goal_type': goal.goal_type,
+            'goal_kind': goal.goal_kind,
+            'composition_mode': goal.composition_mode,
+            'responsible_id': goal.responsible_id,
         }
         for goal in goals
     ]

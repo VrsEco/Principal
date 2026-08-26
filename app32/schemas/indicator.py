@@ -31,15 +31,25 @@ class IndicatorGoalSchema(ma.SQLAlchemyAutoSchema):
     created_at = fields.String(dump_only=True)
     updated_at = fields.String(dump_only=True)
     code = fields.String()
+    name = fields.String(allow_none=True)
     
     goal_value = fields.Float()
     period_start = fields.Date()
+    period_end = fields.Date(allow_none=True)
     goal_date = fields.Date(allow_none=True)
+    responsible_id = fields.Integer(allow_none=True)
+    goal_kind = fields.String()
+    goal_scope = fields.String()
+    composition_mode = fields.String()
+    responsible_name = fields.Method("get_responsible_name", dump_only=True)
     performance_ranges = fields.Dict(allow_none=True)
     routine_id = fields.Integer(allow_none=True)
     collection_method = fields.String(allow_none=True)
     
     records = fields.Nested(IndicatorDataSchema, many=True, dump_only=True)
+
+    def get_responsible_name(self, obj):
+        return obj.responsible.name if getattr(obj, "responsible", None) else None
 
 
 class IndicatorEntityLinkSchema(ma.SQLAlchemyAutoSchema):
@@ -83,21 +93,16 @@ class IndicatorSchema(ma.SQLAlchemyAutoSchema):
         return float(last_data.measured_value)
 
     def get_performance(self, obj):
-        # Comparison logic: last measured value vs active goal
-        from sqlalchemy import desc
-        active_goal = IndicatorGoal.query.filter_by(
-            indicator_id=obj.id,
-            company_id=obj.company_id,
-            status='active',
-        ).order_by(desc('goal_date')).first()
-        if not active_goal:
+        from datetime import date
+        from services.indicator_service import IndicatorGoalService
+
+        context = IndicatorGoalService.consolidated_performance_context(obj.company_id, obj, date.today())
+        target = context.get("target_value")
+        realized = context.get("realized_value")
+        if target is None or realized is None:
             return None
-            
-        last_val = self.get_last_value(obj)
-        if last_val is None:
-            return None
-            
-        goal_val = float(active_goal.goal_value)
+        goal_val = float(target)
+        last_val = float(realized)
         if goal_val == 0:
             return 0
             

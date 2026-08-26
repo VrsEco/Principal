@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arquitetura de Processos Versus"
+  short_description: "Arquitetar e refatorar processos empresariais"
+  default_prompt: "Use $versus-arquitetura-processos para criar ou revisar uma arquitetura de processos a partir da identidade organizacional."

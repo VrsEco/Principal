@@ -12,8 +12,6 @@
     bankAccounts: [],
     selectedType: initialType || '',
     editingSettlementId: null,
-    selectedScheduleIds: new Set(),
-    scheduleAmounts: new Map(),
   };
 
   const $ = (id) => document.getElementById(id);
@@ -27,18 +25,6 @@
   const settlementCancelButton = $('bordero-settlement-cancel-button');
   const banner = $('bordero-banner');
   const typeInfo = $('bordero-type-info');
-  const selectAllSchedules = $('bordero-select-all-schedules');
-  const visibleSelectionChip = $('bordero-visible-selection-chip');
-  const scheduleFilterCount = $('bordero-schedule-filters-count');
-  const applyScheduleFiltersButton = $('bordero-apply-schedule-filters');
-  const clearScheduleFiltersButton = $('bordero-clear-schedule-filters');
-  const scheduleFilters = {
-    counterparty: $('bordero-filter-counterparty'),
-    dueFrom: $('bordero-filter-due-from'),
-    dueTo: $('bordero-filter-due-to'),
-    minAmount: $('bordero-filter-min-amount'),
-    maxAmount: $('bordero-filter-max-amount'),
-  };
   const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatDate = (value) => {
     if (!value) return '-';
@@ -67,46 +53,6 @@
   function parseCurrency(value) {
     const normalized = String(value || '').replace(/\./g, '').replace(',', '.').replace(/[^0-9.\-]/g, '');
     return normalized ? Number(normalized) : 0;
-  }
-
-  function scheduleCounterparty(item) {
-    const summary = item.summary || {};
-    return summary.counterparty_name || item.metadata_json?.counterparty_name || '';
-  }
-
-  function scheduleDueDate(item) {
-    return String(item.next_due_date || item.first_due_date || '').slice(0, 10);
-  }
-
-  function scheduleOpenTotal(item) {
-    return Number((item.summary || {}).open_total || 0);
-  }
-
-  function defaultScheduleAmount(item) {
-    return formatCurrencyFromDigits(Math.round(scheduleOpenTotal(item) * 100));
-  }
-
-  function getScheduleAmount(scheduleId, fallbackItem) {
-    const key = Number(scheduleId || 0);
-    return state.scheduleAmounts.get(key) || defaultScheduleAmount(fallbackItem);
-  }
-
-  function setScheduleAmount(scheduleId, value) {
-    const key = Number(scheduleId || 0);
-    if (!key) return;
-    state.scheduleAmounts.set(key, value);
-  }
-
-  function syncVisibleSelectionState() {
-    document.querySelectorAll('#bordero-schedule-body tr[data-schedule-id]').forEach((row) => {
-      const scheduleId = Number(row.dataset.scheduleId || 0);
-      const selector = row.querySelector('.bordero-schedule-selector');
-      const amountInput = row.querySelector('.bordero-amount-input');
-      if (!scheduleId) return;
-      if (amountInput) setScheduleAmount(scheduleId, amountInput.value);
-      if (selector?.checked) state.selectedScheduleIds.add(scheduleId);
-      else state.selectedScheduleIds.delete(scheduleId);
-    });
   }
 
   function bankAccountLabel(item) {
@@ -145,67 +91,29 @@
 
   function eligibleSchedules() {
     const search = String($('bordero-schedule-search')?.value || '').trim().toLowerCase();
-    const counterpartyFilter = String(scheduleFilters.counterparty?.value || '').trim().toLowerCase();
-    const dueFrom = String(scheduleFilters.dueFrom?.value || '').trim();
-    const dueTo = String(scheduleFilters.dueTo?.value || '').trim();
-    const minAmount = parseCurrency(scheduleFilters.minAmount?.value);
-    const maxAmount = parseCurrency(scheduleFilters.maxAmount?.value);
     return state.schedules.filter((item) => {
       const summary = item.summary || {};
-      const openTotal = scheduleOpenTotal(item);
+      const openTotal = Number(summary.open_total || 0);
       const locked = Boolean(item.is_bordero_locked || summary.is_bordero_locked);
-      const counterparty = scheduleCounterparty(item);
-      const dueDate = scheduleDueDate(item);
-      const haystack = `${item.schedule_code || ''} ${item.description || ''} ${counterparty}`.toLowerCase();
+      const haystack = `${item.schedule_code || ''} ${item.description || ''} ${summary.counterparty_name || ''}`.toLowerCase();
       if (!state.selectedType || item.entry_type !== state.selectedType) return false;
       if (locked || openTotal <= 0) return false;
       if (search && !haystack.includes(search)) return false;
-      if (counterpartyFilter && !counterparty.toLowerCase().includes(counterpartyFilter)) return false;
-      if (dueFrom && (!dueDate || dueDate < dueFrom)) return false;
-      if (dueTo && (!dueDate || dueDate > dueTo)) return false;
-      if (minAmount > 0 && openTotal < minAmount) return false;
-      if (maxAmount > 0 && openTotal > maxAmount) return false;
       return true;
     });
   }
 
   function renderSelectionSummary() {
-    syncVisibleSelectionState();
-    const visibleRows = Array.from(document.querySelectorAll('#bordero-schedule-body tr[data-schedule-id]'));
-    const visibleCount = visibleRows.length;
-    const visibleSelectedCount = visibleRows.filter((row) => state.selectedScheduleIds.has(Number(row.dataset.scheduleId || 0))).length;
-    const hiddenSelectedCount = Array.from(state.selectedScheduleIds).filter((scheduleId) => !visibleRows.some((row) => Number(row.dataset.scheduleId || 0) === scheduleId)).length;
-    const count = state.selectedScheduleIds.size;
-    const total = Array.from(state.selectedScheduleIds).reduce((acc, scheduleId) => {
-      const item = state.schedules.find((schedule) => Number(schedule.id) === Number(scheduleId));
-      if (!item) return acc;
-      return acc + parseCurrency(getScheduleAmount(scheduleId, item));
-    }, 0);
+    const rows = Array.from(document.querySelectorAll('.bordero-schedule-selector:checked'));
+    const count = rows.length;
+    const total = rows.reduce((acc, input) => acc + parseCurrency(input.closest('tr').querySelector('.bordero-amount-input')?.value || 0), 0);
     $('bordero-create-summary').innerHTML = [
       `<span>Títulos selecionados: ${count}</span>`,
       `<span>Total do borderô: ${money(total)}</span>`,
-      hiddenSelectedCount ? `<span>${hiddenSelectedCount} selecionado(s) fora do filtro atual</span>` : '',
     ].join('');
-    if (visibleSelectionChip) visibleSelectionChip.textContent = `${visibleSelectedCount}/${visibleCount} títulos visíveis selecionados`;
-    if (selectAllSchedules) {
-      selectAllSchedules.checked = visibleCount > 0 && visibleSelectedCount === visibleCount;
-      selectAllSchedules.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < visibleCount;
-      selectAllSchedules.disabled = visibleCount === 0;
-    }
-    updateScheduleFilterIndicators();
-  }
-
-  function getActiveScheduleFilters() {
-    return Object.values(scheduleFilters).filter((input) => String(input?.value || '').trim());
-  }
-
-  function updateScheduleFilterIndicators() {
-    const activeCount = getActiveScheduleFilters().length;
-    if (scheduleFilterCount) scheduleFilterCount.textContent = String(activeCount);
   }
 
   function renderEligibleSchedules() {
-    syncVisibleSelectionState();
     const tbody = $('bordero-schedule-body');
     const items = eligibleSchedules();
     if (!items.length) {
@@ -216,13 +124,11 @@
 
     tbody.innerHTML = items.map((item) => {
       const summary = item.summary || {};
-      const openTotal = scheduleOpenTotal(item);
-      const counterparty = scheduleCounterparty(item) || '-';
-      const checked = state.selectedScheduleIds.has(Number(item.id)) ? 'checked' : '';
-      const amountValue = getScheduleAmount(item.id, item);
+      const openTotal = Number(summary.open_total || 0);
+      const counterparty = summary.counterparty_name || item.metadata_json?.counterparty_name || '-';
       return `
         <tr data-schedule-id="${item.id}">
-          <td data-label="Selecionar"><input type="checkbox" class="bordero-schedule-selector" ${checked}></td>
+          <td data-label="Selecionar"><input type="checkbox" class="bordero-schedule-selector"></td>
           <td data-label="Título financeiro">
             <div class="bordero-row-title">
               <strong>${item.description || 'Sem histórico'}</strong>
@@ -232,23 +138,15 @@
           <td data-label="Favorecido">${counterparty}</td>
           <td data-label="Vencimento">${formatDate(item.next_due_date || item.first_due_date)}</td>
           <td data-label="Saldo aberto">${money(openTotal)}</td>
-          <td data-label="Valor no borderô"><input class="bordero-amount-input" inputmode="numeric" value="${amountValue}" data-open-amount="${openTotal}"></td>
+          <td data-label="Valor no borderô"><input class="bordero-amount-input" inputmode="numeric" value="${formatCurrencyFromDigits(Math.round(openTotal * 100))}" data-open-amount="${openTotal}"></td>
         </tr>
       `;
     }).join('');
 
-    tbody.querySelectorAll('.bordero-schedule-selector').forEach((input) => input.addEventListener('change', (event) => {
-      const row = event.target.closest('tr');
-      const scheduleId = Number(row?.dataset.scheduleId || 0);
-      if (event.target.checked) state.selectedScheduleIds.add(scheduleId);
-      else state.selectedScheduleIds.delete(scheduleId);
-      renderSelectionSummary();
-    }));
+    tbody.querySelectorAll('.bordero-schedule-selector').forEach((input) => input.addEventListener('change', renderSelectionSummary));
     tbody.querySelectorAll('.bordero-amount-input').forEach((input) => {
       input.addEventListener('input', (event) => {
         event.target.value = formatCurrencyFromDigits(event.target.value);
-        const row = event.target.closest('tr');
-        setScheduleAmount(Number(row?.dataset.scheduleId || 0), event.target.value);
         renderSelectionSummary();
       });
     });
@@ -256,17 +154,16 @@
   }
 
   function selectedItemsPayload() {
-    syncVisibleSelectionState();
-    return Array.from(state.selectedScheduleIds).map((scheduleId) => {
-      const schedule = state.schedules.find((item) => Number(item.id) === Number(scheduleId));
-      if (!schedule) throw new Error('Um dos títulos selecionados não está mais disponível. Atualize a lista e tente novamente.');
-      const openAmount = scheduleOpenTotal(schedule);
-      const selectedAmount = parseCurrency(getScheduleAmount(scheduleId, schedule));
+    return Array.from(document.querySelectorAll('.bordero-schedule-selector:checked')).map((input) => {
+      const row = input.closest('tr');
+      const amountInput = row.querySelector('.bordero-amount-input');
+      const openAmount = Number(amountInput.dataset.openAmount || 0);
+      const selectedAmount = parseCurrency(amountInput.value);
       if (selectedAmount <= 0 || selectedAmount > openAmount + 0.001) {
         throw new Error('Revise os valores selecionados. Cada valor do borderô deve ser maior que zero e menor ou igual ao saldo aberto.');
       }
       return {
-        financial_schedule_id: Number(scheduleId || 0),
+        financial_schedule_id: Number(row.dataset.scheduleId || 0),
         selected_amount: selectedAmount,
       };
     });
@@ -481,35 +378,6 @@
       await Promise.all([loadBankAccounts(), loadSchedules()]);
       $('bordero-schedule-search')?.addEventListener('input', renderEligibleSchedules);
       $('bordero-refresh-schedules')?.addEventListener('click', loadSchedules);
-      selectAllSchedules?.addEventListener('change', (event) => {
-        const shouldSelect = Boolean(event.target.checked);
-        document.querySelectorAll('#bordero-schedule-body tr[data-schedule-id]').forEach((row) => {
-          const scheduleId = Number(row.dataset.scheduleId || 0);
-          const selector = row.querySelector('.bordero-schedule-selector');
-          const amountInput = row.querySelector('.bordero-amount-input');
-          if (selector) selector.checked = shouldSelect;
-          if (amountInput) setScheduleAmount(scheduleId, amountInput.value);
-          if (shouldSelect) state.selectedScheduleIds.add(scheduleId);
-          else state.selectedScheduleIds.delete(scheduleId);
-        });
-        renderEligibleSchedules();
-      });
-      Object.values(scheduleFilters).forEach((input) => {
-        input?.addEventListener('input', updateScheduleFilterIndicators);
-        input?.addEventListener('change', updateScheduleFilterIndicators);
-      });
-      [scheduleFilters.minAmount, scheduleFilters.maxAmount].forEach((input) => {
-        input?.addEventListener('input', (event) => {
-          event.target.value = formatCurrencyFromDigits(event.target.value);
-        });
-      });
-      applyScheduleFiltersButton?.addEventListener('click', renderEligibleSchedules);
-      clearScheduleFiltersButton?.addEventListener('click', () => {
-        Object.values(scheduleFilters).forEach((input) => {
-          if (input) input.value = '';
-        });
-        renderEligibleSchedules();
-      });
       $('settlement-amount')?.addEventListener('input', (event) => {
         event.target.value = formatCurrencyFromDigits(event.target.value);
       });

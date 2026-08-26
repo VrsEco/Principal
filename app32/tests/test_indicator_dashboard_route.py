@@ -131,6 +131,29 @@ def test_indicator_dashboard_accepts_legacy_performance_ranges(monkeypatch):
         "IndicatorTree",
         SimpleNamespace(query=_FakeQuery([]), code=_FakeColumn("code")),
     )
+    monkeypatch.setattr(
+        indicators_route,
+        "IndicatorGoalService",
+        SimpleNamespace(
+            consolidated_performance_context=lambda company_id, selected_indicator, reference_date: {
+                "base": goal,
+                "realized_value": 109,
+                "target_value": 100,
+                "cycle_start": date(2026, 3, 1),
+                "cycle_end": date(2026, 3, 31),
+                "additive_campaigns": [],
+                "independent_campaigns": [],
+                "individual_contexts": [],
+                "individual_target_sum": None,
+                "allocation_gap": None,
+                "target_source": "team",
+            },
+            classify_performance=lambda selected_indicator, selected_goal, target, realized: {
+                "status_class": "on_target",
+                "performance_pct": 109.0,
+            },
+        ),
+    )
 
     captured = {}
 

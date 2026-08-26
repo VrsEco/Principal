@@ -269,3 +269,145 @@
     text-align: left;
   }
 }
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm 8mm 12mm;
+  }
+
+  body:has(.ledger-report-page) {
+    background: #fff !important;
+  }
+
+  .ledger-report-page .report-workspace-header,
+  .ledger-report-page .report-workspace-filter-toggle,
+  .ledger-report-page .report-workspace-sidebar,
+  .ledger-report-page .report-workspace-navbar,
+  .ledger-report-page .report-workspace-header-actions,
+  .ledger-report-page .report-workspace-actionbar {
+    display: none !important;
+  }
+
+  .ledger-report-viewer {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  .ledger-report-sheet {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    background: #fff !important;
+    gap: 6px !important;
+  }
+
+  .ledger-section {
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .ledger-section--header {
+    padding: 10px 12px !important;
+  }
+
+  .ledger-section--insight,
+  .ledger-section--filters,
+  .ledger-section--stats,
+  .ledger-section--info {
+    padding: 7px 9px !important;
+  }
+
+  .ledger-section--insight {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .ledger-filters-grid,
+  .ledger-stats-grid,
+  .ledger-info-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .ledger-insight-card,
+  .ledger-stat,
+  .ledger-info-card {
+    padding: 6px 7px !important;
+    border-color: #bfdbfe !important;
+    background: #f8fafc !important;
+  }
+
+  .ledger-groups {
+    gap: 8px !important;
+  }
+
+  .ledger-group-card {
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .ledger-group-card__header {
+    padding: 7px 9px !important;
+    background: #111827 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ledger-group-card__header h3 {
+    font-size: 10pt !important;
+  }
+
+  .ledger-group-card__meta strong {
+    font-size: 10pt !important;
+  }
+
+  .ledger-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+  }
+
+  .ledger-table thead th {
+    position: static !important;
+    font-size: 5.7pt !important;
+    padding: 4px 3px !important;
+    background: #e2e8f0 !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ledger-table tbody td {
+    font-size: 5.8pt !important;
+    line-height: 1.22 !important;
+    padding: 3px !important;
+    vertical-align: top !important;
+    word-break: break-word !important;
+  }
+
+  .ledger-table .col-id { width: 4.5%; }
+  .ledger-table .col-historico { width: 17%; min-width: 0; }
+  .ledger-table .col-favorecido { width: 12%; min-width: 0; }
+  .ledger-table .col-tipo { width: 5.5%; }
+  .ledger-table .col-plano_contas { width: 13%; min-width: 0; }
+  .ledger-table .col-centro_resultado { width: 9.5%; min-width: 0; }
+  .ledger-table .col-projeto_processo { width: 12%; min-width: 0; }
+  .ledger-table .col-competencia,
+  .ledger-table .col-vencimento,
+  .ledger-table .col-liquidacao { width: 5.5%; }
+  .ledger-table .col-valor { width: 7%; }
+  .ledger-table .col-totalizador,
+  .ledger-table .col-numero_qtd_rateio { width: 4%; min-width: 0; }
+
+  .ledger-type-chip,
+  .ledger-group-badge {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+}

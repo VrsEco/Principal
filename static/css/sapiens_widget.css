@@ -1,0 +1,242 @@
+#sapiens-widget-container {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 25000;
+    font-family: 'Inter', sans-serif;
+}
+
+#sapiens-launcher {
+    min-width: 58px;
+    height: 58px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2563eb, #1683ff);
+    color: #fff;
+    box-shadow: 0 14px 34px rgba(37, 99, 235, .34);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+#sapiens-launcher:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 42px rgba(37, 99, 235, .42);
+}
+
+.sapiens-widget-panel {
+    position: absolute;
+    right: 0;
+    bottom: 72px;
+    width: min(430px, calc(100vw - 32px));
+    height: min(680px, calc(100vh - 120px));
+    border: 1px solid #dbe4ef;
+    border-radius: 22px;
+    background: #f7f9fc;
+    box-shadow: 0 24px 64px rgba(15, 23, 42, .25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sapiens-widget-panel[hidden] { display: none; }
+
+.sapiens-widget-header {
+    min-height: 78px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: #fff;
+    border-bottom: 1px solid #e5ebf3;
+}
+
+.sapiens-widget-eyebrow {
+    display: block;
+    color: #1683ff;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+}
+
+.sapiens-widget-header h2 {
+    margin: 3px 0 0;
+    color: #172033;
+    font-size: 18px;
+    line-height: 1.2;
+}
+
+.sapiens-widget-header-actions { display: flex; gap: 7px; }
+.sapiens-widget-header-actions a,
+.sapiens-widget-header-actions button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #dbe4ef;
+    border-radius: 10px;
+    background: #fff;
+    color: #526071;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.sapiens-widget-scopes {
+    padding: 11px 14px;
+    display: flex;
+    gap: 7px;
+    background: #fff;
+    border-bottom: 1px solid #e5ebf3;
+    overflow-x: auto;
+}
+
+.sapiens-widget-scopes button {
+    padding: 7px 11px;
+    border: 1px solid #dbe4ef;
+    border-radius: 999px;
+    background: #fff;
+    color: #526071;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.sapiens-widget-scopes button.is-active {
+    border-color: #1683ff;
+    background: #eaf4ff;
+    color: #1467c9;
+}
+
+.sapiens-widget-messages {
+    flex: 1;
+    padding: 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.sapiens-widget-welcome {
+    margin: auto 8px;
+    color: #667085;
+    text-align: center;
+    display: grid;
+    justify-items: center;
+    gap: 7px;
+    font-size: 13px;
+}
+
+.sapiens-widget-welcome i { color: #1683ff; font-size: 24px; }
+.sapiens-widget-welcome strong { color: #172033; font-size: 17px; }
+
+.sapiens-widget-message {
+    max-width: 92%;
+    padding: 12px 14px;
+    border-radius: 15px;
+    color: #263244;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.sapiens-widget-message.is-user {
+    align-self: flex-end;
+    background: #e9f5ff;
+    border-color: #c9e5ff;
+}
+
+.sapiens-widget-message h4 { margin: 0 0 8px; color: #172033; font-size: 14px; }
+.sapiens-widget-message p { margin: 0 0 9px; }
+.sapiens-widget-message p:last-child { margin-bottom: 0; }
+.sapiens-widget-message ol,
+.sapiens-widget-message ul { margin: 6px 0 10px; padding-left: 20px; }
+.sapiens-widget-message li + li { margin-top: 3px; }
+
+.sapiens-widget-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.sapiens-widget-actions a {
+    padding: 7px 10px;
+    border-radius: 9px;
+    background: #1683ff;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.sapiens-widget-source-note { margin-top: 9px; color: #667085; font-size: 10px; }
+.sapiens-widget-feedback { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; color: #667085; font-size: 10px; }
+.sapiens-widget-feedback button { border: 0; border-radius: 999px; padding: 5px 8px; background: #f1f5f9; color: #475467; font-size: 10px; font-weight: 800; cursor: pointer; }
+.sapiens-widget-feedback button:hover,
+.sapiens-widget-feedback button.is-selected { background: #e8f3ff; color: #1683ff; }
+.sapiens-widget-feedback button:disabled { opacity: .7; cursor: progress; }
+.sapiens-widget-status { padding: 8px 16px; color: #526071; font-size: 12px; }
+.sapiens-widget-status.is-error { color: #b42318; }
+
+.sapiens-widget-form {
+    padding: 12px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: #fff;
+    border-top: 1px solid #e5ebf3;
+}
+
+#sapiens-widget-input {
+    flex: 1;
+    max-height: 108px;
+    min-height: 44px;
+    padding: 11px 13px;
+    border: 1px solid #dbe4ef;
+    border-radius: 13px;
+    outline: none;
+    resize: none;
+    color: #172033;
+    background: #f8fafc;
+    font: inherit;
+    font-size: 13px;
+}
+
+#sapiens-widget-input:focus { border-color: #1683ff; box-shadow: 0 0 0 3px rgba(22, 131, 255, .12); }
+.sapiens-widget-form button {
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 13px;
+    background: #1683ff;
+    color: #fff;
+    cursor: pointer;
+}
+.sapiens-widget-form button:disabled { opacity: .55; cursor: wait; }
+
+@media (max-width: 520px) {
+    #sapiens-widget-container { right: 16px; bottom: 16px; }
+    .sapiens-widget-panel { position: fixed; inset: 12px; width: auto; height: auto; }
+    #sapiens-launcher span { display: none; }
+    #sapiens-launcher { min-width: 58px; padding: 0; }
+}
+.sapiens-widget-tree-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 6px 9px;
+    color: #087f72;
+    background: #eaf8f3;
+    font-size: 11px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.sapiens-widget-tree-link[hidden] { display: none !important; }

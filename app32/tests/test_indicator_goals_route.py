@@ -61,7 +61,7 @@ def test_indicator_goals_page_excludes_inactive_indicators(monkeypatch):
         SimpleNamespace(id=2, company_id=9, name='Indicador Inativo', code='INA', unit='R$', is_active=False),
         SimpleNamespace(id=3, company_id=9, name='Indicador Legado', code='LEG', unit='R$', is_active=None),
     ]
-    goals = [SimpleNamespace(id=10, company_id=9, goal_date=None)]
+    goals = [SimpleNamespace(id=10, company_id=9, goal_date=None, period_start=None)]
     routines = [SimpleNamespace(id=1, code='RT', name='Rotina')]
 
     monkeypatch.setattr(
@@ -79,6 +79,7 @@ def test_indicator_goals_page_excludes_inactive_indicators(monkeypatch):
         SimpleNamespace(
             query=_FakeQuery(goals),
             goal_date=_FakeColumn('goal_date'),
+            period_start=_FakeColumn('period_start'),
         ),
     )
     monkeypatch.setattr(

@@ -1249,3 +1249,47 @@ Consequências:
 - análise incompleta pode ser registrada para auditoria, mas permanece inelegível e mantém a jornada em `collecting_evidence`;
 - validações dos Squads e decisão do consultor só se aplicam a análise metodológica elegível;
 - Engenharia continua condicional: participa quando houver gap técnico relevante, não como validação automática de todo conteúdo.
+
+### 12.5.4 Agente de Arquitetura de Processos
+
+O Agente de Arquitetura de Processos transforma a Identidade Organizacional e os resultados empresariais necessários em uma hipótese estruturada da cadeia de valor. Sua decomposição canônica é:
+
+> **Identidade → resultados empresariais necessários → áreas/cadeias → macroprocessos (geração de valor e grandes entregas) → processos (entregas) → atividades (microentregas) → clientes ou processos recebedores.**
+
+Essa sequência não é uma taxonomia meramente cadastral. Cada nível deve explicar por que existe, o que entrega, de quem recebe e para quem entrega. O agente deve preservar o encadeamento vertical entre identidade, resultados e execução, e o encadeamento horizontal entre fornecedores, processos e recebedores.
+
+O agente trabalha com hipóteses explícitas, não inventa fatos operacionais e não publica alterações canônicas sem validação humana. Quando faltarem evidências, registra premissas, gaps e perguntas de validação. A identificação de dimensões ou capacidades habilitadoras pode orientar projetos de implantação, correção ou melhoria, sem transformar projetos em processos permanentes.
+
+Seu repertório de casos é versionado e substituível. Um caso pode estar como candidato, referência ativa ou retirado; a promoção de uma referência mais madura preserva o caso anterior no histórico e registra a sucessão. Casos específicos de clientes servem como evidência e aprendizado, mas não se tornam automaticamente regras universais da Metodologia Versus. A leitura de casos operacionais deve ocorrer por MCP, com `company_id` explícito, sempre que a superfície estiver disponível.
+
+### 12.5.5 Motor de Maturidade Organizacional Versus
+
+A maturação das quatro frentes deve utilizar **um único motor**, e não quatro implementações independentes. O núcleo comum controla ciclo, estados, histórico, dependências, gates e próxima ação; protocolos versionados carregam as perguntas, evidências e critérios específicos de cada elemento.
+
+As quatro frentes oficiais são:
+
+1. **Identidade Organizacional** — entendimento da empresa, mercado e sócios; missão; visão; valores; posicionamento; organograma; competências e capacidade organizacional;
+2. **Processos** — arquitetura; modelagem; implantação; estabilização; controles; auditoria e melhoria;
+3. **Planejamento Estratégico** — direcionadores; objetivos; OKRs; metas; iniciativas; priorização e desdobramento;
+4. **Gerenciamento Estratégico** — indicadores; ciclos de acompanhamento; Business Reviews; incentivos; decisões; ações corretivas e aprendizado.
+
+Todo elemento percorre o ciclo comum:
+
+> **compreender → discutir → identificar gaps → definir → validar → consolidar como vigente → acompanhar alinhamento → amadurecer novamente.**
+
+O motor preserva duas classificações independentes e simples:
+
+- **Estado do conteúdo:** `Em discussão`, `Vigente` ou `Descartado`;
+- **Estado de maturidade relativa:** `Atrasado`, `Em linha com os demais` ou `Adiantado`.
+
+O estado de conteúdo informa a situação da definição. O estado de maturidade relativa informa se o elemento está coerente com as dependências e capacidades dos demais. `Adiantado` não é automaticamente positivo: uma estratégia pode estar além da capacidade de processos, pessoas, dados ou gestão e, por isso, gerar ruptura de execução.
+
+Cada ciclo deve preservar, no mínimo: histórico de discussões, evidências, gaps encontrados, alternativas, definições, decisões descartadas, responsáveis pelas validações, ideias ainda abertas, versão vigente resultante e impactos sobre outros elementos. A consolidação de uma nova versão não apaga o percurso anterior.
+
+A maturidade é avaliada pelo funcionamento e pelo alinhamento, não por percentual de preenchimento. O motor deve detectar diferenças como estratégia adiantada com processos atrasados, processos estruturados sem indicadores confiáveis ou identidade vigente sem organograma capaz de sustentá-la.
+
+Cada elemento é conduzido por um protocolo versionado contendo perguntas orientadoras, evidências mínimas, critérios de qualidade, dependências, gaps verificáveis, entregável esperado, gates humanos e critérios de vigência. A resolução do protocolo segue **tenant → global → fallback**, preservando a metodologia comum e permitindo configuração específica sem afetar outros clientes.
+
+Quando um gap aprovado exigir transformação, o motor recomenda seu tratamento por ação ou projeto e registra a conexão. O **Gestor de Projetos** administra a execução; o Motor de Maturidade recebe as evidências e reavalia o elemento. Assim, maturação e gestão de projetos permanecem conectadas, mas não confundidas.
+
+Na interface, a robustez deve permanecer no motor. Ao usuário, a apresentação padrão deve responder apenas: onde estamos, o que está vigente, o que está em discussão, quais gaps e desalinhamentos existem e qual é a próxima decisão recomendada. Antes de qualquer expansão do APP32, devem ser avaliados aderência ao modelo canônico, impacto sobre outros tenants e complexidade desnecessária.

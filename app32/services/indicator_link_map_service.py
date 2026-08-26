@@ -18,6 +18,7 @@ from models import (
     Project,
     db,
 )
+from utils.catalog_sort import sort_catalog_entries
 
 
 TARGET_TYPE_LABELS = {
@@ -123,9 +124,12 @@ class IndicatorLinkMapService:
             "strategic_objective",
         ]
 
+        ordered_indicators = sort_catalog_entries(
+            Indicator.query.filter_by(company_id=company_id, is_active=True).all()
+        )
         indicators = {
             int(row.id): row
-            for row in Indicator.query.filter_by(company_id=company_id, is_active=True).order_by(Indicator.name).all()
+            for row in ordered_indicators
         }
 
         links = (
@@ -143,6 +147,10 @@ class IndicatorLinkMapService:
         links_payload.extend(_legacy_links(company_id, indicators, links_payload, target_types))
 
         targets = _build_targets(company_id, links_payload)
+        targets = {
+            item["key"]: item
+            for item in sort_catalog_entries(targets.values())
+        }
         indicator_payload = [_indicator_payload(ind) for ind in indicators.values()]
         perf = _indicator_performance(company_id, list(indicators.keys()))
         for item in indicator_payload:

@@ -24,6 +24,10 @@
   color: #fff;
 }
 
+.dre-report-header-actions form {
+  margin: 0;
+}
+
 .dre-report-viewer {
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 28%),
@@ -140,20 +144,25 @@
 }
 
 .dre-row--group .dre-account-content {
-  font-size: 0.83rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #0f172a;
 }
 
 .dre-row--subgroup .dre-account-content {
-  font-size: 0.77rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #1e293b;
 }
 
-.dre-row--account-group .dre-account-content,
+.dre-row--account-group .dre-account-content {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #243244;
+}
+
 .dre-row--account .dre-account-content {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: #334155;
 }
 
@@ -252,7 +261,7 @@
 }
 
 .dre-value-button--footer {
-  font-weight: 800;
+  font-weight: inherit;
 }
 
 .dre-value-static {
@@ -434,12 +443,39 @@
   font-weight: 600;
 }
 
+.dre-row--group .dre-value,
+.dre-row--group .dre-value-button {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.dre-row--subgroup .dre-value,
+.dre-row--subgroup .dre-value-button {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.dre-row--account-group .dre-value,
+.dre-row--account-group .dre-value-button {
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.dre-row--account .dre-value,
+.dre-row--account .dre-value-button {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .dre-table tfoot th {
-  background: #0f172a;
-  color: #fff;
+  background: #f8fbff;
+  color: #0f172a;
   padding: 0.62rem 0.45rem;
   text-align: right;
-  font-size: 0.68rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  border-top: 1px solid #d6e3f8;
+  border-bottom: 1px solid #e5edf9;
 }
 
 .dre-table tfoot th:first-child {
@@ -474,18 +510,47 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   .dre-report-page {
-    padding: 0;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body:has(.dre-report-page) .workspace-sidebar,
+  body:has(.dre-report-page) .workspace-topbar,
+  body:has(.dre-report-page) .workspace-breadcrumb,
+  body:has(.dre-report-page) .workspace-navbar,
+  body:has(.dre-report-page) .report-workspace-header,
+  body:has(.dre-report-page) .no-print {
+    display: none !important;
   }
 
   .dre-report-viewer {
-    background: #fff;
-    padding: 0;
+    background: #fff !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
   .dre-report-sheet {
-    box-shadow: none;
-    padding: 0;
+    width: 100% !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    gap: 6mm;
+    background: #fff !important;
   }
 
   .dre-toggle,
@@ -495,6 +560,183 @@
   }
 
   .dre-row.is-hidden {
-    display: table-row !important;
+    display: none !important;
+  }
+
+  .dre-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-color: #d7e3f8 !important;
+    box-shadow: none !important;
+  }
+
+  .dre-section--header {
+    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%) !important;
+    color: #fff !important;
+    border: 0 !important;
+    padding-top: 5mm !important;
+    padding-bottom: 5mm !important;
+  }
+
+  .dre-section--header .dre-report-title-main,
+  .dre-section--header .dre-report-company-name {
+    color: #fff !important;
+  }
+
+  .dre-section--filters,
+  .dre-section--stats {
+    display: none !important;
+  }
+
+  .dre-section--table > .dre-section-title {
+    display: none !important;
+  }
+
+  .dre-filters-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .dre-filter-item {
+    background: #f8fbff !important;
+    border-color: #dbe7ff !important;
+  }
+
+  .dre-table-wrap {
+    overflow: visible !important;
+    border-radius: 12px !important;
+    border: 1px solid #cddcff !important;
+  }
+
+  .dre-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    font-size: 7.5pt;
+  }
+
+  .dre-table thead {
+    display: table-header-group;
+  }
+
+  .dre-table tfoot {
+    display: table-row-group;
+  }
+
+  .dre-table thead th {
+    background: #0f172a !important;
+    color: #fff !important;
+    font-size: 7pt;
+    padding: 5pt 4pt;
+  }
+
+  .dre-table .col-status {
+    display: none !important;
+  }
+
+  .dre-table .col-account {
+    width: 44% !important;
+  }
+
+  .dre-table .col-value {
+    width: auto !important;
+  }
+
+  .dre-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .dre-row td,
+  .dre-row th {
+    padding: 4pt 4pt !important;
+    border-bottom: 0.5pt solid #dbe7ff !important;
+  }
+
+  .dre-row--group {
+    background: #eaf2ff !important;
+  }
+
+  .dre-row--subgroup {
+    background: #f4f8ff !important;
+  }
+
+  .dre-account-cell.level-0 { padding-left: 0 !important; }
+  .dre-account-cell.level-1 { padding-left: 8pt !important; }
+  .dre-account-cell.level-2 { padding-left: 16pt !important; }
+  .dre-account-cell.level-3 { padding-left: 24pt !important; }
+  .dre-account-cell.level-4,
+  .dre-account-cell.level-5,
+  .dre-account-cell.level-6 { padding-left: 32pt !important; }
+
+  .dre-account-content,
+  .dre-value {
+    font-size: 7.8pt !important;
+    line-height: 1.22 !important;
+  }
+
+  .dre-row--group .dre-account-content {
+    font-size: 8.8pt !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
+  .dre-row--group .dre-value,
+  .dre-row--group .dre-value-button {
+    font-size: 8.8pt !important;
+    font-weight: 800 !important;
+  }
+
+  .dre-row--subgroup .dre-account-content {
+    font-size: 8.3pt !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+  }
+
+  .dre-row--subgroup .dre-value,
+  .dre-row--subgroup .dre-value-button {
+    font-size: 8.3pt !important;
+    font-weight: 700 !important;
+  }
+
+  .dre-row--account-group .dre-account-content,
+  .dre-row--account .dre-account-content {
+    font-size: 7.8pt !important;
+    color: #334155 !important;
+  }
+
+  .dre-row--account-group .dre-value,
+  .dre-row--account-group .dre-value-button,
+  .dre-row--account .dre-value,
+  .dre-row--account .dre-value-button {
+    font-size: 7.8pt !important;
+    font-weight: 600 !important;
+  }
+
+  .dre-value-button {
+    color: inherit !important;
+  }
+
+  .dre-value-button--positive {
+    color: #1d4ed8 !important;
+  }
+
+  .dre-value-button--negative {
+    color: #b91c1c !important;
+  }
+
+  .dre-table tfoot th {
+    background: #f8fbff !important;
+    color: #0f172a !important;
+    font-size: 7.8pt;
+    font-weight: 600 !important;
+    padding: 6pt 4pt !important;
+    border-top: 0.5pt solid #dbe7ff !important;
+  }
+
+  .dre-footer {
+    color: #475569 !important;
+    border-top: 1px solid #dbe7ff !important;
+    padding-top: 5mm !important;
   }
 }

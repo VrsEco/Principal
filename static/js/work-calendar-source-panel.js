@@ -16,6 +16,38 @@
         alert(message);
     }
 
+
+    function getDateHelpers() {
+        return window.App32DateFields || {};
+    }
+
+    function getIsoDateValue(input) {
+        if (!input) return '';
+        const helpers = getDateHelpers();
+        if (typeof helpers.getDateFieldIsoValue === 'function') {
+            return helpers.getDateFieldIsoValue(input);
+        }
+        return input.value || '';
+    }
+
+    function setDateDisplayValue(input, isoValue) {
+        if (!input) return;
+        const helpers = getDateHelpers();
+        if (typeof helpers.setDateFieldDisplayValue === 'function') {
+            helpers.setDateFieldDisplayValue(input, isoValue);
+            return;
+        }
+        input.value = isoValue || '';
+    }
+
+    function bindDateInput(input) {
+        if (!input) return;
+        const helpers = getDateHelpers();
+        if (typeof helpers.bindCompactDateInput === 'function') {
+            helpers.bindCompactDateInput(input);
+        }
+    }
+
     async function initCalendarPanel(root) {
         const companyId = Number(root.dataset.companyId || 0);
         const employeeId = Number(root.dataset.employeeId || 0);
@@ -32,6 +64,7 @@
         const descInput = root.querySelector('[data-calendar-source-description]');
         const statusInput = root.querySelector('[data-calendar-source-status]');
         const priorityInput = root.querySelector('[data-calendar-source-priority]');
+        bindDateInput(dateInput);
 
         async function loadEvents() {
             listEl.innerHTML = '<div class="text-tertiary">Carregando eventos...</div>';
@@ -75,7 +108,7 @@
                 source_type: sourceType,
                 source_id: sourceId,
                 title: titleInput.value.trim(),
-                event_date: dateInput.value,
+                event_date: getIsoDateValue(dateInput),
                 start_time: startInput.value || null,
                 end_time: endInput.value || null,
                 description: descInput.value.trim() || null,
@@ -97,7 +130,7 @@
                 return;
             }
             form.reset();
-            dateInput.value = new Date().toISOString().slice(0, 10);
+            setDateDisplayValue(dateInput, new Date().toISOString().slice(0, 10));
             statusInput.value = 'planned';
             priorityInput.value = 'normal';
             showToastSafe('Evento criado com sucesso.');
@@ -105,7 +138,7 @@
         });
 
         if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().slice(0, 10);
+            setDateDisplayValue(dateInput, new Date().toISOString().slice(0, 10));
         }
         await loadEvents();
     }

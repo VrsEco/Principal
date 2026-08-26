@@ -12,10 +12,6 @@
   const importInput = document.getElementById('bpmnImportInput');
   const canvasEl = document.getElementById('bpmnCanvas');
   const canvasCardEl = canvasEl ? canvasEl.closest('.bpmn-canvas-card') : root.querySelector('.bpmn-canvas-card');
-  const OPERATIONAL_ACTIVITY_BASE_WIDTH = 280;
-  const OPERATIONAL_ACTIVITY_MAX_WIDTH = 392;
-  const OPERATIONAL_ACTIVITY_BASE_HEIGHT = 90;
-  const OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT = 130;
   const OPERATIONAL_ACTIVITY_MIN_WIDTH = 240;
   const OPERATIONAL_ACTIVITY_MIN_HEIGHT = 72;
   let modeler = null;
@@ -37,6 +33,28 @@
   let inspectorBusy = false;
   let manualResizeHandleEl = null;
   let manualResizeState = null;
+  let artifactMenuTarget = null;
+  let colorMenuTarget = null;
+
+  const ARTIFACT_CATALOG = {
+    pop: { label: 'POP', short: 'P', color: '#2563eb', fill: '#eff6ff', hint: 'Procedimento operacional', marker: '[POP]' },
+    form: { label: 'FORM', short: 'F', color: '#7c3aed', fill: '#f5f3ff', hint: 'Formulário estruturado', marker: '[FORM]' },
+    check: { label: 'CHECK', short: 'C', color: '#059669', fill: '#ecfdf5', hint: 'Lista de verificação', marker: '[CHECK]' },
+    ai: { label: 'IA', short: 'IA', color: '#ea580c', fill: '#fff7ed', hint: 'AI Task ou AI Gateway', marker: '[IA]' },
+    data_in: { label: 'DADOS RECEBIDOS', short: 'IN', color: '#0891b2', fill: '#ecfeff', hint: 'Entrada de dados', marker: '[DADOS IN]' },
+    data_out: { label: 'DADOS ENVIADOS', short: 'OUT', color: '#e11d48', fill: '#fff1f2', hint: 'Saída de dados', marker: '[DADOS OUT]' }
+  };
+
+  const BPMN_COLOR_PALETTE = [
+    { key: 'slate', label: 'Cinza', fill: '#f8fafc', stroke: '#64748b' },
+    { key: 'blue', label: 'Azul', fill: '#eff6ff', stroke: '#2563eb' },
+    { key: 'cyan', label: 'Ciano', fill: '#ecfeff', stroke: '#0891b2' },
+    { key: 'green', label: 'Verde', fill: '#dcfce7', stroke: '#16a34a' },
+    { key: 'amber', label: 'Amarelo', fill: '#fef3c7', stroke: '#d97706' },
+    { key: 'orange', label: 'Laranja', fill: '#fff7ed', stroke: '#ea580c' },
+    { key: 'rose', label: 'Vermelho', fill: '#fee2e2', stroke: '#dc2626' },
+    { key: 'purple', label: 'Roxo', fill: '#f5f3ff', stroke: '#7c3aed' }
+  ];
 
   function setStatus(text, detail, isError) {
     if (statusEl) {
@@ -55,7 +73,7 @@
     return window.BpmnJS || window.BpmnModeler;
   }
 
-  function buildAiReplaceModule() {
+  function buildApp32ModelerModule() {
     function App32AiReplaceMenuProvider(popupMenu) {
       popupMenu.registerProvider('bpmn-replace', this);
     }
@@ -87,9 +105,64 @@
       };
     };
 
+    function App32ArtifactContextPadProvider(contextPad) {
+      contextPad.registerProvider(this);
+    }
+
+    App32ArtifactContextPadProvider.$inject = ['contextPad'];
+
+    App32ArtifactContextPadProvider.prototype.getContextPadEntries = function (element) {
+      const type = element && element.businessObject && element.businessObject.$type;
+      const entries = {};
+      const artifactType = type === 'bpmn:DataObjectReference'
+        ? artifactTypeFromDataObjectName(element.businessObject?.name || element.businessObject?.dataObjectRef?.name)
+        : null;
+      if (artifactType) {
+        entries['app32-edit-artifact'] = {
+          group: 'edit',
+          className: 'app32-edit-artifact-entry',
+          title: `Editar ${ARTIFACT_CATALOG[artifactType].label}`,
+          action: {
+            click: function () {
+              openArtifactEditorFromMarker(element).catch((error) => {
+                console.error('[APP32 BPMN] artifact editor error', error);
+                setStatus('Erro ao abrir artefato', error.message || 'Falha inesperada.', true);
+              });
+            }
+          }
+        };
+      }
+      if (isOperationalActivityType(type) || isGatewayType(type)) {
+        entries['app32-add-artifact'] = {
+          group: 'edit',
+          className: 'app32-artifact-entry',
+          title: 'Adicionar ou configurar artefato',
+          action: {
+            click: function (event, target) {
+              openArtifactQuickMenu(target || element, event);
+            }
+          }
+        };
+      }
+      if (!artifactType && isColorableBpmnElement(element)) {
+        entries['app32-color-element'] = {
+          group: 'edit',
+          className: 'app32-color-entry',
+          title: 'Alterar cor do elemento',
+          action: {
+            click: function (event, target) {
+              openBpmnColorMenu(target || element, event);
+            }
+          }
+        };
+      }
+      return entries;
+    };
+
     return {
-      __init__: ['app32AiReplaceMenuProvider'],
-      app32AiReplaceMenuProvider: ['type', App32AiReplaceMenuProvider]
+      __init__: ['app32AiReplaceMenuProvider', 'app32ArtifactContextPadProvider'],
+      app32AiReplaceMenuProvider: ['type', App32AiReplaceMenuProvider],
+      app32ArtifactContextPadProvider: ['type', App32ArtifactContextPadProvider]
     };
   }
 
@@ -122,6 +195,7 @@
     const canvas = modeler.get('canvas');
     canvas.zoom('fit-viewport', 'auto');
     currentZoom = 1;
+    applyArtifactMarkerStyles();
     return result;
   }
 
@@ -135,10 +209,7 @@
 
       modeler = new Modeler({
         container: '#bpmnCanvas',
-        additionalModules: [buildAiReplaceModule()],
-        keyboard: {
-          bindTo: document
-        },
+        additionalModules: [buildApp32ModelerModule()],
         textRenderer: {
           defaultStyle: {
             fontFamily: 'Arial, sans-serif',
@@ -154,6 +225,7 @@
       });
       installOperationalActivityAutoSizing();
       installOperationalActivityManualResize();
+      installArtifactMarkerNavigation();
 
       currentDiagram = await fetchDiagram();
       const [contracts, catalogPayload] = await Promise.all([
@@ -235,9 +307,11 @@
           ? `BPMN publicado e disponível na aba Fluxo do processo.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
           : `BPMN salvo no APP32.${codeResult.changed ? ` ${codeResult.changed} atividade(s) codificada(s).` : ''}`
       );
+      return data;
     } catch (err) {
       console.error('[APP32 BPMN] save error', err);
       setStatus('Erro ao salvar', err.message, true);
+      return null;
     }
   }
 
@@ -248,7 +322,8 @@
 
     const resizeContextShape = (event) => {
       const shape = event && event.context && (event.context.newShape || event.context.shape);
-      ensureOperationalActivityShapeSize(shape);
+      applyOperationalActivityDefaultSize(shape);
+      window.setTimeout(() => applyDefaultBpmnColor(shape), 0);
     };
     const preserveContextShapeOnReplace = (event) => {
       const context = event && event.context;
@@ -263,6 +338,10 @@
     };
 
     eventBus.on('commandStack.shape.create.postExecute', resizeContextShape);
+    eventBus.on('commandStack.connection.create.postExecute', (event) => {
+      const connection = event && event.context && event.context.connection;
+      window.setTimeout(() => applyDefaultBpmnColor(connection), 0);
+    });
     eventBus.on('commandStack.shape.replace.postExecute', preserveContextShapeOnReplace);
     installOperationalActivityAutoSizing._installed = true;
   }
@@ -467,6 +546,314 @@
     currentZoom = 1;
   }
 
+  function openArtifactQuickMenu(element, event) {
+    const menu = document.getElementById('bpmnArtifactQuickMenu');
+    const items = document.getElementById('bpmnArtifactQuickMenuItems');
+    const targetName = document.getElementById('bpmnArtifactTargetName');
+    if (!menu || !items || !element) return;
+
+    artifactMenuTarget = element;
+    const elementType = element.businessObject && element.businessObject.$type;
+    const allowedTypes = isGatewayType(elementType)
+      ? ['ai']
+      : ['pop', 'form', 'check', 'ai', 'data_in', 'data_out'];
+    targetName.textContent = element.businessObject?.name || element.id;
+    items.innerHTML = allowedTypes.map((artifactType) => {
+      const item = ARTIFACT_CATALOG[artifactType];
+      return `
+        <button type="button" class="bpmn-artifact-option" data-context-artifact="${artifactType}" style="--artifact-color:${item.color}">
+          <span class="bpmn-artifact-option__icon">${item.short}</span>
+          <span><strong>${item.label}</strong><small>${item.hint}</small></span>
+        </button>
+      `;
+    }).join('');
+
+    const sourceEvent = event && (event.originalEvent || event);
+    const preferredX = Number(sourceEvent?.clientX) || (window.innerWidth / 2);
+    const preferredY = Number(sourceEvent?.clientY) || (window.innerHeight / 2);
+    menu.hidden = false;
+    const rect = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(16, Math.min(preferredX + 14, window.innerWidth - rect.width - 16))}px`;
+    menu.style.top = `${Math.max(16, Math.min(preferredY + 14, window.innerHeight - rect.height - 16))}px`;
+  }
+
+  function closeArtifactQuickMenu() {
+    const menu = document.getElementById('bpmnArtifactQuickMenu');
+    if (menu) menu.hidden = true;
+    artifactMenuTarget = null;
+  }
+
+  function isBpmnConnection(element) {
+    const type = element?.businessObject?.$type || '';
+    return Boolean(element?.waypoints) || [
+      'bpmn:SequenceFlow', 'bpmn:MessageFlow', 'bpmn:Association',
+      'bpmn:DataInputAssociation', 'bpmn:DataOutputAssociation'
+    ].includes(type);
+  }
+
+  function isColorableBpmnElement(element) {
+    const type = element?.businessObject?.$type || '';
+    if (!type || element.labelTarget || ['bpmn:Process', 'bpmn:Collaboration'].includes(type)) return false;
+    return isBpmnConnection(element)
+      || isOperationalActivityType(type)
+      || isGatewayType(type)
+      || type.endsWith('Event')
+      || ['bpmn:SubProcess', 'bpmn:CallActivity', 'bpmn:Participant', 'bpmn:Lane',
+        'bpmn:DataObjectReference', 'bpmn:DataStoreReference', 'bpmn:TextAnnotation', 'bpmn:Group'].includes(type);
+  }
+
+  function getDefaultBpmnColor(element) {
+    const type = element?.businessObject?.$type || '';
+    const artifactType = type === 'bpmn:DataObjectReference'
+      ? artifactTypeFromDataObjectName(element.businessObject?.name || element.businessObject?.dataObjectRef?.name)
+      : null;
+    if (artifactType) {
+      const artifact = ARTIFACT_CATALOG[artifactType];
+      return { fill: artifact.fill, stroke: artifact.color };
+    }
+    if (isBpmnConnection(element)) return { stroke: '#64748b' };
+    if (type === 'bpmn:StartEvent') return { fill: '#dcfce7', stroke: '#16a34a' };
+    if (type === 'bpmn:EndEvent') return { fill: '#fee2e2', stroke: '#dc2626' };
+    if (type.endsWith('Event')) return { fill: '#fff7ed', stroke: '#ea580c' };
+    if (isGatewayType(type)) return { fill: '#fef3c7', stroke: '#d97706' };
+    if (type === 'bpmn:SubProcess' || type === 'bpmn:CallActivity') return { fill: '#f5f3ff', stroke: '#7c3aed' };
+    if (isOperationalActivityType(type)) return { fill: '#eff6ff', stroke: '#2563eb' };
+    if (type === 'bpmn:DataObjectReference' || type === 'bpmn:DataStoreReference') return { fill: '#ecfeff', stroke: '#0891b2' };
+    if (type === 'bpmn:Participant' || type === 'bpmn:Lane') return { fill: '#f8fafc', stroke: '#64748b' };
+    return { fill: '#ffffff', stroke: '#94a3b8' };
+  }
+
+  function applyBpmnColor(element, color, announce = true) {
+    if (!modeler || !element || !isColorableBpmnElement(element)) return;
+    const modeling = modeler.get('modeling');
+    const value = isBpmnConnection(element)
+      ? { stroke: color?.stroke || null }
+      : { fill: color?.fill || null, stroke: color?.stroke || null };
+    modeling.setColor([element], value);
+    if (announce) {
+      const label = color?.label || 'Padrão do tipo';
+      setStatus('Cor aplicada', `${label} em ${element.businessObject?.name || element.id}.`);
+    }
+  }
+
+  function applyDefaultBpmnColor(element) {
+    if (!element || !isColorableBpmnElement(element)) return;
+    applyBpmnColor(element, getDefaultBpmnColor(element), false);
+  }
+
+  function openBpmnColorMenu(element, event) {
+    const menu = document.getElementById('bpmnColorMenu');
+    const swatches = document.getElementById('bpmnColorSwatches');
+    const targetName = document.getElementById('bpmnColorTargetName');
+    if (!menu || !swatches || !element || !isColorableBpmnElement(element)) return;
+
+    closeArtifactQuickMenu();
+    colorMenuTarget = element;
+    targetName.textContent = element.businessObject?.name || element.id;
+    swatches.innerHTML = BPMN_COLOR_PALETTE.map((color) => `
+      <button type="button" class="bpmn-color-swatch" data-bpmn-color="${color.key}"
+        title="${color.label}" aria-label="Aplicar ${color.label}"
+        style="--swatch-fill:${color.fill};--swatch-stroke:${color.stroke}"></button>
+    `).join('');
+
+    const sourceEvent = event && (event.originalEvent || event);
+    const preferredX = Number(sourceEvent?.clientX) || (window.innerWidth / 2);
+    const preferredY = Number(sourceEvent?.clientY) || (window.innerHeight / 2);
+    menu.hidden = false;
+    const rect = menu.getBoundingClientRect();
+    menu.style.left = `${Math.max(16, Math.min(preferredX + 14, window.innerWidth - rect.width - 16))}px`;
+    menu.style.top = `${Math.max(16, Math.min(preferredY + 14, window.innerHeight - rect.height - 16))}px`;
+  }
+
+  function closeBpmnColorMenu() {
+    const menu = document.getElementById('bpmnColorMenu');
+    if (menu) menu.hidden = true;
+    colorMenuTarget = null;
+  }
+
+  function openAiDialog(element) {
+    const dialog = document.getElementById('bpmnAiDialog');
+    if (!dialog || !element) return;
+    currentSelection = element;
+    modeler?.get('selection')?.select(element);
+    renderAiInspector(element);
+    dialog.hidden = false;
+    document.body.classList.add('bpmn-modal-open');
+    dialog.querySelector('[data-ai-dialog-close]')?.focus();
+  }
+
+  function closeAiDialog() {
+    const dialog = document.getElementById('bpmnAiDialog');
+    if (dialog) dialog.hidden = true;
+    document.body.classList.remove('bpmn-modal-open');
+  }
+
+  function artifactTypeFromDataObjectName(name) {
+    const normalized = String(name || '').trim().toUpperCase();
+    return Object.entries(ARTIFACT_CATALOG)
+      .find(([, item]) => normalized.startsWith(item.marker))?.[0] || null;
+  }
+
+  function findArtifactMarker(element, artifactType) {
+    const refs = getAssociatedDataObjectRefs(element);
+    const matching = refs.find((item) => {
+      const resolvedType = artifactTypeFromDataObjectName(item.name);
+      return resolvedType === artifactType || (artifactType === 'pop' && !resolvedType);
+    });
+    return matching ? modeler.get('elementRegistry').get(matching.id) : null;
+  }
+
+  function applyArtifactMarkerStyles() {
+    if (!modeler) return;
+    const registry = modeler.get('elementRegistry');
+    const canvas = modeler.get('canvas');
+    const modeling = modeler.get('modeling');
+    registry.filter((element) => element.businessObject?.$type === 'bpmn:DataObjectReference').forEach((element) => {
+      const artifactType = artifactTypeFromDataObjectName(
+        element.businessObject?.name || element.businessObject?.dataObjectRef?.name
+      );
+      if (!artifactType) return;
+      const item = ARTIFACT_CATALOG[artifactType];
+      const currentName = String(element.businessObject?.name || '').trim();
+      if (currentName.toUpperCase() === `${item.marker} ${item.label}`.toUpperCase()) {
+        modeling.updateProperties(element, { name: item.marker });
+      }
+      modeling.setColor([element], { fill: item.fill, stroke: item.color });
+      canvas.addMarker(element.id, `app32-artifact-${artifactType.replace('_', '-')}`);
+    });
+  }
+
+  function createArtifactMarker(element, artifactType) {
+    const existing = findArtifactMarker(element, artifactType);
+    if (existing) return existing;
+
+    const item = ARTIFACT_CATALOG[artifactType];
+    const bpmnFactory = modeler.get('bpmnFactory');
+    const elementFactory = modeler.get('elementFactory');
+    const modeling = modeler.get('modeling');
+    const dataObject = bpmnFactory.create('bpmn:DataObject', {
+      name: `${item.marker} ${element.businessObject?.name || element.id}`
+    });
+    const businessObject = bpmnFactory.create('bpmn:DataObjectReference', {
+      name: item.marker,
+      dataObjectRef: dataObject
+    });
+    const marker = elementFactory.createShape({
+      type: 'bpmn:DataObjectReference',
+      businessObject
+    });
+    const markerIndex = getAssociatedDataObjectRefs(element).length;
+    const position = {
+      x: element.x + Math.min(element.width - 20, 42 + (markerIndex * 54)),
+      y: element.y + element.height + 58
+    };
+    modeling.createShape(marker, position, element.parent);
+    applyBpmnColor(marker, getDefaultBpmnColor(marker), false);
+    if (artifactType === 'data_in') {
+      modeling.connect(marker, element, { type: 'bpmn:Association' });
+    } else {
+      modeling.connect(element, marker, { type: 'bpmn:Association' });
+    }
+    modeler.get('canvas').addMarker(marker.id, `app32-artifact-${artifactType.replace('_', '-')}`);
+    return marker;
+  }
+
+  function installArtifactMarkerNavigation() {
+    if (!modeler || installArtifactMarkerNavigation._installed) return;
+    const eventBus = modeler.get('eventBus');
+    eventBus.on('element.dblclick', (event) => {
+      const element = event && event.element;
+      const type = artifactTypeFromDataObjectName(
+        element?.businessObject?.name || element?.businessObject?.dataObjectRef?.name
+      );
+      if (!type) return;
+      event.preventDefault?.();
+      openArtifactEditorFromMarker(element).catch((error) => {
+        console.error('[APP32 BPMN] artifact editor error', error);
+        setStatus('Erro ao abrir artefato', error.message || 'Falha inesperada.', true);
+      });
+    });
+    installArtifactMarkerNavigation._installed = true;
+  }
+
+  function findArtifactOwnerElement(marker) {
+    if (!marker) return null;
+    const connections = [...(marker.incoming || []), ...(marker.outgoing || [])];
+    for (const connection of connections) {
+      const other = connection.source === marker ? connection.target : connection.source;
+      const type = other?.businessObject?.$type;
+      if (isOperationalActivityType(type) || isGatewayType(type)) return other;
+    }
+    return null;
+  }
+
+  function registerPopCandidate(element) {
+    if (!element) return;
+    popCandidatesByElementId.set(element.id, {
+      id: element.id,
+      code: element.id,
+      type: element.businessObject.$type.replace('bpmn:', ''),
+      name: element.businessObject.name || '(sem nome)',
+      data_objects: getAssociatedDataObjectRefs(element)
+    });
+  }
+
+  async function openArtifactEditorFromMarker(marker) {
+    const artifactType = artifactTypeFromDataObjectName(
+      marker?.businessObject?.name || marker?.businessObject?.dataObjectRef?.name
+    );
+    const owner = findArtifactOwnerElement(marker);
+    if (!artifactType || !owner) {
+      throw new Error('Não foi possível identificar a atividade vinculada a este artefato.');
+    }
+    if (artifactType === 'ai') {
+      openAiDialog(owner);
+      return;
+    }
+    if (artifactType === 'pop') {
+      registerPopCandidate(owner);
+      await openOrCreatePopBinding(owner.id, null);
+      return;
+    }
+    window.location.href = await resolveArtifactEditorUrl(artifactType, owner);
+  }
+
+  async function resolveArtifactEditorUrl(artifactType, element) {
+    const query = new URLSearchParams({
+      bpmn_element_id: element.id,
+      bpmn_element_name: element.businessObject?.name || element.id
+    });
+    const response = await fetch(`/api/processes/${processId}/activity-artifacts?artifact_type=${encodeURIComponent(artifactType)}&bpmn_element_id=${encodeURIComponent(element.id)}`, {
+      headers: { Accept: 'application/json' }
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Não foi possível consultar os artefatos da atividade.');
+    const existing = (payload.artifacts || []).find((item) => item.status !== 'archived');
+    return existing
+      ? `/processes/${processId}/artifacts/${existing.id}/edit?${query.toString()}`
+      : `/processes/${processId}/artifacts/new/${artifactType}?${query.toString()}`;
+  }
+
+  async function configureContextArtifact(artifactType, element) {
+    if (!ARTIFACT_CATALOG[artifactType] || !element) return;
+    let target = element;
+    if (artifactType === 'ai') {
+      const preset = isGatewayType(element.businessObject?.$type) ? 'ai_gateway' : 'ai_task';
+      target = applySemanticPreset(element, preset, { openDialog: false }) || element;
+    }
+    const marker = createArtifactMarker(target, artifactType);
+    applyArtifactMarkerStyles();
+    const saved = await saveDiagram('draft');
+    if (!saved) throw new Error('Não foi possível salvar o vínculo visual do artefato.');
+
+    modeler.get('selection')?.select(marker);
+    const item = ARTIFACT_CATALOG[artifactType];
+    setStatus(
+      `${item.label} adicionado`,
+      `O artefato foi vinculado a ${target.businessObject?.name || target.id}. Dê dois cliques no artefato para configurá-lo.`
+    );
+  }
+
   function installAiInspector() {
     if (!modeler) return;
     const eventBus = modeler.get('eventBus');
@@ -474,16 +861,17 @@
 
     eventBus.on('selection.changed', (event) => {
       currentSelection = (event && event.newSelection && event.newSelection[0]) || null;
-      renderAiInspector(currentSelection);
+      const dialog = document.getElementById('bpmnAiDialog');
+      if (dialog && !dialog.hidden) renderAiInspector(currentSelection);
     });
     eventBus.on('elements.changed', () => {
       if (currentSelection) {
         const registry = modeler.get('elementRegistry');
         currentSelection = registry.get(currentSelection.id) || currentSelection;
       }
-      renderAiInspector(currentSelection);
+      const dialog = document.getElementById('bpmnAiDialog');
+      if (dialog && !dialog.hidden) renderAiInspector(currentSelection);
     });
-    renderAiInspector(null);
     installAiInspector._installed = true;
   }
 
@@ -1207,7 +1595,7 @@
     renderAiInspector(element);
   }
 
-  function applySemanticPreset(element, preset) {
+  function applySemanticPreset(element, preset, options) {
     if (!modeler || !element) return;
     const bpmnReplace = modeler.get('bpmnReplace');
     let target = element;
@@ -1221,9 +1609,11 @@
     currentSelection = target;
     modeler.get('selection').select(target);
     renderAiInspector(target);
+    if (!options || options.openDialog !== false) openAiDialog(target);
     showAiStatus(preset === 'ai_gateway'
       ? 'Gateway convertido para AI Gateway. Revise decisões, rotas e fallback.'
       : 'Task convertida para AI Task. Revise objetivo, tools e schema.');
+    return target;
   }
 
   function toggleExecutionSections() {
@@ -1240,47 +1630,6 @@
     }
   }
 
-  function inspectElementsForPopBinding() {
-    if (!modeler) return;
-    normalizeActivityCodes({ silent: true });
-    const panel = document.getElementById('bpmnPopBindingPanel');
-    const list = document.getElementById('bpmnElementList');
-    if (!panel || !list) return;
-
-    const allActivities = getOperationalActivities();
-    const elements = extractPopBindingCandidates();
-    const ignoredCount = Math.max(0, allActivities.length - elements.length);
-    popCandidatesByElementId = new Map(elements.map((item) => [item.id, item]));
-
-    if (!elements.length) {
-      list.innerHTML = `
-        <div class="bpmn-element-card bpmn-element-card--empty">
-          <strong>Nenhuma atividade marcada para POP.</strong>
-          <span>Associe um Data Object Reference à atividade BPMN para ela entrar na preparação do POP.</span>
-        </div>
-      `;
-    } else {
-      list.innerHTML = elements.map((item) => `
-        <div class="bpmn-element-card">
-          <code title="${escapeHtml(item.id)}">${escapeHtml(item.id)}</code>
-          <div>
-            <strong>${escapeHtml(item.name)}</strong>
-            <span>${escapeHtml(item.type)}</span>
-            <small>Data Object: ${escapeHtml(formatDataObjectNames(item.data_objects))}</small>
-          </div>
-          <button type="button" class="bpmn-chip-btn" data-pop-bind="${escapeHtml(item.id)}">Abrir/Criar POP</button>
-        </div>
-      `).join('');
-    }
-
-    panel.hidden = false;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    setStatus(
-      'Atividades POP detectadas',
-      `${elements.length} atividade(s) com Data Object Reference. ${ignoredCount} atividade(s) sem marcador POP.`
-    );
-  }
-
   function extractPopBindingCandidates() {
     return getOperationalActivities()
       .map((element) => ({
@@ -1290,7 +1639,10 @@
         name: element.businessObject.name || '(sem nome)',
         data_objects: getAssociatedDataObjectRefs(element)
       }))
-      .filter((item) => item.data_objects.length > 0)
+      .filter((item) => item.data_objects.some((dataObject) => {
+        const resolvedType = artifactTypeFromDataObjectName(dataObject.name);
+        return resolvedType === 'pop' || !resolvedType;
+      }))
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
@@ -1457,6 +1809,19 @@
     return true;
   }
 
+  function applyOperationalActivityDefaultSize(element) {
+    if (!modeler || !element || !isOperationalActivityType(element.businessObject && element.businessObject.$type)) {
+      return false;
+    }
+
+    return resizeOperationalActivityShape(element, {
+      x: element.x,
+      y: element.y,
+      width: OPERATIONAL_ACTIVITY_MIN_WIDTH,
+      height: OPERATIONAL_ACTIVITY_MIN_HEIGHT
+    });
+  }
+
   function preserveOperationalActivityShapeSize(sourceShape, targetShape) {
     if (!modeler || !sourceShape || !targetShape) return false;
 
@@ -1524,16 +1889,11 @@
   }
 
   function getOperationalActivityTargetSize(element) {
-    const label = getOperationalActivityDisplayLabel(element);
-    const baseMeasuredWidth = Math.max(156, Math.min(214, 128 + Math.ceil(label.length * 1.65)));
-    const width = Math.max(
-      OPERATIONAL_ACTIVITY_BASE_WIDTH,
-      Math.min(OPERATIONAL_ACTIVITY_MAX_WIDTH, baseMeasuredWidth * 2)
-    );
-    const estimatedLines = Math.max(2, Math.ceil(label.length / 34));
-    const dynamicHeight = 52 + (estimatedLines * 16);
-    const height = Math.max(OPERATIONAL_ACTIVITY_BASE_HEIGHT, Math.min(OPERATIONAL_ACTIVITY_EXPANDED_HEIGHT, dynamicHeight));
-    return { width, height };
+    if (!element) return null;
+    return {
+      width: OPERATIONAL_ACTIVITY_MIN_WIDTH,
+      height: OPERATIONAL_ACTIVITY_MIN_HEIGHT
+    };
   }
 
   function enhanceOperationalActivitySvgSnapshot(svgMarkup) {
@@ -1691,16 +2051,10 @@
     });
   }
 
-  function formatDataObjectNames(dataObjects) {
-    return (dataObjects || [])
-      .map((item) => item.name && item.name !== '(sem nome)' ? item.name : item.id)
-      .join(', ');
-  }
-
   async function openOrCreatePopBinding(bpmnElementId, button) {
     const candidate = popCandidatesByElementId.get(bpmnElementId);
     if (!candidate) {
-      setStatus('Atividade BPMN não encontrada', 'Execute novamente “Preparar vínculo com POP”.', true);
+      setStatus('Atividade BPMN não encontrada', 'Selecione o artefato no modelador e tente novamente.', true);
       return;
     }
 
@@ -1734,7 +2088,7 @@
       );
 
       if (routineId) {
-        window.location.href = `/processes/${processId}?tab=pops&routine_id=${routineId}#routine-${routineId}`;
+        window.location.href = `/processes/${processId}?tab=pops&routine_id=${routineId}&from_modeler=1#routine-${routineId}`;
       }
     } catch (err) {
       console.error('[APP32 BPMN] POP binding error', err);
@@ -1756,6 +2110,59 @@
   }
 
   root.addEventListener('click', async (event) => {
+    if (event.target.closest('[data-bpmn-color-close]')) {
+      closeBpmnColorMenu();
+      return;
+    }
+
+    if (event.target.closest('[data-bpmn-color-default]') && colorMenuTarget) {
+      const target = colorMenuTarget;
+      closeBpmnColorMenu();
+      applyBpmnColor(target, { ...getDefaultBpmnColor(target), label: 'Padrão do tipo' });
+      return;
+    }
+
+    if (event.target.closest('[data-bpmn-color-reset]') && colorMenuTarget) {
+      const target = colorMenuTarget;
+      closeBpmnColorMenu();
+      applyBpmnColor(target, { fill: null, stroke: null, label: 'Sem cor' });
+      return;
+    }
+
+    const colorButton = event.target.closest('[data-bpmn-color]');
+    if (colorButton && colorMenuTarget) {
+      const target = colorMenuTarget;
+      const color = BPMN_COLOR_PALETTE.find((item) => item.key === colorButton.dataset.bpmnColor);
+      closeBpmnColorMenu();
+      if (color) applyBpmnColor(target, color);
+      return;
+    }
+
+    if (event.target.closest('[data-artifact-menu-close]')) {
+      closeArtifactQuickMenu();
+      return;
+    }
+
+    const contextArtifactButton = event.target.closest('[data-context-artifact]');
+    if (contextArtifactButton && artifactMenuTarget) {
+      const target = artifactMenuTarget;
+      const artifactType = contextArtifactButton.dataset.contextArtifact;
+      closeArtifactQuickMenu();
+      try {
+        setStatus('Preparando artefato...', `${ARTIFACT_CATALOG[artifactType]?.label || artifactType} será vinculado a ${target.id}.`);
+        await configureContextArtifact(artifactType, target);
+      } catch (error) {
+        console.error('[APP32 BPMN] artifact context error', error);
+        setStatus('Erro ao configurar artefato', error.message || 'Falha inesperada.', true);
+      }
+      return;
+    }
+
+    if (event.target.closest('[data-ai-dialog-close]') || event.target.id === 'bpmnAiDialog') {
+      closeAiDialog();
+      return;
+    }
+
     const aiPresetButton = event.target.closest('[data-ai-preset]');
     if (aiPresetButton && currentSelection) {
       applySemanticPreset(currentSelection, aiPresetButton.dataset.aiPreset);
@@ -1832,12 +2239,6 @@
       return;
     }
 
-    const popBindButton = event.target.closest('[data-pop-bind]');
-    if (popBindButton) {
-      await openOrCreatePopBinding(popBindButton.dataset.popBind, popBindButton);
-      return;
-    }
-
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
@@ -1850,7 +2251,6 @@
     if (action === 'zoom-in') zoom(0.2);
     if (action === 'zoom-out') zoom(-0.2);
     if (action === 'fit') fitViewport();
-    if (action === 'inspect-elements') inspectElementsForPopBinding();
   });
 
   importInput.addEventListener('change', (event) => {
@@ -1868,6 +2268,13 @@
       }
       toggleExecutionSections();
     }
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    closeArtifactQuickMenu();
+    closeBpmnColorMenu();
+    closeAiDialog();
   });
 
   init();

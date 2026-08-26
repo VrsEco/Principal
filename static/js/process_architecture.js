@@ -16,6 +16,7 @@ const state = {
     macros: [],
     processes: [],
     resources: [],
+    dimensions: [],
     employees: [],
     companyId: normalizedCompanyId,
     viewType: localStorage.getItem('arch_view_type') || 'classic',
@@ -29,7 +30,8 @@ const FORM_ALLOWED_FIELDS = {
     formArea: ['id', 'code', 'name', 'color', 'description'],
     formMacro: ['id', 'area_id', 'order_index', 'owner', 'name', 'description'],
     formProcess: ['id', 'macro_id', 'order_index', 'responsible', 'name', 'performance_level', 'description'],
-    formResourceCatalog: ['id', 'type', 'subtype', 'item_name', 'unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'operational_capacity_unit', 'estimated_useful_life', 'notes']
+    formCapabilityDimension: ['id', 'name', 'description', 'order_index'],
+    formResourceCatalog: ['id', 'dimension_id', 'subtype', 'name', 'unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'operational_capacity_unit', 'operational_capacity_period', 'max_recommended_utilization_pct', 'estimated_useful_life', 'notes']
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -105,8 +107,7 @@ async function refreshData() {
         const responses = await Promise.all([
             fetch(`/api/process-areas?company_id=${fetchId || ''}&${cb}`),
             fetch(`/api/macro-processes?company_id=${fetchId || ''}&${cb}`),
-            fetch(`/api/processes?company_id=${fetchId || ''}&${cb}`),
-            fetch(`/api/resources?company_id=${fetchId || ''}&active_only=false&${cb}`)
+            fetch(`/api/processes?company_id=${fetchId || ''}&${cb}`)
         ]);
 
         for (const res of responses) {
@@ -117,14 +118,12 @@ async function refreshData() {
             }
         }
 
-        const [areas, macros, processes, resourceCatalog] = await Promise.all(responses.map(r => r.json()));
-        const resourceList = resourceCatalog && Array.isArray(resourceCatalog.resources) ? resourceCatalog.resources : [];
-        console.log("Data loaded:", { areasCount: areas.length, macrosCount: macros.length, processesCount: processes.length, resourcesCount: resourceList.length });
+        const [areas, macros, processes] = await Promise.all(responses.map(r => r.json()));
 
         state.areas = Array.isArray(areas) ? areas : [];
         state.macros = Array.isArray(macros) ? macros : [];
         state.processes = Array.isArray(processes) ? processes : [];
-        state.resources = resourceList;
+        await refreshEnablingResources();
     } catch (e) {
         console.error("Error refreshing architecture data:", e);
         window.showMessage?.("Erro ao carregar dados da arquitetura. Verifique o console.", "error");
@@ -302,11 +301,12 @@ function renderResourceCatalog() {
     if (!list) return;
 
     const resources = Array.isArray(state.resources) ? state.resources : [];
+    renderCapabilityDimensions();
     if (!resources.length) {
         list.innerHTML = `
             <tr>
                 <td colspan="7" style="text-align:center; color: var(--text-tertiary); padding: 1rem;">
-                    Nenhum recurso cadastrado. Cadastre a capacidade geral da empresa para usar na modelagem dos processos.
+                    Nenhum recurso habilitador cadastrado no catálogo corporativo.
                 </td>
             </tr>
         `;
@@ -315,20 +315,21 @@ function renderResourceCatalog() {
 
     list.innerHTML = resources.map(resource => {
         const usage = resource.usage || {};
-        const inactiveBadge = resource.is_active === false ? '<span class="badge bg-secondary" style="margin-left:.35rem;">Inativo</span>' : '';
+        const inactiveBadge = resource.is_active === false ? '<span class="badge bg-secondary" style="margin-left:.35rem;">Inativa</span>' : '';
+        const dimensionName = resource.dimension?.name || '--';
         return `
             <tr>
                 <td>
-                    <div style="font-weight:700; color: var(--text-primary);">${escapeHtml(resource.item_name || '--')}${inactiveBadge}</div>
+                    <div style="font-weight:700; color: var(--text-primary);">${escapeHtml(resource.name || resource.item_name || '--')}${inactiveBadge}</div>
                     <div style="font-size:.82rem; color: var(--text-secondary);">${escapeHtml(resource.subtype || '--')}</div>
                 </td>
-                <td>${escapeHtml(resourceTypeLabel(resource.type))}</td>
-                <td>${formatNumberBR(resource.quantity)}</td>
-                <td>${formatNumberBR(usage.used_quantity_total)}</td>
-                <td>${formatNumberBR(usage.available_quantity)}</td>
+                <td>${escapeHtml(dimensionName)}</td>
+                <td>${formatNumberBR(usage.capacity_total)} ${escapeHtml(resource.operational_capacity_unit || '')}/mês</td>
+                <td>${formatNumberBR(usage.planned_demand)}</td>
+                <td>${formatNumberBR(usage.remaining_planned_capacity)}</td>
                 <td>
-                    <strong>${formatNumberBR(usage.usage_percentage_total)}%</strong>
-                    <div style="font-size:.78rem; color: var(--text-tertiary);">${formatNumberBR(usage.active_allocations_count || 0)} processos ativos</div>
+                    <strong style="color:${usage.is_overloaded ? 'var(--danger)' : 'inherit'}">${formatNumberBR(usage.planned_utilization_percentage)}% planejado</strong>
+                    <div style="font-size:.78rem; color: var(--text-tertiary);">${formatNumberBR(usage.actual_utilization_percentage)}% real · limite recomendado ${formatNumberBR(usage.max_recommended_utilization_pct)}%</div>
                 </td>
                 <td>
                     <div style="display:flex; gap:4px; flex-wrap:wrap;">
@@ -339,6 +340,50 @@ function renderResourceCatalog() {
             </tr>
         `;
     }).join('');
+
+}
+
+async function refreshEnablingResources() {
+    const res = await fetch(`/api/enabling-resources?company_id=${state.companyId || ''}&active_only=false&_cb=${Date.now()}`);
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.error || 'Falha ao carregar o catálogo corporativo de recursos habilitadores.');
+    state.resources = Array.isArray(payload.resources) ? payload.resources : [];
+    state.dimensions = Array.isArray(payload.dimensions) ? payload.dimensions : [];
+}
+
+function renderCapabilityDimensions() {
+    const host = document.getElementById('capabilityDimensionsList');
+    const select = document.getElementById('capabilityDimensionId');
+    const dimensions = Array.isArray(state.dimensions) ? state.dimensions : [];
+    if (select) {
+        const current = select.value;
+        select.innerHTML = '<option value="">Selecione uma dimensão...</option>' + dimensions
+            .filter(item => item.is_active !== false)
+            .map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`)
+            .join('');
+        if (current) select.value = current;
+    }
+    if (!host) return;
+    host.innerHTML = dimensions.map(item => `
+        <span class="badge bg-light text-dark" style="display:inline-flex; gap:.35rem; align-items:center; margin:.2rem;">
+            ${escapeHtml(item.name)}
+            <button type="button" class="btn btn-icon btn-sm" onclick="editCapabilityDimension(${item.id})" title="Editar dimensão">✎</button>
+        </span>
+    `).join('') || '<span class="text-tertiary">Nenhuma dimensão cadastrada.</span>';
+}
+
+function showEnablingSection(section) {
+    const dimensions = section === 'dimensions';
+    document.getElementById('enablingDimensionsFormSection')?.style.setProperty('display', dimensions ? 'block' : 'none');
+    document.getElementById('enablingDimensionsListCard')?.style.setProperty('display', dimensions ? 'block' : 'none');
+    document.getElementById('enablingResourcesFormSection')?.style.setProperty('display', dimensions ? 'none' : 'block');
+    document.getElementById('enablingResourcesTable')?.style.setProperty('display', dimensions ? 'none' : 'block');
+    const dimensionsButton = document.getElementById('btnEnablingDimensions');
+    const resourcesButton = document.getElementById('btnEnablingResources');
+    dimensionsButton?.classList.toggle('btn-primary', dimensions);
+    dimensionsButton?.classList.toggle('btn-secondary', !dimensions);
+    resourcesButton?.classList.toggle('btn-primary', !dimensions);
+    resourcesButton?.classList.toggle('btn-secondary', dimensions);
 }
 
 function renderTables() {
@@ -721,7 +766,14 @@ function setupFormListeners() {
     document.getElementById('formArea')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/process-areas'));
     document.getElementById('formMacro')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/macro-processes'));
     document.getElementById('formProcess')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/processes'));
-    document.getElementById('formResourceCatalog')?.addEventListener('submit', (e) => handleFormSubmit(e, '/api/resources'));
+    document.getElementById('formCapabilityDimension')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleFormSubmit(e, '/api/enabling-dimensions');
+    });
+    document.getElementById('formResourceCatalog')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        handleFormSubmit(e, '/api/enabling-resources');
+    });
 
     // Fix for Reset buttons to clear hidden ID
     document.querySelectorAll('button[type="reset"]').forEach(btn => {
@@ -776,7 +828,8 @@ async function handleFormSubmit(e, endpoint) {
     // Convert numeric fields to integers/decimals
     if (data.order_index) data.order_index = parseInt(data.order_index, 10);
     if (formId === 'formResourceCatalog') {
-        ['unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value'].forEach((field) => {
+        if (data.dimension_id) data.dimension_id = parseInt(data.dimension_id, 10);
+        ['unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'max_recommended_utilization_pct'].forEach((field) => {
             if (data[field] === '') data[field] = null;
             else if (data[field] !== undefined && data[field] !== null) data[field] = Number(data[field]);
         });
@@ -803,7 +856,7 @@ async function handleFormSubmit(e, endpoint) {
             // Revert button text
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
-                const labels = { formArea: 'Salvar Área', formMacro: 'Salvar Macro', formProcess: 'Salvar Processo', formResourceCatalog: 'Salvar Recurso' };
+                const labels = { formArea: 'Salvar Área', formMacro: 'Salvar Macro', formProcess: 'Salvar Processo', formCapabilityDimension: 'Salvar Dimensão', formResourceCatalog: 'Salvar Recurso' };
                 const type = formId.replace('form', '').toLowerCase();
                 submitBtn.textContent = labels[formId] || `Salvar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
             }
@@ -1136,24 +1189,36 @@ function editResourceCatalog(id) {
     const form = document.getElementById('formResourceCatalog');
     if (!item || !form) return;
 
-    ['id', 'type', 'subtype', 'item_name', 'unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'operational_capacity_unit', 'estimated_useful_life', 'notes'].forEach((field) => {
+    ['id', 'dimension_id', 'subtype', 'unit_value', 'quantity', 'acquisition_total_amount', 'installation_total_amount', 'monthly_recurring_amount', 'operational_capacity_value', 'operational_capacity_unit', 'operational_capacity_period', 'max_recommended_utilization_pct', 'estimated_useful_life', 'notes'].forEach((field) => {
         if (form.elements[field]) form.elements[field].value = item[field] ?? '';
     });
+    if (form.elements.name) form.elements.name.value = item.name || item.item_name || '';
     form.querySelector('button[type="submit"]').textContent = 'Atualizar Recurso';
     form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function deactivateResourceCatalog(id) {
-    if (!confirm('Deseja inativar este recurso? As alocações históricas permanecem vinculadas.')) return;
+    if (!confirm('Deseja inativar este recurso habilitador? Os vínculos históricos serão preservados.')) return;
     try {
-        const res = await fetch(`/api/resources/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/enabling-resources/${id}`, { method: 'DELETE' });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Falha ao inativar recurso.');
+        if (!res.ok) throw new Error(data.error || 'Falha ao inativar recurso habilitador.');
         await refreshData();
         renderResourceCatalog();
     } catch (error) {
-        alert(error.message || 'Erro ao inativar recurso.');
+        alert(error.message || 'Erro ao inativar recurso habilitador.');
     }
+}
+
+function editCapabilityDimension(id) {
+    const item = state.dimensions.find(dimension => Number(dimension.id) === Number(id));
+    const form = document.getElementById('formCapabilityDimension');
+    if (!item || !form) return;
+    ['id', 'name', 'description', 'order_index'].forEach(field => {
+        if (form.elements[field]) form.elements[field].value = item[field] ?? '';
+    });
+    form.querySelector('button[type="submit"]').textContent = 'Atualizar Dimensão';
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Deletes

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "brn-process-architecture-v019",
+      "title": "Arquitetura de Processos BRN",
+      "version": "0.19",
+      "status": "reference",
+      "tags": ["industrial", "mining", "complex", "process-architecture", "capabilities"],
+      "source_refs": ["Paper BRN v0.19", "Arquitetura BRN v0.12", "Catálogo BRN v0.15"],
+      "reusable_patterns": ["identity-to-results", "large-deliveries", "end-to-end-chain", "capability-separation"],
+      "context_specific": ["AZ.C.*", "FEL/FID", "commissioning", "ramp-up", "mining-taxonomy"],
+      "known_corrections": ["catalog-preliminary", "minor-boundary-and-naming-adjustments", "l4-subprocess-not-canonical"],
+      "superseded_by": null
+    },
+    {
+      "id": "m1-autoparts-demo-v1",
+      "title": "M1 Autopeças Digitais",
+      "version": "1",
+      "status": "reference",
+      "tags": ["industrial", "sme", "demo", "digital-b2b"],
+      "source_refs": ["app32/seeds/seed_m1_autoparts_process_portfolio.py"],
+      "reusable_patterns": ["identity-to-three-groups", "commercial-to-delivery-chain", "sipoc-end-to-end"],
+      "context_specific": ["autoparts", "digital-b2b", "tax-by-state"],
+      "known_corrections": ["demonstration-case", "limited-depth"],
+      "superseded_by": null
+    },
+    {
+      "id": "versus-current-pending",
+      "title": "Arquitetura de Processos Versus",
+      "version": "pending",
+      "status": "candidate",
+      "tags": ["services", "consulting", "internal"],
+      "source_refs": ["MCP export required"],
+      "reusable_patterns": [],
+      "context_specific": [],
+      "known_corrections": ["awaiting-tenant-safe-ingestion-and-validation"],
+      "superseded_by": null
+    },
+    {
+      "id": "empresa-testes-current-pending",
+      "title": "Empresa Testes",
+      "version": "pending",
+      "status": "candidate",
+      "tags": ["test-company"],
+      "source_refs": ["MCP export required"],
+      "reusable_patterns": [],
+      "context_specific": [],
+      "known_corrections": ["awaiting-tenant-safe-ingestion-and-validation"],
+      "superseded_by": null
+    }
+  ]
+}

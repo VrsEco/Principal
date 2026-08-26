@@ -24,7 +24,7 @@
                 <a class="btn btn-special" href="/companies/{{ company.id }}/edit?tab=dados">Editar MVV</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Gerenciar cargos</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Gerenciar colaboradores</a>
-                <button type="button" class="btn btn-secondary" onclick="window.print()">Imprimir relatório</button>
+                <button type="button" class="btn btn-secondary" onclick="window.IdentityExecutiveReport?.print()">Imprimir relatório</button>
             </div>
         </div>
         <aside class="identity-hero__meta">
@@ -307,25 +307,60 @@
     <section id="relatorios" class="card identity-section identity-tab-panel" data-identity-panel="relatorios">
         <div class="identity-section__header">
             <div>
-                <span class="identity-section__eyebrow">Saída executiva</span>
-                <h2 class="text-h2">Relatórios</h2>
+                <span class="identity-section__eyebrow">Documento institucional</span>
+                <h2 class="text-h2">Identidade e organograma</h2>
+                <p class="text-secondary">Modelo objetivo para apresentação e impressão.</p>
             </div>
-            <button type="button" class="btn btn-special" onclick="window.print()">Imprimir agora</button>
+            <button type="button" class="btn btn-special" onclick="window.IdentityExecutiveReport?.print()">Imprimir / Salvar PDF</button>
         </div>
-        <div class="identity-report-grid">
-            <article class="identity-content-card">
-                <h3>Relatório de identidade</h3>
-                <p>Imprime missão, visão, valores, métricas, cargos, colaboradores e organograma em uma única saída.</p>
-            </article>
-            <article class="identity-content-card">
-                <h3>Uso recomendado</h3>
-                <ul>
-                    <li>onboarding de liderança</li>
-                    <li>reuniões executivas</li>
-                    <li>alinhamento de processos e responsabilidades</li>
-                </ul>
-            </article>
-        </div>
+
+        <article class="identity-objective-report" id="identityObjectiveReport" aria-label="Relatório de identidade organizacional e organograma">
+            <header class="identity-report-compact-header">
+                <div class="identity-report-compact-header__brand">
+                    <span>V</span>
+                    <div><strong>VERSUS</strong><small>GESTÃO CORPORATIVA</small></div>
+                </div>
+                <div class="identity-report-compact-header__title">
+                    <span>Identidade organizacional</span>
+                    <h3>{{ company.name }}</h3>
+                </div>
+                <div class="identity-report-compact-header__meta">
+                    <span>Referência <strong id="identityReportReferenceDate">—</strong></span>
+                    <span>Estrutura atualizada <strong id="identityReportUpdatedAt">—</strong></span>
+                </div>
+            </header>
+
+            <section class="identity-report-block">
+                <div class="identity-report-block__heading">
+                    <span>01</span>
+                    <div><small>Direcionamento institucional</small><h3>Missão, Visão e Valores</h3></div>
+                </div>
+                <div class="identity-report-identity-grid">
+                    <article><span>Missão</span><p id="identityReportMission">—</p></article>
+                    <article><span>Visão</span><p id="identityReportVision">—</p></article>
+                    <article><span>Valores</span><p id="identityReportValues">—</p></article>
+                </div>
+            </section>
+
+            <section class="identity-report-block identity-report-block--org">
+                <div class="identity-report-block__heading">
+                    <span>02</span>
+                    <div><small>Estrutura organizacional</small><h3>Organograma</h3></div>
+                    <div class="identity-report-org-totals">
+                        <span><strong id="identityReportRolesTotal">0</strong> cargos</span>
+                        <span><strong id="identityReportEmployeesTotal">0</strong> colaboradores ativos</span>
+                    </div>
+                </div>
+                <div class="identity-report-org-chart" id="identityReportOrgChart">
+                    <p>Carregando organograma…</p>
+                </div>
+            </section>
+
+            <footer class="identity-report-compact-footer">
+                <span>Fonte: Gestão Versus · recorte da empresa {{ company.name }}</span>
+                <span>{{ company.client_code or 'EMPRESA' }} · company_id {{ company.id }}</span>
+            </footer>
+        </article>
     </section>
 </div>
 

@@ -42,6 +42,14 @@ def test_identity_page_exposes_didactic_editor_and_efficient_chart_controls():
     assert "identityChartZoomValue" in template
     assert "data-can-edit" in template
     assert "has_permission('companies', 'edit')" in template
+    assert "identityObjectiveReport" in template
+    assert "Relatório de identidade organizacional e organograma" in template
+    assert "identityReportMission" in template
+    assert "identityReportVision" in template
+    assert "identityReportValues" in template
+    assert "identityReportOrgChart" in template
+    assert "identity-report-cover" not in template
+    assert "Sumário executivo" not in template
 
 
 def test_identity_editor_assets_keep_canonical_card_content_and_add_navigation():
@@ -87,6 +95,13 @@ def test_identity_editor_assets_keep_canonical_card_content_and_add_navigation()
     assert "identity-chart-document-header" in stylesheet
     assert "identity-chart-document-footer" in stylesheet
     assert "overflow:auto" in stylesheet.replace(" ", "")
+    assert "renderIdentityReport" in javascript
+    assert "renderReportTreeNode" in javascript
+    assert "IdentityExecutiveReport" in javascript
+    assert "identity-report-compact-header" in stylesheet
+    assert "identity-report-tree" in stylesheet
+    assert "body.identity-report-printing" in stylesheet
+    assert "@page { size:A4 landscape" in stylesheet
 
 
 @pytest.mark.parametrize(

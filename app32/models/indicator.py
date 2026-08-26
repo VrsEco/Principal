@@ -269,6 +269,7 @@ class IndicatorGoal(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(50)) # Novo campo para codificação AB.M.1
+    name = db.Column(db.String(255), nullable=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
     indicator_id = db.Column(db.Integer, db.ForeignKey("indicators.id"), nullable=False)
     
@@ -281,6 +282,9 @@ class IndicatorGoal(db.Model):
     responsible_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True)
     status = db.Column(db.String(50), default="active")
     goal_type = db.Column(db.String(50), default="monthly") # single, weekly, monthly, quarterly, annual, etc.
+    goal_kind = db.Column(db.String(30), nullable=False, default="base") # base, campaign
+    goal_scope = db.Column(db.String(30), nullable=False, default="team") # team, individual
+    composition_mode = db.Column(db.String(30), nullable=False, default="independent") # independent, additive
     notes = db.Column(db.Text)
     
     # Faixas de desempenho (Default: <=80 Red, 81-90 Yellow, 91-110 Green, >111 Blue)
@@ -299,20 +303,29 @@ class IndicatorGoal(db.Model):
 
     # Relationships
     records = db.relationship("IndicatorData", backref="goal", lazy="dynamic", cascade="all, delete-orphan")
+    responsible = db.relationship("Employee", foreign_keys=[responsible_id])
 
     def to_dict(self):
         return {
             "id": self.id,
             "code": self.code,
+            "name": self.name,
             "indicator_id": self.indicator_id,
             "goal_value": float(self.goal_value),
             "start_date": self.period_start.isoformat() if self.period_start else None,
+            "period_start": self.period_start.isoformat() if self.period_start else None,
+            "period_end": self.period_end.isoformat() if self.period_end else None,
             "goal_date": self.goal_date.isoformat() if self.goal_date else None,
             "status": self.status,
             "goal_type": self.goal_type,
+            "goal_kind": self.goal_kind,
+            "goal_scope": self.goal_scope,
+            "composition_mode": self.composition_mode,
+            "responsible_id": self.responsible_id,
             "performance_ranges": self.performance_ranges,
             "routine_id": self.routine_id,
             "collection_method": self.collection_method,
+            "notes": self.notes,
         }
 
 class IndicatorData(db.Model):
@@ -355,12 +368,14 @@ class IndicatorData(db.Model):
     # Relationships
     indicator = db.relationship("Indicator", backref="data_records")
     routine = db.relationship("Routine", backref="measurements")
+    employee = db.relationship("Employee", foreign_keys=[employee_id])
 
     def to_dict(self):
         return {
             "id": self.id,
             "indicator_id": self.indicator_id,
             "routine_id": self.routine_id,
+            "employee_id": self.employee_id,
             "measured_value": float(self.measured_value),
             "measured_date": self.measured_date.isoformat() if hasattr(self.measured_date, 'isoformat') else self.measured_date,
             "status": self.status,

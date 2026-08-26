@@ -105,6 +105,8 @@ def _load_portal_project_tasks(employee_ids):
         )
         .filter(
             ProjectTask.employee_id.in_(employee_ids),
+            ProjectTask.is_deleted.is_(False),
+            Project.is_deleted.is_(False),
             ProjectTask.status.notin_(['completed', 'done', 'cancelled']),
             Company.is_active == True,
         )

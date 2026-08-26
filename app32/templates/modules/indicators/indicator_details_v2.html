@@ -324,6 +324,80 @@ const fmt = {
     }
 };
 
+function isoDate(value) {
+    return value ? String(value).slice(0, 10) : null;
+}
+
+function isGoalEffective(goal, referenceIso) {
+    const start = isoDate(goal.period_start || goal.start_date);
+    const end = isoDate(goal.period_end || goal.goal_date);
+    return (!start || start <= referenceIso) && (!end || referenceIso <= end);
+}
+
+function currentGoalContext(goals, referenceIso) {
+    const effective = goals.filter(goal => isGoalEffective(goal, referenceIso));
+    const bases = effective.filter(goal => (goal.goal_kind || 'base') === 'base');
+    const teamBases = bases
+        .filter(goal => (goal.goal_scope || (goal.responsible_id ? 'individual' : 'team')) === 'team')
+        .sort((a, b) => (isoDate(b.period_start || b.start_date) || '').localeCompare(isoDate(a.period_start || a.start_date) || ''));
+    const individualCandidates = bases
+        .filter(goal => (goal.goal_scope || (goal.responsible_id ? 'individual' : 'team')) === 'individual')
+        .sort((a, b) => (isoDate(b.period_start || b.start_date) || '').localeCompare(isoDate(a.period_start || a.start_date) || ''));
+    const seenResponsible = new Set();
+    const individualBases = individualCandidates.filter(goal => {
+        if (seenResponsible.has(goal.responsible_id)) return false;
+        seenResponsible.add(goal.responsible_id);
+        return true;
+    });
+    const teamBase = teamBases[0] || null;
+    const base = teamBase || individualBases[0] || null;
+    const additive = effective.filter(goal => goal.goal_kind === 'campaign' && goal.composition_mode === 'additive');
+    return { base, teamBase, individualBases, additive };
+}
+
+function goalCycleBounds(goal, referenceIso) {
+    const reference = new Date(`${referenceIso}T12:00:00`);
+    const startLimit = isoDate(goal.period_start || goal.start_date);
+    const endLimit = isoDate(goal.period_end || goal.goal_date);
+    const formatLocal = value => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    let start;
+    let end;
+    if (goal.goal_type === 'single') {
+        start = startLimit;
+        end = endLimit || startLimit;
+    } else if (goal.goal_type === 'weekly') {
+        const mondayOffset = (reference.getDay() + 6) % 7;
+        const first = new Date(reference);
+        first.setDate(reference.getDate() - mondayOffset);
+        const last = new Date(first);
+        last.setDate(first.getDate() + 6);
+        start = formatLocal(first);
+        end = formatLocal(last);
+    } else if (goal.goal_type === 'bimonthly' || goal.goal_type === 'quarterly') {
+        const size = goal.goal_type === 'bimonthly' ? 2 : 3;
+        const anchor = new Date(`${startLimit}T12:00:00`);
+        const distance = (reference.getFullYear() - anchor.getFullYear()) * 12 + reference.getMonth() - anchor.getMonth();
+        const first = new Date(anchor.getFullYear(), anchor.getMonth() + Math.floor(Math.max(distance, 0) / size) * size, 1);
+        const last = new Date(first.getFullYear(), first.getMonth() + size, 0);
+        start = formatLocal(first);
+        end = formatLocal(last);
+    } else if (goal.goal_type === 'annual') {
+        const anchor = new Date(`${startLimit}T12:00:00`);
+        let first = new Date(reference.getFullYear(), anchor.getMonth(), anchor.getDate());
+        if (first > reference) first = new Date(reference.getFullYear() - 1, anchor.getMonth(), anchor.getDate());
+        const last = new Date(first.getFullYear() + 1, first.getMonth(), first.getDate() - 1);
+        start = formatLocal(first);
+        end = formatLocal(last);
+    } else {
+        start = `${reference.getFullYear()}-${String(reference.getMonth() + 1).padStart(2, '0')}-01`;
+        const last = new Date(reference.getFullYear(), reference.getMonth() + 1, 0);
+        end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+    }
+    if (startLimit && start < startLimit) start = startLimit;
+    if (endLimit && end > endLimit) end = endLimit;
+    return { start, end };
+}
+
 const mapType = { effort:'⚙️ Esforço', result:'🎯 Resultado', impact:'🚀 Impacto' };
 const mapFreq = { weekly:'📅 Semanal', monthly:'📅 Mensal', quarterly:'📅 Trimestral', annual:'📅 Anual' };
 const mapAgg = { sum:'Soma Acumulada', avg:'Média do Período', last:'Último Valor', count:'Contagem' };
@@ -360,25 +434,43 @@ function renderUI() {
     document.getElementById('modalRecordCompanyId').value = ind.company_id;
     document.getElementById('modalGoalCompanyId').value = ind.company_id;
 
-    // Meta Ativa
-    const activeGoal = state.goals.find(g => g.status === 'active') || state.goals[0];
+    // Meta vigente e campanhas adicionais da competência atual
+    const referenceIso = new Date().toISOString().slice(0, 10);
+    const goalContext = currentGoalContext(state.goals, referenceIso);
+    const activeGoal = goalContext.base;
     let gValue = 0;
     if (activeGoal) {
-        gValue = parseFloat(activeGoal.goal_value);
+        if (goalContext.teamBase) {
+            gValue = parseFloat(goalContext.teamBase.goal_value) + goalContext.additive
+                .filter(goal => (goal.goal_scope || (goal.responsible_id ? 'individual' : 'team')) === 'team')
+                .reduce((sum, goal) => sum + parseFloat(goal.goal_value || 0), 0);
+        } else {
+            gValue = goalContext.individualBases.reduce((sum, goal) => {
+                const campaigns = goalContext.additive
+                    .filter(campaign => campaign.responsible_id === goal.responsible_id)
+                    .reduce((campaignSum, campaign) => campaignSum + parseFloat(campaign.goal_value || 0), 0);
+                return sum + parseFloat(goal.goal_value || 0) + campaigns;
+            }, 0);
+        }
         document.getElementById('detCurrentGoal').innerText = fmt.num(gValue);
         document.getElementById('detUnitGoal').innerText = unit;
-        document.getElementById('detGoalPeriod').innerText = `Ciclo: ${activeGoal.goal_type || 'Mensal'}`;
+        document.getElementById('detGoalPeriod').innerText = `Ciclo: ${activeGoal.goal_type || 'Mensal'}${goalContext.additive.length ? ` + ${goalContext.additive.length} campanha(s)` : ''}${goalContext.individualBases.length ? ` · ${goalContext.individualBases.length} consultor(es)` : ''}`;
     }
 
     // Cálculo de Acumulado (Período Atual)
     let acc = 0;
-    const targetGoalId = activeGoal ? activeGoal.id : null;
-    const recordsInPeriod = state.records.filter(r => r.goal_id === targetGoalId);
+    const cycle = activeGoal ? goalCycleBounds(activeGoal, referenceIso) : {start: referenceIso, end: referenceIso};
+    const recordsInPeriod = state.records
+        .filter(r => {
+            const measured = isoDate(r.measured_date || r.record_date);
+            return activeGoal && measured && measured >= cycle.start && measured <= cycle.end;
+        })
+        .sort((a, b) => isoDate(a.measured_date || a.record_date).localeCompare(isoDate(b.measured_date || b.record_date)));
     
     if (ind.aggregation_function === 'avg' && recordsInPeriod.length > 0) {
         acc = recordsInPeriod.reduce((sum, r) => sum + parseFloat(r.value||r.measured_value||0), 0) / recordsInPeriod.length;
     } else if (ind.aggregation_function === 'last' && recordsInPeriod.length > 0) {
-        acc = parseFloat(recordsInPeriod[0].value||recordsInPeriod[0].measured_value||0);
+        acc = parseFloat(recordsInPeriod[recordsInPeriod.length - 1].value||recordsInPeriod[recordsInPeriod.length - 1].measured_value||0);
     } else {
         acc = recordsInPeriod.reduce((sum, r) => sum + parseFloat(r.value||r.measured_value||0), 0);
     }
@@ -404,7 +496,7 @@ function renderUI() {
 
     // Sidebar & Selects
     document.getElementById('modalRecordGoalId').innerHTML = `<option value="">Sem meta (avulso)</option>` + 
-        state.goals.map(g => `<option value="${g.id}" ${g.status==='active'?'selected':''}>${g.goal_type} - ${fmt.num(g.goal_value)}</option>`).join('');
+        state.goals.map(g => `<option value="${g.id}" ${goalContext.teamBase && g.id===goalContext.teamBase.id?'selected':''}>${g.name || g.goal_type}${g.responsible_id ? ` · ${g.responsible_name || `Consultor #${g.responsible_id}`}` : ' · Equipe'} - ${fmt.num(g.goal_value)}</option>`).join('');
 
     // Table
     document.getElementById('recordsTableBody').innerHTML = state.records.map(r => {

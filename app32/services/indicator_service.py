@@ -1,11 +1,12 @@
 import ast
+import calendar
 import logging
 import operator
 import re
 from decimal import Decimal
 from datetime import datetime, date, timedelta
-from typing import Optional, Dict, List
-from models import db, Indicator, IndicatorData
+from typing import Optional, Dict, List, Iterable
+from models import db, Indicator, IndicatorData, IndicatorGoal
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,421 @@ ALLOWED_UNARY_OPERATORS = {
     ast.UAdd: operator.pos,
     ast.USub: operator.neg,
 }
+
+
+def _add_months(value: date, months: int) -> date:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def goal_is_effective(goal: IndicatorGoal, reference_date: date) -> bool:
+    """Retorna se a definição da meta cobre a data, inclusive historicamente."""
+    created_at = getattr(goal, "created_at", None)
+    start = goal.period_start or (created_at.date() if created_at else date.min)
+    end = goal.period_end or goal.goal_date
+    if goal.status == "cancelled" or (goal.status == "inactive" and end is None):
+        return False
+    return start <= reference_date and (end is None or reference_date <= end)
+
+
+def get_goal_cycle_bounds(goal: IndicatorGoal, reference_date: date) -> tuple[date, date]:
+    """Resolve a competência da meta sem materializar uma nova meta a cada ciclo."""
+    effective_start = goal.period_start or reference_date
+    effective_end = goal.period_end or goal.goal_date
+    goal_type = goal.goal_type or "monthly"
+
+    if goal_type == "single":
+        cycle_start = effective_start
+        cycle_end = effective_end or effective_start
+    elif goal_type == "weekly":
+        cycle_start = reference_date - timedelta(days=reference_date.weekday())
+        cycle_end = cycle_start + timedelta(days=6)
+    elif goal_type in {"bimonthly", "quarterly"}:
+        size = 2 if goal_type == "bimonthly" else 3
+        month_distance = (reference_date.year - effective_start.year) * 12 + reference_date.month - effective_start.month
+        block = max(month_distance, 0) // size
+        cycle_start = _add_months(effective_start.replace(day=1), block * size)
+        cycle_end = _add_months(cycle_start, size) - timedelta(days=1)
+    elif goal_type == "annual":
+        years = max(reference_date.year - effective_start.year, 0)
+        cycle_year = effective_start.year + years
+        cycle_start = date(
+            cycle_year,
+            effective_start.month,
+            min(effective_start.day, calendar.monthrange(cycle_year, effective_start.month)[1]),
+        )
+        next_year = cycle_start.year + 1
+        next_cycle = date(
+            next_year,
+            effective_start.month,
+            min(effective_start.day, calendar.monthrange(next_year, effective_start.month)[1]),
+        )
+        cycle_end = next_cycle - timedelta(days=1)
+    else:  # monthly
+        cycle_start = reference_date.replace(day=1)
+        cycle_end = _add_months(cycle_start, 1) - timedelta(days=1)
+
+    cycle_start = max(cycle_start, effective_start)
+    if effective_end:
+        cycle_end = min(cycle_end, effective_end)
+    return cycle_start, cycle_end
+
+
+def aggregate_measurement_values(values: Iterable[Decimal], aggregation_function: str) -> Optional[Decimal]:
+    values = [Decimal(str(value)) for value in values]
+    if not values:
+        return None
+    if aggregation_function == "avg":
+        return sum(values, Decimal("0")) / Decimal(len(values))
+    if aggregation_function == "last":
+        return values[-1]
+    if aggregation_function == "count":
+        return Decimal(len(values))
+    return sum(values, Decimal("0"))
+
+
+class IndicatorGoalService:
+    """Regras de vigência, versionamento e composição de metas."""
+
+    @staticmethod
+    def _query():
+        return IndicatorGoal.query
+
+    @staticmethod
+    def _measurement_query():
+        return IndicatorData.query
+
+    @staticmethod
+    def _employee_query():
+        from models import Employee
+        return Employee.query
+
+    @staticmethod
+    def prepare_measurement_payload(company_id: int, data: Dict) -> Dict:
+        """Normaliza o fato medido e impede cruzamento de indicador/consultor/tenant."""
+        payload = dict(data)
+        goal_id = payload.get("goal_id")
+        indicator_id = payload.get("indicator_id")
+        if goal_id:
+            goal = IndicatorGoalService._query().filter_by(
+                id=int(goal_id),
+                company_id=company_id,
+            ).first()
+            if not goal:
+                raise ValueError("Meta não encontrada para a empresa ativa.")
+            if indicator_id and int(indicator_id) != goal.indicator_id:
+                raise ValueError("A meta não pertence ao indicador informado.")
+            payload["indicator_id"] = goal.indicator_id
+            if goal.responsible_id:
+                if payload.get("employee_id") and int(payload["employee_id"]) != goal.responsible_id:
+                    raise ValueError("A medição deve usar o consultor definido na meta individual.")
+                payload["employee_id"] = goal.responsible_id
+
+        if payload.get("employee_id"):
+            employee = IndicatorGoalService._employee_query().filter_by(
+                id=int(payload["employee_id"]),
+                company_id=company_id,
+            ).first()
+            if not employee:
+                raise ValueError("Consultor não encontrado para a empresa ativa.")
+        return payload
+
+    @staticmethod
+    def validate_tenant_references(company_id: int, indicator_id: int, responsible_id: Optional[int] = None) -> Indicator:
+        indicator = Indicator.query.filter_by(id=indicator_id, company_id=company_id).first()
+        if not indicator:
+            raise ValueError("Indicador não encontrado para a empresa ativa.")
+        if responsible_id:
+            from models import Employee
+            employee = Employee.query.filter_by(id=responsible_id, company_id=company_id).first()
+            if not employee:
+                raise ValueError("Responsável não encontrado para a empresa ativa.")
+        return indicator
+
+    @staticmethod
+    def apply_base_versioning(goal: IndicatorGoal, exclude_goal_id: Optional[int] = None) -> None:
+        """Fecha a versão anterior e limita a nova pela próxima versão."""
+        if goal.goal_kind != "base" or goal.goal_type == "single" or not goal.period_start:
+            return
+
+        query = IndicatorGoalService._query().filter_by(
+            company_id=goal.company_id,
+            indicator_id=goal.indicator_id,
+            responsible_id=goal.responsible_id,
+            goal_kind="base",
+        )
+        if exclude_goal_id:
+            query = query.filter(IndicatorGoal.id != exclude_goal_id)
+        versions = query.order_by(IndicatorGoal.period_start.asc()).all()
+
+        if any(item.period_start == goal.period_start for item in versions):
+            raise ValueError("Já existe uma meta-base com esta data de início.")
+
+        previous = next(
+            (item for item in reversed(versions) if item.period_start and item.period_start < goal.period_start),
+            None,
+        )
+        following = next(
+            (item for item in versions if item.period_start and item.period_start > goal.period_start),
+            None,
+        )
+
+        if previous and (previous.period_end is None or previous.period_end >= goal.period_start):
+            previous.period_end = goal.period_start - timedelta(days=1)
+            previous.status = "superseded"
+
+        if following:
+            maximum_end = following.period_start - timedelta(days=1)
+            if goal.period_end is None or goal.period_end > maximum_end:
+                goal.period_end = maximum_end
+
+        goal.composition_mode = "independent"
+        goal.status = "active"
+
+    @staticmethod
+    def validate_goal(goal: IndicatorGoal) -> None:
+        if not goal.period_start:
+            raise ValueError("Informe a data de início da meta.")
+        if goal.goal_value is None or Decimal(str(goal.goal_value)) < 0:
+            raise ValueError("O valor da meta deve ser maior ou igual a zero.")
+        if goal.goal_kind not in {"base", "campaign"}:
+            raise ValueError("Tipo de meta inválido.")
+        if goal.goal_scope not in {"team", "individual"}:
+            raise ValueError("Escopo da meta inválido.")
+        if goal.goal_scope == "team" and goal.responsible_id:
+            raise ValueError("Metas de equipe não podem possuir um consultor responsável.")
+        if goal.goal_scope == "individual" and not goal.responsible_id:
+            raise ValueError("Selecione o consultor da meta individual.")
+        if goal.composition_mode not in {"independent", "additive"}:
+            raise ValueError("Modo de composição inválido.")
+        if goal.goal_kind == "campaign":
+            goal.goal_type = "single"
+            if not goal.period_end:
+                raise ValueError("Informe a data final da campanha.")
+        if goal.period_end and goal.period_end < goal.period_start:
+            raise ValueError("A data final não pode ser anterior ao início.")
+
+    @staticmethod
+    def resolve_effective_goals(company_id: int, indicator_id: int, reference_date: date, responsible_id: Optional[int] = None) -> Dict:
+        query = IndicatorGoalService._query().filter_by(
+            company_id=company_id,
+            indicator_id=indicator_id,
+            responsible_id=responsible_id,
+            goal_scope="individual" if responsible_id is not None else "team",
+        )
+        goals = [goal for goal in query.all() if goal_is_effective(goal, reference_date)]
+        base_goals = sorted(
+            (goal for goal in goals if goal.goal_kind == "base"),
+            key=lambda goal: goal.period_start or date.min,
+            reverse=True,
+        )
+        campaigns = [goal for goal in goals if goal.goal_kind == "campaign"]
+        return {
+            "base": base_goals[0] if base_goals else None,
+            "additive_campaigns": [goal for goal in campaigns if goal.composition_mode == "additive"],
+            "independent_campaigns": [goal for goal in campaigns if goal.composition_mode == "independent"],
+        }
+
+    @staticmethod
+    def performance_context(company_id: int, indicator: Indicator, reference_date: date) -> Dict:
+        return IndicatorGoalService.performance_context_for_scope(
+            company_id,
+            indicator,
+            reference_date,
+            responsible_id=None,
+        )
+
+    @staticmethod
+    def performance_context_for_scope(
+        company_id: int,
+        indicator: Indicator,
+        reference_date: date,
+        responsible_id: Optional[int],
+    ) -> Dict:
+        goals = IndicatorGoalService.resolve_effective_goals(
+            company_id,
+            indicator.id,
+            reference_date,
+            responsible_id=responsible_id,
+        )
+        base = goals["base"]
+        if not base:
+            return {
+                **goals,
+                "responsible_id": responsible_id,
+                "target_value": None,
+                "realized_value": None,
+                "cycle_start": None,
+                "cycle_end": None,
+            }
+
+        cycle_start, cycle_end = get_goal_cycle_bounds(base, reference_date)
+        measurements_query = IndicatorGoalService._measurement_query().filter(
+            IndicatorData.company_id == company_id,
+            IndicatorData.indicator_id == indicator.id,
+            IndicatorData.measured_date >= cycle_start,
+            IndicatorData.measured_date <= cycle_end,
+        ).order_by(IndicatorData.measured_date.asc(), IndicatorData.id.asc())
+        if responsible_id is not None:
+            measurements_query = measurements_query.filter(IndicatorData.employee_id == responsible_id)
+        measurements = measurements_query.all()
+        realized = aggregate_measurement_values(
+            [item.measured_value for item in measurements],
+            indicator.aggregation_function or "sum",
+        )
+        target = Decimal(str(base.goal_value)) + sum(
+            (Decimal(str(goal.goal_value)) for goal in goals["additive_campaigns"]),
+            Decimal("0"),
+        )
+        return {
+            **goals,
+            "responsible_id": responsible_id,
+            "target_value": target,
+            "realized_value": realized,
+            "cycle_start": cycle_start,
+            "cycle_end": cycle_end,
+        }
+
+    @staticmethod
+    def individual_performance_contexts(company_id: int, indicator: Indicator, reference_date: date) -> List[Dict]:
+        goals = IndicatorGoalService._query().filter_by(
+            company_id=company_id,
+            indicator_id=indicator.id,
+            goal_scope="individual",
+        ).all()
+        responsible_ids = sorted({
+            goal.responsible_id
+            for goal in goals
+            if goal.responsible_id and goal_is_effective(goal, reference_date)
+        })
+        contexts = [
+            IndicatorGoalService.performance_context_for_scope(
+                company_id,
+                indicator,
+                reference_date,
+                responsible_id=responsible_id,
+            )
+            for responsible_id in responsible_ids
+        ]
+        for context in contexts:
+            base = context.get("base")
+            context["responsible"] = getattr(base, "responsible", None) if base else None
+        return sorted(
+            contexts,
+            key=lambda context: (
+                getattr(context.get("responsible"), "name", "") or "",
+                context.get("responsible_id") or 0,
+            ),
+        )
+
+    @staticmethod
+    def consolidated_performance_context(company_id: int, indicator: Indicator, reference_date: date) -> Dict:
+        team_context = IndicatorGoalService.performance_context(company_id, indicator, reference_date)
+        individuals = IndicatorGoalService.individual_performance_contexts(company_id, indicator, reference_date)
+        valid_individuals = [item for item in individuals if item.get("target_value") is not None]
+        for item in individuals:
+            item.update(IndicatorGoalService.classify_performance(
+                indicator,
+                item.get("base"),
+                item.get("target_value"),
+                item.get("realized_value"),
+            ))
+        if not valid_individuals:
+            return {
+                **team_context,
+                "individual_contexts": individuals,
+                "individual_target_sum": None,
+                "allocation_gap": None,
+                "target_source": "team" if team_context.get("target_value") is not None else None,
+            }
+
+        individual_target_sum = sum(
+            (Decimal(str(item["target_value"])) for item in valid_individuals),
+            Decimal("0"),
+        )
+        realized_values = [
+            Decimal(str(item["realized_value"]))
+            for item in valid_individuals
+            if item.get("realized_value") is not None
+        ]
+        if not realized_values:
+            consolidated_realized = None
+        elif indicator.aggregation_function == "avg":
+            consolidated_realized = sum(realized_values, Decimal("0")) / Decimal(len(realized_values))
+        else:
+            consolidated_realized = sum(realized_values, Decimal("0"))
+
+        explicit_team_target = team_context.get("target_value")
+        consolidated_target = (
+            Decimal(str(explicit_team_target))
+            if explicit_team_target is not None
+            else individual_target_sum
+        )
+        allocation_gap = (
+            consolidated_target - individual_target_sum
+            if explicit_team_target is not None
+            else Decimal("0")
+        )
+        cycle_context = team_context if team_context.get("cycle_start") else valid_individuals[0]
+        return {
+            **team_context,
+            "target_value": consolidated_target,
+            "realized_value": consolidated_realized,
+            "cycle_start": cycle_context.get("cycle_start"),
+            "cycle_end": cycle_context.get("cycle_end"),
+            "individual_contexts": individuals,
+            "individual_target_sum": individual_target_sum,
+            "allocation_gap": allocation_gap,
+            "target_source": "team" if explicit_team_target is not None else "individual_sum",
+        }
+
+    @staticmethod
+    def classify_performance(
+        indicator: Indicator,
+        goal: Optional[IndicatorGoal],
+        target_value,
+        realized_value,
+    ) -> Dict:
+        from utils.indicator_ranges import normalize_performance_ranges
+
+        if target_value is None:
+            return {"performance_pct": None, "status_class": "no_goal"}
+        if realized_value is None:
+            return {"performance_pct": None, "status_class": "no_data"}
+
+        target = float(target_value)
+        realized = float(realized_value)
+        if target == 0:
+            return {
+                "performance_pct": 100.0 if realized == 0 else None,
+                "status_class": "on_target" if realized == 0 else "alert",
+            }
+
+        performance_pct = round((realized / target) * 100, 1)
+        ranges = normalize_performance_ranges(getattr(goal, "performance_ranges", None))
+        red_max = ranges.get("red", 80)
+        yellow_max = ranges.get("yellow", 90)
+        green_max = ranges.get("green", 110)
+
+        if indicator.polarity == "negative":
+            if realized <= target:
+                status_class = "on_target"
+            elif realized <= target * (green_max / 100):
+                status_class = "alert"
+            else:
+                status_class = "below"
+        elif performance_pct >= green_max:
+            status_class = "exceeded"
+        elif performance_pct >= yellow_max:
+            status_class = "on_target"
+        elif performance_pct >= red_max:
+            status_class = "alert"
+        else:
+            status_class = "below"
+        return {"performance_pct": performance_pct, "status_class": status_class}
 
 
 def _evaluate_formula_expression(expression: str) -> float:

@@ -282,8 +282,8 @@
                         <tr>
                             <th>Indicador</th>
                             <th>Tipo</th>
-                        <th class="hide-m">Último Valor</th>
-                        <th class="hide-m">Meta Ativa</th>
+                        <th class="hide-m">Realizado no Ciclo</th>
+                        <th class="hide-m">Meta do Ciclo</th>
                         <th>Desempenho</th>
                         <th>Status</th>
                         <th style="text-align:right;">Ações</th>
@@ -293,14 +293,16 @@
                     {% for item in kpi_data %}
                     {% set ind = item.indicator %}
                     {% set goal = item.goal %}
-                    {% set last = item.last_data %}
+                    {% set realized = item.realized_value %}
+                    {% set target = item.target_value %}
                     {% set sc = item.status_class %}
                     {% set perf = item.performance_pct %}
-                    <tr data-type="{{ ind.indicator_type }}" data-status="{{ sc }}" data-group="{{ ind.tree_id or 'none' }}">
+                    <tr data-type="{{ ind.indicator_type }}" data-status="{{ sc }}" data-group="{{ ind.tree_id or 'none' }}" data-consultant="team">
                         <td>
                             <a href="/indicators/{{ ind.id }}" style="text-decoration:none; color:inherit;">
                                 <div style="font-weight:700; font-size:0.875rem; color:var(--text-primary);">{{ ind.name }}</div>
                                 <div style="font-size:0.6rem; color:var(--primary); font-family:'JetBrains Mono',monospace; font-weight:800; opacity:0.8; margin-top:1px;">{{ ind.code or ind.full_code or '—' }}</div>
+                                {% if item.individual_contexts %}<div style="font-size:0.62rem;color:var(--success);font-weight:800;margin-top:3px;"><i class="fas fa-users"></i> Equipe consolidada · {{ item.individual_contexts|length }} consultor(es)</div>{% endif %}
                             </a>
                         </td>
                         <td>
@@ -311,20 +313,20 @@
                             {% endif %}
                         </td>
                         <td class="hide-m">
-                            {% if last %}
+                            {% if realized is not none %}
                             <div style="font-weight:700; color:var(--primary); font-size:0.9rem;">
-                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ last.measured_value | format_currency_br }}
-                                {% else %}{{ "{:,.2f}".format(last.measured_value|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
+                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ realized | format_currency_br }}
+                                {% else %}{{ "{:,.2f}".format(realized|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
                                 {% endif %}
                             </div>
-                            <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:1px;">{{ last.measured_date | format_date_br if last.measured_date else '—' }}</div>
+                            <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:1px;">{{ item.cycle_start | format_date_br }} a {{ item.cycle_end | format_date_br }}</div>
                             {% else %}<span style="font-size:0.78rem; color:var(--text-tertiary);">Sem medição</span>{% endif %}
                         </td>
                         <td class="hide-m">
                             {% if goal %}
                             <div style="font-weight:600; font-size:0.875rem; color:var(--text-primary);">
-                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ goal.goal_value | format_currency_br }}
-                                {% else %}{{ "{:,.2f}".format(goal.goal_value|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
+                                {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ target | format_currency_br }}
+                                {% else %}{{ "{:,.2f}".format(target|float).replace(",","X").replace(".",",").replace("X",".") }} <span style="font-size:0.7rem; color:var(--text-tertiary);">{{ ind.unit or '' }}</span>
                                 {% endif %}
                             </div>
                             <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:1px;">
@@ -333,7 +335,12 @@
                                 {% elif goal.goal_type == 'annual' %}📅 Anual
                                 {% elif goal.goal_type == 'weekly' %}📅 Semanal
                                 {% else %}{{ goal.goal_type or '—' }}{% endif %}
+                                {% if item.additive_campaigns %}· +{{ item.additive_campaigns|length }} campanha(s){% endif %}
                             </div>
+                            {% if item.target_source == 'individual_sum' %}<div style="font-size:0.62rem;color:var(--success);font-weight:700;">Soma das metas individuais</div>{% endif %}
+                            {% if item.allocation_gap is not none and item.allocation_gap != 0 %}
+                            <div style="font-size:0.62rem;color:var(--warning);font-weight:800;" title="Diferença entre a meta explícita da equipe e a soma distribuída aos consultores.">Diferença de distribuição: {% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {% endif %}{{ item.allocation_gap | format_currency_br }}{% if ind.unit != 'R$' and (not ind.unit or 'R$' not in ind.unit) %} {{ ind.unit or '' }}{% endif %}</div>
+                            {% endif %}
                             {% else %}<span style="font-size:0.78rem; color:var(--text-tertiary);">Sem meta ativa</span>{% endif %}
                         </td>
                         <td>
@@ -366,6 +373,38 @@
                             </div>
                         </td>
                     </tr>
+                    {% for individual in item.individual_contexts %}
+                    {% set ig = individual.base %}
+                    {% set ir = individual.realized_value %}
+                    {% set it = individual.target_value %}
+                    {% set ip = individual.performance_pct %}
+                    {% set isc = individual.status_class %}
+                    <tr data-type="{{ ind.indicator_type }}" data-status="{{ isc }}" data-group="{{ ind.tree_id or 'none' }}" data-consultant="{{ individual.responsible_id }}" style="background:var(--surface-secondary);">
+                        <td style="padding-left:2.5rem;">
+                            <div style="font-size:0.78rem;font-weight:700;color:var(--text-secondary);"><i class="fas fa-user" style="color:var(--primary);margin-right:5px;"></i>{{ individual.responsible.name if individual.responsible else ('Consultor #' ~ individual.responsible_id) }}</div>
+                        </td>
+                        <td><span class="tpill" style="background:white;color:var(--text-secondary);border:1px solid var(--border);">Individual</span></td>
+                        <td class="hide-m">
+                            {% if ir is not none %}<strong style="font-size:0.82rem;color:var(--primary);">{% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ ir | format_currency_br }}{% else %}{{ ir }} {{ ind.unit or '' }}{% endif %}</strong>
+                            {% else %}<span style="font-size:0.75rem;color:var(--text-tertiary);">Sem medição</span>{% endif %}
+                        </td>
+                        <td class="hide-m">
+                            {% if it is not none %}<strong style="font-size:0.82rem;color:var(--text-primary);">{% if ind.unit == 'R$' or (ind.unit and 'R$' in ind.unit) %}R$ {{ it | format_currency_br }}{% else %}{{ it }} {{ ind.unit or '' }}{% endif %}</strong>{% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if ip is not none %}<span style="font-size:0.75rem;font-weight:800;color:{% if isc in ['exceeded','on_target'] %}var(--success){% elif isc == 'alert' %}var(--warning){% else %}var(--danger){% endif %};">{{ ip }}%</span>{% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if isc == 'exceeded' %}<span class="sbadge sb-exc">Superação</span>
+                            {% elif isc == 'on_target' %}<span class="sbadge sb-ok">Na Meta</span>
+                            {% elif isc == 'alert' %}<span class="sbadge sb-alt">Alerta</span>
+                            {% elif isc == 'below' %}<span class="sbadge sb-low">Abaixo</span>
+                            {% elif isc == 'no_goal' %}<span class="sbadge sb-ng">Sem Meta</span>
+                            {% else %}<span class="sbadge sb-nd">Sem Dados</span>{% endif %}
+                        </td>
+                        <td></td>
+                    </tr>
+                    {% endfor %}
                     {% endfor %}
                 </tbody>
             </table>
@@ -441,18 +480,19 @@ function applyFilters() {
     const type   = document.getElementById('filterType')?.value   || 'all';
     const status = document.getElementById('filterStatus')?.value || 'all';
     const group  = document.getElementById('filterGroup')?.value  || 'all';
+    const consultant = document.getElementById('filterConsultant')?.value || 'all';
     const rows   = document.querySelectorAll('#kpiTableBody tr');
     let visible  = 0;
     rows.forEach(r => {
-        const show = (type==='all'||r.dataset.type===type) && (status==='all'||r.dataset.status===status) && (group==='all'||r.dataset.group===group);
+        const show = (type==='all'||r.dataset.type===type) && (status==='all'||r.dataset.status===status) && (group==='all'||r.dataset.group===group) && (consultant==='all'||r.dataset.consultant===consultant);
         r.style.display = show ? '' : 'none';
         if (show) visible++;
     });
     const rc = document.getElementById('tableRowCount');
-    if (rc) rc.textContent = `${visible} de ${rows.length} KPIs`;
+    if (rc) rc.textContent = `${visible} de ${rows.length} linhas`;
     
     // Info bar
-    const hasFilters = type !== 'all' || status !== 'all' || group !== 'all';
+    const hasFilters = type !== 'all' || status !== 'all' || group !== 'all' || consultant !== 'all';
     const infoBar = document.getElementById('activeFiltersInfo');
     if (infoBar) infoBar.style.display = hasFilters ? 'flex' : 'none';
 }
@@ -463,7 +503,7 @@ function toggleSection(header) {
 }
 
 function clearFilters() {
-    ['filterType','filterStatus','filterGroup'].forEach(id => { const e=document.getElementById(id); if(e) e.value='all'; });
+    ['filterType','filterStatus','filterGroup','filterConsultant'].forEach(id => { const e=document.getElementById(id); if(e) e.value='all'; });
     applyFilters();
 }
 
@@ -498,6 +538,19 @@ document.addEventListener('DOMContentLoaded', () => { initStatusDonut(); initTyp
             <option value="no_goal">Sem Meta</option>
         </select>
     </div>
+
+    {% if dashboard_employees %}
+    <div class="filter-group">
+        <label class="filter-label">Equipe / Consultor</label>
+        <select class="filter-select" id="filterConsultant" onchange="applyFilters()">
+            <option value="all">Equipe e consultores</option>
+            <option value="team">Somente consolidado</option>
+            {% for employee in dashboard_employees %}
+            <option value="{{ employee.id }}">{{ employee.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
 
     {% if tree_nodes %}
     <div class="filter-group">

@@ -173,6 +173,11 @@
                     <tr style="border-bottom: 1px solid var(--border); transition: background 0.2s;" onmouseover="this.style.background='var(--surface-secondary)'" onmouseout="this.style.background='transparent'">
                         <td style="padding: 1.25rem 1.5rem;">
                             <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">{{ goal.indicator.name }}</div>
+                            {% if goal.name %}<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">{{ goal.name }}</div>{% endif %}
+                            <div style="font-size:0.68rem;color:var(--text-tertiary);margin-top:2px;">
+                                <i class="fas {{ 'fa-user' if goal.goal_scope == 'individual' else 'fa-users' }}"></i>
+                                {{ goal.responsible.name if goal.responsible else 'Equipe / consolidado' }}
+                            </div>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <div style="font-size: 0.65rem; color: var(--primary); font-family: 'JetBrains Mono', monospace; font-weight: 800; opacity: 0.8;">{{ goal.indicator.code }}</div>
                                 {% if goal.code %}
@@ -194,11 +199,11 @@
                         <td style="padding: 1.25rem 1.5rem;">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">
-                                    <span style="color: var(--text-tertiary); font-size: 0.7rem;">DE</span> {{ goal.period_start or goal.created_at | format_date_br }}
+                                    <span style="color: var(--text-tertiary); font-size: 0.7rem;">DE</span> {{ (goal.period_start or goal.created_at) | format_date_br }}
                                 </div>
-                                {% if goal.goal_date %}
+                                {% if goal.period_end or goal.goal_date %}
                                 <div style="font-size: 0.85rem; font-weight: 600; color: var(--danger);">
-                                    <span style="color: var(--text-tertiary); font-size: 0.7rem;">ATÉ</span> {{ goal.goal_date }}
+                                    <span style="color: var(--text-tertiary); font-size: 0.7rem;">ATÉ</span> {{ (goal.period_end or goal.goal_date) | format_date_br }}
                                 </div>
                                 {% else %}
                                 <div style="font-size: 0.8rem; color: var(--success); font-weight: 700;">
@@ -211,7 +216,8 @@
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     <span class="badge-vs badge-freq">
-                                        {% if goal.goal_type == 'single' %}🎯 Única
+                                        {% if goal.goal_kind == 'campaign' %}🚀 Campanha
+                                        {% elif goal.goal_type == 'single' %}🎯 Única
                                         {% elif goal.goal_type == 'weekly' %}📅 Semanal
                                         {% elif goal.goal_type == 'monthly' %}📅 Mensal
                                         {% elif goal.goal_type == 'bimonthly' %}📅 Bimestral
@@ -219,6 +225,11 @@
                                         {% elif goal.goal_type == 'annual' %}📅 Anual
                                         {% else %}{{ goal.goal_type }}{% endif %}
                                     </span>
+                                    {% if goal.goal_kind == 'campaign' %}
+                                    <span class="badge-vs" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:2px 6px;font-size:0.6rem;">
+                                        {{ 'Adicional' if goal.composition_mode == 'additive' else 'Independente' }}
+                                    </span>
+                                    {% endif %}
                                     <span class="badge-vs" style="background: var(--surface-secondary); color: var(--text-tertiary); border: 1px solid var(--border); padding: 2px 6px; font-size: 0.6rem;">
                                         {% if goal.collection_method == 'api' %}<i class="fas fa-plug" title="API"></i> API
                                         {% elif goal.collection_method == 'webhook' %}<i class="fas fa-link" title="Webhook"></i> Webhook
@@ -238,20 +249,30 @@
                             </div>
                         </td>
                         <td style="padding: 1.25rem 1.5rem;">
-                            {% if goal.status == 'active' and not goal.goal_date %}
-                                <span class="badge-vs badge-success-vs">Em Vigência</span>
-                            {% elif goal.status == 'inactive' or goal.goal_date %}
+                            {% set effective_end = goal.period_end or goal.goal_date %}
+                            {% if goal.status == 'inactive' %}
                                 <span class="badge-vs badge-danger-vs">Inativa</span>
+                            {% elif goal.period_start and goal.period_start > today %}
+                                <span class="badge-vs badge-planned-vs">Programada</span>
+                            {% elif effective_end and effective_end < today %}
+                                <span class="badge-vs" style="background:var(--surface-secondary);color:var(--text-tertiary);">Histórica</span>
+                            {% elif goal.status in ['active', 'superseded'] %}
+                                <span class="badge-vs badge-success-vs">Em Vigência</span>
                             {% else %}
                                 <span class="badge-vs badge-planned-vs">{{ goal.status }}</span>
                             {% endif %}
                         </td>
                         <td style="padding: 1.25rem 1.5rem; text-align: right;">
                             <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                {% if goal.goal_kind == 'base' and goal.status != 'inactive' %}
+                                <button class="btn-icon-sm" onclick='openNewVersionModal({{ goal.to_dict() | tojson }})' title="Alterar valor a partir de uma data">
+                                    <i class="fas fa-code-branch"></i>
+                                </button>
+                                {% endif %}
                                 <button class="btn-icon-sm" onclick='openEditGoalModal({{ goal.to_dict() | tojson }})' title="Editar Meta">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                {% if not goal.goal_date %}
+                                {% if goal.status != 'inactive' and not goal.period_end and not goal.goal_date %}
                                 <button class="btn-icon-sm" onclick="openInactivateModal({{ goal.id }}, '{{ goal.indicator.name }}')" title="Inativar (Definir Prazo Final)">
                                     <i class="fas fa-hand-paper"></i>
                                 </button>
@@ -309,6 +330,40 @@
 
                 <div class="form-grid-2">
                     <div class="field-group">
+                        <label class="field-label">Tipo de Meta *</label>
+                        <select name="goal_kind" id="goal_kind_select" class="field-select" required onchange="handleGoalKindChange()">
+                            <option value="base">Meta-base recorrente</option>
+                            <option value="campaign">Campanha / meta única</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label">Nome da Meta</label>
+                        <input type="text" name="name" id="goal_name" class="field-input" placeholder="Ex.: Meta comercial ou Campanha de fim de ano">
+                    </div>
+                </div>
+
+                <div class="form-grid-2">
+                    <div class="field-group">
+                        <label class="field-label">Escopo da Meta *</label>
+                        <select name="goal_scope" id="goal_scope_select" class="field-select" required onchange="handleGoalScopeChange()">
+                            <option value="team">Equipe / consolidado</option>
+                            <option value="individual">Consultor individual</option>
+                        </select>
+                    </div>
+                    <div class="field-group" id="responsibleField" style="display:none;">
+                        <label class="field-label">Consultor *</label>
+                        <select name="responsible_id" id="goal_responsible_id" class="field-select">
+                            <option value="">Selecione o consultor...</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}">{{ employee.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <p class="field-hint" style="margin-top:-0.75rem;margin-bottom:1rem;">O consolidado soma automaticamente metas e medições individuais. Uma meta explícita de equipe prevalece e exibe eventual diferença de distribuição.</p>
+
+                <div class="form-grid-2">
+                    <div class="field-group">
                         <label class="field-label">Valor Alvo <span id="goal_unit_badge" style="text-transform:none; font-weight:600; opacity:0.7;"></span> *</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <span id="currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
@@ -320,6 +375,26 @@
                         <label class="field-label">Data de Início *</label>
                         <input type="date" name="period_start" id="new_goal_start_date" class="field-input" required>
                     </div>
+                </div>
+
+                <div id="campaignFields" style="display:none;">
+                    <div class="form-grid-2">
+                        <div class="field-group">
+                            <label class="field-label">Data Final da Campanha *</label>
+                            <input type="date" name="period_end" id="goal_period_end" class="field-input">
+                        </div>
+                        <div class="field-group">
+                            <label class="field-label">Composição *</label>
+                            <select name="composition_mode" id="goal_composition_mode" class="field-select">
+                                <option value="additive">Adicional — soma à meta-base</option>
+                                <option value="independent">Independente — acompanha separadamente</option>
+                            </select>
+                            <p class="field-hint">Campanhas adicionais reutilizam as medições da meta-base, evitando lançamentos duplicados.</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="baseVersionHint" class="alert alert-info" style="font-size:0.78rem;margin-bottom:1rem;">
+                    Ao criar uma nova meta-base com vigência futura, a versão anterior será encerrada automaticamente no dia anterior.
                 </div>
 
                 <!-- Range de Performance -->
@@ -518,16 +593,44 @@ function handleGoalValueInput(input) {
     document.getElementById('goal_value_real').value = realVal;
 }
 
+function handleGoalKindChange() {
+    const isCampaign = document.getElementById('goal_kind_select').value === 'campaign';
+    const campaignFields = document.getElementById('campaignFields');
+    const periodEnd = document.getElementById('goal_period_end');
+    const goalType = document.getElementById('goal_type_select');
+    campaignFields.style.display = isCampaign ? 'block' : 'none';
+    document.getElementById('baseVersionHint').style.display = isCampaign ? 'none' : 'block';
+    periodEnd.required = isCampaign;
+    goalType.disabled = isCampaign;
+    if (isCampaign) goalType.value = 'single';
+    else if (goalType.value === 'single') goalType.value = 'monthly';
+}
+
+function handleGoalScopeChange() {
+    const isIndividual = document.getElementById('goal_scope_select').value === 'individual';
+    const responsibleField = document.getElementById('responsibleField');
+    const responsibleSelect = document.getElementById('goal_responsible_id');
+    responsibleField.style.display = isIndividual ? 'block' : 'none';
+    responsibleSelect.required = isIndividual;
+    if (!isIndividual) responsibleSelect.value = '';
+}
+
 function openGoalModal() {
+    document.getElementById('goalForm').reset();
     document.getElementById('goalModalTitle').innerText = "Nova Meta";
     document.getElementById('btnGoalText').innerText = "Ativar Meta";
     document.getElementById('goal_id_hidden').value = "";
     document.getElementById('new_goal_start_date').value = new Date().toISOString().split('T')[0];
-    document.getElementById('goalForm').reset();
+    document.getElementById('goal_kind_select').value = 'base';
+    document.getElementById('goal_scope_select').value = 'team';
+    document.getElementById('goal_type_select').value = 'monthly';
+    document.getElementById('goal_composition_mode').value = 'additive';
     document.getElementById('goal_routine_id').value = "";
     document.getElementById('goal_collection_method').value = "manual";
     document.getElementById('currency_prefix').style.display = 'none';
     document.getElementById('goal_value_visual').style.paddingLeft = '1rem';
+    handleGoalKindChange();
+    handleGoalScopeChange();
     updateBlueRangeLabel();
     document.getElementById('goalModal').style.display = 'block';
 }
@@ -545,7 +648,13 @@ function openEditGoalModal(goal) {
     document.getElementById('goal_value_visual').value = formatBR(rawVal);
     document.getElementById('goal_value_real').value = goal.goal_value;
     
-    document.getElementById('new_goal_start_date').value = goal.start_date || "";
+    document.getElementById('goal_name').value = goal.name || "";
+    document.getElementById('goal_kind_select').value = goal.goal_kind || 'base';
+    document.getElementById('goal_scope_select').value = goal.goal_scope || (goal.responsible_id ? 'individual' : 'team');
+    document.getElementById('goal_responsible_id').value = goal.responsible_id || "";
+    document.getElementById('new_goal_start_date').value = goal.period_start || goal.start_date || "";
+    document.getElementById('goal_period_end').value = goal.period_end || "";
+    document.getElementById('goal_composition_mode').value = goal.composition_mode || 'independent';
     document.getElementById('goal_type_select').value = goal.goal_type;
     document.getElementById('goal_collection_method').value = goal.collection_method || "manual";
     document.getElementById('goal_notes').value = goal.notes || "";
@@ -558,8 +667,36 @@ function openEditGoalModal(goal) {
     }
     document.getElementById('goal_routine_id').value = goal.routine_id || "";
     
+    handleGoalKindChange();
+    handleGoalScopeChange();
     updateBlueRangeLabel();
     document.getElementById('goalModal').style.display = 'block';
+}
+
+function openNewVersionModal(goal) {
+    openGoalModal();
+    document.getElementById('goalModalTitle').innerText = "Nova vigência da meta";
+    document.getElementById('btnGoalText').innerText = "Criar nova vigência";
+    document.getElementById('goal_indicator_id').value = goal.indicator_id;
+    updateGoalValuePrefix(document.getElementById('goal_indicator_id'));
+    document.getElementById('goal_name').value = goal.name || "";
+    document.getElementById('goal_responsible_id').value = goal.responsible_id || "";
+    document.getElementById('goal_scope_select').value = goal.goal_scope || (goal.responsible_id ? 'individual' : 'team');
+    document.getElementById('goal_kind_select').value = 'base';
+    document.getElementById('goal_type_select').value = goal.goal_type || 'monthly';
+    document.getElementById('goal_collection_method').value = goal.collection_method || 'manual';
+    document.getElementById('goal_routine_id').value = goal.routine_id || "";
+    const rawVal = (goal.goal_value * 100).toFixed(0);
+    document.getElementById('goal_value_visual').value = formatBR(rawVal);
+    document.getElementById('goal_value_real').value = goal.goal_value;
+    if (goal.performance_ranges) {
+        document.getElementById('range_red').value = goal.performance_ranges.red || 80;
+        document.getElementById('range_yellow').value = goal.performance_ranges.yellow || 90;
+        document.getElementById('range_green').value = goal.performance_ranges.green || 110;
+    }
+    handleGoalKindChange();
+    handleGoalScopeChange();
+    updateBlueRangeLabel();
 }
 
 function openInactivateModal(id, name) {
@@ -595,6 +732,11 @@ document.getElementById('goalForm').addEventListener('submit', async (e) => {
     data.indicator_id = parseInt(data.indicator_id);
     data.company_id = parseInt(data.company_id);
     data.routine_id = data.routine_id ? parseInt(data.routine_id) : null;
+    data.goal_scope = data.goal_scope || 'team';
+    data.responsible_id = data.goal_scope === 'individual' && data.responsible_id ? parseInt(data.responsible_id) : null;
+    data.period_end = data.period_end || null;
+    data.goal_type = data.goal_kind === 'campaign' ? 'single' : (data.goal_type || 'monthly');
+    data.composition_mode = data.goal_kind === 'campaign' ? (data.composition_mode || 'additive') : 'independent';
     
     // Formatação do Performance Range
     data.performance_ranges = {

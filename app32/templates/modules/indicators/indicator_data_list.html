@@ -148,6 +148,7 @@
                         <th>Indicador</th>
                         <th>Valor Medido</th>
                         <th>Data da Medição</th>
+                        <th>Consultor</th>
                         <th>Meta Associada</th>
                         <th>Notas</th>
                         <th style="text-align: right;">Ações</th>
@@ -159,6 +160,13 @@
                         <td>
                             <div style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">{{ record.indicator.name }}</div>
                             <div style="font-size: 0.65rem; color: var(--primary); font-family: 'JetBrains Mono', monospace; font-weight: 800;">{{ record.indicator.code }}</div>
+                        </td>
+                        <td>
+                            {% if record.employee %}
+                                <span style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);"><i class="fas fa-user"></i> {{ record.employee.name }}</span>
+                            {% else %}
+                                <span style="font-size:0.75rem;color:var(--text-tertiary);">Equipe</span>
+                            {% endif %}
                         </td>
                         <td>
                             <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">
@@ -251,8 +259,9 @@
                             data-indicator-id="{{ goal.indicator_id }}"
                             data-indicator-name="{{ goal.indicator.code }} - {{ goal.indicator.name }}"
                             data-unit="{{ goal.indicator.unit or '' }}"
+                            data-responsible-id="{{ goal.responsible_id or '' }}"
                         >
-                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — Meta {{ goal.goal_value | format_currency_br if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') else "{:,.2f}".format(goal.goal_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}{% if goal.goal_date %} (venc: {{ goal.goal_date | format_date_br }}){% endif %}
+                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — {{ goal.name or ('Campanha' if goal.goal_kind == 'campaign' else 'Meta-base') }} — {{ goal.goal_value | format_currency_br if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') else "{:,.2f}".format(goal.goal_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}{% if goal.responsible %} · {{ goal.responsible.name }}{% endif %}
                         </option>
                         {% endfor %}
                     </select>
@@ -262,6 +271,17 @@
                     <label class="field-label">Indicador Vinculado</label>
                     <input type="text" class="field-input" id="modalIndicatorName" readonly placeholder="Selecione uma meta para preencher o indicador">
                     <p class="field-hint">O indicador é derivado automaticamente da meta selecionada.</p>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Consultor da Medição</label>
+                    <select class="field-select" name="employee_id" id="modalEmployeeSelect">
+                        <option value="">Equipe / sem consultor</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}">{{ employee.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="field-hint">Nas metas individuais, o consultor é preenchido automaticamente.</p>
                 </div>
 
                 <div class="form-grid-2">
@@ -335,6 +355,7 @@ function handleGoalSelection(select) {
     const input = document.getElementById('record_value_visual');
     const indicatorIdInput = document.getElementById('modalIndicatorId');
     const indicatorNameInput = document.getElementById('modalIndicatorName');
+    const employeeSelect = document.getElementById('modalEmployeeSelect');
 
     if (!select.value) {
         indicatorIdInput.value = '';
@@ -342,6 +363,7 @@ function handleGoalSelection(select) {
         unitLabel.innerText = '';
         prefix.style.display = 'none';
         input.style.paddingLeft = '1rem';
+        employeeSelect.value = '';
         return;
     }
 
@@ -349,6 +371,7 @@ function handleGoalSelection(select) {
     const unit = selectedOption.getAttribute('data-unit') || "";
     indicatorIdInput.value = selectedOption.getAttribute('data-indicator-id') || '';
     indicatorNameInput.value = selectedOption.getAttribute('data-indicator-name') || '';
+    employeeSelect.value = selectedOption.getAttribute('data-responsible-id') || '';
     unitLabel.innerText = unit ? `(${unit})` : "";
     
     if (unit === 'R$' || unit.includes('moeda')) {
@@ -374,6 +397,7 @@ document.getElementById('recordForm').addEventListener('submit', async (e) => {
     data.indicator_id = parseInt(data.indicator_id);
     data.goal_id = parseInt(data.goal_id);
     data.company_id = parseInt(data.company_id);
+    data.employee_id = data.employee_id ? parseInt(data.employee_id) : null;
 
     try {
         const res = await fetch('/api/indicator-data', {

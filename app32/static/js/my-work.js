@@ -871,25 +871,6 @@ function updateProcessOwnersFromActivities() {
   }
 }
 
-function handleCompanySelectionChange() {
-  saveFiltersToCache();
-
-  // Atualizar dependentes (Projetos, Processos, Colaboradores)
-  FILTER_MULTISELECTS.forEach(config => {
-    if (config.key !== 'company' && config.key !== 'delivery') {
-      const trigger = document.getElementById(config.triggerId);
-      if (trigger) trigger.dispatchEvent(new CustomEvent('multiselect:re-sync'));
-    }
-  });
-
-  loadActivitiesData();
-  if (state.currentScope === 'team') {
-    loadTeamOverview();
-  } else if (state.currentScope === 'company') {
-    loadCompanyOverview();
-  }
-}
-
 // ========================================
 // Company Selector (Seletor de Empresa)
 // ========================================
@@ -1588,6 +1569,11 @@ function handleCompanySelectionChange() {
   // 3. Normal flow: save and load
   saveFiltersToCache();
   loadActivitiesData();
+  if (state.currentScope === 'team') {
+    loadTeamOverview();
+  } else if (state.currentScope === 'company') {
+    loadCompanyOverview();
+  }
 }
 
 function findFirstCollaboratorByRole(collaborators, role) {
@@ -2471,12 +2457,6 @@ function renderProgressBar(activity) {
       <span class="progress-label">${activity.progress_percent}% concluído</span>
     </div>
   `;
-}
-
-function formatHours(value) {
-  const hours = parseFloat(value || 0);
-  if (!hours) return '0h';
-  return `${hours.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}h`;
 }
 
 function getProcessExecutorNames(activity) {

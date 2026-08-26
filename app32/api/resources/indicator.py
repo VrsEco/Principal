@@ -13,6 +13,7 @@ from schemas.indicator import (
 )
 
 from utils.permissions import permission_required
+from utils.catalog_sort import sort_catalog_entries
 from utils.indicator_filters import (
     PROCESS_SOURCE_MODULES,
     PROJECT_SOURCE_MODULES,
@@ -132,7 +133,7 @@ class IndicatorListResource(Resource):
         query = Indicator.query.filter_by(company_id=company_id)
         query = _apply_indicator_context_filters(query, process_id=process_id, project_id=project_id)
             
-        indicators = query.all()
+        indicators = sort_catalog_entries(query.all())
         return indicators_schema.dump(indicators), 200
 
     @permission_required('indicators', 'create')
@@ -254,7 +255,7 @@ class IndicatorGroupListResource(Resource):
             return [], 200
             
         query = IndicatorGroup.query.filter_by(company_id=company_id)
-        groups = query.all()
+        groups = sort_catalog_entries(query.all())
         return indicator_groups_schema.dump(groups), 200
 
     @permission_required('indicators', 'create')
@@ -285,7 +286,7 @@ class IndicatorGoalListResource(Resource):
             return [], 200
              
         query = IndicatorGoal.query.filter_by(company_id=company_id, indicator_id=indicator_id)
-        goals = query.all()
+        goals = query.order_by(IndicatorGoal.period_start.desc(), IndicatorGoal.created_at.desc()).all()
         return indicator_goals_schema.dump(goals), 200
 
     @permission_required('indicators', 'create')
@@ -295,9 +296,21 @@ class IndicatorGoalListResource(Resource):
             cid = get_request_company_id()
             if cid:
                 data['company_id'] = cid
+            data.setdefault('goal_kind', 'base')
+            data.setdefault('goal_scope', 'individual' if data.get('responsible_id') else 'team')
+            data.setdefault('composition_mode', 'independent')
+            data.setdefault('status', 'active')
+            if data.get('goal_date') in ('', 'null', 'undefined'):
+                data['goal_date'] = None
+            if data.get('period_end') in ('', 'null', 'undefined'):
+                data['period_end'] = None
 
-            if data.get('goal_date') in (None, '', 'null', 'undefined'):
-                data['goal_date'] = data.get('period_end') or data.get('period_start')
+            from services.indicator_service import IndicatorGoalService
+            IndicatorGoalService.validate_tenant_references(
+                int(cid),
+                int(data.get('indicator_id')),
+                int(data['responsible_id']) if data.get('responsible_id') else None,
+            )
             
             # --- Autocodificação (AB.M.1) ---
             from models.company import Company
@@ -310,9 +323,14 @@ class IndicatorGoalListResource(Resource):
             # -------------------------------
                 
             goal = indicator_goal_schema.load(data)
+            IndicatorGoalService.validate_goal(goal)
+            IndicatorGoalService.apply_base_versioning(goal)
             db.session.add(goal)
             db.session.commit()
             return indicator_goal_schema.dump(goal), 201
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except ValidationError as err:
             return {"errors": err.messages}, 400
         except Exception as e:
@@ -334,9 +352,30 @@ class IndicatorGoalResource(Resource):
         try:
             data = request.get_json()
             data['company_id'] = company_id
+            if 'responsible_id' in data and 'goal_scope' not in data:
+                data['goal_scope'] = 'individual' if data.get('responsible_id') else 'team'
+            if data.get('goal_date'):
+                data['period_end'] = data['goal_date']
+            for nullable_date in ('goal_date', 'period_end'):
+                if data.get(nullable_date) in ('', 'null', 'undefined'):
+                    data[nullable_date] = None
+
+            from services.indicator_service import IndicatorGoalService
+            responsible_id = data.get('responsible_id') if 'responsible_id' in data else goal.responsible_id
+            IndicatorGoalService.validate_tenant_references(
+                int(company_id),
+                int(data.get('indicator_id') or goal.indicator_id),
+                int(responsible_id) if responsible_id else None,
+            )
             goal = indicator_goal_schema.load(data, instance=goal, partial=True)
+            IndicatorGoalService.validate_goal(goal)
+            if goal.status != 'inactive':
+                IndicatorGoalService.apply_base_versioning(goal, exclude_goal_id=goal.id)
             db.session.commit()
             return indicator_goal_schema.dump(goal), 200
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except ValidationError as err:
             return {"errors": err.messages}, 400
         except Exception as e:
@@ -389,17 +428,8 @@ class IndicatorDataListResource(Resource):
             if cid:
                 data['company_id'] = cid
 
-            goal_id = data.get('goal_id')
-            indicator_id = data.get('indicator_id')
-
-            if goal_id and not indicator_id:
-                goal = IndicatorGoal.query.filter_by(
-                    id=goal_id,
-                    company_id=cid
-                ).first()
-                if not goal:
-                    return {"error": "Meta não encontrada para a empresa ativa."}, 400
-                data['indicator_id'] = goal.indicator_id
+            from services.indicator_service import IndicatorGoalService
+            data = IndicatorGoalService.prepare_measurement_payload(int(cid), data)
                 
             record = indicator_data_schema.load(data)
             db.session.add(record)
@@ -417,6 +447,9 @@ class IndicatorDataListResource(Resource):
                 logger.error(f"Erro ao disparar cálculos dependentes: {e}")
 
             return indicator_data_schema.dump(record), 201
+        except ValueError as err:
+            db.session.rollback()
+            return {"error": str(err)}, 400
         except ValidationError as err:
             return {"errors": err.messages}, 400
         except Exception as e:
