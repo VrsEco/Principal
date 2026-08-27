@@ -86,6 +86,11 @@ def fetch_normalized_project_rows(
         query = query.filter(Project.company_id.in_(company_ids))
     if project_ids:
         query = query.filter(ProjectTask.project_id.in_(project_ids))
+
+    # Soft-deleted tasks are not operational records anymore. Keep the
+    # discovery contract aligned with the task resources, which also require
+    # ``is_deleted = false`` for reads and mutations.
+    query = query.filter(ProjectTask.is_deleted.is_(False))
     
     if not include_inactive:
         # Hide completed, cancelled and archived projects globally
