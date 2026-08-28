@@ -569,6 +569,7 @@
     .cw-list.compact-tree { gap:.2rem; }
     .cw-tree { display:flex; flex-direction:column; gap:.1rem; }
     .cw-tree-node { display:flex; flex-direction:column; gap:.12rem; }
+    .cw-tree-node[hidden] { display:none !important; }
     .cw-tree-children { display:flex; flex-direction:column; gap:.12rem; margin-left:.7rem; padding-left:.75rem; border-left:1px dashed var(--border); }
     .cw-tree-children.collapsed { display:none; }
     .cw-list-item { border:1px solid #e6ebf3; background:#fff; border-radius:10px; padding:.42rem .55rem; text-decoration:none; color:inherit; transition:all .15s ease; }
@@ -688,16 +689,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const searchInput = document.getElementById('contracts-tree-search');
     const nodes = Array.from(document.querySelectorAll('[data-tree-node]'));
+    const normalizeTreeSearch = (value) => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
     if (searchInput && nodes.length) {
         searchInput.addEventListener('input', function () {
-            const query = (searchInput.value || '').trim().toLowerCase();
+            const query = normalizeTreeSearch(searchInput.value);
             nodes.forEach((node) => {
-                const branchText = node.getAttribute('data-search-text') || '';
+                const branchText = normalizeTreeSearch(node.getAttribute('data-search-text'));
                 const branchMatches = !query || branchText.includes(query);
                 const contractNodes = Array.from(node.querySelectorAll('[data-contract-search-text]'));
                 let hasMatchingContract = false;
                 contractNodes.forEach((contractNode) => {
-                    const contractText = contractNode.getAttribute('data-contract-search-text') || '';
+                    const contractText = normalizeTreeSearch(contractNode.getAttribute('data-contract-search-text'));
                     const contractMatches = branchMatches || contractText.includes(query);
                     contractNode.hidden = !contractMatches;
                     hasMatchingContract = hasMatchingContract || contractMatches;
@@ -705,7 +711,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 node.hidden = !(branchMatches || hasMatchingContract);
 
                 const children = node.querySelector('[data-tree-children]');
-                if (children && query && hasMatchingContract) children.classList.remove('collapsed');
+                if (children && query && hasMatchingContract) {
+                    children.classList.remove('collapsed');
+                    const toggle = node.querySelector('[data-tree-toggle]');
+                    if (toggle) {
+                        toggle.textContent = '▾';
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                }
             });
             if (!query) syncCollapsedTreeNodes();
         });
@@ -807,7 +820,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
  </script>
-{% set sidebar_right_html %}
+{% include "modules/contracts/_styles.html" %}
+{% endblock %}
+
+{% block sidebar_right %}
 <div class="contracts-sidebar-card contracts-filter-card">
     <div class="sidebar-header-ws">
         <h3 class="text-h3">Filtros</h3>
@@ -855,6 +871,4 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
     </form>
 </div>
-{% endset %}
-{% include "modules/contracts/_styles.html" %}
 {% endblock %}

@@ -79,6 +79,34 @@ def test_contracts_list_template_preserves_filters_and_does_not_pin_contract_on_
     assert "('suspended', 'Suspenso')" in template
 
 
+def test_contracts_list_renders_filters_in_workspace_sidebar_block():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "contracts"
+        / "contracts_list.html"
+    ).read_text(encoding="utf-8")
+
+    assert "{% block sidebar_right %}" in template
+    assert "{% set sidebar_right_html %}" not in template
+    assert 'class="contracts-sidebar-card contracts-filter-card"' in template
+
+
+def test_contracts_list_tree_search_can_hide_author_styled_nodes():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "contracts"
+        / "contracts_list.html"
+    ).read_text(encoding="utf-8")
+
+    assert ".cw-tree-node[hidden] { display:none !important; }" in template
+    assert "const normalizeTreeSearch" in template
+    assert "contractNode.hidden = !contractMatches" in template
+
+
 def test_contracts_list_detail_context_does_not_load_contract_financial_terms(monkeypatch):
     company = SimpleNamespace(id=9)
     contract = SimpleNamespace(
