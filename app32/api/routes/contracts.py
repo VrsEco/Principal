@@ -683,6 +683,14 @@ def contracts_party_manage(party_id: int | None = None):
     )
 
 
+def _select_contract_from_filtered_list(contracts: list, selected_contract_id: int | None):
+    if selected_contract_id:
+        selected_contract = next((item for item in contracts if item.id == selected_contract_id), None)
+        if selected_contract is not None:
+            return selected_contract
+    return contracts[0] if contracts else None
+
+
 @contracts_bp.route("/contracts/list", methods=["GET", "POST"])
 @permission_required("contracts", "view")
 def contracts_list():
@@ -702,12 +710,7 @@ def contracts_list():
     contracts = ContractService.list_contracts_filtered(company.id, filters)
     selected_contract = None
     if mode != "new":
-        if selected_contract_id:
-            selected_contract = ContractService.get_contract(company.id, selected_contract_id)
-            if not selected_contract:
-                abort(404)
-        elif contracts:
-            selected_contract = contracts[0]
+        selected_contract = _select_contract_from_filtered_list(contracts, selected_contract_id)
 
     if request.method == "POST":
         form_action = (request.form.get("form_action") or "").strip().lower()
@@ -785,6 +788,11 @@ def contracts_list():
         "parties": parties,
         "managers": managers,
         "filters": filters,
+        "contracts_list_filter_args": {
+            key: value
+            for key, value in filters.items()
+            if value not in (None, "")
+        },
         "kpis": ContractService.get_contracts_kpis(company.id),
         "contract_status_group": ContractService.get_contract_status_group,
         "contract_status_label": ContractService.get_contract_status_label,

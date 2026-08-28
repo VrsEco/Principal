@@ -45,6 +45,40 @@ def test_contracts_list_template_exposes_activate_contract_action_in_general_foo
     assert "Colocar em produção" in template
 
 
+def test_contracts_list_selects_first_filtered_contract_when_previous_selection_is_outside_filter():
+    filtered_contract = SimpleNamespace(id=22)
+
+    selected = contracts_route._select_contract_from_filtered_list([filtered_contract], selected_contract_id=11)
+
+    assert selected is filtered_contract
+
+
+def test_contracts_list_keeps_selection_when_it_remains_inside_filter():
+    first_contract = SimpleNamespace(id=11)
+    selected_contract = SimpleNamespace(id=22)
+
+    selected = contracts_route._select_contract_from_filtered_list(
+        [first_contract, selected_contract],
+        selected_contract_id=22,
+    )
+
+    assert selected is selected_contract
+
+
+def test_contracts_list_template_preserves_filters_and_does_not_pin_contract_on_apply():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "contracts"
+        / "contracts_list.html"
+    ).read_text(encoding="utf-8")
+
+    assert "**contracts_list_filter_args" in template
+    assert '<input type="hidden" name="contract_id" value="{{ selected_contract.id }}">' not in template
+    assert "('suspended', 'Suspenso')" in template
+
+
 def test_contracts_list_detail_context_does_not_load_contract_financial_terms(monkeypatch):
     company = SimpleNamespace(id=9)
     contract = SimpleNamespace(

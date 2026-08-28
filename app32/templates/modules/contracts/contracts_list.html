@@ -78,7 +78,7 @@
                                 {% set next_action = contract_next_action(item) %}
                                 <div class="cw-tree-node is-leaf is-analytic" data-contract-search-text="{{ (item.code ~ ' ' ~ item.title ~ ' ' ~ branch.party.code ~ ' ' ~ branch.party.name)|lower }}">
                                     <article class="cw-list-item {{ 'active' if selected_id == item.id else '' }}">
-                                        <a class="cw-list-item-line" href="/contracts/list?company_id={{ company_id }}&contract_id={{ item.id }}&tab={{ active_list_tab }}">
+                                        <a class="cw-list-item-line" href="{{ url_for('contracts.contracts_list', company_id=company_id, contract_id=item.id, tab=active_list_tab, **contracts_list_filter_args) }}">
                                             <div class="cw-tree-title-wrap">
                                                 <button type="button" class="cw-tree-toggle placeholder" tabindex="-1"></button>
                                                 <div class="cw-tree-title-content">
@@ -535,7 +535,7 @@
                 <nav class="contracts-tab-nav">
                     {% for tab in contracts_list_tabs %}
                     {% if selected_contract %}
-                    <a class="contracts-tab-card {{ 'active' if active_list_tab == tab.key else '' }}" href="/contracts/list?company_id={{ company_id }}&contract_id={{ selected_contract.id }}&tab={{ tab.key }}">
+                    <a class="contracts-tab-card {{ 'active' if active_list_tab == tab.key else '' }}" href="{{ url_for('contracts.contracts_list', company_id=company_id, contract_id=selected_contract.id, tab=tab.key, **contracts_list_filter_args) }}">
                         <span>{{ tab.label }}</span>
                     </a>
                     {% else %}
@@ -693,10 +693,21 @@ document.addEventListener('DOMContentLoaded', function () {
             const query = (searchInput.value || '').trim().toLowerCase();
             nodes.forEach((node) => {
                 const branchText = node.getAttribute('data-search-text') || '';
-                const contractTexts = Array.from(node.querySelectorAll('[data-contract-search-text]')).map((item) => item.getAttribute('data-contract-search-text') || '');
-                const match = !query || branchText.includes(query) || contractTexts.some((value) => value.includes(query));
-                node.hidden = !match;
+                const branchMatches = !query || branchText.includes(query);
+                const contractNodes = Array.from(node.querySelectorAll('[data-contract-search-text]'));
+                let hasMatchingContract = false;
+                contractNodes.forEach((contractNode) => {
+                    const contractText = contractNode.getAttribute('data-contract-search-text') || '';
+                    const contractMatches = branchMatches || contractText.includes(query);
+                    contractNode.hidden = !contractMatches;
+                    hasMatchingContract = hasMatchingContract || contractMatches;
+                });
+                node.hidden = !(branchMatches || hasMatchingContract);
+
+                const children = node.querySelector('[data-tree-children]');
+                if (children && query && hasMatchingContract) children.classList.remove('collapsed');
             });
+            if (!query) syncCollapsedTreeNodes();
         });
     }
 
@@ -808,8 +819,6 @@ document.addEventListener('DOMContentLoaded', function () {
         <input type="hidden" name="ui_refresh" value="1">
         {% if is_new_contract %}
         <input type="hidden" name="mode" value="new">
-        {% elif selected_contract %}
-        <input type="hidden" name="contract_id" value="{{ selected_contract.id }}">
         {% endif %}
         <div class="contracts-sidebar-header">
             <h3>Filtros</h3>
@@ -819,8 +828,8 @@ document.addEventListener('DOMContentLoaded', function () {
         <label><span>Status</span>
             <select name="status">
                 <option value="">Todos</option>
-                {% for status in ['draft', 'active', 'signed', 'implanting', 'inactive', 'closed'] %}
-                <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ status }}</option>
+                {% for status, label in [('draft', 'Rascunho'), ('active', 'Ativo'), ('signed', 'Assinado'), ('implanting', 'Em implantação'), ('inactive', 'Inativo'), ('suspended', 'Suspenso'), ('closed', 'Encerrado')] %}
+                <option value="{{ status }}" {% if filters.status == status %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
         </label>
