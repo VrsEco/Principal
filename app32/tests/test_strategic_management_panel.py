@@ -13,10 +13,12 @@ from services.strategic_management_panel_service import (
     GROUP_DEFINITIONS,
     _build_stability_gate_payload,
     _evaluate_indicator_status,
+    _goal_routines_payload,
     _indicator_required_stable_cycles,
     _indicator_stability_summary,
     _is_finalistic_profile,
     _resolve_period,
+    _select_effective_goal,
 )
 
 
@@ -504,3 +506,46 @@ def test_efficiency_analysis_has_company_aware_route_and_sidebar_link():
     assert "efficiency_analysis_company" in main_content
     assert "_can_access_company_efficiency" in main_content
     assert "main.efficiency_analysis_company" in sidebar_content
+
+
+def test_strategic_management_panel_template_exposes_current_goal_contract():
+    template_path = os.path.join(
+        os.path.dirname(__file__), "..", "templates", "modules", "processes", "strategic_management_panel.html"
+    )
+    with open(template_path, encoding="utf-8") as handle:
+        content = handle.read()
+
+    assert "Meta vigente" in content
+    assert "goal_period_start" in content
+    assert "goal_period_end" in content
+    assert "measurement_routines" in content
+    assert "Rotinas de medição" in content
+
+
+def test_effective_goal_selection_prioritizes_team_base_and_current_version():
+    from datetime import date
+
+    goals = [
+        SimpleNamespace(id=1, status="superseded", goal_kind="base", goal_scope="team", period_start=date(2026, 1, 1), period_end=date(2026, 6, 30), goal_date=None),
+        SimpleNamespace(id=2, status="active", goal_kind="base", goal_scope="team", period_start=date(2026, 7, 1), period_end=None, goal_date=None),
+        SimpleNamespace(id=3, status="active", goal_kind="campaign", goal_scope="team", period_start=date(2026, 8, 1), period_end=date(2026, 8, 31), goal_date=None),
+        SimpleNamespace(id=4, status="active", goal_kind="base", goal_scope="individual", period_start=date(2026, 8, 1), period_end=None, goal_date=None),
+    ]
+
+    assert _select_effective_goal(goals, date(2026, 8, 28)).id == 2
+    assert _select_effective_goal(goals, date(2026, 5, 31)).id == 1
+
+
+def test_goal_routines_payload_returns_all_links_and_legacy_fallback():
+    goal = SimpleNamespace(
+        routine_id=10,
+        routine_links=[
+            SimpleNamespace(routine_id=10, routine=SimpleNamespace(code="RT.1", name="Medição semanal")),
+            SimpleNamespace(routine_id=20, routine=SimpleNamespace(code="RT.2", name="Fechamento mensal")),
+        ],
+    )
+
+    payload = _goal_routines_payload(goal)
+
+    assert [item["id"] for item in payload] == [10, 20]
+    assert payload[1]["name"] == "Fechamento mensal"

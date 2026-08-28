@@ -20,6 +20,7 @@ from models import (
     db,
 )
 from services.efficiency_collaborators_service import build_team_efficiency_summary
+from services.indicator_service import goal_is_effective
 from services.structuring_journey_service import StructuringJourneyService
 from utils.indicator_ranges import normalize_performance_ranges
 
@@ -117,6 +118,7 @@ def build_strategic_management_panel(
         latest = latest_data.get(indicator.id)
         goal = goals.get(indicator.id)
         status = _evaluate_indicator_status(indicator, latest, goal)
+        goal_routines = _goal_routines_payload(goal)
         responsible = employees_by_id.get(indicator.responsible_id)
         project = projects_by_id.get(indicator.project_id) if indicator.project_id else None
         project_status = _project_execution_status(project, project_task_stats.get(indicator.project_id or 0))
@@ -134,7 +136,20 @@ def build_strategic_management_panel(
             "unit": indicator.unit or "",
             "polarity": indicator.polarity or "positive",
             "goal": _decimal_to_float(getattr(goal, "goal_value", None)),
-            "goal_date": _date_to_iso(getattr(goal, "goal_date", None)),
+            "goal_id": getattr(goal, "id", None),
+            "goal_name": getattr(goal, "name", None),
+            "goal_type": getattr(goal, "goal_type", None),
+            "goal_kind": getattr(goal, "goal_kind", None),
+            "goal_scope": getattr(goal, "goal_scope", None),
+            "goal_period_start": _date_to_iso(getattr(goal, "period_start", None)),
+            "goal_period_end": _date_to_iso(
+                getattr(goal, "period_end", None) or getattr(goal, "goal_date", None)
+            ),
+            "goal_date": _date_to_iso(
+                getattr(goal, "period_end", None) or getattr(goal, "goal_date", None)
+            ),
+            "routine_ids": [routine["id"] for routine in goal_routines],
+            "measurement_routines": goal_routines,
             "current_value": _decimal_to_float(getattr(latest, "measured_value", None)),
             "measured_date": _date_to_iso(getattr(latest, "measured_date", None)),
             "responsible": {
@@ -855,19 +870,64 @@ def _latest_indicator_data(company_id: int, indicator_ids: list[int], period: di
 def _latest_indicator_goals(company_id: int, indicator_ids: list[int], period: dict[str, Any]) -> dict[int, IndicatorGoal]:
     if not indicator_ids:
         return {}
-    end = date.fromisoformat(period["end"])
+    reference_date = date.fromisoformat(period["end"])
     rows = (
         IndicatorGoal.query.filter(IndicatorGoal.company_id == company_id)
         .filter(IndicatorGoal.indicator_id.in_(indicator_ids))
-        .filter(IndicatorGoal.status == "active")
-        .filter(db.or_(IndicatorGoal.goal_date.is_(None), IndicatorGoal.goal_date <= end))
-        .order_by(IndicatorGoal.indicator_id.asc(), IndicatorGoal.goal_date.desc().nullslast(), IndicatorGoal.id.desc())
+        .order_by(IndicatorGoal.indicator_id.asc(), IndicatorGoal.period_start.desc().nullslast(), IndicatorGoal.id.desc())
         .all()
     )
-    latest: dict[int, IndicatorGoal] = {}
+    grouped: dict[int, list[IndicatorGoal]] = defaultdict(list)
     for row in rows:
-        latest.setdefault(row.indicator_id, row)
-    return latest
+        grouped[int(row.indicator_id)].append(row)
+    return {
+        indicator_id: selected
+        for indicator_id, goals in grouped.items()
+        if (selected := _select_effective_goal(goals, reference_date)) is not None
+    }
+
+
+def _select_effective_goal(goals: list[IndicatorGoal], reference_date: date) -> IndicatorGoal | None:
+    """Seleciona a meta-base vigente, priorizando o escopo corporativo/equipe."""
+    effective = [goal for goal in goals if goal_is_effective(goal, reference_date)]
+    if not effective:
+        return None
+    return max(
+        effective,
+        key=lambda goal: (
+            1 if getattr(goal, "goal_kind", "base") == "base" else 0,
+            1 if getattr(goal, "goal_scope", "team") == "team" else 0,
+            getattr(goal, "period_start", None) or date.min,
+            getattr(goal, "id", 0) or 0,
+        ),
+    )
+
+
+def _goal_routines_payload(goal: IndicatorGoal | None) -> list[dict[str, Any]]:
+    if not goal:
+        return []
+    routines_by_id: dict[int, dict[str, Any]] = {}
+    for link in getattr(goal, "routine_links", []) or []:
+        routine = getattr(link, "routine", None)
+        routine_id = int(getattr(link, "routine_id", 0) or 0)
+        if not routine_id:
+            continue
+        routines_by_id[routine_id] = {
+            "id": routine_id,
+            "code": getattr(routine, "code", None),
+            "name": getattr(routine, "name", None) or f"Rotina {routine_id}",
+        }
+    legacy_id = getattr(goal, "routine_id", None)
+    if legacy_id and int(legacy_id) not in routines_by_id:
+        routines_by_id[int(legacy_id)] = {
+            "id": int(legacy_id),
+            "code": None,
+            "name": f"Rotina {legacy_id}",
+        }
+    return sorted(
+        routines_by_id.values(),
+        key=lambda item: ((item.get("code") or ""), item.get("name") or "", item["id"]),
+    )
 
 
 def _project_task_stats(company_id: int) -> dict[int, dict[str, Any]]:

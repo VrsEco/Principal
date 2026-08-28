@@ -460,6 +460,14 @@
     function badge(status) {
         return `<span class="smp-badge" style="--badge:${colorMap[status] || colorMap.gray};">${esc(status || 'gray')}</span>`;
     }
+    function formatDate(value) {
+        if (!value) return 'Em aberto';
+        const [year, month, day] = String(value).split('-');
+        return year && month && day ? `${day}/${month}/${year}` : String(value);
+    }
+    function goalTypeLabel(value) {
+        return ({single:'Única', weekly:'Semanal', monthly:'Mensal', bimonthly:'Bimestral', quarterly:'Trimestral', annual:'Anual'})[value] || value || '-';
+    }
     function openGroup(groupKey) {
         const group = (panel.groups || []).find(g => g.key === groupKey);
         if (!group) return;
@@ -583,11 +591,18 @@
     function openIndicator(item) {
         const project = item.project;
         const activities = item.activities || [];
+        const measurementRoutines = item.measurement_routines || [];
+        const routineLabel = measurementRoutines.length
+            ? measurementRoutines.map(routine => esc(`${routine.code ? routine.code + ' - ' : ''}${routine.name}`)).join('<br>')
+            : 'Sem rotina vinculada (coleta manual)';
         const body = `
             <div class="smp-detail-grid">
                 <div class="smp-detail-box"><span>Semáforo</span><strong>${badge(item.semaphore)} ${esc(item.situation)}</strong></div>
                 <div class="smp-detail-box"><span>Responsável</span><strong>${esc(item.responsible?.name || 'Não informado')}</strong></div>
-                <div class="smp-detail-box"><span>Meta / Prazo</span><strong>${esc(item.goal ?? '-')} ${esc(item.unit || '')} • ${esc(item.goal_date || '-')}</strong></div>
+                <div class="smp-detail-box"><span>Meta vigente</span><strong>${esc(item.goal ?? '-')} ${esc(item.unit || '')}</strong></div>
+                <div class="smp-detail-box"><span>Vigência</span><strong>${formatDate(item.goal_period_start)} — ${formatDate(item.goal_period_end)}</strong></div>
+                <div class="smp-detail-box"><span>Periodicidade / Escopo</span><strong>${esc(goalTypeLabel(item.goal_type))} • ${item.goal_scope === 'individual' ? 'Individual' : 'Equipe'}</strong></div>
+                <div class="smp-detail-box"><span>Rotinas de medição</span><strong>${routineLabel}</strong></div>
                 <div class="smp-detail-box"><span>Situação atual</span><strong>${esc(item.current_value ?? '-')} ${esc(item.unit || '')} • ${esc(item.measured_date || '-')}</strong></div>
                 <div class="smp-detail-box"><span>Projeto associado</span><strong>${project ? esc(project.code + ' - ' + project.name) : 'Sem projeto vinculado'}</strong></div>
                 <div class="smp-detail-box"><span>Status projeto/atividades</span><strong>${project?.execution ? esc(project.execution.label) : 'Sem ação definida'}</strong></div>
