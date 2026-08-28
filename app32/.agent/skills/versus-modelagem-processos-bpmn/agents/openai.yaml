@@ -1,0 +1,5 @@
+interface:
+  display_name: "Modelagem BPMN Versus"
+  short_description: "Modelar fluxos BPMN 2.0 pela Metodologia Versus"
+  default_prompt: "Use $versus-modelagem-processos-bpmn para modelar ou revisar um processo em BPMN 2.0 sem publicar antes do gate humano."
+

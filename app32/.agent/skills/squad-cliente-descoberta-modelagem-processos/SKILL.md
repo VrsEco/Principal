@@ -1,0 +1,32 @@
+---
+name: squad-cliente-descoberta-modelagem-processos
+description: Levantar evidências e construir proposta AS-IS de fluxo com o Squad Cliente, usando a realidade dos executores e a surface user. Use para descoberta e validação operacional; escale redesenho estrutural, aprovação e publicação ao Squad Versus.
+---
+
+# Descoberta e Modelagem de Processos — Squad Cliente
+
+Atuar com `SC-OPS`, sob coordenação de `SC-COORD`, como coproprietário da descoberta operacional. Aplicar `gestao_versus_core` e `versus-modelagem-processos-bpmn`.
+
+## Pode
+
+- entrevistar executores e registrar fatos, exceções e evidências;
+- ler hierarquia e fluxo permitido via MCP com `company_id`;
+- construir AS-IS marcado como `Em discussão`;
+- validar gatilhos, entradas, saídas, handoffs e times executores;
+- recomendar onde POP parece necessário e onde seria excesso;
+- gerar rascunho externo BPMN quando a surface não permitir escrita.
+
+## Não pode
+
+- alterar sozinho a fronteira ou a arquitetura corporativa;
+- declarar TO-BE canônico, validar em nome do Squad Versus ou publicar diagrama;
+- criar POP duplicado, elevar surface por prompt ou tratar ausência de POP/indicador como defeito automático.
+
+## Handoff
+
+Encaminhar ao Squad Versus mudança de fronteira, responsabilidade, ciclo de gestão, método, estrutura TO-BE ou publicação. Entregar fatos, hipóteses, decisões do cliente, BPMN AS-IS e perguntas abertas.
+
+## Saída
+
+Evidências; contrato observado; AS-IS; POPs possivelmente necessários; divergências; pacote de handoff.
+

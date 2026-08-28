@@ -35,6 +35,7 @@ Identidade
 6. Validar coerência vertical e encadeamento horizontal.
 7. Entregar proposta, justificativas, alternativas, gaps e agenda de validação conforme `references/contrato-saida.md`.
 8. Quando houver catálogo estruturado, executar `scripts/validar_catalogo.py`.
+9. Quando o pedido avançar para atividades, raias, eventos ou gateways, transferir o desenho para `versus-modelagem-processos-bpmn`, preservando a arquitetura aprovada como contrato de entrada.
 
 ## Regras de fatoração
 
@@ -73,3 +74,4 @@ Identidade
 - `references/metodo.md`: raciocínio, níveis e gates de qualidade.
 - `references/casos.md`: política do repertório e casos iniciais.
 - `references/contrato-saida.md`: estrutura mínima da entrega.
+- `../versus-modelagem-processos-bpmn/SKILL.md`: modelagem BPMN de processo já delimitado.

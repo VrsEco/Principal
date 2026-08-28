@@ -67,3 +67,7 @@ Escalar ou registrar ocorrência quando houver:
 4. recomendação ou ação controlada
 5. evidência
 6. necessidade de escalonamento, se houver
+
+## Modelagem de processos
+
+Para revisar ou redesenhar processos, aplicar `squad-versus-arquitetura-modelagem-processos` com o núcleo `versus-modelagem-processos-bpmn`: receber AS-IS, validar fronteira, desenhar TO-BE e manter rascunho/publicação sob gates humanos distintos.

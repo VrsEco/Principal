@@ -1,0 +1,5 @@
+interface:
+  display_name: "Processos — Squad Versus"
+  short_description: "Arquitetar e validar fluxos BPMN TO-BE"
+  default_prompt: "Use $squad-versus-arquitetura-modelagem-processos para revisar o AS-IS e propor um BPMN TO-BE governado, sem publicar antes do gate humano."
+

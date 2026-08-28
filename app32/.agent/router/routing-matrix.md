@@ -6,6 +6,9 @@
 |---|---|---|---|
 | Definir arquitetura, boundaries, refatoração estrutural | `gestao_versus_core` | `arquiteto.md` | `dba.md`, `backend_service.md` |
 | Criar, refatorar ou revisar arquitetura de processos empresariais | `versus-arquitetura-processos` | `arquiteto_processos.md` | `backend_service.md`, `qa_automation.md` |
+| Descobrir e validar AS-IS com executores do cliente | `squad-cliente-descoberta-modelagem-processos` | `SC-OPS` | `SC-COORD`, `arquiteto_processos.md` por handoff |
+| Modelar ou revisar fluxo BPMN 2.0 de processo delimitado | `versus-modelagem-processos-bpmn` | `arquiteto_processos.md` | `backend_service.md`, `qa_automation.md` |
+| Refatorar AS-IS, desenhar TO-BE ou validar método pelo Squad Versus | `squad-versus-arquitetura-modelagem-processos` | `business_architect_versus.md` | `arquiteto_processos.md`, `qa_automation.md` |
 | Execução longa com 3+ etapas | `aa-j-31-card-execution` (obrigatória) | depende do domínio | `qa_automation.md`, `arquiteto.md` |
 | Criar ou revisar workflow V3 | `workflow-factory-versus` | `backend_service.md` | `backend_api.md`, `qa_automation.md`, `ai_engineer.md` |
 | Investigar bug, drift, permissão, tenant, produção | `gestao-versus-incident-response` | `qa_automation.md` | `arquiteto.md`, `backend_api.md`, `dba.md` |

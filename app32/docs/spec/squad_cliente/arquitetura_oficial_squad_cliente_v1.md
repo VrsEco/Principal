@@ -326,3 +326,17 @@ Esta SPEC foi consolidada a partir de:
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_sc_ops_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_sc_adm_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\papers\paper_consolidacao_agentes_iniciais_squad_cliente_v1.md`
+
+---
+
+## 17. Descoberta e modelagem de processos
+
+O Squad Cliente usa `squad-cliente-descoberta-modelagem-processos` para levantar evidências e propor o AS-IS. `SC-OPS` conduz a descoberta e `SC-COORD` preserva o handoff.
+
+Autonomia oficial:
+
+- pode registrar realidade, exceções, gatilhos, saídas, executores e rascunho AS-IS;
+- pode recomendar necessidade de POP, sem impor POP a toda atividade;
+- não pode redefinir sozinho fronteira, TO-BE, método ou responsabilidade estrutural;
+- não pode publicar BPMN nem validar em nome do Squad Versus;
+- deve escalar redesenho e aprovação para `squad-versus-arquitetura-modelagem-processos`.

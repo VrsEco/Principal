@@ -71,3 +71,32 @@ O catálogo `references/cases.json` mantém casos com os estados `candidate`, `r
 4. `company_id` é obrigatório em catálogos operacionais;
 5. premissas, gaps e validações humanas aparecem separadamente.
 6. nomes são diretos e não agrupam entregas ou ciclos de gestão distintos.
+
+## 8. Extensão oficial para modelagem BPMN
+
+```text
+versus-arquitetura-processos
+→ processo delimitado
+→ versus-modelagem-processos-bpmn
+→ BPMN em discussão
+→ validação Cliente
+→ validação Versus
+→ aprovação humana
+→ publicação APP32
+```
+
+Regras oficiais:
+
+- responsável do processo é único; lanes representam times ou papéis executores;
+- rotina pertence ao disparo do processo;
+- POP é seletivo e pode estar vinculado a várias atividades;
+- o título do POP compartilhado lista código e nome de todas as atividades vinculadas, na ordem do fluxo;
+- indicadores devem ser mínimos e não nascem automaticamente por atividade;
+- limitações do vínculo legado `ProcessRoutine.bpmn_element_id` não autorizam duplicação de POP;
+- publicação de BPMN depende de gate humano explícito.
+
+Artefatos adicionais:
+
+- núcleo: `.agent/skills/versus-modelagem-processos-bpmn/`;
+- Squad Cliente: `.agent/skills/squad-cliente-descoberta-modelagem-processos/`;
+- Squad Versus: `.agent/skills/squad-versus-arquitetura-modelagem-processos/`.

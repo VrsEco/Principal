@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-07-19.2"
+    CURRENT_BUNDLE_VERSION = "2026-08-28.1"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -40,6 +40,7 @@ class InstructionRegistryService:
         "harness_operacional_cliente_v1": "SC-OPS",
         "harness_admfin_cliente_v1": "SC-ADM",
         "harness_coordenador_versus_v1": "SV-COORD",
+        "harness_business_architect_versus_v1": "SV-BUSINESS-ARCHITECT",
         "harness_coordenador_engenharia_v1": "SE-COORD",
     }
     _DOCS = {
@@ -680,7 +681,9 @@ class InstructionRegistryService:
         }
         per_agent = {
             "SC-COORD": "Coordenar sem inflar custo, preferindo resposta direta segura antes de qualquer roteamento.",
+            "SC-OPS": "Na descoberta de processos, levantar o AS-IS com evidências e escalar redesenho estrutural ao Squad Versus.",
             "SV-COORD": "Conduzir discovery consultivo antes de acionar especialidades do Squad Versus.",
+            "SV-BUSINESS-ARCHITECT": "Revisar AS-IS, desenhar TO-BE pela Metodologia Versus e manter publicação BPMN sob gate humano explícito.",
             "SE-COORD": "Fazer triagem técnica antes de qualquer mudança estrutural ou intervenção operacional.",
         }
         return [
@@ -720,6 +723,10 @@ class InstructionRegistryService:
                 rule=per_agent.get(agent_key, "Aplicar o escopo do harness ativo com economia de contexto."),
                 rationale="Especializa o agente sem replicar um prompt gigante por cliente.",
             ),
+            InstructionRule(
+                rule="Em modelagem de processos, separar responsável único do processo de times executores; tratar POP como seletivo e compartilhável, rotina como gatilho e indicadores como conjunto mínimo.",
+                rationale="Evita reproduzir no BPMN relações artificiais de um POP, rotina ou indicador para cada atividade.",
+            ),
         ]
 
     @classmethod
@@ -734,6 +741,10 @@ class InstructionRegistryService:
                     rule="Escalar para Squad Versus ou Engenharia quando o caso sair da operação local ou virar problema técnico.",
                     rationale="Evita atuação fora da surface correta.",
                 ),
+                InstructionRule(
+                    rule="Na modelagem de processos, entregar evidências e AS-IS ao Business Architect Versus; não publicar BPMN nem validar TO-BE em nome do Squad Versus.",
+                    rationale="Preserva a autonomia operacional do cliente e o gate metodológico da Versus.",
+                ),
             ]
         if runtime_profile == "squad_versus":
             return [
@@ -744,6 +755,10 @@ class InstructionRegistryService:
                 InstructionRule(
                     rule="Redirecionar ao Squad Cliente quando a demanda couber em operação local de menor privilégio.",
                     rationale="Evita inflar a surface admin sem necessidade.",
+                ),
+                InstructionRule(
+                    rule="Na modelagem de processos, receber o AS-IS do Squad Cliente, validar o TO-BE e publicar somente após confirmação humana explícita.",
+                    rationale="Mantém realidade, método e decisão humana em gates distintos.",
                 ),
             ]
         return [
@@ -765,8 +780,10 @@ class InstructionRegistryService:
         ]
         if runtime_profile == "squad_cliente":
             base.append("Não contornar surfaces privilegiadas, human gate ou restrições financeiras sensíveis.")
+            base.append("Não publicar BPMN, redefinir fronteira estrutural ou validar TO-BE em nome do Squad Versus.")
         elif runtime_profile == "squad_versus":
             base.append("Não usar surface admin como atalho para analytics read-only ou operação do cliente quando o menor privilégio bastar.")
+            base.append("Não duplicar POP compartilhado nem publicar BPMN sem confirmação humana explícita.")
         else:
             base.append("Não transformar surface ops em atalho para governança funcional, controladoria ou analytics executivo.")
         return base

@@ -108,3 +108,17 @@ Este harness é aderente quando:
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\agentes_oficiais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\harnesses_oficiais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\playbooks\squad_cliente\playbook_handoff_escalonamento_squad_cliente_v1.md`
+
+---
+
+## 11. Descoberta de processos BPMN
+
+Quando a demanda for mapear como o trabalho acontece, ativar `squad-cliente-descoberta-modelagem-processos` e usar `versus-modelagem-processos-bpmn` como núcleo metodológico.
+
+- coletar evidência antes de desenhar;
+- produzir AS-IS `Em discussão`;
+- separar responsável do processo de times executores;
+- tratar rotina como gatilho do processo;
+- recomendar POP somente quando houver necessidade real;
+- não publicar nem validar TO-BE em nome do Squad Versus;
+- encaminhar mudança estrutural ao `harness_business_architect_versus_v1`.

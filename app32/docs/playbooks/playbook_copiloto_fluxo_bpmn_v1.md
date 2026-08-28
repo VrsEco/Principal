@@ -17,7 +17,7 @@ Use este playbook quando o pedido envolver:
 
 1. carregar processo e diagrama no tenant correto, sempre validando `company_id`;
 2. analisar lanes, atividades e gateways;
-3. identificar POPs, FORM, CHECK, IA, IN, OUT e contratos já existentes;
+3. identificar POPs, FORM, CHECK, IA, IN, OUT e contratos já existentes, sem presumir que toda atividade exige POP;
 4. verificar assignment, SLA, completion rules e dados exigidos por atividade;
 5. propor artefatos, automação ou conexão por atividade;
 6. simular a execução da instância e os gates de conclusão;
@@ -79,7 +79,16 @@ Para cada elemento executável, registrar:
 
 ## 8. Checklist por tipo de artefato
 
-- `POP`: existe versão publicada e a evidência de leitura/aceite está definida?
+- `POP`: a atividade realmente exige instrução detalhada? Quando várias atividades usam a mesma instrução, existe uma única definição compartilhada e título com todos os códigos/nomes?
+
+## 8.1 Divisão de atuação entre Squads
+
+- Squad Cliente evidencia e valida o AS-IS; não publica nem redefine estrutura sozinho.
+- Squad Versus revisa fronteira, desenha TO-BE e valida o método.
+- Consultor ou responsável autorizado decide a publicação.
+- Engenharia corrige capability, cardinalidade, importação ou defeito do APP32.
+
+O responsável pelo processo não deve ser inferido das lanes. Lanes representam times ou papéis executores.
 - `FORM`: schema, validações, condicionais e destino dos dados estão definidos?
 - `CHECK`: itens obrigatórios, evidências, N/A e regra de reprovação estão definidos?
 - `IA`: AI Task/Gateway, tools, autonomia, threshold e fallback estão definidos?

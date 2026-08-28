@@ -1,0 +1,5 @@
+interface:
+  display_name: "Processos — Squad Cliente"
+  short_description: "Descobrir e validar o fluxo operacional AS-IS"
+  default_prompt: "Use $squad-cliente-descoberta-modelagem-processos para levantar o AS-IS com os executores e preparar o handoff ao Squad Versus."
+

@@ -65,3 +65,7 @@ Escalar ou registrar ocorrência quando houver:
 3. ação executada ou orientação
 4. resultado
 5. necessidade de escalonamento, se houver
+
+## Modelagem de processos
+
+Para mapear processos, aplicar `squad-cliente-descoberta-modelagem-processos`: levantar evidências e AS-IS, separar responsável do processo de times executores e recomendar POP apenas quando necessário. Não publicar BPMN nem validar TO-BE; encaminhar o pacote ao Squad Versus.
