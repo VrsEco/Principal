@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-08-28.3"
+    CURRENT_BUNDLE_VERSION = "2026-08-28.4"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -735,6 +735,14 @@ class InstructionRegistryService:
                 rule="Na maturação da modelagem, aplicar process-modeling-official-v1.0, diagnosticar seis dimensões e indicar estado, gate e próxima ação sem score percentual universal.",
                 rationale="Separa maturidade metodológica de completude cadastral, implantação e desempenho operacional.",
             ),
+            InstructionRule(
+                rule="Conduzir a maturação em uma dimensão por vez, com uma pergunta por mensagem e síntese após no máximo três perguntas; mostrar conclusão, contribuição estratégica, status e uma próxima ação.",
+                rationale="Mantém profundidade metodológica sem sobrecarregar o usuário.",
+            ),
+            InstructionRule(
+                rule="Pesquisar referências externas somente quando puderem alterar a decisão, separando fato, fonte, inferência e recomendação; usar MCP First para identidade, estratégia e estado interno.",
+                rationale="Conecta a modelagem aos objetivos com evidência e sem pesquisa ornamental.",
+            ),
         ]
 
     @classmethod
@@ -761,6 +769,10 @@ class InstructionRegistryService:
                     rule="Na jornada de maturação da modelagem, atuar em collecting_evidence, mapping_as_is e awaiting_client_validation; demais estados exigem handoff.",
                     rationale="Preserva o gate de realidade sem personificar a validação metodológica da Versus.",
                 ),
+                InstructionRule(
+                    rule="Na conversa de maturação, coletar apenas a evidência operacional faltante e encaminhar análise estratégica ou TO-BE ao Squad Versus.",
+                    rationale="Evita que o Squad Cliente ultrapasse sua autonomia metodológica.",
+                ),
             ]
         if runtime_profile == "squad_versus":
             return [
@@ -783,6 +795,10 @@ class InstructionRegistryService:
                 InstructionRule(
                     rule="Na jornada de maturação da modelagem, conduzir contracting_process, designing_to_be, completing_operational_model e awaiting_versus_validation pelo protocolo oficial.",
                     rationale="Concentra método, fronteira e TO-BE no Squad Versus sem contornar decisão do consultor.",
+                ),
+                InstructionRule(
+                    rule="Na conversa de maturação, confrontar a dimensão escolhida com Identidade Organizacional e Planejamento Estratégico e coordenar especialistas em uma única conversa.",
+                    rationale="Faz a modelagem contribuir para os objetivos sem expor complexidade interna ao usuário.",
                 ),
             ]
         return [

@@ -91,3 +91,14 @@ def test_process_modeling_maturity_protocol_is_versioned_and_complete() -> None:
     assert {"mapping_as_is", "designing_to_be", "published", "due_for_review", "blocked"} <= states
     assert protocol["maturity_contract"]["universal_percentage_score"] is False
     assert protocol["runtime_activation"]["agent_and_squad_guidance"] == "active"
+    executive_dimensions = {item["key"] for item in protocol["executive_view"]["dimensions"]}
+    assert executive_dimensions == {
+        "flow", "operational_artifacts", "indicators",
+        "routine", "resources", "accountability",
+    }
+    assert protocol["executive_view"]["fields_per_dimension"] == ["status", "main_gap", "next_action"]
+    conversation = protocol["conversation_contract"]
+    assert conversation["one_dimension_at_a_time"] is True
+    assert conversation["one_question_at_a_time"] is True
+    assert conversation["max_questions_before_synthesis"] == 3
+    assert conversation["new_agent_required"] is False

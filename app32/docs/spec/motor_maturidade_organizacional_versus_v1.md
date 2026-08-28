@@ -177,3 +177,30 @@ As dimensões produzem diagnóstico e gaps, não score percentual universal. A m
 ### 12.4 Artefato canônico
 
 O contrato detalhado fica em `.agent/skills/versus-modelagem-processos-bpmn/references/process-modeling-official-v1.0.json`. Esta decisão formaliza método e atuação dos Squads; persistência tenant-owned e automação da próxima ação no motor exigem recorte técnico próprio antes de produção.
+
+### 12.5 Visão executiva
+
+Por padrão, o usuário recebe uma única tela com seis dimensões:
+
+1. Fluxo;
+2. POP, Checklist e Formulários;
+3. Indicadores;
+4. Rotina;
+5. Recursos;
+6. Responsável e Time Executor.
+
+Cada dimensão exibe apenas `status`, `principal_gap` e `next_action`. Os estados permitidos são `not_defined`, `building`, `validating`, `validated` e `review_required`. Não há média percentual obrigatória. Evidências, critérios técnicos e histórico permanecem no segundo nível.
+
+### 12.6 Modo conversacional
+
+O coordenador dos Squads conduz uma dimensão por vez e:
+
+1. lê via MCP identidade, objetivos estratégicos, arquitetura, modelagem e evidências do tenant;
+2. escolhe o gap com maior impacto no objetivo do processo e na estratégia;
+3. faz uma pergunta por vez e no máximo três perguntas antes de sintetizar;
+4. pesquisa referências internas, mercado, normas ou legislação apenas quando puderem alterar a decisão;
+5. separa fato, fonte, inferência e recomendação;
+6. apresenta conclusão, contribuição estratégica e uma única próxima ação;
+7. solicita aprovação antes de alterar conteúdo canônico.
+
+O Squad Cliente conduz realidade e AS-IS; o Squad Versus confronta o desenho com Identidade, Planejamento Estratégico e método. Engenharia só participa quando houver gap técnico. Não se cria um novo agente neste recorte.

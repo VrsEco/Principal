@@ -50,3 +50,5 @@ Escalar para Engenharia quando faltar capability, houver cross-tenant, XML invá
 
 Usar `process-modeling-official-v1.0` para diagnosticar as seis dimensões e conduzir os estados de contrato, TO-BE, modelo operacional e validação Versus. Apresentar uma próxima ação e manter separados modelagem, implantação e desempenho operacional.
 
+No modo conversacional, cruzar a dimensão escolhida com Identidade Organizacional e Planejamento Estratégico. Coordenar especialistas sem expor múltiplas conversas, pesquisar apenas quando decisório e sintetizar após no máximo três perguntas.
+

@@ -14,6 +14,7 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 - `refatorar`: corrigir fluxo existente preservando rastreabilidade.
 - `preparar-importacao`: gerar BPMN 2.0 validado sem gravar estado operacional.
 - `maturar`: diagnosticar o estado da modelagem e recomendar a próxima ação pelo protocolo oficial.
+- `conversar-maturacao`: conduzir uma dimensão executiva por vez, conectando a modelagem à identidade e aos objetivos estratégicos.
 
 ## Sequência obrigatória
 
@@ -26,11 +27,14 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 7. Entregar diagnóstico, fluxo proposto, pendências e estado `Em discussão` até o gate humano.
 8. Gravar apenas rascunho autorizado via MCP; reler após a escrita. Publicar somente após confirmação humana explícita.
 9. Quando a demanda envolver maturação, aplicar `references/process-modeling-official-v1.0.json`, informar estado da jornada, dimensões com evidência/gaps e próxima ação recomendada.
+10. No modo conversacional, ler contexto interno via MCP, escolher a dimensão de maior impacto, fazer uma pergunta por vez e no máximo três antes de sintetizar conclusão, contribuição estratégica, status e uma próxima ação.
 
 ## Invariantes Versus
 
 - O processo possui um responsável; as raias representam times, papéis ou participantes executores.
 - SIPOC orienta a coerência do fluxo, sem relação automática `1:1` com atividades e sem exigir snapshot persistido.
+- A visão padrão de maturidade usa Fluxo; POP/Checklist/Formulários; Indicadores; Rotina; Recursos; Responsável/Time Executor. Detalhe técnico aparece sob demanda.
+- Pesquisa externa só ocorre quando puder alterar a decisão e deve separar fonte, fato, inferência e recomendação.
 - Saída é a entrega concreta; objetivo é o resultado pretendido. Todo caminho final produz saída intencional e recebedor identificado.
 - Rotina define periodicidade e gatilho do processo, não a repetição isolada de cada atividade.
 - POP existe somente quando risco, variabilidade, complexidade ou conformidade exigirem instrução detalhada.

@@ -1318,6 +1318,10 @@ O diagnóstico considera seis dimensões independentes: contrato, aderência à 
 
 O Squad Cliente responde pelas evidências e pela validação do AS-IS. O Squad Versus responde pelo método, pela fronteira e pelo TO-BE. Engenharia valida contrato técnico, XML, capabilities e importação quando necessário. O consultor decide; o executor autorizado publica. Depois da publicação, desvios entre modelo e execução podem abrir novo ciclo sem apagar a última versão vigente.
 
+A maturação deve ocorrer em conversa simples. Um coordenador lê via MCP a Identidade Organizacional, o Planejamento Estratégico, a arquitetura e a modelagem vigente; escolhe a dimensão com maior impacto; faz no máximo três perguntas antes de devolver uma conclusão; pesquisa fontes internas ou externas somente quando isso puder alterar a decisão; e encerra com uma próxima ação. Os especialistas entram por handoff, sem expor ao usuário uma sequência de agentes concorrentes.
+
+A visão padrão apresenta apenas seis dimensões: **Fluxo; POP/Checklist/Formulários; Indicadores; Rotina; Recursos; Responsável/Time Executor**. Cada uma mostra estado, principal gap e próxima ação. O diagnóstico metodológico completo permanece como segundo nível para o consultor e para auditoria.
+
 Três leituras permanecem separadas:
 
 - **maturidade da modelagem:** qualidade e coerência do modelo aprovado;

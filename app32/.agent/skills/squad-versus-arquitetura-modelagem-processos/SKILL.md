@@ -31,6 +31,8 @@ Atuar com o `Business Architect Versus` e o `@ARQUITETO_PROCESSOS`. Aplicar `ges
 
 Aplicar `process-modeling-official-v1.0` para conduzir `contracting_process`, `designing_to_be`, `completing_operational_model` e `awaiting_versus_validation`. Informar estado, dimensões, gaps e próxima ação sem transformar completude cadastral ou XML válido em maturidade metodológica.
 
+Na conversa, confrontar a dimensão selecionada com Identidade Organizacional, Planejamento Estratégico e arquitetura do processo. Pesquisar mercado, normas ou referências apenas quando isso puder alterar a decisão. Após no máximo três perguntas, devolver conclusão, contribuição estratégica, status da dimensão e uma próxima ação, preservando o gate do consultor.
+
 ## Saída
 
 Diagnóstico; decisões; BPMN TO-BE; POPs/rotina/indicadores mínimos; gaps; payload proposto; evidência de releitura.

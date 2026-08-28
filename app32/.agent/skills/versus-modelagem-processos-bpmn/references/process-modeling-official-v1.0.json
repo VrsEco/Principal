@@ -116,6 +116,37 @@
     "alteracao_regulatoria_ou_tecnologica",
     "revisao_periodica_definida"
   ],
+  "executive_view": {
+    "default": true,
+    "allowed_statuses": ["not_defined", "building", "validating", "validated", "review_required"],
+    "fields_per_dimension": ["status", "main_gap", "next_action"],
+    "dimensions": [
+      {"key": "flow", "label": "Fluxo", "strategic_question": "As atividades e saídas contribuem para os objetivos da empresa?"},
+      {"key": "operational_artifacts", "label": "POP / Checklist / Formulários", "strategic_question": "Os artefatos reduzem risco ou geram dados realmente necessários?"},
+      {"key": "indicators", "label": "Indicadores", "strategic_question": "Os poucos indicadores escolhidos mostram contribuição para o resultado estratégico?"},
+      {"key": "routine", "label": "Rotina", "strategic_question": "O gatilho e a frequência permitem alcançar as metas no tempo necessário?"},
+      {"key": "resources", "label": "Recursos", "strategic_question": "Existem recursos e capacidade para executar o processo conforme a estratégia?"},
+      {"key": "accountability", "label": "Responsável / Time Executor", "strategic_question": "Responsabilidade, competência e capacidade estão claramente definidas?"}
+    ],
+    "technical_detail": "on_demand"
+  },
+  "conversation_contract": {
+    "mode": "maturity_conversation",
+    "one_dimension_at_a_time": true,
+    "one_question_at_a_time": true,
+    "max_questions_before_synthesis": 3,
+    "required_context": ["organizational_identity", "strategic_objectives", "process_architecture", "current_modeling"],
+    "research_policy": {
+      "mcp_first_for_internal_state": true,
+      "external_search_only_if_decision_relevant": true,
+      "separate_fact_source_inference_recommendation": true,
+      "cite_external_sources": true
+    },
+    "response_contract": ["conclusion", "strategic_contribution", "dimension_status", "single_next_action"],
+    "canonical_change_requires_human_approval": true,
+    "coordinator_exposes_single_conversation": true,
+    "new_agent_required": false
+  },
   "runtime_activation": {
     "agent_and_squad_guidance": "active",
     "tenant_owned_persistence": "requires_technical_slice",

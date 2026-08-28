@@ -32,6 +32,8 @@ Encaminhar ao Squad Versus mudança de fronteira, responsabilidade, ciclo de ges
 
 No protocolo `process-modeling-official-v1.0`, o Squad Cliente conduz `collecting_evidence`, `mapping_as_is` e `awaiting_client_validation`. Pode diagnosticar gaps nas seis dimensões, mas não promover sozinho `designing_to_be`, `awaiting_versus_validation` ou publicação.
 
+Na conversa, perguntar uma coisa por vez, buscar apenas evidência operacional que falta e sintetizar após no máximo três perguntas. Relacionar a resposta ao objetivo do processo sem assumir sozinho interpretação estratégica ou TO-BE; quando isso for necessário, fazer handoff ao Squad Versus.
+
 ## Saída
 
 Evidências; contrato SIPOC observado; AS-IS; resultado das leituras progressiva e regressiva; POPs possivelmente necessários; divergências; pacote de handoff.

@@ -106,6 +106,17 @@ Usar `process-modeling-official-v1.0` quando a pergunta deixar de ser apenas “
 
 Apresentar separadamente maturidade da modelagem, maturidade da implantação e desempenho operacional.
 
+### Conversa padrão
+
+1. mostrar o quadro curto das seis dimensões;
+2. selecionar a dimensão com maior impacto estratégico e explicar o motivo em uma frase;
+3. perguntar uma coisa por vez;
+4. sintetizar após no máximo três perguntas;
+5. pesquisar somente se a referência puder mudar a decisão;
+6. encerrar com conclusão, contribuição estratégica, novo status e uma próxima ação.
+
+Não mostrar o diagnóstico técnico completo, a lista de agentes ou todos os gaps de uma vez. Abrir detalhes apenas por solicitação, divergência ou auditoria.
+
 ## 8. Checklist por tipo de artefato
 
 - `POP`: a atividade realmente exige instrução detalhada? Quando várias atividades usam a mesma instrução, existe uma única definição compartilhada e título com todos os códigos/nomes?

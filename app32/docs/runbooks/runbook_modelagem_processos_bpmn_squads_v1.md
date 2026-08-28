@@ -55,3 +55,12 @@ XML válido, renderização legível, checklist sem bloqueios, validações sem 
 
 Até existir persistência tenant-owned e next action MCP específicos, registrar o diagnóstico no pacote de modelagem e não declarar transição operacional automática no APP32.
 
+## 6. Rito conversacional
+
+1. carregar identidade, objetivos estratégicos, arquitetura e modelagem via MCP;
+2. exibir as seis dimensões com status, gap principal e próxima ação;
+3. escolher uma dimensão e fazer até três perguntas, uma por vez;
+4. consultar fonte externa apenas quando relevante para a decisão;
+5. registrar fato, fonte, inferência e recomendação separadamente;
+6. apresentar síntese curta e solicitar aprovação antes de qualquer escrita.
+

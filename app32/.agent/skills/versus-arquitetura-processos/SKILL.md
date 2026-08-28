@@ -37,6 +37,7 @@ Identidade
 8. Quando houver catálogo estruturado, executar `scripts/validar_catalogo.py`.
 9. Quando o pedido avançar para atividades, raias, eventos ou gateways, transferir o desenho para `versus-modelagem-processos-bpmn`, preservando a arquitetura aprovada como contrato de entrada.
 10. Quando a arquitetura estiver delimitada e a demanda for amadurecer o desenho, transferir para o modo `maturar` do protocolo `process-modeling-official-v1.0`.
+11. Preservar no handoff os vínculos da modelagem com Identidade Organizacional e Planejamento Estratégico para que a conversa avalie contribuição, capacidade e coerência.
 
 ## Regras de fatoração
 

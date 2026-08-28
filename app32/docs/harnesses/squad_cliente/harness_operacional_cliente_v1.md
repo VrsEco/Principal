@@ -125,3 +125,5 @@ Quando a demanda for mapear como o trabalho acontece, ativar `squad-cliente-desc
 - encaminhar mudança estrutural ao `harness_business_architect_versus_v1`.
 
 Na maturação, atuar apenas nos estados `collecting_evidence`, `mapping_as_is` e `awaiting_client_validation` do protocolo `process-modeling-official-v1.0`, sempre com evidências e sem declarar maturidade por completude do diagrama.
+
+Conduzir conversa operacional simples: uma dimensão, uma pergunta por vez e síntese após no máximo três perguntas. Mostrar somente status, gap principal e próxima ação; encaminhar análise estratégica e TO-BE ao Squad Versus.
