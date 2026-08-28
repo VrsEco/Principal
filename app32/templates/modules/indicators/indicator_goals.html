@@ -212,7 +212,7 @@
                                 {% endif %}
                             </div>
                         </td>
-                        <td style="padding: 1.15rem 1.5rem;" data-routine-id="{{ goal.routine_id or 'manual' }}">
+                        <td style="padding: 1.15rem 1.5rem;" data-routine-ids="{{ goal.routine_ids | join(',') }}">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     <span class="badge-vs badge-freq">
@@ -237,10 +237,14 @@
                                         {% else %}<i class="fas fa-hand-paper" title="Manual"></i> Manual{% endif %}
                                     </span>
                                 </div>
-                                {% if goal.routine_id and routines_map.get(goal.routine_id) %}
-                                    <span style="font-size: 0.65rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 4px;">
-                                        <i class="fas fa-sync" style="font-size: 0.6rem;"></i> {{ routines_map.get(goal.routine_id) }}
-                                    </span>
+                                {% if goal.routine_ids %}
+                                    {% for routine_id in goal.routine_ids %}
+                                        {% if routines_map.get(routine_id) %}
+                                        <span style="font-size: 0.65rem; color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 4px;">
+                                            <i class="fas fa-sync" style="font-size: 0.6rem;"></i> {{ routines_map.get(routine_id) }}
+                                        </span>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% else %}
                                     <span style="font-size: 0.65rem; color: var(--text-tertiary); font-weight: 600;">
                                         <i class="fas fa-exclamation-triangle" style="font-size: 0.6rem; color: var(--warning);"></i> Sem rotina (workflow)
@@ -471,10 +475,12 @@
                 </div>
 
                 <div class="field-group">
-                    <label class="field-label">Rotina Vinculada (Workflow de Medição)</label>
-                    <select name="routine_id" id="goal_routine_id" class="field-select">
-                        <option value="">-- Sem rotina (Tarefa manual) --</option>
+                    <label class="field-label">Rotinas Vinculadas (Workflows de Medição)</label>
+                    <select name="routine_ids" id="goal_routine_ids" class="field-select" multiple size="5" aria-describedby="goalRoutineHelp">
                     </select>
+                    <small id="goalRoutineHelp" style="display:block;margin-top:6px;color:var(--text-tertiary);">
+                        Selecione todas as rotinas que geram medições para esta meta. Sem seleção mantém a coleta manual.
+                    </small>
                 </div>
 
                 <div class="field-group" style="margin-bottom:0;">
@@ -531,14 +537,17 @@
 const routines = {{ routines_json | safe if routines_json else '[]' }};
 
 function initRoutineSelects() {
-    const selects = ['goal_routine_id', 'wizard_routine_select'];
+    const selects = ['goal_routine_ids', 'wizard_routine_select'];
     selects.forEach(sid => {
         const sel = document.getElementById(sid);
         if (sel) {
-            // Preservar primeira opção (nula)
-            const first = sel.options[0];
             sel.innerHTML = "";
-            sel.appendChild(first);
+            if (!sel.multiple) {
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.text = '-- Sem rotina (Tarefa manual) --';
+                sel.appendChild(emptyOption);
+            }
             routines.forEach(r => {
                 const opt = document.createElement('option');
                 opt.value = r.id;
@@ -546,6 +555,13 @@ function initRoutineSelects() {
                 sel.appendChild(opt);
             });
         }
+    });
+}
+
+function setGoalRoutineIds(routineIds) {
+    const selectedIds = new Set((routineIds || []).map(String));
+    document.querySelectorAll('#goal_routine_ids option').forEach(option => {
+        option.selected = selectedIds.has(option.value);
     });
 }
 
@@ -625,7 +641,7 @@ function openGoalModal() {
     document.getElementById('goal_scope_select').value = 'team';
     document.getElementById('goal_type_select').value = 'monthly';
     document.getElementById('goal_composition_mode').value = 'additive';
-    document.getElementById('goal_routine_id').value = "";
+    setGoalRoutineIds([]);
     document.getElementById('goal_collection_method').value = "manual";
     document.getElementById('currency_prefix').style.display = 'none';
     document.getElementById('goal_value_visual').style.paddingLeft = '1rem';
@@ -665,7 +681,7 @@ function openEditGoalModal(goal) {
         document.getElementById('range_yellow').value = goal.performance_ranges.yellow || 90;
         document.getElementById('range_green').value = goal.performance_ranges.green || 110;
     }
-    document.getElementById('goal_routine_id').value = goal.routine_id || "";
+    setGoalRoutineIds(goal.routine_ids || (goal.routine_id ? [goal.routine_id] : []));
     
     handleGoalKindChange();
     handleGoalScopeChange();
@@ -685,7 +701,7 @@ function openNewVersionModal(goal) {
     document.getElementById('goal_kind_select').value = 'base';
     document.getElementById('goal_type_select').value = goal.goal_type || 'monthly';
     document.getElementById('goal_collection_method').value = goal.collection_method || 'manual';
-    document.getElementById('goal_routine_id').value = goal.routine_id || "";
+    setGoalRoutineIds(goal.routine_ids || (goal.routine_id ? [goal.routine_id] : []));
     const rawVal = (goal.goal_value * 100).toFixed(0);
     document.getElementById('goal_value_visual').value = formatBR(rawVal);
     document.getElementById('goal_value_real').value = goal.goal_value;
@@ -731,7 +747,9 @@ document.getElementById('goalForm').addEventListener('submit', async (e) => {
     data.goal_value = parseFloat(document.getElementById('goal_value_real').value || 0);
     data.indicator_id = parseInt(data.indicator_id);
     data.company_id = parseInt(data.company_id);
-    data.routine_id = data.routine_id ? parseInt(data.routine_id) : null;
+    data.routine_ids = Array.from(document.getElementById('goal_routine_ids').selectedOptions)
+        .map(option => parseInt(option.value));
+    delete data.routine_id;
     data.goal_scope = data.goal_scope || 'team';
     data.responsible_id = data.goal_scope === 'individual' && data.responsible_id ? parseInt(data.responsible_id) : null;
     data.period_end = data.period_end || null;
@@ -822,14 +840,17 @@ function applyFilters() {
     const rows = document.querySelectorAll('tbody tr');
 
     rows.forEach(row => {
-        const routineCell = row.querySelector('[data-routine-id]');
-        const routineId = routineCell ? routineCell.getAttribute('data-routine-id') : 'manual';
+        const routineCell = row.querySelector('[data-routine-ids]');
+        const routineIds = routineCell
+            ? routineCell.getAttribute('data-routine-ids').split(',').filter(Boolean)
+            : [];
         const statusBadge = row.querySelector('.badge-vs:not(.badge-freq)');
         const isActive = statusBadge && statusBadge.classList.contains('badge-success-vs');
         const statusValue = isActive ? 'active' : 'inactive';
 
         let show = true;
-        if (routineFilter !== 'all' && routineFilter !== routineId) show = false;
+        if (routineFilter === 'manual' && routineIds.length > 0) show = false;
+        else if (routineFilter !== 'all' && routineFilter !== 'manual' && !routineIds.includes(routineFilter)) show = false;
         if (statusFilter !== 'all' && statusFilter !== statusValue) show = false;
 
         row.style.display = show ? '' : 'none';

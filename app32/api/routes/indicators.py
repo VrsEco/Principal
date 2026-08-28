@@ -464,8 +464,8 @@ def measurement_routines():
     if not company_id: return redirect(url_for('auth.portal'))
     
     from models import Routine, IndicatorGoal, ProcessInstance
-    active_goals = IndicatorGoal.query.filter_by(company_id=int(company_id), status='active').filter(IndicatorGoal.routine_id.isnot(None)).all()
-    routine_ids = set(g.routine_id for g in active_goals)
+    active_goals = IndicatorGoal.query.filter_by(company_id=int(company_id), status='active').all()
+    routine_ids = {routine_id for goal in active_goals for routine_id in goal.routine_ids}
     routines = sort_catalog_entries(
         Routine.query.filter(
             Routine.company_id == int(company_id),
@@ -476,7 +476,7 @@ def measurement_routines():
     # Para cada rotina, buscar instância de processo ativa
     routines_data = []
     for r in routines:
-        count = sum(1 for g in active_goals if g.routine_id == r.id)
+        count = sum(1 for goal in active_goals if r.id in goal.routine_ids)
         
         # Instância ativa: pending ou in_progress vinculada a esta routine
         active_instance = ProcessInstance.query.filter(

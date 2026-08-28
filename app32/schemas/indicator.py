@@ -44,6 +44,7 @@ class IndicatorGoalSchema(ma.SQLAlchemyAutoSchema):
     responsible_name = fields.Method("get_responsible_name", dump_only=True)
     performance_ranges = fields.Dict(allow_none=True)
     routine_id = fields.Integer(allow_none=True)
+    routine_ids = fields.List(fields.Integer(), dump_only=True)
     collection_method = fields.String(allow_none=True)
     
     records = fields.Nested(IndicatorDataSchema, many=True, dump_only=True)

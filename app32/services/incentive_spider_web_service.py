@@ -224,13 +224,13 @@ class IncentiveSpiderWebService:
             .filter(
                 Indicator.company_id == company_id,
                 IndicatorGoal.company_id == company_id,
-                IndicatorGoal.routine_id.isnot(None),
                 IndicatorGoal.status == "active",
             )
             .all()
         )
         for goal in indicator_goals:
-            add_link(f"ind_{goal.indicator_id}", f"routine_{goal.routine_id}", "meta alimentada por rotina", "indirect")
+            for routine_id in goal.routine_ids:
+                add_link(f"ind_{goal.indicator_id}", f"routine_{routine_id}", "meta alimentada por rotina", "indirect")
 
         for proj in projects:
             if proj.kpis and isinstance(proj.kpis, list):

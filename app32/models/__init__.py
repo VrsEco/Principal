@@ -16,7 +16,7 @@ from .user_employee_assignment import UserEmployeeAssignment
 
 # Planning & Strategic
 from .plan import Plan, PlanParticipant, PlanSectionStatus, PlanDriver, PlanImplantationData
-from .indicator import Indicator, IndicatorEntityLink, IndicatorGroup, IndicatorTree, IndicatorGoal, IndicatorData
+from .indicator import Indicator, IndicatorEntityLink, IndicatorGroup, IndicatorTree, IndicatorGoal, IndicatorGoalRoutine, IndicatorData
 from .okr_global import OKRGlobal, KeyResult
 from .okr_area import OKRArea, KeyResultArea
 
@@ -204,7 +204,7 @@ __all__ = [
     'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal',
     'StrategicTree', 'StrategicTreeNode', 'StrategicTreeContribution', 'StrategicTreeAuditEvent',
     'Plan', 'PlanParticipant', 'PlanSectionStatus', 'PlanDriver', 'PlanImplantationData',
-    'Indicator', 'IndicatorEntityLink', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorData',
+    'Indicator', 'IndicatorEntityLink', 'IndicatorGroup', 'IndicatorTree', 'IndicatorGoal', 'IndicatorGoalRoutine', 'IndicatorData',
     'OKRGlobal', 'KeyResult', 'OKRArea', 'KeyResultArea',
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'MacroProcessSipocSnapshot', 'MacroProcessSipocItem', 'MacroProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessActivityArtifactDefinition', 'ProcessActivityArtifactLink', 'ProcessActivityArtifactExecution', 'ProcessExecutionAssignment', 'CapabilityDimension', 'EnablingResource', 'EnablingCapability', 'ProcessEnablingResourceLink', 'ProcessCapabilityLink', 'ProcessExecutionPlan', 'ResourceCatalog', 'ProcessResourceLink', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',

@@ -124,6 +124,11 @@ class IndicatorGoalService:
         return Employee.query
 
     @staticmethod
+    def _routine_query():
+        from models import Routine
+        return Routine.query
+
+    @staticmethod
     def prepare_measurement_payload(company_id: int, data: Dict) -> Dict:
         """Normaliza o fato medido e impede cruzamento de indicador/consultor/tenant."""
         payload = dict(data)
@@ -164,6 +169,38 @@ class IndicatorGoalService:
             if not employee:
                 raise ValueError("Responsável não encontrado para a empresa ativa.")
         return indicator
+
+    @staticmethod
+    def sync_routines(goal: IndicatorGoal, company_id: int, routine_ids: Iterable[int]) -> None:
+        """Substitui os workflows da meta após validar todos no tenant ativo."""
+        from models import IndicatorGoalRoutine, Routine
+
+        normalized_ids = []
+        for raw_id in routine_ids or []:
+            try:
+                routine_id = int(raw_id)
+            except (TypeError, ValueError):
+                raise ValueError("Rotina vinculada inválida.")
+            if routine_id not in normalized_ids:
+                normalized_ids.append(routine_id)
+
+        if normalized_ids:
+            valid_ids = {
+                item.id
+                for item in IndicatorGoalService._routine_query()
+                .filter_by(company_id=company_id)
+                .filter(Routine.id.in_(normalized_ids))
+                .all()
+            }
+            if valid_ids != set(normalized_ids):
+                raise ValueError("Uma ou mais rotinas não pertencem à empresa ativa.")
+
+        goal.routine_links = [
+            IndicatorGoalRoutine(company_id=company_id, routine_id=routine_id)
+            for routine_id in normalized_ids
+        ]
+        # Compatibilidade temporária com integrações que ainda consomem o vínculo 1:1.
+        goal.routine_id = normalized_ids[0] if normalized_ids else None
 
     @staticmethod
     def apply_base_versioning(goal: IndicatorGoal, exclude_goal_id: Optional[int] = None) -> None:

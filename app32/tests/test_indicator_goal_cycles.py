@@ -299,6 +299,40 @@ def test_measurement_rejects_consultant_different_from_individual_goal(monkeypat
         )
 
 
+def test_goal_accepts_multiple_tenant_routines_and_keeps_legacy_primary(monkeypatch):
+    routines = [
+        SimpleNamespace(id=10, company_id=7),
+        SimpleNamespace(id=20, company_id=7),
+    ]
+    goal = SimpleNamespace(routine_links=[], routine_id=None)
+    monkeypatch.setattr(
+        IndicatorGoalService,
+        "_routine_query",
+        staticmethod(lambda: _FakeQuery(routines)),
+    )
+
+    IndicatorGoalService.sync_routines(goal, 7, [10, "20", 10])
+
+    assert [link.routine_id for link in goal.routine_links] == [10, 20]
+    assert all(link.company_id == 7 for link in goal.routine_links)
+    assert goal.routine_id == 10
+
+
+def test_goal_rejects_routine_from_another_tenant(monkeypatch):
+    import pytest
+
+    routines = [SimpleNamespace(id=99, company_id=8)]
+    goal = SimpleNamespace(routine_links=[], routine_id=None)
+    monkeypatch.setattr(
+        IndicatorGoalService,
+        "_routine_query",
+        staticmethod(lambda: _FakeQuery(routines)),
+    )
+
+    with pytest.raises(ValueError, match="empresa ativa"):
+        IndicatorGoalService.sync_routines(goal, 7, [99])
+
+
 def test_individual_goal_requires_consultant():
     import pytest
 

@@ -305,6 +305,10 @@ class IndicatorGoalListResource(Resource):
             if data.get('period_end') in ('', 'null', 'undefined'):
                 data['period_end'] = None
 
+            routine_ids = data.pop('routine_ids', None)
+            if routine_ids is None:
+                routine_ids = [data['routine_id']] if data.get('routine_id') else []
+
             from services.indicator_service import IndicatorGoalService
             IndicatorGoalService.validate_tenant_references(
                 int(cid),
@@ -325,6 +329,7 @@ class IndicatorGoalListResource(Resource):
             goal = indicator_goal_schema.load(data)
             IndicatorGoalService.validate_goal(goal)
             IndicatorGoalService.apply_base_versioning(goal)
+            IndicatorGoalService.sync_routines(goal, int(cid), routine_ids)
             db.session.add(goal)
             db.session.commit()
             return indicator_goal_schema.dump(goal), 201
@@ -360,6 +365,10 @@ class IndicatorGoalResource(Resource):
                 if data.get(nullable_date) in ('', 'null', 'undefined'):
                     data[nullable_date] = None
 
+            routine_ids = data.pop('routine_ids', None)
+            if routine_ids is None and 'routine_id' in data:
+                routine_ids = [data['routine_id']] if data.get('routine_id') else []
+
             from services.indicator_service import IndicatorGoalService
             responsible_id = data.get('responsible_id') if 'responsible_id' in data else goal.responsible_id
             IndicatorGoalService.validate_tenant_references(
@@ -369,6 +378,8 @@ class IndicatorGoalResource(Resource):
             )
             goal = indicator_goal_schema.load(data, instance=goal, partial=True)
             IndicatorGoalService.validate_goal(goal)
+            if routine_ids is not None:
+                IndicatorGoalService.sync_routines(goal, int(company_id), routine_ids)
             if goal.status != 'inactive':
                 IndicatorGoalService.apply_base_versioning(goal, exclude_goal_id=goal.id)
             db.session.commit()
@@ -573,6 +584,7 @@ class IndicatorWizardBatchResource(Resource):
     @permission_required('indicators', 'edit')
     def post(self):
         from models import IndicatorGoal
+        from services.indicator_service import IndicatorGoalService
         data = request.get_json()
         company_id = get_request_company_id()
         links = data.get('links', []) # List of {indicator_id: X, routine_id: Y}
@@ -587,7 +599,10 @@ class IndicatorWizardBatchResource(Resource):
             ).first()
             
             if active_goal:
-                active_goal.routine_id = link.get('routine_id')
+                routine_ids = link.get('routine_ids')
+                if routine_ids is None:
+                    routine_ids = [link['routine_id']] if link.get('routine_id') else []
+                IndicatorGoalService.sync_routines(active_goal, int(company_id), routine_ids)
                 updated_count += 1
         
         db.session.commit()

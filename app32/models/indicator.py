@@ -304,6 +304,20 @@ class IndicatorGoal(db.Model):
     # Relationships
     records = db.relationship("IndicatorData", backref="goal", lazy="dynamic", cascade="all, delete-orphan")
     responsible = db.relationship("Employee", foreign_keys=[responsible_id])
+    routine_links = db.relationship(
+        "IndicatorGoalRoutine",
+        back_populates="goal",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def routine_ids(self):
+        """IDs de todas as rotinas vinculadas, incluindo o legado 1:1."""
+        ids = [link.routine_id for link in self.routine_links]
+        if self.routine_id and self.routine_id not in ids:
+            ids.insert(0, self.routine_id)
+        return ids
 
     def to_dict(self):
         return {
@@ -324,9 +338,30 @@ class IndicatorGoal(db.Model):
             "responsible_id": self.responsible_id,
             "performance_ranges": self.performance_ranges,
             "routine_id": self.routine_id,
+            "routine_ids": self.routine_ids,
             "collection_method": self.collection_method,
             "notes": self.notes,
         }
+
+
+class IndicatorGoalRoutine(db.Model):
+    """Vínculo tenant-safe N:N entre uma meta e seus workflows de medição."""
+
+    __tablename__ = "indicator_goal_routines"
+    __table_args__ = (
+        db.UniqueConstraint("company_id", "goal_id", "routine_id", name="uq_indicator_goal_routine"),
+        {"extend_existing": True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    goal_id = db.Column(db.Integer, db.ForeignKey("indicator_goals.id", ondelete="CASCADE"), nullable=False, index=True)
+    routine_id = db.Column(db.Integer, db.ForeignKey("routines.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    goal = db.relationship("IndicatorGoal", back_populates="routine_links")
+    routine = db.relationship("Routine")
+
 
 class IndicatorData(db.Model):
     """Actual measured values (facts) for an indicator"""
