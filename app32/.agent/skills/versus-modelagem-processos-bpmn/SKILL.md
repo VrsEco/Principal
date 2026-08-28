@@ -35,6 +35,7 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 - SIPOC orienta a coerência do fluxo, sem relação automática `1:1` com atividades e sem exigir snapshot persistido.
 - A visão padrão de maturidade usa Fluxo; POP/Checklist/Formulários; Indicadores; Rotina; Recursos; Responsável/Time Executor. Detalhe técnico aparece sob demanda.
 - Pesquisa externa só ocorre quando puder alterar a decisão e deve separar fonte, fato, inferência e recomendação.
+- POP, FORM e CHECK usam os marcadores e cores canônicas do Modeler, mas maturidade depende de tipo/vínculo/configuração/versão e contribuição, nunca apenas da aparência.
 - Saída é a entrega concreta; objetivo é o resultado pretendido. Todo caminho final produz saída intencional e recebedor identificado.
 - Rotina define periodicidade e gatilho do processo, não a repetição isolada de cada atividade.
 - POP existe somente quando risco, variabilidade, complexidade ou conformidade exigirem instrução detalhada.
@@ -43,6 +44,7 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 - Código da atividade começa pelo código do processo e termina em sequência de dois dígitos.
 - Gateway representa decisão ou sincronização real, possui pergunta clara quando decisório e saídas rotuladas.
 - Nenhuma atividade fica órfã, desconectada ou tipada como automática sem contrato de execução compatível.
+- Personalização de cor do BPMN, tipo do artefato e estado de execução são camadas distintas; não inferir semântica apenas pela cor.
 
 ## APP32 e MCP
 

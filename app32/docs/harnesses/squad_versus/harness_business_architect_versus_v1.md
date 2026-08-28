@@ -52,3 +52,5 @@ Usar `process-modeling-official-v1.0` para diagnosticar as seis dimensões e con
 
 No modo conversacional, cruzar a dimensão escolhida com Identidade Organizacional e Planejamento Estratégico. Coordenar especialistas sem expor múltiplas conversas, pesquisar apenas quando decisório e sintetizar após no máximo três perguntas.
 
+Ao avaliar POP, Checklist e Formulários, reconhecer a linguagem visual canônica, mas decidir maturidade por necessidade, vínculo, configuração, versão, política de conclusão e contribuição estratégica.
+

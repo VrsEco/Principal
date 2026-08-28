@@ -24,7 +24,7 @@ def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
     payload = InstructionRegistryService.resolve_bundle(runtime_profile="squad_cliente", channel="stable")
     rules = " ".join(item["rule"] for item in payload["mandatory_rules"])
 
-    assert payload["bundle_version"] == "2026-08-28.4"
+    assert payload["bundle_version"] == "2026-08-28.5"
     assert "capability_not_available" in rules
     assert "502, 503 ou 504" in rules
     assert "Nunca repetir mutação automaticamente" in rules
@@ -34,6 +34,8 @@ def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
     assert "process-modeling-official-v1.0" in rules
     assert "no máximo três perguntas" in rules
     assert "Pesquisar referências externas" in rules
+    assert "POP azul" in rules
+    assert "completion policy" in rules
     assert payload["journey_guide"]["version"] == "structuring-journey-v2.1"
     state_keys = [item["key"] for item in payload["journey_guide"]["states"]]
     action_policy = {item["action"]: item["autonomy"] for item in payload["journey_guide"]["action_policy"]}
@@ -57,7 +59,9 @@ def test_instruction_bundle_specializes_process_modeling_by_squad() -> None:
     assert any("SIPOC nos dois sentidos" in item["rule"] for item in client["handoff_rules"])
     assert any("collecting_evidence" in item["rule"] for item in client["handoff_rules"])
     assert any("evidência operacional faltante" in item["rule"] for item in client["handoff_rules"])
+    assert any("não validar apenas pela cor" in item["rule"] for item in client["handoff_rules"])
     assert any("publicar somente" in item["rule"] for item in versus["handoff_rules"])
     assert any("objetivo ao gatilho pelo SIPOC" in item["rule"] for item in versus["handoff_rules"])
     assert any("completing_operational_model" in item["rule"] for item in versus["handoff_rules"])
     assert any("Identidade Organizacional" in item["rule"] for item in versus["handoff_rules"])
+    assert any("linguagem visual apenas como apoio" in item["rule"] for item in versus["handoff_rules"])

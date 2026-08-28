@@ -1322,6 +1322,8 @@ A maturação deve ocorrer em conversa simples. Um coordenador lê via MCP a Ide
 
 A visão padrão apresenta apenas seis dimensões: **Fluxo; POP/Checklist/Formulários; Indicadores; Rotina; Recursos; Responsável/Time Executor**. Cada uma mostra estado, principal gap e próxima ação. O diagnóstico metodológico completo permanece como segundo nível para o consultor e para auditoria.
 
+Na dimensão de POP, Checklist e Formulários, os agentes devem reconhecer a linguagem visual já implementada no Modeler: marcadores externos, rótulos e cores canônicas por tipo. A cor facilita leitura, mas não comprova existência, vínculo, configuração ou maturidade. A avaliação usa o tipo persistido, o vínculo com a atividade, a versão, a obrigatoriedade, a política de conclusão e a contribuição para o objetivo do processo.
+
 Três leituras permanecem separadas:
 
 - **maturidade da modelagem:** qualidade e coerência do modelo aprovado;

@@ -122,7 +122,22 @@
     "fields_per_dimension": ["status", "main_gap", "next_action"],
     "dimensions": [
       {"key": "flow", "label": "Fluxo", "strategic_question": "As atividades e saídas contribuem para os objetivos da empresa?"},
-      {"key": "operational_artifacts", "label": "POP / Checklist / Formulários", "strategic_question": "Os artefatos reduzem risco ou geram dados realmente necessários?"},
+      {
+        "key": "operational_artifacts",
+        "label": "POP / Checklist / Formulários",
+        "strategic_question": "Os artefatos reduzem risco ou geram dados realmente necessários?",
+        "maturity_checks": ["necessity", "activity_link", "configuration", "version", "required_flag", "completion_policy", "evidence", "strategic_contribution"],
+        "visual_contract": {
+          "semantic_truth": ["artifact_type", "bpmn_element_id", "definition_id", "version", "status"],
+          "color_is_reading_aid_only": true,
+          "marker_presence_does_not_prove_maturity": true,
+          "canonical_markers": {
+            "pop": {"label": "POP", "stroke": "#2563eb", "fill": "#eff6ff"},
+            "form": {"label": "FORM", "stroke": "#7c3aed", "fill": "#f5f3ff"},
+            "check": {"label": "CHECK", "stroke": "#059669", "fill": "#ecfdf5"}
+          }
+        }
+      },
       {"key": "indicators", "label": "Indicadores", "strategic_question": "Os poucos indicadores escolhidos mostram contribuição para o resultado estratégico?"},
       {"key": "routine", "label": "Rotina", "strategic_question": "O gatilho e a frequência permitem alcançar as metas no tempo necessário?"},
       {"key": "resources", "label": "Recursos", "strategic_question": "Existem recursos e capacidade para executar o processo conforme a estratégia?"},

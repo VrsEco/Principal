@@ -172,6 +172,14 @@ O card do Portal representa a atividade acionável. A instância fornece o conte
 - preservar no runtime a cor do modelo e representar execução por overlay, contorno ou badge.
 - validar no Book/PDF que todos os marcadores externos mantêm cor de contorno, preenchimento e rótulo correspondente ao tipo.
 
+Na maturação de POP/Checklist/Formulários:
+
+- usar `artifact_type`, vínculo, definição, versão e status como evidência canônica;
+- usar cor e marcador somente como apoio visual;
+- verificar necessidade, configuração, obrigatoriedade, completion policy, evidência e contribuição ao objetivo/risco;
+- classificar como gap divergência entre Modeler, editor, runtime ou Book;
+- não elevar a maturidade pela simples presença do marcador.
+
 ## 12. Detalhe do processo e artefatos
 
 - manter todos os acessos principais em uma única linha: SIPOC, Recursos, Fluxo, POP, Formulários, Checklists, IA, Rotinas e Indicadores;

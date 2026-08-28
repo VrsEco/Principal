@@ -34,6 +34,8 @@ No protocolo `process-modeling-official-v1.0`, o Squad Cliente conduz `collectin
 
 Na conversa, perguntar uma coisa por vez, buscar apenas evidência operacional que falta e sintetizar após no máximo três perguntas. Relacionar a resposta ao objetivo do processo sem assumir sozinho interpretação estratégica ou TO-BE; quando isso for necessário, fazer handoff ao Squad Versus.
 
+Para POP, Checklist e Formulários, reconhecer marcadores e cores do Modeler, mas validar com o executor o uso real, a atividade correta, a obrigatoriedade, a evidência e a capacidade de execução. Não declarar artefato maduro por estar desenhado ou colorido.
+
 ## Saída
 
 Evidências; contrato SIPOC observado; AS-IS; resultado das leituras progressiva e regressiva; POPs possivelmente necessários; divergências; pacote de handoff.

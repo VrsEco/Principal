@@ -36,6 +36,12 @@ Usar `userTask` para trabalho humano assistido por sistema, `manualTask` para tr
 
 O responsável pelo processo responde pelo resultado ponta a ponta e permanece metadado do processo. A lane informa quem executa a atividade. Uma lane “todos” só é válida quando não elimina accountability.
 
+## 3.1 Linguagem visual e artefatos
+
+POP, FORM e CHECK aparecem como artefatos externos ligados à atividade por associação BPMN. Usar tipo, vínculo e definição persistidos como verdade; usar cor e marcador apenas para leitura. Cores canônicas: POP azul `#2563eb`, FORM violeta `#7c3aed` e CHECK verde `#059669`.
+
+Na maturação, verificar necessidade, atividade vinculada, configuração, versão, obrigatoriedade, política de conclusão, evidência e contribuição estratégica. Não considerar marcador colorido como prova de maturidade. Personalização de cor do BPMN e status da execução são camadas distintas.
+
 ## 4. POP seletivo e compartilhado
 
 Criar POP quando risco, conformidade, qualidade, baixa frequência, treinamento ou alta variabilidade exigirem passos prescritos. Não criar POP para atividade autoexplicativa e de baixo impacto.

@@ -33,6 +33,8 @@ Aplicar `process-modeling-official-v1.0` para conduzir `contracting_process`, `d
 
 Na conversa, confrontar a dimensão selecionada com Identidade Organizacional, Planejamento Estratégico e arquitetura do processo. Pesquisar mercado, normas ou referências apenas quando isso puder alterar a decisão. Após no máximo três perguntas, devolver conclusão, contribuição estratégica, status da dimensão e uma próxima ação, preservando o gate do consultor.
 
+Para POP, Checklist e Formulários, validar necessidade, risco/objetivo atendido, vínculo, versão, obrigatoriedade e política de conclusão. Usar a linguagem visual canônica do Modeler sem tratar cor ou marcador como evidência suficiente.
+
 ## Saída
 
 Diagnóstico; decisões; BPMN TO-BE; POPs/rotina/indicadores mínimos; gaps; payload proposto; evidência de releitura.

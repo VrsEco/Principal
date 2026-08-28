@@ -73,3 +73,5 @@ Para mapear processos, aplicar `squad-cliente-descoberta-modelagem-processos`: l
 Na maturação da modelagem, aplicar `process-modeling-official-v1.0` somente nos estados de coleta, AS-IS e validação Cliente. Informar evidências, gaps e handoff; não declarar score universal nem avançar gates do Squad Versus, consultor ou publicação.
 
 Conduzir uma dimensão por vez, com uma pergunta por mensagem e síntese em até três perguntas. Não sobrecarregar o usuário com relatório completo; devolver status, gap e próxima ação.
+
+No Modeler, cor e marcador ajudam a localizar POP, FORM e CHECK, mas não provam maturidade. Validar com o executor uso real, vínculo, obrigatoriedade e evidência.

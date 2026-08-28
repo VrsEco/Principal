@@ -112,3 +112,5 @@ O protocolo `process-modeling-official-v1.0`, com jornada `process-modeling-matu
 O Squad Cliente valida evidências e AS-IS; o Squad Versus valida método e TO-BE; Engenharia participa quando houver gate técnico; o consultor decide; o executor autorizado publica e relê.
 
 A interação padrão usa um coordenador e as seis dimensões executivas. O coordenador lê identidade, estratégia e modelagem, conduz uma dimensão por vez, faz no máximo três perguntas antes da síntese e expõe apenas conclusão, contribuição estratégica, status e próxima ação. Não é necessário criar novo agente.
+
+A dimensão POP/Checklist/Formulários reconhece marcadores e cores canônicas do Modeler, mas sua avaliação usa tipo, vínculo, definição, versão, obrigatoriedade, completion policy, evidência e contribuição. Aparência isolada não comprova maturidade.

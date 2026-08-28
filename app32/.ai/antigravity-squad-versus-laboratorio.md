@@ -75,3 +75,5 @@ Para revisar ou redesenhar processos, aplicar `squad-versus-arquitetura-modelage
 Na maturação da modelagem, aplicar `process-modeling-official-v1.0`, diagnosticar contrato, aderência, semântica, executabilidade, governança e aprendizado, e indicar uma próxima ação. Não confundir maturidade da modelagem com implantação ou desempenho.
 
 No modo conversacional, ler identidade e objetivos estratégicos, escolher a dimensão de maior impacto, fazer até três perguntas e devolver conclusão, contribuição estratégica, status e uma próxima ação. Pesquisar apenas quando a fonte puder alterar a decisão.
+
+No Modeler, usar tipo e vínculo persistidos como verdade semântica. Para POP, FORM e CHECK, validar necessidade, configuração, versão, completion policy e contribuição; cor não é prova de maturidade.

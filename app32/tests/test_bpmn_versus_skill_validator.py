@@ -102,3 +102,8 @@ def test_process_modeling_maturity_protocol_is_versioned_and_complete() -> None:
     assert conversation["one_question_at_a_time"] is True
     assert conversation["max_questions_before_synthesis"] == 3
     assert conversation["new_agent_required"] is False
+    artifacts = next(item for item in protocol["executive_view"]["dimensions"] if item["key"] == "operational_artifacts")
+    assert artifacts["visual_contract"]["color_is_reading_aid_only"] is True
+    assert artifacts["visual_contract"]["canonical_markers"]["pop"]["stroke"] == "#2563eb"
+    assert artifacts["visual_contract"]["canonical_markers"]["form"]["stroke"] == "#7c3aed"
+    assert artifacts["visual_contract"]["canonical_markers"]["check"]["stroke"] == "#059669"

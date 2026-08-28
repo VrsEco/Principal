@@ -64,3 +64,12 @@ Até existir persistência tenant-owned e next action MCP específicos, registra
 5. registrar fato, fonte, inferência e recomendação separadamente;
 6. apresentar síntese curta e solicitar aprovação antes de qualquer escrita.
 
+## 7. Verificação visual e semântica dos artefatos
+
+1. confirmar `artifact_type`, definição, versão e vínculo com `bpmn_element_id`;
+2. conferir marcador/rótulo e cores canônicas no Modeler: POP azul, FORM violeta e CHECK verde;
+3. abrir o editor especializado e conferir configuração e obrigatoriedade;
+4. validar completion policy e evidência esperada;
+5. conferir preservação no XML, reabertura e Book quando aplicável;
+6. tratar cor personalizada e overlay de execução como camadas separadas.
+

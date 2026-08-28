@@ -191,6 +191,8 @@ Por padrão, o usuário recebe uma única tela com seis dimensões:
 
 Cada dimensão exibe apenas `status`, `principal_gap` e `next_action`. Os estados permitidos são `not_defined`, `building`, `validating`, `validated` e `review_required`. Não há média percentual obrigatória. Evidências, critérios técnicos e histórico permanecem no segundo nível.
 
+Para `POP / Checklist / Formulários`, o status não deriva da cor ou da presença do marcador. Exige análise de necessidade, vínculo com atividade, configuração, versão, obrigatoriedade, política de conclusão, evidência e contribuição para objetivo ou risco do processo.
+
 ### 12.6 Modo conversacional
 
 O coordenador dos Squads conduz uma dimensão por vez e:

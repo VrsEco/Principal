@@ -137,14 +137,14 @@ E as capabilities:
 
 O APP32 passa a reconhecer seis tipos canônicos de artefato associados a elementos executáveis do BPMN:
 
-| Código | Nome | Cor semântica | Finalidade |
+| Código | Nome | Cor canônica no Modeler | Finalidade |
 |---|---|---|---|
-| `pop` | POP | azul | instrução operacional, mídia e conhecimento |
-| `form` | FORM | violeta | coleta estruturada de dados |
-| `check` | CHECK | verde | verificação, evidência e aceite item a item |
-| `ai` | IA | âmbar | task/gateway executado ou assistido pelo Sapiens |
-| `data_in` | IN | vermelho | conexão de dados recebidos |
-| `data_out` | OUT | vermelho escuro | conexão de dados enviados |
+| `pop` | POP | azul `#2563eb` / fundo `#eff6ff` | instrução operacional, mídia e conhecimento |
+| `form` | FORM | violeta `#7c3aed` / fundo `#f5f3ff` | coleta estruturada de dados |
+| `check` | CHECK | verde `#059669` / fundo `#ecfdf5` | verificação, evidência e aceite item a item |
+| `ai` | IA | laranja `#ea580c` / fundo `#fff7ed` | task/gateway executado ou assistido pelo Sapiens |
+| `data_in` | IN | ciano `#0891b2` / fundo `#ecfeff` | conexão de dados recebidos |
+| `data_out` | OUT | rosa `#e11d48` / fundo `#fff1f2` | conexão de dados enviados |
 
 Regras oficiais:
 
@@ -154,6 +154,15 @@ Regras oficiais:
 - o vínculo não altera a semântica nativa do elemento BPMN;
 - criar o marcador não abre nem redireciona para o editor; dois cliques no artefato abrem diretamente seu editor especializado;
 - POP, FORM e CHECK podem coexistir com IA, IN e OUT na mesma atividade.
+
+### 10.1 Contrato visual para documentos e Squads
+
+- o tipo persistido e o vínculo com `bpmn_element_id` são a verdade semântica; cor, rótulo e ícone são linguagem de leitura;
+- presença de marcador colorido não comprova que o artefato esteja configurado, versionado, publicado ou adequado;
+- personalização de cor do elemento BPMN não altera o tipo do artefato;
+- estado de execução usa overlay, contorno ou badge e não sobrescreve a cor canônica;
+- os Squads avaliam necessidade, atividade vinculada, definição, versão, obrigatoriedade, completion policy, evidência e contribuição para objetivo/risco;
+- o Squad Cliente valida como o artefato é usado; o Squad Versus valida sua necessidade e coerência metodológica; Engenharia trata divergência entre XML, vínculo, editor, runtime e Book.
 
 ## 11. Modelo canônico de definição e vínculo
 

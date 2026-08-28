@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-08-28.4"
+    CURRENT_BUNDLE_VERSION = "2026-08-28.5"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -743,6 +743,14 @@ class InstructionRegistryService:
                 rule="Pesquisar referências externas somente quando puderem alterar a decisão, separando fato, fonte, inferência e recomendação; usar MCP First para identidade, estratégia e estado interno.",
                 rationale="Conecta a modelagem aos objetivos com evidência e sem pesquisa ornamental.",
             ),
+            InstructionRule(
+                rule="No Modeler, reconhecer POP azul, FORM violeta e CHECK verde, usando tipo e vínculo persistidos como verdade; cor ou marcador isolado não comprova maturidade.",
+                rationale="Preserva a linguagem visual sem confundir apresentação com contrato semântico.",
+            ),
+            InstructionRule(
+                rule="Avaliar POP, Checklist e Formulários por necessidade, atividade vinculada, configuração, versão, obrigatoriedade, completion policy, evidência e contribuição ao objetivo ou risco.",
+                rationale="Mantém a dimensão executiva curta e metodologicamente completa.",
+            ),
         ]
 
     @classmethod
@@ -773,6 +781,10 @@ class InstructionRegistryService:
                     rule="Na conversa de maturação, coletar apenas a evidência operacional faltante e encaminhar análise estratégica ou TO-BE ao Squad Versus.",
                     rationale="Evita que o Squad Cliente ultrapasse sua autonomia metodológica.",
                 ),
+                InstructionRule(
+                    rule="Para POP, Checklist e Formulários, confirmar com executores uso real, atividade vinculada, obrigatoriedade e evidência; não validar apenas pela cor.",
+                    rationale="Faz o Squad Cliente validar a operação, não a aparência do desenho.",
+                ),
             ]
         if runtime_profile == "squad_versus":
             return [
@@ -799,6 +811,10 @@ class InstructionRegistryService:
                 InstructionRule(
                     rule="Na conversa de maturação, confrontar a dimensão escolhida com Identidade Organizacional e Planejamento Estratégico e coordenar especialistas em uma única conversa.",
                     rationale="Faz a modelagem contribuir para os objetivos sem expor complexidade interna ao usuário.",
+                ),
+                InstructionRule(
+                    rule="Para POP, Checklist e Formulários, validar necessidade, vínculo, versão, política de conclusão e contribuição estratégica, usando a linguagem visual apenas como apoio.",
+                    rationale="Mantém o gate metodológico no Squad Versus.",
                 ),
             ]
         return [
