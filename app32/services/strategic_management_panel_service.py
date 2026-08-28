@@ -85,7 +85,7 @@ def build_strategic_management_panel(
     )
     indicator_ids = [indicator.id for indicator in indicators]
     latest_data = _latest_indicator_data(company_id, indicator_ids, period_context)
-    goals = _latest_indicator_goals(company_id, indicator_ids, period_context)
+    goal_contexts = _indicator_goal_contexts(company_id, indicator_ids, period_context)
 
     projects_by_id = {
         project.id: project
@@ -116,9 +116,15 @@ def build_strategic_management_panel(
     for indicator in indicators:
         group_key = _classify_indicator(indicator)
         latest = latest_data.get(indicator.id)
-        goal = goals.get(indicator.id)
-        status = _evaluate_indicator_status(indicator, latest, goal)
-        goal_routines = _goal_routines_payload(goal)
+        goal_context = goal_contexts.get(indicator.id) or {}
+        goal = goal_context.get("reference_goal")
+        status = _evaluate_indicator_status(
+            indicator,
+            latest,
+            goal if goal_context.get("status") == "active" else None,
+            target_value=goal_context.get("target_value") if goal_context.get("status") == "active" else None,
+        )
+        goal_routines = goal_context.get("measurement_routines") or []
         responsible = employees_by_id.get(indicator.responsible_id)
         project = projects_by_id.get(indicator.project_id) if indicator.project_id else None
         project_status = _project_execution_status(project, project_task_stats.get(indicator.project_id or 0))
@@ -135,19 +141,18 @@ def build_strategic_management_panel(
             "objective": indicator.description or indicator.notes or "Objetivo não informado no cadastro do indicador.",
             "unit": indicator.unit or "",
             "polarity": indicator.polarity or "positive",
-            "goal": _decimal_to_float(getattr(goal, "goal_value", None)),
+            "goal": _decimal_to_float(goal_context.get("target_value")),
+            "goal_status": goal_context.get("status"),
             "goal_id": getattr(goal, "id", None),
-            "goal_name": getattr(goal, "name", None),
-            "goal_type": getattr(goal, "goal_type", None),
+            "goal_ids": goal_context.get("goal_ids") or [],
+            "goal_name": goal_context.get("name"),
+            "goal_type": goal_context.get("goal_type"),
             "goal_kind": getattr(goal, "goal_kind", None),
-            "goal_scope": getattr(goal, "goal_scope", None),
-            "goal_period_start": _date_to_iso(getattr(goal, "period_start", None)),
-            "goal_period_end": _date_to_iso(
-                getattr(goal, "period_end", None) or getattr(goal, "goal_date", None)
-            ),
-            "goal_date": _date_to_iso(
-                getattr(goal, "period_end", None) or getattr(goal, "goal_date", None)
-            ),
+            "goal_scope": goal_context.get("goal_scope"),
+            "goal_responsible_count": goal_context.get("responsible_count", 0),
+            "goal_period_start": _date_to_iso(goal_context.get("period_start")),
+            "goal_period_end": _date_to_iso(goal_context.get("period_end")),
+            "goal_date": _date_to_iso(goal_context.get("period_end")),
             "routine_ids": [routine["id"] for routine in goal_routines],
             "measurement_routines": goal_routines,
             "current_value": _decimal_to_float(getattr(latest, "measured_value", None)),
@@ -868,6 +873,15 @@ def _latest_indicator_data(company_id: int, indicator_ids: list[int], period: di
 
 
 def _latest_indicator_goals(company_id: int, indicator_ids: list[int], period: dict[str, Any]) -> dict[int, IndicatorGoal]:
+    """Compatibilidade: retorna apenas a meta de referência do contexto consolidado."""
+    return {
+        indicator_id: context["reference_goal"]
+        for indicator_id, context in _indicator_goal_contexts(company_id, indicator_ids, period).items()
+        if context.get("status") == "active" and context.get("reference_goal") is not None
+    }
+
+
+def _indicator_goal_contexts(company_id: int, indicator_ids: list[int], period: dict[str, Any]) -> dict[int, dict[str, Any]]:
     if not indicator_ids:
         return {}
     reference_date = date.fromisoformat(period["end"])
@@ -880,10 +894,80 @@ def _latest_indicator_goals(company_id: int, indicator_ids: list[int], period: d
     grouped: dict[int, list[IndicatorGoal]] = defaultdict(list)
     for row in rows:
         grouped[int(row.indicator_id)].append(row)
+    contexts = {}
+    for indicator_id, goals in grouped.items():
+        context = _build_panel_goal_context(goals, reference_date)
+        if context:
+            contexts[indicator_id] = context
+    return contexts
+
+
+def _build_panel_goal_context(goals: list[IndicatorGoal], reference_date: date) -> dict[str, Any] | None:
+    effective = [goal for goal in goals if goal_is_effective(goal, reference_date)]
+    status = "active"
+    if not effective:
+        upcoming_starts = sorted({
+            goal.period_start
+            for goal in goals
+            if getattr(goal, "goal_kind", "base") == "base"
+            and getattr(goal, "period_start", None)
+            and goal.period_start > reference_date
+            and getattr(goal, "status", None) != "cancelled"
+        })
+        if not upcoming_starts:
+            return None
+        reference_date = upcoming_starts[0]
+        effective = [goal for goal in goals if goal_is_effective(goal, reference_date)]
+        status = "scheduled"
+
+    base_goals = [goal for goal in effective if getattr(goal, "goal_kind", "base") == "base"]
+    if not base_goals:
+        return None
+    team_goals = [goal for goal in base_goals if getattr(goal, "goal_scope", "team") == "team"]
+    if team_goals:
+        contributing = [max(team_goals, key=lambda goal: (goal.period_start or date.min, goal.id or 0))]
+        goal_scope = "team"
+    else:
+        latest_by_responsible: dict[int, IndicatorGoal] = {}
+        for goal in base_goals:
+            responsible_id = int(getattr(goal, "responsible_id", 0) or 0)
+            if not responsible_id:
+                continue
+            current = latest_by_responsible.get(responsible_id)
+            if current is None or (goal.period_start or date.min, goal.id or 0) > (
+                current.period_start or date.min,
+                current.id or 0,
+            ):
+                latest_by_responsible[responsible_id] = goal
+        contributing = list(latest_by_responsible.values())
+        goal_scope = "individual"
+    if not contributing:
+        return None
+
+    target_value = sum((Decimal(str(goal.goal_value)) for goal in contributing), Decimal("0"))
+    goal_types = {getattr(goal, "goal_type", None) for goal in contributing}
+    starts = [goal.period_start for goal in contributing if goal.period_start]
+    ends = [goal.period_end or goal.goal_date for goal in contributing]
+    common_end = ends[0] if ends and all(end == ends[0] for end in ends) else None
+    reference_goal = sorted(
+        contributing,
+        key=lambda goal: (getattr(getattr(goal, "responsible", None), "name", "") or "", goal.id or 0),
+    )[0]
+    routines = _goals_routines_payload(contributing)
     return {
-        indicator_id: selected
-        for indicator_id, goals in grouped.items()
-        if (selected := _select_effective_goal(goals, reference_date)) is not None
+        "status": status,
+        "reference_goal": reference_goal,
+        "goal_ids": [int(goal.id) for goal in contributing],
+        "name": getattr(reference_goal, "name", None) or (
+            f"Meta consolidada de {len(contributing)} consultores" if goal_scope == "individual" else None
+        ),
+        "target_value": target_value,
+        "goal_scope": goal_scope,
+        "responsible_count": len(contributing) if goal_scope == "individual" else 0,
+        "goal_type": next(iter(goal_types)) if len(goal_types) == 1 else "composed",
+        "period_start": min(starts) if starts else None,
+        "period_end": common_end,
+        "measurement_routines": routines,
     }
 
 
@@ -924,6 +1008,17 @@ def _goal_routines_payload(goal: IndicatorGoal | None) -> list[dict[str, Any]]:
             "code": None,
             "name": f"Rotina {legacy_id}",
         }
+    return sorted(
+        routines_by_id.values(),
+        key=lambda item: ((item.get("code") or ""), item.get("name") or "", item["id"]),
+    )
+
+
+def _goals_routines_payload(goals: list[IndicatorGoal]) -> list[dict[str, Any]]:
+    routines_by_id = {}
+    for goal in goals:
+        for routine in _goal_routines_payload(goal):
+            routines_by_id[routine["id"]] = routine
     return sorted(
         routines_by_id.values(),
         key=lambda item: ((item.get("code") or ""), item.get("name") or "", item["id"]),
@@ -1051,9 +1146,15 @@ def _infer_subgroup(indicator: Indicator, group_key: str) -> str:
     return "Conexões e dependências"
 
 
-def _evaluate_indicator_status(indicator: Indicator, latest: IndicatorData | None, goal: IndicatorGoal | None) -> dict[str, str]:
+def _evaluate_indicator_status(
+    indicator: Indicator,
+    latest: IndicatorData | None,
+    goal: IndicatorGoal | None,
+    *,
+    target_value: Any = None,
+) -> dict[str, str]:
     current = _to_decimal(getattr(latest, "measured_value", None))
-    target = _to_decimal(getattr(goal, "goal_value", None))
+    target = _to_decimal(target_value if target_value is not None else getattr(goal, "goal_value", None))
     if current is None:
         return {"semaphore": "gray", "label": "Sem medição no período", "detail": "Inclua medição no menu de indicadores."}
     if target is None or target == 0:

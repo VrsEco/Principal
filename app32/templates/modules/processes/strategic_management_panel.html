@@ -599,9 +599,9 @@
             <div class="smp-detail-grid">
                 <div class="smp-detail-box"><span>Semáforo</span><strong>${badge(item.semaphore)} ${esc(item.situation)}</strong></div>
                 <div class="smp-detail-box"><span>Responsável</span><strong>${esc(item.responsible?.name || 'Não informado')}</strong></div>
-                <div class="smp-detail-box"><span>Meta vigente</span><strong>${esc(item.goal ?? '-')} ${esc(item.unit || '')}</strong></div>
+                <div class="smp-detail-box"><span>${item.goal_status === 'scheduled' ? 'Meta programada' : 'Meta vigente'}</span><strong>${esc(item.goal ?? '-')} ${esc(item.unit || '')}</strong></div>
                 <div class="smp-detail-box"><span>Vigência</span><strong>${formatDate(item.goal_period_start)} — ${formatDate(item.goal_period_end)}</strong></div>
-                <div class="smp-detail-box"><span>Periodicidade / Escopo</span><strong>${esc(goalTypeLabel(item.goal_type))} • ${item.goal_scope === 'individual' ? 'Individual' : 'Equipe'}</strong></div>
+                <div class="smp-detail-box"><span>Periodicidade / Escopo</span><strong>${esc(goalTypeLabel(item.goal_type))} • ${item.goal_scope === 'individual' ? `Individual consolidada (${esc(item.goal_responsible_count || 0)} consultores)` : 'Equipe'}</strong></div>
                 <div class="smp-detail-box"><span>Rotinas de medição</span><strong>${routineLabel}</strong></div>
                 <div class="smp-detail-box"><span>Situação atual</span><strong>${esc(item.current_value ?? '-')} ${esc(item.unit || '')} • ${esc(item.measured_date || '-')}</strong></div>
                 <div class="smp-detail-box"><span>Projeto associado</span><strong>${project ? esc(project.code + ' - ' + project.name) : 'Sem projeto vinculado'}</strong></div>

@@ -11,6 +11,7 @@ from api.routes import processes as processes_route
 from services.efficiency_collaborators_service import build_team_efficiency_summary
 from services.strategic_management_panel_service import (
     GROUP_DEFINITIONS,
+    _build_panel_goal_context,
     _build_stability_gate_payload,
     _evaluate_indicator_status,
     _goal_routines_payload,
@@ -549,3 +550,36 @@ def test_goal_routines_payload_returns_all_links_and_legacy_fallback():
 
     assert [item["id"] for item in payload] == [10, 20]
     assert payload[1]["name"] == "Fechamento mensal"
+
+
+def test_panel_consolidates_five_individual_scheduled_goals():
+    from datetime import date
+    from decimal import Decimal
+
+    goals = [
+        SimpleNamespace(
+            id=index,
+            status="active",
+            goal_kind="base",
+            goal_scope="individual",
+            responsible_id=index,
+            responsible=SimpleNamespace(name=f"Consultor {index}"),
+            goal_value=Decimal("250000"),
+            goal_type="monthly",
+            period_start=date(2026, 9, 1),
+            period_end=None,
+            goal_date=None,
+            routine_id=None,
+            routine_links=[],
+            name=None,
+        )
+        for index in range(1, 6)
+    ]
+
+    context = _build_panel_goal_context(goals, date(2026, 8, 31))
+
+    assert context["status"] == "scheduled"
+    assert context["target_value"] == Decimal("1250000")
+    assert context["goal_scope"] == "individual"
+    assert context["responsible_count"] == 5
+    assert context["period_start"] == date(2026, 9, 1)
