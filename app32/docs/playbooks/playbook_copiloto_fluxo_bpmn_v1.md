@@ -93,6 +93,19 @@ Confirmar que:
 - exceção, rejeição ou item fora do corte atual possui destino explícito, como classificação para reanálise futura;
 - SIPOC e BPMN permanecem transversais, sem cardinalidade `1:1` artificial.
 
+## 7.2 Condução da maturação da modelagem
+
+Usar `process-modeling-official-v1.0` quando a pergunta deixar de ser apenas “o fluxo está válido?” e passar a ser “qual é o estado metodológico da modelagem e o que falta para avançar?”.
+
+1. identificar `company_id`, `process_id` e versão/draft BPMN;
+2. determinar o estado da jornada pela evidência disponível;
+3. avaliar contrato, aderência, semântica, executabilidade, governança e aprendizado;
+4. separar gaps metodológicos, técnicos e operacionais;
+5. indicar o gate pendente e uma próxima ação;
+6. nunca converter cobertura, XML válido ou publicação em score de maturidade.
+
+Apresentar separadamente maturidade da modelagem, maturidade da implantação e desempenho operacional.
+
 ## 8. Checklist por tipo de artefato
 
 - `POP`: a atividade realmente exige instrução detalhada? Quando várias atividades usam a mesma instrução, existe uma única definição compartilhada e título com todos os códigos/nomes?

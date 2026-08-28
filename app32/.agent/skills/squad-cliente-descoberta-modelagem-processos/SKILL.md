@@ -28,6 +28,10 @@ Atuar com `SC-OPS`, sob coordenação de `SC-COORD`, como coproprietário da des
 
 Encaminhar ao Squad Versus mudança de fronteira, responsabilidade, ciclo de gestão, método, estrutura TO-BE ou publicação. Entregar fatos, hipóteses, decisões do cliente, BPMN AS-IS e perguntas abertas.
 
+## Maturação
+
+No protocolo `process-modeling-official-v1.0`, o Squad Cliente conduz `collecting_evidence`, `mapping_as_is` e `awaiting_client_validation`. Pode diagnosticar gaps nas seis dimensões, mas não promover sozinho `designing_to_be`, `awaiting_versus_validation` ou publicação.
+
 ## Saída
 
 Evidências; contrato SIPOC observado; AS-IS; resultado das leituras progressiva e regressiva; POPs possivelmente necessários; divergências; pacote de handoff.

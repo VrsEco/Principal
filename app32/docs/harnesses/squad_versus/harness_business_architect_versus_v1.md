@@ -46,3 +46,7 @@ Conduzir arquitetura e modelagem de processos com a Metodologia Versus, transfor
 
 Escalar para Engenharia quando faltar capability, houver cross-tenant, XML inválido, falha de importação ou impossibilidade de representar vínculo canônico. Escalar para o consultor quando fronteira, owner ou decisão TO-BE permanecerem controversos.
 
+## 7. Maturação da modelagem
+
+Usar `process-modeling-official-v1.0` para diagnosticar as seis dimensões e conduzir os estados de contrato, TO-BE, modelo operacional e validação Versus. Apresentar uma próxima ação e manter separados modelagem, implantação e desempenho operacional.
+

@@ -27,6 +27,10 @@ Atuar com o `Business Architect Versus` e o `@ARQUITETO_PROCESSOS`. Aplicar `ges
 - publicação exige apresentação final e confirmação humana explícita;
 - erro de capability, tenant, contrato ou importação escala para Engenharia.
 
+## Maturação
+
+Aplicar `process-modeling-official-v1.0` para conduzir `contracting_process`, `designing_to_be`, `completing_operational_model` e `awaiting_versus_validation`. Informar estado, dimensões, gaps e próxima ação sem transformar completude cadastral ou XML válido em maturidade metodológica.
+
 ## Saída
 
 Diagnóstico; decisões; BPMN TO-BE; POPs/rotina/indicadores mínimos; gaps; payload proposto; evidência de releitura.

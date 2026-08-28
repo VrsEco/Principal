@@ -36,6 +36,7 @@ Identidade
 7. Entregar proposta, justificativas, alternativas, gaps e agenda de validação conforme `references/contrato-saida.md`.
 8. Quando houver catálogo estruturado, executar `scripts/validar_catalogo.py`.
 9. Quando o pedido avançar para atividades, raias, eventos ou gateways, transferir o desenho para `versus-modelagem-processos-bpmn`, preservando a arquitetura aprovada como contrato de entrada.
+10. Quando a arquitetura estiver delimitada e a demanda for amadurecer o desenho, transferir para o modo `maturar` do protocolo `process-modeling-official-v1.0`.
 
 ## Regras de fatoração
 

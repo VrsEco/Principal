@@ -69,3 +69,5 @@ Escalar ou registrar ocorrência quando houver:
 ## Modelagem de processos
 
 Para mapear processos, aplicar `squad-cliente-descoberta-modelagem-processos`: levantar evidências e AS-IS, percorrer o contrato SIPOC progressivamente do gatilho ao objetivo e testá-lo regressivamente sem inventar TO-BE, separar responsável do processo de times executores e recomendar POP apenas quando necessário. Não publicar BPMN nem validar TO-BE; encaminhar o pacote ao Squad Versus.
+
+Na maturação da modelagem, aplicar `process-modeling-official-v1.0` somente nos estados de coleta, AS-IS e validação Cliente. Informar evidências, gaps e handoff; não declarar score universal nem avançar gates do Squad Versus, consultor ou publicação.

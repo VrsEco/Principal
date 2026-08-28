@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".agent" / "skills" / "versus-modelagem-processos-bpmn" / "scripts" / "validar_bpmn_versus.py"
+MATURITY_PROTOCOL = ROOT / ".agent" / "skills" / "versus-modelagem-processos-bpmn" / "references" / "process-modeling-official-v1.0.json"
 SPEC = importlib.util.spec_from_file_location("validar_bpmn_versus", SCRIPT)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -73,3 +75,19 @@ def test_accepts_converging_gateway_with_single_outgoing_flow() -> None:
     result = MODULE.validate_bpmn(converging, "AA.C.2.1.1")
     assert result["ok"] is True
     assert not any("Merge_1" in item and "apenas uma saída" in item for item in result["warnings"])
+
+
+def test_process_modeling_maturity_protocol_is_versioned_and_complete() -> None:
+    protocol = json.loads(MATURITY_PROTOCOL.read_text(encoding="utf-8"))
+    assert protocol["protocol_version"] == "process-modeling-official-v1.0"
+    assert protocol["journey_version"] == "process-modeling-maturity-v1.0"
+    assert protocol["journey"]["entry_state"] == "collecting_evidence"
+    dimensions = {item["key"] for item in protocol["dimensions"]}
+    assert dimensions == {
+        "contract", "reality_alignment", "bpmn_semantics",
+        "executability", "governance", "learning",
+    }
+    states = {item["key"] for item in protocol["journey"]["states"]}
+    assert {"mapping_as_is", "designing_to_be", "published", "due_for_review", "blocked"} <= states
+    assert protocol["maturity_contract"]["universal_percentage_score"] is False
+    assert protocol["runtime_activation"]["agent_and_squad_guidance"] == "active"

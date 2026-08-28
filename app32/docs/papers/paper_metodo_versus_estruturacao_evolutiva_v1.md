@@ -1306,6 +1306,24 @@ A maturidade é avaliada pelo funcionamento e pelo alinhamento, não por percent
 
 Cada elemento é conduzido por um protocolo versionado contendo perguntas orientadoras, evidências mínimas, critérios de qualidade, dependências, gaps verificáveis, entregável esperado, gates humanos e critérios de vigência. A resolução do protocolo segue **tenant → global → fallback**, preservando a metodologia comum e permitindo configuração específica sem afetar outros clientes.
 
+#### 12.5.5.1 Maturação da modelagem de processos
+
+A modelagem de cada processo passa a ser conduzida pelo protocolo `process-modeling-official-v1.0`, no mesmo núcleo de maturação usado pela Identidade Organizacional e pela Arquitetura de Processos. O elemento avaliado é a modelagem vinculada ao `process_id`, ao `company_id` e à versão do BPMN; não se cria um motor paralelo nem uma nota universal de modelagem.
+
+A jornada oficial percorre:
+
+> **coletar evidências → contratar o processo → mapear AS-IS → desenhar TO-BE → completar o modelo operacional → validar com o Cliente → validar com a Versus → decidir aprovação → publicar → observar e reavaliar.**
+
+O diagnóstico considera seis dimensões independentes: contrato, aderência à realidade, semântica BPMN, executabilidade, governança e aprendizado. O desenho progride do gatilho ao objetivo e é validado regressivamente pelo SIPOC. A existência de um diagrama completo não comprova maturidade metodológica, implantação ou desempenho operacional.
+
+O Squad Cliente responde pelas evidências e pela validação do AS-IS. O Squad Versus responde pelo método, pela fronteira e pelo TO-BE. Engenharia valida contrato técnico, XML, capabilities e importação quando necessário. O consultor decide; o executor autorizado publica. Depois da publicação, desvios entre modelo e execução podem abrir novo ciclo sem apagar a última versão vigente.
+
+Três leituras permanecem separadas:
+
+- **maturidade da modelagem:** qualidade e coerência do modelo aprovado;
+- **maturidade da implantação:** capacidade de colocar o desenho em funcionamento;
+- **desempenho operacional:** resultados efetivamente produzidos pelo processo.
+
 Quando um gap aprovado exigir transformação, o motor recomenda seu tratamento por ação ou projeto e registra a conexão. O **Gestor de Projetos** administra a execução; o Motor de Maturidade recebe as evidências e reavalia o elemento. Assim, maturação e gestão de projetos permanecem conectadas, mas não confundidas.
 
 Na interface, a robustez deve permanecer no motor. Ao usuário, a apresentação padrão deve responder apenas: onde estamos, o que está vigente, o que está em discussão, quais gaps e desalinhamentos existem e qual é a próxima decisão recomendada. Antes de qualquer expansão do APP32, devem ser avaliados aderência ao modelo canônico, impacto sobre outros tenants e complexidade desnecessária.

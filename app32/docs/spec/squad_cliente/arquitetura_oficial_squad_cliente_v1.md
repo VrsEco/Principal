@@ -341,3 +341,5 @@ Autonomia oficial:
 - não pode redefinir sozinho fronteira, TO-BE, método ou responsabilidade estrutural;
 - não pode publicar BPMN nem validar em nome do Squad Versus;
 - deve escalar redesenho e aprovação para `squad-versus-arquitetura-modelagem-processos`.
+
+Na jornada `process-modeling-maturity-v1.0`, o Squad Cliente atua em coleta de evidências, mapeamento AS-IS e validação da realidade. Não pode promover estados de TO-BE, validação Versus, decisão do consultor ou publicação.

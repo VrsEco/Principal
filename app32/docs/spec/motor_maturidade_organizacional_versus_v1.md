@@ -134,3 +134,46 @@ Discussões, evidências, eventos, versões e dependências permanecem acessíve
 - cálculo de score percentual universal;
 - gestão operacional de projetos dentro do motor;
 - publicação autônoma de conteúdo canônico por agentes.
+
+## 12. Protocolo oficial de maturação da modelagem
+
+A modelagem de processos utiliza o protocolo global `process-modeling-official-v1.0`, com jornada `process-modeling-maturity-v1.0`. A resolução permanece `tenant → global → fallback` e o contexto operacional exige `company_id`, `process_id` e referência da versão BPMN avaliada.
+
+### 12.1 Estados da jornada
+
+1. `collecting_evidence` — reunir fatos operacionais e fontes;
+2. `contracting_process` — confirmar objetivo, fronteira, gatilho, SIPOC, responsável e recebedores;
+3. `mapping_as_is` — representar a realidade observada;
+4. `designing_to_be` — propor o desenho futuro com rastreabilidade;
+5. `completing_operational_model` — decidir responsabilidades, rotina, POPs seletivos, indicadores mínimos e artefatos aplicáveis;
+6. `awaiting_client_validation` — validar evidências e AS-IS com o Cliente;
+7. `awaiting_versus_validation` — validar método, fronteira e TO-BE com a Versus;
+8. `awaiting_consultant_decision` — aprovar, ajustar ou rejeitar a proposta;
+9. `approved_for_publication` — aguardar execução autorizada;
+10. `published` — manter a versão vigente e sua evidência de releitura;
+11. `due_for_review` — abrir novo ciclo quando houver mudança ou desvio relevante;
+12. `blocked` — registrar impedimento, responsável e condição de desbloqueio.
+
+### 12.2 Dimensões metodológicas
+
+- `contract`: objetivo, fronteira, gatilho e SIPOC bidirecional;
+- `reality_alignment`: evidências, exceções e aderência do AS-IS;
+- `bpmn_semantics`: eventos, atividades, gateways, raias, finais e conectividade;
+- `executability`: responsável, executores, recursos, rotina e artefatos necessários;
+- `governance`: versões, gates, rastreabilidade, tenant e publicação;
+- `learning`: desvios observados, reavaliação e evolução do modelo.
+
+As dimensões produzem diagnóstico e gaps, não score percentual universal. A maturidade metodológica da modelagem não pode ser inferida de completude cadastral, XML válido ou existência de BPMN publicado.
+
+### 12.3 Gates e separações
+
+- Squad Cliente valida fatos e AS-IS;
+- Squad Versus valida método e TO-BE;
+- Engenharia valida aspectos técnicos quando acionada;
+- consultor decide a aprovação;
+- executor autorizado publica e relê;
+- desempenho operacional e maturidade de implantação são avaliados separadamente da maturidade da modelagem.
+
+### 12.4 Artefato canônico
+
+O contrato detalhado fica em `.agent/skills/versus-modelagem-processos-bpmn/references/process-modeling-official-v1.0.json`. Esta decisão formaliza método e atuação dos Squads; persistência tenant-owned e automação da próxima ação no motor exigem recorte técnico próprio antes de produção.

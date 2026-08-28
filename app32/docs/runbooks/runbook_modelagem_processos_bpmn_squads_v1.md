@@ -44,3 +44,14 @@ python .agent\skills\versus-modelagem-processos-bpmn\scripts\validar_bpmn_versus
 
 XML válido, renderização legível, checklist sem bloqueios, validações sem personificação de outro Squad, releitura MCP e confirmação humana da publicação.
 
+## 5. Rito de maturação
+
+1. carregar `references/process-modeling-official-v1.0.json`;
+2. confirmar `company_id`, `process_id` e referência BPMN;
+3. classificar o estado atual somente por evidência;
+4. diagnosticar as seis dimensões sem score percentual;
+5. devolver gaps, gate pendente e próxima ação;
+6. abrir `due_for_review` quando mudança ou desvio invalidar premissas da versão vigente.
+
+Até existir persistência tenant-owned e next action MCP específicos, registrar o diagnóstico no pacote de modelagem e não declarar transição operacional automática no APP32.
+

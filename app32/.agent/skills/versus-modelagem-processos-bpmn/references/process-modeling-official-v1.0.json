@@ -1,0 +1,124 @@
+{
+  "protocol_version": "process-modeling-official-v1.0",
+  "journey_version": "process-modeling-maturity-v1.0",
+  "status": "canonical_methodology",
+  "scope": "process_modeling",
+  "required_context": [
+    "company_id",
+    "process_id",
+    "process_code",
+    "bpmn_version_or_draft_reference"
+  ],
+  "maturity_contract": {
+    "registered_diagram_is_not_methodological_maturity": true,
+    "valid_xml_is_not_methodological_maturity": true,
+    "published_model_is_not_implementation_maturity": true,
+    "implementation_maturity_is_not_operational_performance": true,
+    "universal_percentage_score": false
+  },
+  "dimensions": [
+    {
+      "key": "contract",
+      "label": "Contrato",
+      "questions": [
+        "Objetivo e saída estão distintos?",
+        "Gatilho, fronteira, fornecedores, entradas, saídas e recebedores estão coerentes nos dois sentidos?",
+        "Cada caminho final produz resultado intencional?"
+      ],
+      "minimum_evidence": ["objetivo", "fronteira", "gatilho", "sipoc_bidirecional", "responsavel_processo"],
+      "quality_criteria": ["sem_atividade_sem_contribuicao", "sem_saida_sem_recebedor", "sem_loop_artificial"]
+    },
+    {
+      "key": "reality_alignment",
+      "label": "Aderência à realidade",
+      "questions": [
+        "O AS-IS foi sustentado por executores e evidências?",
+        "Exceções, retrabalho e handoffs reais estão explícitos?",
+        "Fatos, hipóteses e decisões estão separados?"
+      ],
+      "minimum_evidence": ["fontes_operacionais", "validacao_cliente", "gaps_as_is"],
+      "quality_criteria": ["rastreabilidade_evidencia_fluxo", "hipoteses_identificadas"]
+    },
+    {
+      "key": "bpmn_semantics",
+      "label": "Semântica BPMN",
+      "questions": [
+        "Eventos, atividades, gateways, raias e finais representam corretamente o trabalho?",
+        "Decisões e sincronizações são reais e compreensíveis?",
+        "Todos os nós possuem conectividade válida?"
+      ],
+      "minimum_evidence": ["xml_bpmn", "validacao_estrutural", "revisao_visual"],
+      "quality_criteria": ["codigos_coerentes", "caminhos_completos", "gateways_semanticos", "lanes_executoras"]
+    },
+    {
+      "key": "executability",
+      "label": "Executabilidade",
+      "questions": [
+        "Responsável do processo e times executores estão distintos?",
+        "Rotina, recursos e artefatos necessários foram decididos?",
+        "POPs e indicadores foram mantidos no mínimo necessário?"
+      ],
+      "minimum_evidence": ["responsabilidades", "rotina_gatilho", "decisoes_artefatos"],
+      "quality_criteria": ["pop_seletivo", "indicadores_minimos", "tarefas_automaticas_com_contrato"]
+    },
+    {
+      "key": "governance",
+      "label": "Governança",
+      "questions": [
+        "Versão, tenant, gates e decisões estão rastreáveis?",
+        "AS-IS e TO-BE preservam relação explícita?",
+        "Publicação e releitura foram autorizadas e evidenciadas?"
+      ],
+      "minimum_evidence": ["company_id", "versao", "gates", "historico_decisoes"],
+      "quality_criteria": ["mcp_first", "human_gate", "sem_publicacao_autonoma"]
+    },
+    {
+      "key": "learning",
+      "label": "Aprendizado",
+      "questions": [
+        "Existem sinais para comparar modelo e execução?",
+        "Mudanças e desvios possuem critérios de reavaliação?",
+        "Um novo ciclo preserva a última versão vigente?"
+      ],
+      "minimum_evidence": ["gatilhos_reavaliacao", "historico_ciclos"],
+      "quality_criteria": ["revisao_por_evento_ou_cadencia", "historico_imutavel"]
+    }
+  ],
+  "journey": {
+    "entry_state": "collecting_evidence",
+    "states": [
+      {"key": "collecting_evidence", "owner": "squad_cliente", "exit_evidence": ["fontes_e_fatos_operacionais"]},
+      {"key": "contracting_process", "owner": "squad_versus", "exit_evidence": ["contrato_sipoc_bidirecional"]},
+      {"key": "mapping_as_is", "owner": "squad_cliente", "exit_evidence": ["bpmn_as_is_em_discussao"]},
+      {"key": "designing_to_be", "owner": "squad_versus", "exit_evidence": ["bpmn_to_be_rastreavel"]},
+      {"key": "completing_operational_model", "owner": "squad_versus", "exit_evidence": ["decisoes_responsabilidades_rotina_pops_indicadores_artefatos"]},
+      {"key": "awaiting_client_validation", "owner": "squad_cliente", "exit_evidence": ["validacao_realidade"]},
+      {"key": "awaiting_versus_validation", "owner": "squad_versus", "exit_evidence": ["validacao_metodologica"]},
+      {"key": "awaiting_consultant_decision", "owner": "consultor", "exit_evidence": ["decisao_explicita"]},
+      {"key": "approved_for_publication", "owner": "executor_autorizado", "exit_evidence": ["autorizacao_publicacao"]},
+      {"key": "published", "owner": "executor_autorizado", "exit_evidence": ["publicacao_e_releitura"]},
+      {"key": "due_for_review", "owner": "consultor", "exit_evidence": ["novo_ciclo_aberto"]},
+      {"key": "blocked", "owner": "responsavel_pelo_bloqueio", "exit_evidence": ["condicao_desbloqueio_atendida"]}
+    ]
+  },
+  "gates": [
+    {"key": "client_validation", "actor": "squad_cliente", "scope": "fatos_e_as_is"},
+    {"key": "versus_validation", "actor": "squad_versus", "scope": "metodo_fronteira_e_to_be"},
+    {"key": "technical_validation", "actor": "engenharia", "scope": "xml_capabilities_importacao", "conditional": true},
+    {"key": "consultant_decision", "actor": "consultor", "scope": "aprovacao_ajuste_ou_rejeicao"},
+    {"key": "publication", "actor": "executor_autorizado", "scope": "publicar_e_reler"}
+  ],
+  "reassessment_triggers": [
+    "mudanca_de_objetivo_ou_fronteira",
+    "mudanca_relevante_no_sipoc",
+    "desvio_recorrente_entre_modelo_e_execucao",
+    "excecao_recorrente_nao_modelada",
+    "alteracao_regulatoria_ou_tecnologica",
+    "revisao_periodica_definida"
+  ],
+  "runtime_activation": {
+    "agent_and_squad_guidance": "active",
+    "tenant_owned_persistence": "requires_technical_slice",
+    "deterministic_next_action_mcp": "requires_technical_slice"
+  }
+}

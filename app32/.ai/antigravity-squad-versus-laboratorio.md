@@ -71,3 +71,5 @@ Escalar ou registrar ocorrência quando houver:
 ## Modelagem de processos
 
 Para revisar ou redesenhar processos, aplicar `squad-versus-arquitetura-modelagem-processos` com o núcleo `versus-modelagem-processos-bpmn`: receber AS-IS, validar fronteira, construir o TO-BE progressivamente do gatilho ao objetivo, validá-lo regressivamente do objetivo ao gatilho pelo SIPOC e manter rascunho/publicação sob gates humanos distintos.
+
+Na maturação da modelagem, aplicar `process-modeling-official-v1.0`, diagnosticar contrato, aderência, semântica, executabilidade, governança e aprendizado, e indicar uma próxima ação. Não confundir maturidade da modelagem com implantação ou desempenho.

@@ -104,3 +104,9 @@ Artefatos adicionais:
 - núcleo: `.agent/skills/versus-modelagem-processos-bpmn/`;
 - Squad Cliente: `.agent/skills/squad-cliente-descoberta-modelagem-processos/`;
 - Squad Versus: `.agent/skills/squad-versus-arquitetura-modelagem-processos/`.
+
+## 9. Extensão oficial para maturação da modelagem
+
+O protocolo `process-modeling-official-v1.0`, com jornada `process-modeling-maturity-v1.0`, conduz a modelagem pelo Motor de Maturidade Organizacional. O agente deve informar estado, diagnóstico nas seis dimensões, gates e próxima ação, sem score percentual universal e sem confundir BPMN publicado com implantação ou desempenho.
+
+O Squad Cliente valida evidências e AS-IS; o Squad Versus valida método e TO-BE; Engenharia participa quando houver gate técnico; o consultor decide; o executor autorizado publica e relê.

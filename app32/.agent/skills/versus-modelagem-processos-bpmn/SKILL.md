@@ -13,6 +13,7 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 - `revisar`: localizar falhas semânticas, desconexões e drift com o processo.
 - `refatorar`: corrigir fluxo existente preservando rastreabilidade.
 - `preparar-importacao`: gerar BPMN 2.0 validado sem gravar estado operacional.
+- `maturar`: diagnosticar o estado da modelagem e recomendar a próxima ação pelo protocolo oficial.
 
 ## Sequência obrigatória
 
@@ -24,6 +25,7 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 6. Validar o XML com `scripts/validar_bpmn_versus.py` e revisar o diagrama visualmente no `bpmn-js`.
 7. Entregar diagnóstico, fluxo proposto, pendências e estado `Em discussão` até o gate humano.
 8. Gravar apenas rascunho autorizado via MCP; reler após a escrita. Publicar somente após confirmação humana explícita.
+9. Quando a demanda envolver maturação, aplicar `references/process-modeling-official-v1.0.json`, informar estado da jornada, dimensões com evidência/gaps e próxima ação recomendada.
 
 ## Invariantes Versus
 
@@ -58,5 +60,6 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 
 - `references/metodo-bpmn.md`: semântica e decisões de modelagem.
 - `references/contrato-saida.md`: entrega mínima e estados.
+- `references/process-modeling-official-v1.0.json`: protocolo oficial de maturação da modelagem.
 - `../versus-arquitetura-processos/SKILL.md`: arquitetura e fatoração do processo.
 
