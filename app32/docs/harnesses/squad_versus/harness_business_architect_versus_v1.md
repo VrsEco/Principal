@@ -27,13 +27,17 @@ Conduzir arquitetura e modelagem de processos com a Metodologia Versus, transfor
 2. consultar `list_process_hierarchy`;
 3. carregar o processo e analisar o fluxo publicado ou draft;
 4. revisar o pacote AS-IS do Squad Cliente;
-5. somente então propor TO-BE.
+5. construir o TO-BE progressivamente do gatilho ao objetivo pelo contrato SIPOC;
+6. validar o desenho regressivamente do objetivo ao gatilho;
+7. somente então consolidar a proposta TO-BE.
 
 ## 5. Guardrails
 
 - não copiar fluxo de outro tenant sem refatoração e validação;
 - não confundir lane com responsável do processo;
 - não criar POP ou indicador por atividade automaticamente;
+- não tratar SIPOC como espelho `1:1` das atividades nem confundir objetivo com saída;
+- não encerrar caminho sem saída intencional e recebedor definido;
 - não duplicar POP compartilhado para contornar limitação legada;
 - não gravar via banco direto;
 - rascunho exige autorização; publicação exige confirmação humana explícita e releitura.

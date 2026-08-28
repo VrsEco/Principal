@@ -120,7 +120,7 @@ def validate_bpmn(xml_text: str, process_code: str | None = None) -> dict:
     if not lane_count:
         warnings.append("O processo não possui lanes de times/papéis executores.")
     for gateway_id in sorted(gateways):
-        if len(outgoing[gateway_id]) == 1:
+        if len(incoming[gateway_id]) <= 1 and len(outgoing[gateway_id]) == 1:
             warnings.append(f"Gateway com apenas uma saída: {gateway_id}.")
         if len(outgoing[gateway_id]) > 1 and not names.get(gateway_id):
             warnings.append(f"Gateway decisório sem pergunta/nome: {gateway_id}.")

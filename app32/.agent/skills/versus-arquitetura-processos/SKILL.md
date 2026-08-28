@@ -43,6 +43,8 @@ Identidade
 - Não confundir projeto temporário, ativo físico, departamento ou fase com processo permanente.
 - Tratar macroprocesso como grande entrega/capacidade empresarial; tratar processo como entrega gerenciável; tratar atividade como microentrega executável.
 - Exigir em cada processo: gatilho, entrada, transformação, saída, recebedor e fronteira.
+- Construir o contrato progressivamente do gatilho ao objetivo e validá-lo regressivamente do objetivo ao gatilho, usando o SIPOC como lente transversal.
+- Distinguir saída (entrega) de objetivo (resultado pretendido) e não exigir relação 1:1 entre SIPOC e atividades.
 - Manter granularidade comparável entre irmãos.
 - Usar atividade no BPMN; não inflar o catálogo corporativo quando o detalhe não agrega decisão.
 - Preferir simplicidade proporcional ao porte, risco e estágio da empresa.

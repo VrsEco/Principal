@@ -18,8 +18,8 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 
 1. Confirmar `company_id` e executar discovery MCP quando houver estado do APP32.
 2. Ler a arquitetura, o objetivo e a fronteira do processo; separar fatos, hipóteses e decisões.
-3. Confirmar gatilho, entradas, saída, recebedor, responsável único pelo processo e times executores.
-4. Modelar eventos, atividades, gateways, raias e fluxos conforme `references/metodo-bpmn.md`.
+3. Confirmar gatilho, fornecedores, entradas, saídas, recebedores, objetivo, responsável único pelo processo e times executores.
+4. Construir progressivamente do gatilho ao objetivo e validar regressivamente do objetivo ao gatilho, usando o SIPOC como contrato transversal conforme `references/metodo-bpmn.md`.
 5. Decidir POP, rotina e indicadores sem aplicar relação automática 1:1.
 6. Validar o XML com `scripts/validar_bpmn_versus.py` e revisar o diagrama visualmente no `bpmn-js`.
 7. Entregar diagnóstico, fluxo proposto, pendências e estado `Em discussão` até o gate humano.
@@ -28,6 +28,8 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 ## Invariantes Versus
 
 - O processo possui um responsável; as raias representam times, papéis ou participantes executores.
+- SIPOC orienta a coerência do fluxo, sem relação automática `1:1` com atividades e sem exigir snapshot persistido.
+- Saída é a entrega concreta; objetivo é o resultado pretendido. Todo caminho final produz saída intencional e recebedor identificado.
 - Rotina define periodicidade e gatilho do processo, não a repetição isolada de cada atividade.
 - POP existe somente quando risco, variabilidade, complexidade ou conformidade exigirem instrução detalhada.
 - Um POP pode documentar várias atividades. Seu título lista, na ordem do fluxo, o código e o nome de todas as atividades vinculadas.

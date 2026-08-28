@@ -70,4 +70,4 @@ Escalar ou registrar ocorrência quando houver:
 
 ## Modelagem de processos
 
-Para revisar ou redesenhar processos, aplicar `squad-versus-arquitetura-modelagem-processos` com o núcleo `versus-modelagem-processos-bpmn`: receber AS-IS, validar fronteira, desenhar TO-BE e manter rascunho/publicação sob gates humanos distintos.
+Para revisar ou redesenhar processos, aplicar `squad-versus-arquitetura-modelagem-processos` com o núcleo `versus-modelagem-processos-bpmn`: receber AS-IS, validar fronteira, construir o TO-BE progressivamente do gatilho ao objetivo, validá-lo regressivamente do objetivo ao gatilho pelo SIPOC e manter rascunho/publicação sob gates humanos distintos.

@@ -71,6 +71,7 @@ O catálogo `references/cases.json` mantém casos com os estados `candidate`, `r
 4. `company_id` é obrigatório em catálogos operacionais;
 5. premissas, gaps e validações humanas aparecem separadamente.
 6. nomes são diretos e não agrupam entregas ou ciclos de gestão distintos.
+7. a validação bidirecional SIPOC demonstra que fornecedores, entradas, transformação, saídas, recebedores, gatilho e objetivo são coerentes.
 
 ## 8. Extensão oficial para modelagem BPMN
 
@@ -87,6 +88,9 @@ versus-arquitetura-processos
 
 Regras oficiais:
 
+- todo fluxo é construído progressivamente do gatilho ao objetivo e validado regressivamente do objetivo ao gatilho;
+- o SIPOC funciona como contrato de fronteira e coerência, sem exigir relação 1:1 com atividades nem snapshot persistido;
+- saída é a entrega do processo; objetivo é o resultado pretendido e não deve ser usado como sinônimo da saída;
 - responsável do processo é único; lanes representam times ou papéis executores;
 - rotina pertence ao disparo do processo;
 - POP é seletivo e pode estar vinculado a várias atividades;

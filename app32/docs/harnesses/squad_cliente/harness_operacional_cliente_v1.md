@@ -116,6 +116,7 @@ Este harness é aderente quando:
 Quando a demanda for mapear como o trabalho acontece, ativar `squad-cliente-descoberta-modelagem-processos` e usar `versus-modelagem-processos-bpmn` como núcleo metodológico.
 
 - coletar evidência antes de desenhar;
+- percorrer o AS-IS do gatilho ao objetivo pelos pontos SIPOC e testá-lo regressivamente, sem converter gaps em TO-BE;
 - produzir AS-IS `Em discussão`;
 - separar responsável do processo de times executores;
 - tratar rotina como gatilho do processo;

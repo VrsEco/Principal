@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-08-28.1"
+    CURRENT_BUNDLE_VERSION = "2026-08-28.2"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -681,9 +681,9 @@ class InstructionRegistryService:
         }
         per_agent = {
             "SC-COORD": "Coordenar sem inflar custo, preferindo resposta direta segura antes de qualquer roteamento.",
-            "SC-OPS": "Na descoberta de processos, levantar o AS-IS com evidências e escalar redesenho estrutural ao Squad Versus.",
+            "SC-OPS": "Na descoberta de processos, levantar o AS-IS com evidências, percorrer o SIPOC do gatilho ao objetivo e escalar redesenho estrutural ao Squad Versus.",
             "SV-COORD": "Conduzir discovery consultivo antes de acionar especialidades do Squad Versus.",
-            "SV-BUSINESS-ARCHITECT": "Revisar AS-IS, desenhar TO-BE pela Metodologia Versus e manter publicação BPMN sob gate humano explícito.",
+            "SV-BUSINESS-ARCHITECT": "Revisar AS-IS, desenhar TO-BE com validação SIPOC progressiva/regressiva e manter publicação BPMN sob gate humano explícito.",
             "SE-COORD": "Fazer triagem técnica antes de qualquer mudança estrutural ou intervenção operacional.",
         }
         return [
@@ -727,6 +727,10 @@ class InstructionRegistryService:
                 rule="Em modelagem de processos, separar responsável único do processo de times executores; tratar POP como seletivo e compartilhável, rotina como gatilho e indicadores como conjunto mínimo.",
                 rationale="Evita reproduzir no BPMN relações artificiais de um POP, rotina ou indicador para cada atividade.",
             ),
+            InstructionRule(
+                rule="Construir o fluxo progressivamente do gatilho ao objetivo e validá-lo regressivamente do objetivo ao gatilho, usando o SIPOC como contrato transversal e distinguindo saída de objetivo.",
+                rationale="Evita atividades sem contribuição, saídas sem recebedor e lacunas de entrada ou fornecedor sem impor relação 1:1 com o BPMN.",
+            ),
         ]
 
     @classmethod
@@ -745,6 +749,10 @@ class InstructionRegistryService:
                     rule="Na modelagem de processos, entregar evidências e AS-IS ao Business Architect Versus; não publicar BPMN nem validar TO-BE em nome do Squad Versus.",
                     rationale="Preserva a autonomia operacional do cliente e o gate metodológico da Versus.",
                 ),
+                InstructionRule(
+                    rule="No AS-IS, percorrer o contrato SIPOC nos dois sentidos e registrar gaps como evidência, sem preencher lacunas com desenho TO-BE.",
+                    rationale="Mantém a descoberta fiel à realidade operacional do cliente.",
+                ),
             ]
         if runtime_profile == "squad_versus":
             return [
@@ -759,6 +767,10 @@ class InstructionRegistryService:
                 InstructionRule(
                     rule="Na modelagem de processos, receber o AS-IS do Squad Cliente, validar o TO-BE e publicar somente após confirmação humana explícita.",
                     rationale="Mantém realidade, método e decisão humana em gates distintos.",
+                ),
+                InstructionRule(
+                    rule="No TO-BE, construir do gatilho ao objetivo e validar do objetivo ao gatilho pelo SIPOC, assegurando saída e recebedor em cada caminho final.",
+                    rationale="Torna explícito o teste de suficiência e contribuição do desenho proposto.",
                 ),
             ]
         return [

@@ -336,6 +336,7 @@ O Squad Cliente usa `squad-cliente-descoberta-modelagem-processos` para levantar
 Autonomia oficial:
 
 - pode registrar realidade, exceções, gatilhos, saídas, executores e rascunho AS-IS;
+- deve percorrer o AS-IS progressivamente do gatilho ao objetivo pelos pontos SIPOC e validá-lo regressivamente, registrando lacunas sem inventar o TO-BE;
 - pode recomendar necessidade de POP, sem impor POP a toda atividade;
 - não pode redefinir sozinho fronteira, TO-BE, método ou responsabilidade estrutural;
 - não pode publicar BPMN nem validar em nome do Squad Versus;

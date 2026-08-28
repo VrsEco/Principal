@@ -12,6 +12,8 @@ Atuar com `SC-OPS`, sob coordenação de `SC-COORD`, como coproprietário da des
 - entrevistar executores e registrar fatos, exceções e evidências;
 - ler hierarquia e fluxo permitido via MCP com `company_id`;
 - construir AS-IS marcado como `Em discussão`;
+- percorrer o AS-IS progressivamente do gatilho ao objetivo, observando fornecedores, entradas, transformação, saídas e recebedores;
+- testar regressivamente se as evidências sustentam objetivo, saídas, atividades, entradas, fornecedores e gatilho, registrando lacunas sem inventar o TO-BE;
 - validar gatilhos, entradas, saídas, handoffs e times executores;
 - recomendar onde POP parece necessário e onde seria excesso;
 - gerar rascunho externo BPMN quando a surface não permitir escrita.
@@ -28,5 +30,5 @@ Encaminhar ao Squad Versus mudança de fronteira, responsabilidade, ciclo de ges
 
 ## Saída
 
-Evidências; contrato observado; AS-IS; POPs possivelmente necessários; divergências; pacote de handoff.
+Evidências; contrato SIPOC observado; AS-IS; resultado das leituras progressiva e regressiva; POPs possivelmente necessários; divergências; pacote de handoff.
 

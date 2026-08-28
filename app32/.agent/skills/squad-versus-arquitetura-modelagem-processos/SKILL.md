@@ -11,6 +11,8 @@ Atuar com o `Business Architect Versus` e o `@ARQUITETO_PROCESSOS`. Aplicar `ges
 
 - revisar evidências e AS-IS do Squad Cliente;
 - confirmar ou refatorar fronteira, entrega e recebedor;
+- construir o TO-BE progressivamente do gatilho ao objetivo e validá-lo regressivamente do objetivo ao gatilho pelo contrato SIPOC;
+- distinguir objetivo de saída e assegurar resultado intencional/recebedor em cada caminho final;
 - desenhar TO-BE simples e proporcional ao risco;
 - distinguir responsável único e times executores;
 - decidir seletivamente POP, rotina e indicadores;

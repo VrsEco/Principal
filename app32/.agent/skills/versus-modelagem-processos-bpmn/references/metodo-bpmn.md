@@ -2,7 +2,21 @@
 
 ## 1. Contrato antes do desenho
 
-Não iniciar pelo canvas. Confirmar objetivo, fronteira, gatilho, entradas, saída, recebedor, responsável único, times executores, exceções e encerramento. Se não estiverem claros, retornar à arquitetura do processo.
+Não iniciar pelo canvas. Confirmar objetivo, fronteira, gatilho, fornecedores, entradas, saídas, recebedores, responsável único, times executores, exceções e encerramentos. Se não estiverem claros, retornar à arquitetura do processo.
+
+### 1.1 Construção progressiva e validação regressiva
+
+Construir o fluxo no sentido:
+
+`gatilho → fornecedores → entradas → transformação/atividades → saídas → clientes/recebedores → objetivo`.
+
+Depois validar no sentido inverso:
+
+`objetivo → saídas necessárias → transformações suficientes → entradas requeridas → fornecedores adequados → gatilho coerente`.
+
+O SIPOC é contrato transversal do processo. Não criar uma atividade para cada item SIPOC, nem um item SIPOC para cada atividade. Um bloco de transformação pode abranger várias atividades. Objetivo e saída não são sinônimos: a saída é o que se entrega; o objetivo explica o resultado que essa entrega pretende gerar.
+
+Cada caminho que termina deve produzir saída intencional e ter cliente ou processo recebedor identificado. Quando algo ficar fora do corte atual, preferir classificar para ciclo futuro ou encaminhar a outro processo, em vez de descartar silenciosamente ou criar loop artificial na mesma instância.
 
 ## 2. Tradução para BPMN
 
@@ -43,5 +57,5 @@ Os vínculos apontam para a mesma definição de POP. Não duplicar conteúdo pa
 
 ## 6. Qualidade
 
-Validar ids únicos; códigos coerentes; caminhos completos entre início e fim; gateways claros; loops compreensíveis; tarefas automáticas com contrato; raias sem substituir o responsável; POPs, rotinas e indicadores por necessidade; leitura simples do diagrama.
+Validar ids únicos; códigos coerentes; caminhos completos entre início e fim; gateways claros; loops compreensíveis; tarefas automáticas com contrato; raias sem substituir o responsável; POPs, rotinas e indicadores por necessidade; coerência progressiva e regressiva do SIPOC; leitura simples do diagrama.
 

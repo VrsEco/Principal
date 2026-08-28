@@ -1260,6 +1260,22 @@ Essa sequência não é uma taxonomia meramente cadastral. Cada nível deve expl
 
 O agente trabalha com hipóteses explícitas, não inventa fatos operacionais e não publica alterações canônicas sem validação humana. Quando faltarem evidências, registra premissas, gaps e perguntas de validação. A identificação de dimensões ou capacidades habilitadoras pode orientar projetos de implantação, correção ou melhoria, sem transformar projetos em processos permanentes.
 
+#### 12.5.4.1 SIPOC como contrato bidirecional do fluxo
+
+Ao criar ou revisar um processo, o SIPOC não deve ser tratado apenas como quadro cadastral anterior ao BPMN. Ele funciona como **contrato de fronteira e coerência** entre o motivo do processo, aquilo que entra, a transformação realizada e as entregas recebidas.
+
+A construção percorre o processo no sentido progressivo:
+
+> **gatilho → fornecedores → entradas → transformação/atividades → saídas → clientes ou processos recebedores → objetivo.**
+
+Depois, o desenho é validado no sentido regressivo:
+
+> **objetivo → saídas necessárias → transformações suficientes → entradas requeridas → fornecedores adequados → gatilho coerente.**
+
+Os dois percursos são complementares. O progressivo evita atividades soltas e revela o que efetivamente acontece. O regressivo elimina etapas que não contribuem para a entrega e evidencia ausências que impedem alcançar o objetivo. O objetivo explica por que o processo existe; a saída descreve o que ele entrega. Portanto, objetivo e saída não são sinônimos.
+
+O uso metodológico dessa lente é obrigatório na modelagem, mas não cria relação `1:1` entre itens do SIPOC e atividades BPMN, nem torna obrigatório persistir um artefato SIPOC no APP32. Um bloco de transformação pode abranger várias atividades; uma decisão pode gerar saídas distintas para recebedores diferentes; e cada caminho encerrado deve produzir resultado intencional, inclusive classificação para tratamento ou reanálise futura.
+
 Seu repertório de casos é versionado e substituível. Um caso pode estar como candidato, referência ativa ou retirado; a promoção de uma referência mais madura preserva o caso anterior no histórico e registra a sucessão. Casos específicos de clientes servem como evidência e aprendizado, mas não se tornam automaticamente regras universais da Metodologia Versus. A leitura de casos operacionais deve ocorrer por MCP, com `company_id` explícito, sempre que a superfície estiver disponível.
 
 ### 12.5.5 Motor de Maturidade Organizacional Versus

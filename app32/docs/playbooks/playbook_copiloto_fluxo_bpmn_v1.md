@@ -77,6 +77,22 @@ Para cada elemento executável, registrar:
 7. **exceção** — retry, fallback humano, aprovação e escalonamento;
 8. **visibilidade** — Portal, Meu Trabalho, timeline e responsáveis autorizados.
 
+## 7.1 Checklist transversal SIPOC do processo
+
+Antes do checklist por atividade, aplicar o contrato do processo nos dois sentidos:
+
+1. **progressivo:** gatilho → fornecedores → entradas → transformação/atividades → saídas → clientes/recebedores → objetivo;
+2. **regressivo:** objetivo → saídas necessárias → transformações suficientes → entradas requeridas → fornecedores adequados → gatilho coerente.
+
+Confirmar que:
+
+- objetivo descreve o resultado pretendido e não repete apenas o nome da saída;
+- cada caminho final entrega uma saída intencional a um recebedor;
+- nenhuma atividade existe sem contribuir para uma saída necessária;
+- entradas e fornecedores são suficientes para executar a transformação;
+- exceção, rejeição ou item fora do corte atual possui destino explícito, como classificação para reanálise futura;
+- SIPOC e BPMN permanecem transversais, sem cardinalidade `1:1` artificial.
+
 ## 8. Checklist por tipo de artefato
 
 - `POP`: a atividade realmente exige instrução detalhada? Quando várias atividades usam a mesma instrução, existe uma única definição compartilhada e título com todos os códigos/nomes?

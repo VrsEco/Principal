@@ -24,6 +24,8 @@ Ele deve existir **entre**:
 
 O SIPOC **não substitui** BPMN, POP, rotinas ou indicadores.
 
+Independentemente da persistência do artefato, seus cinco pontos formam a lente metodológica obrigatória para criar ou revisar o fluxo. A obrigatoriedade é de análise, não de cadastro: o APP32 continua aceitando processos sem snapshot SIPOC publicado.
+
 Quando adotado pelo cliente, o SIPOC passa a ser a **camada de enquadramento do processo**, usada para:
 
 - definição de escopo;
@@ -47,6 +49,9 @@ Além do SIPOC de Processo, o APP32 pode suportar **SIPOC de Macroprocesso** qua
 8. **toda integração do SIPOC com o app deve preservar rastreabilidade**
 9. **não existe obrigatoriedade global de SIPOC por tenant, macroprocesso ou processo**
 10. **requisitos regulatórios são camada de apoio do SIPOC, não nova coluna da matriz principal**
+11. **o fluxo é construído progressivamente do gatilho ao objetivo e validado regressivamente do objetivo ao gatilho**
+12. **SIPOC é contrato transversal do processo, não relação 1:1 com atividades BPMN**
+13. **objetivo e saída são conceitos distintos: a saída é a entrega; o objetivo é o resultado pretendido**
 
 ## 4. Encaixe oficial no domínio de processos
 
@@ -84,6 +89,16 @@ Observação:
 
 - esta ordem descreve o encaixe conceitual do SIPOC **quando ele existir**;
 - a ausência de SIPOC não bloqueia BPMN, POP, rotinas, indicadores ou análise BPMS.
+- mesmo sem artefato persistido, a modelagem deve verificar `Supplier`, `Input`, `Process`, `Output` e `Customer` como contrato de coerência.
+
+### 4.2.1 Regra de construção e validação bidirecional
+
+Na criação ou revisão do BPMN, executar os dois percursos:
+
+1. **progressivo:** gatilho → fornecedores → entradas → transformação/atividades → saídas → clientes/recebedores → objetivo;
+2. **regressivo:** objetivo → saídas necessárias → transformações suficientes → entradas requeridas → fornecedores adequados → gatilho coerente.
+
+O bloco `Process` do SIPOC permanece macro e pode corresponder a várias atividades BPMN. Gateways e exceções podem produzir mais de uma saída válida. Todo caminho encerrado precisa entregar um resultado intencional a um recebedor identificado; itens fora do corte atual podem, por exemplo, ser classificados para um ciclo futuro, sem criar loop artificial na mesma instância.
 
 Posicionamento oficial por nível:
 

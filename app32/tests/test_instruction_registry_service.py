@@ -24,12 +24,13 @@ def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
     payload = InstructionRegistryService.resolve_bundle(runtime_profile="squad_cliente", channel="stable")
     rules = " ".join(item["rule"] for item in payload["mandatory_rules"])
 
-    assert payload["bundle_version"] == "2026-08-28.1"
+    assert payload["bundle_version"] == "2026-08-28.2"
     assert "capability_not_available" in rules
     assert "502, 503 ou 504" in rules
     assert "Nunca repetir mutação automaticamente" in rules
     assert "consultive_get_next_action" in rules
     assert "POP como seletivo e compartilhável" in rules
+    assert "progressivamente do gatilho ao objetivo" in rules
     assert payload["journey_guide"]["version"] == "structuring-journey-v2.1"
     state_keys = [item["key"] for item in payload["journey_guide"]["states"]]
     action_policy = {item["action"]: item["autonomy"] for item in payload["journey_guide"]["action_policy"]}
@@ -50,4 +51,6 @@ def test_instruction_bundle_specializes_process_modeling_by_squad() -> None:
     assert client["agent_key"] == "SC-OPS"
     assert versus["agent_key"] == "SV-BUSINESS-ARCHITECT"
     assert any("não publicar bpmn" in item.lower() for item in client["forbidden_actions"])
+    assert any("SIPOC nos dois sentidos" in item["rule"] for item in client["handoff_rules"])
     assert any("publicar somente" in item["rule"] for item in versus["handoff_rules"])
+    assert any("objetivo ao gatilho pelo SIPOC" in item["rule"] for item in versus["handoff_rules"])

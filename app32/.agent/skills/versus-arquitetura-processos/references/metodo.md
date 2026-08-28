@@ -88,6 +88,15 @@ Validar dois eixos:
 
 Localizar órfãos, lacunas, duplicidades, sobreposições e saltos de nível.
 
+### 4.1 Validação bidirecional pelo SIPOC
+
+Para cada processo, executar dois percursos complementares:
+
+1. `progressivo`: gatilho → fornecedores → entradas → transformação/atividades → saídas → clientes/recebedores → objetivo;
+2. `regressivo`: objetivo → saídas necessárias → transformações suficientes → entradas requeridas → fornecedores adequados → gatilho coerente.
+
+O SIPOC é contrato transversal de fronteira e coerência, não decomposição `1:1` do BPMN. O objetivo explica o resultado pretendido; a saída identifica a entrega concreta. Todo caminho final deve produzir saída intencional e recebedor, inclusive quando o resultado for classificação para tratamento futuro.
+
 ## 5. Relação com capacidades e projetos
 
 - Processo declara as capacidades habilitadoras de que necessita.
