@@ -126,7 +126,6 @@ def save_execution_rule(company_id: int, routine_id: int, payload: dict[str, Any
                     routine_id=routine_id,
                 )
                 db.session.add(trigger)
-                db.session.flush()
             elif trigger.company_id != company_id or trigger.routine_id != routine_id:
                 raise ValueError("Gatilho não pertence à rotina e empresa ativas.")
             trigger.trigger_type = item.get("trigger_type") or "event"
@@ -135,7 +134,8 @@ def save_execution_rule(company_id: int, routine_id: int, payload: dict[str, Any
             trigger.activation_policy = item.get("activation_policy") or "automatic"
             trigger.config_json = item.get("config") or {}
             trigger.is_active = True
-            retained_trigger_ids.add(trigger.id)
+            if trigger.id is not None:
+                retained_trigger_ids.add(trigger.id)
 
         for trigger in existing_triggers:
             if trigger.id not in retained_trigger_ids:
