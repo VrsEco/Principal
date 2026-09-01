@@ -3163,7 +3163,7 @@
                     </div>
                     <div class="bpmn-flow-preview__canvas">
                         ${bpmnFlow.svg_snapshot
-                            ? bpmnFlow.svg_snapshot
+                            ? enhancePublishedBpmnMetadataBandSvg(bpmnFlow.svg_snapshot, bpmnFlow.bpmn_xml)
                             : (bpmnFlow.bpmn_xml
                                 ? `<div id="${viewerId}" class="bpmn-flow-preview__viewer"></div>`
                                 : '<div class="empty-state"><p>Fluxo publicado indisponível.</p></div>')}
@@ -3294,6 +3294,10 @@
         });
 
         await publishedBpmnViewer.importXML(bpmnFlow.bpmn_xml);
+        enhancePublishedBpmnMetadataBand(
+            host.querySelector('.djs-container > svg'),
+            bpmnFlow.bpmn_xml
+        );
 
         const canvas = publishedBpmnViewer.get && publishedBpmnViewer.get('canvas');
         if (canvas) {
@@ -3311,6 +3315,117 @@
                 canvas.zoom('fit-viewport', 'auto');
             }
         }
+    }
+
+    function enhancePublishedBpmnMetadataBandSvg(svgMarkup, bpmnXml) {
+        if (!svgMarkup || typeof DOMParser === 'undefined' || typeof XMLSerializer === 'undefined') {
+            return svgMarkup;
+        }
+
+        try {
+            const svgDocument = new DOMParser().parseFromString(svgMarkup, 'image/svg+xml');
+            enhancePublishedBpmnMetadataBand(svgDocument.documentElement, bpmnXml);
+            return new XMLSerializer().serializeToString(svgDocument);
+        } catch (error) {
+            console.warn('Falha ao ampliar a faixa de identificação do BPMN.', error);
+            return svgMarkup;
+        }
+    }
+
+    function enhancePublishedBpmnMetadataBand(svg, bpmnXml) {
+        if (!svg || !bpmnXml || typeof DOMParser === 'undefined') return;
+
+        const PARTICIPANT_BAND_WIDTH = 46;
+        const DEFAULT_PARTICIPANT_BAND_WIDTH = 30;
+        const bandDelta = PARTICIPANT_BAND_WIDTH - DEFAULT_PARTICIPANT_BAND_WIDTH;
+        const bpmnDocument = new DOMParser().parseFromString(bpmnXml, 'application/xml');
+        const participants = Array.from(bpmnDocument.getElementsByTagNameNS('*', 'participant'));
+        if (!participants.length) return;
+
+        let enhanced = false;
+        participants.forEach((participant) => {
+            const participantId = participant.getAttribute('id');
+            if (!participantId) return;
+
+            const participantGraphics = Array.from(svg.querySelectorAll('.djs-element[data-element-id]'))
+                .find((element) => element.getAttribute('data-element-id') === participantId);
+            if (!participantGraphics || participantGraphics.getAttribute('data-app32-metadata-band') === 'wide') return;
+
+            const visual = participantGraphics.querySelector(':scope > .djs-visual');
+            const participantRect = visual?.querySelector(':scope > rect');
+            const participantHeight = Number(participantRect?.getAttribute('height')) || 0;
+            const participantWidth = Number(participantRect?.getAttribute('width')) || 0;
+            if (!visual || !participantHeight || !participantWidth) return;
+
+            participantRect.setAttribute('width', String(participantWidth + bandDelta));
+            visual.querySelectorAll(':scope > path').forEach((path) => {
+                const definition = path.getAttribute('d') || '';
+                path.setAttribute(
+                    'd',
+                    definition.replace(
+                        /M\s*30(?:\s*,\s*|\s+)0\s*L\s*30(?:\s*,\s*|\s+)/i,
+                        `M${PARTICIPANT_BAND_WIDTH},0L${PARTICIPANT_BAND_WIDTH},`
+                    )
+                );
+            });
+
+            participantGraphics.querySelectorAll(':scope > rect').forEach((rect) => {
+                const width = Number(rect.getAttribute('width'));
+                if (!Number.isFinite(width)) return;
+                if (rect.classList.contains('djs-hit-all')) {
+                    rect.setAttribute('width', String(PARTICIPANT_BAND_WIDTH));
+                } else if (width >= participantWidth) {
+                    rect.setAttribute('width', String(width + bandDelta));
+                }
+            });
+
+            const participantWrapper = participantGraphics.parentElement;
+            const childrenGraphics = participantWrapper?.querySelector(':scope > .djs-children');
+            if (childrenGraphics) {
+                const currentTransform = childrenGraphics.getAttribute('transform') || '';
+                childrenGraphics.setAttribute('transform', `translate(${bandDelta} 0) ${currentTransform}`.trim());
+            }
+
+            const label = visual.querySelector(':scope > text.djs-label');
+            if (label) {
+                const metadataLines = splitParticipantMetadataLines(participant.getAttribute('name'));
+                label.replaceChildren();
+                label.style.fontSize = '13.5px';
+                label.setAttribute('lineHeight', '1.15');
+                metadataLines.forEach((line, index) => {
+                    const tspan = svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+                    tspan.setAttribute('x', String(participantHeight / 2));
+                    tspan.setAttribute('y', String(index === 0 ? 16 : 33));
+                    tspan.setAttribute('text-anchor', 'middle');
+                    tspan.textContent = line;
+                    label.appendChild(tspan);
+                });
+            }
+
+            participantGraphics.setAttribute('data-app32-metadata-band', 'wide');
+            enhanced = true;
+        });
+
+        if (enhanced && svg.hasAttribute('viewBox')) {
+            const viewBox = svg.getAttribute('viewBox').trim().split(/\s+/).map(Number);
+            if (viewBox.length === 4 && viewBox.every(Number.isFinite)) {
+                viewBox[2] += bandDelta;
+                svg.setAttribute('viewBox', viewBox.join(' '));
+            }
+        }
+    }
+
+    function splitParticipantMetadataLines(metadata) {
+        const normalized = String(metadata || 'Processo').replace(/\s+/g, ' ').trim();
+        const sections = normalized.split(/\s+\|\s+/).filter(Boolean);
+        if (sections.length > 1) {
+            return [sections[0], sections.slice(1).join(' | ')];
+        }
+
+        const words = normalized.split(' ');
+        if (words.length < 2) return [normalized, ''];
+        const midpoint = Math.ceil(words.length / 2);
+        return [words.slice(0, midpoint).join(' '), words.slice(midpoint).join(' ')];
     }
 
     function getPublishedDiagramUsefulBounds(viewer) {

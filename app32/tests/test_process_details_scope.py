@@ -195,6 +195,18 @@ def test_bpmn_modeler_keeps_saved_layout_on_import():
     assert 'scheduleOperationalActivityLabelRefresh();' not in content
 
 
+def test_published_bpmn_preview_widens_participant_metadata_band_for_two_lines():
+    template_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates', 'modules', 'processes', 'process_details_v2.html'))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'enhancePublishedBpmnMetadataBandSvg(bpmnFlow.svg_snapshot, bpmnFlow.bpmn_xml)' in content
+    assert 'function enhancePublishedBpmnMetadataBand(svg, bpmnXml)' in content
+    assert 'const PARTICIPANT_BAND_WIDTH = 46;' in content
+    assert "childrenGraphics.setAttribute('transform', `translate(${bandDelta} 0) ${currentTransform}`.trim());" in content
+    assert 'function splitParticipantMetadataLines(metadata)' in content
+
+
 def test_occurrences_loader_sends_company_scope_and_falls_back_gracefully():
     js_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static', 'js', 'process_details_occurrences.js'))
     with open(js_path, 'r', encoding='utf-8') as handle:
@@ -288,7 +300,7 @@ def test_process_details_template_uses_renderer_font_config_for_xml_fallback():
     assert 'fontSize: 16.5,' in content
     assert 'enhancePublishedBpmnTaskLabels' not in content
     assert 'tightenPublishedSvgViewport(host)' not in content
-    assert 'svg.setAttribute(\'viewBox\'' not in content
+    assert "svg.setAttribute('viewBox', viewBox.join(' '));" in content
     assert 'window.BpmnViewer || window.BpmnNavigatedViewer || window.BpmnJS || window.BpmnModeler' in content
 
 
