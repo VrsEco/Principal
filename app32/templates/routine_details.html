@@ -42,6 +42,10 @@
                 %}disabled style="opacity: 0.5; cursor: not-allowed;" {% endif %}>
                 <span>👥</span> Executores
             </button>
+            <button class="tab-button" data-tab="rule" onclick="switchTab('rule')" {% if is_new
+                %}disabled style="opacity: 0.5; cursor: not-allowed;" {% endif %}>
+                <span>⚡</span> Regra de Execução
+            </button>
         </div>
 
         <!-- Aba: Dados da Rotina -->
@@ -66,8 +70,18 @@
                         </select>
                     </div>
 
-                    <!-- Row 2: Tipo de Agendamento e Horário de Início -->
                     <div class="form-group">
+                        <label class="form-label">Modo de Execução *</label>
+                        <select name="execution_mode" class="form-select-custom" id="executionMode" required>
+                            <option value="scheduled" {{ 'selected' if (routine.execution_mode or 'scheduled')=='scheduled' else '' }}>📅 Programada</option>
+                            <option value="triggered" {{ 'selected' if routine.execution_mode=='triggered' else '' }}>⚡ Contínua por gatilho</option>
+                            <option value="hybrid" {{ 'selected' if routine.execution_mode=='hybrid' else '' }}>🔀 Híbrida</option>
+                        </select>
+                        <span class="form-hint">Programada usa agenda; contínua aguarda eventos; híbrida combina os dois.</span>
+                    </div>
+
+                    <!-- Row 2: Tipo de Agendamento e Horário de Início -->
+                    <div class="form-group schedule-only-field">
                         <label class="form-label">Tipo de Agendamento *</label>
                         <select name="schedule_type" class="form-select-custom" id="scheduleType" required>
                             <option value="daily" {{ 'selected' if routine.schedule_type=='daily' else '' }}>🌅 Diário
@@ -88,13 +102,13 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group schedule-only-field">
                         <label class="form-label">Horário de Início * <span style="font-weight:normal;color:var(--text-secondary);font-size:0.85em">(Fuso de Brasília -3:00)</span></label>
                         <input type="time" name="start_time" class="form-control" value="{{ routine.start_time or '00:01' }}" required>
                     </div>
 
                     <!-- Row 3: Detalhes do Agendamento (full width) -->
-                    <div class="form-group" id="scheduleValueGroup" style="grid-column: 1 / -1;">
+                    <div class="form-group schedule-only-field" id="scheduleValueGroup" style="grid-column: 1 / -1;">
                         <label class="form-label" id="scheduleValueLabel">Detalhes do Agendamento *</label>
                         <input type="text" name="schedule_value" class="form-control" id="scheduleValue"
                             value="{{ routine.schedule_value or '' }}">
@@ -102,7 +116,7 @@
                     </div>
 
                     <!-- Checkboxes para dias da semana -->
-                    <div class="form-group" id="weekdaysGroup" style="display: none; grid-column: 1 / -1;">
+                    <div class="form-group schedule-only-field" id="weekdaysGroup" style="display: none; grid-column: 1 / -1;">
                         <label class="form-label">Dias da Semana *</label>
                         <div class="weekdays-grid">
                             {% set selected_days = (routine.schedule_value or '').split(',') %}
@@ -268,6 +282,73 @@
                         <p>Aguarde enquanto buscamos os blocos compatíveis com instâncias de processo.</p>
                     </div>
                 </div>
+            </section>
+        </div>
+
+        <div id="tab-rule" class="tab-content">
+            <section class="surface-card execution-rule-shell">
+                <div class="execution-rule-header">
+                    <div>
+                        <p class="executors-eyebrow">Governança operacional</p>
+                        <h3 class="text-h3">Funções e gatilhos da rotina</h3>
+                        <p class="text-secondary">Vincule a responsabilidade às funções. Os ocupantes atuais são resolvidos automaticamente quando a instância é criada.</p>
+                    </div>
+                    <span class="executors-toolbar-badge" id="executionModeBadge">Programada</span>
+                </div>
+
+                <div id="executionRuleLoading" class="empty-state enhanced">
+                    <div class="empty-state-icon">⚡</div>
+                    <p>Carregando a regra de execução.</p>
+                </div>
+
+                <form id="executionRuleForm" style="display:none;">
+                    <div class="execution-rule-section">
+                        <div>
+                            <p class="executors-eyebrow">Responsabilidade</p>
+                            <h4 class="text-h4">Responsável único</h4>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Função responsável</label>
+                            <select id="responsibleRoleId" class="form-select-custom" onchange="updateResponsibleOccupants()"></select>
+                            <span class="form-hint" id="responsibleOccupantsHint">Nenhuma função selecionada.</span>
+                        </div>
+                    </div>
+
+                    <div class="execution-rule-section">
+                        <div class="execution-rule-section-title">
+                            <div>
+                                <p class="executors-eyebrow">Execução</p>
+                                <h4 class="text-h4">Time executor por função</h4>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addExecutorRoleRow()">➕ Adicionar função</button>
+                        </div>
+                        <div id="executorRoleRows" class="execution-rule-list"></div>
+                    </div>
+
+                    <div class="execution-rule-section" id="triggersSection">
+                        <div class="execution-rule-section-title">
+                            <div>
+                                <p class="executors-eyebrow">Disparo</p>
+                                <h4 class="text-h4">Gatilhos contínuos ou extraordinários</h4>
+                            </div>
+                            <button type="button" class="btn btn-secondary" onclick="addTriggerRow()">➕ Adicionar gatilho</button>
+                        </div>
+                        <div id="triggerRows" class="execution-rule-list"></div>
+                    </div>
+
+                    <div class="execution-rule-section" id="pendingEventsSection" style="display:none;">
+                        <div>
+                            <p class="executors-eyebrow">Aguardando decisão</p>
+                            <h4 class="text-h4">Eventos pendentes de confirmação</h4>
+                        </div>
+                        <div id="pendingEventRows" class="execution-rule-list"></div>
+                    </div>
+
+                    <div class="form-actions execution-rule-actions">
+                        <span class="text-secondary" id="executionRuleStatus"></span>
+                        <button type="submit" class="btn btn-primary">💾 Salvar regra de execução</button>
+                    </div>
+                </form>
             </section>
         </div>
     </div>
@@ -750,6 +831,81 @@
         border: 1px solid rgba(37, 99, 235, 0.15);
     }
 
+    .execution-rule-shell {
+        padding: 1.5rem;
+    }
+
+    .execution-rule-header,
+    .execution-rule-section-title,
+    .execution-rule-actions {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .execution-rule-section {
+        margin-top: 1.25rem;
+        padding: 1.25rem;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface-secondary);
+    }
+
+    .execution-rule-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .execution-rule-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 1.25fr) minmax(150px, 0.8fr) minmax(110px, 0.45fr) auto;
+        gap: 0.75rem;
+        align-items: end;
+        padding: 1rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
+    .execution-rule-row.trigger-row {
+        grid-template-columns: minmax(180px, 1fr) minmax(180px, 0.9fr) minmax(135px, 0.6fr) minmax(150px, 0.7fr) auto;
+    }
+
+    .execution-rule-row .form-group {
+        margin: 0;
+    }
+
+    .execution-rule-remove {
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(220, 38, 38, 0.2);
+        border-radius: 10px;
+        background: rgba(220, 38, 38, 0.07);
+        color: var(--danger, #dc2626);
+        font-size: 1.35rem;
+        cursor: pointer;
+    }
+
+    .execution-rule-actions {
+        align-items: center;
+        margin-top: 1.5rem;
+    }
+
+    .pending-event-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.9rem 1rem;
+        background: var(--surface-primary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+    }
+
     @media (max-width: 992px) {
         .executors-metrics-grid,
         .executors-list {
@@ -757,6 +913,11 @@
         }
 
         .journey-binding-row {
+            grid-template-columns: 1fr;
+        }
+
+        .execution-rule-row,
+        .execution-rule-row.trigger-row {
             grid-template-columns: 1fr;
         }
     }
@@ -794,6 +955,7 @@
     const routineMeta = {
         processCode: {{ (routine.process_code or '')|tojson }},
         processName: {{ (routine.process_name or '')|tojson }},
+        executionMode: {{ (routine.execution_mode or 'scheduled')|tojson }},
         scheduleType: {{ (routine.schedule_type or '')|tojson }},
         scheduleValue: {{ (routine.schedule_value or '')|tojson }},
         startTime: {{ (routine.start_time or '00:01')|tojson }}
@@ -801,7 +963,7 @@
 
     function switchTab(t) {
         console.log('Switching to tab:', t);
-        const tabs = ['routine', 'collaborators'];
+        const tabs = ['routine', 'collaborators', 'rule'];
         if (!tabs.includes(t)) return;
 
         // Update buttons
@@ -820,6 +982,9 @@
         if (t === 'collaborators' && routineId) {
             loadCollaborators();
         }
+        if (t === 'rule' && routineId) {
+            loadExecutionRule();
+        }
     }
 
     // Handle tab from URL on load
@@ -827,11 +992,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         const activeTab = urlParams.get('tab');
         updateCollaboratorsSummary();
-        if (activeTab && (activeTab === 'routine' || (activeTab === 'collaborators' && !isNew))) {
+        if (activeTab && (activeTab === 'routine' || (['collaborators', 'rule'].includes(activeTab) && !isNew))) {
             switchTab(activeTab);
         }
     });
 
+    const executionMode = document.getElementById('executionMode');
     const scheduleType = document.getElementById('scheduleType');
     const scheduleValueGroup = document.getElementById('scheduleValueGroup');
     const scheduleValue = document.getElementById('scheduleValue');
@@ -880,8 +1046,19 @@
         }
     }
 
+    function updateExecutionModeFields() {
+        const usesSchedule = executionMode.value !== 'triggered';
+        document.querySelectorAll('.schedule-only-field').forEach(field => {
+            field.style.display = usesSchedule ? '' : 'none';
+        });
+        const badge = document.getElementById('executionModeBadge');
+        if (badge) badge.textContent = executionModeLabel(executionMode.value);
+        if (usesSchedule) updateScheduleFields();
+    }
+
     scheduleType.addEventListener('change', updateScheduleFields);
-    updateScheduleFields();
+    executionMode.addEventListener('change', updateExecutionModeFields);
+    updateExecutionModeFields();
 
     document.getElementById('routineDataForm').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -891,6 +1068,10 @@
         if (data.schedule_type === 'weekly') {
             const days = Array.from(document.querySelectorAll('input[name="weekday"]:checked')).map(cb => cb.value);
             data.schedule_value = days.join(',');
+        }
+        const scoreWeightInput = this.querySelector('input[name="score_weight"]');
+        if (scoreWeightInput && window.App32InputFormatters) {
+            data.score_weight = window.App32InputFormatters.normalizeForSubmit(scoreWeightInput);
         }
 
         const url = isNew ? `/api/companies/${companyId}/process-routines` : `/api/companies/${companyId}/process-routines/${routineId}`;
@@ -911,6 +1092,242 @@
             alert('Erro: ' + result.message);
         }
     });
+
+    let executionRuleLoaded = false;
+    let executionRuleState = {
+        available_roles: [],
+        role_assignments: [],
+        triggers: [],
+        pending_events: []
+    };
+
+    function formatApiMessage(result, fallback) {
+        const message = result?.message || result?.error || fallback;
+        if (Array.isArray(message)) {
+            return message.map(item => item.msg || String(item)).join('; ');
+        }
+        return String(message || fallback);
+    }
+
+    function executionModeLabel(mode) {
+        return {
+            scheduled: 'Programada',
+            triggered: 'Contínua por gatilho',
+            hybrid: 'Híbrida'
+        }[mode] || 'Programada';
+    }
+
+    function roleOptions(selectedId = '') {
+        return ['<option value="">Selecione uma função...</option>']
+            .concat((executionRuleState.available_roles || []).map(role => `
+                <option value="${role.id}" ${String(role.id) === String(selectedId || '') ? 'selected' : ''}>
+                    ${escapeHtml(role.title || role.name || `Função ${role.id}`)}
+                </option>
+            `)).join('');
+    }
+
+    function findRole(roleId) {
+        return (executionRuleState.available_roles || []).find(role => String(role.id) === String(roleId || ''));
+    }
+
+    function updateResponsibleOccupants() {
+        const role = findRole(document.getElementById('responsibleRoleId')?.value);
+        const hint = document.getElementById('responsibleOccupantsHint');
+        if (!hint) return;
+        if (!role) {
+            hint.textContent = 'Selecione a função que responde pelo resultado da rotina.';
+            return;
+        }
+        const occupants = role.occupants || [];
+        hint.textContent = occupants.length
+            ? `Ocupantes atuais: ${occupants.map(item => item.name).join(', ')}.`
+            : 'Atenção: esta função ainda não possui ocupante ativo.';
+    }
+
+    function removeExecutionRuleRow(button) {
+        button.closest('.execution-rule-row')?.remove();
+    }
+
+    function addExecutorRoleRow(item = {}) {
+        const container = document.getElementById('executorRoleRows');
+        const row = document.createElement('div');
+        row.className = 'execution-rule-row';
+        row.innerHTML = `
+            <div class="form-group">
+                <label>Função executora</label>
+                <select class="form-select-custom executor-role-id" required>${roleOptions(item.role_id)}</select>
+            </div>
+            <div class="form-group">
+                <label>Distribuição</label>
+                <select class="form-select-custom executor-distribution-mode">
+                    <option value="collective" ${item.distribution_mode === 'collective' ? 'selected' : ''}>Coletiva</option>
+                    <option value="individual" ${item.distribution_mode === 'individual' ? 'selected' : ''}>Uma instância por ocupante</option>
+                    <option value="pool" ${item.distribution_mode === 'pool' ? 'selected' : ''}>Fila da função</option>
+                </select>
+            </div>
+            <div class="form-group compact-field">
+                <label>Horas</label>
+                <input class="form-control executor-hours-used" type="number" min="0" step="0.25" value="${escapeHtml(item.hours_used ?? 0)}">
+            </div>
+            <button type="button" class="execution-rule-remove" onclick="removeExecutionRuleRow(this)" aria-label="Remover função">×</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function addTriggerRow(item = {}) {
+        const container = document.getElementById('triggerRows');
+        const row = document.createElement('div');
+        row.className = 'execution-rule-row trigger-row';
+        row.dataset.triggerId = item.id || '';
+        row.innerHTML = `
+            <div class="form-group">
+                <label>Nome do gatilho</label>
+                <input class="form-control trigger-name" maxlength="160" required value="${escapeHtml(item.name || '')}" placeholder="Ex.: Novo pedido recebido">
+            </div>
+            <div class="form-group">
+                <label>Código do evento</label>
+                <input class="form-control trigger-code" maxlength="120" required value="${escapeHtml(item.trigger_code || '')}" placeholder="novo_pedido_recebido">
+            </div>
+            <div class="form-group compact-field">
+                <label>Origem</label>
+                <select class="form-select-custom trigger-type">
+                    <option value="event" ${item.trigger_type !== 'manual' ? 'selected' : ''}>Evento</option>
+                    <option value="manual" ${item.trigger_type === 'manual' ? 'selected' : ''}>Manual</option>
+                </select>
+            </div>
+            <div class="form-group compact-field">
+                <label>Ativação</label>
+                <select class="form-select-custom trigger-activation-policy">
+                    <option value="automatic" ${item.activation_policy !== 'confirmation' ? 'selected' : ''}>Automática</option>
+                    <option value="confirmation" ${item.activation_policy === 'confirmation' ? 'selected' : ''}>Confirmar antes</option>
+                </select>
+            </div>
+            <button type="button" class="execution-rule-remove" onclick="removeExecutionRuleRow(this)" aria-label="Remover gatilho">×</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function renderPendingEvents() {
+        const section = document.getElementById('pendingEventsSection');
+        const list = document.getElementById('pendingEventRows');
+        const events = executionRuleState.pending_events || [];
+        section.style.display = events.length ? 'block' : 'none';
+        list.innerHTML = events.map(event => `
+            <article class="pending-event-card">
+                <div>
+                    <strong>${escapeHtml(event.trigger_name || event.trigger_code || 'Gatilho')}</strong>
+                    <span>${escapeHtml(event.event_key || '')}</span>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="confirmTriggerEvent(${event.id})">Confirmar execução</button>
+            </article>
+        `).join('');
+    }
+
+    function renderExecutionRule() {
+        const responsible = (executionRuleState.role_assignments || []).find(item => item.assignment_type === 'responsible');
+        const executors = (executionRuleState.role_assignments || []).filter(item => item.assignment_type === 'executor');
+        const responsibleSelect = document.getElementById('responsibleRoleId');
+        responsibleSelect.innerHTML = roleOptions(responsible?.role_id);
+        responsibleSelect.onchange = updateResponsibleOccupants;
+
+        document.getElementById('executorRoleRows').innerHTML = '';
+        executors.forEach(addExecutorRoleRow);
+        document.getElementById('triggerRows').innerHTML = '';
+        (executionRuleState.triggers || []).forEach(addTriggerRow);
+        updateResponsibleOccupants();
+        renderPendingEvents();
+
+        const mode = executionRuleState.execution_mode || 'scheduled';
+        document.getElementById('executionMode').value = mode;
+        routineMeta.executionMode = mode;
+        updateExecutionModeFields();
+        document.getElementById('executionRuleStatus').textContent = `${executionModeLabel(mode)} · funções resolvidas pelos ocupantes ativos`;
+        document.getElementById('executionRuleLoading').style.display = 'none';
+        document.getElementById('executionRuleForm').style.display = 'block';
+    }
+
+    async function loadExecutionRule(force = false) {
+        if (!routineId || (executionRuleLoaded && !force)) return;
+        document.getElementById('executionRuleLoading').style.display = 'block';
+        try {
+            const response = await fetch(`/api/companies/${companyId}/process-routines/${routineId}/execution-rule`);
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(formatApiMessage(result, 'Não foi possível carregar a regra.'));
+            executionRuleState = result.data || executionRuleState;
+            executionRuleLoaded = true;
+            renderExecutionRule();
+        } catch (error) {
+            document.getElementById('executionRuleLoading').innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+        }
+    }
+
+    function collectExecutionRulePayload() {
+        const assignments = [];
+        const responsibleRoleId = document.getElementById('responsibleRoleId').value;
+        if (responsibleRoleId) {
+            assignments.push({
+                role_id: Number(responsibleRoleId),
+                assignment_type: 'responsible',
+                distribution_mode: 'collective',
+                hours_used: 0,
+                notes: ''
+            });
+        }
+        document.querySelectorAll('#executorRoleRows .execution-rule-row').forEach(row => {
+            assignments.push({
+                role_id: Number(row.querySelector('.executor-role-id').value),
+                assignment_type: 'executor',
+                distribution_mode: row.querySelector('.executor-distribution-mode').value,
+                hours_used: Number(row.querySelector('.executor-hours-used').value || 0),
+                notes: ''
+            });
+        });
+        const triggers = Array.from(document.querySelectorAll('#triggerRows .trigger-row')).map(row => ({
+            id: row.dataset.triggerId ? Number(row.dataset.triggerId) : null,
+            trigger_type: row.querySelector('.trigger-type').value,
+            trigger_code: row.querySelector('.trigger-code').value,
+            name: row.querySelector('.trigger-name').value,
+            activation_policy: row.querySelector('.trigger-activation-policy').value,
+            config: {}
+        }));
+        return {
+            execution_mode: document.getElementById('executionMode').value,
+            role_assignments: assignments,
+            triggers
+        };
+    }
+
+    document.getElementById('executionRuleForm').addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const status = document.getElementById('executionRuleStatus');
+        status.textContent = 'Salvando...';
+        try {
+            const response = await fetch(`/api/companies/${companyId}/process-routines/${routineId}/execution-rule`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(collectExecutionRulePayload())
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(formatApiMessage(result, 'Não foi possível salvar a regra.'));
+            executionRuleState = result.data || executionRuleState;
+            executionRuleLoaded = true;
+            renderExecutionRule();
+            status.textContent = 'Regra salva com sucesso.';
+        } catch (error) {
+            status.textContent = error.message;
+        }
+    });
+
+    async function confirmTriggerEvent(eventId) {
+        try {
+            const response = await fetch(`/api/companies/${companyId}/routine-trigger-events/${eventId}/confirm`, { method: 'POST' });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(formatApiMessage(result, 'Não foi possível confirmar o evento.'));
+            await loadExecutionRule(true);
+        } catch (error) {
+            alert(error.message);
+        }
+    }
 
     async function deleteRoutine() {
         if (!routineId) return;

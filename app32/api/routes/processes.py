@@ -16,6 +16,7 @@ from database import get_db
 from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
 from services.process_artifact_service import build_definition_snapshot, get_artifact_definition
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
+from schemas.routine_execution_rule import RoutineEventDispatchInput, RoutineExecutionRuleInput
 from services.process_bpmn_service import get_latest_diagram, serialize_flow_snapshot
 from services.process_portal_service import (
     ProcessPortalAccessError,
@@ -1090,6 +1091,7 @@ def api_get_process_routines(company_id):
                 r.name,
                 r.description,
                 r.process_id,
+                r.execution_mode,
                 r.schedule_type,
                 r.schedule_value,
                 r.start_time,
@@ -1111,6 +1113,36 @@ def api_get_process_routines(company_id):
                     FILTER (WHERE rc.employee_id IS NOT NULL),
                     '[]'::json
                 ) AS collaborators
+                ,COALESCE(
+                    (
+                        SELECT json_agg(
+                            json_build_object(
+                                'role_id', rra.role_id,
+                                'role_title', ro.title,
+                                'assignment_type', rra.assignment_type,
+                                'distribution_mode', rra.distribution_mode
+                            ) ORDER BY rra.assignment_type, ro.title
+                        )
+                        FROM routine_role_assignments rra
+                        JOIN roles ro
+                          ON ro.id = rra.role_id
+                         AND ro.company_id = r.company_id
+                        WHERE rra.routine_id = r.id
+                          AND rra.company_id = r.company_id
+                          AND rra.is_active = TRUE
+                    ),
+                    '[]'::json
+                ) AS role_assignments
+                ,COALESCE(
+                    (
+                        SELECT COUNT(*)
+                        FROM routine_triggers rt
+                        WHERE rt.routine_id = r.id
+                          AND rt.company_id = r.company_id
+                          AND rt.is_active = TRUE
+                    ),
+                    0
+                ) AS trigger_count
             FROM routines r
             LEFT JOIN processes p ON r.process_id = p.id
             LEFT JOIN routine_collaborators rc ON rc.routine_id = r.id
@@ -1121,6 +1153,7 @@ def api_get_process_routines(company_id):
                 r.name,
                 r.description,
                 r.process_id,
+                r.execution_mode,
                 r.schedule_type,
                 r.schedule_value,
                 r.start_time,
@@ -1156,6 +1189,9 @@ def api_create_process_routine(company_id):
 
         process_id = _coerce_optional_int(data.get("process_id"), default=None)
         schedule_type = _coerce_optional_text(data.get("schedule_type")) or "weekly"
+        execution_mode = _coerce_optional_text(data.get("execution_mode")) or "scheduled"
+        if execution_mode not in {"scheduled", "triggered", "hybrid"}:
+            return jsonify({"success": False, "message": "Modo de execução inválido."}), 400
         schedule_value = _coerce_optional_text(data.get("schedule_value"))
         start_time = _coerce_optional_text(data.get("start_time")) or "00:01"
         deadline_days = _coerce_optional_int(data.get("deadline_days"), default=0)
@@ -1171,9 +1207,9 @@ def api_create_process_routine(company_id):
             """
             INSERT INTO routines (
                 company_id, name, description, process_id,
-                schedule_type, schedule_value, start_time, deadline_days, deadline_hours, deadline_date,
+                execution_mode, schedule_type, schedule_value, start_time, deadline_days, deadline_hours, deadline_date,
                 score_weight, is_active, created_at, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             RETURNING id
         """,
             (
@@ -1181,6 +1217,7 @@ def api_create_process_routine(company_id):
                 name,
                 data.get("description", ""),
                 process_id,
+                execution_mode,
                 schedule_type,
                 schedule_value,
                 start_time,
@@ -1214,6 +1251,9 @@ def api_update_process_routine(company_id, routine_id):
         data = request.get_json(silent=True) or {}
         process_id = _coerce_optional_int(data.get("process_id"), default=None)
         schedule_type = _coerce_optional_text(data.get("schedule_type"))
+        execution_mode = _coerce_optional_text(data.get("execution_mode")) or "scheduled"
+        if execution_mode not in {"scheduled", "triggered", "hybrid"}:
+            return jsonify({"success": False, "message": "Modo de execução inválido."}), 400
         schedule_value = _coerce_optional_text(data.get("schedule_value"))
         start_time = _coerce_optional_text(data.get("start_time")) or "00:01"
         deadline_days = _coerce_optional_int(data.get("deadline_days"), default=0)
@@ -1229,6 +1269,7 @@ def api_update_process_routine(company_id, routine_id):
                 name = %s,
                 description = %s,
                 process_id = %s,
+                execution_mode = %s,
                 schedule_type = %s,
                 schedule_value = %s,
                 start_time = %s,
@@ -1242,6 +1283,7 @@ def api_update_process_routine(company_id, routine_id):
                 data.get("name"),
                 data.get("description", ""),
                 process_id,
+                execution_mode,
                 schedule_type,
                 schedule_value,
                 start_time,
@@ -1258,6 +1300,102 @@ def api_update_process_routine(company_id, routine_id):
         return jsonify({"success": True, "message": "Rotina atualizada com sucesso"})
 
     except Exception as e:
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@processes_bp.route(
+    '/api/companies/<int:company_id>/process-routines/<int:routine_id>/execution-rule',
+    methods=['GET'],
+)
+@permission_required('processes', 'view')
+def api_get_routine_execution_rule(company_id, routine_id):
+    from services.routine_execution_rule_service import get_execution_rule
+
+    try:
+        if not has_permission(company_id, 'processes', 'view'):
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+        session['active_company_id'] = company_id
+        return jsonify({"success": True, "data": get_execution_rule(company_id, routine_id)})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 404
+    except Exception:
+        current_app.logger.exception(
+            'Falha ao carregar regra de execução company_id=%s routine_id=%s', company_id, routine_id
+        )
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@processes_bp.route(
+    '/api/companies/<int:company_id>/process-routines/<int:routine_id>/execution-rule',
+    methods=['PUT'],
+)
+@permission_required('processes', 'edit')
+def api_save_routine_execution_rule(company_id, routine_id):
+    from services.routine_execution_rule_service import save_execution_rule
+
+    if not has_company_full_access(company_id):
+        return jsonify({"success": False, "message": "Acesso negado: somente gestores podem configurar a rotina."}), 403
+    try:
+        payload = RoutineExecutionRuleInput.model_validate(request.get_json(silent=True) or {}).model_dump()
+        session['active_company_id'] = company_id
+        data = save_execution_rule(company_id, routine_id, payload)
+        return jsonify({"success": True, "data": data})
+    except ValidationError as exc:
+        return jsonify({"success": False, "message": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception:
+        current_app.logger.exception(
+            'Falha ao salvar regra de execução company_id=%s routine_id=%s', company_id, routine_id
+        )
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@processes_bp.route('/api/companies/<int:company_id>/routine-events', methods=['POST'])
+@permission_required('processes', 'create')
+def api_dispatch_routine_event(company_id):
+    from services.routine_execution_rule_service import dispatch_routine_event
+
+    try:
+        if not has_permission(company_id, 'processes', 'create'):
+            return jsonify({"success": False, "message": "Acesso negado."}), 403
+        payload = RoutineEventDispatchInput.model_validate(request.get_json(silent=True) or {})
+        session['active_company_id'] = company_id
+        result = dispatch_routine_event(
+            company_id,
+            payload.trigger_code,
+            payload.event_key,
+            payload.payload,
+        )
+        return jsonify({"success": True, "data": result}), 202
+    except ValidationError as exc:
+        return jsonify({"success": False, "message": exc.errors()}), 400
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 404
+    except Exception:
+        current_app.logger.exception('Falha ao processar evento de rotina company_id=%s', company_id)
+        return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@processes_bp.route(
+    '/api/companies/<int:company_id>/routine-trigger-events/<int:event_id>/confirm',
+    methods=['POST'],
+)
+@permission_required('processes', 'edit')
+def api_confirm_routine_trigger_event(company_id, event_id):
+    from services.routine_execution_rule_service import confirm_trigger_event
+
+    if not has_company_full_access(company_id):
+        return jsonify({"success": False, "message": "Acesso negado."}), 403
+    try:
+        session['active_company_id'] = company_id
+        return jsonify({"success": True, "data": confirm_trigger_event(company_id, event_id)})
+    except ValueError as exc:
+        return jsonify({"success": False, "message": str(exc)}), 400
+    except Exception:
+        current_app.logger.exception(
+            'Falha ao confirmar evento de rotina company_id=%s event_id=%s', company_id, event_id
+        )
         return jsonify({"success": False, "message": PUBLIC_ERROR_MESSAGE}), 500
 
 @processes_bp.route('/api/companies/<int:company_id>/process-routines/<int:routine_id>', methods=['DELETE'])
@@ -1639,6 +1777,7 @@ def routine_details_page(company_id, routine_id):
     if is_new:
         routine = {
             "id": None, "name": "", "description": "", "process_id": None,
+            "execution_mode": "scheduled",
             "schedule_type": "weekly", "schedule_value": "", "start_time": "00:01",
             "deadline_days": 0, "deadline_hours": 0, "score_weight": 1.0
         }

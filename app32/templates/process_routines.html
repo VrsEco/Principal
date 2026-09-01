@@ -434,7 +434,13 @@
     }
 
     grid.innerHTML = data.map(r => {
-      const scheduleDetails = formatScheduleDetails(r);
+      const mode = r.execution_mode || 'scheduled';
+      const triggerCount = Number(r.trigger_count || 0);
+      const scheduleDetails = mode === 'triggered'
+        ? `Contínua por gatilho | ${triggerCount} gatilho${triggerCount === 1 ? '' : 's'}`
+        : mode === 'hybrid'
+          ? `Híbrida | ${formatScheduleDetails(r)} | ${triggerCount} gatilho${triggerCount === 1 ? '' : 's'}`
+          : formatScheduleDetails(r);
       const processLabel = `${r.process_code ? r.process_code + ' - ' : ''}${r.process_name || 'Processo Indefinido'}`;
 
       // Team rendering
@@ -446,6 +452,12 @@
         }).join('');
         const remaining = r.collaborators.length > 3 ? `<span class="text-sm text-tertiary ms-1">+${r.collaborators.length - 3}</span>` : '';
         teamHtml = `<div class="rt-team">${avatars}${remaining}</div>`;
+      } else if (r.role_assignments && r.role_assignments.length > 0) {
+        const roleTitles = r.role_assignments.map(item => item.role_title).filter(Boolean);
+        const responsible = r.role_assignments.find(item => item.assignment_type === 'responsible');
+        teamHtml = `<div class="rt-team" title="Funções: ${roleTitles.join(', ')}">
+          <span class="text-sm">${responsible ? '🎯 ' + responsible.role_title : '👥 ' + roleTitles.length + ' função(ões)'}</span>
+        </div>`;
       }
 
       // Next deadline
@@ -480,7 +492,7 @@
                 
                 <div class="rt-meta">
                     <div class="rt-schedule-badge">
-                        <span>📅</span> ${scheduleDetails}
+                        <span>${mode === 'triggered' ? '⚡' : mode === 'hybrid' ? '🔁' : '📅'}</span> ${scheduleDetails}
                     </div>
                     ${deadlineHtml}
                     <div style="flex:1"></div>

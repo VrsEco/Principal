@@ -151,6 +151,18 @@ def build_automatic_instance_code(routine: Routine, now: Optional[datetime] = No
     return f"{process_code}-RT{routine.id}-{current.strftime('%Y%m%d')}"
 
 
+def build_automatic_instance_code_for_target(
+    routine: Routine,
+    target_key: str | int | None,
+    now: Optional[datetime] = None,
+) -> str:
+    base_code = build_automatic_instance_code(routine, now)
+    if not target_key:
+        return base_code
+    safe_target = "".join(char for char in str(target_key) if char.isalnum() or char in "-_")[:24]
+    return f"{base_code}-{safe_target}"[:100]
+
+
 def calculate_due_date_for_routine(routine: Routine, now: Optional[datetime] = None) -> date:
     current = get_scheduler_now(now)
 
@@ -192,6 +204,8 @@ def process_scheduled_routines(now: Optional[datetime] = None) -> dict:
     )
 
     for routine in routines:
+        if str(getattr(routine, "execution_mode", "scheduled") or "scheduled").lower() == "triggered":
+            continue
         if not is_routine_due(routine, current):
             continue
 
@@ -200,40 +214,66 @@ def process_scheduled_routines(now: Optional[datetime] = None) -> dict:
             skipped += 1
             continue
 
-        instance_code = build_automatic_instance_code(routine, current)
-        existing_instance = ProcessInstance.query.filter_by(
-            company_id=routine.company_id,
-            routine_id=routine.id,
-            instance_code=instance_code,
-        ).first()
-        if existing_instance is not None:
-            skipped += 1
-            continue
+        direct_collaborators = _build_collaborators_payload(routine, routine.company_id)
+        from services.routine_execution_rule_service import resolve_execution_groups_for_routine
 
-        collaborators = _build_collaborators_payload(routine, routine.company_id)
-        instance = ProcessInstance(
-            company_id=routine.company_id,
-            process_id=process.id,
-            routine_id=routine.id,
-            instance_code=instance_code,
-            title=routine.name,
-            description=routine.description,
-            status="pending",
-            priority="normal",
-            due_date=calculate_due_date_for_routine(routine, current),
-            trigger_type="automatic",
-            owner_employee_id=process.owner_employee_id,
-            responsible_id=process.responsible_id,
-            executor_id=_first_executor_id(collaborators),
-            collaborators_json=collaborators,
-            score_weight=float(_normalize_numeric(getattr(routine, "score_weight", 1.0), default=1.0)),
-            created_by="scheduler",
-        )
-        db.session.add(instance)
-        db.session.flush()
+        resolved = resolve_execution_groups_for_routine(routine)
+        if resolved:
+            groups, responsible_snapshot = resolved
+        else:
+            groups = [{
+                "distribution_mode": "collective",
+                "target_employee_id": None,
+                "executor_id": _first_executor_id(direct_collaborators),
+                "collaborators": direct_collaborators,
+            }]
+            responsible_snapshot = []
 
-        _persist_instance_collaborators(instance.id, collaborators)
-        created += 1
+        for group in groups:
+            collaborators = _merge_collaborators(group.get("collaborators", []), direct_collaborators)
+            target_key = group.get("target_employee_id")
+            instance_code = build_automatic_instance_code_for_target(routine, target_key, current)
+            existing_instance = ProcessInstance.query.filter_by(
+                company_id=routine.company_id,
+                routine_id=routine.id,
+                instance_code=instance_code,
+            ).first()
+            if existing_instance is not None:
+                skipped += 1
+                continue
+
+            responsible_id = (
+                responsible_snapshot[0].get("id") if responsible_snapshot else process.responsible_id
+            )
+            instance = ProcessInstance(
+                company_id=routine.company_id,
+                process_id=process.id,
+                routine_id=routine.id,
+                instance_code=instance_code,
+                title=routine.name,
+                description=routine.description,
+                status="pending",
+                priority="normal",
+                due_date=calculate_due_date_for_routine(routine, current),
+                trigger_type="automatic",
+                owner_employee_id=process.owner_employee_id,
+                responsible_id=responsible_id,
+                executor_id=group.get("executor_id"),
+                collaborators_json=collaborators,
+                runtime_context_json={
+                    "role_snapshot": {
+                        "responsible": responsible_snapshot,
+                        "executors": collaborators,
+                    }
+                },
+                score_weight=float(_normalize_numeric(getattr(routine, "score_weight", 1.0), default=1.0)),
+                created_by="scheduler",
+            )
+            db.session.add(instance)
+            db.session.flush()
+
+            _persist_instance_collaborators(instance.id, collaborators)
+            created += 1
 
     db.session.commit()
     overdue_updated = sync_overdue_process_instances(current)
@@ -292,6 +332,19 @@ def _first_executor_id(collaborators: Iterable[dict]) -> Optional[int]:
         if employee_id:
             return int(employee_id)
     return None
+
+
+def _merge_collaborators(*groups: Iterable[dict]) -> list[dict]:
+    result = []
+    seen_ids = set()
+    for group in groups:
+        for collaborator in group:
+            employee_id = collaborator.get("id") or collaborator.get("employee_id")
+            if not employee_id or employee_id in seen_ids:
+                continue
+            seen_ids.add(employee_id)
+            result.append(collaborator)
+    return result
 
 
 def _normalize_numeric(value: object, default: float = 0) -> float:

@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from services.process_routine_scheduler_service import (
     build_automatic_instance_code,
+    build_automatic_instance_code_for_target,
     calculate_due_date_for_routine,
     is_routine_due,
     resolve_routine_start_time,
@@ -59,6 +60,16 @@ def test_build_automatic_instance_code_is_deterministic_per_day():
     code = build_automatic_instance_code(routine, datetime(2026, 3, 11, 14, 30))
 
     assert code == "FIN.44-RT7-20260311"
+
+
+def test_build_automatic_instance_code_supports_individual_role_targets():
+    routine = _routine(id=7, process_id=44, process=SimpleNamespace(code="FIN.44"))
+
+    first = build_automatic_instance_code_for_target(routine, 101, datetime(2026, 3, 11, 14, 30))
+    second = build_automatic_instance_code_for_target(routine, 102, datetime(2026, 3, 11, 14, 30))
+
+    assert first == "FIN.44-RT7-20260311-101"
+    assert second == "FIN.44-RT7-20260311-102"
 
 
 def test_calculate_due_date_for_routine_uses_relative_deadline():

@@ -48,7 +48,14 @@ from .strategy_alignment import (
     ProcessStrategyProfile,
     StrategyMaturationItem,
 )
-from .routine import Routine, RoutineCollaborator, RoutineJourneyBinding
+from .routine import (
+    Routine,
+    RoutineCollaborator,
+    RoutineJourneyBinding,
+    RoutineRoleAssignment,
+    RoutineTrigger,
+    RoutineTriggerEvent,
+)
 from .financial import (
     FinancialAccountCategory,
     FinancialAssetAccount,
@@ -209,7 +216,7 @@ __all__ = [
     'Portfolio', 'Project', 'ProjectTask', 'ProjectTaskDependency', 'ProjectActivityCollaborator',
     'ProcessArea', 'MacroProcess', 'Process', 'ProcessBpmnDiagram', 'ProcessBpmsAnalysis', 'ProcessSipocSnapshot', 'ProcessSipocItem', 'ProcessSipocRegulatoryItem', 'MacroProcessSipocSnapshot', 'MacroProcessSipocItem', 'MacroProcessSipocRegulatoryItem', 'ProcessRoutine', 'ProcessStep', 'ProcessInstance', 'ProcessInstanceCollaborator', 'ProcessInstanceExecution', 'ProcessActivityExecutionContract', 'ProcessActivityArtifactDefinition', 'ProcessActivityArtifactLink', 'ProcessActivityArtifactExecution', 'ProcessExecutionAssignment', 'CapabilityDimension', 'EnablingResource', 'EnablingCapability', 'ProcessEnablingResourceLink', 'ProcessCapabilityLink', 'ProcessExecutionPlan', 'ResourceCatalog', 'ProcessResourceLink', 'ProcessPortalPublication', 'ProcessPortalPublicationGrant',
     'OrganizationalIdentity', 'ProcessStrategyProfile', 'ProcessStrategicAlignmentLink', 'IndicatorLineOfSight', 'StrategyMaturationItem',
-    'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding',
+    'Routine', 'RoutineCollaborator', 'RoutineJourneyBinding', 'RoutineRoleAssignment', 'RoutineTrigger', 'RoutineTriggerEvent',
     'FinancialAccountCategory', 'FinancialAssetAccount', 'FinancialBankAccount', 'FinancialChartAccount', 'FinancialCorrectionIndex', 'FinancialCostCenter', 'FinancialCustomerPortfolio', 'FinancialCounterparty', 'FinancialDiscountRule', 'FinancialDomainEnablement', 'FinancialManualDomain', 'FinancialAutomationRule', 'FinancialAutomationExecution', 'FinancialPaymentMethod', 'FinancialSchedule', 'FinancialSatellitePolicy', 'FinancialScheduleLink', 'FinancialSatelliteExecution', 'FinancialBordero', 'FinancialBorderoItem', 'FinancialBorderoSettlement',
     'FinancialEntry', 'FinancialEntryAllocation', 'FinancialSettlement', 'FinancialSettlementComponent', 'FinancialTitleAdjustment', 'FinancialTitleAdjustmentAllocation', 'FinancialTitleCalculationLog', 'FinancialImportBatch', 'FinancialImportRow', 'FinancialReconciliationMatch', 'FinancialClassificationRule', 'FinancialClassificationMemory', 'FinancialClassificationSuggestion', 'FinancialIngestionRecord',
     'FinancialAutomationBatch', 'FinancialAutomationDocument', 'FinancialAutomationHistory', 'FinancialAutomationRecord',
