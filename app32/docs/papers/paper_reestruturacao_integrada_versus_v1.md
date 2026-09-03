@@ -294,11 +294,11 @@ O ICP deve combinar características da empresa, situação de compra e condiç�
 
 #### Núcleo comum obrigatório
 
-Empresa brasileira de pequeno ou médio porte que precisa **crescer com controle** ou **conduzir um ciclo de adequação com eficiência e preservação de valor**, e que:
+Empresa brasileira de pequeno ou médio porte que precisa **crescer com controle** ou **conduzir um ciclo de adequação com eficiência e preservação de valor**, especialmente quando a complexidade da operação começa a superar a capacidade atual de acompanhamento e controle dos gestores, e que:
 
 1. possua operação real, equipe e processos interdependentes;
 2. tenha sócio, diretor ou gestor com poder de patrocinar mudanças;
-3. enfrente perda relevante por improviso, falta de clareza ou baixa previsibilidade durante um ciclo de expansão, reorganização ou redimensionamento;
+3. perceba que os controles atuais já não oferecem segurança suficiente para acompanhar a operação, delegar decisões e preservar a previsibilidade durante um ciclo de expansão, reorganização ou redimensionamento;
 4. aceite disponibilizar pessoas, dados e tempo para implantação;
 5. queira capacidade gerencial funcionando, e não apenas relatório ou aconselhamento;
 6. tenha condição econômica compatível com o escopo, a duração e a intensidade do trabalho.
@@ -312,7 +312,7 @@ Empresa brasileira de pequeno ou médio porte que precisa **crescer com controle
 
 #### Perfil B — estruturação para crescer ou se adequar com controle
 
-- **Gatilho:** expansão sem organização; ou necessidade de reorganizar custos, estrutura e capacidade diante de retração, mudança de mercado ou redimensionamento do negócio.
+- **Gatilho:** a complexidade da empresa começa a superar a capacidade de controle dos gestores; há expansão sem organização ou necessidade de reorganizar custos, estrutura e capacidade diante de retração, mudança de mercado ou redimensionamento do negócio.
 - **Busca:** estruturar capacidades duradouras para crescer com segurança ou realizar ajustes preservando caixa, produtividade, clientes e competências essenciais.
 - **Entrada comercial:** Fase 00 da Estruturação Empresarial, com diagnóstico e priorização.
 - **Sustentação possível:** Performance Hub como cadência recorrente de execução, acompanhamento e evolução.
