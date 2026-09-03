@@ -50,8 +50,10 @@ Arquivo:
 - `C:\GestaoVersus\app32\app32\src\core\mcp_process_flow_tools.py`
 
 Tools oficiais:
+- `get_process_modeling_package_tool`
 - `analyze_process_flow_copilot_tool`
 - `suggest_process_flow_activity_automation_tool`
+- `publish_approved_process_modeling_package_tool` — exclusiva da surface `admin`, após gate humano.
 
 ## 4. Read model derivado oficial
 
@@ -122,8 +124,16 @@ O catálogo MCP do projeto deve reconhecer a feature:
 - `processos_copiloto_fluxo`
 
 E as capabilities:
+- `get_process_modeling_package_tool`
 - `analyze_process_flow_copilot_tool`
 - `suggest_process_flow_activity_automation_tool`
+
+### 8.1 Separação por surface
+
+- `user`/Squad Cliente: relê pacote, analisa, coleta evidências e entrega AS-IS; não publica;
+- `admin`/Squad Versus: relê, revisa TO-BE e pode publicar após confirmação humana explícita;
+- `resolve_app32_instruction_bundle_tool` pertence a `identity_self_service` para continuar disponível após a seleção do harness operacional;
+- áudio e documentos brutos são processados pela IA/CLI local do cliente; o MCP recebe `process_modeling_intake.v1`, não o arquivo bruto.
 
 ## 9. Ordem de evolução
 

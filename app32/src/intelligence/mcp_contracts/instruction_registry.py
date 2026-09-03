@@ -91,6 +91,7 @@ class InstructionBootstrapBundle(_StrictModel):
     layer_matrix: list[InstructionLayerDefinition] = Field(default_factory=list, min_length=3)
     doc_refs: list[InstructionDocumentRef] = Field(default_factory=list, min_length=3)
     journey_guide: InstructionJourneyGuide | None = None
+    process_modeling_intake_contract: dict[str, Any] | None = None
 
 
 class InstructionRegistryManifest(_StrictModel):

@@ -13,6 +13,7 @@ O Instruction Registry do `Squad Cliente` existe para entregar **governança ins
 - composição por camadas antes de cópia por cliente
 - override pequeno antes de customização caótica
 - `company_id` e tenant isolation acima de conveniência
+- arquivo bruto local antes de upload desnecessário; evidência estruturada e rastreável antes de resumo livre
 
 ## 3. Limites
 
@@ -20,6 +21,7 @@ O Instruction Registry do `Squad Cliente` existe para entregar **governança ins
 - não permitir override que quebre guardrail global
 - não trocar MCP operacional por texto livre
 - não expandir surface `user` por artefato instrucional
+- não exigir tool MCP para transcrever áudio ou digerir documento legado: o CLI local entrega `process_modeling_intake.v1`
 
 ## 4. Frase-guia
 

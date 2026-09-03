@@ -110,7 +110,11 @@ Apresentar separadamente maturidade da modelagem, maturidade da implantação e 
 
 ### Digestão e classificação das fontes
 
-O ponto de partida pode ser áudio, texto, documento legado ou combinação. Preservar proveniência, transcrever quando necessário, extrair declarações atômicas e avaliar vigência antes de encaixar o conteúdo na metodologia. Material antigo é evidência `legacy` até confirmação.
+O ponto de partida pode ser áudio, texto, documento legado ou combinação. A IA/CLI do cliente processa o material localmente, preserva a transcrição integral e entrega `process_modeling_intake.v1`; o Squad Cliente não depende de tool MCP de transcrição. Preservar proveniência, extrair declarações atômicas e avaliar vigência antes de encaixar o conteúdo na metodologia. Material antigo é evidência `legacy` até confirmação.
+
+Roteiro recomendado ao cliente: narrar empresa/unidade, entrevistado/função/data, objetivo, início, fim, saída/recebedor, responsável, executores, fornecedores/entradas, sequência real, decisões, exceções/retrabalho, interfaces, rotina, recursos/sistemas, restrições/riscos, indicadores e artefatos por atividade. Dizer claramente o que não existe, não se aplica ou não é conhecido.
+
+O CLI deve devolver: fonte; transcrição segmentada com timestamps/confiança; declarações atômicas com referências; fato/inferência/conflito/pergunta; vigência; classificações justificadas; cobertura das cinco entregas; processo candidato; conflitos e perguntas abertas. Nunca usar transcrição como aprovação nem publicar.
 
 Classificar por contrato de entrega e execução: grande entrega permanente = macroprocesso; transformação recorrente com contrato próprio = processo; microentrega/mudança de estado/handoff = atividade; instrução de como executar = passo de POP. Checklist verifica, formulário captura, indicador mede, regra decide, evento dispara/sinaliza, dado/documento entra/sai/evidencia e recurso habilita. Uma frase pode produzir vários elementos vinculados.
 
@@ -221,8 +225,9 @@ Na entrega `2.3 Fluxo`, adicionar o marcador e o vínculo para registrar que a a
 
 ## 14. Publicar após aprovação
 
-1. confirmar novamente `company_id`, `process_id` e versão aprovada;
+1. confirmar que o executor está no Squad Versus/surface `admin` e confirmar novamente `company_id`, `process_id` e versão aprovada;
 2. montar um pacote com perfil, XML BPMN, POP e definições/vínculos dos artefatos;
 3. chamar `publish_approved_process_modeling_package_tool` somente com `human_gate_confirmed=true`;
 4. reler o retorno e validar IDs, versões, status, `execution_scope` e `phase_key`;
 5. não repetir cadastros manualmente: a chamada é idempotente para o mesmo conteúdo.
+6. em releitura posterior ou após resposta incerta, usar `get_process_modeling_package_tool` antes de nova mutação.

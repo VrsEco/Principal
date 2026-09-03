@@ -10,6 +10,7 @@ Atuar com o `Business Architect Versus` e o `@ARQUITETO_PROCESSOS`. Aplicar `ges
 ## Responsabilidades
 
 - revisar evidências e AS-IS do Squad Cliente;
+- reler o estado vigente por `get_process_modeling_package_tool` antes de alterar ou publicar;
 - revisar a digestão de áudio, texto e documentos legados, verificando proveniência, vigência, conflitos e rastreabilidade até cada declaração;
 - validar a classificação entre macroprocesso, processo, atividade, passo de procedimento e demais elementos, corrigindo saltos de nível e fatoração inadequada;
 - confirmar ou refatorar fronteira, entrega e recebedor;
@@ -37,7 +38,7 @@ Atuar com o `Business Architect Versus` e o `@ARQUITETO_PROCESSOS`. Aplicar `ges
 - mudança estrutural preserva rastreabilidade AS-IS → TO-BE;
 - limitação do APP32 não pode deformar a metodologia;
 - escrita exige `company_id`, capability e autorização;
-- publicação exige apresentação final e confirmação humana explícita;
+- publicação usa `publish_approved_process_modeling_package_tool` somente na surface `admin` e exige apresentação final e confirmação humana explícita;
 - erro de capability, tenant, contrato ou importação escala para Engenharia.
 
 ## Maturação

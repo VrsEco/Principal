@@ -11,6 +11,9 @@ from models import (
     ProcessActivityArtifactLink,
     ProcessBpmnDiagram,
     ProcessRoutine,
+    ProcessSipocItem,
+    ProcessSipocRegulatoryItem,
+    ProcessSipocSnapshot,
     ProcessStep,
     db,
 )
@@ -26,6 +29,10 @@ from services.process_bpmn_service import upsert_process_bpmn_diagram
 
 class ProcessModelingPublicationError(ValueError):
     """Erro funcional da publicação aprovada de modelagem de processos."""
+
+
+def _iso(value: Any) -> str | None:
+    return value.isoformat() if value is not None and hasattr(value, "isoformat") else None
 
 
 def _required_text(value: Any, field: str) -> str:
@@ -372,7 +379,208 @@ def publish_approved_process_modeling_package(
     }
 
 
+def get_process_modeling_package(
+    *,
+    company_id: int,
+    process_id: int,
+    diagram_status: str = "published",
+    include_bpmn_xml: bool = True,
+) -> dict[str, Any]:
+    """Relê o pacote vigente de modelagem sem atravessar o tenant informado."""
+    process = _process(int(company_id), int(process_id))
+    status = str(diagram_status or "published").strip().lower()
+    if status not in {"draft", "published", "archived"}:
+        raise ProcessModelingPublicationError("diagram_status deve ser draft, published ou archived.")
+
+    macro = MacroProcess.query.filter_by(
+        id=process.macro_id,
+        company_id=process.company_id,
+    ).first()
+    diagram = (
+        ProcessBpmnDiagram.query.filter_by(
+            company_id=process.company_id,
+            process_id=process.id,
+            status=status,
+        )
+        .order_by(ProcessBpmnDiagram.version.desc(), ProcessBpmnDiagram.id.desc())
+        .first()
+    )
+    sipoc = (
+        ProcessSipocSnapshot.query.filter_by(
+            company_id=process.company_id,
+            process_id=process.id,
+            status="published",
+        )
+        .order_by(ProcessSipocSnapshot.version.desc(), ProcessSipocSnapshot.id.desc())
+        .first()
+    )
+
+    sipoc_payload = None
+    if sipoc is not None:
+        items = (
+            ProcessSipocItem.query.filter_by(
+                company_id=process.company_id,
+                sipoc_snapshot_id=sipoc.id,
+            )
+            .order_by(ProcessSipocItem.lane, ProcessSipocItem.order_index, ProcessSipocItem.id)
+            .all()
+        )
+        regulations = (
+            ProcessSipocRegulatoryItem.query.filter_by(
+                company_id=process.company_id,
+                sipoc_snapshot_id=sipoc.id,
+            )
+            .order_by(ProcessSipocRegulatoryItem.id)
+            .all()
+        )
+        sipoc_payload = {
+            "id": sipoc.id,
+            "version": sipoc.version,
+            "status": sipoc.status,
+            "title": sipoc.title,
+            "objective": sipoc.objective,
+            "start_boundary": sipoc.start_boundary,
+            "end_boundary": sipoc.end_boundary,
+            "trigger_event": sipoc.trigger_event,
+            "customer_requirements": sipoc.customer_requirements,
+            "constraints_notes": sipoc.constraints_notes,
+            "measures_notes": sipoc.measures_notes,
+            "risks_notes": sipoc.risks_notes,
+            "notes": sipoc.notes,
+            "items": [
+                {
+                    "id": item.id,
+                    "lane": item.lane,
+                    "title": item.title,
+                    "description": item.description,
+                    "order_index": item.order_index,
+                    "source_type": item.source_type,
+                    "source_ref": item.source_ref,
+                    "is_critical": bool(item.is_critical),
+                }
+                for item in items
+            ],
+            "regulatory_items": [
+                {
+                    "id": item.id,
+                    "sipoc_item_id": item.sipoc_item_id,
+                    "regulatory_domain": item.regulatory_domain,
+                    "regulatory_code": item.regulatory_code,
+                    "regulatory_name": item.regulatory_name,
+                    "regulator_entity": item.regulator_entity,
+                    "requirement_summary": item.requirement_summary,
+                    "affected_scope_type": item.affected_scope_type,
+                    "control_requirements": item.control_requirements,
+                    "risk_level": item.risk_level,
+                    "evidence_requirements": item.evidence_requirements,
+                    "notes": item.notes,
+                }
+                for item in regulations
+            ],
+        }
+
+    routines = (
+        ProcessRoutine.query.filter_by(
+            company_id=process.company_id,
+            process_id=process.id,
+            is_active=True,
+        )
+        .order_by(ProcessRoutine.order_index, ProcessRoutine.id)
+        .all()
+    )
+    definitions = (
+        ProcessActivityArtifactDefinition.query.filter_by(
+            company_id=process.company_id,
+            process_id=process.id,
+            status="published",
+        )
+        .order_by(
+            ProcessActivityArtifactDefinition.artifact_type,
+            ProcessActivityArtifactDefinition.artifact_key,
+            ProcessActivityArtifactDefinition.version.desc(),
+            ProcessActivityArtifactDefinition.id.desc(),
+        )
+        .all()
+    )
+    artifact_payloads = []
+    for definition in definitions:
+        payload = definition.to_dict()
+        payload["activity_links"] = _link_signature(definition)
+        artifact_payloads.append(payload)
+
+    diagram_payload = None
+    if diagram is not None:
+        diagram_payload = {
+            "id": diagram.id,
+            "version": diagram.version,
+            "status": diagram.status,
+            "name": diagram.name,
+            "metadata_json": diagram.metadata_json or {},
+            "published_at": _iso(diagram.published_at),
+            "updated_at": _iso(diagram.updated_at),
+        }
+        if include_bpmn_xml:
+            diagram_payload["bpmn_xml"] = diagram.bpmn_xml
+
+    return {
+        "company_id": process.company_id,
+        "process_id": process.id,
+        "process": {
+            "id": process.id,
+            "code": process.code,
+            "name": process.name,
+            "description": process.description,
+            "responsible": process.responsible,
+            "responsible_id": process.responsible_id,
+            "owner_employee_id": process.owner_employee_id,
+            "kanban_stage": process.kanban_stage,
+            "structuring_level": process.structuring_level,
+            "performance_level": process.performance_level,
+            "notes": process.notes,
+            "is_active": bool(process.is_active),
+        },
+        "macro_process": (
+            {
+                "id": macro.id,
+                "area_id": macro.area_id,
+                "code": macro.code,
+                "name": macro.name,
+                "description": macro.description,
+                "owner": macro.owner,
+            }
+            if macro is not None
+            else None
+        ),
+        "sipoc": sipoc_payload,
+        "bpmn": diagram_payload,
+        "pops": [
+            {
+                "routine_id": routine.id,
+                "code": routine.code,
+                "name": routine.name,
+                "description": routine.description,
+                "bpmn_element_id": routine.bpmn_element_id,
+                "bpmn_element_type": routine.bpmn_element_type,
+                "bpmn_data_objects": routine.bpmn_data_objects or [],
+                "steps": [
+                    {
+                        "id": step.id,
+                        "order_index": step.order_index,
+                        "name": step.name,
+                        "description": step.description,
+                        "expected_result": step.expected_result,
+                    }
+                    for step in routine.steps.order_by(ProcessStep.order_index, ProcessStep.id).all()
+                ],
+            }
+            for routine in routines
+        ],
+        "artifacts": artifact_payloads,
+    }
+
+
 __all__ = [
     "ProcessModelingPublicationError",
+    "get_process_modeling_package",
     "publish_approved_process_modeling_package",
 ]

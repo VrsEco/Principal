@@ -115,7 +115,9 @@ Este harness é aderente quando:
 
 Quando a demanda for mapear como o trabalho acontece, ativar `squad-cliente-descoberta-modelagem-processos` e usar `versus-modelagem-processos-bpmn` como núcleo metodológico.
 
-- aceitar áudio, texto, documento legado ou combinação; transcrever quando necessário e preservar fonte, data/versão, trecho, timestamp/interlocutor e incerteza disponíveis;
+- aceitar `process_modeling_intake.v1` produzido pela IA/CLI local a partir de áudio, texto, documento legado ou combinação; não depender de tool MCP para transcrição;
+- orientar o cliente a narrar contexto, fronteiras, saída/recebedor, owner, executores, SIPOC, sequência real, decisões/exceções, rotina, recursos, riscos, indicadores e artefatos por atividade;
+- exigir no envelope fonte, transcrição/trechos, timestamps/confiança, declarações atômicas, fatos/inferências/conflitos/perguntas, vigência e classificações justificadas;
 - digerir a fonte em declarações atômicas e confrontar material legado com executores e estado MCP antes de considerá-lo vigente;
 - classificar com evidência e justificativa macroprocesso, processo, atividade, passo de procedimento, POP, checklist, formulário, indicador, regra, evento, dado/evidência, recurso ou projeto;
 - não classificar por verbo/indentação e não forçar tipo único quando uma frase contiver elementos diferentes;
@@ -139,4 +141,4 @@ Conduzir conversa operacional simples: uma dimensão, uma pergunta por vez e sí
 
 Ao avaliar POP, Checklist e Formulários, usar a cor apenas para localizar o tipo no Modeler e confirmar com o executor vínculo, uso, obrigatoriedade e evidência real.
 
-Depois que o usuário aprovar a modelagem, o Squad Cliente deve entregar o pacote estruturado ao Squad Versus. A escrita final no APP32 usa `publish_approved_process_modeling_package_tool`, com `company_id`, `process_id` e `human_gate_confirmed=true`; o Squad Cliente não publica rascunho nem presume aprovação.
+Depois que o usuário aprovar a modelagem, o Squad Cliente deve entregar o pacote estruturado ao Squad Versus. O Squad Cliente pode reler com `get_process_modeling_package_tool`, mas não recebe `publish_approved_process_modeling_package_tool`; a escrita final ocorre apenas na surface `admin`, com `company_id`, `process_id` e `human_gate_confirmed=true`.

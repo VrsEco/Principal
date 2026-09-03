@@ -7,7 +7,10 @@ from services.process_flow_copilot_service import (
     build_process_flow_copilot_analysis,
 )
 from services.process_bpmn_activity_mcp_service import create_bpmn_activity
-from services.process_modeling_publication_service import publish_approved_process_modeling_package
+from services.process_modeling_publication_service import (
+    get_process_modeling_package,
+    publish_approved_process_modeling_package,
+)
 
 
 def register_process_flow_tools(mcp: Any) -> None:
@@ -33,6 +36,24 @@ def register_process_flow_tools(mcp: Any) -> None:
                 process_id=process_id,
                 package=package,
                 human_gate_confirmed=human_gate_confirmed,
+            ),
+        }
+
+    @mcp.tool()
+    def get_process_modeling_package_tool(
+        company_id: int,
+        process_id: int,
+        diagram_status: str = "published",
+        include_bpmn_xml: bool = True,
+    ) -> dict[str, Any]:
+        """Relê perfil, SIPOC, BPMN, POPs e artefatos publicados do processo no tenant."""
+        return {
+            "ok": True,
+            "package": get_process_modeling_package(
+                company_id=company_id,
+                process_id=process_id,
+                diagram_status=diagram_status,
+                include_bpmn_xml=include_bpmn_xml,
             ),
         }
 

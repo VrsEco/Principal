@@ -534,7 +534,7 @@ def build_permission_matrix_manifest() -> PermissionMatrixManifest:
                 default_scope="active_company",
                 domains=[
                     _rule("routine", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Execução operacional do dia a dia."]),
-                    _rule("processes", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Condução de processos operacionais."]),
+                    _rule("processes", ["discover", "read", "create", "update", "analyze"], denied=["delete", "audit"], notes=["Condução e análise assistida de processos operacionais."]),
                     _rule("projects", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Acompanhamento e ajuste de tarefas."]),
                     _rule("meetings", ["discover", "read", "create", "update"], denied=["delete", "audit"], notes=["Coordenação operacional de reuniões."]),
                     _rule("identity_self_service", ["discover", "read"], denied=["create", "update", "delete", "audit"], notes=["Consulta de contexto próprio."]),

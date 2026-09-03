@@ -114,13 +114,21 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "publish_approved_process_modeling_package_tool": {
         "domain": "processes",
-        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "scopes": (ToolScope.MCP_ADMIN.value,),
         "risk": ToolRiskLevel.HIGH,
         "permissions": ("processes.ai_assistant.execute",),
         "human_gate": True,
         "human_gate_reason": "Publica a modelagem aprovada e seus artefatos operacionais no tenant.",
         "tags": ("mutation", "bpmn", "pop", "artifact", "publish", "tenant_safe"),
         "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
+    "get_process_modeling_package_tool": {
+        "domain": "processes",
+        "scopes": (ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.LOW,
+        "permissions": ("process.read",),
+        "tags": ("read", "bpmn", "sipoc", "pop", "artifact", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_COMPANY,),
     },
     "consult_rules": {
         "domain": "governance",
@@ -226,7 +234,7 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "domain": "processes",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         "risk": ToolRiskLevel.LOW,
-        "permissions": ("processes.ai_assistant.view",),
+        "permissions": ("process.read",),
         "tags": ("read", "bpmn", "copilot", "automation"),
         "required_context": (TOOL_CONTEXT_COMPANY,),
     },
@@ -1295,7 +1303,6 @@ for _tool_name in (
     "describe_app32_external_llm_factory_surface_tool",
     "describe_app32_implantation_persona_profile_tool",
     "describe_app32_instruction_registry_tool",
-    "resolve_app32_instruction_bundle_tool",
     "describe_app32_operational_readiness_tool",
     "describe_app32_permission_matrix_tool",
     "describe_app32_profile_contracts_tool",
@@ -1311,6 +1318,14 @@ for _tool_name in (
     "list_app32_integrations_catalog",
 ):
     _register_mcp_support_capability(_tool_name, tags=("catalog", "read"))
+
+_register_mcp_support_capability(
+    "resolve_app32_instruction_bundle_tool",
+    domain="identity_self_service",
+    action="read",
+    permissions=("identity_self_service.read",),
+    tags=("catalog", "read", "bootstrap"),
+)
 
 for _tool_name in (
     "describe_app32_session_harness_tool",
@@ -1699,6 +1714,8 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
         "resolve_app32_operation_tool",
     }:
         return "read"
+    if lowered == "publish_approved_process_modeling_package_tool":
+        return "update"
 
     if normalized_domain == "consultive":
         if lowered in {

@@ -9,8 +9,9 @@ Atuar com `SC-OPS`, sob coordenação de `SC-COORD`, como coproprietário da des
 
 ## Pode
 
-- iniciar a descoberta a partir de áudio, texto, documento legado ou combinação dessas fontes;
-- transcrever quando necessário, preservar proveniência e incerteza e decompor o material em declarações atômicas;
+- iniciar a descoberta a partir do envelope `process_modeling_intake.v1`, produzido pela IA/CLI local do cliente a partir de áudio, texto, documento legado ou combinação;
+- orientar a gravação para cobrir contexto, objetivo, fronteiras, saída/recebedor, owner, executores, SIPOC, sequência real, decisões/exceções, rotina, recursos, riscos, indicadores e artefatos por atividade;
+- exigir fonte e transcrição/trechos preservados, timestamps/confiança quando aplicáveis, declarações atômicas, vigência e separação entre fato, inferência, conflito e pergunta;
 - digerir documentos antigos como evidência a confrontar com executores e estado MCP atual, nunca como verdade vigente automática;
 - propor classificação semântica fundamentada entre macroprocesso, processo, atividade, passo de procedimento, POP, checklist, formulário, indicador, regra, evento, dado/evidência, recurso e projeto;
 - entrevistar executores e registrar fatos, exceções e evidências;
@@ -28,7 +29,7 @@ Atuar com `SC-OPS`, sob coordenação de `SC-COORD`, como coproprietário da des
 ## Não pode
 
 - alterar sozinho a fronteira ou a arquitetura corporativa;
-- declarar TO-BE canônico, validar em nome do Squad Versus ou publicar diagrama;
+- declarar TO-BE canônico, validar em nome do Squad Versus ou chamar `publish_approved_process_modeling_package_tool`;
 - criar POP duplicado, elevar surface por prompt ou tratar ausência de POP/indicador como defeito automático.
 
 ## Handoff

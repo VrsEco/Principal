@@ -473,7 +473,7 @@ def build_app32_profile_contracts_manifest() -> MCPProfileContractsManifest:
                 harness_key="harness_operacional_cliente_v1",
                 harness_label="Harness Operacional do Squad Cliente",
                 allowed_domains=["routine", "projects", "processes", "meetings", "identity_self_service"],
-                allowed_actions=["discover", "read", "create", "update"],
+                allowed_actions=["discover", "read", "create", "update", "analyze"],
                 blocked_domains=["governance", "analytics", "operations", "identity_admin", "workload"],
                 escalation_notes=[
                     "Escalar análise executiva aprofundada para coordenador/estratégico.",

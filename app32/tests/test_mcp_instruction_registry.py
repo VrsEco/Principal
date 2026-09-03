@@ -48,6 +48,12 @@ def test_instruction_registry_resolves_squad_cliente_bundle():
     assert payload["data"]["invalidation_token"]
     assert payload["data"]["cache_key"].startswith("instruction-registry:squad_cliente")
     assert any(item["doc_class"] == "spec" for item in payload["data"]["doc_refs"])
+    intake = payload["data"]["process_modeling_intake_contract"]
+    assert intake["schema"] == "process_modeling_intake.v1"
+    assert intake["required_payload"]["source"]["type"] == "audio|text|legacy_document|mixed"
+    assert "transcript" in intake["required_payload"]
+    assert "statements" in intake["required_payload"]
+    assert any("não publicar" in item.lower() for item in intake["cli_pipeline"])
 
 
 
@@ -89,6 +95,7 @@ def test_instruction_registry_exposes_structuring_journey_guide_only_to_squad_cl
         company_id=31,
     )
     assert versus_payload["data"]["journey_guide"] is None
+    assert versus_payload["data"]["process_modeling_intake_contract"]["schema"] == "process_modeling_intake.v1"
 
 
 def test_instruction_registry_supports_engineering_runtime():
@@ -100,6 +107,7 @@ def test_instruction_registry_supports_engineering_runtime():
     assert payload["success"] is True
     assert payload["data"]["runtime_profile"] == "engineering"
     assert payload["data"]["surface"] == "ops"
+    assert payload["data"]["process_modeling_intake_contract"] is None
 
 
 def test_instruction_registry_rejects_unknown_runtime():

@@ -292,6 +292,10 @@ _supplemental_mcp_tools = (
         description="Publica perfil, BPMN, POP e artefatos de uma modelagem de processo após aprovação humana explícita.",
     ),
     SimpleNamespace(
+        name="get_process_modeling_package_tool",
+        description="Relê o pacote tenant-safe de perfil, SIPOC, BPMN, POPs e artefatos de um processo.",
+    ),
+    SimpleNamespace(
         name="analyze_process_flow_copilot_tool",
         description="Analisa o fluxo BPMN do processo e aponta gaps de lane, POP, gateways e oportunidades de automação/conexão.",
     ),

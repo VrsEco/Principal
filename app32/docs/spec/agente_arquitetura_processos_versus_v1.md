@@ -46,6 +46,30 @@ O agente aceita como ponto de partida áudio, texto, documento legado ou combina
 4. classificar cada declaração como fato, hipótese, pendência ou não aplicável e registrar justificativa e evidência;
 5. confrontar documentos antigos com executores e estado MCP atual antes de tratá-los como verdade vigente.
 
+#### 2.2.1 Boundary de ingestão local
+
+- áudio, texto e documento legado são processados pela IA/CLI do cliente; não existe dependência de tool MCP para upload, OCR ou transcrição;
+- o material bruto permanece local, salvo autorização e integração específicas;
+- o MCP recebe o envelope normalizado `process_modeling_intake.v1` e continua responsável por discovery, leitura do estado atual, handoff e persistência autorizada;
+- o CLI não pode usar a transcrição como aprovação, preencher desconhecidos por inferência ou publicar BPMN.
+
+#### 2.2.2 Roteiro mínimo para gravação do cliente
+
+O cliente deve narrar, preferencialmente um processo por áudio: empresa/unidade e variante; entrevistado/função/data; objetivo; gatilho/início; fim e saída principal; cliente/recebedor; responsável do processo; executores; fornecedores e entradas; sequência real; decisões; exceções e retrabalho; interfaces; frequência; recursos/sistemas; restrições/riscos; indicadores; e, por atividade, POP, checklist, formulário, dado/evidência ou IA existente/necessária. Informação desconhecida, inexistente ou não aplicável deve ser declarada como tal.
+
+#### 2.2.3 Envelope `process_modeling_intake.v1`
+
+O CLI entrega JSON com:
+
+- `source`: tipo, identificação, data, idioma, hash e versão legada quando houver;
+- `transcript[]`: segmento, interlocutor, timestamps, texto e confiança;
+- `statements[]`: declaração atômica, referências à fonte, `assertion_kind`, vigência, confiança e classificações justificadas;
+- `methodology_coverage`: cobertura de Arquitetura, 2.1 Premissas, 2.2 SIPOC, 2.3 Fluxo e 2.4 Artefatos;
+- `candidate_process`: normalização operacional sem promoção canônica;
+- `conflicts[]` e `open_questions[]` rastreáveis.
+
+O contrato completo é devolvido pelo `resolve_app32_instruction_bundle_tool` no campo `process_modeling_intake_contract`.
+
 O classificador deve aplicar os seguintes testes:
 
 | Tipo | Critério determinante |

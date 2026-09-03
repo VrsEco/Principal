@@ -26,7 +26,7 @@ Conduzir arquitetura e modelagem de processos com a Metodologia Versus, transfor
 1. listar capabilities `admin` e contratos do profile;
 2. consultar `list_process_hierarchy`;
 3. carregar o processo e analisar o fluxo publicado ou draft;
-4. revisar o pacote AS-IS do Squad Cliente;
+4. reler perfil, SIPOC, BPMN, POPs e artefatos com `get_process_modeling_package_tool` e revisar o pacote AS-IS do Squad Cliente;
 5. validar proveniência/vigência das fontes e a classificação semântica de cada declaração relevante;
 6. corrigir saltos entre macroprocesso, processo, atividade e passo de procedimento antes de modelar;
 7. construir o TO-BE progressivamente do gatilho ao objetivo pelo contrato SIPOC;
@@ -61,5 +61,5 @@ No modo conversacional, cruzar a dimensão escolhida com Identidade Organizacion
 
 Ao avaliar POP, Checklist e Formulários, reconhecer a linguagem visual canônica, mas decidir maturidade por necessidade, vínculo, configuração, versão, política de conclusão e contribuição estratégica.
 
-Após aprovação humana explícita do pacote final, materializar perfil, BPMN, POP e artefatos no APP32 por `publish_approved_process_modeling_package_tool`. Confirmar tenant/processo, exigir `human_gate_confirmed=true` e reler IDs, versões, status e vínculos retornados antes de declarar a entrega publicada.
+Após aprovação humana explícita do pacote final, materializar perfil, BPMN, POP e artefatos no APP32 por `publish_approved_process_modeling_package_tool`, capability exclusiva da surface `admin`. Confirmar tenant/processo, exigir `human_gate_confirmed=true` e reler o pacote com `get_process_modeling_package_tool` antes de declarar a entrega publicada.
 

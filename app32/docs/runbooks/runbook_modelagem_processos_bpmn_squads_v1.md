@@ -20,27 +20,28 @@ Cada entrega possui versão própria. Antes de avançar, validar seu gate; ao en
 
 
 1. ativar a skill do Squad correspondente;
-2. transcrever áudio quando necessário, preservar proveniência e decompor todas as fontes em declarações atômicas;
-3. marcar vigência da fonte e confrontar documento legado com executores e estado atual;
-4. classificar cada declaração com tipo, evidência, justificativa e pergunta de validação; permitir múltiplos elementos na mesma declaração;
-5. executar discovery e `list_process_hierarchy`;
-6. carregar o fluxo com `analyze_process_flow_copilot_tool`;
-7. antes do AS-IS, gerar a matriz de cobertura de Arquitetura, Premissas, SIPOC, Fluxo e Artefatos, confrontando o estado MCP com transcrições e demais evidências;
-8. classificar cada elemento como `defined`, `hypothesis`, `pending` ou `not_applicable`; para pendências, registrar fonte esperada, responsável, etapa de revisão e impacto;
-9. confirmar contrato do processo e responsabilidades;
-10. construir progressivamente `gatilho → fornecedores → entradas → transformação → saídas → recebedores → objetivo`;
-11. validar regressivamente `objetivo → saídas → transformação → entradas → fornecedores → gatilho`;
-12. modelar com `versus-modelagem-processos-bpmn`;
-13. validar o arquivo:
+2. no CLI da IA do cliente, transcrever/extrair localmente e gerar `process_modeling_intake.v1`; não procurar tool MCP de upload, OCR ou transcrição;
+3. validar que o envelope contém fonte, transcrição/trechos, declarações atômicas, confiança, vigência, classificações justificadas, cobertura metodológica, conflitos e perguntas abertas;
+4. marcar vigência da fonte e confrontar documento legado com executores e estado atual;
+5. classificar cada declaração com tipo, evidência, justificativa e pergunta de validação; permitir múltiplos elementos na mesma declaração;
+6. executar discovery e `list_process_hierarchy`;
+7. reler o pacote vigente com `get_process_modeling_package_tool` e carregar a análise com `analyze_process_flow_copilot_tool`;
+8. antes do AS-IS, gerar a matriz de cobertura de Arquitetura, Premissas, SIPOC, Fluxo e Artefatos, confrontando o estado MCP com transcrições e demais evidências;
+9. classificar cada elemento como `defined`, `hypothesis`, `pending` ou `not_applicable`; para pendências, registrar fonte esperada, responsável, etapa de revisão e impacto;
+10. confirmar contrato do processo e responsabilidades;
+11. construir progressivamente `gatilho → fornecedores → entradas → transformação → saídas → recebedores → objetivo`;
+12. validar regressivamente `objetivo → saídas → transformação → entradas → fornecedores → gatilho`;
+13. modelar com `versus-modelagem-processos-bpmn`;
+14. validar o arquivo:
 
 ```powershell
 python .agent\skills\versus-modelagem-processos-bpmn\scripts\validar_bpmn_versus.py fluxo.bpmn --process-code AA.C.2.1.1
 ```
 
-14. importar e revisar visualmente no modelador APP32;
-15. apresentar diferenças, POPs seletivos, rotina e indicadores mínimos;
-16. gravar rascunho somente após autorização e reler;
-17. publicar somente após confirmação humana explícita.
+15. importar e revisar visualmente no modelador APP32;
+16. apresentar diferenças, POPs seletivos, rotina e indicadores mínimos;
+17. gravar rascunho somente após autorização e reler;
+18. fazer handoff ao Squad Versus; somente a surface `admin` publica após confirmação humana explícita.
 
 ## 3. Bloqueios
 
@@ -96,7 +97,7 @@ Até existir persistência tenant-owned e next action MCP específicos, registra
 
 - executar somente após aprovação humana explícita;
 - usar `publish_approved_process_modeling_package_tool` com o tenant e processo confirmados;
-- conferir no readback: BPMN `published`, POP e passos, artefatos `published`, vínculos ativos e escopo compartilhado quando aplicável;
+- conferir no retorno e em `get_process_modeling_package_tool`: BPMN `published`, POP e passos, artefatos `published`, vínculos ativos e escopo compartilhado quando aplicável;
 - repetir a mesma chamada em caso de resposta de rede incerta: o serviço deve retornar `noop` para conteúdo já publicado;
 - em falha parcial, reler o estado pelo MCP antes de tentar correção.
 

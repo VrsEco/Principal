@@ -27,7 +27,7 @@ class InstructionRegistryService:
     SUPPORTED_CHANNELS = {"stable", "beta", "hotfix"}
     DEFAULT_CACHE_TTL_SECONDS = 1800
     DEFAULT_ENVIRONMENT = "production"
-    CURRENT_BUNDLE_VERSION = "2026-08-28.5"
+    CURRENT_BUNDLE_VERSION = "2026-09-03.1"
 
     _EXPERIENCE_LABELS = {
         "squad_cliente": "Sapiens Cliente",
@@ -210,6 +210,7 @@ class InstructionRegistryService:
                 "layer_matrix",
                 "doc_refs",
                 "journey_guide",
+                "process_modeling_intake_contract",
             )
         }
         checksum = hashlib.sha256(json.dumps(canonical_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
@@ -238,6 +239,7 @@ class InstructionRegistryService:
             forbidden_actions=list(merged["forbidden_actions"]),
             layer_matrix=list(APP32_INSTRUCTION_REGISTRY_MANIFEST.layer_matrix),
             doc_refs=[InstructionDocumentRef.model_validate(item) for item in merged["doc_refs"]],
+            process_modeling_intake_contract=merged.get("process_modeling_intake_contract"),
             journey_guide=merged.get("journey_guide"),
         )
         return bundle.model_dump(mode="json")
@@ -529,6 +531,80 @@ class InstructionRegistryService:
             "layer_matrix": [item.model_dump(mode="json") for item in APP32_INSTRUCTION_REGISTRY_MANIFEST.layer_matrix],
             "doc_refs": [item.model_dump(mode="json") for item in cls._doc_refs()],
             "journey_guide": cls.build_journey_guide(runtime_profile),
+            "process_modeling_intake_contract": cls._process_modeling_intake_contract(runtime_profile),
+        }
+
+    @classmethod
+    def _process_modeling_intake_contract(cls, runtime_profile: str) -> dict[str, Any] | None:
+        if runtime_profile not in {"squad_cliente", "squad_versus"}:
+            return None
+        return {
+            "schema": "process_modeling_intake.v1",
+            "purpose": "Transformar áudio, texto ou documento legado local em evidência estruturada para o Squad Cliente, sem enviar o arquivo bruto ao MCP.",
+            "client_recording_guide": [
+                "Identifique empresa, unidade/variante, entrevistado, função, data e nome provisório do processo.",
+                "Explique objetivo, gatilho/início, fim, saída principal, cliente/recebedor e responsável pelo processo.",
+                "Descreva executores, fornecedores, entradas e sequência real das macroatividades.",
+                "Informe decisões, exceções, retrabalho, interfaces, frequência/rotina, recursos, sistemas, restrições e riscos.",
+                "Para cada atividade, cite POP, checklist, formulário, indicador, dado/evidência ou apoio de IA existente ou necessário.",
+                "Declare variações por loja/unidade e diga explicitamente quando algo não existir, não se aplicar ou não for conhecido.",
+            ],
+            "cli_pipeline": [
+                "Processar o arquivo localmente; não presumir tool MCP de upload ou transcrição.",
+                "Preservar transcrição integral e segmentada antes de normalizar.",
+                "Extrair declarações atômicas e separar fato, inferência, conflito e pergunta.",
+                "Classificar hierarquia e artefatos somente com evidência; manter hipótese quando houver ambiguidade.",
+                "Confrontar material legado com data/versão e marcá-lo como não confirmado até validação operacional.",
+                "Entregar o pacote JSON ao Squad Cliente; não publicar BPMN nem alterar estado canônico.",
+            ],
+            "required_payload": {
+                "schema": "process_modeling_intake.v1",
+                "company_id": "integer|null; obrigatório antes de qualquer leitura MCP",
+                "source": {
+                    "type": "audio|text|legacy_document|mixed",
+                    "source_id": "string",
+                    "captured_at": "ISO-8601|null",
+                    "language": "string|null",
+                    "sha256": "string|null",
+                    "legacy_version": "string|null",
+                },
+                "transcript": [
+                    {
+                        "segment_id": "string",
+                        "speaker": "string|null",
+                        "start_seconds": "number|null",
+                        "end_seconds": "number|null",
+                        "text": "string",
+                        "confidence": "0..1|null",
+                    }
+                ],
+                "statements": [
+                    {
+                        "statement_id": "string",
+                        "text": "string",
+                        "source_refs": ["segment_id ou página/seção"],
+                        "assertion_kind": "fact|inference|conflict|question",
+                        "validity": "current_confirmed|current_unconfirmed|legacy|conflicting|unknown",
+                        "confidence": "0..1|null",
+                        "classifications": [
+                            {
+                                "type": "macroprocess|process|activity|procedure_step|pop|checklist|form|indicator|rule|event|data_evidence|resource_system|project",
+                                "justification": "string",
+                            }
+                        ],
+                    }
+                ],
+                "methodology_coverage": {
+                    "architecture": "defined|hypothesis|pending|not_applicable",
+                    "premises_2_1": "defined|hypothesis|pending|not_applicable",
+                    "sipoc_2_2": "defined|hypothesis|pending|not_applicable",
+                    "flow_2_3": "defined|hypothesis|pending|not_applicable",
+                    "artifacts_2_4": "defined|hypothesis|pending|not_applicable",
+                },
+                "candidate_process": "objeto normalizado com objetivo, fronteiras, owner, executores, SIPOC, fluxo, exceções, rotina, recursos, indicadores e artefatos por atividade",
+                "conflicts": ["divergências rastreáveis entre fontes"],
+                "open_questions": ["uma pergunta objetiva por lacuna relevante"],
+            },
         }
 
     @classmethod
@@ -750,6 +826,10 @@ class InstructionRegistryService:
             InstructionRule(
                 rule="Avaliar POP, Checklist e Formulários por necessidade, atividade vinculada, configuração, versão, obrigatoriedade, completion policy, evidência e contribuição ao objetivo ou risco.",
                 rationale="Mantém a dimensão executiva curta e metodologicamente completa.",
+            ),
+            InstructionRule(
+                rule="Quando a entrada for áudio, texto ou documento legado, aplicar process_modeling_intake.v1: processar localmente, preservar transcrição/proveniência, separar fatos de inferências e entregar JSON estruturado ao Squad Cliente sem publicar.",
+                rationale="Mantém a ingestão no CLI do cliente e entrega evidência auditável ao processo metodológico.",
             ),
         ]
 

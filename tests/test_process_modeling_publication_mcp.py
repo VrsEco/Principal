@@ -11,7 +11,10 @@ if str(APP_DIR) not in sys.path:
 
 from services import process_modeling_publication_service as service  # noqa: E402
 from src.core import mcp_process_flow_tools  # noqa: E402
-from src.intelligence.tooling.capabilities import _PRESET_CAPABILITIES  # noqa: E402
+from src.intelligence.tooling.capabilities import (  # noqa: E402
+    _PRESET_CAPABILITIES,
+    infer_tool_action,
+)
 
 
 class FakeMcp:
@@ -70,6 +73,72 @@ def test_publication_tool_is_high_risk_tenant_safe_and_human_gated():
     assert capability["human_gate"] is True
     assert "tenant_safe" in capability["tags"]
     assert "company" in capability["required_context"]
+    assert capability["scopes"] == ("mcp_admin",)
+    assert infer_tool_action("publish_approved_process_modeling_package_tool", "processes") == "update"
+
+
+def test_mcp_readback_tool_forwards_tenant_and_read_options(monkeypatch):
+    captured = {}
+
+    def fake_get(**kwargs):
+        captured.update(kwargs)
+        return {"company_id": kwargs["company_id"], "process_id": kwargs["process_id"]}
+
+    monkeypatch.setattr(mcp_process_flow_tools, "get_process_modeling_package", fake_get)
+    mcp = FakeMcp()
+    mcp_process_flow_tools.register_process_flow_tools(mcp)
+
+    result = mcp.tools["get_process_modeling_package_tool"](
+        company_id=8,
+        process_id=150,
+        diagram_status="draft",
+        include_bpmn_xml=False,
+    )
+
+    assert result == {"ok": True, "package": {"company_id": 8, "process_id": 150}}
+    assert captured == {
+        "company_id": 8,
+        "process_id": 150,
+        "diagram_status": "draft",
+        "include_bpmn_xml": False,
+    }
+
+
+def test_process_modeling_read_and_analysis_use_tenant_safe_read_permission():
+    readback = _PRESET_CAPABILITIES["get_process_modeling_package_tool"]
+    analysis = _PRESET_CAPABILITIES["analyze_process_flow_copilot_tool"]
+
+    assert set(readback["scopes"]) == {"mcp_user", "mcp_admin"}
+    assert readback["permissions"] == ("process.read",)
+    assert readback["required_context"] == ("company",)
+    assert analysis["permissions"] == ("process.read",)
+
+
+def test_instruction_bundle_resolver_remains_in_operational_self_service_domain():
+    resolver = _PRESET_CAPABILITIES["resolve_app32_instruction_bundle_tool"]
+
+    assert resolver["domain"] == "identity_self_service"
+    assert resolver["permissions"] == ("identity_self_service.read",)
+    assert "mcp_user" in resolver["scopes"]
+
+
+def test_process_lookup_always_filters_by_company_id(monkeypatch):
+    captured = {}
+
+    class QueryStub:
+        def filter_by(self, **kwargs):
+            captured.update(kwargs)
+            return self
+
+        def first(self):
+            return None
+
+    monkeypatch.setattr(service, "Process", type("ProcessStub", (), {"query": QueryStub()}))
+
+    with pytest.raises(service.ProcessModelingPublicationError, match="tenant"):
+        service._process(8, 150)
+
+    assert captured == {"id": 150, "company_id": 8}
 
 
 def test_new_pop_is_initialized_with_required_fields_before_flush(monkeypatch):

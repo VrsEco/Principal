@@ -586,6 +586,43 @@ def test_user_surface_router_and_harness_selector_exist_in_all_official_cliente_
         assert "select_app32_session_harness_tool" in names
 
 
+def test_operational_cliente_exposes_modeling_reads_and_bootstrap_but_not_publication(monkeypatch):
+    context = MCPExecutionContext(
+        user_id=22,
+        company_id=8,
+        employee_id=None,
+        role="cliente",
+        channel="claude_remote",
+        thread_id=None,
+        accessible_company_ids=(8,),
+        permissions=("process.read", "identity_self_service.read"),
+        metadata={
+            "surface": "user",
+            "transport": "streamable_http",
+            "runtime_profile": "squad_cliente",
+            "actor_type": "client_agent",
+            "harness_key": "harness_operacional_cliente_v1",
+            "mcp_enabled": True,
+            "training_completed": True,
+        },
+    )
+    monkeypatch.setattr(registry, "resolve_mcp_execution_context", lambda payload=None: context)
+
+    process_names = {
+        tool["name"]
+        for tool in registry.get_surface_manifest("user", domain="processes", include_tools=True)["tools"]
+    }
+    bootstrap_names = {
+        tool["name"]
+        for tool in registry.get_surface_manifest("user", domain="identity_self_service", include_tools=True)["tools"]
+    }
+
+    assert "get_process_modeling_package_tool" in process_names
+    assert "analyze_process_flow_copilot_tool" in process_names
+    assert "publish_approved_process_modeling_package_tool" not in process_names
+    assert "resolve_app32_instruction_bundle_tool" in bootstrap_names
+
+
 def test_user_surface_payables_summary_is_exposed_only_in_admfin_harness(monkeypatch):
     def names_for(harness_key):
         monkeypatch.setattr(
