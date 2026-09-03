@@ -1597,3 +1597,46 @@ def test_adjust_required_fields_for_context_normalizes_my_work_collaborator_as_o
     assert normalized["colaborador"].category == "optional"
     assert normalized["entidade"].required is False
     assert normalized["entidade"].category == "complementary"
+
+
+def test_handle_menu_message_answers_modeled_process_count_without_workflow_discovery(monkeypatch):
+    option = _build_routine_consult_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+    monkeypatch.setattr(menu_engine, "_load_modeled_process_count", lambda company_id: 17)
+    monkeypatch.setattr(
+        menu_engine,
+        "_discover_options_by_keywords",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("não deve buscar workflows")),
+    )
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=9,
+        channel="web",
+        thread_id="thread-1",
+        message="quero saber quantos processos temos modelados?",
+    )
+
+    assert result.handled is True
+    assert "17 processos modelados" in result.response_text
+    assert result.metadata["menu_engine"]["intercept_stage"] == "operational_direct_read"
+    assert result.metadata["workflow_discovery"]["topic"] == "process_modeled_count"
+
+
+def test_handle_menu_message_modeled_process_count_requires_active_company(monkeypatch):
+    option = _build_routine_consult_option()
+    session = _DummySession(option)
+    _install_common_patches(monkeypatch, session, option)
+
+    result = menu_engine.handle_menu_message(
+        user_id=10,
+        company_id=None,
+        channel="web",
+        thread_id="thread-1",
+        message="quantos processos temos modelados?",
+    )
+
+    assert result.handled is True
+    assert "selecione primeiro a empresa ativa" in result.response_text.lower()
+    assert result.metadata["workflow_discovery"]["topic"] == "process_modeled_count_missing_company"
