@@ -70,3 +70,42 @@ def test_publication_tool_is_high_risk_tenant_safe_and_human_gated():
     assert capability["human_gate"] is True
     assert "tenant_safe" in capability["tags"]
     assert "company" in capability["required_context"]
+
+
+def test_new_pop_is_initialized_with_required_fields_before_flush(monkeypatch):
+    process = type("ProcessStub", (), {"company_id": 8, "id": 150})()
+    created = {}
+
+    class QueryStub:
+        def filter_by(self, **kwargs):
+            return self
+
+        def first(self):
+            return None
+
+    class RoutineStub:
+        query = QueryStub()
+
+        def __init__(self, **kwargs):
+            created.update(kwargs)
+
+    monkeypatch.setattr(service, "ProcessRoutine", RoutineStub)
+    monkeypatch.setattr(service.db.session, "add", lambda row: None)
+
+    def verify_before_flush():
+        assert created["name"] == "POP Limpeza"
+        assert created["bpmn_element_id"] == "Activity_04"
+
+    monkeypatch.setattr(service.db.session, "flush", verify_before_flush)
+
+    with pytest.raises(AttributeError):
+        service._publish_pop(
+            process,
+            {
+                "code": "AW.C.2.2.6.POP.01",
+                "name": "POP Limpeza",
+                "primary_bpmn_element_id": "Activity_04",
+                "activity_ids": ["Activity_04"],
+                "steps": [{"name": "Preparar"}],
+            },
+        )

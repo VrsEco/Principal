@@ -271,7 +271,17 @@ def _publish_pop(process: Process, payload: dict[str, Any]) -> dict[str, Any]:
     ).first()
     operation = "updated" if routine else "created"
     if routine is None:
-        routine = ProcessRoutine(company_id=process.company_id, process_id=process.id, code=code)
+        routine = ProcessRoutine(
+            company_id=process.company_id,
+            process_id=process.id,
+            code=code,
+            name=_required_text(payload.get("name"), "name do POP"),
+            description=str(payload.get("description") or "").strip() or None,
+            bpmn_element_id=primary_id,
+            bpmn_element_type=str(payload.get("bpmn_element_type") or "bpmn:Task"),
+            bpmn_data_objects=payload.get("bpmn_data_objects") or [],
+            is_active=True,
+        )
         db.session.add(routine)
         db.session.flush()
     routine.name = _required_text(payload.get("name"), "name do POP")
