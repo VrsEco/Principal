@@ -59,6 +59,9 @@ app31/
 **/.codex_temp*
 /.codex_publish_*/
 /.codex_tmp*/
+/.codex_deploy_*/
+/.codex_sync_release_*/
+/outputs/process_modeling_pilot/
 **/tmp/
 **/tmp_*
 **/tmp_edge_profile/
