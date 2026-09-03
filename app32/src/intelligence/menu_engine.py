@@ -707,6 +707,26 @@ def handle_menu_message(
                 intercept_stage="system_guidance",
             )
 
+        direct_read = _build_operational_direct_read_response(lower, company_id=company_id, channel=channel)
+        if direct_read:
+            return _attach_menu_intercept_metadata(
+                MenuInterceptResult(
+                    handled=True,
+                    response_text=direct_read["response_text"],
+                    metadata={
+                        "workflow_discovery": {
+                            "strategy": "operational_direct_read",
+                            "route": "answered",
+                            "topic": direct_read["topic"],
+                            "candidate_count": 1,
+                        }
+                    },
+                ),
+                session=session,
+                option=None,
+                intercept_stage="operational_direct_read",
+            )
+
         # Fallback de ambiguidade em modo comando: somente quando parece ação operacional.
         if _looks_like_command(lower):
             candidates, discovery_trace = _discover_options_by_keywords(
@@ -1266,6 +1286,52 @@ def _looks_like_guidance_query(normalized_text: str) -> bool:
         )
     )
 
+
+
+def _build_operational_direct_read_response(
+    lower_text: str,
+    *,
+    company_id: Optional[int],
+    channel: str = "web",
+) -> Optional[Dict[str, str]]:
+    normalized = _normalize_text(lower_text)
+    if not _looks_like_modeled_process_count_query(normalized):
+        return None
+    if not company_id:
+        response = (
+            "Para contar os processos modelados, selecione primeiro a empresa ativa.\n\n"
+            "Depois pergunte novamente: quantos processos temos modelados?"
+        )
+        return {
+            "topic": "process_modeled_count_missing_company",
+            "response_text": sanitize_for_channel(response, channel=channel),
+        }
+
+    total = _load_modeled_process_count(int(company_id))
+    plural = "processo modelado" if total == 1 else "processos modelados"
+    response = (
+        f"Temos **{total} {plural}** na empresa ativa.\n\n"
+        "Se quiser, posso listar quais são ou separar por responsável/status."
+    )
+    return {
+        "topic": "process_modeled_count",
+        "response_text": sanitize_for_channel(response, channel=channel),
+    }
+
+
+def _looks_like_modeled_process_count_query(normalized_text: str) -> bool:
+    if not normalized_text:
+        return False
+    asks_count = bool(re.search(r"\b(quantos?|qtd|quantidade|total)\b", normalized_text))
+    mentions_process = bool(re.search(r"\b(processo|processos)\b", normalized_text))
+    mentions_modeled = bool(re.search(r"\b(modelado|modelados|modelada|modeladas|cadastrado|cadastrados|mapeado|mapeados)\b", normalized_text))
+    return asks_count and mentions_process and mentions_modeled
+
+
+def _load_modeled_process_count(company_id: int) -> int:
+    from models.process import Process
+
+    return int(Process.query.filter(Process.company_id == company_id).count() or 0)
 
 def _build_system_guidance_response(lower_text: str, *, channel: str = "web") -> Optional[Dict[str, str]]:
     normalized = _normalize_text(lower_text)
