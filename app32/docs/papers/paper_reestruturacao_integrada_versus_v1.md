@@ -1,7 +1,7 @@
 # Paper — Reestruturação Integrada da Versus v1
 
 **Classificação:** Paper  
-**Status:** Diagnóstico inicial para validação  
+**Status:** Ciclo 1 concluído para validação humana
 **Data-base:** 2026-09-03  
 **Empresa:** Versus Gestão Corporativa (`company_id=9`)  
 **Projeto de execução recomendado:** `AA.J.15 — Estruturação Versus Gestão Corporativa`  
@@ -256,13 +256,128 @@ A capacidade técnica é suficiente para conduzir a reestruturação. O gap não
 - aprendizados convertidos em processo, produto ou publicidade;
 - recorrência de gaps por causa.
 
-## 12. Próxima decisão humana
+## 12. Gate de evolução
 
-Antes de alterar publicidade, catálogo ou produto, a direção da Versus precisa validar:
+Publicidade, catálogo, produto e propostas não devem ser alterados antes da validação humana do ICP e da arquitetura de oferta. O Ciclo 1, registrado a seguir, aprofunda esse gate e apresenta as decisões para a direção da Versus.
 
-1. se a arquitetura-alvo dos dois trilhos e dos componentes subordinados está correta;
-2. quais segmentos devem compor o ICP prioritário;
-3. se Performance Hub é o nome do modelo recorrente ou o nome comercial da própria Estruturação Empresarial;
-4. quais resultados e cases podem ser publicados com evidência e autorização.
+Após a validação, o trabalho deverá continuar no `AA.J.15`, começando pelo processo `Desenvolvimento de Mercados` e conectado aos processos `Desenvolvimento de Produtos`, `Gerir Marketing Digital`, `Gerir Vendas` e `Gerir Operações Próprias`.
 
-Após essa validação, o trabalho deve continuar no `AA.J.15`, começando pelo processo `Desenvolvimento de Mercados` e conectado aos processos `Desenvolvimento de Produtos`, `Gerir Marketing Digital`, `Gerir Vendas` e `Gerir Operações Próprias`.
+## 13. Ciclo 1 — ICP e arquitetura de oferta
+
+### 13.1 Evidência interna
+
+A base comercial atual demonstra recorrência, mas ainda não demonstra segmentação:
+
+- 5 clientes e 5 contratos mensais ativos;
+- todos os contratos possuem `Performance Hub` como único item;
+- faixa mensal observada entre R$ 3 mil e R$ 6 mil, com total mensal de R$ 21 mil;
+- 1 produto no catálogo, sem descrição, escopo, entregáveis ou critérios de aceite;
+- os clientes atendidos pertencem a setores diferentes, portanto a amostra atual não comprova especialização setorial;
+- o cadastro não contém atributos suficientes para comparar porte, maturidade, dor de entrada, ciclo de venda, margem, resultado ou valor agregado por perfil.
+
+**Leitura:** a Versus já possui uma base recorrente, porém ainda vende e registra um único nome comercial para trabalhos que podem ter gatilhos, escopos e resultados distintos. A base atual é evidência de operação; não é, sozinha, evidência de ICP.
+
+### 13.2 Evidência externa e implicações
+
+- O IBGE diferencia empresas de alto crescimento por trajetória mensurável e pessoal ocupado, reforçando que “PME” isoladamente não descreve estágio nem necessidade gerencial. Fonte: [Demografia das Empresas e Estatísticas de Empreendedorismo](https://www.ibge.gov.br/estatisticas/economicas/servicos/22649-demografia-das-empresas-e-estatisticas-de-empreendedorismo.html).
+- O IBGC recomenda governança gradual e adequada à realidade das PMEs, nas quais proprietário e gestor frequentemente são a mesma pessoa. Isso é aderente à condução Versus com implantação progressiva, sem burocracia excessiva. Fonte: [Governança corporativa em PMEs exige modelos sob medida](https://www3.ibgc.org.br/blog/estudo-governanca-pmes).
+- O Sebrae trata planejamento, processos e indicadores como partes conectadas da gestão e destaca a necessidade de acompanhamento sistemático da execução. Isso valida a proposta integrada da Versus, mas também mostra que esses elementos, isoladamente, não são diferenciais exclusivos. Fontes: [Gestão empresarial](https://sebrae.com.br/sites/PortalSebrae/ufs/ms/sebraeaz/prepare-se-sobre-gestao-empresarial%2C6621a8c0a1c5c710VgnVCM100000d701210aRCRD), [Gestão por indicadores](https://sebrae.com.br/sites/PortalSebrae/artigos/gestao-por-indicadores%2Cc269a48dcd616810VgnVCM1000001b00320aRCRD) e [Organização de processos](https://meuatendimento.sebrae.com.br/sites/PortalSebrae/sebraeaz/organize-os-processos-da-sua-empresa-e-atinja-as-suas-metas%2C640c08cd17c90710aRCRD).
+- A Endeavor mostra que o desafio predominante muda conforme a maturidade: estrutura organizacional, crescimento e refinamento do modelo de negócio não devem receber a mesma abordagem. Fonte: [Endeavor Outliers 2026](https://endeavor.org.br/2026-endeavor-outliers/).
+- A Falconi organiza sua comunicação por problema e domínio de resultado — estratégia, operações, gastos e digital — e apresenta casos com resultado mensurável. A Versus pode adotar essa clareza sem copiar sua arquitetura ou mirar o mesmo porte de cliente. Fonte: [Falconi](https://falconi.com/).
+- O G4 explicita programas diferentes para fases e necessidades distintas e usa uma triagem curta para orientar o cliente. A referência útil é a clareza de entrada; o modelo educacional não deve ser confundido com a consultoria assistida e implantadora da Versus. Fonte: [G4 Business](https://g4business.com/).
+
+**Conclusão externa:** o mercado já promete planejamento, processos, indicadores, educação e resultado. O diferencial potencial da Versus não é possuir esses componentes, mas conectá-los em uma implantação assistida, dentro do APP32, com consultor, cliente, squads, IA, gates, estabilização e registro do valor agregado. Essa diferenciação ainda precisa ser comprovada por casos e indicadores.
+
+### 13.3 ICP proposto para validação
+
+O ICP deve combinar características da empresa, situação de compra e condições de execução. Setor e faturamento, sozinhos, não bastam.
+
+#### Núcleo comum obrigatório
+
+Empresa brasileira de pequeno ou médio porte que:
+
+1. possua operação real, equipe e processos interdependentes;
+2. tenha sócio, diretor ou gestor com poder de patrocinar mudanças;
+3. enfrente perda relevante por improviso, falta de clareza, baixa previsibilidade ou crescimento desorganizado;
+4. aceite disponibilizar pessoas, dados e tempo para implantação;
+5. queira capacidade gerencial funcionando, e não apenas relatório ou aconselhamento;
+6. tenha condição econômica compatível com o escopo, a duração e a intensidade do trabalho.
+
+#### Perfil A — dor urgente
+
+- **Gatilho:** risco, perda, autuação, ruptura, atraso crítico, falha financeira, comercial ou operacional.
+- **Busca:** resposta rápida e responsável para uma dor delimitada.
+- **Entrada comercial:** Necessidade Urgente, executada por projeto ou programa.
+- **Expansão possível:** o aprendizado pode originar Estruturação Empresarial, sem venda forçada e sem automatismo.
+
+#### Perfil B — estruturação para crescer ou recuperar controle
+
+- **Gatilho:** dependência excessiva do dono, crescimento sem organização, baixa delegação, processos informais, estratégia sem execução ou gestão sem indicadores confiáveis.
+- **Busca:** estruturar capacidades duradouras e tornar a gestão executável pela empresa.
+- **Entrada comercial:** Fase 00 da Estruturação Empresarial, com diagnóstico e priorização.
+- **Sustentação possível:** Performance Hub como cadência recorrente de execução, acompanhamento e evolução.
+
+#### Prioridade inicial recomendada
+
+Priorizar empresas lideradas diretamente por sócios ou diretores, com complexidade suficiente para exigir coordenação entre áreas, mas ainda sem estrutura gerencial madura. Não restringir por setor nesta etapa, porque a base atual é multissetorial e ainda pequena. O recorte setorial deverá resultar de evidência de conversão, margem, velocidade de entrega, recompra e valor agregado.
+
+#### Critérios de exclusão ou despriorização
+
+- ausência de patrocinador com poder de decisão;
+- busca exclusiva por documento, palestra ou opinião sem implantação;
+- indisponibilidade de dados, responsáveis ou agenda mínima do cliente;
+- expectativa de terceirizar integralmente a gestão para a Versus;
+- necessidade técnica regulada fora da competência da Versus sem parceiro habilitado;
+- urgência sem capacidade mínima de decisão ou execução;
+- incompatibilidade econômica com o esforço necessário;
+- conduta contrária à ética, à transparência ou aos limites metodológicos.
+
+### 13.4 Arquitetura canônica de oferta proposta
+
+| Camada | Nome | Função | Modelo comercial | Relação com a metodologia |
+|---|---|---|---|---|
+| Qualificação | Diagnóstico inicial / Fase 00 | compreender contexto, dor, prontidão e prioridade | etapa de entrada, gratuita ou remunerada conforme profundidade | não é um terceiro trilho |
+| Oferta 1 | Necessidade Urgente | resolver uma dor específica e relevante | projeto ou programa com escopo, prazo, responsável e critério de aceite | primeiro trilho metodológico |
+| Oferta 2 | Estruturação Empresarial | construir ou amadurecer capacidades permanentes | programa faseado, com gates e projetos de implantação | segundo trilho metodológico |
+| Sustentação | Performance Hub | manter cadência, acompanhamento, squads, APP32 e evolução | contrato recorrente, com capacidade e ritos definidos | modelo operacional que sustenta principalmente a Estruturação Empresarial |
+| Evidência | Business Review | registrar necessidade, solução, resultado e valor agregado | obrigatório na entrega; não comercializado isoladamente | fecha o ciclo de valor e aprendizado |
+
+#### Recomendação sobre o Performance Hub
+
+Manter `Performance Hub` como nome do **modelo recorrente de sustentação e operação assistida**, e não como sinônimo da metodologia inteira. Assim:
+
+- o cliente entende primeiro qual problema será resolvido;
+- a Versus preserva os dois trilhos canônicos;
+- o contrato recorrente define capacidade, cadência, ferramentas e governança;
+- projetos de Necessidade Urgente podem existir dentro ou fora do Hub, conforme contratação;
+- a Estruturação Empresarial pode usar o Hub como veículo recorrente de execução;
+- o APP32 deixa de registrar todos os contratos como se fossem um produto indistinto.
+
+### 13.5 Informações mínimas por oferta no APP32
+
+Cada item comercial deverá conter:
+
+- ICP e situação de compra;
+- dor e resultado esperado;
+- patrocinador e participantes necessários;
+- escopo, exclusões e premissas;
+- entregáveis e critérios de aceite;
+- processo responsável pela venda, implantação e entrega;
+- capacidade Versus e capacidade exigida do cliente;
+- preço ou regra de formação, periodicidade e margem-alvo;
+- indicadores de execução e resultado;
+- regra de encerramento, continuidade e Business Review;
+- evidências e cases autorizados para comunicação.
+
+### 13.6 Decisões humanas para fechar o Ciclo 1
+
+A direção deverá confirmar ou ajustar:
+
+1. o núcleo comum do ICP e os dois perfis por situação de compra;
+2. a decisão de não especializar por setor antes de medir a base;
+3. os critérios de exclusão e despriorização;
+4. `Performance Hub` como sustentação recorrente, não como terceiro trilho nem nome da metodologia inteira;
+5. se o diagnóstico da Fase 00 poderá ser gratuito, remunerado ou possuir duas profundidades;
+6. quais clientes e resultados podem formar a primeira biblioteca de provas.
+
+Somente após esse gate o conteúdo deverá migrar de Paper para SPEC e ser materializado no catálogo, nos processos comerciais, nas propostas e no site.
