@@ -1,0 +1,64 @@
+{
+  "golden_set_id": "sapiens_fase1_product_help_pt_br",
+  "version": "2026-09-03",
+  "status": "active",
+  "owner": "Sapiens / APP Versus",
+  "purpose": "Validar entendimento mínimo de perguntas reais de uso do APP Versus antes de ativar RAG vetorial.",
+  "rules": {
+    "language": "pt-BR simples",
+    "forbidden_user_terms": ["MCP", "API", "endpoint", "contrato financeiro", "get_", "paper", "spec"],
+    "tenant_policy": "company_id sempre vem da sessão; product_help não recebe company_id artificial"
+  },
+  "cases": [
+    {
+      "id": "PH-001",
+      "question": "Como faço para ver as atividades que tenho?",
+      "scope": "all",
+      "expected_intent": "product_help",
+      "expected_domain": "routine",
+      "expected_source_refs": ["rotina.meu_trabalho_atividades"],
+      "expected_actions": ["/my-work"],
+      "must_include": ["Meu Trabalho", "atividades"]
+    },
+    {
+      "id": "PH-002",
+      "question": "Como faço para fazer o lançamento de uma conta a pagar?",
+      "scope": "all",
+      "expected_intent": "product_help",
+      "expected_domain": "finance",
+      "expected_source_refs": ["financeiro.conta_a_pagar_lancamento"],
+      "expected_actions": ["/financial/schedules/new", "/financial/schedules"],
+      "must_include": ["Gestão Financeira", "Agendamentos", "Conta a pagar"]
+    },
+    {
+      "id": "PH-003",
+      "question": "Como eu faço para ver os títulos financeiros em aberto?",
+      "scope": "all",
+      "expected_intent": "product_help",
+      "expected_domain": "finance",
+      "expected_source_refs": ["financeiro.titulos_em_aberto"],
+      "expected_actions": ["/financial/schedules", "/financial/reports/agendamento"],
+      "must_include": ["títulos financeiros", "Relatório de Agendamentos", "Em aberto"]
+    },
+    {
+      "id": "PH-004",
+      "question": "Como eu faço para conciliar uma conta bancária?",
+      "scope": "all",
+      "expected_intent": "product_help",
+      "expected_domain": "finance",
+      "expected_source_refs": ["financeiro.conciliacao_bancaria"],
+      "expected_actions": ["/financial/reconciliation"],
+      "must_include": ["Conciliação Bancária", "extrato"]
+    },
+    {
+      "id": "PH-005",
+      "question": "Como publico um processo no Portal de Processos?",
+      "scope": "all",
+      "expected_intent": "product_help",
+      "expected_domain": "processes",
+      "expected_source_refs": ["processos.publicar_portal"],
+      "expected_actions": ["/process-portal"],
+      "must_include": ["Fluxo / POP", "aprovação"]
+    }
+  ]
+}

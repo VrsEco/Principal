@@ -1493,3 +1493,27 @@ O Robô Treinador do Sapiens opera como curador assistido:
 Esse ciclo transforma o feedback real em melhoria auditável, tenant-safe e
 reversível, sem permitir que uma avaliação isolada oficialize conhecimento ou
 contorne ACL, capability ou autoridade da fonte.
+
+## 48. Fase 1 — Golden Set antes de ampliar inteligência
+
+A primeira execução prática da evolução cognitiva deve começar por um conjunto
+pequeno e versionado de perguntas reais. O objetivo não é aumentar complexidade,
+mas proteger a experiência simples do usuário contra respostas longas, técnicas ou
+fora de assunto.
+
+O Golden Set Fase 1 cobre perguntas de uso recorrente do APP Versus:
+
+1. minhas atividades;
+2. conta a pagar;
+3. títulos financeiros em aberto;
+4. conciliação bancária;
+5. publicação de processo em Fluxo / POP.
+
+Cada pergunta registra a intenção esperada, domínio, atalhos internos e termos que
+devem aparecer na resposta. A validação também bloqueia termos técnicos internos
+para usuário comum, como MCP, API, endpoint, SPEC, Paper e nomes de funções.
+
+Essa abordagem cria uma régua objetiva para treinar o Sapiens: antes de discutir
+RAG vetorial ou modelos mais sofisticados, o sistema precisa acertar o básico com
+linguagem simples e ação navegável.
+

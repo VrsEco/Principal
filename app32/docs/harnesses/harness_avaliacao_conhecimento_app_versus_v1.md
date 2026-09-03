@@ -108,6 +108,26 @@ python -m pytest `
   -q
 ```
 
+
+## Suíte Golden Set Fase 1 — uso do APP Versus
+
+- golden set versionado em `app32/knowledge/golden_sets/sapiens_fase1_product_help_pt_br.json`;
+- perguntas reais de uso comum são classificadas como `product_help`;
+- domínios esperados: `routine`, `finance` e `processes`;
+- resposta para usuário comum não pode expor termos técnicos como MCP, API, endpoint, contrato financeiro, `get_`, Paper ou SPEC;
+- toda pergunta do golden set precisa ter atalho interno seguro e manual `product_help` correspondente;
+- o classificador deve impedir que perguntas de orientação sejam tratadas como execução operacional.
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
+$env:PYTHONDONTWRITEBYTECODE='1'
+python -m pytest `
+  .\app32\tests\test_sapiens_fase1_golden_set.py `
+  .\app32\tests\test_knowledge_interaction_service.py `
+  .\app32\tests\test_menu_engine_conversation_integration.py `
+  -q -p no:cacheprovider
+```
+
 ## Suíte RAG governado híbrido
 
 - RAG não aceita `company_id` do cliente;

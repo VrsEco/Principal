@@ -1,0 +1,23 @@
+{
+  "source_ref": "rotina.meu_trabalho_atividades",
+  "title": "Consultar minhas atividades",
+  "version": "v1",
+  "product_version": "3.2",
+  "locale": "pt-BR",
+  "status": "published",
+  "authority_level": "official",
+  "route_key": "work.my_work_page",
+  "module_key": "routine",
+  "help_kind": "how_to",
+  "canonical_uri": "app-versus://help/routine/my-activities",
+  "navigation_target": "/my-work",
+  "audience": ["administrator", "client", "collaborator"],
+  "required_capabilities": ["routine.view"],
+  "suggested_questions": [
+    "Como faço para ver as atividades que tenho?",
+    "Onde vejo minhas tarefas?",
+    "Como acompanho minhas pendências?",
+    "Quero ver minhas atividades abertas"
+  ],
+  "content": "# Como ver suas atividades\n\n1. Abra **Meu Trabalho** no menu lateral.\n2. A tela mostra as atividades atribuídas a você.\n3. Use os filtros de empresa, status, prazo ou responsável quando precisar refinar.\n4. Clique no card ou na linha da atividade para abrir os detalhes.\n\nAtividades de processos também aparecem em **Meu Trabalho** quando estiverem atribuídas a você."
+}

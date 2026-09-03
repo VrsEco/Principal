@@ -24,7 +24,7 @@ class KnowledgeInteractionService:
     MAX_SOURCE_TYPES = 12
     PRODUCT_SOURCE_TYPES = ("product_help", "system_documentation")
     ENGINE_VERSION = "knowledge-understanding-v1"
-    PRODUCT_HELP_PATTERNS = ("como", "onde", "cadastro", "cadastrar", "lançamento", "lancamento", "lançar", "lancar", "publico", "publicar", "gero", "gerar", "filtro", "filtrar", "faço", "faco", "vejo", "ver")
+    PRODUCT_HELP_PATTERNS = ("como", "onde", "cadastro", "cadastrar", "lançamento", "lancamento", "lançar", "lancar", "publico", "publicar", "gero", "gerar", "filtro", "filtrar", "faço", "faco", "vejo", "ver", "consulto", "consultar", "acompanho", "acompanhar")
     ROUTINE_ACTIVITY_TERMS = ("atividade", "atividades", "tarefa", "tarefas", "pendencia", "pendências", "pendencias", "meu", "minhas", "tenho")
 
     def __init__(self, query_service: KnowledgeQueryService | None = None) -> None:
@@ -229,6 +229,12 @@ class KnowledgeInteractionService:
             return None
         if self._looks_like_payable_creation(tokens):
             return self._direct_payable_creation_help()
+        if self._looks_like_open_financial_titles(tokens):
+            return self._direct_open_financial_titles_help()
+        if self._looks_like_bank_reconciliation(tokens):
+            return self._direct_bank_reconciliation_help()
+        if self._looks_like_process_publication(tokens):
+            return self._direct_process_publication_help()
         if not tokens.intersection({"atividade", "atividades", "tarefa", "tarefas", "pendencias", "pendências", "pendencia"}):
             return None
         if not tokens.intersection({"meu", "minhas", "tenho", "ver", "vejo", "acompanhar", "consultar"}):
@@ -273,6 +279,27 @@ class KnowledgeInteractionService:
                 "limits": {"candidate_limit": 0, "answer_source_limit": 1},
             },
         }
+
+
+    @staticmethod
+    def _looks_like_open_financial_titles(tokens: set[str]) -> bool:
+        has_titles = bool({"titulo", "titulos", "título", "títulos", "conta", "contas"}.intersection(tokens))
+        has_finance = bool({"financeiro", "financeiros", "financeira", "pagar", "receber"}.intersection(tokens))
+        has_open = bool({"aberto", "abertos", "aberta", "abertas", "pendente", "pendentes"}.intersection(tokens))
+        has_view = bool({"ver", "vejo", "consultar", "consulto", "visualizar", "mostrar"}.intersection(tokens))
+        return has_titles and has_finance and (has_open or has_view)
+
+    @staticmethod
+    def _looks_like_bank_reconciliation(tokens: set[str]) -> bool:
+        has_reconcile = bool({"conciliar", "conciliacao", "conciliação"}.intersection(tokens))
+        has_bank = bool({"banco", "bancaria", "bancária", "bancario", "bancário", "conta", "extrato"}.intersection(tokens))
+        return has_reconcile and has_bank
+
+    @staticmethod
+    def _looks_like_process_publication(tokens: set[str]) -> bool:
+        has_publish = bool({"publicar", "publico", "publique", "publicação", "publicacao"}.intersection(tokens))
+        has_process = bool({"processo", "processos", "portal", "pop", "fluxo"}.intersection(tokens))
+        return has_publish and has_process
 
     @staticmethod
     def _looks_like_payable_creation(tokens: set[str]) -> bool:
@@ -327,6 +354,120 @@ class KnowledgeInteractionService:
                 "source_types": ["product_help"],
                 "strategies": ["deterministic_playbook"],
                 "entities": ["financial_payable"],
+                "time": {"mode": "current", "from": None, "to": None},
+                "filters": {},
+                "limits": {"candidate_limit": 0, "answer_source_limit": 1},
+            },
+        }
+
+
+    @staticmethod
+    def _direct_open_financial_titles_help() -> dict[str, Any]:
+        answer = (
+            "Para ver os títulos financeiros em aberto:\n"
+            "1. Abra **Gestão Financeira > Movimentos > Agendamentos**.\n"
+            "2. Abra **Filtros**.\n"
+            "3. No campo **Baixa**, escolha **Em aberto**.\n"
+            "4. Clique em **Aplicar Filtros**.\n\n"
+            "Você também pode usar **Gestão Financeira > Relatórios > Relatório de Agendamentos** "
+            "quando precisar analisar, imprimir ou exportar a lista."
+        )
+        return {
+            "query_id": uuid.uuid4().hex,
+            "mode": "answer",
+            "knowledge_scope": "product",
+            "answer": answer,
+            "claims": [{"text": answer, "citations": []}],
+            "citations": [],
+            "warnings": [],
+            "trust_signals": ["official"],
+            "related_objects": [],
+            "actions": [
+                {"kind": "open", "label": "Abrir Títulos Financeiros", "target": "/financial/schedules", "canonical_uri": "/financial/schedules"},
+                {"kind": "open", "label": "Abrir Relatório de Agendamentos", "target": "/financial/reports/agendamento", "canonical_uri": "/financial/reports/agendamento"},
+            ],
+            "query_plan": {
+                "query_kind": "direct_product_help",
+                "knowledge_scope": "product",
+                "company_id": None,
+                "include_product": True,
+                "source_types": ["product_help"],
+                "strategies": ["deterministic_playbook"],
+                "entities": ["financial_open_titles"],
+                "time": {"mode": "current", "from": None, "to": None},
+                "filters": {},
+                "limits": {"candidate_limit": 0, "answer_source_limit": 1},
+            },
+        }
+
+    @staticmethod
+    def _direct_bank_reconciliation_help() -> dict[str, Any]:
+        answer = (
+            "Para conciliar uma conta bancária:\n"
+            "1. Abra **Gestão Financeira > Movimentos > Conciliação Bancária**.\n"
+            "2. Em **Upload de Arquivos**, selecione a conta bancária.\n"
+            "3. Importe o extrato em **OFX, XLSX, XLS ou CSV**.\n"
+            "4. Abra o lote importado e revise as sugestões.\n"
+            "5. Confirme vínculos ou baixas somente depois de conferir valores, datas e favorecidos."
+        )
+        return {
+            "query_id": uuid.uuid4().hex,
+            "mode": "answer",
+            "knowledge_scope": "product",
+            "answer": answer,
+            "claims": [{"text": answer, "citations": []}],
+            "citations": [],
+            "warnings": [],
+            "trust_signals": ["official"],
+            "related_objects": [],
+            "actions": [
+                {"kind": "open", "label": "Abrir Conciliação Bancária", "target": "/financial/reconciliation", "canonical_uri": "/financial/reconciliation"}
+            ],
+            "query_plan": {
+                "query_kind": "direct_product_help",
+                "knowledge_scope": "product",
+                "company_id": None,
+                "include_product": True,
+                "source_types": ["product_help"],
+                "strategies": ["deterministic_playbook"],
+                "entities": ["financial_bank_reconciliation"],
+                "time": {"mode": "current", "from": None, "to": None},
+                "filters": {},
+                "limits": {"candidate_limit": 0, "answer_source_limit": 1},
+            },
+        }
+
+    @staticmethod
+    def _direct_process_publication_help() -> dict[str, Any]:
+        answer = (
+            "Para publicar um processo no Portal de Processos:\n"
+            "1. Abra o processo e acesse **Fluxo / POP**.\n"
+            "2. Revise o fluxo, o POP, responsáveis e resultado esperado.\n"
+            "3. Acesse **Publicação**.\n"
+            "4. Revise a visibilidade e envie para aprovação.\n\n"
+            "Se a opção não aparecer, verifique o status do processo e sua permissão."
+        )
+        return {
+            "query_id": uuid.uuid4().hex,
+            "mode": "answer",
+            "knowledge_scope": "product",
+            "answer": answer,
+            "claims": [{"text": answer, "citations": []}],
+            "citations": [],
+            "warnings": [],
+            "trust_signals": ["official"],
+            "related_objects": [],
+            "actions": [
+                {"kind": "open", "label": "Abrir processo (Fluxo / POP)", "target": "/process-portal", "canonical_uri": "/process-portal"}
+            ],
+            "query_plan": {
+                "query_kind": "direct_product_help",
+                "knowledge_scope": "product",
+                "company_id": None,
+                "include_product": True,
+                "source_types": ["product_help"],
+                "strategies": ["deterministic_playbook"],
+                "entities": ["process_publication"],
                 "time": {"mode": "current", "from": None, "to": None},
                 "filters": {},
                 "limits": {"candidate_limit": 0, "answer_source_limit": 1},

@@ -1340,3 +1340,23 @@ Regra oficial:
 2. o robô treinador agrupa padrões e sugere melhoria;
 3. a curadoria humana decide;
 4. a aplicação da melhoria ocorre em mudança posterior, com SPEC/Playbook/Teste quando alterar comportamento oficial.
+
+
+### 43.5 Golden Set Fase 1
+
+A primeira esteira de melhoria contínua passa a ter um golden set versionado em
+`app32/knowledge/golden_sets/sapiens_fase1_product_help_pt_br.json`.
+
+Regras oficiais:
+
+1. perguntas reais de uso do APP Versus devem ser avaliadas antes de qualquer
+   mudança no classificador ou no retrieval;
+2. cada caso define pergunta, escopo, intenção, domínio, atalhos esperados e
+   termos mínimos da resposta;
+3. perguntas de orientação como “como faço...” não podem ser roteadas como
+   execução operacional;
+4. resposta para usuário comum deve usar linguagem simples e não expor termos
+   técnicos internos;
+5. cada caso do golden set deve possuir manual `product_help` correspondente,
+   mesmo quando houver resposta determinística para proteger a experiência.
+
