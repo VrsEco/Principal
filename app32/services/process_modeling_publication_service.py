@@ -79,7 +79,9 @@ def _apply_process_profile(process: Process, payload: dict[str, Any]) -> dict[st
 def _publish_bpmn(process: Process, payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ProcessModelingPublicationError("bpmn deve ser um objeto.")
-    bpmn_xml = _required_text(payload.get("bpmn_xml"), "bpmn_xml")
+    bpmn_xml = payload.get("bpmn_xml")
+    if not isinstance(bpmn_xml, str) or not bpmn_xml.strip():
+        raise ProcessModelingPublicationError("bpmn_xml é obrigatório.")
     source_hash = hashlib.sha256(bpmn_xml.encode("utf-8")).hexdigest()
     declared_hash = str(payload.get("source_sha256") or "").strip()
     if declared_hash and declared_hash != source_hash:
