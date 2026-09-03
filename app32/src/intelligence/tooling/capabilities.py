@@ -112,6 +112,16 @@ _PRESET_CAPABILITIES: dict[str, dict[str, Any]] = {
         "risk": ToolRiskLevel.MEDIUM, "permissions": ("processes.ai_assistant.execute",),
         "tags": ("bpmn", "activity", "data_object", "create"), "required_context": (TOOL_CONTEXT_COMPANY,),
     },
+    "publish_approved_process_modeling_package_tool": {
+        "domain": "processes",
+        "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
+        "risk": ToolRiskLevel.HIGH,
+        "permissions": ("processes.ai_assistant.execute",),
+        "human_gate": True,
+        "human_gate_reason": "Publica a modelagem aprovada e seus artefatos operacionais no tenant.",
+        "tags": ("mutation", "bpmn", "pop", "artifact", "publish", "tenant_safe"),
+        "required_context": (TOOL_CONTEXT_USER, TOOL_CONTEXT_COMPANY),
+    },
     "consult_rules": {
         "domain": "governance",
         "scopes": (ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),

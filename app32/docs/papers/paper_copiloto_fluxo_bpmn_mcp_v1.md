@@ -157,3 +157,7 @@ A composição `BPMN + artefatos + contrato + runtime` transforma o fluxo de des
 ## 15. Experiência visual unificada dos editores
 
 Os editores especializados compartilham a mesma shell: cabeçalho compacto com identidade e cor do tipo, status e ações; conteúdo principal; painel lateral de contexto BPMN e governança. A consistência reduz a curva de aprendizado sem apagar a semântica de `FORM`, `CHECK`, `IN` e `OUT`. O POP permanece como referência canônica, enquanto IA evolui na mesma linguagem visual dentro de sua configuração sob demanda.
+
+## 16. Publicação do pacote aprovado
+
+Após a validação humana, o mesmo pacote estruturado pode materializar perfil do processo, BPMN, POP e artefatos vinculados por uma capability MCP única. A publicação deve ser idempotente, tenant-safe e preservar versões anteriores, eliminando a transcrição manual entre a modelagem aprovada e o APP32.

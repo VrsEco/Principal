@@ -92,3 +92,11 @@ Até existir persistência tenant-owned e next action MCP específicos, registra
 7. conferir preservação no XML, reabertura e Book quando aplicável;
 8. tratar cor personalizada e overlay de execução como camadas separadas.
 
+## 8. Materialização no APP32
+
+- executar somente após aprovação humana explícita;
+- usar `publish_approved_process_modeling_package_tool` com o tenant e processo confirmados;
+- conferir no readback: BPMN `published`, POP e passos, artefatos `published`, vínculos ativos e escopo compartilhado quando aplicável;
+- repetir a mesma chamada em caso de resposta de rede incerta: o serviço deve retornar `noop` para conteúdo já publicado;
+- em falha parcial, reler o estado pelo MCP antes de tentar correção.
+

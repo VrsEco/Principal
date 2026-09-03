@@ -61,3 +61,5 @@ No modo conversacional, cruzar a dimensão escolhida com Identidade Organizacion
 
 Ao avaliar POP, Checklist e Formulários, reconhecer a linguagem visual canônica, mas decidir maturidade por necessidade, vínculo, configuração, versão, política de conclusão e contribuição estratégica.
 
+Após aprovação humana explícita do pacote final, materializar perfil, BPMN, POP e artefatos no APP32 por `publish_approved_process_modeling_package_tool`. Confirmar tenant/processo, exigir `human_gate_confirmed=true` e reler IDs, versões, status e vínculos retornados antes de declarar a entrega publicada.
+

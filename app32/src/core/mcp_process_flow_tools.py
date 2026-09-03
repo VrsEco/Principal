@@ -7,6 +7,7 @@ from services.process_flow_copilot_service import (
     build_process_flow_copilot_analysis,
 )
 from services.process_bpmn_activity_mcp_service import create_bpmn_activity
+from services.process_modeling_publication_service import publish_approved_process_modeling_package
 
 
 def register_process_flow_tools(mcp: Any) -> None:
@@ -16,6 +17,24 @@ def register_process_flow_tools(mcp: Any) -> None:
     def create_process_bpmn_activity_tool(company_id: int, process_id: int, name: str, lane_id: str | None = None, lane_name: str | None = None, source_element_id: str | None = None, target_element_id: str | None = None, order_index: int | None = None, data_object_name: str | None = None, data_object_direction: str = "input_output", data_object_id: str | None = None) -> dict[str, Any]:
         """Cria task BPMN, conexões e Data Object Reference reutilizável no diagrama draft do processo."""
         return {"ok": True, **create_bpmn_activity(company_id=company_id, process_id=process_id, name=name, lane_id=lane_id, lane_name=lane_name, source_element_id=source_element_id, target_element_id=target_element_id, order_index=order_index, data_object_name=data_object_name, data_object_direction=data_object_direction, data_object_id=data_object_id)}
+
+    @mcp.tool()
+    def publish_approved_process_modeling_package_tool(
+        company_id: int,
+        process_id: int,
+        package: dict[str, Any],
+        human_gate_confirmed: bool = False,
+    ) -> dict[str, Any]:
+        """Publica perfil, BPMN, POP e artefatos de uma modelagem já aprovada pelo usuário."""
+        return {
+            "ok": True,
+            **publish_approved_process_modeling_package(
+                company_id=company_id,
+                process_id=process_id,
+                package=package,
+                human_gate_confirmed=human_gate_confirmed,
+            ),
+        }
 
     @mcp.tool()
     def analyze_process_flow_copilot_tool(company_id: int, process_id: int, diagram_status: str = "published") -> dict[str, Any]:

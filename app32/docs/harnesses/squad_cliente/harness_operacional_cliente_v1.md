@@ -138,3 +138,5 @@ Na maturação, atuar apenas nos estados `collecting_evidence`, `mapping_as_is` 
 Conduzir conversa operacional simples: uma dimensão, uma pergunta por vez e síntese após no máximo três perguntas. Mostrar somente status, gap principal e próxima ação; encaminhar análise estratégica e TO-BE ao Squad Versus.
 
 Ao avaliar POP, Checklist e Formulários, usar a cor apenas para localizar o tipo no Modeler e confirmar com o executor vínculo, uso, obrigatoriedade e evidência real.
+
+Depois que o usuário aprovar a modelagem, o Squad Cliente deve entregar o pacote estruturado ao Squad Versus. A escrita final no APP32 usa `publish_approved_process_modeling_package_tool`, com `company_id`, `process_id` e `human_gate_confirmed=true`; o Squad Cliente não publica rascunho nem presume aprovação.

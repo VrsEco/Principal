@@ -218,3 +218,11 @@ Na entrega `2.3 Fluxo`, adicionar o marcador e o vínculo para registrar que a a
 - validar em desktop e largura reduzida, sem rolagem horizontal nem perda de contexto.
 - ao abrir POP pelo diagrama, usar o modo focado e retornar pelo botão `Voltar ao Modeler`;
 - no Modeler, preservar o canvas como área dominante e manter cabeçalho/ribbon em altura compacta.
+
+## 14. Publicar após aprovação
+
+1. confirmar novamente `company_id`, `process_id` e versão aprovada;
+2. montar um pacote com perfil, XML BPMN, POP e definições/vínculos dos artefatos;
+3. chamar `publish_approved_process_modeling_package_tool` somente com `human_gate_confirmed=true`;
+4. reler o retorno e validar IDs, versões, status, `execution_scope` e `phase_key`;
+5. não repetir cadastros manualmente: a chamada é idempotente para o mesmo conteúdo.

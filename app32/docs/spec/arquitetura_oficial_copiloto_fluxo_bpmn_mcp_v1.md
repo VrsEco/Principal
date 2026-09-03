@@ -431,3 +431,11 @@ Ainda não fazem parte das ondas concluídas:
 - enforcement do gate na finalização administrativa direta da instância.
 
 Esses itens devem avançar em ondas posteriores, sem reabrir o modelo canônico desta fundação.
+
+### Publicação MCP do pacote aprovado
+
+- capability canônica: `publish_approved_process_modeling_package_tool`;
+- entrada: `company_id`, `process_id`, pacote estruturado e `human_gate_confirmed=true`;
+- escopo: perfil, BPMN publicado, POP legado adaptado e artefatos versionados com vínculos BPMN;
+- garantias: escopo por tenant, validação do hash BPMN, idempotência e arquivamento da versão anterior do mesmo artefato;
+- permissão: `processes.ai_assistant.execute`, risco alto e gate humano obrigatório.
