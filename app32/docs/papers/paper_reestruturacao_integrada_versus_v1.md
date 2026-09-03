@@ -294,11 +294,11 @@ O ICP deve combinar características da empresa, situação de compra e condiç�
 
 #### Núcleo comum obrigatório
 
-Empresa brasileira de pequeno ou médio porte que:
+Empresa brasileira de pequeno ou médio porte que precisa **crescer com controle** ou **conduzir um ciclo de adequação com eficiência e preservação de valor**, e que:
 
 1. possua operação real, equipe e processos interdependentes;
 2. tenha sócio, diretor ou gestor com poder de patrocinar mudanças;
-3. enfrente perda relevante por improviso, falta de clareza, baixa previsibilidade ou crescimento desorganizado;
+3. enfrente perda relevante por improviso, falta de clareza ou baixa previsibilidade durante um ciclo de expansão, reorganização ou redimensionamento;
 4. aceite disponibilizar pessoas, dados e tempo para implantação;
 5. queira capacidade gerencial funcionando, e não apenas relatório ou aconselhamento;
 6. tenha condição econômica compatível com o escopo, a duração e a intensidade do trabalho.
@@ -310,10 +310,10 @@ Empresa brasileira de pequeno ou médio porte que:
 - **Entrada comercial:** Necessidade Urgente, executada por projeto ou programa.
 - **Expansão possível:** o aprendizado pode originar Estruturação Empresarial, sem venda forçada e sem automatismo.
 
-#### Perfil B — estruturação para crescer ou recuperar controle
+#### Perfil B — estruturação para crescer ou se adequar com controle
 
-- **Gatilho:** dependência excessiva do dono, crescimento sem organização, baixa delegação, processos informais, estratégia sem execução ou gestão sem indicadores confiáveis.
-- **Busca:** estruturar capacidades duradouras e tornar a gestão executável pela empresa.
+- **Gatilho:** expansão sem organização; ou necessidade de reorganizar custos, estrutura e capacidade diante de retração, mudança de mercado ou redimensionamento do negócio.
+- **Busca:** estruturar capacidades duradouras para crescer com segurança ou realizar ajustes preservando caixa, produtividade, clientes e competências essenciais.
 - **Entrada comercial:** Fase 00 da Estruturação Empresarial, com diagnóstico e priorização.
 - **Sustentação possível:** Performance Hub como cadência recorrente de execução, acompanhamento e evolução.
 
