@@ -29,7 +29,7 @@ class QueryServiceSpy:
 def test_product_scope_never_receives_tenant_artificially():
     spy = QueryServiceSpy()
     payload = KnowledgeInteractionService(spy).answer(
-        "Como publicar um processo?",
+        "Onde encontro o manual geral do sistema?",
         scope="product",
         company_id=91,
         user_id=7,
@@ -42,7 +42,7 @@ def test_product_scope_never_receives_tenant_artificially():
     assert payload["presentation"]["source_label"] == "Manual oficial"
     assert payload["interaction_id"]
     assert payload["understanding"]["intent"] == "product_help"
-    assert payload["understanding"]["domain"] in {"app_versus_usage", "processes"}
+    assert payload["understanding"]["domain"] == "app_versus_usage"
 
 
 def test_company_scope_is_tenant_bound_and_excludes_product():
@@ -131,3 +131,56 @@ def test_company_scope_fails_closed_without_active_company():
             company_id=None,
             user_id=7,
         )
+
+
+def test_open_financial_titles_question_returns_direct_simple_help():
+    spy = QueryServiceSpy()
+    payload = KnowledgeInteractionService(spy).answer(
+        "Como eu faço para ver os títulos financeiros em aberto?",
+        scope="all",
+        company_id=44,
+        user_id=7,
+    )
+
+    assert spy.calls == []
+    assert payload["understanding"]["intent"] == "product_help"
+    assert payload["understanding"]["domain"] == "finance"
+    assert payload["query_plan"]["entities"] == ["financial_open_titles"]
+    assert "Relatório de Agendamentos" in payload["answer"]
+    assert "get_" not in payload["answer"]
+    assert payload["actions"][0]["target"] == "/financial/schedules"
+    assert payload["actions"][1]["target"] == "/financial/reports/agendamento"
+
+
+def test_bank_reconciliation_question_returns_direct_simple_help():
+    spy = QueryServiceSpy()
+    payload = KnowledgeInteractionService(spy).answer(
+        "Como eu faço para conciliar uma conta bancária?",
+        scope="all",
+        company_id=44,
+        user_id=7,
+    )
+
+    assert spy.calls == []
+    assert payload["understanding"]["intent"] == "product_help"
+    assert payload["understanding"]["domain"] == "finance"
+    assert payload["query_plan"]["entities"] == ["financial_bank_reconciliation"]
+    assert "Conciliação Bancária" in payload["answer"]
+    assert "Consultar atividades" not in payload["answer"]
+    assert payload["actions"][0]["target"] == "/financial/reconciliation"
+
+
+def test_process_publication_question_returns_direct_flow_pop_help():
+    spy = QueryServiceSpy()
+    payload = KnowledgeInteractionService(spy).answer(
+        "Como publico um processo no Portal de Processos?",
+        scope="all",
+        company_id=44,
+        user_id=7,
+    )
+
+    assert spy.calls == []
+    assert payload["understanding"]["intent"] == "product_help"
+    assert payload["understanding"]["domain"] == "processes"
+    assert "Fluxo / POP" in payload["answer"]
+    assert payload["actions"][0]["label"] == "Abrir processo (Fluxo / POP)"

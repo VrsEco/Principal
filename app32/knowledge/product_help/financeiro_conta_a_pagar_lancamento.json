@@ -1,0 +1,33 @@
+{
+  "source_ref": "financeiro.conta_a_pagar_lancamento",
+  "title": "Lançar conta a pagar",
+  "version": "v1",
+  "product_version": "3.2",
+  "locale": "pt-BR",
+  "status": "published",
+  "authority_level": "official",
+  "route_key": "financial.financial_schedule_form_page",
+  "module_key": "finance",
+  "help_kind": "how_to",
+  "canonical_uri": "app-versus://help/finance/create-payable",
+  "navigation_target": "/financial/schedules/new",
+  "navigation_actions": [
+    {
+      "label": "Novo agendamento financeiro",
+      "target": "/financial/schedules/new"
+    },
+    {
+      "label": "Abrir Títulos Financeiros",
+      "target": "/financial/schedules"
+    }
+  ],
+  "audience": ["administrator", "client", "collaborator"],
+  "required_capabilities": ["financial.view"],
+  "suggested_questions": [
+    "Como faço para fazer o lançamento de uma conta a pagar?",
+    "Como cadastrar uma conta a pagar?",
+    "Onde lanço um pagamento futuro?",
+    "Como criar um título financeiro de pagamento?"
+  ],
+  "content": "# Como lançar uma conta a pagar\n\n1. Abra **Gestão Financeira > Movimentos > Agendamentos**.\n2. Clique em **Novo**.\n3. Escolha o tipo **Pagamento** ou **Conta a pagar**.\n4. Preencha favorecido, histórico, valor, vencimento, competência, plano de contas e centro de resultado.\n5. Clique em **Salvar**.\n\nDepois de salva, a conta aparece em **Títulos Financeiros** como em aberto até a baixa."
+}

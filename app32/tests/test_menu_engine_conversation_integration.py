@@ -1070,6 +1070,15 @@ def test_looks_like_command_rejects_how_to_open_titles_question():
     )
 
 
+def test_looks_like_command_rejects_how_to_my_activities_question():
+    assert (
+        menu_engine._looks_like_command(
+            "como faço para ver as atividades que tenho?"
+        )
+        is False
+    )
+
+
 def test_looks_like_command_accepts_me_traga_operational_phrase():
     assert (
         menu_engine._looks_like_command(
