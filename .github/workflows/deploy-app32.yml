@@ -1,9 +1,22 @@
 name: 🚀 Deploy App32 to Production (Cloudez)
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Modo do deploy"
+        required: true
+        default: "quick"
+        type: choice
+        options:
+          - quick
+          - standard
+          - full
+      restart_mcp:
+        description: "Reiniciar e validar o runtime MCP"
+        required: true
+        default: false
+        type: boolean
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -55,10 +68,10 @@ jobs:
 
             if [ -f "app32/scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via app32/scripts/deploy_configr.sh"
-              bash app32/scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash app32/scripts/deploy_configr.sh
             elif [ -f "scripts/deploy_configr.sh" ]; then
               echo "🚀 Executando deploy oficial via scripts/deploy_configr.sh"
-              bash scripts/deploy_configr.sh
+              DEPLOY_MODE="${{ inputs.mode }}" RESTART_MCP="${{ inputs.restart_mcp }}" bash scripts/deploy_configr.sh
             else
               echo "❌ Script oficial de deploy não encontrado."
               find . -maxdepth 3 -name "deploy_configr.sh" -print

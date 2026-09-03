@@ -16,6 +16,16 @@ DEPLOY_STDOUT_LOG="$APP/deploy_stdout.txt"
 DEPLOY_STDERR_LOG="$APP/deploy_stderr.txt"
 WEB_HEALTH_URL="http://127.0.0.1/healthz"
 WEB_HEALTH_HOST="app.gestaoversus.com.br"
+DEPLOY_MODE="${DEPLOY_MODE:-quick}"
+RESTART_MCP="${RESTART_MCP:-false}"
+
+case "$DEPLOY_MODE" in
+    quick|standard|full) ;;
+    *)
+        echo "❌ DEPLOY_MODE inválido: $DEPLOY_MODE (use quick, standard ou full)."
+        exit 2
+        ;;
+esac
 
 mkdir -p "$APP"
 : > "$DEPLOY_STDOUT_LOG"
@@ -24,6 +34,7 @@ exec > >(tee "$DEPLOY_STDOUT_LOG") 2> >(tee "$DEPLOY_STDERR_LOG" >&2)
 
 echo "----------------------------------------------------"
 echo "🚀 INICIANDO ATUALIZAÇÃO: $(date)"
+echo "🚦 Modo: $DEPLOY_MODE | Reiniciar MCP: $RESTART_MCP"
 echo "----------------------------------------------------"
 
 # 1. Sincronia Git
@@ -33,15 +44,23 @@ git fetch origin +refs/heads/main:refs/remotes/origin/main
 git reset --hard origin/main
 echo "✅ Código atualizado com sucesso."
 
-# 2. Dependências
-echo "📦 Atualizando dependências Python..."
-$PIP install -r requirements.txt --quiet
-echo "✅ Dependências em conformidade."
+# 2. Dependências (standard/full)
+if [ "$DEPLOY_MODE" = "standard" ] || [ "$DEPLOY_MODE" = "full" ]; then
+    echo "📦 Atualizando dependências Python..."
+    $PIP install -r requirements.txt --quiet
+    echo "✅ Dependências em conformidade."
+else
+    echo "⏭️  Dependências preservadas no modo quick."
+fi
 
 # Protege contra instalações parciais em virtualenv persistente. O pacote
 # langgraph-prebuilt pode manter metadata válida mesmo com o namespace
 # langgraph.prebuilt sem os módulos físicos, derrubando o boot do Flask.
 if ! $PYTHON -c "from langgraph.prebuilt import ToolNode" >/dev/null 2>&1; then
+    if [ "$DEPLOY_MODE" = "quick" ]; then
+        echo "❌ Ambiente LangGraph inconsistente. Reexecute em modo standard ou full."
+        exit 1
+    fi
     echo "⚠️  langgraph-prebuilt inconsistente; reparando instalação..."
     $PIP install --force-reinstall --no-deps 'langgraph-prebuilt>=1.1.0,<2.0.0' --quiet
 fi
@@ -52,10 +71,11 @@ echo "🖼️  Sincronizando assets canônicos do portfólio de processos..."
 $PYTHON scripts/sync_process_portfolio_assets.py
 echo "✅ Assets de portfólio sincronizados."
 
-# 3. Migrações de Banco (Alembic)
-echo "🗃️  Verificando migrações de banco de dados..."
-set +e
-$PYTHON -c "
+# 3. Migrações de Banco (somente full)
+if [ "$DEPLOY_MODE" = "full" ]; then
+    echo "🗃️  Verificando migrações de banco de dados..."
+    set +e
+    $PYTHON -c "
 import sys, os
 sys.path.insert(0, '.')
 from dotenv import load_dotenv
@@ -69,14 +89,17 @@ app = create_app('production')
 with app.app_context():
     upgrade(revision='heads')
 " 2>&1
-EXIT_CODE=$?
-set -e
+    EXIT_CODE=$?
+    set -e
 
-if [ $EXIT_CODE -eq 0 ]; then
-    echo "✅ Migrations aplicadas/verificadas com sucesso."
+    if [ $EXIT_CODE -eq 0 ]; then
+        echo "✅ Migrations aplicadas/verificadas com sucesso."
+    else
+        echo "❌ ERRO: migrations falharam; deploy interrompido antes do restart."
+        exit $EXIT_CODE
+    fi
 else
-    echo "❌ ERRO: migrations falharam; deploy interrompido antes do restart."
-    exit $EXIT_CODE
+    echo "⏭️  Migrations preservadas no modo $DEPLOY_MODE."
 fi
 
 # 3.1 Runtime uWSGI: buffering de POST + resiliência básica
@@ -203,7 +226,15 @@ else
     exit 1
 fi
 
-# 6. MCP HTTP remoto (reinício controlado para refletir novas tools/contratos após deploy)
+# 6. MCP HTTP remoto (reinício somente por decisão explícita do operador)
+if [ "$RESTART_MCP" != "true" ]; then
+    echo "⏭️  Runtime MCP preservado por decisão do operador."
+    echo "----------------------------------------------------"
+    echo "✅ DEPLOY CONCLUÍDO COM SUCESSO: $(date)"
+    echo "----------------------------------------------------"
+    exit 0
+fi
+
 echo "🧠 Reiniciando runtime MCP HTTP remoto para refletir o código recém-publicado..."
 MCP_HEALTH_URL="http://127.0.0.1:8101/healthz"
 MCP_PUBLIC_HEALTH_URL="https://app.gestaoversus.com.br/mcp/healthz"
