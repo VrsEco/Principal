@@ -1,10 +1,10 @@
 from io import BytesIO
 
-from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for, send_file
+from flask import Blueprint, render_template, jsonify, request, abort, current_app, redirect, url_for, send_file, session
 from flask_login import login_required, current_user
 from pydantic import ValidationError
 from werkzeug.exceptions import HTTPException
-from models import db, AIAgent, AgentMessage
+from models import db, AIAgent, AgentMessage, Company
 from services.ai_configuration_pages_service import AIConfigurationPagesService
 from services.ai_capability_backlog_service import AICapabilityBacklogService
 from services.ai_capability_blueprint_service import AICapabilityBlueprintService
@@ -19,6 +19,7 @@ from services.mcp_connection_snippet_service import MCPConnectionSnippetService
 from services.ai_monitoring_pdf_service import generate_ai_monitoring_report_pdf
 from services.agent_backlog_service import create_backlog_task
 from services.e2e_operations_center_service import E2EOperationsCenterService
+from services.user_presence_service import UserPresenceService
 from services.robot_tests_center_service import RobotTestsCenterService
 try:
     from app32.tests.e2e.core.e2e_supervised_execution_service import E2ESupervisedExecutionService
@@ -327,6 +328,28 @@ def _resolve_robot_tests_company_id(active_company):
     return company_id
 
 
+def _resolve_presence_admin_context():
+    """Resolve uma única empresa autorizada para a leitura de presença."""
+    active_company = _resolve_active_company()
+    active_company_id = getattr(active_company, "id", None)
+    requested_company_id = request.args.get("company_id", type=int)
+
+    if is_platform_admin():
+        company_id = requested_company_id or active_company_id
+        companies = Company.query.filter_by(is_active=True).order_by(Company.name.asc()).all()
+    else:
+        company_id = active_company_id
+        if requested_company_id and requested_company_id != active_company_id:
+            abort(403)
+        if not company_id or not has_company_full_access(company_id):
+            abort(403)
+        companies = [active_company]
+
+    if not company_id:
+        abort(400, description="Selecione uma empresa para consultar a presença.")
+    return int(company_id), companies
+
+
 @configs_bp.route('/qa/robot-tests')
 @login_required
 def robot_tests_center():
@@ -633,6 +656,64 @@ def system_settings():
                           log_stats=log_stats,
                           users_count=users_count,
                           users_with_contacts=users_with_contacts)
+
+
+@configs_bp.route('/configs/system/presence')
+@login_required
+def user_presence_page():
+    company_id, companies = _resolve_presence_admin_context()
+    selected_company = next(
+        (company for company in companies if int(company.id) == company_id),
+        Company.query.filter_by(id=company_id, is_active=True).first(),
+    )
+    if selected_company is None:
+        abort(404)
+    return render_template(
+        'configs_user_presence.html',
+        companies=companies,
+        selected_company=selected_company,
+        platform_scope=is_platform_admin(),
+    )
+
+
+@configs_bp.route('/api/configs/system/presence')
+@login_required
+def user_presence_state_api():
+    company_id, _ = _resolve_presence_admin_context()
+    payload = UserPresenceService.list_company_presence(
+        company_id=company_id,
+        status=request.args.get('status'),
+        search=request.args.get('search'),
+        limit=request.args.get('limit', type=int) or 200,
+    )
+    return jsonify({"success": True, "presence": payload})
+
+
+@configs_bp.route('/api/presence/heartbeat', methods=['POST'])
+@login_required
+def user_presence_heartbeat_api():
+    company_id = session.get('active_company_id')
+    if not company_id:
+        return jsonify({"success": False, "message": "Empresa ativa não selecionada."}), 409
+
+    company_id = int(company_id)
+    allowed_company_ids = {int(value) for value in (get_accessible_company_ids() or [])}
+    if not is_platform_admin() and company_id not in allowed_company_ids:
+        abort(403)
+
+    try:
+        state = UserPresenceService.heartbeat(
+            user_id=current_user.id,
+            company_id=company_id,
+            session_state=session,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+        )
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Falha ao registrar heartbeat de presença.")
+        return jsonify({"success": False, "message": "Presença temporariamente indisponível."}), 503
+    return jsonify({"success": True, "presence": state})
 
 
 @configs_bp.route('/api-mcp-legacy')

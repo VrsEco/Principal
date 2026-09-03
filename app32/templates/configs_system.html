@@ -290,6 +290,40 @@
       </div>
     </div>
 
+    {% if is_platform_admin() or has_company_full_access() %}
+    <!-- Card: Usuários Online -->
+    <div class="system-card" onclick="window.location.href='{{ url_for('configs.user_presence_page') }}';">
+      <div class="card-header">
+        <div class="card-icon monitoring">🟢</div>
+        <div class="card-content">
+          <h3>Usuários Online</h3>
+          <p>Acompanhe sessões, clientes conectados e última atividade com isolamento por empresa.</p>
+          <span class="card-badge badge-active">✅ Tempo real</span>
+        </div>
+      </div>
+
+      <div class="card-stats">
+        <div class="stat-item">
+          <span class="stat-value">3 min</span>
+          <span class="stat-label">Online</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">15 min</span>
+          <span class="stat-label">Expiração</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">Tenant</span>
+          <span class="stat-label">Protegido</span>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <a href="{{ url_for('configs.user_presence_page') }}" class="action-btn primary"
+          onclick="event.stopPropagation()">Abrir painel</a>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Card 3: Segurança e Acesso -->
     <div class="system-card" onclick="window.location.href='{{ url_for('usuarios.index') }}';">
       <div class="card-header">

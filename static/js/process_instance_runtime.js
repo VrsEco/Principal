@@ -494,11 +494,36 @@
     return `<label class="bpms-runtime-form-field"><span>${label}${field.required ? ' *' : ''}</span><input type="${htmlType}" data-form-field="${id}" value="${escapeHtml(current)}" ${required} ${disabled}></label>`;
   }
 
+  function phaseFieldsHtml(artifact, { readOnly = false } = {}) {
+    const policy = artifact.completion_policy_json || {};
+    const phaseKey = artifact.phase_key || policy.phase_key || 'activity';
+    const values = artifact.output_json?.phase_values?.[phaseKey] || {};
+    const fields = Array.isArray(policy.phase_fields) ? policy.phase_fields : [];
+    if (!fields.length && !policy.can_finalize) return '';
+    return `<fieldset class="bpms-document-phase"><legend>${escapeHtml(policy.phase_label || 'Dados desta etapa')}</legend>${fields.map(field => {
+      const id=escapeHtml(field.id); const label=escapeHtml(field.label || field.id); const disabled=readOnly?'disabled':''; const required=field.required&&!readOnly?'required':''; const value=values[field.id]??'';
+      if(field.type==='textarea') return `<label class="bpms-runtime-form-field"><span>${label}${field.required?' *':''}</span><textarea data-phase-field="${id}" ${required} ${disabled}>${escapeHtml(value)}</textarea></label>`;
+      if(field.type==='checkbox') return `<label class="bpms-runtime-form-field bpms-runtime-form-field--check"><input type="checkbox" data-phase-field="${id}" ${value?'checked':''} ${disabled}><span>${label}</span></label>`;
+      if(field.type==='select') { const options=(field.options||[]).map(option=>typeof option==='object'?option:{value:option,label:option}); return `<label class="bpms-runtime-form-field"><span>${label}${field.required?' *':''}</span><select data-phase-field="${id}" ${required} ${disabled}><option value="">Selecione</option>${options.map(option=>`<option value="${escapeHtml(option.value)}" ${String(value)===String(option.value)?'selected':''}>${escapeHtml(option.label)}</option>`).join('')}</select></label>`; }
+      return `<label class="bpms-runtime-form-field"><span>${label}${field.required?' *':''}</span><input type="text" data-phase-field="${id}" value="${escapeHtml(value)}" ${required} ${disabled}></label>`;
+    }).join('')}${policy.can_finalize&&!readOnly?'<label class="bpms-runtime-form-field bpms-runtime-form-field--check"><input type="checkbox" data-finalize-artifact><span>Aprovar definitivamente este documento</span></label>':''}</fieldset>`;
+  }
+
+  function attachPhaseValues(artifact, form, output) {
+    const phaseKey = artifact.phase_key || artifact.completion_policy_json?.phase_key || 'activity';
+    const phaseValues = structuredClone(artifact.output_json?.phase_values || {});
+    const current = {};
+    form.querySelectorAll('[data-phase-field]').forEach(input => { current[input.dataset.phaseField] = input.type === 'checkbox' ? input.checked : input.value; });
+    if (form.querySelector('[data-phase-field]')) phaseValues[phaseKey] = current;
+    return {...output, phase_values:phaseValues};
+  }
+
   function openFormArtifactModal(artifact) {
     const config = artifact.configuration_json || {};
     const answers = artifact.output_json?.answers || {};
     const readOnly = artifact.status === 'completed';
-    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${section.description ? `<p class="bpms-document-section-help">${escapeHtml(section.description)}</p>` : ''}${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id], { readOnly })).join('')}</fieldset>`).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? `<a class="btn btn-primary" href="/api/process-artifact-executions/${artifact.id}/pdf?company_id=${encodeURIComponent(companyId)}" target="_blank" rel="noopener">Emitir PDF</a><button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>` : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir formulário</button>'}</div></form>`;
+    const contentReadOnly = readOnly || artifact.completion_policy_json?.editable_content === false;
+    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactForm" class="bpms-runtime-form">${(config.sections || []).map(section => `<fieldset><legend>${escapeHtml(section.title || 'Seção')}</legend>${section.description ? `<p class="bpms-document-section-help">${escapeHtml(section.description)}</p>` : ''}${(section.fields || []).map(field => fieldInputHtml(field, answers[field.id], { readOnly:contentReadOnly })).join('')}</fieldset>`).join('')}${phaseFieldsHtml(artifact,{readOnly})}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? `<a class="btn btn-primary" href="/api/process-artifact-executions/${artifact.id}/pdf?company_id=${encodeURIComponent(companyId)}" target="_blank" rel="noopener">Emitir PDF</a><button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>` : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir formulário</button>'}</div></form>`;
     window.openRuntimeSupportModal(`${readOnly ? 'Resultado do formulário' : 'Preencher formulário'} · ${artifact.name || 'Formulário'}`, readOnly ? `Concluído em ${formatDateTime(artifact.completed_at)}.` : 'Preencha os campos e salve um rascunho quando necessário.', html);
     const form = document.getElementById('runtimeArtifactForm');
     if (readOnly) { form.querySelector('[data-document-close]')?.addEventListener('click', closeDocumentModal); return; }
@@ -513,8 +538,9 @@
       });
       return values;
     };
-    form.querySelector('[data-artifact-save]').addEventListener('click', () => submitDocument(form, () => saveArtifactExecution(artifact.id, 'in_progress', { answers: collect() }, {}), 'Rascunho salvo. Você pode continuar depois.'));
-    form.addEventListener('submit', event => { event.preventDefault(); submitDocument(form, () => saveArtifactExecution(artifact.id, 'completed', { answers: collect() }, {}), 'Formulário concluído.'); });
+    const collectAnswers = () => contentReadOnly ? structuredClone(answers) : collect();
+    form.querySelector('[data-artifact-save]').addEventListener('click', () => submitDocument(form, () => saveArtifactExecution(artifact, 'in_progress', attachPhaseValues(artifact,form,{answers:collectAnswers()}), {}), 'Rascunho salvo. Você pode continuar depois.'));
+    form.addEventListener('submit', event => { event.preventDefault(); submitDocument(form, () => saveArtifactExecution(artifact, 'completed', attachPhaseValues(artifact,form,{answers:collectAnswers()}), {}, Boolean(form.querySelector('[data-finalize-artifact]')?.checked)), 'Etapa do formulário concluída.'); });
   }
 
   function openCheckArtifactModal(artifact) {
@@ -522,15 +548,16 @@
     const answers = artifact.output_json?.answers || {};
     const evidence = artifact.evidence_json || {};
     const readOnly = artifact.status === 'completed';
-    const disabled = readOnly ? 'disabled' : '';
-    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactCheck" class="bpms-runtime-check"><div class="bpms-runtime-check__columns"><span>Critério</span><span>Resultado</span><span>Comentário</span><span>Evidência</span></div>${(config.items || []).map(item => { const answer=answers[item.id]||{}; const evidenceValue=evidence[item.id]; const evidenceFile=evidenceValue&&typeof evidenceValue==='object'?evidenceValue:null; const evidenceControl=readOnly?(evidenceFile?.download_url?`<a class="bpms-document-file-link" href="${escapeHtml(evidenceFile.download_url)}">Baixar ${escapeHtml(evidenceFile.name||'evidência')}</a>`:`<span>${escapeHtml(evidenceValue||'Sem evidência')}</span>`):`<input type="file" data-check-evidence="${escapeHtml(item.id)}" data-document-file accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx"><small data-file-name>${evidenceFile?`Arquivo atual: ${escapeHtml(evidenceFile.name||'evidência')}`:(item.evidence_required?'Evidência obrigatória':'Evidência opcional')}</small>`; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><label><span class="bpms-mobile-label">Resultado</span><select data-check-status="${escapeHtml(item.id)}" ${disabled}><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select></label><label><span class="bpms-mobile-label">Comentário</span><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário" ${disabled}></label><label><span class="bpms-mobile-label">Evidência</span>${evidenceControl}</label></article>`; }).join('')}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? `<a class="btn btn-primary" href="/api/process-artifact-executions/${artifact.id}/pdf?company_id=${encodeURIComponent(companyId)}" target="_blank" rel="noopener">Emitir PDF</a><button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>` : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir checklist</button>'}</div></form>`;
+    const contentReadOnly = readOnly || artifact.completion_policy_json?.editable_content === false;
+    const disabled = contentReadOnly ? 'disabled' : '';
+    const html = `<div class="bpms-document-context"><span>${artifact.is_required ? 'Obrigatório' : 'Opcional'}</span><span>${escapeHtml(artifactStatusLabel(artifact.status))}</span><span>Versão ${escapeHtml(artifact.artifact_version || 1)}</span></div><form id="runtimeArtifactCheck" class="bpms-runtime-check"><div class="bpms-runtime-check__columns"><span>Critério</span><span>Resultado</span><span>Comentário</span><span>Evidência</span></div>${(config.items || []).map(item => { const answer=answers[item.id]||{}; const evidenceValue=evidence[item.id]; const evidenceFile=evidenceValue&&typeof evidenceValue==='object'?evidenceValue:null; const evidenceControl=contentReadOnly?(evidenceFile?.download_url?`<a class="bpms-document-file-link" href="${escapeHtml(evidenceFile.download_url)}">Baixar ${escapeHtml(evidenceFile.name||'evidência')}</a>`:`<span>${escapeHtml(evidenceValue||'Sem evidência')}</span>`):`<input type="file" data-check-evidence="${escapeHtml(item.id)}" data-document-file accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx"><small data-file-name>${evidenceFile?`Arquivo atual: ${escapeHtml(evidenceFile.name||'evidência')}`:(item.evidence_required?'Evidência obrigatória':'Evidência opcional')}</small>`; return `<article class="bpms-runtime-check__item"><strong>${escapeHtml(item.label || 'Item')}${item.required ? ' *' : ''}</strong><label><span class="bpms-mobile-label">Resultado</span><select data-check-status="${escapeHtml(item.id)}" ${disabled}><option value="">Selecione</option><option value="accepted" ${answer.status==='accepted'?'selected':''}>Conforme</option><option value="rejected" ${answer.status==='rejected'?'selected':''}>Não conforme</option>${item.allow_na?`<option value="na" ${answer.status==='na'?'selected':''}>N/A</option>`:''}</select></label><label><span class="bpms-mobile-label">Comentário</span><input type="text" data-check-comment="${escapeHtml(item.id)}" value="${escapeHtml(answer.comment || '')}" placeholder="Comentário" ${disabled}></label><label><span class="bpms-mobile-label">Evidência</span>${evidenceControl}</label></article>`; }).join('')}${phaseFieldsHtml(artifact,{readOnly})}<div class="bpms-document-feedback" data-document-feedback role="status"></div><div class="bpms-runtime-form__actions">${readOnly ? `<a class="btn btn-primary" href="/api/process-artifact-executions/${artifact.id}/pdf?company_id=${encodeURIComponent(companyId)}" target="_blank" rel="noopener">Emitir PDF</a><button type="button" class="btn btn-secondary" data-document-close>Fechar resultado</button>` : '<button type="button" class="btn btn-secondary" data-artifact-save="progress">Salvar rascunho</button><button type="submit" class="btn btn-primary">Concluir checklist</button>'}</div></form>`;
     window.openRuntimeSupportModal(`${readOnly ? 'Resultado do checklist' : 'Executar checklist'} · ${artifact.name || 'Checklist'}`, readOnly ? `Concluído em ${formatDateTime(artifact.completed_at)}.` : 'Verifique cada critério antes de concluir.', html);
     const form=document.getElementById('runtimeArtifactCheck');
     if (readOnly) { form.querySelector('[data-document-close]')?.addEventListener('click', closeDocumentModal); return; }
     bindDocumentFileInputs(form, artifact, evidence);
     const collect=()=>{const output={};const evidencePayload={};form.querySelectorAll('[data-check-status]').forEach(select=>{const id=select.dataset.checkStatus;output[id]={status:select.value,comment:form.querySelector(`[data-check-comment="${CSS.escape(id)}"]`)?.value||''};const evidenceInput=form.querySelector(`[data-check-evidence="${CSS.escape(id)}"]`);evidencePayload[id]=parseFilePayload(evidenceInput)||evidence[id]||'';});return {output,evidencePayload};};
-    form.querySelector('[data-artifact-save]').addEventListener('click',()=>{const data=collect();submitDocument(form,()=>saveArtifactExecution(artifact.id,'in_progress',{answers:data.output},data.evidencePayload),'Rascunho salvo. Você pode continuar depois.');});
-    form.addEventListener('submit',event=>{event.preventDefault();const data=collect();submitDocument(form,()=>saveArtifactExecution(artifact.id,'completed',{answers:data.output},data.evidencePayload),'Checklist concluído.');});
+    form.querySelector('[data-artifact-save]').addEventListener('click',()=>{const data=collect();submitDocument(form,()=>saveArtifactExecution(artifact,'in_progress',attachPhaseValues(artifact,form,{answers:data.output}),data.evidencePayload),'Rascunho salvo. Você pode continuar depois.');});
+    form.addEventListener('submit',event=>{event.preventDefault();const data=collect();submitDocument(form,()=>saveArtifactExecution(artifact,'completed',attachPhaseValues(artifact,form,{answers:data.output}),data.evidencePayload,Boolean(form.querySelector('[data-finalize-artifact]')?.checked)),'Etapa do checklist concluída.');});
   }
 
   function closeDocumentModal() {
@@ -559,7 +586,8 @@
         try {
           const body = new FormData();
           body.append('file', file);
-          const response = await fetch(`/api/process-artifact-executions/${artifact.id}/files?company_id=${encodeURIComponent(companyId)}`, { method:'POST', body });
+          const activityQuery = artifact.activity_execution_id ? `&activity_execution_id=${encodeURIComponent(artifact.activity_execution_id)}` : '';
+          const response = await fetch(`/api/process-artifact-executions/${artifact.id}/files?company_id=${encodeURIComponent(companyId)}${activityQuery}`, { method:'POST', body });
           const data = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(data.error || 'Falha ao enviar arquivo.');
           input.dataset.filePayload = JSON.stringify(data);
@@ -602,8 +630,10 @@
     }
   }
 
-  async function saveArtifactExecution(artifactExecutionId, status, outputJson, evidenceJson) {
-    const response = await fetch(`/api/process-artifact-executions/${artifactExecutionId}`, { method:'PUT', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({company_id:Number(companyId),status,output_json:outputJson,evidence_json:evidenceJson}) });
+  async function saveArtifactExecution(artifact, status, outputJson, evidenceJson, finalizeArtifact = false) {
+    const policy = artifact.completion_policy_json || {};
+    const artifactExecutionId = artifact.id;
+    const response = await fetch(`/api/process-artifact-executions/${artifactExecutionId}`, { method:'PUT', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({company_id:Number(companyId),activity_execution_id:artifact.activity_execution_id,phase_key:artifact.phase_key,status,finalize_artifact:status === 'completed' && policy.can_finalize === true && finalizeArtifact,output_json:outputJson,evidence_json:evidenceJson}) });
     const data = await response.json().catch(()=>({}));
     if(!response.ok) throw new Error(data.error || `Falha ao salvar artefato (${response.status})`);
     await refreshRuntime();

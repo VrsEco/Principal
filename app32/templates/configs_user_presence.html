@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Usuários Online | Sistema{% endblock %}
+
+{% block body %}
+{% set active_nav = 'configs' %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<style>
+  .presence-shell { max-width: 1440px; margin: 0 auto; padding: 2rem; }
+  .presence-back { color: #64748b; text-decoration: none; font-weight: 700; font-size: .9rem; }
+  .presence-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin: 1rem 0 1.5rem; }
+  .presence-header h1 { margin: 0; font-size: 2rem; color: #0f172a; }
+  .presence-header p { margin: .35rem 0 0; color: #64748b; }
+  .presence-company { min-width: 260px; }
+  .presence-company label { display: block; font-size: .75rem; font-weight: 800; color: #64748b; margin-bottom: .35rem; text-transform: uppercase; }
+  .presence-company select, .presence-filter { width: 100%; border: 1px solid #cbd5e1; border-radius: .65rem; padding: .7rem .8rem; background: #fff; }
+  .presence-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+  .presence-metric { background: #fff; border: 1px solid #e2e8f0; border-radius: .9rem; padding: 1rem 1.1rem; box-shadow: 0 6px 22px rgba(15, 23, 42, .05); }
+  .presence-metric span { display: block; color: #64748b; font-size: .8rem; font-weight: 800; text-transform: uppercase; }
+  .presence-metric strong { display: block; margin-top: .35rem; color: #0f172a; font-size: 1.75rem; }
+  .presence-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: .9rem; overflow: hidden; box-shadow: 0 6px 22px rgba(15, 23, 42, .05); }
+  .presence-toolbar { display: grid; grid-template-columns: 1fr 190px auto; gap: .75rem; padding: 1rem; border-bottom: 1px solid #e2e8f0; }
+  .presence-refresh { border: 0; border-radius: .65rem; padding: .7rem 1rem; background: #0f766e; color: #fff; font-weight: 800; cursor: pointer; }
+  .presence-table-wrap { overflow-x: auto; }
+  .presence-table { width: 100%; border-collapse: collapse; }
+  .presence-table th { padding: .85rem 1rem; text-align: left; background: #f8fafc; color: #475569; font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; }
+  .presence-table td { padding: .9rem 1rem; border-top: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+  .presence-user strong, .presence-user small { display: block; }
+  .presence-user small { color: #64748b; margin-top: .2rem; }
+  .presence-status { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .3rem .65rem; font-size: .78rem; font-weight: 800; }
+  .presence-status.online { background: #dcfce7; color: #166534; }
+  .presence-status.idle { background: #fef3c7; color: #92400e; }
+  .presence-status.offline { background: #e2e8f0; color: #475569; }
+  .presence-status.revoked { background: #fee2e2; color: #991b1b; }
+  .presence-empty { padding: 3rem 1rem; text-align: center; color: #64748b; }
+  .presence-footnote { padding: .75rem 1rem; border-top: 1px solid #e2e8f0; color: #64748b; font-size: .8rem; }
+  @media (max-width: 900px) {
+    .presence-header { align-items: stretch; flex-direction: column; }
+    .presence-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .presence-toolbar { grid-template-columns: 1fr; }
+  }
+</style>
+
+<main class="presence-shell">
+  <a class="presence-back" href="{{ url_for('configs.system_settings') }}">← Sistema e Auditoria</a>
+  <header class="presence-header">
+    <div>
+      <h1>Usuários Online</h1>
+      <p>Presença web e sessões recentes da empresa selecionada.</p>
+    </div>
+    <div class="presence-company">
+      <label for="presence-company">Empresa</label>
+      <select id="presence-company" {% if not platform_scope %}disabled{% endif %}>
+        {% for company in companies %}
+        <option value="{{ company.id }}" {% if company.id == selected_company.id %}selected{% endif %}>{{ company.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </header>
+
+  <section class="presence-metrics" aria-label="Resumo de presença">
+    <article class="presence-metric"><span>Online</span><strong id="metric-online">–</strong></article>
+    <article class="presence-metric"><span>Ociosos</span><strong id="metric-idle">–</strong></article>
+    <article class="presence-metric"><span>Offline recentes</span><strong id="metric-offline">–</strong></article>
+    <article class="presence-metric"><span>Sessões 24h</span><strong id="metric-sessions">–</strong></article>
+  </section>
+
+  <section class="presence-panel">
+    <div class="presence-toolbar">
+      <input id="presence-search" class="presence-filter" type="search" placeholder="Buscar por nome ou e-mail" aria-label="Buscar usuário">
+      <select id="presence-status" class="presence-filter" aria-label="Filtrar status">
+        <option value="">Todos os status</option>
+        <option value="online">Online</option>
+        <option value="idle">Ocioso</option>
+        <option value="offline">Offline</option>
+      </select>
+      <button id="presence-refresh" class="presence-refresh" type="button">Atualizar</button>
+    </div>
+    <div class="presence-table-wrap">
+      <table class="presence-table">
+        <thead>
+          <tr>
+            <th>Usuário</th>
+            <th>Status</th>
+            <th>Entrada</th>
+            <th>Última atividade</th>
+            <th>Dispositivo</th>
+          </tr>
+        </thead>
+        <tbody id="presence-rows"></tbody>
+      </table>
+      <div id="presence-empty" class="presence-empty" hidden>Nenhuma sessão encontrada.</div>
+    </div>
+    <footer class="presence-footnote">
+      Online: atividade nos últimos 3 minutos. Ocioso: até 15 minutos. Atualização automática a cada 30 segundos.
+    </footer>
+  </section>
+</main>
+
+<script>
+(function () {
+  const companySelect = document.getElementById('presence-company');
+  const searchInput = document.getElementById('presence-search');
+  const statusSelect = document.getElementById('presence-status');
+  const refreshButton = document.getElementById('presence-refresh');
+  const rows = document.getElementById('presence-rows');
+  const empty = document.getElementById('presence-empty');
+  let debounceTimer = null;
+
+  function formatDate(value) {
+    if (!value) return '–';
+    return new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short', timeStyle: 'short'
+    }).format(new Date(value));
+  }
+
+  function textCell(value, className) {
+    const cell = document.createElement('td');
+    if (className) cell.className = className;
+    cell.textContent = value == null ? '–' : String(value);
+    return cell;
+  }
+
+  function renderItem(item) {
+    const row = document.createElement('tr');
+    const userCell = document.createElement('td');
+    userCell.className = 'presence-user';
+    const name = document.createElement('strong');
+    name.textContent = item.user_name;
+    const email = document.createElement('small');
+    email.textContent = item.user_email;
+    userCell.append(name, email);
+
+    const statusCell = document.createElement('td');
+    const badge = document.createElement('span');
+    const labels = { online: '● Online', idle: '● Ocioso', offline: 'Offline', revoked: 'Revogada' };
+    badge.className = `presence-status ${item.status}`;
+    badge.textContent = labels[item.status] || item.status;
+    statusCell.appendChild(badge);
+
+    row.appendChild(userCell);
+    row.appendChild(statusCell);
+    row.appendChild(textCell(formatDate(item.login_at)));
+    row.appendChild(textCell(formatDate(item.last_seen_at)));
+    row.appendChild(textCell(`${item.device_type} · ${item.browser}`));
+    return row;
+  }
+
+  async function loadPresence() {
+    refreshButton.disabled = true;
+    const params = new URLSearchParams({ company_id: companySelect.value });
+    if (statusSelect.value) params.set('status', statusSelect.value);
+    if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
+    try {
+      const response = await fetch(`/api/configs/system/presence?${params.toString()}`, { credentials: 'same-origin' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const state = payload.presence;
+      document.getElementById('metric-online').textContent = state.summary.online;
+      document.getElementById('metric-idle').textContent = state.summary.idle;
+      document.getElementById('metric-offline').textContent = state.summary.offline;
+      document.getElementById('metric-sessions').textContent = state.summary.sessions;
+      rows.replaceChildren(...state.items.map(renderItem));
+      empty.hidden = state.items.length > 0;
+    } catch (_) {
+      rows.replaceChildren();
+      empty.textContent = 'Não foi possível carregar a presença agora.';
+      empty.hidden = false;
+    } finally {
+      refreshButton.disabled = false;
+    }
+  }
+
+  companySelect.addEventListener('change', function () {
+    const target = new URL(window.location.href);
+    target.searchParams.set('company_id', companySelect.value);
+    window.location.href = target.toString();
+  });
+  statusSelect.addEventListener('change', loadPresence);
+  refreshButton.addEventListener('click', loadPresence);
+  searchInput.addEventListener('input', function () {
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(loadPresence, 350);
+  });
+
+  loadPresence();
+  window.setInterval(loadPresence, 30000);
+})();
+</script>
+{% endblock %}

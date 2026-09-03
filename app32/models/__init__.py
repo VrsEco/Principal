@@ -161,6 +161,7 @@ from .project_due_date_change import ProjectTaskDueDateChangeRequest
 from .app_compliance_report import AppComplianceReport, AppComplianceReportItem
 from .ui_catalog import UiCatalog
 from .user_log import UserLog
+from .user_presence_session import UserPresenceSession
 from .urgent_business_review import (
     BusinessReviewRecord,
     StructuralLearningLink,
@@ -228,7 +229,7 @@ __all__ = [
     'Meeting', 'MeetingAgendaItem', 'Note', 'ActivityComment', 'ActivityWorkLog', 'Occurrence', 
     'CadastroSession', 'CompanyPerformanceSettings', 'CompanyRolePermissionPreset', 'AppComplianceReport', 'AppComplianceReportItem',
     'ProjectTaskDueDateChangeRequest',
-    'UiCatalog', 'UserLog',
+    'UiCatalog', 'UserLog', 'UserPresenceSession',
     'UrgentNeedOverlay', 'BusinessReviewRecord', 'StructuralLearningLink',
     'AssistedAnalysis', 'AssistedAnalysisValidation', 'AssistedAnalysisDecision',
     'ConsultiveProtocol',

@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from models import User, Employee, Company, ProjectTask, ProcessInstance, Project
 from datetime import date, datetime, timedelta
 from services.auth_service import auth_service
+from services.user_presence_service import UserPresenceService
 from services.user_mcp_token_service import user_mcp_token_service
 from schemas.user_pydantic import (
     UserProfileUpdateSchema,
@@ -133,6 +134,7 @@ def login():
         if user and is_active and user.check_password(password):
             session.clear()
             login_user(user)
+            UserPresenceService.ensure_session_token(session)
             if next_target:
                 session['post_login_redirect'] = next_target
             
@@ -506,6 +508,10 @@ def profile_mcp_token_config():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    try:
+        UserPresenceService.close_current(user_id=current_user.id, session_state=session)
+    except Exception:
+        logger.exception("Falha ao encerrar presença durante o logout.")
     logout_user()
     session.pop('active_company_id', None)
     return redirect(url_for('auth.login'))
