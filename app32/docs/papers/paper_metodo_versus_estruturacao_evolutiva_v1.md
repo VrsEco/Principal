@@ -1314,6 +1314,27 @@ A jornada oficial percorre:
 
 > **coletar evidências → contratar o processo → mapear AS-IS → desenhar TO-BE → completar o modelo operacional → validar com o Cliente → validar com a Versus → decidir aprovação → publicar → observar e reavaliar.**
 
+
+O ciclo produz uma entrega de arquitetura e quatro entregas de modelagem, sequenciais e evolutivas:
+
+1. **Arquitetura de Processos** — macroprocessos, objetivos, donos e relações entre macroprocessos;
+2. **2.1 Premissas dos Processos** — objetivo, escopo, início, fim, responsável, time executor, indicadores, rotina, recursos, restrições e demais definições conhecidas;
+3. **2.2 SIPOC** — fornecedores, entradas, atividades em nível macro, saídas, clientes e interfaces externas ao processo;
+4. **2.3 Fluxo** — BPMN com atividades, eventos, decisões, responsabilidades e exceções, indicando junto a cada atividade quais POPs, checklists, formulários ou outros artefatos serão necessários;
+5. **2.4 Artefatos do Fluxo** — desenvolvimento dos artefatos identificados na etapa 2.3 e vínculo com as atividades correspondentes.
+
+Antes de desenhar ou revisar o AS-IS, o Squad Cliente confronta as evidências recebidas — inclusive transcrições — com essas cinco entregas e explicita sua cobertura. O objetivo não é preencher campos artificialmente, mas separar o que já está definido, o que é hipótese, o que permanece pendente e o que não se aplica, direcionando a conversa para as lacunas que realmente afetam o processo.
+
+O ponto de partida pode ser áudio, texto, documento legado ou uma combinação dessas fontes. O Squad Cliente primeiro digere o material em declarações atômicas rastreáveis e só depois propõe classificações. Documento antigo evidencia o que já foi definido ou praticado em algum momento, mas não prova vigência: data, versão, origem, trecho e confirmação operacional devem acompanhar cada achado.
+
+A decomposição não pode depender apenas do verbo ou da posição do item no documento. Macroprocesso representa grande entrega ou capacidade permanente; processo representa transformação recorrente com contrato próprio; atividade produz microentrega ou mudança verificável no estado do trabalho; passo de procedimento apenas explica como executar uma atividade e pertence ao conteúdo de um POP. Checklist verifica, formulário captura dados, indicador mede, regra decide, evento dispara ou sinaliza e documento/dado entra, sai ou evidencia. Uma mesma frase pode originar mais de um elemento tipado.
+
+As entregas avançam em sequência, mas não são congeladas. Uma descoberta no SIPOC, no fluxo ou na elaboração de um artefato pode exigir revisão de uma entrega anterior. Cada componente mantém versão própria, motivo da mudança e impactos registrados. A baseline aprovada reúne as versões vigentes de Premissas, SIPOC, Fluxo e Artefatos, ainda que sejam diferentes entre si.
+
+Informações não conhecidas não devem ser inventadas para completar o modelo. Cada definição pode estar `definida`, em `hipótese`, `pendente` ou marcada como `não se aplica`. Toda pendência registra o que falta, responsável pela definição, etapa de revisão e natureza bloqueante ou não bloqueante. Pendência crítica impede aprovação para implantação; pendência não crítica pode integrar uma baseline condicionada, desde que tenha tratamento definido.
+
+No Fluxo, a presença do marcador identifica a necessidade do artefato, mas não comprova seu desenvolvimento. Somente a entrega Artefatos do Fluxo confirma conteúdo, versão, obrigatoriedade, política de conclusão e evidência esperada.
+
 O diagnóstico considera seis dimensões independentes: contrato, aderência à realidade, semântica BPMN, executabilidade, governança e aprendizado. O desenho progride do gatilho ao objetivo e é validado regressivamente pelo SIPOC. A existência de um diagrama completo não comprova maturidade metodológica, implantação ou desempenho operacional.
 
 O Squad Cliente responde pelas evidências e pela validação do AS-IS. O Squad Versus responde pelo método, pela fronteira e pelo TO-BE. Engenharia valida contrato técnico, XML, capabilities e importação quando necessário. O consultor decide; o executor autorizado publica. Depois da publicação, desvios entre modelo e execução podem abrir novo ciclo sem apagar a última versão vigente.

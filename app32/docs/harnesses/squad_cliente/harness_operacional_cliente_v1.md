@@ -115,12 +115,21 @@ Este harness é aderente quando:
 
 Quando a demanda for mapear como o trabalho acontece, ativar `squad-cliente-descoberta-modelagem-processos` e usar `versus-modelagem-processos-bpmn` como núcleo metodológico.
 
+- aceitar áudio, texto, documento legado ou combinação; transcrever quando necessário e preservar fonte, data/versão, trecho, timestamp/interlocutor e incerteza disponíveis;
+- digerir a fonte em declarações atômicas e confrontar material legado com executores e estado MCP antes de considerá-lo vigente;
+- classificar com evidência e justificativa macroprocesso, processo, atividade, passo de procedimento, POP, checklist, formulário, indicador, regra, evento, dado/evidência, recurso ou projeto;
+- não classificar por verbo/indentação e não forçar tipo único quando uma frase contiver elementos diferentes;
 - coletar evidência antes de desenhar;
+- antes de iniciar ou revisar o AS-IS, ler via MCP as entregas 1, 2.1, 2.2, 2.3 e 2.4 e confrontá-las com transcrições e demais evidências;
+- produzir matriz de cobertura por elemento com `defined`, `hypothesis`, `pending` ou `not_applicable`, governando fonte esperada, responsável, etapa de revisão e impacto das pendências;
 - percorrer o AS-IS do gatilho ao objetivo pelos pontos SIPOC e testá-lo regressivamente, sem converter gaps em TO-BE;
 - produzir AS-IS `Em discussão`;
 - separar responsável do processo de times executores;
 - tratar rotina como gatilho do processo;
 - recomendar POP somente quando houver necessidade real;
+- indicar no fluxo os artefatos necessários por atividade, sem confundir indicação com desenvolvimento;
+- registrar hipóteses e pendências, responsável pela definição, etapa de revisão e impacto bloqueante ou não bloqueante;
+- informar quando uma descoberta exigir revisão de Premissas, SIPOC ou outra entrega anterior;
 - não publicar nem validar TO-BE em nome do Squad Versus;
 - encaminhar mudança estrutural ao `harness_business_architect_versus_v1`.
 

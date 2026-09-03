@@ -6,28 +6,41 @@ Status: oficial
 ## 1. Entrada
 
 - processo identificado e `company_id` autorizado;
+- fonte inicial em áudio, texto, documento legado ou combinação, com identificação e contexto disponíveis;
 - objetivo da rodada: AS-IS, TO-BE, revisão ou importação;
 - responsável humano disponível para os gates.
 
 ## 2. Execução
 
+Usar a sequência oficial de entregas:
+
+`1 Arquitetura de Processos → 2.1 Premissas → 2.2 SIPOC → 2.3 Fluxo com indicação de artefatos → 2.4 desenvolvimento dos Artefatos do Fluxo`.
+
+Cada entrega possui versão própria. Antes de avançar, validar seu gate; ao encontrar impacto posterior, reabrir a entrega afetada, registrar a alteração e recompor a baseline.
+
+
 1. ativar a skill do Squad correspondente;
-2. executar discovery e `list_process_hierarchy`;
-3. carregar o fluxo com `analyze_process_flow_copilot_tool`;
-4. confirmar contrato do processo e responsabilidades;
-5. construir progressivamente `gatilho → fornecedores → entradas → transformação → saídas → recebedores → objetivo`;
-6. validar regressivamente `objetivo → saídas → transformação → entradas → fornecedores → gatilho`;
-7. modelar com `versus-modelagem-processos-bpmn`;
-8. validar o arquivo:
+2. transcrever áudio quando necessário, preservar proveniência e decompor todas as fontes em declarações atômicas;
+3. marcar vigência da fonte e confrontar documento legado com executores e estado atual;
+4. classificar cada declaração com tipo, evidência, justificativa e pergunta de validação; permitir múltiplos elementos na mesma declaração;
+5. executar discovery e `list_process_hierarchy`;
+6. carregar o fluxo com `analyze_process_flow_copilot_tool`;
+7. antes do AS-IS, gerar a matriz de cobertura de Arquitetura, Premissas, SIPOC, Fluxo e Artefatos, confrontando o estado MCP com transcrições e demais evidências;
+8. classificar cada elemento como `defined`, `hypothesis`, `pending` ou `not_applicable`; para pendências, registrar fonte esperada, responsável, etapa de revisão e impacto;
+9. confirmar contrato do processo e responsabilidades;
+10. construir progressivamente `gatilho → fornecedores → entradas → transformação → saídas → recebedores → objetivo`;
+11. validar regressivamente `objetivo → saídas → transformação → entradas → fornecedores → gatilho`;
+12. modelar com `versus-modelagem-processos-bpmn`;
+13. validar o arquivo:
 
 ```powershell
 python .agent\skills\versus-modelagem-processos-bpmn\scripts\validar_bpmn_versus.py fluxo.bpmn --process-code AA.C.2.1.1
 ```
 
-9. importar e revisar visualmente no modelador APP32;
-10. apresentar diferenças, POPs seletivos, rotina e indicadores mínimos;
-11. gravar rascunho somente após autorização e reler;
-12. publicar somente após confirmação humana explícita.
+14. importar e revisar visualmente no modelador APP32;
+15. apresentar diferenças, POPs seletivos, rotina e indicadores mínimos;
+16. gravar rascunho somente após autorização e reler;
+17. publicar somente após confirmação humana explícita.
 
 ## 3. Bloqueios
 
@@ -39,6 +52,10 @@ python .agent\skills\versus-modelagem-processos-bpmn\scripts\validar_bpmn_versus
 - tentativa de duplicar POP compartilhado;
 - ausência de capability MCP;
 - inconsistência de `company_id`.
+- pendência bloqueante sem responsável ou condição de resolução;
+- artefato apenas indicado no fluxo tratado como se estivesse desenvolvido;
+- baseline sem as versões vigentes de Premissas, SIPOC, Fluxo e Artefatos.
+- início ou revisão do AS-IS sem matriz de cobertura metodológica das cinco entregas.
 
 ## 4. Evidência
 
@@ -68,8 +85,10 @@ Até existir persistência tenant-owned e next action MCP específicos, registra
 
 1. confirmar `artifact_type`, definição, versão e vínculo com `bpmn_element_id`;
 2. conferir marcador/rótulo e cores canônicas no Modeler: POP azul, FORM violeta e CHECK verde;
-3. abrir o editor especializado e conferir configuração e obrigatoriedade;
-4. validar completion policy e evidência esperada;
-5. conferir preservação no XML, reabertura e Book quando aplicável;
-6. tratar cor personalizada e overlay de execução como camadas separadas.
+3. quando várias atividades operarem o mesmo FORM ou CHECK, confirmar `execution_scope=process_instance`, uma `phase_key` por vínculo e `can_finalize` apenas na etapa aprovadora;
+4. executar o fluxo completo e comprovar que preenchimento, validação, correção e nova validação reutilizam o mesmo documento, sem perder a trilha individual de interações;
+5. abrir o editor especializado e conferir configuração e obrigatoriedade;
+6. validar completion policy e evidência esperada;
+7. conferir preservação no XML, reabertura e Book quando aplicável;
+8. tratar cor personalizada e overlay de execução como camadas separadas.
 

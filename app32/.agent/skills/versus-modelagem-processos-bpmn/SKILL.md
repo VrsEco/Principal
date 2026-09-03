@@ -22,7 +22,7 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 2. Ler a arquitetura, o objetivo e a fronteira do processo; separar fatos, hipóteses e decisões.
 3. Confirmar gatilho, fornecedores, entradas, saídas, recebedores, objetivo, responsável único pelo processo e times executores.
 4. Construir progressivamente do gatilho ao objetivo e validar regressivamente do objetivo ao gatilho, usando o SIPOC como contrato transversal conforme `references/metodo-bpmn.md`.
-5. Decidir POP, rotina e indicadores sem aplicar relação automática 1:1.
+5. Conduzir as entregas evolutivas 2.1 Premissas, 2.2 SIPOC, 2.3 Fluxo e 2.4 Artefatos; no Fluxo, indicar os artefatos necessários junto às atividades e somente na etapa 2.4 desenvolver POPs, checklists e formulários.
 6. Validar o XML com `scripts/validar_bpmn_versus.py` e revisar o diagrama visualmente no `bpmn-js`.
 7. Entregar diagnóstico, fluxo proposto, pendências e estado `Em discussão` até o gate humano.
 8. Gravar apenas rascunho autorizado via MCP; reler após a escrita. Publicar somente após confirmação humana explícita.
@@ -34,6 +34,10 @@ Transformar um processo validado em BPMN 2.0 simples, coerente e importável no 
 - O processo possui um responsável; as raias representam times, papéis ou participantes executores.
 - SIPOC orienta a coerência do fluxo, sem relação automática `1:1` com atividades e sem exigir snapshot persistido.
 - A visão padrão de maturidade usa Fluxo; POP/Checklist/Formulários; Indicadores; Rotina; Recursos; Responsável/Time Executor. Detalhe técnico aparece sob demanda.
+- As entregas são sequenciais, evolutivas e versionadas de forma independente; descoberta posterior pode reabrir etapa anterior com análise de impacto e histórico.
+- A baseline da modelagem reúne as versões vigentes de Premissas, SIPOC, Fluxo e Artefatos.
+- Informação desconhecida permanece como hipótese ou pendência governada; não é inventada. Pendência registra responsável, etapa de revisão e impacto bloqueante ou não bloqueante.
+- Marcador de POP, FORM ou CHECK no fluxo indica necessidade; não comprova que o artefato foi desenvolvido.
 - Pesquisa externa só ocorre quando puder alterar a decisão e deve separar fonte, fato, inferência e recomendação.
 - POP, FORM e CHECK usam os marcadores e cores canônicas do Modeler, mas maturidade depende de tipo/vínculo/configuração/versão e contribuição, nunca apenas da aparência.
 - Saída é a entrega concreta; objetivo é o resultado pretendido. Todo caminho final produz saída intencional e recebedor identificado.

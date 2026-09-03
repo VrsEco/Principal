@@ -60,6 +60,12 @@
       </div>
       <div class="artifact-field artifact-switch"><label><input id="allowDraft" type="checkbox" checked><span>Permitir salvar parcialmente</span></label></div>
       <div class="artifact-field artifact-switch"><label><input id="requiredArtifact" type="checkbox" checked><span>Obrigatório para concluir atividade</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="sharedArtifact" type="checkbox"><span>Compartilhar a mesma instância entre atividades</span></label></div>
+      <div class="artifact-field"><label for="phaseKey">Fase desta atividade</label><input id="phaseKey" maxlength="80" placeholder="Ex.: preencher, revisar ou corrigir"></div>
+      <div class="artifact-field"><label for="phaseFieldLabel">Campo aberto desta fase (opcional)</label><input id="phaseFieldLabel" maxlength="255" placeholder="Ex.: Parecer ou correções realizadas"></div>
+      <div class="artifact-field artifact-switch"><label><input id="phaseFieldRequired" type="checkbox"><span>Campo aberto obrigatório</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="editableContent" type="checkbox" checked><span>Esta fase pode alterar os campos principais</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="canFinalize" type="checkbox"><span>Esta atividade pode aprovar definitivamente</span></label></div>
       <p class="artifact-help"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Respostas são persistidas por empresa, instância e execução. A versão publicada preserva o histórico.</span></p>
     </aside>
   </div>
@@ -93,6 +99,14 @@
   $('allowDraft').checked = config.allow_draft !== false;
   const linkedRequired = state.artifact?.link?.is_required;
   $('requiredArtifact').checked = linkedRequired === undefined ? true : Boolean(linkedRequired);
+  $('sharedArtifact').checked = state.artifact?.execution_scope === 'process_instance';
+  const linkedPolicy = state.artifact?.link?.completion_policy_json || {};
+  $('phaseKey').value = linkedPolicy.phase_key || '';
+  const linkedPhaseField = (linkedPolicy.phase_fields || [])[0] || {};
+  $('phaseFieldLabel').value = linkedPhaseField.label || '';
+  $('phaseFieldRequired').checked = Boolean(linkedPhaseField.required);
+  $('editableContent').checked = linkedPolicy.editable_content !== false;
+  $('canFinalize').checked = Boolean(linkedPolicy.can_finalize);
 
   function render() {
     const host=$('formSections'); host.innerHTML='';
@@ -119,14 +133,17 @@
   }
 
   function payload() {
+    const phaseLabel=$('phaseFieldLabel').value.trim();
+    const phaseFields=phaseLabel?[{id:linkedPhaseField.id||'phase_notes',label:phaseLabel,type:'textarea',required:$('phaseFieldRequired').checked}]:[];
     return {
       company_id:state.companyId,
       artifact_type:'form',
       name:$('artifactName').value.trim(),
       description:$('artifactDescription').value.trim(),
+      execution_scope:$('sharedArtifact').checked?'process_instance':'activity',
       bpmn_element_id:state.bpmnElementId,
       is_required:$('requiredArtifact').checked,
-      completion_policy_json:{mode:'valid_submission',allow_skip:false},
+      completion_policy_json:{mode:'valid_submission',allow_skip:false,phase_key:$('phaseKey').value.trim(),editable_content:$('editableContent').checked,can_finalize:$('canFinalize').checked,phase_fields:phaseFields},
       configuration_json:{sections:state.sections,submit_label:$('submitLabel').value.trim()||'Enviar formulário',allow_draft:$('allowDraft').checked}
     };
   }

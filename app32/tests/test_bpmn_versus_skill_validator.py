@@ -107,3 +107,38 @@ def test_process_modeling_maturity_protocol_is_versioned_and_complete() -> None:
     assert artifacts["visual_contract"]["canonical_markers"]["pop"]["stroke"] == "#2563eb"
     assert artifacts["visual_contract"]["canonical_markers"]["form"]["stroke"] == "#7c3aed"
     assert artifacts["visual_contract"]["canonical_markers"]["check"]["stroke"] == "#059669"
+
+    delivery_model = protocol["delivery_model"]
+    assert delivery_model["sequential_and_evolutionary"] is True
+    assert delivery_model["independent_component_versions"] is True
+    assert [item["code"] for item in delivery_model["modeling_deliveries"]] == ["2.1", "2.2", "2.3", "2.4"]
+    flow = next(item for item in delivery_model["modeling_deliveries"] if item["key"] == "flow")
+    flow_artifacts = next(item for item in delivery_model["modeling_deliveries"] if item["key"] == "flow_artifacts")
+    assert flow["artifact_rule"] == "identify_and_link_requirements_only"
+    assert flow_artifacts["artifact_rule"] == "develop_validate_version_and_link_artifacts_identified_in_flow"
+    assert delivery_model["baseline"]["component_versions_may_differ"] is True
+    pending = protocol["definition_status_contract"]
+    assert pending["allowed_statuses"] == ["defined", "hypothesis", "pending", "not_applicable"]
+    assert pending["blocking_pending_prevents_implementation_approval"] is True
+    assert pending["unknown_information_must_not_be_invented"] is True
+
+
+def test_process_modeling_protocol_defines_source_ingestion_and_semantic_classification() -> None:
+    protocol = json.loads(MATURITY_PROTOCOL.read_text(encoding="utf-8"))
+
+    ingestion = protocol["source_ingestion_contract"]
+    assert set(ingestion["accepted_sources"]) == {"audio", "text", "legacy_document", "mixed"}
+    assert ingestion["legacy_document_is_current_truth"] is False
+    assert "preserve_source_provenance" in ingestion["required_actions"]
+    assert "reconcile_legacy_content_with_current_mcp_state_and_executors" in ingestion["required_actions"]
+
+    classification = protocol["element_classification_contract"]
+    assert classification["classification_requires_evidence_and_rationale"] is True
+    assert classification["single_statement_may_yield_multiple_elements"] is True
+    assert classification["classify_by_verb_or_indentation_only"] is False
+    assert classification["procedure_step_belongs_inside_pop"] is True
+    assert classification["pop_is_activity"] is False
+    assert set(classification["types"]) == {
+        "macroprocess", "process", "activity", "procedure_step", "pop", "checklist", "form",
+        "indicator", "business_rule", "event", "data_document_evidence", "resource_system", "project",
+    }

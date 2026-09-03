@@ -2285,6 +2285,7 @@ class ProcessArtifactExecutionResource(Resource):
     def put(self, artifact_execution_id):
         company_id = get_request_company_id()
         try:
+            payload = request.get_json(silent=True) or {}
             artifact_execution = get_artifact_execution(company_id, artifact_execution_id)
             instance = ProcessInstance.query.filter_by(
                 id=artifact_execution.process_instance_id,
@@ -2292,6 +2293,14 @@ class ProcessArtifactExecutionResource(Resource):
             ).first()
             if not instance:
                 return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            current_activity_id = payload.get('activity_execution_id') or artifact_execution.activity_execution_id
+            activity_execution = ProcessInstanceExecution.query.filter_by(
+                id=current_activity_id,
+                process_instance_id=instance.id,
+                company_id=company_id,
+            ).first()
+            if not activity_execution:
+                return {"error": "Atividade não pertence à instância deste artefato."}, 400
             if not has_company_full_access(company_id):
                 from models.employee import Employee
                 employee = Employee.query.filter_by(
@@ -2303,21 +2312,17 @@ class ProcessArtifactExecutionResource(Resource):
                     company_id,
                     employee.id,
                     instance,
-                    artifact_execution.activity_execution_id,
+                    activity_execution.id,
                 ):
                     return {"error": "Acesso negado à execução deste artefato."}, 403
-            activity_execution = ProcessInstanceExecution.query.filter_by(
-                id=artifact_execution.activity_execution_id,
-                process_instance_id=instance.id,
-                company_id=company_id,
-            ).first()
-            if activity_execution:
-                activity_execution.performed_by_user_id = getattr(current_user, 'id', None)
-                activity_execution.performer_type = activity_execution.performer_type or 'user'
+            activity_execution.performed_by_user_id = getattr(current_user, 'id', None)
+            activity_execution.performer_type = activity_execution.performer_type or 'user'
             artifact_execution = update_artifact_execution(
                 company_id,
                 artifact_execution_id,
-                request.get_json(silent=True) or {},
+                payload,
+                activity_execution_id=activity_execution.id,
+                actor_user_id=getattr(current_user, 'id', None),
             )
             return artifact_execution.to_dict(), 200
         except ProcessArtifactValidationError as exc:
@@ -2391,11 +2396,19 @@ class ProcessArtifactExecutionFileResource(Resource):
             ).first()
             if not instance:
                 return {"error": "Execução de processo não encontrada para este tenant."}, 404
+            current_activity_id = request.args.get('activity_execution_id', type=int) or artifact_execution.activity_execution_id
+            activity_execution = ProcessInstanceExecution.query.filter_by(
+                id=current_activity_id,
+                process_instance_id=instance.id,
+                company_id=company_id,
+            ).first()
+            if not activity_execution:
+                return {"error": "Atividade não pertence à instância deste artefato."}, 400
             if not has_company_full_access(company_id):
                 from models.employee import Employee
                 employee = Employee.query.filter_by(user_id=current_user.id, company_id=company_id, status='active').first()
                 if not employee or not employee_can_execute_activity(
-                    company_id, employee.id, instance, artifact_execution.activity_execution_id
+                    company_id, employee.id, instance, activity_execution.id
                 ):
                     return {"error": "Acesso negado à execução deste artefato."}, 403
             uploaded = request.files.get('file')

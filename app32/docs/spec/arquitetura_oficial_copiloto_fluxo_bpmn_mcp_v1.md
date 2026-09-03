@@ -173,14 +173,27 @@ A implementação deve separar quatro conceitos:
 3. **snapshot publicado** — versão imutável consumida por novas instâncias;
 4. **execução do artefato** — estado, dados e evidências de uma instância específica.
 
+### 11.1. Escopo e interação multipapel
+
+- `execution_scope=activity` mantém uma execução independente por atividade e é o padrão retrocompatível;
+- `execution_scope=process_instance` materializa uma única execução por definição e instância do processo, ainda que exista vínculo com várias atividades;
+- cada vínculo declara sua `phase_key`, obrigatoriedade e se pode finalizar definitivamente o artefato (`can_finalize`);
+- o gate da atividade consulta o estado da interação daquela execução de atividade, não apenas o status global do documento;
+- cada gravação gera trilha imutável com `company_id`, instância, atividade, artefato, fase, ator e estados anterior/posterior;
+- conclusão de fase não encerra o documento compartilhado; somente vínculo autorizado pode aprová-lo definitivamente;
+- FORM, CHECK, IA, IN e OUT podem usar este escopo. IA compartilha contexto e resultados acumulados, mantendo cada chamada como interação auditável;
+- autorização deve validar tenant, instância, atividade corrente e vínculo ativo da definição, sem confiar na atividade âncora que criou o documento.
+
 Entidades lógicas propostas:
 
 - `ProcessActivityArtifactDefinition`
-  - `id`, `company_id`, `process_id`, `artifact_type`, `name`, `status`, `version`, `configuration_json`, timestamps;
+  - `id`, `company_id`, `process_id`, `artifact_type`, `name`, `status`, `version`, `execution_scope`, `configuration_json`, timestamps;
 - `ProcessActivityArtifactLink`
   - `id`, `company_id`, `process_id`, `bpmn_element_id`, `artifact_definition_id`, `display_order`, `is_required`, `completion_policy_json`;
 - `ProcessActivityArtifactExecution`
-  - `id`, `company_id`, `process_instance_id`, `activity_execution_id`, `artifact_definition_id`, `artifact_version`, `status`, `input_json`, `output_json`, `evidence_json`, `started_at`, `completed_at`.
+  - `id`, `company_id`, `process_instance_id`, `activity_execution_id`, `artifact_definition_id`, `artifact_version`, `scope_key`, `status`, `input_json`, `output_json`, `evidence_json`, `started_at`, `completed_at`;
+- `ProcessActivityArtifactInteraction`
+  - `id`, `company_id`, `process_instance_id`, `activity_execution_id`, `artifact_execution_id`, `phase_key`, `action`, `actor_user_id`, `before_json`, `after_json`, `created_at`.
 
 `ProcessRoutine` continua sendo a base legada do POP durante a migração. A camada canônica deve oferecer adaptador para que POPs existentes sejam expostos como artefatos sem duplicação nem quebra de URLs.
 

@@ -9,6 +9,7 @@ from models import (
     Process,
     ProcessActivityArtifactDefinition,
     ProcessActivityArtifactExecution,
+    ProcessActivityArtifactInteraction,
     ProcessActivityArtifactLink,
     ProcessInstanceExecution,
     ProcessRoutine,
@@ -17,6 +18,7 @@ from models import (
 from models.process_artifact import (
     PROCESS_ARTIFACT_DEFINITION_STATUSES,
     PROCESS_ARTIFACT_EXECUTION_STATUSES,
+    PROCESS_ARTIFACT_EXECUTION_SCOPES,
     PROCESS_ARTIFACT_TYPES,
 )
 
@@ -34,6 +36,7 @@ FORM_FIELD_TYPES = (
     "phone",
     "file",
 )
+PHASE_FIELD_TYPES = ("text", "textarea", "select", "checkbox")
 
 
 class ProcessArtifactValidationError(ValueError):
@@ -66,6 +69,13 @@ def normalize_execution_status(value: Any) -> str:
     if status not in PROCESS_ARTIFACT_EXECUTION_STATUSES:
         raise ProcessArtifactValidationError("Status da execução de artefato inválido.")
     return status
+
+
+def normalize_execution_scope(value: Any) -> str:
+    scope = _clean_text(value, field="escopo de execução", required=True)
+    if scope not in PROCESS_ARTIFACT_EXECUTION_SCOPES:
+        raise ProcessArtifactValidationError("Escopo de execução do artefato inválido.")
+    return scope
 
 
 def _ensure_unique_ids(items: list[dict[str, Any]], *, scope: str) -> None:
@@ -175,6 +185,7 @@ def create_artifact_definition(
     if version <= 0:
         raise ProcessArtifactValidationError("A versão deve ser maior que zero.")
     status = normalize_definition_status(payload.get("status") or "draft")
+    execution_scope = normalize_execution_scope(payload.get("execution_scope") or "activity")
     artifact_type = normalize_artifact_type(payload.get("artifact_type"))
     configuration = validate_artifact_configuration(artifact_type, payload.get("configuration_json") or {})
     if status == "published" and artifact_type == "form" and not configuration.get("sections"):
@@ -203,6 +214,7 @@ def create_artifact_definition(
         description=_clean_text(payload.get("description")),
         version=version,
         status=status,
+        execution_scope=execution_scope,
         configuration_json=configuration,
         legacy_process_routine_id=legacy_process_routine_id,
         created_by_user_id=user_id,
@@ -244,6 +256,8 @@ def update_artifact_definition(
         definition.name = _clean_text(payload.get("name"), field="nome", required=True)
     if "description" in payload:
         definition.description = _clean_text(payload.get("description"))
+    if "execution_scope" in payload:
+        definition.execution_scope = normalize_execution_scope(payload.get("execution_scope"))
     if "configuration_json" in payload:
         definition.configuration_json = validate_artifact_configuration(
             definition.artifact_type,
@@ -370,6 +384,17 @@ def link_artifact_to_activity(
     completion_policy = payload.get("completion_policy_json") or {}
     if not isinstance(completion_policy, dict):
         raise ProcessArtifactValidationError("completion_policy_json deve ser um objeto.")
+    phase_key = _clean_text(completion_policy.get("phase_key"))
+    if phase_key and len(phase_key) > 80:
+        raise ProcessArtifactValidationError("phase_key deve possuir no máximo 80 caracteres.")
+    phase_fields = completion_policy.get("phase_fields") or []
+    if not isinstance(phase_fields, list):
+        raise ProcessArtifactValidationError("phase_fields deve ser uma lista.")
+    _ensure_unique_ids(phase_fields, scope="campos da fase")
+    for phase_field in phase_fields:
+        _clean_text(phase_field.get("label"), field="rótulo do campo da fase", required=True)
+        if _clean_text(phase_field.get("type"), required=True) not in PHASE_FIELD_TYPES:
+            raise ProcessArtifactValidationError("Tipo de campo da fase inválido.")
     display_order = int(payload.get("display_order") or 0)
     if display_order < 0:
         raise ProcessArtifactValidationError("display_order não pode ser negativo.")
@@ -531,6 +556,82 @@ def list_activity_artifacts(company_id: int, process_id: int, bpmn_element_id: s
     return [serialize_artifact_link(link) for link in links]
 
 
+def _artifact_scope_key(
+    definition: ProcessActivityArtifactDefinition,
+    activity: ProcessInstanceExecution,
+) -> str:
+    scope = normalize_execution_scope(getattr(definition, "execution_scope", None) or "activity")
+    if scope == "process_instance":
+        return f"process_instance:{activity.process_instance_id}"
+    return f"activity:{activity.id}"
+
+
+def _find_materialized_execution(
+    company_id: int,
+    activity: ProcessInstanceExecution,
+    definition: ProcessActivityArtifactDefinition,
+) -> ProcessActivityArtifactExecution | None:
+    scope_key = _artifact_scope_key(definition, activity)
+    return ProcessActivityArtifactExecution.query.filter_by(
+        company_id=company_id,
+        process_instance_id=activity.process_instance_id,
+        artifact_definition_id=definition.id,
+        scope_key=scope_key,
+    ).first()
+
+
+def _phase_key(link: ProcessActivityArtifactLink, activity: ProcessInstanceExecution) -> str:
+    policy = link.completion_policy_json or {}
+    return _clean_text(policy.get("phase_key")) or f"activity:{activity.bpmn_element_id}"
+
+
+def _activity_phase_state(execution: Any, activity_execution_id: int | None) -> dict[str, Any]:
+    if not activity_execution_id:
+        return {}
+    output = getattr(execution, "output_json", None) or {}
+    workflow = output.get("_workflow") or {}
+    phases = workflow.get("activity_phases") or {}
+    phase = phases.get(str(activity_execution_id)) or {}
+    return phase if isinstance(phase, dict) else {}
+
+
+def _bind_runtime_context(
+    execution: ProcessActivityArtifactExecution,
+    activity: ProcessInstanceExecution,
+    link: ProcessActivityArtifactLink,
+) -> ProcessActivityArtifactExecution:
+    """Anexa somente contexto transitório; o snapshot original continua imutável."""
+    execution._runtime_activity_execution_id = activity.id
+    execution._runtime_link = link
+    return execution
+
+
+def _runtime_item(
+    execution: ProcessActivityArtifactExecution,
+    activity: ProcessInstanceExecution,
+    link: ProcessActivityArtifactLink,
+) -> dict[str, Any]:
+    snapshot = execution.definition_snapshot_json or {}
+    phase = _activity_phase_state(execution, activity.id)
+    overall_status = execution.status
+    phase_status = phase.get("status") or (overall_status if overall_status in {"completed", "skipped"} else "pending")
+    policy = link.completion_policy_json or {}
+    return {
+        **execution.to_dict(),
+        "name": snapshot.get("name") or execution.artifact_type.upper(),
+        "description": snapshot.get("description"),
+        "configuration_json": snapshot.get("configuration_json") or {},
+        "execution_scope": snapshot.get("execution_scope") or "activity",
+        "overall_status": overall_status,
+        "status": phase_status,
+        "activity_execution_id": activity.id,
+        "phase_key": _phase_key(link, activity),
+        "phase_state": phase,
+        "is_required": bool(link.is_required),
+        "completion_policy_json": policy,
+    }
+
+
 def materialize_activity_artifacts(
     company_id: int,
     activity_execution_id: int,
@@ -565,11 +666,7 @@ def materialize_activity_artifacts(
     materialized: list[ProcessActivityArtifactExecution] = []
     for link in links:
         definition = link.artifact_definition
-        execution = ProcessActivityArtifactExecution.query.filter_by(
-            company_id=company_id,
-            activity_execution_id=activity.id,
-            artifact_definition_id=definition.id,
-        ).first()
+        execution = _find_materialized_execution(company_id, activity, definition)
         if not execution:
             snapshot = build_definition_snapshot(definition)
             snapshot["link"] = {
@@ -586,6 +683,7 @@ def materialize_activity_artifacts(
                 artifact_key=definition.artifact_key,
                 artifact_type=definition.artifact_type,
                 artifact_version=definition.version,
+                scope_key=_artifact_scope_key(definition, activity),
                 definition_snapshot_json=snapshot,
                 status="pending",
                 input_json={},
@@ -594,7 +692,7 @@ def materialize_activity_artifacts(
                 error_json={},
             )
             db.session.add(execution)
-        materialized.append(execution)
+        materialized.append(_bind_runtime_context(execution, activity, link))
 
     if commit:
         db.session.commit()
@@ -618,24 +716,18 @@ def build_activity_artifacts_runtime_payload(
         }
 
     if activity_execution_id:
-        executions = (
-            ProcessActivityArtifactExecution.query
-            .filter_by(company_id=company_id, activity_execution_id=activity_execution_id)
-            .order_by(ProcessActivityArtifactExecution.id.asc())
-            .all()
-        )
-        items = []
-        for execution in executions:
-            snapshot = execution.definition_snapshot_json or {}
-            link_snapshot = snapshot.get("link") or {}
-            items.append({
-                **execution.to_dict(),
-                "name": snapshot.get("name") or execution.artifact_type.upper(),
-                "description": snapshot.get("description"),
-                "configuration_json": snapshot.get("configuration_json") or {},
-                "is_required": bool(link_snapshot.get("is_required")),
-                "completion_policy_json": link_snapshot.get("completion_policy_json") or {},
-            })
+        activity = ProcessInstanceExecution.query.filter_by(
+            id=activity_execution_id,
+            company_id=company_id,
+            process_id=process_id,
+        ).first()
+        if not activity:
+            raise ProcessArtifactValidationError("Execução de atividade não encontrada para este tenant/processo.")
+        executions = materialize_activity_artifacts(company_id, activity.id, commit=False)
+        items = [
+            _runtime_item(execution, activity, execution._runtime_link)
+            for execution in executions
+        ]
         return {
             "items": items,
             "completion": evaluate_required_artifacts(executions),
@@ -674,6 +766,7 @@ def build_activity_artifacts_runtime_payload(
             "artifact_key": link.artifact_definition.artifact_key,
             "artifact_type": link.artifact_definition.artifact_type,
             "artifact_version": link.artifact_definition.version,
+            "execution_scope": link.artifact_definition.execution_scope,
             "name": snapshot.get("name"),
             "description": snapshot.get("description"),
             "configuration_json": snapshot.get("configuration_json") or {},
@@ -726,6 +819,8 @@ def _validate_check_submission(
     execution: ProcessActivityArtifactExecution,
     output: dict[str, Any],
     evidence: dict[str, Any],
+    *,
+    require_acceptance: bool = False,
 ) -> None:
     answers = output.get("answers") or {}
     if not isinstance(answers, dict):
@@ -745,36 +840,145 @@ def _validate_check_submission(
             raise ProcessArtifactValidationError(f"Evidência obrigatória ausente: {item.get('label')}.")
         if answer_status == "rejected" and config.get("failure_behavior", "block") == "block":
             raise ProcessArtifactValidationError(f"Item reprovado bloqueia a conclusão: {item.get('label')}.")
+        if require_acceptance and answer_status == "rejected":
+            raise ProcessArtifactValidationError(f"Item não conforme impede a aprovação final: {item.get('label')}.")
+
+
+def _validate_phase_submission(policy: dict[str, Any], output: dict[str, Any], phase_key: str) -> None:
+    phase_values = output.get("phase_values") or {}
+    if not isinstance(phase_values, dict):
+        raise ProcessArtifactValidationError("phase_values deve ser um objeto.")
+    values = phase_values.get(phase_key) or {}
+    if not isinstance(values, dict):
+        raise ProcessArtifactValidationError("Os valores da fase devem ser um objeto.")
+    for field in policy.get("phase_fields") or []:
+        if field.get("required") and not _is_answered(values.get(field.get("id"))):
+            raise ProcessArtifactValidationError(f"Campo obrigatório da fase não preenchido: {field.get('label')}.")
 
 
 def update_artifact_execution(
     company_id: int,
     artifact_execution_id: int,
     payload: dict[str, Any],
+    *,
+    activity_execution_id: int | None = None,
+    actor_user_id: int | None = None,
 ) -> ProcessActivityArtifactExecution:
     execution = get_artifact_execution(company_id, artifact_execution_id)
-    status = normalize_execution_status(payload.get("status") or execution.status)
-    if execution.status in {"completed", "skipped"}:
+    if not isinstance(payload, dict):
+        raise ProcessArtifactValidationError("Payload inválido.")
+    shared = (getattr(execution, "definition_snapshot_json", None) or {}).get("execution_scope") == "process_instance"
+    if execution.status in {"completed", "skipped"} and not shared:
         raise ProcessArtifactValidationError("Documento concluído é somente leitura e não pode ser alterado.")
+    if execution.status in {"completed", "skipped"} and shared:
+        raise ProcessArtifactValidationError("Documento compartilhado aprovado é somente leitura.")
+    current_activity_id = activity_execution_id or payload.get("activity_execution_id") or getattr(execution, "activity_execution_id", None)
+    activity = None
+    link = None
+    if current_activity_id is not None:
+        try:
+            current_activity_id = int(current_activity_id)
+        except (TypeError, ValueError):
+            raise ProcessArtifactValidationError("activity_execution_id inválido.")
+        activity = ProcessInstanceExecution.query.filter_by(
+            id=current_activity_id,
+            company_id=company_id,
+            process_instance_id=execution.process_instance_id,
+        ).first()
+        if not activity:
+            raise ProcessArtifactValidationError("Atividade não pertence à instância deste artefato.")
+        link = ProcessActivityArtifactLink.query.filter_by(
+            company_id=company_id,
+            process_id=activity.process_id,
+            bpmn_element_id=activity.bpmn_element_id,
+            artifact_definition_id=execution.artifact_definition_id,
+            is_active=True,
+        ).first()
+        if not link:
+            raise ProcessArtifactValidationError("Artefato não está vinculado à atividade informada.")
+        expected_scope_key = _artifact_scope_key(execution.artifact_definition, activity)
+        if execution.scope_key and execution.scope_key != expected_scope_key:
+            raise ProcessArtifactValidationError("Artefato fora do escopo desta atividade.")
+    elif shared:
+        raise ProcessArtifactValidationError("activity_execution_id é obrigatório para artefato compartilhado.")
+    status = normalize_execution_status(payload.get("status") or execution.status)
     output = payload.get("output_json") if "output_json" in payload else execution.output_json or {}
     evidence = payload.get("evidence_json") if "evidence_json" in payload else execution.evidence_json or {}
     if not isinstance(output, dict) or not isinstance(evidence, dict):
         raise ProcessArtifactValidationError("output_json e evidence_json devem ser objetos.")
-    if status == "completed":
+    policy = (link.completion_policy_json or {}) if link is not None else {}
+    can_finalize = bool(policy.get("can_finalize"))
+    finalize_artifact = bool(payload.get("finalize_artifact"))
+    if finalize_artifact and not can_finalize:
+        raise ProcessArtifactValidationError("Esta etapa não pode aprovar definitivamente o artefato.")
+    validate_phase_content = bool(policy.get("validate_content_on_phase_complete", policy.get("editable_content", True)))
+    if status == "completed" and (not shared or finalize_artifact or validate_phase_content):
         if execution.artifact_type == "form":
             _validate_form_submission(execution, output)
         elif execution.artifact_type == "check":
-            _validate_check_submission(execution, output, evidence)
+            _validate_check_submission(execution, output, evidence, require_acceptance=shared and finalize_artifact)
+    if shared and activity is not None and link is not None:
+        phase_key = _phase_key(link, activity)
+        previous_output = getattr(execution, "output_json", None) or {}
+        submitted_output = output
+        if policy.get("editable_content", True) is False and output.get("answers", {}) != previous_output.get("answers", {}):
+            raise ProcessArtifactValidationError("Esta fase não pode alterar o conteúdo principal do artefato.")
+        if policy.get("editable_content", True) is False and evidence != (getattr(execution, "evidence_json", None) or {}):
+            raise ProcessArtifactValidationError("Esta fase não pode alterar as evidências do conteúdo principal.")
+        submitted_phase_values = output.get("phase_values") or {}
+        previous_phase_values = previous_output.get("phase_values") or {}
+        for submitted_key, submitted_value in submitted_phase_values.items():
+            if submitted_key != phase_key and submitted_value != previous_phase_values.get(submitted_key):
+                raise ProcessArtifactValidationError("Uma fase não pode alterar campos pertencentes a outra fase.")
+        merged_phase_values = dict(previous_phase_values)
+        merged_phase_values[phase_key] = submitted_phase_values.get(phase_key) or previous_phase_values.get(phase_key) or {}
+        output = {**previous_output, **submitted_output}
+        output["phase_values"] = merged_phase_values
+        if status == "completed":
+            _validate_phase_submission(policy, output, phase_key)
 
+    before = execution.to_dict() if hasattr(execution, "to_dict") else {
+        "id": getattr(execution, "id", None),
+        "status": execution.status,
+        "output_json": getattr(execution, "output_json", None) or {},
+        "evidence_json": getattr(execution, "evidence_json", None) or {},
+    }
+    if shared and activity is not None and link is not None:
+        previous_output = getattr(execution, "output_json", None) or {}
+        workflow = dict(previous_output.get("_workflow") or {})
+        activity_phases = dict(workflow.get("activity_phases") or {})
+        activity_phases[str(activity.id)] = {
+            "phase_key": _phase_key(link, activity),
+            "status": status,
+            "actor_user_id": actor_user_id,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        workflow["activity_phases"] = activity_phases
+        output = dict(output)
+        output["_workflow"] = workflow
     execution.output_json = output
     execution.evidence_json = evidence
-    execution.status = status
-    if status == "in_progress" and not execution.started_at:
+    execution.status = "completed" if finalize_artifact else ("in_progress" if shared else status)
+    if execution.status == "in_progress" and not execution.started_at:
         execution.started_at = datetime.utcnow()
-    if status == "completed":
+    if execution.status == "completed":
         execution.started_at = execution.started_at or datetime.utcnow()
         execution.completed_at = datetime.utcnow()
         execution.error_json = {}
+    if activity is not None and link is not None:
+        db.session.add(
+            ProcessActivityArtifactInteraction(
+                company_id=company_id,
+                process_instance_id=execution.process_instance_id,
+                activity_execution_id=activity.id,
+                artifact_execution_id=execution.id,
+                phase_key=_phase_key(link, activity),
+                action="finalize" if finalize_artifact else ("complete_phase" if status == "completed" else "save"),
+                actor_user_id=actor_user_id,
+                before_json=before,
+                after_json=execution.to_dict(),
+            )
+        )
     db.session.commit()
     return execution
 
@@ -786,11 +990,20 @@ def evaluate_required_artifacts(executions: Iterable[Any]) -> dict[str, Any]:
     blocking_ids: list[int] = []
     for execution in executions:
         snapshot = getattr(execution, "definition_snapshot_json", None) or {}
-        link_snapshot = snapshot.get("link") or {}
+        runtime_link = getattr(execution, "_runtime_link", None)
+        link_snapshot = (
+            {
+                "is_required": bool(runtime_link.is_required),
+                "completion_policy_json": runtime_link.completion_policy_json or {},
+            }
+            if runtime_link is not None
+            else snapshot.get("link") or {}
+        )
         if not bool(link_snapshot.get("is_required")):
             continue
         required_total += 1
-        status = normalize_execution_status(getattr(execution, "status", None) or "pending")
+        phase_state = _activity_phase_state(execution, getattr(execution, "_runtime_activity_execution_id", None))
+        status = normalize_execution_status(phase_state.get("status") or getattr(execution, "status", None) or "pending")
         completion_policy = link_snapshot.get("completion_policy_json") or {}
         skip_is_allowed = status == "skipped" and bool(completion_policy.get("allow_skip"))
         if status == "completed" or skip_is_allowed:

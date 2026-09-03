@@ -98,13 +98,21 @@ Confirmar que:
 Usar `process-modeling-official-v1.0` quando a pergunta deixar de ser apenas “o fluxo está válido?” e passar a ser “qual é o estado metodológico da modelagem e o que falta para avançar?”.
 
 1. identificar `company_id`, `process_id` e versão/draft BPMN;
-2. determinar o estado da jornada pela evidência disponível;
-3. avaliar contrato, aderência, semântica, executabilidade, governança e aprendizado;
-4. separar gaps metodológicos, técnicos e operacionais;
-5. indicar o gate pendente e uma próxima ação;
-6. nunca converter cobertura, XML válido ou publicação em score de maturidade.
+2. antes do AS-IS, confrontar evidências e transcrições com Arquitetura, Premissas, SIPOC, Fluxo e Artefatos, gerando a matriz de cobertura;
+3. classificar cada elemento como `defined`, `hypothesis`, `pending` ou `not_applicable`, governando responsável, revisão e impacto das pendências;
+4. determinar o estado da jornada pela evidência disponível;
+5. avaliar contrato, aderência, semântica, executabilidade, governança e aprendizado;
+6. separar gaps metodológicos, técnicos e operacionais;
+7. indicar o gate pendente e uma próxima ação;
+8. nunca converter cobertura, XML válido ou publicação em score de maturidade.
 
 Apresentar separadamente maturidade da modelagem, maturidade da implantação e desempenho operacional.
+
+### Digestão e classificação das fontes
+
+O ponto de partida pode ser áudio, texto, documento legado ou combinação. Preservar proveniência, transcrever quando necessário, extrair declarações atômicas e avaliar vigência antes de encaixar o conteúdo na metodologia. Material antigo é evidência `legacy` até confirmação.
+
+Classificar por contrato de entrega e execução: grande entrega permanente = macroprocesso; transformação recorrente com contrato próprio = processo; microentrega/mudança de estado/handoff = atividade; instrução de como executar = passo de POP. Checklist verifica, formulário captura, indicador mede, regra decide, evento dispara/sinaliza, dado/documento entra/sai/evidencia e recurso habilita. Uma frase pode produzir vários elementos vinculados.
 
 ### Conversa padrão
 
@@ -131,6 +139,9 @@ Não mostrar o diagnóstico técnico completo, a lista de agentes ou todos os ga
 O responsável pelo processo não deve ser inferido das lanes. Lanes representam times ou papéis executores.
 - `FORM`: schema, validações, condicionais e destino dos dados estão definidos?
 - `CHECK`: itens obrigatórios, evidências, N/A e regra de reprovação estão definidos?
+- multipapel: o artefato deve ser isolado por atividade ou compartilhado na instância?
+- compartilhado: cada vínculo possui fase, responsável, gate e permissão explícita de aprovação final?
+- IA compartilhada: contexto comum e chamadas individuais auditáveis estão separados?
 - `IA`: AI Task/Gateway, tools, autonomia, threshold e fallback estão definidos?
 - `IN`: origem, schema, correlação, idempotência e erro estão definidos?
 - `OUT`: destino, payload, retry, idempotência e confirmação estão definidos?
@@ -189,6 +200,9 @@ Na maturação de POP/Checklist/Formulários:
 - validar vazio, carregado, rascunho, publicado e arquivado, sem expor dados de outra empresa.
 
 ## 12. Criação e edição de artefatos no modelador
+
+Na entrega `2.3 Fluxo`, adicionar o marcador e o vínculo para registrar que a atividade necessita do artefato, podendo manter sua definição como pendente. Na entrega `2.4 Artefatos do Fluxo`, abrir o editor especializado e desenvolver conteúdo, versão, obrigatoriedade, completion policy e evidência. Não tratar o marcador como artefato concluído.
+
 
 - adicionar o marcador com `+ Artefato` sem interromper a modelagem nem abrir outra tela;
 - configurar posteriormente com dois cliques no marcador POP, FORM, CHECK, IA, IN ou OUT;

@@ -10,6 +10,7 @@ from models import (
     IndicatorGoal,
     ProcessBpmnDiagram,
     ProcessActivityArtifactExecution,
+    ProcessActivityArtifactInteraction,
     ProcessInstance,
     ProcessInstanceExecution,
     ProcessRoutine,
@@ -259,10 +260,25 @@ def build_instance_document_history(instance: ProcessInstance) -> list[dict[str,
         .order_by(ProcessActivityArtifactExecution.completed_at.desc(), ProcessActivityArtifactExecution.id.desc())
         .all()
     )
+    final_interactions = (
+        ProcessActivityArtifactInteraction.query.filter(
+            ProcessActivityArtifactInteraction.company_id == instance.company_id,
+            ProcessActivityArtifactInteraction.artifact_execution_id.in_([row.id for row in rows] or [-1]),
+            ProcessActivityArtifactInteraction.action == "finalize",
+        )
+        .order_by(ProcessActivityArtifactInteraction.created_at.asc(), ProcessActivityArtifactInteraction.id.asc())
+        .all()
+    )
+    final_by_artifact = {int(item.artifact_execution_id): item for item in final_interactions}
     performer_ids = {
-        int(row.activity_execution.performed_by_user_id)
+        int(final_by_artifact[int(row.id)].actor_user_id)
+        if int(row.id) in final_by_artifact and final_by_artifact[int(row.id)].actor_user_id
+        else int(row.activity_execution.performed_by_user_id)
         for row in rows
-        if row.activity_execution and row.activity_execution.performed_by_user_id
+        if (
+            (int(row.id) in final_by_artifact and final_by_artifact[int(row.id)].actor_user_id)
+            or (row.activity_execution and row.activity_execution.performed_by_user_id)
+        )
     }
     performer_names = {
         int(user.id): (getattr(user, "name", None) or getattr(user, "email", None) or f"Usuário {user.id}")
@@ -273,7 +289,8 @@ def build_instance_document_history(instance: ProcessInstance) -> list[dict[str,
     for row in rows:
         snapshot = row.definition_snapshot_json or {}
         activity = row.activity_execution
-        performer_id = getattr(activity, "performed_by_user_id", None)
+        final_interaction = final_by_artifact.get(int(row.id))
+        performer_id = getattr(final_interaction, "actor_user_id", None) or getattr(activity, "performed_by_user_id", None)
         payload.append(
             {
                 **row.to_dict(),

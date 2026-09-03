@@ -2,14 +2,16 @@
 
 Entregar na ordem:
 
-1. **Leitura da identidade:** fatos, hipóteses, lacunas e decisões usadas.
-2. **Resultados empresariais necessários:** resultados derivados da identidade.
-3. **Arquitetura proposta:** área/cadeia → macroprocesso → processo; atividades apenas quando solicitadas ou necessárias para validar a fatoração.
-4. **Encadeamento:** principais entregas, fronteiras perceptíveis e respectivos clientes/processos recebedores.
-5. **Justificativas:** inclusões, divisões, agrupamentos e mudanças relevantes.
-6. **Casos consultados:** influência aproveitada e aspectos não transferidos.
-7. **Gaps e alternativas:** pontos que dependem de evidência ou decisão.
-8. **Agenda de validação:** perguntas objetivas ao consultor/cliente.
+1. **Fontes digeridas:** áudio, texto e documentos com proveniência, versão/data, trecho e avaliação de vigência.
+2. **Declarações classificadas:** elementos atômicos com tipo proposto, evidência, justificativa, confiança e pergunta de validação quando necessária.
+3. **Leitura da identidade:** fatos, hipóteses, lacunas e decisões usadas.
+4. **Resultados empresariais necessários:** resultados derivados da identidade.
+5. **Arquitetura proposta:** área/cadeia → macroprocesso → processo; atividades apenas quando solicitadas ou necessárias para validar a fatoração.
+6. **Encadeamento:** principais entregas, fronteiras perceptíveis e respectivos clientes/processos recebedores.
+7. **Justificativas:** inclusões, divisões, agrupamentos e mudanças relevantes.
+8. **Casos consultados:** influência aproveitada e aspectos não transferidos.
+9. **Gaps e alternativas:** pontos que dependem de evidência ou decisão.
+10. **Agenda de validação:** perguntas objetivas ao consultor/cliente.
 
 ## Estado do conteúdo
 

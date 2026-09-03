@@ -5,6 +5,7 @@ from . import db
 
 PROCESS_ARTIFACT_TYPES = ("pop", "form", "check", "ai", "data_in", "data_out")
 PROCESS_ARTIFACT_DEFINITION_STATUSES = ("draft", "published", "archived")
+PROCESS_ARTIFACT_EXECUTION_SCOPES = ("activity", "process_instance")
 PROCESS_ARTIFACT_EXECUTION_STATUSES = (
     "pending",
     "in_progress",
@@ -30,6 +31,10 @@ class ProcessActivityArtifactDefinition(db.Model):
             name="ck_process_artifact_definition_status",
         ),
         db.CheckConstraint("version > 0", name="ck_process_artifact_definition_version_positive"),
+        db.CheckConstraint(
+            "execution_scope IN ('activity', 'process_instance')",
+            name="ck_process_artifact_definition_execution_scope",
+        ),
         db.UniqueConstraint(
             "company_id",
             "process_id",
@@ -65,6 +70,7 @@ class ProcessActivityArtifactDefinition(db.Model):
     description = db.Column(db.Text, nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     status = db.Column(db.String(30), nullable=False, default="draft", index=True)
+    execution_scope = db.Column(db.String(30), nullable=False, default="activity", index=True)
     configuration_json = db.Column(db.JSON, nullable=False, default=dict)
     legacy_process_routine_id = db.Column(
         db.Integer,
@@ -97,6 +103,7 @@ class ProcessActivityArtifactDefinition(db.Model):
             "description": self.description,
             "version": self.version,
             "status": self.status,
+            "execution_scope": self.execution_scope,
             "configuration_json": self.configuration_json or {},
             "legacy_process_routine_id": self.legacy_process_routine_id,
             "created_by_user_id": self.created_by_user_id,
@@ -200,6 +207,13 @@ class ProcessActivityArtifactExecution(db.Model):
             "process_instance_id",
             "status",
         ),
+        db.UniqueConstraint(
+            "company_id",
+            "process_instance_id",
+            "artifact_definition_id",
+            "scope_key",
+            name="uq_process_artifact_execution_scope",
+        ),
         {"extend_existing": True},
     )
 
@@ -226,6 +240,7 @@ class ProcessActivityArtifactExecution(db.Model):
     artifact_key = db.Column(db.String(64), nullable=False)
     artifact_type = db.Column(db.String(30), nullable=False, index=True)
     artifact_version = db.Column(db.Integer, nullable=False)
+    scope_key = db.Column(db.String(255), nullable=False, index=True)
     definition_snapshot_json = db.Column(db.JSON, nullable=False, default=dict)
     status = db.Column(db.String(30), nullable=False, default="pending", index=True)
     input_json = db.Column(db.JSON, nullable=False, default=dict)
@@ -257,6 +272,7 @@ class ProcessActivityArtifactExecution(db.Model):
             "artifact_key": self.artifact_key,
             "artifact_type": self.artifact_type,
             "artifact_version": self.artifact_version,
+            "scope_key": self.scope_key,
             "definition_snapshot_json": self.definition_snapshot_json or {},
             "status": self.status,
             "input_json": self.input_json or {},
@@ -267,4 +283,51 @@ class ProcessActivityArtifactExecution(db.Model):
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ProcessActivityArtifactInteraction(db.Model):
+    """Trilha imutável de cada interação de atividade com uma instância de artefato."""
+
+    __tablename__ = "process_activity_artifact_interactions"
+    __table_args__ = (
+        db.Index(
+            "ix_process_artifact_interaction_company_execution",
+            "company_id",
+            "artifact_execution_id",
+            "created_at",
+        ),
+        {"extend_existing": True},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False, index=True)
+    process_instance_id = db.Column(db.Integer, db.ForeignKey("process_instances.id"), nullable=False, index=True)
+    activity_execution_id = db.Column(db.Integer, db.ForeignKey("process_instance_executions.id"), nullable=False, index=True)
+    artifact_execution_id = db.Column(db.Integer, db.ForeignKey("process_activity_artifact_executions.id"), nullable=False, index=True)
+    phase_key = db.Column(db.String(80), nullable=True, index=True)
+    action = db.Column(db.String(40), nullable=False)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    before_json = db.Column(db.JSON, nullable=False, default=dict)
+    after_json = db.Column(db.JSON, nullable=False, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    artifact_execution = db.relationship(
+        "ProcessActivityArtifactExecution",
+        backref=db.backref("interactions", lazy="dynamic", cascade="all, delete-orphan"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "company_id": self.company_id,
+            "process_instance_id": self.process_instance_id,
+            "activity_execution_id": self.activity_execution_id,
+            "artifact_execution_id": self.artifact_execution_id,
+            "phase_key": self.phase_key,
+            "action": self.action,
+            "actor_user_id": self.actor_user_id,
+            "before_json": self.before_json or {},
+            "after_json": self.after_json or {},
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

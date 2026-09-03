@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import joinedload
 
 from models import (
@@ -13,6 +13,7 @@ from models import (
     Process,
     ProcessActivityExecutionContract,
     ProcessActivityArtifactExecution,
+    ProcessActivityArtifactLink,
     ProcessBpmnDiagram,
     ProcessInstance,
     ProcessInstanceExecution,
@@ -393,27 +394,60 @@ def load_employee_active_activities(
     if not executions:
         return []
 
+    execution_ids_list = [row.id for row in executions]
+    instance_ids = sorted({row.process_instance_id for row in executions})
     artifact_rows = (
         ProcessActivityArtifactExecution.query.filter(
             ProcessActivityArtifactExecution.company_id == company_id,
-            ProcessActivityArtifactExecution.activity_execution_id.in_([row.id for row in executions]),
+            or_(
+                ProcessActivityArtifactExecution.activity_execution_id.in_(execution_ids_list),
+                and_(
+                    ProcessActivityArtifactExecution.process_instance_id.in_(instance_ids),
+                    ProcessActivityArtifactExecution.scope_key.like("process_instance:%"),
+                ),
+            ),
         )
         .order_by(ProcessActivityArtifactExecution.id.asc())
         .all()
     )
     artifacts_by_execution: dict[int, list[ProcessActivityArtifactExecution]] = defaultdict(list)
+    shared_by_instance: dict[int, list[ProcessActivityArtifactExecution]] = defaultdict(list)
     for artifact in artifact_rows:
         artifacts_by_execution[int(artifact.activity_execution_id)].append(artifact)
+        if str(artifact.scope_key or "").startswith("process_instance:"):
+            shared_by_instance[int(artifact.process_instance_id)].append(artifact)
+
+    definition_ids = sorted({int(row.artifact_definition_id) for row in artifact_rows})
+    links = ProcessActivityArtifactLink.query.filter(
+        ProcessActivityArtifactLink.company_id == company_id,
+        ProcessActivityArtifactLink.artifact_definition_id.in_(definition_ids or [-1]),
+        ProcessActivityArtifactLink.is_active.is_(True),
+    ).all()
+    links_by_activity = {
+        (int(link.process_id), str(link.bpmn_element_id), int(link.artifact_definition_id)): link
+        for link in links
+    }
 
     payload = []
     for execution in executions:
         instance = execution.process_instance
-        artifacts = artifacts_by_execution.get(int(execution.id), [])
+        artifacts = list(artifacts_by_execution.get(int(execution.id), []))
+        for shared_artifact in shared_by_instance.get(int(instance.id), []):
+            current_link = links_by_activity.get(
+                (int(execution.process_id), str(execution.bpmn_element_id), int(shared_artifact.artifact_definition_id))
+            )
+            if current_link and all(item.id != shared_artifact.id for item in artifacts):
+                artifacts.append(shared_artifact)
         required_pending = 0
         document_items = []
         for artifact in artifacts:
-            link = dict((artifact.definition_snapshot_json or {}).get("link") or {})
-            if link.get("is_required") and artifact.status not in {"completed", "skipped"}:
+            current_link = links_by_activity.get(
+                (int(execution.process_id), str(execution.bpmn_element_id), int(artifact.artifact_definition_id))
+            )
+            link = current_link.to_dict(include_definition=False) if current_link else dict((artifact.definition_snapshot_json or {}).get("link") or {})
+            phase = (((artifact.output_json or {}).get("_workflow") or {}).get("activity_phases") or {}).get(str(execution.id)) or {}
+            artifact_status = phase.get("status") or artifact.status
+            if link.get("is_required") and artifact_status not in {"completed", "skipped"}:
                 required_pending += 1
             snapshot = artifact.definition_snapshot_json or {}
             document_items.append(
@@ -421,7 +455,7 @@ def load_employee_active_activities(
                     "id": int(artifact.id),
                     "type": str(artifact.artifact_type),
                     "name": snapshot.get("name") or str(artifact.artifact_type).upper(),
-                    "status": str(artifact.status),
+                    "status": str(artifact_status),
                     "is_required": bool(link.get("is_required")),
                 }
             )

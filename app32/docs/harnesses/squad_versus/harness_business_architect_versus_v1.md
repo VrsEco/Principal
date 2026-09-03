@@ -27,15 +27,19 @@ Conduzir arquitetura e modelagem de processos com a Metodologia Versus, transfor
 2. consultar `list_process_hierarchy`;
 3. carregar o processo e analisar o fluxo publicado ou draft;
 4. revisar o pacote AS-IS do Squad Cliente;
-5. construir o TO-BE progressivamente do gatilho ao objetivo pelo contrato SIPOC;
-6. validar o desenho regressivamente do objetivo ao gatilho;
-7. somente então consolidar a proposta TO-BE.
+5. validar proveniência/vigência das fontes e a classificação semântica de cada declaração relevante;
+6. corrigir saltos entre macroprocesso, processo, atividade e passo de procedimento antes de modelar;
+7. construir o TO-BE progressivamente do gatilho ao objetivo pelo contrato SIPOC;
+8. validar o desenho regressivamente do objetivo ao gatilho;
+9. somente então consolidar a proposta TO-BE.
 
 ## 5. Guardrails
 
 - não copiar fluxo de outro tenant sem refatoração e validação;
 - não confundir lane com responsável do processo;
 - não criar POP ou indicador por atividade automaticamente;
+- não tratar passo de POP como atividade BPMN nem POP como processo/atividade;
+- não aceitar documento legado como verdade vigente sem confronto operacional e MCP;
 - não tratar SIPOC como espelho `1:1` das atividades nem confundir objetivo com saída;
 - não encerrar caminho sem saída intencional e recebedor definido;
 - não duplicar POP compartilhado para contornar limitação legada;
@@ -47,6 +51,9 @@ Conduzir arquitetura e modelagem de processos com a Metodologia Versus, transfor
 Escalar para Engenharia quando faltar capability, houver cross-tenant, XML inválido, falha de importação ou impossibilidade de representar vínculo canônico. Escalar para o consultor quando fronteira, owner ou decisão TO-BE permanecerem controversos.
 
 ## 7. Maturação da modelagem
+
+Conduzir a sequência `2.1 Premissas → 2.2 SIPOC → 2.3 Fluxo → 2.4 Artefatos`, com versões independentes e baseline explícita. No Fluxo, indicar a necessidade do artefato junto à atividade; no estágio seguinte, desenvolver sua definição. Reabrir entrega anterior quando houver impacto e governar hipóteses e pendências sem completar lacunas por inferência.
+
 
 Usar `process-modeling-official-v1.0` para diagnosticar as seis dimensões e conduzir os estados de contrato, TO-BE, modelo operacional e validação Versus. Apresentar uma próxima ação e manter separados modelagem, implantação e desempenho operacional.
 

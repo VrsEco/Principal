@@ -109,7 +109,9 @@ Cada tipo precisa de tela própria, baseada no padrão atual do editor de POP, m
 - `IN`: origem, autenticação, schema, mapeamento, idempotência e política de erro;
 - `OUT`: destino, autenticação, payload, gatilho, retry e confirmação de entrega.
 
-Formulários e checklists devem ser persistidos no banco por tenant (`company_id`), versão, instância e execução da atividade. Não devem depender de uma URL pública como identidade. O endereço eletrônico é apenas uma rota de acesso ao runtime autenticado; links assinados e temporários ficam reservados a participantes externos autorizados.
+Formulários e checklists devem ser persistidos no banco por tenant (`company_id`), versão e instância. O escopo pode ser isolado por atividade ou compartilhado por toda a instância do processo. No modo compartilhado, atividades diferentes operam a mesma instância do artefato, mas cada preenchimento, revisão, correção, chamada de IA ou aprovação mantém interação própria, ator, fase e atividade de origem. Não devem depender de uma URL pública como identidade. O endereço eletrônico é apenas uma rota de acesso ao runtime autenticado; links assinados e temporários ficam reservados a participantes externos autorizados.
+
+O mesmo contrato vale para FORM, CHECK, IA, IN e OUT. POP reutiliza uma definição comum, sem estado operacional compartilhado. IA compartilha o contexto e os dados da instância, nunca uma chamada indivisível: cada invocação permanece auditável e sujeita à política da atividade que a acionou.
 
 ## 11. Instância como workspace operacional
 

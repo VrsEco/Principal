@@ -18,9 +18,11 @@ Atuar como copiloto metodológico do consultor. Compreender antes de decompor, a
 
 1. Aplicar `gestao_versus_core` e confirmar `company_id` quando houver estado operacional.
 2. Ler `references/metodo.md`.
-3. Ler `references/casos.md` e selecionar somente casos `reference` pertinentes.
-4. Separar fatos, hipóteses e decisões antes de propor a arquitetura.
-5. Construir ou revisar nesta cadeia:
+3. Aceitar como fonte áudio, texto, documento legado ou combinação; transcrever quando necessário, preservar proveniência e digerir em declarações atômicas.
+4. Confrontar vigência de material legado com executores e estado MCP atual; separar fatos, hipóteses e decisões.
+5. Classificar cada declaração relevante com tipo, evidência e justificativa segundo `references/metodo.md`, sem depender apenas de verbo ou indentação.
+6. Ler `references/casos.md` e selecionar somente casos `reference` pertinentes.
+7. Construir ou revisar nesta cadeia:
 
 ```text
 Identidade
@@ -32,18 +34,23 @@ Identidade
 → clientes ou processos recebedores
 ```
 
-6. Validar coerência vertical e encadeamento horizontal.
-7. Entregar proposta, justificativas, alternativas, gaps e agenda de validação conforme `references/contrato-saida.md`.
-8. Quando houver catálogo estruturado, executar `scripts/validar_catalogo.py`.
-9. Quando o pedido avançar para atividades, raias, eventos ou gateways, transferir o desenho para `versus-modelagem-processos-bpmn`, preservando a arquitetura aprovada como contrato de entrada.
-10. Quando a arquitetura estiver delimitada e a demanda for amadurecer o desenho, transferir para o modo `maturar` do protocolo `process-modeling-official-v1.0`.
-11. Preservar no handoff os vínculos da modelagem com Identidade Organizacional e Planejamento Estratégico para que a conversa avalie contribuição, capacidade e coerência.
+8. Validar coerência vertical e encadeamento horizontal.
+9. Entregar proposta, justificativas, alternativas, gaps e agenda de validação conforme `references/contrato-saida.md`.
+10. Quando houver catálogo estruturado, executar `scripts/validar_catalogo.py`.
+11. Quando o pedido avançar para atividades, raias, eventos ou gateways, transferir o desenho para `versus-modelagem-processos-bpmn`, preservando a arquitetura aprovada como contrato de entrada.
+12. Quando a arquitetura estiver delimitada e a demanda for amadurecer o desenho, transferir para o modo `maturar` do protocolo `process-modeling-official-v1.0`.
+13. Tratar a Arquitetura de Processos como entrega 1 e transferir cada processo para as entregas evolutivas 2.1 Premissas, 2.2 SIPOC, 2.3 Fluxo e 2.4 Artefatos, preservando versionamento e impactos.
+14. Registrar informação desconhecida como hipótese ou pendência governada, nunca como fato presumido.
+15. Preservar no handoff os vínculos da modelagem com Identidade Organizacional e Planejamento Estratégico para que a conversa avalie contribuição, capacidade e coerência.
 
 ## Regras de fatoração
 
 - Não copiar organograma como arquitetura.
 - Não confundir projeto temporário, ativo físico, departamento ou fase com processo permanente.
 - Tratar macroprocesso como grande entrega/capacidade empresarial; tratar processo como entrega gerenciável; tratar atividade como microentrega executável.
+- Tratar passo de procedimento como instrução interna de POP; POP é artefato versionado, não atividade.
+- Distinguir checklist que verifica, formulário que captura dados, indicador que mede, regra que decide, evento que dispara/sinaliza, dado que entra/sai/evidencia e recurso que habilita.
+- Permitir que uma declaração origine vários elementos relacionados; não forçar classificação única.
 - Exigir em cada processo: gatilho, entrada, transformação, saída, recebedor e fronteira.
 - Construir o contrato progressivamente do gatilho ao objetivo e validá-lo regressivamente do objetivo ao gatilho, usando o SIPOC como lente transversal.
 - Distinguir saída (entrega) de objetivo (resultado pretendido) e não exigir relação 1:1 entre SIPOC e atividades.

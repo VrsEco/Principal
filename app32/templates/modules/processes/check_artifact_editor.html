@@ -59,6 +59,12 @@
         <select id="failureBehavior"><option value="block">Bloquear conclusão</option><option value="request_review">Solicitar revisão</option><option value="allow_with_justification">Permitir com justificativa</option></select>
       </div>
       <div class="artifact-field artifact-switch"><label><input id="requiredArtifact" type="checkbox" checked><span>Obrigatório para concluir atividade</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="sharedArtifact" type="checkbox"><span>Compartilhar a mesma instância entre atividades</span></label></div>
+      <div class="artifact-field"><label for="phaseKey">Fase desta atividade</label><input id="phaseKey" maxlength="80" placeholder="Ex.: preencher, validar ou corrigir"></div>
+      <div class="artifact-field"><label for="phaseFieldLabel">Campo aberto desta fase (opcional)</label><input id="phaseFieldLabel" maxlength="255" placeholder="Ex.: Observações e não conformidades"></div>
+      <div class="artifact-field artifact-switch"><label><input id="phaseFieldRequired" type="checkbox"><span>Campo aberto obrigatório</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="editableContent" type="checkbox" checked><span>Esta fase pode alterar os itens principais</span></label></div>
+      <div class="artifact-field artifact-switch"><label><input id="canFinalize" type="checkbox"><span>Esta atividade pode aprovar definitivamente</span></label></div>
       <p class="artifact-help"><i class="fas fa-shield-halved" aria-hidden="true"></i><span>Cada resposta ficará auditada. Evidências obrigatórias deverão ser anexadas antes do aceite.</span></p>
     </aside>
   </div>
@@ -83,6 +89,14 @@
   $('failureBehavior').value=config.failure_behavior||'block';
   const linkedRequired=state.artifact?.link?.is_required;
   $('requiredArtifact').checked=linkedRequired===undefined?true:Boolean(linkedRequired);
+  $('sharedArtifact').checked=state.artifact?.execution_scope==='process_instance';
+  const linkedPolicy=state.artifact?.link?.completion_policy_json||{};
+  $('phaseKey').value=linkedPolicy.phase_key||'';
+  const linkedPhaseField=(linkedPolicy.phase_fields||[])[0]||{};
+  $('phaseFieldLabel').value=linkedPhaseField.label||'';
+  $('phaseFieldRequired').checked=Boolean(linkedPhaseField.required);
+  $('editableContent').checked=linkedPolicy.editable_content!==false;
+  $('canFinalize').checked=Boolean(linkedPolicy.can_finalize);
 
   function render(){
     const host=$('checkItems');host.innerHTML='';
@@ -96,7 +110,7 @@
     });
     if(!state.items.length)host.innerHTML='<div class="artifact-empty">Adicione um item para começar o checklist.</div>';
   }
-  function payload(){return {company_id:state.companyId,artifact_type:'check',name:$('artifactName').value.trim(),description:$('artifactDescription').value.trim(),bpmn_element_id:state.bpmnElementId,is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'all_required_accepted',allow_skip:false},configuration_json:{items:state.items,failure_behavior:$('failureBehavior').value}};}
+  function payload(){const phaseLabel=$('phaseFieldLabel').value.trim();const phaseFields=phaseLabel?[{id:linkedPhaseField.id||'phase_notes',label:phaseLabel,type:'textarea',required:$('phaseFieldRequired').checked}]:[];return {company_id:state.companyId,artifact_type:'check',name:$('artifactName').value.trim(),description:$('artifactDescription').value.trim(),execution_scope:$('sharedArtifact').checked?'process_instance':'activity',bpmn_element_id:state.bpmnElementId,is_required:$('requiredArtifact').checked,completion_policy_json:{mode:'all_required_accepted',allow_skip:false,phase_key:$('phaseKey').value.trim(),editable_content:$('editableContent').checked,can_finalize:$('canFinalize').checked,phase_fields:phaseFields},configuration_json:{items:state.items,failure_behavior:$('failureBehavior').value}};}
   async function save(){
     const editing=Boolean(state.artifact?.id);const url=editing?`/api/process-activity-artifacts/${state.artifact.id}`:`/api/processes/${state.processId}/activity-artifacts`;
     const response=await fetch(url,{method:editing?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())});const data=await response.json();if(!response.ok)throw new Error(data.error||'Não foi possível salvar.');

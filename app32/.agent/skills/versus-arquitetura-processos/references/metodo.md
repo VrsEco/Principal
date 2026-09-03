@@ -40,6 +40,33 @@ Representar transformações recorrentes e gerenciáveis. Exigir gatilho, entrad
 
 Representar ações executáveis que produzem avanço verificável no processo. Associar controles, responsáveis, checklists, formulários, POPs e indicadores quando aplicável.
 
+### Passos de procedimento e demais elementos
+
+Um passo de procedimento descreve como executar uma atividade. Ele não possui entrega de negócio, recebedor, handoff, responsável ou ciclo de gestão autônomos e deve permanecer dentro do conteúdo versionado do POP. POP não é atividade: é o artefato instrucional que pode servir a uma ou várias atividades.
+
+- checklist verifica condição, conformidade ou evidência;
+- formulário captura dados estruturados para uso definido;
+- indicador mede resultado, prazo, qualidade ou capacidade;
+- regra ou decisão altera o caminho;
+- evento representa ocorrência, mensagem, tempo ou condição;
+- documento, dado ou evidência entra, sai ou comprova;
+- recurso ou sistema habilita a execução;
+- projeto é esforço temporário para criar, corrigir ou melhorar o sistema permanente.
+
+Uma mesma declaração pode conter vários elementos. Exemplo: “Conferir a nota pelo checklist e registrar divergências no formulário” contém uma atividade, um checklist, um formulário e possivelmente uma regra; não deve ser reduzida a um único tipo.
+
+### Ingestão de áudio, texto e documentos legados
+
+O levantamento pode começar por áudio, texto, documento antigo ou combinação dessas fontes. Antes de fatorar:
+
+1. identificar fonte, data/versão e trecho; para áudio, preservar timestamp, interlocutor e incerteza quando possível;
+2. quebrar o conteúdo em declarações atômicas;
+3. marcar vigência como `current_confirmed`, `current_unconfirmed`, `legacy`, `conflicting` ou `unknown`;
+4. separar fatos, hipóteses, pendências e itens não aplicáveis;
+5. confrontar material legado com executores e estado MCP atual antes de declará-lo vigente.
+
+“Digerir” significa extrair, rastrear, classificar, confrontar e organizar o conteúdo na Metodologia Versus; nunca copiar a estrutura do documento de origem nem transformar texto antigo em verdade atual automaticamente.
+
 ### Clientes ou processos recebedores
 
 Fechar a cadeia explicitando quem recebe cada entrega. Validar se a saída de um processo é entrada útil de outro ou resultado percebido pelo cliente.
@@ -56,6 +83,17 @@ Para cada item, perguntar:
 6. Pode ter responsável e indicador?
 7. Está no mesmo nível de granularidade dos irmãos?
 8. Continua fazendo sentido se o organograma mudar?
+
+Aplicar também a árvore de decisão:
+
+1. É esforço temporário com término único? Tratar como projeto.
+2. É grande entrega/capacidade permanente que agrupa transformações? Avaliar como macroprocesso.
+3. Possui transformação recorrente, gatilho, saída, recebedor, responsável e ciclo próprios? Avaliar como processo.
+4. Produz microentrega, mudança de estado ou handoff executável dentro do processo? Avaliar como atividade BPMN.
+5. Apenas explica como executar uma atividade? Tratar como passo de procedimento dentro de POP.
+6. Verifica, coleta, mede, decide, dispara, evidencia ou habilita? Classificar respectivamente como checklist, formulário, indicador, regra, evento, dado/documento/evidência ou recurso/sistema.
+
+Não forçar tipo único quando a declaração contiver elementos diferentes. Registrar classificação proposta, evidência, justificativa, confiança e pergunta de validação.
 
 Dividir quando houver resultados, recebedores, owners ou ciclos claramente distintos. Agrupar quando os itens forem apenas etapas inseparáveis da mesma entrega.
 

@@ -165,6 +165,35 @@ A modelagem de processos utiliza o protocolo global `process-modeling-official-v
 
 As dimensões produzem diagnóstico e gaps, não score percentual universal. A maturidade metodológica da modelagem não pode ser inferida de completude cadastral, XML válido ou existência de BPMN publicado.
 
+
+### 12.2.1 Entregas evolutivas e baseline
+
+O protocolo distingue `1 Arquitetura de Processos` e as entregas de modelagem `2.1 Premissas`, `2.2 SIPOC`, `2.3 Fluxo` e `2.4 Artefatos do Fluxo`. A etapa 2.3 identifica os artefatos necessários junto às atividades; a etapa 2.4 desenvolve esses elementos. As versões são independentes, e uma descoberta posterior pode reabrir uma etapa anterior mediante registro de impacto.
+
+A baseline do processo reúne as versões vigentes dos quatro componentes da modelagem. Definições podem estar `defined`, `hypothesis`, `pending` ou `not_applicable`. Toda pendência informa responsável, etapa de revisão e impacto. Pendência bloqueante impede implantação; pendência não bloqueante pode avançar com tratamento registrado.
+
+### 12.2.2 Diagnóstico metodológico prévio
+
+Antes de iniciar ou revisar o AS-IS, o Squad Cliente deve confrontar a transcrição e as demais evidências com o estado vigente das cinco entregas, obtido via MCP no escopo do `company_id`:
+
+1. `1 Arquitetura de Processos`: macroprocessos, objetivos, donos e relações entre macroprocessos;
+2. `2.1 Premissas dos Processos`: objetivo, escopo, início, fim, responsável, time executor, indicadores, rotina, recursos, restrições e definições conhecidas;
+3. `2.2 SIPOC`: fornecedores, entradas, atividades macro, saídas, clientes e interfaces;
+4. `2.3 Fluxo`: BPMN, atividades, decisões, eventos, responsabilidades, exceções e necessidade de POP, checklist, formulário ou outro artefato por atividade;
+5. `2.4 Artefatos do Fluxo`: conteúdo, vínculo, versão e estado dos artefatos identificados no fluxo.
+
+O resultado obrigatório é uma matriz de cobertura que classifica cada elemento como `defined`, `hypothesis`, `pending` ou `not_applicable`. Toda lacuna deve registrar fonte esperada, responsável pela definição, etapa de revisão e impacto `blocking` ou `non_blocking`.
+
+Esse diagnóstico orienta a conversa de maturação e não autoriza o Squad Cliente a definir sozinho arquitetura, fronteira, TO-BE ou conteúdo metodológico. Divergência estrutural deve ser encaminhada ao Squad Versus. O AS-IS somente começa após a matriz tornar explícito o que é fato, hipótese, pendência ou não aplicável; pendências não bloqueantes podem seguir sob governança.
+
+### 12.2.3 Ingestão e classificação semântica
+
+O protocolo aceita áudio, texto, documento legado ou combinação como fonte inicial. A ingestão deve preservar proveniência, transcrever quando necessário, extrair declarações atômicas e avaliar se cada evidência está confirmada, não confirmada, legada, conflitante ou com vigência desconhecida. Documento antigo não se torna verdade atual sem confronto com executores e estado MCP do tenant.
+
+Cada declaração pode originar um ou vários elementos. A classificação deve distinguir macroprocesso, processo, atividade, passo de procedimento, POP, checklist, formulário, indicador, regra, evento, dado/documento/evidência, recurso/sistema e projeto. Passo de procedimento explica como executar e pertence ao POP; POP é artefato versionado, não atividade. A decisão usa entrega, recebedor, handoff, mudança de estado, responsabilidade, fronteira e ciclo, nunca somente verbo ou indentação.
+
+O Squad Cliente propõe e valida a aderência à realidade; o Squad Versus valida nível, fronteira e fatoração. Ambiguidade permanece como hipótese ou pendência até o gate humano.
+
 ### 12.3 Gates e separações
 
 - Squad Cliente valida fatos e AS-IS;

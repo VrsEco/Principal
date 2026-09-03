@@ -16,6 +16,15 @@ Depois validar no sentido inverso:
 
 O SIPOC é contrato transversal do processo. Não criar uma atividade para cada item SIPOC, nem um item SIPOC para cada atividade. Um bloco de transformação pode abranger várias atividades. Objetivo e saída não são sinônimos: a saída é o que se entrega; o objetivo explica o resultado que essa entrega pretende gerar.
 
+
+### 1.2 Entregas evolutivas e baseline
+
+A modelagem segue cinco entregas: `1 Arquitetura de Processos`, `2.1 Premissas dos Processos`, `2.2 SIPOC`, `2.3 Fluxo` e `2.4 Artefatos do Fluxo`. O fluxo identifica, junto às atividades, os artefatos necessários; a etapa 2.4 desenvolve essas definições. Não confundir indicação visual com artefato configurado.
+
+Cada entrega possui versão independente. Descobertas posteriores podem reabrir entregas anteriores mediante análise de impacto, registro do motivo e nova validação quando relevante. A baseline do processo reúne as versões vigentes dos quatro componentes da modelagem.
+
+Uma definição pode estar `definida`, em `hipótese`, `pendente` ou `não se aplica`. Pendências devem informar responsável, etapa de revisão e se bloqueiam a implantação. Não preencher lacunas como fato nem bloquear todo o desenho por pendência não crítica governada.
+
 Cada caminho que termina deve produzir saída intencional e ter cliente ou processo recebedor identificado. Quando algo ficar fora do corte atual, preferir classificar para ciclo futuro ou encaminhar a outro processo, em vez de descartar silenciosamente ou criar loop artificial na mesma instância.
 
 ## 2. Tradução para BPMN
@@ -32,13 +41,19 @@ Cada caminho que termina deve produzir saída intencional e ter cliente ou proce
 
 Usar `userTask` para trabalho humano assistido por sistema, `manualTask` para trabalho humano fora do sistema, `serviceTask` somente com execução automática definida e `sendTask`/`receiveTask` quando a mensagem for a própria atividade.
 
+### 2.1 Atividade versus passo de procedimento
+
+Modelar como atividade quando o trabalho produzir microentrega, mudança verificável de estado ou handoff e puder ser atribuído a papel/time. Manter como passo dentro do POP quando apenas explicar como executar uma atividade, sem saída de negócio, recebedor, handoff ou ciclo autônomos. Não inflar o BPMN com cliques, campos ou instruções operacionais que pertencem ao procedimento.
+
+Uma frase da fonte pode combinar atividade, regra, checklist, formulário e evidência. Separar os elementos e criar vínculos; não transformar todos em tasks.
+
 ## 3. Responsabilidade
 
 O responsável pelo processo responde pelo resultado ponta a ponta e permanece metadado do processo. A lane informa quem executa a atividade. Uma lane “todos” só é válida quando não elimina accountability.
 
 ## 3.1 Linguagem visual e artefatos
 
-POP, FORM e CHECK aparecem como artefatos externos ligados à atividade por associação BPMN. Usar tipo, vínculo e definição persistidos como verdade; usar cor e marcador apenas para leitura. Cores canônicas: POP azul `#2563eb`, FORM violeta `#7c3aed` e CHECK verde `#059669`.
+POP, FORM e CHECK aparecem como artefatos externos ligados à atividade por associação BPMN. Na entrega 2.3, o marcador e o vínculo indicam a necessidade do artefato; na entrega 2.4, seu conteúdo é desenvolvido e validado. Usar tipo, vínculo, definição e versão persistidos como verdade; usar cor e marcador apenas para leitura. Cores canônicas: POP azul `#2563eb`, FORM violeta `#7c3aed` e CHECK verde `#059669`.
 
 Na maturação, verificar necessidade, atividade vinculada, configuração, versão, obrigatoriedade, política de conclusão, evidência e contribuição estratégica. Não considerar marcador colorido como prova de maturidade. Personalização de cor do BPMN e status da execução são camadas distintas.
 

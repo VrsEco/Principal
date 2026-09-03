@@ -14,6 +14,7 @@ if str(APP_DIR) not in sys.path:
 from models.process_artifact import (  # noqa: E402
     ProcessActivityArtifactDefinition,
     ProcessActivityArtifactExecution,
+    ProcessActivityArtifactInteraction,
     ProcessActivityArtifactLink,
 )
 from services import process_artifact_service as service  # noqa: E402
@@ -27,6 +28,7 @@ def test_artifact_models_require_company_id_and_expected_constraints():
         ProcessActivityArtifactDefinition,
         ProcessActivityArtifactLink,
         ProcessActivityArtifactExecution,
+        ProcessActivityArtifactInteraction,
     ):
         assert model.__table__.columns["company_id"].nullable is False
 
@@ -37,6 +39,22 @@ def test_artifact_models_require_company_id_and_expected_constraints():
     assert "uq_process_artifact_definition_version" in definition_constraints
     assert "uq_process_artifact_link_activity_definition" in link_constraints
     assert "uq_process_artifact_execution_activity_definition" in execution_constraints
+    assert "uq_process_artifact_execution_scope" in execution_constraints
+    assert ProcessActivityArtifactExecution.__table__.columns["scope_key"].nullable is False
+
+
+@pytest.mark.parametrize("scope", ("activity", "process_instance"))
+def test_normalize_execution_scope_accepts_canonical_scopes(scope):
+    assert service.normalize_execution_scope(scope) == scope
+
+
+def test_process_instance_scope_key_is_shared_across_activities():
+    definition = SimpleNamespace(execution_scope="process_instance")
+    first = SimpleNamespace(id=11, process_instance_id=90)
+    second = SimpleNamespace(id=12, process_instance_id=90)
+
+    assert service._artifact_scope_key(definition, first) == "process_instance:90"
+    assert service._artifact_scope_key(definition, second) == "process_instance:90"
 
 
 @pytest.mark.parametrize("artifact_type", ("pop", "form", "check", "ai", "data_in", "data_out"))
@@ -221,6 +239,95 @@ def test_evaluate_required_artifacts_rejects_unauthorized_skip():
 
     assert result["activity_may_complete"] is False
     assert result["blocking_artifact_execution_ids"] == [9]
+
+
+def test_evaluate_shared_artifact_uses_current_activity_phase():
+    execution = SimpleNamespace(
+        id=19,
+        status="in_progress",
+        output_json={"_workflow": {"activity_phases": {"44": {"status": "completed"}}}},
+        definition_snapshot_json={"link": {"is_required": True}},
+        _runtime_activity_execution_id=44,
+        _runtime_link=SimpleNamespace(is_required=True, completion_policy_json={}),
+    )
+
+    result = service.evaluate_required_artifacts([execution])
+
+    assert result["activity_may_complete"] is True
+    assert result["required_completed"] == 1
+
+
+def test_shared_artifact_completes_phase_without_closing_document(monkeypatch):
+    activity = SimpleNamespace(id=44, process_instance_id=90, process_id=2, bpmn_element_id="Activity_Review")
+    link = SimpleNamespace(
+        id=7,
+        is_required=True,
+        completion_policy_json={
+            "phase_key": "manager_review",
+            "editable_content": False,
+            "can_finalize": True,
+            "phase_fields": [{"id": "notes", "label": "Observações", "type": "textarea", "required": True}],
+        },
+    )
+    definition = SimpleNamespace(execution_scope="process_instance")
+    execution = SimpleNamespace(
+        id=19,
+        company_id=9,
+        process_instance_id=90,
+        activity_execution_id=40,
+        artifact_definition_id=5,
+        artifact_definition=definition,
+        artifact_type="check",
+        artifact_version=1,
+        artifact_key="daily-check",
+        scope_key="process_instance:90",
+        status="in_progress",
+        output_json={"answers": {"item": {"status": "accepted"}}},
+        evidence_json={},
+        error_json={},
+        started_at=None,
+        completed_at=None,
+        definition_snapshot_json={"execution_scope": "process_instance", "configuration_json": {"items": []}},
+    )
+    execution.to_dict = lambda: {
+        "id": execution.id,
+        "status": execution.status,
+        "output_json": execution.output_json,
+        "evidence_json": execution.evidence_json,
+    }
+
+    class QueryResult:
+        def __init__(self, value): self.value = value
+        def filter_by(self, **_kwargs): return self
+        def first(self): return self.value
+
+    added = []
+    monkeypatch.setattr(service, "get_artifact_execution", lambda *_args: execution)
+    monkeypatch.setattr(service, "ProcessInstanceExecution", SimpleNamespace(query=QueryResult(activity)))
+    monkeypatch.setattr(service, "ProcessActivityArtifactLink", SimpleNamespace(query=QueryResult(link)))
+    monkeypatch.setattr(service.db.session, "add", added.append)
+    monkeypatch.setattr(service.db.session, "commit", lambda: None)
+
+    result = service.update_artifact_execution(
+        9,
+        19,
+        {
+            "activity_execution_id": 44,
+            "status": "completed",
+            "output_json": {
+                "answers": {"item": {"status": "accepted"}},
+                "phase_values": {"manager_review": {"notes": "Corrigir rodapé"}},
+            },
+            "evidence_json": {},
+        },
+        actor_user_id=3,
+    )
+
+    assert result.status == "in_progress"
+    assert result.output_json["_workflow"]["activity_phases"]["44"]["status"] == "completed"
+    assert result.output_json["phase_values"]["manager_review"]["notes"] == "Corrigir rodapé"
+    assert len(added) == 1
+    assert added[0].phase_key == "manager_review"
 
 
 def test_ensure_pop_artifact_uses_tenant_process_and_deterministic_legacy_key(monkeypatch):
@@ -439,7 +546,7 @@ def test_runtime_exposes_read_only_document_history_with_explicit_tenant():
     assert "company_id:Number(companyId)" in runtime_source
     assert '"document_history": build_instance_document_history(instance)' in runtime_service
     assert "document_completed" in runtime_service
-    assert execution_resource.count("company_id = get_request_company_id()") == 4
+    assert execution_resource.count("company_id = get_request_company_id()") == 5
     assert "company_id = get_default_company_id()" not in execution_resource
     assert "/api/process-artifact-executions/${artifact.id}/files?company_id=" in runtime_source
 
@@ -487,6 +594,26 @@ def test_artifact_editors_use_shared_responsive_ui_shell():
     assert ".artifact-editor--data-out" in css_source
     assert ".artifact-row--check" in css_source
     assert "@media (max-width: 900px)" in css_source
+
+
+def test_form_and_check_editors_expose_shared_multiparty_scope():
+    for template_name in ("form_artifact_editor.html", "check_artifact_editor.html"):
+        source = (APP_DIR / "templates" / "modules" / "processes" / template_name).read_text(encoding="utf-8")
+        assert 'id="sharedArtifact"' in source
+        assert 'id="phaseKey"' in source
+        assert 'id="editableContent"' in source
+        assert 'id="phaseFieldLabel"' in source
+        assert 'id="canFinalize"' in source
+        assert "execution_scope:$('sharedArtifact').checked?'process_instance':'activity'" in source
+        assert "phase_fields:phaseFields" in source
+
+
+def test_portal_projects_shared_artifact_on_each_linked_activity():
+    source = (APP_DIR / "services" / "process_portal_service.py").read_text(encoding="utf-8")
+    assert 'ProcessActivityArtifactExecution.scope_key.like("process_instance:%")' in source
+    assert "shared_by_instance" in source
+    assert "links_by_activity" in source
+    assert 'get(str(execution.id))' in source
 
 
 def test_artifact_editors_send_explicit_tenant_context_on_save_and_publish():
