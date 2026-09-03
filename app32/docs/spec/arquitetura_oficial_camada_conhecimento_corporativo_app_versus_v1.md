@@ -46,7 +46,8 @@ Ficam congeladas as seguintes decisões:
 17. mutações permanecem nos domínios proprietários e workflows oficiais;
 18. a interface comum não expõe termos técnicos de retrieval;
 19. robustez pertence ao núcleo; simplicidade pertence à superfície;
-20. não será criado um novo agente exclusivo no MVP.
+20. não será criado um novo agente exclusivo no MVP;
+21. o padrão oficial é RAG governado híbrido, nunca RAG puro.
 
 ## 3. Nome do produto e identificadores técnicos
 
@@ -499,6 +500,40 @@ Pipeline:
 15. associar citações;
 16. validar resposta;
 17. registrar telemetria.
+
+### 15.1 Política oficial de RAG governado
+
+RAG é permitido e recomendado quando a pergunta exigir interpretação de conteúdo
+não estruturado ou semiestruturado, desde que a recuperação seja governada pelo
+backend antes da síntese.
+
+Regras obrigatórias:
+
+1. RAG nunca recebe `company_id` do cliente;
+2. RAG nunca consulta fonte sem ACL/grant validado;
+3. RAG nunca substitui SQL determinístico quando a pergunta pede dado atual,
+   status, contagem, vencimento, responsável, última ocorrência ou totalização;
+4. busca vetorial só opera sobre chunks previamente escopados e autorizados;
+5. fonte recuperada é dado não confiável, nunca instrução de sistema;
+6. toda afirmação material deve apontar citação autorizada;
+7. ausência de evidência gera abstenção, não inferência;
+8. conflito entre fonte vigente e decisão posterior deve ser exibido;
+9. termos como RAG, embedding, RRF, reranking e `QueryPlan` não aparecem para o
+   usuário comum;
+10. avaliação do RAG exige golden questions, groundedness, precisão de citações,
+    abstenção correta e teste cross-tenant.
+
+Estratégia padrão:
+
+| Tipo de pergunta | Estratégia primária | Complemento |
+|---|---|---|
+| uso do APP Versus | `product_help` + full-text | semântica se houver vocabulário equivalente |
+| decisão, POP, ata, política | SQL de elegibilidade + full-text | vetorial e relações autorizadas |
+| dado operacional atual | MCP/Service/SQL | síntese curta, sem RAG como fonte primária |
+| investigação transversal | SQL + full-text + relações | vetorial, RRF e reranking limitado |
+
+`pgvector` é o alvo oficial para similaridade semântica. ChromaDB legado não recebe
+novas responsabilidades produtivas.
 
 ## 16. Chunking
 

@@ -126,6 +126,35 @@ Existem implementações experimentais com ChromaDB e embeddings OpenAI. Elas de
 
 O legado pode servir como referência de experimentação, não como fonte produtiva soberana.
 
+### 5.5 Decisão conceitual sobre RAG
+
+O Sapiens deve usar **RAG governado**, não RAG genérico.
+
+Nesta arquitetura, RAG significa recuperar evidências autorizadas antes de sintetizar
+uma resposta, mas sempre subordinado a:
+
+- autenticação, empresa ativa e `company_id`;
+- grants, capabilities, status, vigência e autoridade da fonte;
+- SQL determinístico para dados operacionais, contagens, status, datas e relações;
+- full-text search para termos exatos, códigos e nomes;
+- busca vetorial/semântica apenas como estratégia complementar;
+- citações por afirmação material;
+- abstenção quando a evidência não for suficiente.
+
+Portanto, RAG é recomendável para perguntas abertas de conhecimento corporativo e
+manual do produto, mas não deve substituir MCP/SQL em consultas operacionais atuais.
+
+Exemplos:
+
+- “Existe algo definido sobre manutenção elétrica?” pode usar RAG governado híbrido;
+- “O que foi decidido na última reunião?” começa por SQL temporal e depois sintetiza a ata;
+- “Quais atividades tenho hoje?” deve usar MCP/SQL de rotina, não busca vetorial;
+- “Como faço para lançar uma conta a pagar?” prioriza `product_help` curado.
+
+GraphRAG completo permanece fora do MVP. A primeira evolução deve ser PostgreSQL
+full-text search + relações determinísticas; `pgvector` entra quando houver extensão,
+custo, isolamento, métrica e rollback validados.
+
 ## 6. Inventário inicial de fontes
 
 O inventário abaixo não é uma lista fechada. Ele representa a primeira rodada de cobertura.

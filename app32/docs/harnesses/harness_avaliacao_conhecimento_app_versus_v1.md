@@ -108,6 +108,30 @@ python -m pytest `
   -q
 ```
 
+## Suíte RAG governado híbrido
+
+- RAG não aceita `company_id` do cliente;
+- ACL/grants são aplicados antes de full-text, vetor ou síntese;
+- pergunta operacional atual usa MCP/Service/SQL como fonte primária;
+- pergunta de uso do produto prioriza `product_help`;
+- busca vetorial só roda sobre chunks tenant-safe;
+- resposta factual sem citação é rejeitada;
+- ausência de evidência gera abstenção;
+- conflito entre fontes é exibido;
+- termos técnicos de retrieval não aparecem para usuário comum;
+- ChromaDB legado não recebe nova responsabilidade produtiva.
+
+Gate mínimo antes de ativar embeddings/`pgvector`:
+
+1. golden set por domínio;
+2. teste cross-tenant;
+3. teste de ACL revogada;
+4. métrica de groundedness;
+5. precisão e completude de citações;
+6. abstenção correta;
+7. custo e latência por empresa;
+8. rollback para SQL + full-text.
+
 ## Suíte busca citada
 
 - pergunta de ajuda retorna claim e citação;
