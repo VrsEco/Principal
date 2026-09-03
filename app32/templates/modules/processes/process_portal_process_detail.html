@@ -810,6 +810,10 @@
             return numeric.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
         }
 
+        function formatIndicatorValue(value, unit) {
+            return window.App32InputFormatters?.formatIndicatorValue(value, unit) ?? formatNumberBR(value);
+        }
+
         function formatCapacityUnit(unit) {
             return ({ hour: 'h/mês', day: 'dia/mês', month: 'mês' })[unit] || '';
         }
@@ -985,8 +989,8 @@
                 <article class="portal-content-card">
                     <h4>${esc(item.name || 'Indicador')}</h4>
                     <p>${esc(item.group_name || 'Sem grupo')} · ${esc(item.unit || 'sem unidade')}</p>
-                    <p style="margin-top:.6rem;"><strong>Atual:</strong> ${esc(item.current_value || '—')}</p>
-                    <p><strong>Meta:</strong> ${esc(item.goal_value || '—')}</p>
+                    <p style="margin-top:.6rem;"><strong>Atual:</strong> ${esc(formatIndicatorValue(item.current_value, item.unit))}</p>
+                    <p><strong>Meta:</strong> ${esc(formatIndicatorValue(item.goal_value, item.unit))}</p>
                 </article>
             `).join('')}</div>`;
         }

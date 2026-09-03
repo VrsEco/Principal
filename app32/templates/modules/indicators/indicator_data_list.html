@@ -146,9 +146,9 @@
                 <thead>
                     <tr>
                         <th>Indicador</th>
+                        <th>Consultor</th>
                         <th>Valor Medido</th>
                         <th>Data da Medição</th>
-                        <th>Consultor</th>
                         <th>Meta Associada</th>
                         <th>Notas</th>
                         <th style="text-align: right;">Ações</th>
@@ -170,7 +170,7 @@
                         </td>
                         <td>
                             <div style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">
-                                {% if record.indicator.unit == 'R$' or 'R$' in record.indicator.unit or 'moeda' in record.indicator.unit.lower() %}
+                                {% if record.indicator.unit == 'R$' or 'R$' in (record.indicator.unit or '') or 'moeda' in (record.indicator.unit or '').lower() %}
                                     R$ {{ record.measured_value | format_currency_br }}
                                 {% else %}
                                     {{ "{:,.2f}".format(record.measured_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}
@@ -261,7 +261,7 @@
                             data-unit="{{ goal.indicator.unit or '' }}"
                             data-responsible-id="{{ goal.responsible_id or '' }}"
                         >
-                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — {{ goal.name or ('Campanha' if goal.goal_kind == 'campaign' else 'Meta-base') }} — {{ goal.goal_value | format_currency_br if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') else "{:,.2f}".format(goal.goal_value|float).replace(",", "X").replace(".", ",").replace("X", ".") }}{% if goal.responsible %} · {{ goal.responsible.name }}{% endif %}
+                            {% if goal.code %}[{{ goal.code }}] {% endif %}{{ goal.indicator.name }} — {{ goal.name or ('Campanha' if goal.goal_kind == 'campaign' else 'Meta-base') }} — {% if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') or 'moeda' in (goal.indicator.unit or '').lower() %}R$ {% endif %}{{ goal.goal_value | format_currency_br }}{% if goal.indicator.unit and goal.indicator.unit != 'R$' and 'R$' not in goal.indicator.unit and 'moeda' not in goal.indicator.unit.lower() %} {{ goal.indicator.unit }}{% endif %}{% if goal.responsible %} · {{ goal.responsible.name }}{% endif %}
                         </option>
                         {% endfor %}
                     </select>

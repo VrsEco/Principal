@@ -69,6 +69,34 @@
     return normalized ? Number(normalized) : 0;
   }
 
+  function isCurrencyUnit(unit) {
+    const normalized = String(unit ?? '').trim().toLowerCase();
+    return normalized === 'r$'
+      || normalized === 'brl'
+      || normalized.includes('moeda')
+      || normalized.includes('real');
+  }
+
+  function formatNumberBR(value, { minimumFractionDigits = 2, maximumFractionDigits = 2, empty = '—' } = {}) {
+    if (value === null || value === undefined || value === '') return empty;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return empty;
+    return numeric.toLocaleString('pt-BR', { minimumFractionDigits, maximumFractionDigits });
+  }
+
+  function formatIndicatorValue(value, unit, { empty = '—' } = {}) {
+    if (value === null || value === undefined || value === '') return empty;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return empty;
+    if (isCurrencyUnit(unit)) {
+      return numeric.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+    const formatted = formatNumberBR(numeric, { empty });
+    const suffix = String(unit ?? '').trim();
+    if (!suffix) return formatted;
+    return suffix === '%' ? `${formatted}%` : `${formatted} ${suffix}`;
+  }
+
   function formatPercent(value) {
     const formatted = normalizeNumericText(value, { decimals: 2, useGrouping: false });
     return formatted ? `${formatted}%` : '';
@@ -224,27 +252,40 @@
 
   function bindInput(element) {
     if (!element || element.dataset.formatBound === '1') return;
-    const format = getFormat(element);
-    if (!format) return;
+    if (!getFormat(element)) return;
     element.dataset.formatBound = '1';
-    if (element.tagName === 'INPUT' && ['currency', 'integer', 'score', 'weight', 'decimal', 'confidence', 'note', 'percent', 'hours-decimal', 'duration-minutes', 'date-ymd'].includes(format)) {
-      element.type = 'text';
-    }
-    if (format === 'currency' || format === 'integer' || format === 'score' || format === 'weight') {
-      element.inputMode = 'numeric';
-    } else if (format === 'decimal' || format === 'confidence' || format === 'note' || format === 'percent') {
-      element.inputMode = 'decimal';
-    } else if (format === 'hours-decimal' || format === 'duration-minutes' || format === 'date-ymd') {
-      element.inputMode = 'numeric';
-    }
+
+    const applyInputContract = () => {
+      const format = getFormat(element);
+      if (element.tagName === 'INPUT' && ['currency', 'integer', 'score', 'weight', 'decimal', 'confidence', 'note', 'percent', 'hours-decimal', 'duration-minutes', 'date-ymd'].includes(format)) {
+        element.type = 'text';
+      }
+      if (format === 'currency' || format === 'integer' || format === 'score' || format === 'weight') {
+        element.inputMode = 'numeric';
+      } else if (format === 'decimal' || format === 'confidence' || format === 'note' || format === 'percent') {
+        element.inputMode = 'decimal';
+      } else if (format === 'hours-decimal' || format === 'duration-minutes' || format === 'date-ymd') {
+        element.inputMode = 'numeric';
+      }
+    };
 
     const applyFormat = () => {
+      applyInputContract();
+      const format = getFormat(element);
       element.value = formatValueByType(format, element.value);
     };
 
     element.addEventListener('input', applyFormat);
     element.addEventListener('blur', applyFormat);
+    applyInputContract();
     if (element.value) applyFormat();
+  }
+
+  function setFormat(element, format) {
+    if (!element) return;
+    element.dataset.format = format;
+    bindInput(element);
+    element.dispatchEvent(new Event('blur'));
   }
 
   function bindAll(root = document) {
@@ -299,8 +340,12 @@
   window.App32InputFormatters = {
     bindAll,
     bindInput,
+    setFormat,
     formatCurrency,
+    formatIndicatorValue,
+    formatNumberBR,
     formatValueByType,
+    isCurrencyUnit,
     normalizeForSubmit,
     parseCurrency,
     parseDecimal,

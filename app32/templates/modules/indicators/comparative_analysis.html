@@ -242,7 +242,7 @@ function renderIndicators() {
                             <div>
                                 <div class="goal-title">${escapeHtml(goal.code || 'Meta')}</div>
                                 <div class="goal-meta">
-                                    Valor da meta: <strong>${formatNumber(goal.goal_value)}</strong><br>
+                                    Valor da meta: <strong>${escapeHtml(formatIndicatorValue(goal.goal_value, indicator.unit))}</strong><br>
                                     ${describeGoalPeriod(goal)}
                                 </div>
                             </div>
@@ -331,7 +331,8 @@ function buildDatasets(selectedGoals, periodStart, periodEnd, viewMode) {
             borderWidth: 2,
             pointRadius: 4,
             tension: 0.25,
-            fill: false
+            fill: false,
+            unit: indicator.unit || ''
         };
     }).filter(Boolean).filter(item => item.data.length > 0);
 }
@@ -391,6 +392,7 @@ function buildStats(selectedGoals, periodStart, periodEnd) {
             averageValue: avg,
             lastValue,
             count,
+            unit: indicator.unit || '',
             performance
         };
     }).filter(Boolean);
@@ -424,7 +426,7 @@ function renderChart(datasets) {
                 legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
-                        label: (context) => `${context.dataset.label}: ${formatNumber(context.parsed.y)}`
+                        label: (context) => `${context.dataset.label}: ${formatIndicatorValue(context.parsed.y, context.dataset.unit)}`
                     }
                 }
             }
@@ -437,9 +439,9 @@ function renderStatsTable(stats) {
     tbody.innerHTML = stats.map(item => `
         <tr>
             <td>${escapeHtml(item.indicatorLabel)}</td>
-            <td>${formatNumber(item.goalValue)}</td>
-            <td>${formatNumber(item.averageValue)}</td>
-            <td>${formatNumber(item.lastValue)}</td>
+            <td>${escapeHtml(formatIndicatorValue(item.goalValue, item.unit))}</td>
+            <td>${escapeHtml(formatIndicatorValue(item.averageValue, item.unit))}</td>
+            <td>${escapeHtml(formatIndicatorValue(item.lastValue, item.unit))}</td>
             <td>${item.count}</td>
             <td>${performanceBadge(item.performance)}</td>
         </tr>
@@ -472,6 +474,10 @@ function formatDate(value) {
 function formatNumber(value) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
     return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
+function formatIndicatorValue(value, unit) {
+    return window.App32InputFormatters?.formatIndicatorValue(value, unit) ?? formatNumber(value);
 }
 
 function escapeHtml(value) {

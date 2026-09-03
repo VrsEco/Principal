@@ -125,19 +125,25 @@
                             <span class="indicator-name">{{ item.indicator.name }}</span>
                             <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
                                 <span class="indicator-code">{{ item.indicator.code }}</span>
-                                <span class="goal-badge">Meta: {{ item.goal.goal_value }}{{ item.indicator.unit }}</span>
+                                <span class="goal-badge">
+                                    Meta:
+                                    {% if 'R$' in (item.indicator.unit or '') or 'moeda' in (item.indicator.unit or '').lower() %}
+                                        R$ {{ item.goal.goal_value | format_currency_br }}
+                                    {% else %}
+                                        {{ item.goal.goal_value | format_currency_br }}{% if item.indicator.unit %} {{ item.indicator.unit }}{% endif %}
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                     </td>
                     <td>
                         <div style="position:relative; display:flex; align-items:center;">
-                            {% if 'R$' in item.indicator.unit or 'moeda' in item.indicator.unit.lower() %}
+                            {% if 'R$' in (item.indicator.unit or '') or 'moeda' in (item.indicator.unit or '').lower() %}
                             <span style="position:absolute; left:0.6rem; font-size:0.8rem; font-weight:700; color:var(--text-tertiary);">R$</span>
-                            <input type="text" class="cell-input val-visual" placeholder="0,00" style="padding-left:2rem;" oninput="formatBatchCurrency(this)">
+                            <input type="text" data-format="currency" class="cell-input val-real" placeholder="0,00" style="padding-left:2rem;">
                             {% else %}
                             <input type="text" data-format="decimal" class="cell-input val-real" placeholder="0,00">
                             {% endif %}
-                            <input type="hidden" class="val-hidden">
                         </div>
                     </td>
                     <td>
@@ -165,18 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-function formatBatchCurrency(input) {
-    let val = input.value.replace(/\D/g, "");
-    if (val === "") {
-        input.value = "";
-        input.closest('td').querySelector('.val-hidden').value = "";
-        return;
-    }
-    let num = (parseFloat(val) / 100).toFixed(2);
-    input.value = num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    input.closest('td').querySelector('.val-hidden').value = num;
-}
-
 async function saveBatch() {
     const btn = document.getElementById('btnSaveBatch');
     btn.disabled = true;
@@ -189,29 +183,19 @@ async function saveBatch() {
     rows.forEach(row => {
         const indicatorId = parseInt(row.dataset.indicatorId);
         const goalId = parseInt(row.dataset.goalId);
-        const unit = row.dataset.unit;
-        
-        let value;
-        const visualInput = row.querySelector('.val-visual');
         const realInput = row.querySelector('.val-real');
-        const hiddenInput = row.querySelector('.val-hidden');
-        
-        if (visualInput) {
-            // Se for moeda, usa o hidden que foi preenchido pelo formatBatchCurrency
-            value = hiddenInput.value !== "" ? parseFloat(hiddenInput.value) : NaN;
-        } else {
-            // Se for número direto
-            value = realInput.value !== "" ? parseFloat(realInput.value) : NaN;
-        }
+        const value = realInput.value !== ''
+            ? window.App32InputFormatters.normalizeForSubmit(realInput)
+            : NaN;
         
         const date = row.querySelector('.date-input').value;
         const notes = row.querySelector('.notes-input').value;
         
-        if (!isNaN(value)) {
+        if (!Number.isNaN(Number(value))) {
             const entry = {
                 indicator_id: indicatorId,
                 goal_id: goalId,
-                measured_value: value,
+                measured_value: Number(value),
                 measured_date: date,
                 notes: notes
             };

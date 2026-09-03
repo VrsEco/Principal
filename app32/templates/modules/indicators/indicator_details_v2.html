@@ -252,8 +252,8 @@
                         <input type="date" class="fld-inp" name="measured_date" id="modalRecordDate" required>
                     </div>
                     <div class="fld">
-                        <label class="fld-lbl">Valor</label>
-                        <input type="text" data-format="decimal" class="fld-inp" name="measured_value" required placeholder="0,00">
+                        <label class="fld-lbl">Valor <span id="recordValueUnit"></span></label>
+                        <input type="text" data-format="decimal" class="fld-inp" name="measured_value" id="modalMeasuredValue" required placeholder="0,00">
                     </div>
                 </div>
                 <div class="fld">
@@ -281,8 +281,8 @@
                 <input type="hidden" name="indicator_id" value="{{ indicator_id }}">
                 <div class="form-grid-2">
                     <div class="fld">
-                        <label class="fld-lbl">Valor Alvo</label>
-                        <input type="text" data-format="decimal" class="fld-inp" name="goal_value" required placeholder="0,00">
+                        <label class="fld-lbl">Valor Alvo <span id="goalValueUnit"></span></label>
+                        <input type="text" data-format="decimal" class="fld-inp" name="goal_value" id="modalGoalValue" required placeholder="0,00">
                     </div>
                     <div class="fld">
                         <label class="fld-lbl">Início</label>
@@ -321,7 +321,8 @@ const fmt = {
         if (!d) return '--';
         const date = new Date(d);
         return isNaN(date.getTime()) ? d : date.toLocaleDateString('pt-BR');
-    }
+    },
+    value: (v, unit) => window.App32InputFormatters?.formatIndicatorValue(v, unit) ?? '--'
 };
 
 function isoDate(value) {
@@ -418,6 +419,11 @@ async function init() {
 function renderUI() {
     const ind = state.indicator;
     const unit = ind.unit || '';
+    const inputFormat = window.App32InputFormatters?.isCurrencyUnit(unit) ? 'currency' : 'decimal';
+    window.App32InputFormatters?.setFormat(document.getElementById('modalMeasuredValue'), inputFormat);
+    window.App32InputFormatters?.setFormat(document.getElementById('modalGoalValue'), inputFormat);
+    document.getElementById('recordValueUnit').innerText = unit ? `(${unit})` : '';
+    document.getElementById('goalValueUnit').innerText = unit ? `(${unit})` : '';
     
     // Header
     document.getElementById('breadcrumbName').innerText = ind.name;
@@ -452,8 +458,8 @@ function renderUI() {
                 return sum + parseFloat(goal.goal_value || 0) + campaigns;
             }, 0);
         }
-        document.getElementById('detCurrentGoal').innerText = fmt.num(gValue);
-        document.getElementById('detUnitGoal').innerText = unit;
+        document.getElementById('detCurrentGoal').innerText = fmt.value(gValue, unit);
+        document.getElementById('detUnitGoal').innerText = '';
         document.getElementById('detGoalPeriod').innerText = `Ciclo: ${activeGoal.goal_type || 'Mensal'}${goalContext.additive.length ? ` + ${goalContext.additive.length} campanha(s)` : ''}${goalContext.individualBases.length ? ` · ${goalContext.individualBases.length} consultor(es)` : ''}`;
     }
 
@@ -475,8 +481,8 @@ function renderUI() {
         acc = recordsInPeriod.reduce((sum, r) => sum + parseFloat(r.value||r.measured_value||0), 0);
     }
 
-    document.getElementById('detAccValue').innerText = fmt.num(acc);
-    document.getElementById('detUnitAcc').innerText = unit;
+    document.getElementById('detAccValue').innerText = fmt.value(acc, unit);
+    document.getElementById('detUnitAcc').innerText = '';
     if (state.records.length > 0) {
         document.getElementById('detLastUpdate').innerText = `Último: ${fmt.dateBr(state.records[0].measured_date || state.records[0].record_date)}`;
     }
@@ -491,19 +497,19 @@ function renderUI() {
         if (pct >= 100) color = '#10b981';
         else if (pct >= 85) color = '#f59e0b';
         document.getElementById('detProgressBar').style.background = color;
-        document.getElementById('detPerfMsg').innerText = pct >= 100 ? 'Meta alcançada!' : `Faltam ${fmt.num(gValue - acc)} ${unit}`;
+        document.getElementById('detPerfMsg').innerText = pct >= 100 ? 'Meta alcançada!' : `Faltam ${fmt.value(gValue - acc, unit)}`;
     }
 
     // Sidebar & Selects
     document.getElementById('modalRecordGoalId').innerHTML = `<option value="">Sem meta (avulso)</option>` + 
-        state.goals.map(g => `<option value="${g.id}" ${goalContext.teamBase && g.id===goalContext.teamBase.id?'selected':''}>${g.name || g.goal_type}${g.responsible_id ? ` · ${g.responsible_name || `Consultor #${g.responsible_id}`}` : ' · Equipe'} - ${fmt.num(g.goal_value)}</option>`).join('');
+        state.goals.map(g => `<option value="${g.id}" ${goalContext.teamBase && g.id===goalContext.teamBase.id?'selected':''}>${g.name || g.goal_type}${g.responsible_id ? ` · ${g.responsible_name || `Consultor #${g.responsible_id}`}` : ' · Equipe'} - ${fmt.value(g.goal_value, unit)}</option>`).join('');
 
     // Table
     document.getElementById('recordsTableBody').innerHTML = state.records.map(r => {
         const g = state.goals.find(goal => goal.id === r.goal_id);
         return `<tr>
             <td><strong>${fmt.dateBr(r.measured_date || r.record_date)}</strong></td>
-            <td><span style="color:var(--primary); font-weight:700;">${fmt.num(r.value||r.measured_value)}</span> ${unit}</td>
+            <td><span style="color:var(--primary); font-weight:700;">${fmt.value(r.value ?? r.measured_value, unit)}</span></td>
             <td><span style="font-size:0.7rem; background:var(--surface-secondary); padding:2px 6px; border-radius:4px;">${g ? (g.code || 'Meta ' + g.id) : '—'}</span></td>
             <td style="font-size:0.75rem; color:var(--text-tertiary); max-width:200px; overflow:hidden; text-overflow:ellipsis;">${r.notes||'—'}</td>
             <td style="text-align:right;"><button class="btn btn-icon btn-sm" onclick="deleteRec(${r.id})"><i class="fas fa-trash"></i></button></td>
@@ -516,7 +522,7 @@ function renderUI() {
         goalsList.innerHTML = state.goals.map(g => `
             <div class="goal-card-sb ${g.status==='active'?'active':''}" onclick="renderChartByGoal(${g.id})">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div style="font-size:0.85rem; font-weight:700;">${fmt.num(g.goal_value)} ${unit}</div>
+                    <div style="font-size:0.85rem; font-weight:700;">${fmt.value(g.goal_value, unit)}</div>
                     <span class="ind-badge" style="font-size:0.55rem; padding:1px 4px;">${g.status==='active'?'ATIVA':'PASSADA'}</span>
                 </div>
                 <div style="font-size:0.65rem; color:var(--text-tertiary); margin-top:2px;">
@@ -565,7 +571,10 @@ function renderChart(activeGoal) {
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: context => `${context.dataset.label}: ${fmt.value(context.parsed.y, state.indicator?.unit || '')}` } }
+            },
             scales: {
                 y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks:{ font:{size:10} } },
                 x: { grid: { display: false }, ticks:{ font:{size:10}, maxRotation:0 } }

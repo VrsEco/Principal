@@ -355,6 +355,10 @@
         return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
     }
 
+    function formatIndicatorValue(value, unit) {
+        return window.App32InputFormatters?.formatIndicatorValue(value, unit) ?? String(value ?? '—');
+    }
+
     function setSidebarCollapsed(collapsed) {
         state.sidebarCollapsed = !!collapsed;
         shell.classList.toggle('portal-content-shell--sidebar-collapsed', state.sidebarCollapsed);
@@ -687,8 +691,8 @@
             <article class="portal-content-card">
                 <h4>${esc(item.name || 'Indicador')}</h4>
                 <p>${esc(item.group_name || 'Sem grupo')} · ${esc(item.unit || 'sem unidade')}</p>
-                <p style="margin-top:.6rem;"><strong>Atual:</strong> ${esc(item.current_value || '—')}</p>
-                <p><strong>Meta:</strong> ${esc(item.goal_value || '—')}</p>
+                <p style="margin-top:.6rem;"><strong>Atual:</strong> ${esc(formatIndicatorValue(item.current_value, item.unit))}</p>
+                <p><strong>Meta:</strong> ${esc(formatIndicatorValue(item.goal_value, item.unit))}</p>
             </article>
         `).join('')}</div>`;
     }

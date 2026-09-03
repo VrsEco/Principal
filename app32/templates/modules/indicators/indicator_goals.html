@@ -187,7 +187,7 @@
                         </td>
                         <td style="padding: 1.25rem 1.5rem;">
                             <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
-                                {% if goal.indicator.unit == 'R$' or 'R$' in goal.indicator.unit or 'moeda' in goal.indicator.unit.lower() %}
+                                {% if goal.indicator.unit == 'R$' or 'R$' in (goal.indicator.unit or '') or 'moeda' in (goal.indicator.unit or '').lower() %}
                                     R$ {{ goal.goal_value | format_currency_br }}
                                 {% else %}
                                     {# Formatação genérica brasileira para decimais #}
@@ -413,7 +413,6 @@
                             <div class="range-input-group">
                                 <span style="font-size: 0.8rem;">Até</span>
                                 <input type="text" data-format="percent" name="range_red" id="range_red" class="field-input" style="padding: 0.4rem; width: 80px;" value="80%" oninput="updateBlueRangeLabel()">
-                                <span style="font-size: 0.8rem;">%</span>
                             </div>
                         </div>
                         <div class="range-item">
@@ -424,7 +423,6 @@
                             <div class="range-input-group">
                                 <span style="font-size: 0.8rem;">Até</span>
                                 <input type="text" data-format="percent" name="range_yellow" id="range_yellow" class="field-input" style="padding: 0.4rem; width: 80px;" value="90%" oninput="updateBlueRangeLabel()">
-                                <span style="font-size: 0.8rem;">%</span>
                             </div>
                         </div>
                         <div class="range-item">
@@ -435,7 +433,6 @@
                             <div class="range-input-group">
                                 <span style="font-size: 0.8rem;">Até</span>
                                 <input type="text" data-format="percent" name="range_green" id="range_green" class="field-input" style="padding: 0.4rem; width: 80px;" value="110%" oninput="updateBlueRangeLabel()">
-                                <span style="font-size: 0.8rem;">%</span>
                             </div>
                         </div>
                         <div class="range-item">
@@ -569,7 +566,9 @@ document.addEventListener('DOMContentLoaded', initRoutineSelects);
 
 // --- Dinâmica de Faixas ---
 function updateBlueRangeLabel() {
-    const greenVal = document.getElementById('range_green').value || 110;
+    const greenInput = document.getElementById('range_green');
+    const greenVal = window.App32InputFormatters?.parsePercent(greenInput.value)
+        ?? parseFloat(String(greenInput.value || '110').replace(',', '.'));
     document.getElementById('blue_threshold_label').innerText = greenVal;
 }
 
