@@ -124,7 +124,27 @@
 
     .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-tertiary); }
 
+    .indicator-filters {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, 220px)) auto;
+        gap: 0.75rem;
+        align-items: end;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+    }
+    .indicator-filter-field { display: flex; flex-direction: column; gap: 0.35rem; }
+    .indicator-filter-field label {
+        color: var(--text-secondary);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
     @media (max-width: 768px) {
+        .indicator-filters { grid-template-columns: 1fr; }
         .tree-indicator {
             flex-direction: column;
             align-items: flex-start;
@@ -170,7 +190,33 @@
     {% endfor %}
     {% endwith %}
 
-
+    <div class="indicator-filters" aria-label="Filtros de indicadores">
+        <div class="indicator-filter-field">
+            <label for="indSearch">Buscar</label>
+            <input id="indSearch" class="form-control" type="search" placeholder="Código ou nome do indicador" oninput="filterIndicators()">
+        </div>
+        <div class="indicator-filter-field">
+            <label for="filterSource">Origem</label>
+            <select id="filterSource" class="form-control" onchange="filterIndicators()">
+                <option value="">Todas</option>
+                <option value="processo">Processo</option>
+                <option value="projeto">Projeto</option>
+                <option value="okr">Planejamento / OKR</option>
+                <option value="manual">Manual</option>
+            </select>
+        </div>
+        <div class="indicator-filter-field">
+            <label for="filterStatus">Situação</label>
+            <select id="filterStatus" class="form-control" onchange="filterIndicators()">
+                <option value="active" selected>Somente ativos</option>
+                <option value="">Ativos e inativos</option>
+                <option value="inactive">Somente inativos</option>
+            </select>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetFilters()">
+            <i class="fas fa-undo"></i> Limpar
+        </button>
+    </div>
 
     <!-- Tree Accounting Plan View -->
     {% if tree_nodes %}
@@ -200,7 +246,7 @@
                     {# Render Individual Indicators #}
                     {% if node_indicators %}
                         {% for ind in node_indicators %}
-                        <div class="tree-indicator {% if not ind.is_active %}inactive{% endif %}" data-ind-id="{{ ind.id }}" data-source="{{ ind.source_module }}" data-name="{{ ind.name|lower }}">
+                        <div class="tree-indicator {% if not ind.is_active %}inactive{% endif %}" data-ind-id="{{ ind.id }}" data-source="{{ ind.source_module }}" data-search="{{ ((ind.full_code or ind.code or '') ~ ' ' ~ ind.name)|lower }}">
                             <i class="fas fa-chart-line" style="color:{% if ind.is_active %}var(--success){% else %}var(--text-tertiary){% endif %}; font-size:0.8rem;"></i>
                             
                             <div class="ind-main-info">
@@ -343,10 +389,10 @@ function filterIndicators() {
     const status = document.getElementById('filterStatus').value;
     const indicators = document.querySelectorAll('.tree-indicator');
     indicators.forEach(ind => {
-        const nameText = (ind.getAttribute('data-name') || '').toLowerCase();
+        const searchText = (ind.getAttribute('data-search') || '').toLowerCase();
         const indSource = ind.getAttribute('data-source') || '';
         const isInactive = ind.classList.contains('inactive');
-        const matchesSearch = !search || nameText.includes(search);
+        const matchesSearch = !search || searchText.includes(search);
         const matchesSource = !source || indSource === source;
         const matchesStatus = !status || (status === 'active' && !isInactive) || (status === 'inactive' && isInactive);
         ind.style.display = (matchesSearch && matchesSource && matchesStatus) ? 'flex' : 'none';
@@ -356,9 +402,11 @@ function filterIndicators() {
 function resetFilters() {
     document.getElementById('indSearch').value = '';
     document.getElementById('filterSource').value = '';
-    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterStatus').value = 'active';
     filterIndicators();
 }
+
+document.addEventListener('DOMContentLoaded', filterIndicators);
 
 // Sapiens Wizard Logic
 function openWizard() {

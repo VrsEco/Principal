@@ -30,6 +30,19 @@ class _FakeCompanyQuery:
         return self.company_obj
 
 
+class _CapturingFilterByQuery:
+    def __init__(self, result=None):
+        self.result = result
+        self.filters = []
+
+    def filter_by(self, **kwargs):
+        self.filters.append(kwargs)
+        return self
+
+    def first(self):
+        return self.result
+
+
 def _build_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'test'
@@ -63,6 +76,24 @@ def test_process_details_route_syncs_active_company_from_process(monkeypatch):
     assert response['context']['company_id'] == 22
     assert response['context']['process_payload']['company_id'] == 22
     assert response['context']['process_payload']['name'] == 'Processo X'
+
+
+def test_process_details_payload_scopes_active_incentive_indicator_to_company(monkeypatch):
+    indicator_query = _CapturingFilterByQuery()
+    process = SimpleNamespace(id=287, company_id=22, name='Processo X', macro=None)
+
+    monkeypatch.setattr(process_routes, 'Indicator', SimpleNamespace(query=indicator_query))
+    monkeypatch.setattr(process_routes, '_build_published_bpmn_flow_payload', lambda process: None)
+
+    payload = process_routes._build_process_details_payload(process)
+
+    assert payload['incentive_indicator'] is None
+    assert indicator_query.filters == [{
+        'company_id': 22,
+        'source_module': 'processo',
+        'source_id': 287,
+        'is_active': True,
+    }]
 
 
 def test_process_bpmn_modeler_route_exposes_asset_version(monkeypatch):
