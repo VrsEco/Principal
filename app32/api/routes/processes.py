@@ -373,6 +373,7 @@ def _build_process_details_payload(process: Process) -> dict:
     ind = None
     try:
         ind = Indicator.query.filter_by(
+            company_id=process.company_id,
             source_module='processo',
             source_id=process.id,
             is_active=True

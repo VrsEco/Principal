@@ -33,6 +33,7 @@ def _fake_indicator_model(query):
         query=query,
         process_id=column('indicators.process_id'),
         project_id=column('indicators.project_id'),
+        is_active=column('indicators.is_active'),
         source_module=column('indicators.source_module'),
         source_id=column('indicators.source_id'),
     )
@@ -95,11 +96,32 @@ def test_indicator_list_resource_filters_process_by_direct_or_source_link(monkey
     assert status == 200
     assert response == [{'id': 8, 'name': 'Lead Time'}]
     assert fake_query.filters == [{'company_id': 17}]
-    assert len(fake_query.filter_conditions) == 1
-    condition_repr = str(fake_query.filter_conditions[0])
-    assert 'indicators.process_id' in condition_repr
-    assert 'indicators.source_module' in condition_repr
-    assert 'indicators.source_id' in condition_repr
+    assert len(fake_query.filter_conditions) == 2
+    context_condition = str(fake_query.filter_conditions[0])
+    active_condition = str(fake_query.filter_conditions[1])
+    assert 'indicators.process_id' in context_condition
+    assert 'indicators.source_module' in context_condition
+    assert 'indicators.source_id' in context_condition
+    assert 'is_active' in active_condition
+    assert 'IS true' in active_condition
+
+
+def test_indicator_list_template_has_inactive_visibility_filter_defaulting_to_active():
+    template_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__),
+        '..',
+        'templates',
+        'modules',
+        'incentives',
+        'indicator_list.html',
+    ))
+    with open(template_path, 'r', encoding='utf-8') as handle:
+        content = handle.read()
+
+    assert 'id="filterStatus"' in content
+    assert '<option value="active" selected>Somente ativos</option>' in content
+    assert '<option value="">Ativos e inativos</option>' in content
+    assert "document.addEventListener('DOMContentLoaded', filterIndicators);" in content
 
 
 def test_indicator_form_template_supports_query_prefill_for_process_context():

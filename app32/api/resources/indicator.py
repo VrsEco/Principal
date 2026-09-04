@@ -132,6 +132,8 @@ class IndicatorListResource(Resource):
         
         query = Indicator.query.filter_by(company_id=company_id)
         query = _apply_indicator_context_filters(query, process_id=process_id, project_id=project_id)
+        if process_id is not None:
+            query = query.filter(Indicator.is_active.is_(True))
             
         indicators = sort_catalog_entries(query.all())
         return indicators_schema.dump(indicators), 200
