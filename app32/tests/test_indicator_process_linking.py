@@ -124,6 +124,7 @@ def test_indicator_list_template_has_inactive_visibility_filter_defaulting_to_ac
     assert '{% block sidebar_right %}' in content
     assert 'class="indicator-filters"' not in content
     assert 'onclick="closeAllSidebars()">Aplicar filtros</button>' in content
+    assert '    </div>\n\n</div>\n{% endblock %}' not in content
     assert "document.addEventListener('DOMContentLoaded', filterIndicators);" in content
 
 
