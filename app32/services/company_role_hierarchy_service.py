@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from models import Role, db
@@ -21,6 +22,7 @@ class CompanyRoleHierarchyService:
         "headcount_planned",
         "weekly_hours",
         "notes",
+        "qualification_requirements",
         "color",
         "permissions",
     }
@@ -72,12 +74,44 @@ class CompanyRoleHierarchyService:
 
         if "headcount_planned" in values:
             try:
-                headcount = int(values.get("headcount_planned") or 0)
-            except (TypeError, ValueError) as exc:
+                raw = values["headcount_planned"]
+                headcount = Decimal(str(raw))
+                if not headcount.is_finite() or headcount != headcount.to_integral_value():
+                    raise ValueError()
+            except (InvalidOperation, TypeError, ValueError) as exc:
                 raise RoleHierarchyValidationError("Pessoas previstas deve ser um número inteiro.") from exc
-            if headcount < 0:
-                raise RoleHierarchyValidationError("Pessoas previstas não pode ser negativo.")
-            values["headcount_planned"] = headcount
+            if not 0 <= headcount <= 2147483647:
+                raise RoleHierarchyValidationError("Pessoas previstas deve estar entre 0 e 2147483647.")
+            values["headcount_planned"] = int(headcount)
+
+        if "weekly_hours" in values:
+            raw = values["weekly_hours"]
+            if raw is None or raw == "":
+                values["weekly_hours"] = None
+            else:
+                try:
+                    hours = Decimal(str(raw))
+                    if not hours.is_finite() or not 0 < hours <= 168:
+                        raise ValueError()
+                    if hours != hours.quantize(Decimal("0.01")):
+                        raise ValueError()
+                except (InvalidOperation, TypeError, ValueError) as exc:
+                    raise RoleHierarchyValidationError(
+                        "Jornada semanal deve ser maior que zero, até 168 horas e ter no máximo duas casas decimais."
+                    ) from exc
+                values["weekly_hours"] = hours
+
+        if "qualification_requirements" in values:
+            requirements = values["qualification_requirements"]
+            if requirements is not None and (not isinstance(requirements, str) or len(requirements) > 10000):
+                raise RoleHierarchyValidationError("Qualificações exigidas devem ser texto com até 10000 caracteres.")
+            values["qualification_requirements"] = (requirements.strip() or None) if requirements is not None else None
+
+        if "notes" in values:
+            notes = values["notes"]
+            if notes is not None and not isinstance(notes, str):
+                raise RoleHierarchyValidationError("Responsabilidades e observações devem ser texto.")
+            values["notes"] = notes.strip() or None if notes is not None else None
 
         if "color" in values:
             color = str(values.get("color") or "").strip()
@@ -100,8 +134,11 @@ class CompanyRoleHierarchyService:
         if value in (None, ""):
             return None
         try:
-            return int(value)
-        except (TypeError, ValueError) as exc:
+            parsed = Decimal(str(value))
+            if not parsed.is_finite() or parsed != parsed.to_integral_value() or not 1 <= parsed <= 2147483647:
+                raise ValueError()
+            return int(parsed)
+        except (InvalidOperation, TypeError, ValueError) as exc:
             raise RoleHierarchyValidationError("Cargo superior inválido.") from exc
 
     @classmethod

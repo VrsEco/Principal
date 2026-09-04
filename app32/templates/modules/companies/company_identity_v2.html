@@ -69,9 +69,77 @@
         <button type="button" class="identity-tab-btn" data-identity-tab="estrutura">Cargos e Colaboradores</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="editor">Editor da estrutura</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="organograma">Organograma</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="ocupacoes">Ocupações por data</button>
+        {% if has_permission('financial', 'view') %}
+        <button type="button" class="identity-tab-btn" data-identity-tab="custos">Custos planejados</button>
+        {% endif %}
         <button type="button" class="identity-tab-btn" data-identity-tab="relatorios">Relatórios</button>
     </nav>
 
+    {% if has_permission('financial', 'view') %}
+    <section id="custos" class="card identity-section identity-tab-panel" data-identity-panel="custos">
+        <h2 class="text-h2">Custos planejados por cargo</h2>
+        <p>Quadro planejado atual × custo por profissional equivalente vigente na data. Não representa folha realizada nem o quadro histórico.</p>
+        <form id="identityCostQuery">
+            <label for="identityCostDate">Data de vigência do custo</label>
+            <input id="identityCostDate" class="form-control" type="date" required>
+            <button id="identityCostSearch" class="btn btn-secondary" type="submit">Consultar custos</button>
+        </form>
+        <p id="identityCostStatus" role="status" aria-live="polite">Selecione uma data e consulte.</p>
+        <p id="identityCostTotals"></p>
+        <div class="identity-table-wrap">
+            <table class="table-v2"><thead><tr><th>Cargo</th><th>Custo mensal planejado</th></tr></thead>
+                <tbody id="identityCostRows"><tr><td colspan="2">Nenhuma consulta realizada.</td></tr></tbody>
+            </table>
+        </div>
+        <p>Valores não informados são desconhecidos, não zero.</p>
+        {% if has_permission('financial', 'edit') and has_permission('companies', 'edit') %}
+        <details id="identityCostCreateDetails">
+            <summary>Cadastrar perfil de custo por cargo</summary>
+            <p>Valores mensais por profissional equivalente completo. Deixe componentes desconhecidos vazios; informe zero somente quando comprovadamente não houver custo. Períodos não podem se sobrepor.</p>
+            <form id="identityCostCreate">
+                <label for="identityCostRole">Cargo</label>
+                <select id="identityCostRole" class="form-control" required><option value="">Carregue os cargos</option></select>
+                <button id="identityCostLoadRoles" class="btn btn-secondary" type="button">Carregar cargos</button>
+                <div class="identity-form-grid">
+                    <div><label for="identityCostStart">Início</label><input id="identityCostStart" class="form-control" type="date" required></div>
+                    <div><label for="identityCostEnd">Fim exclusivo (opcional)</label><input id="identityCostEnd" class="form-control" type="date"></div>
+                    <div><label for="identityCostCurrency">Moeda</label><input id="identityCostCurrency" class="form-control" pattern="[A-Z]{3}" maxlength="3" placeholder="BRL" required></div>
+                    {% for field, label in [('base_salary', 'Salário-base estimado'), ('charges', 'Encargos estimados'), ('benefits', 'Benefícios estimados'), ('other_costs', 'Outros custos estimados')] %}
+                    <div><label for="identityCost_{{ field }}">{{ label }}</label><input id="identityCost_{{ field }}" class="form-control" type="number" min="0" max="999999999999.99" step="0.01"></div>
+                    {% endfor %}
+                </div>
+                <button id="identityCostCreateSave" class="btn btn-secondary" type="submit">Salvar novo perfil</button>
+                <p id="identityCostCreateStatus" role="status" aria-live="polite"></p>
+            </form>
+            <div class="identity-table-wrap">
+                <table class="table-v2" aria-describedby="identityQualificationListStatus">
+                    <thead><tr><th>Qualificação</th><th>Origem</th><th>Validade</th></tr></thead>
+                    <tbody id="identityQualificationRows"><tr><td colspan="3">Selecione um colaborador para consultar as evidências.</td></tr></tbody>
+                </table>
+            </div>
+            <p id="identityQualificationListStatus" role="status" aria-live="polite"></p>
+        </details>
+        {% endif %}
+    </section>
+    {% endif %}
+    <section id="ocupacoes" class="card identity-section identity-tab-panel" data-identity-panel="ocupacoes">
+        <h2 class="text-h2">Ocupações por data</h2>
+        <p>Consulta das vigências registradas, sem alterar cargos ou acessos. O organograma principal ainda utiliza o cadastro legado.</p>
+        <form id="identityOccupancyQuery">
+            <label for="identityOccupancyDate">Data de referência</label>
+            <input id="identityOccupancyDate" class="form-control" type="date" required>
+            <button id="identityOccupancySearch" type="submit" class="btn btn-secondary">Consultar ocupações</button>
+        </form>
+        <p id="identityOccupancyStatus" role="status" aria-live="polite">Selecione uma data e consulte.</p>
+        <div class="identity-table-wrap">
+            <table class="table-v2">
+                <thead><tr><th>Colaborador</th><th>Cargo</th><th>Horas semanais</th><th>Origem</th></tr></thead>
+                <tbody id="identityOccupancyRows"><tr><td colspan="4">Nenhuma consulta realizada.</td></tr></tbody>
+            </table>
+        </div>
+        <p>Dados legados sem vigência só aparecem na data atual do servidor e são sinalizados como não verificados. Ausência de registros não comprova ausência de ocupação histórica.</p>
+    </section>
     <section id="mvv" class="card identity-section identity-tab-panel is-active" data-identity-panel="mvv">
         <div class="identity-section__header">
             <div>
@@ -153,6 +221,24 @@
                 </div>
             </article>
         </div>
+        {% if has_permission('companies', 'edit') %}
+        <details id="identityQualificationDetails">
+            <summary>Registrar evidência de qualificação</summary>
+            <p>Registra a evidência do colaborador. Aderência aos requisitos do cargo exige análise humana posterior.</p>
+            <form id="identityQualificationForm">
+                <div class="identity-form-grid">
+                    <div><label for="identityQualificationEmployee">Colaborador</label><select id="identityQualificationEmployee" class="form-control" required><option value="">Carregando colaboradores…</option></select></div>
+                    <div><label for="identityQualificationName">Qualificação</label><input id="identityQualificationName" class="form-control" maxlength="255" required></div>
+                    <div><label for="identityQualificationLevel">Nível (opcional)</label><input id="identityQualificationLevel" class="form-control" maxlength="80"></div>
+                    <div><label for="identityQualificationSource">Origem</label><select id="identityQualificationSource" class="form-control"><option value="declared">Declarada</option><option value="documented">Documentada</option><option value="verified">Verificada</option></select></div>
+                    <div><label for="identityQualificationExpiry">Validade (opcional)</label><input id="identityQualificationExpiry" class="form-control" type="date"></div>
+                    <div><label for="identityQualificationReference">Referência da evidência (opcional)</label><input id="identityQualificationReference" class="form-control" maxlength="500"></div>
+                </div>
+                <button id="identityQualificationSave" class="btn btn-secondary" type="submit">Registrar evidência</button>
+                <p id="identityQualificationStatus" role="status" aria-live="polite"></p>
+            </form>
+        </details>
+        {% endif %}
     </section>
 
     <section id="editor" class="card identity-section identity-tab-panel" data-identity-panel="editor">
@@ -213,8 +299,22 @@
                         </div>
                         <div class="form-group">
                             <label class="identity-field-label" for="identityRoleHeadcount">Pessoas previstas</label>
-                            <input id="identityRoleHeadcount" class="form-control" type="number" min="0" step="1" value="1">
+                            <input id="identityRoleHeadcount" class="form-control" type="number" min="0" max="2147483647" step="1" value="1" required>
                             <small class="identity-field-help">Use 0 quando o cargo existir sem vaga planejada.</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="identity-field-label" for="identityRoleWeeklyHours">Jornada semanal por posição (horas)</label>
+                            <input id="identityRoleWeeklyHours" class="form-control" type="number" min="0.01" max="168" step="0.01" placeholder="Ex.: 40">
+                            <small class="identity-field-help">Opcional. Deixe vazio quando ainda não definida; não representa dedicação de um ocupante.</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="identity-field-label" for="identityRoleNotes">Responsabilidades e observações</label>
+                            <textarea id="identityRoleNotes" class="form-control" rows="4" placeholder="Entregas esperadas, responsabilidades e limites do cargo"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="identity-field-label" for="identityRoleQualifications">Qualificações exigidas</label>
+                            <textarea id="identityRoleQualifications" class="form-control" rows="4" maxlength="10000" placeholder="Formação, experiência, competências e certificações necessárias"></textarea>
+                            <small class="identity-field-help">Requisitos do cargo, não comprovação das qualificações dos ocupantes.</small>
                         </div>
                         <div class="form-group identity-color-field">
                             <label class="identity-field-label" for="identityRoleColor">Cor do card</label>
@@ -243,6 +343,28 @@
         </div>
     </section>
 
+    {% if has_permission('companies', 'edit') %}
+    <section class="card identity-section" aria-labelledby="identityNewEmployeeHeading">
+        <h2 id="identityNewEmployeeHeading" class="text-h2">Cadastrar colaborador no cargo</h2>
+        <p>Selecione e salve um cargo no editor. O colaborador será cadastrado sem login; nenhum acesso será criado.</p>
+        <form id="identityNewEmployeeForm">
+            <label for="identityNewEmployeeName">Nome do colaborador</label>
+            <input id="identityNewEmployeeName" class="form-control" maxlength="200" required autocomplete="off">
+            <p id="identityNewEmployeeRole">Selecione um cargo existente no editor.</p>
+            <button id="identityNewEmployeeSave" class="btn btn-secondary" type="submit" disabled>Cadastrar sem login</button>
+            <p id="identityNewEmployeeStatus" role="status" aria-live="polite"></p>
+        </form>
+        <form id="identityLinkEmployeeForm">
+            <label for="identityExistingEmployee">Ou vincule um colaborador existente</label>
+            <p>Somente ativos sem cargo e sem login. Nenhuma ocupação ou permissão existente será substituída.</p>
+            <select id="identityExistingEmployee" class="form-control" required>
+                <option value="">Selecione um colaborador</option>
+            </select>
+            <button id="identityLinkEmployeeSave" class="btn btn-secondary" type="submit" disabled>Vincular ao cargo selecionado</button>
+            <p id="identityLinkEmployeeStatus" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+    {% endif %}
     <section id="organograma" class="card identity-section identity-tab-panel" data-identity-panel="organograma">
         <div class="identity-section__header">
             <div>
@@ -365,4 +487,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/company_identity.js') }}"></script>
+<script src="{{ url_for('static', filename='js/company_identity_costs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/company_identity_cost_create.js') }}"></script>
+<script src="{{ url_for('static', filename='js/company_identity_qualifications.js') }}"></script>
 {% endblock %}

@@ -31,6 +31,7 @@ class Employee(db.Model):
     # Constraint: Um usuário não pode ter dois vínculos com a mesma empresa
     # Mas pode ter vínculos com empresas diferentes
     __table_args__ = (
+        db.UniqueConstraint('company_id', 'id', name='uq_employees_company_id'),
         db.UniqueConstraint('user_id', 'company_id', name='idx_employees_user_company_unique'),
     )
 

@@ -159,6 +159,7 @@ class CompanyIdentityService:
             "headcount_planned": planned_headcount,
             "weekly_hours": float(role.weekly_hours) if role.weekly_hours is not None else None,
             "notes": role.notes,
+            "qualification_requirements": role.qualification_requirements,
             "employee_count": len(assigned),
             "active_employee_count": len(active_assigned),
             "vacancy_count": vacancy_count,

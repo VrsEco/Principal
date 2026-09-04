@@ -151,6 +151,133 @@ def get_company_roles(company_id):
     return jsonify([RbacPermissionCatalogService.serialize_role(r) for r in roles])
 
 
+@companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>/employees', methods=['POST', 'PUT'])
+@permission_required('companies', 'edit')
+def create_role_employee(company_id, role_id):
+    from werkzeug.exceptions import HTTPException
+    from services.company_org_employee_service import create_org_employee, link_org_employee
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        if request.method == 'PUT':
+            return jsonify(link_org_employee(company_id, role_id, request.get_json(silent=True))), 200
+        return jsonify(create_org_employee(company_id, role_id, request.get_json(silent=True))), 201
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except HTTPException:
+        db.session.rollback()
+        raise
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/qualification-evidences', methods=['POST'])
+@permission_required('companies', 'edit')
+def create_employee_qualification_evidence(company_id, employee_id):
+    from werkzeug.exceptions import HTTPException
+    from services.employee_qualification_service import create
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        record = create(company_id, employee_id, request.get_json(silent=True), actor_user_id=getattr(current_user, 'id', None))
+        db.session.commit()
+        return jsonify(record.to_dict()), 201
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({'error': str(exc)}), 400
+    except HTTPException:
+        db.session.rollback()
+        raise
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/qualification-evidences', methods=['GET'])
+@permission_required('companies', 'view')
+def get_employee_qualification_evidences(company_id, employee_id):
+    from werkzeug.exceptions import HTTPException
+    from services.employee_qualification_service import list_for_employee
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        return jsonify(list_for_employee(company_id, employee_id, reference_date=request.args.get('as_of')))
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+    except HTTPException:
+        raise
+    except Exception:
+        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/roles/<int:role_id>/cost-profiles', methods=['POST'])
+@permission_required('companies', 'edit')
+@permission_required('financial', 'edit')
+def add_role_cost_profile(company_id, role_id):
+    from werkzeug.exceptions import HTTPException
+    from services.role_cost_profile_service import create_cost_profile
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        profile = create_cost_profile(company_id, role_id, request.get_json(silent=True), actor_user_id=getattr(current_user, 'id', None))
+        db.session.commit()
+        return jsonify({"id": profile.id, "company_id": company_id, "role_id": role_id}), 201
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except HTTPException:
+        db.session.rollback()
+        raise
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/planned-role-costs', methods=['GET'])
+@permission_required('companies', 'view')
+@permission_required('financial', 'view')
+def get_planned_role_costs(company_id):
+    from werkzeug.exceptions import HTTPException
+    from services.role_cost_profile_service import build_planned_cost_snapshot
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        return jsonify(build_planned_cost_snapshot(company_id, request.args.get('as_of')))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except HTTPException:
+        raise
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/occupancy-snapshot', methods=['GET'])
+@permission_required('companies', 'view')
+def get_occupancy_snapshot(company_id):
+    from werkzeug.exceptions import HTTPException
+    from services.org_occupancy_read_service import build_occupancy_snapshot
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    try:
+        return jsonify(build_occupancy_snapshot(company_id, request.args.get('as_of')))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except HTTPException:
+        raise
+    except Exception:
+        db.session.rollback()
+        return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
 @companies_bp.route('/api/companies/<int:company_id>/roles/tree', methods=['GET'])
 @permission_required('companies', 'view')
 def get_company_roles_tree(company_id):
