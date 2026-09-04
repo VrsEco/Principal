@@ -7,6 +7,7 @@ class Role(db.Model):
     Define a hierarquia e permissões dentro de uma empresa.
     """
     __tablename__ = "roles"
+    __table_args__ = (db.UniqueConstraint("company_id", "id", name="uq_roles_company_id"),)
 
     id = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.Integer, db.ForeignKey("companies.id"), nullable=False)
@@ -20,6 +21,7 @@ class Role(db.Model):
     headcount_planned = db.Column(db.Integer, default=1)
     weekly_hours = db.Column(db.Numeric(5, 2))
     notes = db.Column(db.Text)
+    qualification_requirements = db.Column(db.Text, nullable=True)
     
     # Novo campo para permissões (JSON)
     # Ex: {'financial': 'view', 'tasks': 'edit'}
@@ -49,6 +51,7 @@ class Role(db.Model):
             "department": self.department,
             "color": self.color,
             "headcount_planned": self.headcount_planned,
+            "qualification_requirements": self.qualification_requirements,
             "permissions": self.permissions,
             "created_at": format_dt(self.created_at),
             "updated_at": format_dt(self.updated_at),

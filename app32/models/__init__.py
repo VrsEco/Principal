@@ -10,8 +10,11 @@ from .instruction_registry import InstructionRegistryEntry, InstructionRegistryA
 from .knowledge import KnowledgeSource, KnowledgeSourceGrant, KnowledgeChunk, KnowledgeIndexRun, KnowledgeInteraction, KnowledgeFeedback, KnowledgeTrainingProposal
 from .strategic_tree import StrategicTree, StrategicTreeNode, StrategicTreeContribution, StrategicTreeAuditEvent
 from .role import Role
+from .role_cost_profile import RoleCostProfile
 from .team import Team
 from .employee import Employee
+from .employee_role_occupancy import EmployeeRoleOccupancy
+from .employee_qualification_evidence import EmployeeQualificationEvidence
 from .user_employee_assignment import UserEmployeeAssignment
 
 # Planning & Strategic
@@ -208,6 +211,9 @@ from .incentive import (
 )
 
 __all__ = [
+    'EmployeeQualificationEvidence',
+    'RoleCostProfile',
+    'EmployeeRoleOccupancy',
     'db', 'Company', 'User', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
     'InstructionRegistryEntry', 'InstructionRegistryAuditLog',
     'KnowledgeSource', 'KnowledgeSourceGrant', 'KnowledgeChunk', 'KnowledgeIndexRun', 'KnowledgeInteraction', 'KnowledgeFeedback', 'KnowledgeTrainingProposal',

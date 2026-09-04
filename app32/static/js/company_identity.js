@@ -406,7 +406,7 @@
     }
 
     function setEditorEnabled(enabled) {
-        ['identityRoleTitle', 'identityRoleDepartment', 'identityRoleParent', 'identityRoleHeadcount', 'identityRoleColor', 'identityEditorSave']
+        ['identityRoleTitle', 'identityRoleDepartment', 'identityRoleParent', 'identityRoleHeadcount', 'identityRoleWeeklyHours', 'identityRoleNotes', 'identityRoleQualifications', 'identityRoleColor', 'identityEditorSave']
             .forEach((id) => { if (byId(id)) byId(id).disabled = !enabled; });
         document.querySelectorAll('[data-role-color]').forEach((button) => { button.disabled = !enabled; });
     }
@@ -414,12 +414,16 @@
     function openRoleEditor(roleId = null) {
         const role = roleId ? state.rolesById.get(Number(roleId)) : null;
         state.selectedRoleId = role?.id || null;
+        updateNewEmployeeTarget(role);
         byId('identityEditorEmpty').hidden = true;
         byId('identityEditorFields').hidden = false;
         byId('identityRoleId').value = role?.id || '';
         byId('identityRoleTitle').value = role?.title || '';
         byId('identityRoleDepartment').value = role?.department || '';
         byId('identityRoleHeadcount').value = role?.headcount_planned ?? 1;
+        byId('identityRoleWeeklyHours').value = role?.weekly_hours ?? '';
+        byId('identityRoleNotes').value = role?.notes ?? '';
+        byId('identityRoleQualifications').value = role?.qualification_requirements ?? '';
         byId('identityRoleColor').value = safeColor(role?.color);
         byId('identityRoleColorValue').textContent = safeColor(role?.color);
         byId('identityEditorMode').textContent = role ? 'Editando cargo' : 'Novo cargo';
@@ -438,6 +442,7 @@
     }
 
     function closeRoleEditor() {
+        updateNewEmployeeTarget(null);
         state.selectedRoleId = null;
         byId('identityEditorFields').hidden = true;
         byId('identityEditorEmpty').hidden = false;
@@ -467,6 +472,7 @@
     async function saveRole(event) {
         event.preventDefault();
         if (!canEdit) return;
+        if (!byId('identityRoleEditorForm').reportValidity()) return;
         const title = byId('identityRoleTitle').value.trim();
         if (!title) {
             byId('identityRoleTitle').focus();
@@ -479,7 +485,10 @@
             title,
             department: byId('identityRoleDepartment').value.trim() || null,
             parent_role_id: parentRoleId,
-            headcount_planned: Math.max(0, Number.parseInt(byId('identityRoleHeadcount').value, 10) || 0),
+            headcount_planned: Number(byId('identityRoleHeadcount').value),
+            weekly_hours: byId('identityRoleWeeklyHours').value === '' ? null : Number(byId('identityRoleWeeklyHours').value),
+            notes: byId('identityRoleNotes').value.trim() || null,
+            qualification_requirements: byId('identityRoleQualifications').value.trim() || null,
             color: safeColor(byId('identityRoleColor').value),
         };
         const saveButton = byId('identityEditorSave');
@@ -585,6 +594,7 @@
                 fetchJson(`/api/companies/${companyId}/roles/tree`),
             ]);
             state.summary = summary;
+            renderLinkCandidates();
             state.tree = treeResponse.data || [];
             state.rolesById = new Map(summary.roles.map((role) => [Number(role.id), role]));
             state.treeNodesById = new Map(flattenTree(state.tree).map((role) => [Number(role.id), role]));
@@ -602,7 +612,101 @@
         }
     }
 
+    function updateNewEmployeeTarget(role) {
+        const button = byId('identityNewEmployeeSave');
+        if (!button) return;
+        button.disabled = !canEdit || !role;
+        byId('identityLinkEmployeeSave').disabled = !canEdit || !role;
+        byId('identityNewEmployeeRole').textContent = role ? `Cargo: ${role.title}` : 'Selecione e salve um cargo no editor.';
+        byId('identityNewEmployeeStatus').textContent = '';
+    }
+
+    async function createEmployeeWithoutLogin(event) {
+        event.preventDefault();
+        const roleId = Number(byId('identityRoleId').value);
+        if (!canEdit || !roleId || !state.rolesById.has(roleId)) return;
+        const button = byId('identityNewEmployeeSave');
+        if (button.disabled) return;
+        const status = byId('identityNewEmployeeStatus');
+        const name = byId('identityNewEmployeeName').value.trim();
+        if (!name) { status.textContent = 'Informe o nome do colaborador.'; return; }
+        if (!window.confirm(`Cadastrar ${name} sem login no cargo ${state.rolesById.get(roleId).title}?`)) return;
+        button.disabled = true;
+        try {
+            await fetchJson(`/api/companies/${companyId}/roles/${roleId}/employees`, {
+                method: 'POST', body: JSON.stringify({ name }),
+            });
+            byId('identityNewEmployeeName').value = '';
+            await loadPage({ preserveRoleId: roleId });
+            status.textContent = 'Colaborador cadastrado sem login. Confira a lotação no organograma.';
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            button.disabled = !canEdit || !Number(byId('identityRoleId').value);
+        }
+    }
+
+    function renderLinkCandidates() {
+        const select = byId('identityExistingEmployee');
+        if (!select) return;
+        const employees = (state.summary?.employees || []).filter(employee =>
+            !employee.role_id && !employee.user_id && ['', 'active', 'ativo'].includes(String(employee.status || '').trim().toLowerCase()));
+        select.innerHTML = '<option value="">Selecione um colaborador</option>' + employees.map(employee =>
+            `<option value="${Number(employee.id)}">${escapeHtml(employee.name)}</option>`).join('');
+    }
+
+    async function linkExistingEmployee(event) {
+        event.preventDefault();
+        const roleId = Number(byId('identityRoleId').value);
+        const employeeId = Number(byId('identityExistingEmployee').value);
+        const button = byId('identityLinkEmployeeSave');
+        if (!canEdit || button.disabled || !employeeId || !state.rolesById.has(roleId)) return;
+        const name = byId('identityExistingEmployee').selectedOptions[0].textContent;
+        if (!window.confirm(`Vincular ${name} ao cargo ${state.rolesById.get(roleId).title}?`)) return;
+        button.disabled = true;
+        const status = byId('identityLinkEmployeeStatus');
+        try {
+            await fetchJson(`/api/companies/${companyId}/roles/${roleId}/employees`, {
+                method: 'PUT', body: JSON.stringify({ employee_id: employeeId }),
+            });
+            await loadPage({ preserveRoleId: roleId });
+            status.textContent = 'Colaborador vinculado. Nenhum login foi criado.';
+        } catch (error) { status.textContent = error.message; }
+        finally { button.disabled = !canEdit || !Number(byId('identityRoleId').value); }
+    }
+
+    async function queryOccupancies(event) {
+        event.preventDefault();
+        const date = byId('identityOccupancyDate').value;
+        const button = byId('identityOccupancySearch');
+        if (!date || button.disabled) return;
+        button.disabled = true;
+        const status = byId('identityOccupancyStatus');
+        const rows = byId('identityOccupancyRows');
+        rows.innerHTML = '<tr><td colspan="4">Carregando...</td></tr>';
+        status.textContent = 'Consultando vigências registradas…';
+        try {
+            const result = await fetchJson(`/api/companies/${companyId}/occupancy-snapshot?as_of=${encodeURIComponent(date)}`);
+            const assignments = result.assignments || [];
+            const pending = (result.legacy_pending_employee_ids || []).length;
+            status.textContent = `${result.as_of}: ${result.distinct_people_count} pessoa(s) distinta(s), ${assignments.length} ocupação(ões). ${pending} colaborador(es) com legado pendente de reconciliação.`;
+            rows.innerHTML = assignments.length ? assignments.map(item => `<tr>
+                <td>${escapeHtml(item.employee_name)}</td><td>${escapeHtml(item.role_title)}</td>
+                <td>${escapeHtml(item.weekly_hours ?? 'Não informada')}</td>
+                <td>${item.source === 'temporal' ? 'Vigência registrada' : 'Legado não verificado'}${item.capacity_pending ? ' · dedicação pendente' : ''}</td>
+            </tr>`).join('') : '<tr><td colspan="4">Sem ocupações comprovadas ou legadas elegíveis nesta data.</td></tr>';
+        } catch (error) {
+            status.textContent = error.message || 'Não foi possível consultar ocupações.';
+            rows.innerHTML = '<tr><td colspan="4">Consulta indisponível. Não interprete esta falha como ausência de colaboradores.</td></tr>';
+        } finally { button.disabled = false; }
+    }
+
     function bindEvents() {
+        byId('identityOccupancyQuery').addEventListener('submit', queryOccupancies);
+        const today = new Date();
+        byId('identityOccupancyDate').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        byId('identityLinkEmployeeForm')?.addEventListener('submit', linkExistingEmployee);
+        byId('identityNewEmployeeForm')?.addEventListener('submit', createEmployeeWithoutLogin);
         document.querySelectorAll('.identity-tab-btn').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.identityTab)));
         byId('identityEditorNewRole')?.addEventListener('click', () => openRoleEditor());
         byId('identityEditorCancel').addEventListener('click', closeRoleEditor);
@@ -632,7 +736,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         bindEvents();
         const hashTab = (window.location.hash || '').replace('#', '').trim();
-        const allowedTabs = ['mvv', 'estrutura', 'editor', 'organograma', 'relatorios'];
+        const allowedTabs = Array.from(document.querySelectorAll('[data-identity-tab]')).map(button => button.dataset.identityTab);
         activateTab(allowedTabs.includes(hashTab) ? hashTab : 'mvv');
         loadPage();
     });
