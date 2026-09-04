@@ -371,7 +371,7 @@
                         <label class="field-label">Valor Alvo <span id="goal_unit_badge" style="text-transform:none; font-weight:600; opacity:0.7;"></span> *</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <span id="currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
-                            <input type="text" id="goal_value_visual" class="field-input" placeholder="0,00" required oninput="handleGoalValueInput(this)">
+                            <input type="text" inputmode="decimal" id="goal_value_visual" class="field-input" placeholder="0,00" required oninput="handleGoalValueInput(this)" title="Aceita valores positivos e negativos">
                             <input type="hidden" name="goal_value" id="goal_value_real">
                         </div>
                     </div>
@@ -575,10 +575,13 @@ function updateBlueRangeLabel() {
 // --- Formatação Brasileira ---
 function formatBR(val) {
     if (val === "" || val === null) return "";
-    let clean = val.toString().replace(/\D/g, "");
-    if (clean === "") return "";
+    const raw = val.toString();
+    const negative = raw.trimStart().startsWith("-");
+    let clean = raw.replace(/\D/g, "");
+    if (clean === "") return negative ? "-" : "";
     let num = (parseFloat(clean) / 100).toFixed(2);
-    return num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const formatted = num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return negative && formatted !== "0,00" ? `-${formatted}` : formatted;
 }
 
 function updateGoalValuePrefix(select) {
@@ -604,8 +607,8 @@ function handleGoalValueInput(input) {
     input.value = formatBR(val);
     
     // Atualiza o valor real (hidden) para o servidor
-    let realVal = input.value.replace(/\./g, "").replace(",", ".");
-    document.getElementById('goal_value_real').value = realVal;
+    const realVal = input.value.replace(/\./g, "").replace(",", ".");
+    document.getElementById('goal_value_real').value = /^-?\d+(\.\d+)?$/.test(realVal) ? realVal : "";
 }
 
 function handleGoalKindChange() {

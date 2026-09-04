@@ -246,8 +246,14 @@ class IndicatorGoalService:
     def validate_goal(goal: IndicatorGoal) -> None:
         if not goal.period_start:
             raise ValueError("Informe a data de início da meta.")
-        if goal.goal_value is None or Decimal(str(goal.goal_value)) < 0:
-            raise ValueError("O valor da meta deve ser maior ou igual a zero.")
+        if goal.goal_value is None:
+            raise ValueError("Informe o valor da meta.")
+        try:
+            goal_value = Decimal(str(goal.goal_value))
+        except Exception as exc:
+            raise ValueError("O valor da meta deve ser numérico.") from exc
+        if not goal_value.is_finite():
+            raise ValueError("O valor da meta deve ser um número finito.")
         if goal.goal_kind not in {"base", "campaign"}:
             raise ValueError("Tipo de meta inválido.")
         if goal.goal_scope not in {"team", "individual"}:
@@ -462,6 +468,11 @@ class IndicatorGoalService:
             }
 
         performance_pct = round((realized / target) * 100, 1)
+        # Para metas negativas de indicadores em que maior é melhor (ex.: CCL),
+        # o quociente puro inverte o sentido: -105 / -100 resultaria em 105%.
+        # Espelhamos o percentual em torno de 100 para preservar a direção.
+        if target < 0 and indicator.polarity != "negative":
+            performance_pct = round(200 - performance_pct, 1)
         ranges = normalize_performance_ranges(getattr(goal, "performance_ranges", None))
         red_max = ranges.get("red", 80)
         yellow_max = ranges.get("yellow", 90)
@@ -470,7 +481,9 @@ class IndicatorGoalService:
         if indicator.polarity == "negative":
             if realized <= target:
                 status_class = "on_target"
-            elif realized <= target * (green_max / 100):
+            elif target < 0 and performance_pct >= (200 - green_max):
+                status_class = "alert"
+            elif target > 0 and realized <= target * (green_max / 100):
                 status_class = "alert"
             else:
                 status_class = "below"

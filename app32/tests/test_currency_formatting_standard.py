@@ -32,6 +32,20 @@ def test_global_formatter_exposes_indicator_value_and_dynamic_input_contract():
     assert "function formatIndicatorValue(value, unit" in content
     assert "style: 'currency', currency: 'BRL'" in content
     assert "function setFormat(element, format)" in content
+    assert "normalizeNumericText(value, { decimals, allowNegative: true" in content
+    assert "if (!digits) return negative ? '-' : '';" in content
+
+
+def test_indicator_goal_and_measurement_masks_preserve_negative_sign():
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    for relative_path in (
+        "templates/modules/indicators/indicator_goals.html",
+        "templates/modules/indicators/indicator_data_list.html",
+    ):
+        content = open(os.path.join(root, *relative_path.split("/")), encoding="utf-8").read()
+        assert 'inputmode="decimal"' in content
+        assert 'return negative ? "-" : "";' in content
+        assert 'return negative && formatted !== "0,00" ? `-${formatted}` : formatted;' in content
 
 
 def test_indicator_surfaces_use_brazilian_value_formatting_contract():
