@@ -90,6 +90,29 @@ def test_measurement_aggregation_respects_configured_function():
     assert aggregate_measurement_values([], "sum") is None
 
 
+def test_goal_validation_accepts_negative_value():
+    goal = _goal(
+        goal_value=Decimal("-105041.00"),
+        goal_kind="base",
+        goal_scope="team",
+        responsible_id=None,
+        composition_mode="independent",
+    )
+
+    IndicatorGoalService.validate_goal(goal)
+
+
+def test_positive_indicator_classification_preserves_direction_with_negative_target():
+    indicator = SimpleNamespace(polarity="positive")
+    goal = SimpleNamespace(performance_ranges=None)
+
+    below = IndicatorGoalService.classify_performance(indicator, goal, -100, -105)
+    exceeded = IndicatorGoalService.classify_performance(indicator, goal, -100, -90)
+
+    assert below == {"performance_pct": 95.0, "status_class": "on_target"}
+    assert exceeded == {"performance_pct": 110.0, "status_class": "exceeded"}
+
+
 def test_new_base_version_automatically_closes_previous(monkeypatch):
     from services import indicator_service
 

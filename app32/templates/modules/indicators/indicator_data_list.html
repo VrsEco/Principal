@@ -289,7 +289,7 @@
                         <label class="field-label">Valor Medido <span id="record_unit_label" style="text-transform:none;opacity:0.7;"></span> *</label>
                         <div style="position: relative; display: flex; align-items: center;">
                             <span id="record_currency_prefix" style="position: absolute; left: 1rem; font-weight: 700; color: var(--text-tertiary); display: none;">R$</span>
-                            <input type="text" id="record_value_visual" class="field-input" placeholder="0,00" required oninput="handleRecordValueInput(this)">
+                            <input type="text" inputmode="decimal" id="record_value_visual" class="field-input" placeholder="0,00" required oninput="handleRecordValueInput(this)" title="Aceita valores positivos e negativos">
                             <input type="hidden" name="measured_value" id="record_value_real">
                         </div>
                     </div>
@@ -321,17 +321,20 @@
 // --- Formatação Brasileira ---
 function formatBR(val) {
     if (val === "" || val === null) return "";
-    let clean = val.toString().replace(/\D/g, "");
-    if (clean === "") return "";
+    const raw = val.toString();
+    const negative = raw.trimStart().startsWith("-");
+    let clean = raw.replace(/\D/g, "");
+    if (clean === "") return negative ? "-" : "";
     let num = (parseFloat(clean) / 100).toFixed(2);
-    return num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const formatted = num.replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return negative && formatted !== "0,00" ? `-${formatted}` : formatted;
 }
 
 function handleRecordValueInput(input) {
     let val = input.value;
     input.value = formatBR(val);
-    let realVal = input.value.replace(/\./g, "").replace(",", ".");
-    document.getElementById('record_value_real').value = realVal;
+    const realVal = input.value.replace(/\./g, "").replace(",", ".");
+    document.getElementById('record_value_real').value = /^-?\d+(\.\d+)?$/.test(realVal) ? realVal : "";
 }
 
 function openRecordModal() {

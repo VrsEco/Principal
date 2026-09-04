@@ -21,6 +21,7 @@
     if (!allowNegative) text = text.replace(/\-/g, '');
     const negative = allowNegative && text.startsWith('-');
     text = text.replace(/\-/g, '');
+    if (!/[0-9]/.test(text)) return negative ? '-' : '';
     const parts = text.split('.');
     const integerPart = (parts.shift() || '0').replace(/^0+(?=\d)/, '') || '0';
     const decimalPartRaw = parts.join('');
@@ -37,7 +38,7 @@
     const raw = String(value ?? '').trim();
     const negative = /^\s*-/.test(raw) || /^\s*\(/.test(raw);
     const digits = onlyDigits(value);
-    if (!digits) return '';
+    if (!digits) return negative ? '-' : '';
     const cents = digits.padStart(3, '0');
     const integerPart = cents.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
     const formatted = `${integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${cents.slice(-2)}`;
@@ -61,7 +62,7 @@
   }
 
   function formatDecimal(value, decimals = 2) {
-    return normalizeNumericText(value, { decimals, useGrouping: false });
+    return normalizeNumericText(value, { decimals, allowNegative: true, useGrouping: false });
   }
 
   function parseDecimal(value) {
