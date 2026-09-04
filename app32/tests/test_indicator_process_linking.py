@@ -121,6 +121,9 @@ def test_indicator_list_template_has_inactive_visibility_filter_defaulting_to_ac
     assert 'id="filterStatus"' in content
     assert '<option value="active" selected>Somente ativos</option>' in content
     assert '<option value="">Ativos e inativos</option>' in content
+    assert '{% block sidebar_right %}' in content
+    assert 'class="indicator-filters"' not in content
+    assert 'onclick="closeAllSidebars()">Aplicar filtros</button>' in content
     assert "document.addEventListener('DOMContentLoaded', filterIndicators);" in content
 
 

@@ -124,27 +124,7 @@
 
     .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-tertiary); }
 
-    .indicator-filters {
-        display: grid;
-        grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(160px, 220px)) auto;
-        gap: 0.75rem;
-        align-items: end;
-        margin-bottom: 1rem;
-        padding: 1rem;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-    }
-    .indicator-filter-field { display: flex; flex-direction: column; gap: 0.35rem; }
-    .indicator-filter-field label {
-        color: var(--text-secondary);
-        font-size: 0.72rem;
-        font-weight: 800;
-        text-transform: uppercase;
-    }
-
     @media (max-width: 768px) {
-        .indicator-filters { grid-template-columns: 1fr; }
         .tree-indicator {
             flex-direction: column;
             align-items: flex-start;
@@ -189,34 +169,6 @@
     <div class="alert alert-{{ cat }}" style="margin-bottom:1rem;">{{ msg }}</div>
     {% endfor %}
     {% endwith %}
-
-    <div class="indicator-filters" aria-label="Filtros de indicadores">
-        <div class="indicator-filter-field">
-            <label for="indSearch">Buscar</label>
-            <input id="indSearch" class="form-control" type="search" placeholder="Código ou nome do indicador" oninput="filterIndicators()">
-        </div>
-        <div class="indicator-filter-field">
-            <label for="filterSource">Origem</label>
-            <select id="filterSource" class="form-control" onchange="filterIndicators()">
-                <option value="">Todas</option>
-                <option value="processo">Processo</option>
-                <option value="projeto">Projeto</option>
-                <option value="okr">Planejamento / OKR</option>
-                <option value="manual">Manual</option>
-            </select>
-        </div>
-        <div class="indicator-filter-field">
-            <label for="filterStatus">Situação</label>
-            <select id="filterStatus" class="form-control" onchange="filterIndicators()">
-                <option value="active" selected>Somente ativos</option>
-                <option value="">Ativos e inativos</option>
-                <option value="inactive">Somente inativos</option>
-            </select>
-        </div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="resetFilters()">
-            <i class="fas fa-undo"></i> Limpar
-        </button>
-    </div>
 
     <!-- Tree Accounting Plan View -->
     {% if tree_nodes %}
@@ -457,4 +409,41 @@ async function processWizard() {
     } catch(e) { alert("Erro de conexão."); }
 }
 </script>
+{% endblock %}
+
+{% block sidebar_right %}
+<div class="sidebar-header-ws">
+    <h3 class="text-h3">Filtros</h3>
+</div>
+<div class="sidebar-content-ws" style="padding: 1rem;">
+    <div class="form-group mb-4">
+        <label class="form-label" for="indSearch">Buscar</label>
+        <input id="indSearch" class="form-control" type="search" placeholder="Código ou nome do indicador" oninput="filterIndicators()">
+    </div>
+
+    <div class="form-group mb-4">
+        <label class="form-label" for="filterSource">Origem</label>
+        <select id="filterSource" class="form-control" onchange="filterIndicators()">
+            <option value="">Todas</option>
+            <option value="processo">Processo</option>
+            <option value="projeto">Projeto</option>
+            <option value="okr">Planejamento / OKR</option>
+            <option value="manual">Manual</option>
+        </select>
+    </div>
+
+    <div class="form-group mb-4">
+        <label class="form-label" for="filterStatus">Situação</label>
+        <select id="filterStatus" class="form-control" onchange="filterIndicators()">
+            <option value="active" selected>Somente ativos</option>
+            <option value="">Ativos e inativos</option>
+            <option value="inactive">Somente inativos</option>
+        </select>
+    </div>
+
+    <button type="button" class="btn btn-primary w-100" onclick="closeAllSidebars()">Aplicar filtros</button>
+    <button type="button" class="btn btn-secondary w-100 mt-2" onclick="resetFilters()">
+        <i class="fas fa-undo"></i> Limpar filtros
+    </button>
+</div>
 {% endblock %}
