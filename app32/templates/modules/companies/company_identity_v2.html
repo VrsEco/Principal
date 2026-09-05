@@ -16,9 +16,9 @@
     <section class="identity-hero card">
         <div class="identity-hero__copy">
             <span class="identity-kicker">Núcleo canônico</span>
-            <h1 class="text-h1">Identidade Organizacional</h1>
+            <h1 class="text-h1">Estrutura e Pessoas</h1>
             <p class="text-secondary">
-                Reúne missão, visão, valores, cargos, colaboradores e organograma em um ponto único da empresa.
+                Gerencie cargos, colaboradores e acessos em jornadas separadas; o organograma é a visão consolidada.
             </p>
             <div class="identity-hero__actions">
                 <a class="btn btn-special" href="/companies/{{ company.id }}/edit?tab=dados">Editar MVV</a>
@@ -65,9 +65,10 @@
     </section>
 
     <nav class="identity-tabs" aria-label="Seções da identidade">
-        <button type="button" class="identity-tab-btn is-active" data-identity-tab="mvv">Missão, Visão e Valores</button>
-        <button type="button" class="identity-tab-btn" data-identity-tab="estrutura">Cargos e Colaboradores</button>
-        <button type="button" class="identity-tab-btn" data-identity-tab="editor">Editor da estrutura</button>
+        <button type="button" class="identity-tab-btn is-active" data-identity-tab="mvv">Visão geral</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="editor">Cargos</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="estrutura">Colaboradores</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="usuarios">Usuários e acessos</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="organograma">Organograma</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="ocupacoes">Ocupações por data</button>
         {% if has_permission('financial', 'view') %}
@@ -164,11 +165,16 @@
         </div>
     </section>
 
+    <section id="usuarios" class="card identity-section identity-tab-panel" data-identity-panel="usuarios">
+        <div class="identity-section__header"><div><span class="identity-section__eyebrow">Acesso ao sistema</span><h2 class="text-h2">Usuários e acessos</h2><p class="text-secondary">Usuário é a conta de acesso; colaborador é a pessoa do organograma. O vínculo entre ambos é opcional e administrado com permissões.</p></div><a class="btn btn-special" href="/usuarios">Gerenciar usuários</a></div>
+        <div class="identity-content-card"><h3>Como funciona</h3><p>Crie primeiro o colaborador quando ele fizer parte do quadro. Depois, em Usuários e acessos, crie ou vincule a conta e defina o perfil de permissão. Contas sem vínculo não alteram o organograma.</p></div>
+    </section>
+
     <section id="estrutura" class="card identity-section identity-tab-panel" data-identity-panel="estrutura">
         <div class="identity-section__header">
             <div>
                 <span class="identity-section__eyebrow">Estrutura organizacional</span>
-                <h2 class="text-h2">Cargos e colaboradores</h2>
+                <h2 class="text-h2">Colaboradores</h2>
             </div>
             <div class="identity-inline-actions">
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Cadastrar cargo</a>

@@ -14,6 +14,7 @@
 .identity-tab-btn:hover { background:var(--surface-secondary); }
 .identity-tab-btn.is-active { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:0 10px 20px rgba(37, 99, 235, 0.20); }
 .identity-section { padding:1.35rem; margin-bottom:1rem; }
+.identity-section#estrutura .identity-table-card:first-child { display:none; }
 .identity-tab-panel { display:none; }
 .identity-tab-panel.is-active { display:block; }
 .identity-section__header, .identity-table-card__header { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
