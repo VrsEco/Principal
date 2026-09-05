@@ -158,11 +158,13 @@
         byId('identityMission').textContent = summary.company.mission || 'Ainda não definida.';
         byId('identityVision').textContent = summary.company.vision || 'Ainda não definida.';
         byId('identityValues').textContent = formatInstitutionalValues(summary.company.values, true) || 'Ainda não definidos.';
-        byId('rolesTableCount').textContent = `${summary.roles.length} registros`;
+        const rolesCount = byId('rolesTableCount');
+        if (rolesCount) rolesCount.textContent = `${summary.roles.length} registros`;
         byId('employeesTableCount').textContent = `${summary.employees.length} registros`;
         renderIdentityReport(summary);
 
-        byId('identityRolesBody').innerHTML = summary.roles.length ? summary.roles.map((role) => `
+        const rolesBody = byId('identityRolesBody');
+        if (rolesBody) rolesBody.innerHTML = summary.roles.length ? summary.roles.map((role) => `
             <tr>
                 <td><strong>${escapeHtml(role.title)}</strong><div class="text-secondary">${role.vacancy_count || 0} vagas livres</div></td>
                 <td>${escapeHtml(role.department || '—')}</td>
@@ -607,7 +609,8 @@
             console.error(error);
             byId('identityOrgChart').innerHTML = `<div class="identity-org-chart__empty">${escapeHtml(error.message || 'Falha ao carregar organograma.')}</div>`;
             byId('identityEditorTree').innerHTML = '<div class="identity-org-chart__empty">Falha ao carregar cargos.</div>';
-            byId('identityRolesBody').innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar cargos.</td></tr>';
+            const rolesBody = byId('identityRolesBody');
+            if (rolesBody) rolesBody.innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar cargos.</td></tr>';
             byId('identityEmployeesBody').innerHTML = '<tr><td colspan="4" class="identity-empty-row">Falha ao carregar colaboradores.</td></tr>';
         }
     }
