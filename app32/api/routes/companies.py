@@ -89,6 +89,22 @@ def company_people_hub(company_id):
     return render_template('modules/companies/company_people_hub.html', company=summary.company,
                            metrics=summary.metrics, is_platform_admin_user=is_platform_admin())
 
+
+@companies_bp.route('/api/companies/<int:company_id>/usage-telemetry', methods=['GET'])
+@permission_required('companies', 'view')
+def company_usage_telemetry(company_id):
+    """Fundação analítica temporariamente restrita ao admin da plataforma."""
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    if not is_platform_admin():
+        return jsonify({'error': 'Acesso negado'}), 403
+    from services.usage_telemetry_dashboard_service import UsageTelemetryDashboardService
+    try:
+        return jsonify(UsageTelemetryDashboardService.summary(company_id, request.args.get('start'), request.args.get('end')))
+    except ValueError as exc:
+        return jsonify({'error': str(exc)}), 400
+
 # Complex nested components logic goes to routes.
 # Core CRUD functionality should be exclusively in api/resources/company.py
 
