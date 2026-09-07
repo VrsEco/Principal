@@ -350,6 +350,10 @@
             </svg>
         </button>
         <div class="sub-menu">
+            {% set active_company_id = session.get('active_company_id') %}
+            {% if has_permission('companies', 'view') %}
+            <a href="{{ '/companies/%s/people' % active_company_id if active_company_id else '/companies' }}" class="sub-nav-link {{ 'active' if request.path.endswith('/people') or request.path.endswith('/identity') }}">Pessoas</a>
+            {% endif %}
             {% set ai_section = request.args.get('section', 'overview') if request.path in ['/configs/ai', '/ai'] else '' %}
             <div class="sidebar-subgroup {{ 'open' if '/integrations' in request.path or '/configs/ai' in request.path or request.path in ['/ai', '/ai/factory', '/ai-capability-inventory', '/ai-automation-mesh', '/api-mcp', '/tools', '/workflow', '/ai-capabilities', '/ai-monitoring', '/channels'] }}">
                 <button class="subgroup-button" onclick="return toggleSidebarGroup(this, event)">
@@ -399,10 +403,8 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
-                    {% set active_company_id = session.get('active_company_id') %}
                     {% if has_permission('companies', 'view') %}
                     <a href="/companies" class="sub-nav-link {{ 'active' if request.path == '/companies' }}">Lista de empresas</a>
-                    <a href="{{ '/companies/%s/people' % active_company_id if active_company_id else '/companies' }}" class="sub-nav-link {{ 'active' if request.path.endswith('/people') and '/companies/' in request.path }}">Pessoas da empresa</a>
                     {% endif %}
                     {% if has_permission('companies', 'create') %}
                     <a href="/companies/new" class="sub-nav-link {{ 'active' if request.path == '/companies/new' }}">Nova empresa / Onboarding</a>
