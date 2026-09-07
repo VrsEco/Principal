@@ -243,6 +243,29 @@
             </form>
         </details>
         {% endif %}
+    {% if has_permission('companies', 'edit') %}
+    <section class="card identity-section" aria-labelledby="identityNewEmployeeHeading">
+        <span class="identity-section__eyebrow">Perfil e ocupação inicial</span>
+        <h2 id="identityNewEmployeeHeading" class="text-h2">Cadastrar colaborador</h2>
+        <p>Selecione e salve um cargo na aba Cargos para definir a ocupação inicial. O colaborador será cadastrado sem login; nenhum acesso será criado.</p>
+        <form id="identityNewEmployeeForm">
+            <label for="identityNewEmployeeName">Nome do colaborador</label>
+            <input id="identityNewEmployeeName" class="form-control" maxlength="200" required autocomplete="off">
+            <p id="identityNewEmployeeRole">Selecione um cargo existente no editor.</p>
+            <button id="identityNewEmployeeSave" class="btn btn-secondary" type="submit" disabled>Cadastrar sem login</button>
+            <p id="identityNewEmployeeStatus" role="status" aria-live="polite"></p>
+        </form>
+        <form id="identityLinkEmployeeForm">
+            <label for="identityExistingEmployee">Ou vincule um colaborador existente</label>
+            <p>Somente ativos sem cargo e sem login. Nenhuma ocupação ou permissão existente será substituída.</p>
+            <select id="identityExistingEmployee" class="form-control" required>
+                <option value="">Selecione um colaborador</option>
+            </select>
+            <button id="identityLinkEmployeeSave" class="btn btn-secondary" type="submit" disabled>Vincular ao cargo selecionado</button>
+            <p id="identityLinkEmployeeStatus" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+    {% endif %}
     </section>
 
     <section id="editor" class="card identity-section identity-tab-panel" data-identity-panel="editor">
@@ -347,28 +370,6 @@
         </div>
     </section>
 
-    {% if has_permission('companies', 'edit') %}
-    <section class="card identity-section" aria-labelledby="identityNewEmployeeHeading">
-        <h2 id="identityNewEmployeeHeading" class="text-h2">Cadastrar colaborador no cargo</h2>
-        <p>Selecione e salve um cargo no editor. O colaborador será cadastrado sem login; nenhum acesso será criado.</p>
-        <form id="identityNewEmployeeForm">
-            <label for="identityNewEmployeeName">Nome do colaborador</label>
-            <input id="identityNewEmployeeName" class="form-control" maxlength="200" required autocomplete="off">
-            <p id="identityNewEmployeeRole">Selecione um cargo existente no editor.</p>
-            <button id="identityNewEmployeeSave" class="btn btn-secondary" type="submit" disabled>Cadastrar sem login</button>
-            <p id="identityNewEmployeeStatus" role="status" aria-live="polite"></p>
-        </form>
-        <form id="identityLinkEmployeeForm">
-            <label for="identityExistingEmployee">Ou vincule um colaborador existente</label>
-            <p>Somente ativos sem cargo e sem login. Nenhuma ocupação ou permissão existente será substituída.</p>
-            <select id="identityExistingEmployee" class="form-control" required>
-                <option value="">Selecione um colaborador</option>
-            </select>
-            <button id="identityLinkEmployeeSave" class="btn btn-secondary" type="submit" disabled>Vincular ao cargo selecionado</button>
-            <p id="identityLinkEmployeeStatus" role="status" aria-live="polite"></p>
-        </form>
-    </section>
-    {% endif %}
     <section id="organograma" class="card identity-section identity-tab-panel" data-identity-panel="organograma">
         <div class="identity-section__header">
             <div>
