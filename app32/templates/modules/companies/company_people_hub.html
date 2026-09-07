@@ -1,0 +1,21 @@
+{% extends "layouts/app.html" %}
+{% block title %}Pessoas - {{ company.name }}{% endblock %}
+{% block page_title %}Empresa / Pessoas{% endblock %}
+{% block head %}{{ super() }}<link rel="stylesheet" href="{{ url_for('static', filename='css/company_people_hub.css') }}">{% endblock %}
+{% block content %}
+<div class="people-hub" data-company-id="{{ company.id }}">
+  <header class="people-hero card">
+    <div><span class="people-eyebrow">Empresa ativa · {{ company.name }}</span><h1 class="text-h1">Pessoas</h1><p>Gerencie estrutura, colaboradores e acessos com responsabilidades claras.</p></div>
+    <a class="btn btn-secondary" href="/companies/{{ company.id }}/identity">Visão detalhada</a>
+  </header>
+  <section class="people-metrics" aria-label="Resumo"><article><strong>{{ metrics.active_employees_total or 0 }}</strong><span>colaboradores ativos</span></article><article><strong>{{ metrics.roles_total or 0 }}</strong><span>cargos</span></article><article><strong>{{ metrics.planned_headcount_total or 0 }}</strong><span>posições planejadas</span></article></section>
+  <section class="people-grid">
+    <article class="people-card"><span class="people-icon">👤</span><h2>Colaboradores</h2><p>Cadastre pessoas, acompanhe perfil, qualificações e ocupações.</p><div><a class="btn btn-special" href="/companies/{{ company.id }}/edit?tab=colaboradores">Novo colaborador</a><a class="people-link" href="/companies/{{ company.id }}/identity#estrutura">Gerenciar colaboradores</a></div></article>
+    <article class="people-card"><span class="people-icon">▦</span><h2>Cargos e organograma</h2><p>Defina cargos, hierarquia, vagas planejadas e jornada.</p><div><a class="btn btn-special" href="/companies/{{ company.id }}/edit?tab=cargos">Novo cargo</a><a class="people-link" href="/companies/{{ company.id }}/identity#editor">Gerenciar estrutura</a></div></article>
+    <article class="people-card"><span class="people-icon">⌁</span><h2>Acessos</h2><p><strong id="peopleAccessCount">Carregando…</strong> contas vinculadas a esta empresa. Contas são globais; o vínculo é controlado por permissão.</p><div>{% if is_platform_admin_user %}<a class="btn btn-special" href="/usuarios/cadastrar">Convidar usuário</a><a class="people-link" href="/usuarios">Gerenciar usuários</a>{% else %}<span class="people-restricted">Somente administrador da plataforma gerencia contas.</span>{% endif %}</div></article>
+    <article class="people-card"><span class="people-icon">◫</span><h2>Capacidade e custos</h2><p>Consulte vagas, FTE e custos planejados por cargo.</p><a class="people-link" href="/companies/{{ company.id }}/identity#custos">Abrir capacidade e custos</a></article>
+  </section>
+  <aside class="people-guidance"><strong>Começando agora?</strong><span>1. Crie o cargo · 2. Cadastre o colaborador · 3. Vincule o acesso quando necessário.</span></aside>
+</div>
+<script src="{{ url_for('static', filename='js/company_people_hub.js') }}"></script>
+{% endblock %}

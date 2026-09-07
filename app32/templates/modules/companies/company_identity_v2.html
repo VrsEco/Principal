@@ -21,7 +21,8 @@
                 Gerencie cargos, colaboradores e acessos em jornadas separadas; o organograma é a visão consolidada.
             </p>
             <div class="identity-hero__actions">
-                <a class="btn btn-special" href="/companies/{{ company.id }}/edit?tab=dados">Editar MVV</a>
+                <a class="btn btn-special" href="/companies/{{ company.id }}/people">Abrir Central Pessoas</a>
+                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=dados">Editar MVV</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Gerenciar cargos</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Gerenciar colaboradores</a>
                 <button type="button" class="btn btn-secondary" onclick="window.IdentityExecutiveReport?.print()">Imprimir relatório</button>

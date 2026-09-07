@@ -77,6 +77,18 @@ def company_identity(company_id):
         metrics=summary.metrics,
     )
 
+
+@companies_bp.route('/companies/<int:company_id>/people')
+@permission_required('companies', 'view')
+def company_people_hub(company_id):
+    """Entrada unificada de pessoas; dados operacionais permanecem tenant-safe."""
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    summary = CompanyIdentityService.build_summary(company_id)
+    return render_template('modules/companies/company_people_hub.html', company=summary.company,
+                           metrics=summary.metrics, is_platform_admin_user=is_platform_admin())
+
 # Complex nested components logic goes to routes.
 # Core CRUD functionality should be exclusively in api/resources/company.py
 
