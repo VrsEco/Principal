@@ -10,7 +10,7 @@ def test_people_hub_is_company_scoped_and_uses_existing_permission_guard():
     assert "@permission_required('companies', 'view')" in source
     assert 'def company_people_hub(company_id):' in source
     assert '_ensure_company_access(company_id)' in source
-    assert "company_people_hub.html" in source
+    assert "return redirect(f'/companies/{company_id}/identity')" in source
 
 
 def test_people_hub_does_not_expose_mcp_token_management():

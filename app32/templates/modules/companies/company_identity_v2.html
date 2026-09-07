@@ -16,12 +16,11 @@
     <section class="identity-hero card">
         <div class="identity-hero__copy">
             <span class="identity-kicker">Núcleo canônico</span>
-            <h1 class="text-h1">Estrutura e Pessoas</h1>
+            <h1 class="text-h1">Pessoas</h1>
             <p class="text-secondary">
-                Gerencie cargos, colaboradores e acessos em jornadas separadas; o organograma é a visão consolidada.
+                Gerencie usuários, cargos, colaboradores e estrutura da empresa em uma única jornada.
             </p>
             <div class="identity-hero__actions">
-                <a class="btn btn-special" href="/companies/{{ company.id }}/people">Abrir Central Pessoas</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=dados">Editar MVV</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Gerenciar cargos</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Gerenciar colaboradores</a>
@@ -67,14 +66,10 @@
 
     <nav class="identity-tabs" aria-label="Seções da identidade">
         <button type="button" class="identity-tab-btn is-active" data-identity-tab="mvv">Visão geral</button>
-        <button type="button" class="identity-tab-btn" data-identity-tab="editor">Cargos</button>
-        <button type="button" class="identity-tab-btn" data-identity-tab="estrutura">Colaboradores</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="usuarios">Usuários e acessos</button>
+        <button type="button" class="identity-tab-btn" data-identity-tab="editor">Cargos</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="organograma">Organograma</button>
-        <button type="button" class="identity-tab-btn" data-identity-tab="ocupacoes">Ocupações por data</button>
-        {% if has_permission('financial', 'view') %}
-        <button type="button" class="identity-tab-btn" data-identity-tab="custos">Custos planejados</button>
-        {% endif %}
+        <button type="button" class="identity-tab-btn" data-identity-tab="estrutura">Colaboradores</button>
         <button type="button" class="identity-tab-btn" data-identity-tab="relatorios">Relatórios</button>
     </nav>
 
@@ -180,6 +175,8 @@
             <div class="identity-inline-actions">
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Cadastrar cargo</a>
                 <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Cadastrar colaborador</a>
+                <button type="button" class="btn btn-secondary" data-identity-tab="ocupacoes">Ocupação por data</button>
+                {% if has_permission('financial', 'view') %}<button type="button" class="btn btn-secondary" data-identity-tab="custos">Custos planejados por cargo</button>{% endif %}
             </div>
         </div>
 
@@ -253,7 +250,7 @@
             <div>
                 <span class="identity-section__eyebrow">Monte a hierarquia sem perder o contexto</span>
                 <h2 class="text-h2">Editor da estrutura</h2>
-                <p class="text-secondary">Selecione um cargo na árvore, ajuste seus dados e defina a quem ele responde.</p>
+                <p class="text-secondary">Perfil do cargo e quantidade planejada. Selecione um cargo na árvore, ajuste seus dados e defina a quem ele responde.</p>
             </div>
             {% if has_permission('companies', 'edit') %}
             <button type="button" class="btn btn-special" id="identityEditorNewRole">+ Novo cargo</button>
