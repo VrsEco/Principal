@@ -15,6 +15,9 @@
     <article class="people-card"><span class="people-icon">⌁</span><h2>Acessos</h2><p><strong id="peopleAccessCount">Carregando…</strong> contas vinculadas a esta empresa. Contas são globais; o vínculo é controlado por permissão.</p><div>{% if is_platform_admin_user %}<a class="btn btn-special" href="/usuarios/cadastrar">Convidar usuário</a><a class="people-link" href="/usuarios">Gerenciar usuários</a>{% else %}<span class="people-restricted">Somente administrador da plataforma gerencia contas.</span>{% endif %}</div></article>
     <article class="people-card"><span class="people-icon">◫</span><h2>Capacidade e custos</h2><p>Consulte vagas, FTE e custos planejados por cargo.</p><a class="people-link" href="/companies/{{ company.id }}/identity#custos">Abrir capacidade e custos</a></article>
   </section>
+  {% if is_platform_admin_user %}
+  <section class="people-telemetry card"><div><span class="people-eyebrow">Governança</span><h2>Uso da empresa</h2><p>Dados agregados; não exibe conteúdo, segredos ou dados sensíveis.</p></div><div class="people-period"><button type="button" data-people-period="7">7 dias</button><button type="button" data-people-period="30">30 dias</button></div><p id="peopleTelemetryStatus" role="status">Selecione um período.</p><div class="people-metrics"><article><strong id="peopleTelemetrySessions">—</strong><span>sessões</span></article><article><strong id="peopleTelemetryTime">—</strong><span>tempo ativo</span></article><article><strong id="peopleTelemetryRequests">—</strong><span>requisições</span></article></div></section>
+  {% endif %}
   <aside class="people-guidance"><strong>Começando agora?</strong><span>1. Crie o cargo · 2. Cadastre o colaborador · 3. Vincule o acesso quando necessário.</span></aside>
 </div>
 <script src="{{ url_for('static', filename='js/company_people_hub.js') }}"></script>

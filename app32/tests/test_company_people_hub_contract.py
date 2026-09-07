@@ -20,6 +20,8 @@ def test_people_hub_does_not_expose_mcp_token_management():
     assert 'data-company-id="{{ company.id }}"' in template
     script = (ROOT / 'static' / 'js' / 'company_people_hub.js').read_text(encoding='utf-8')
     assert '/api/companies/${companyId}/users' in script
+    assert '/api/companies/${companyId}/usage-telemetry' in script
+    assert 'uso da empresa' in template
 
 
 def test_sidebar_uses_active_company_for_people_navigation():
