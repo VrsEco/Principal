@@ -27,4 +27,4 @@ def test_people_hub_does_not_expose_mcp_token_management():
 def test_sidebar_uses_active_company_for_people_navigation():
     sidebar = (ROOT / 'templates' / 'partials' / 'sidebar_standard.html').read_text(encoding='utf-8')
     assert "'/companies/%s/people' % active_company_id" in sidebar
-    assert 'Pessoas da empresa' in sidebar
+    assert '>Pessoas</a>' in sidebar

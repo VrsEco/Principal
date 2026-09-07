@@ -350,7 +350,7 @@
             </svg>
         </button>
         <div class="sub-menu">
-            {% set active_company_id = session.get('active_company_id') %}
+            {% set active_company_id = session.get('active_company_id') or request.view_args.get('company_id') if request.view_args else session.get('active_company_id') %}
             {% if has_permission('companies', 'view') %}
             <a href="{{ '/companies/%s/people' % active_company_id if active_company_id else '/companies' }}" class="sub-nav-link {{ 'active' if request.path.endswith('/people') or request.path.endswith('/identity') }}">Pessoas</a>
             {% endif %}
