@@ -140,6 +140,15 @@ class Config:
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL
 
+    # Observabilidade de uso: desligada até Redis, migrations e retenção serem validados.
+    USAGE_TELEMETRY_ENABLED = env_flag("USAGE_TELEMETRY_ENABLED", default=False)
+    USAGE_TELEMETRY_MAX_CUSTOM_RANGE_DAYS = int(
+        os.environ.get("USAGE_TELEMETRY_MAX_CUSTOM_RANGE_DAYS", "90")
+    )
+    USAGE_TELEMETRY_RAW_RETENTION_DAYS = int(
+        os.environ.get("USAGE_TELEMETRY_RAW_RETENTION_DAYS", "14")
+    )
+
     # PDF Generation
     PDF_TEMP_FOLDER = os.environ.get("PDF_TEMP_FOLDER") or "temp_pdfs"
 

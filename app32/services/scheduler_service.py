@@ -139,6 +139,11 @@ def setup_routine_jobs(app):
         name="Processamento de Rotinas Agendadas",
     )
 
+    scheduler_service.add_job(
+        func=lambda: aggregate_usage_telemetry(app), trigger="cron", job_id="usage_telemetry_hourly",
+        minute=5, name="Consolidação horária de presença",
+    )
+
     # Job 2: Verificar instâncias atrasadas a cada hora
     scheduler_service.add_job(
         func=lambda: check_overdue_tasks(app),
@@ -251,6 +256,19 @@ def send_proactive_morning_summary(app):
     """Bridge para o proactive_service"""
     from services.proactive_service import send_morning_summaries
     send_morning_summaries(app)
+
+
+def aggregate_usage_telemetry(app):
+    """Executa fora do request e só processa a hora já encerrada."""
+    if not app.config.get("USAGE_TELEMETRY_ENABLED", False):
+        return {"skipped": "telemetry_disabled"}
+    with app.app_context():
+        from services.usage_telemetry_readiness_service import UsageTelemetryReadinessService
+        readiness = UsageTelemetryReadinessService.check(app.config)
+        if not readiness.get("ready"):
+            return {"skipped": readiness.get("reason", "not_ready")}
+        from services.usage_telemetry_aggregation_service import UsageTelemetryAggregationService
+        return UsageTelemetryAggregationService.aggregate_previous_closed_hour()
 
 
 def check_overdue_tasks(app):

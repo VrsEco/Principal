@@ -399,14 +399,15 @@
                     </svg>
                 </button>
                 <div class="subgroup-content">
+                    {% set active_company_id = session.get('active_company_id') %}
                     {% if has_permission('companies', 'view') %}
                     <a href="/companies" class="sub-nav-link {{ 'active' if request.path == '/companies' }}">Lista de empresas</a>
+                    <a href="{{ '/companies/%s/people' % active_company_id if active_company_id else '/companies' }}" class="sub-nav-link {{ 'active' if request.path.endswith('/people') and '/companies/' in request.path }}">Pessoas da empresa</a>
                     {% endif %}
                     {% if has_permission('companies', 'create') %}
                     <a href="/companies/new" class="sub-nav-link {{ 'active' if request.path == '/companies/new' }}">Nova empresa / Onboarding</a>
                     {% endif %}
                     {% if has_permission('companies', 'edit') %}
-                    {% set active_company_id = session.get('active_company_id') %}
                     <a href="{{ '/companies/%s/edit' % active_company_id if active_company_id else '/companies' }}" class="sub-nav-link {{ 'active' if request.path.endswith('/edit') and '/companies/' in request.path }}">Configurações da unidade</a>
                     {% endif %}
                 </div>

@@ -15,6 +15,7 @@ from .team import Team
 from .employee import Employee
 from .employee_role_occupancy import EmployeeRoleOccupancy
 from .employee_qualification_evidence import EmployeeQualificationEvidence
+from .usage_telemetry_hourly import UsageTelemetryHourly
 from .user_employee_assignment import UserEmployeeAssignment
 
 # Planning & Strategic
@@ -212,6 +213,7 @@ from .incentive import (
 
 __all__ = [
     'EmployeeQualificationEvidence',
+    'UsageTelemetryHourly',
     'RoleCostProfile',
     'EmployeeRoleOccupancy',
     'db', 'Company', 'User', 'UserMcpToken', 'Role', 'Team', 'Employee', 'UserEmployeeAssignment',
