@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect
 from models import (
     db,
     Company,
@@ -81,13 +81,11 @@ def company_identity(company_id):
 @companies_bp.route('/companies/<int:company_id>/people')
 @permission_required('companies', 'view')
 def company_people_hub(company_id):
-    """Entrada unificada de pessoas; dados operacionais permanecem tenant-safe."""
+    """Compatibilidade: a Central Pessoas agora é a tela única de identidade."""
     denied = _ensure_company_access(company_id)
     if denied:
         return denied
-    summary = CompanyIdentityService.build_summary(company_id)
-    return render_template('modules/companies/company_people_hub.html', company=summary.company,
-                           metrics=summary.metrics, is_platform_admin_user=is_platform_admin())
+    return redirect(f'/companies/{company_id}/identity')
 
 
 @companies_bp.route('/api/companies/<int:company_id>/usage-telemetry', methods=['GET'])
