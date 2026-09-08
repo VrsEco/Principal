@@ -63,7 +63,8 @@ def fetch_normalized_process_rows(
         Company.name.label("company_name"),
         Company.client_code.label("company_code"),
         Process.name.label("process_name"),
-        Process.code.label("process_code")
+        Process.code.label("process_code"),
+        Process.owner_employee_id.label("process_owner_employee_id")
     ).join(Company, Company.id == ProcessInstance.company_id, isouter=True)\
      .join(Process, Process.id == ProcessInstance.process_id, isouter=True)
 
@@ -102,6 +103,9 @@ def fetch_normalized_process_rows(
             if not ({cid for cid in collab_ids if cid} & target_employee_ids):
                 continue
 
+        owner_id = safe_int(pi.owner_employee_id) or safe_int(r.process_owner_employee_id)
+        owner_name = (employee_directory or {}).get(owner_id, {}).get("name") if owner_id else None
+
         data = {
             "instance_id": pi.id,
             "company_id": pi.company_id,
@@ -117,6 +121,8 @@ def fetch_normalized_process_rows(
             "deadline_date": pi.due_date,
             "estimated_hours": pi.estimated_hours,
             "worked_hours": pi.actual_hours or 0,
+            "owner_id": owner_id,
+            "owner_name": owner_name,
             "collaborators_json": collaborators
         }
         results.append(_process_row_from_normalized(data))
@@ -141,6 +147,8 @@ def _process_row_from_normalized(data: Dict[str, Any]) -> Dict[str, Any]:
         "deadline": data.get("deadline_date").isoformat() if hasattr(data.get("deadline_date"), 'isoformat') else data.get("deadline_date"),
         "estimated_hours": data.get("estimated_hours"),
         "worked_hours": data.get("worked_hours"),
+        "owner_id": data.get("owner_id"),
+        "owner_name": data.get("owner_name"),
         "collaborators_json": data.get("collaborators_json"),
         "type": "process"
     }

@@ -394,6 +394,10 @@ def export_my_work_pdf():
 
     exported_filters = _parse_export_filters(request.args.get("filters"))
     query_filters = dict(exported_filters)
+    # A busca da tela é aplicada depois da descoberta, sobre título, descrição,
+    # plano e empresa. Não antecipá-la aqui evita que o PDF use um conjunto de
+    # campos diferente do que está visível no dashboard.
+    query_filters.pop("search", None)
     responsible_ids = exported_filters.get("responsible_ids") or []
     executor_ids = exported_filters.get("executor_ids") or []
     if responsible_ids or executor_ids:

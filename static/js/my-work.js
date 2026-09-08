@@ -836,11 +836,12 @@ function updateProcessOwnersFromActivities() {
 
   (state.activities || []).forEach(activity => {
     if (activity.type === 'process') {
+      const ownerId = Number(activity.owner_id ?? activity.owner_employee_id);
       const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
-      if (ownerName && !ownersMap.has(ownerName)) {
-        ownersMap.set(ownerName, {
-          id: ownerName, // Usar o nome como ID para simplificar
-          name: ownerName,
+      if (Number.isInteger(ownerId) && ownerId > 0 && !ownersMap.has(ownerId)) {
+        ownersMap.set(ownerId, {
+          id: ownerId,
+          name: ownerName || `Dono #${ownerId}`,
           company_name: activity.company_name || ''
         });
       }
@@ -1998,11 +1999,14 @@ function getFilteredActivities() {
         if (activity.type !== 'process') {
           return true; // Não filtrar atividades de projeto por dono de processo
         }
-        const ownerName = (activity.owner_name || activity.process_owner_name || '').trim();
-        if (!ownerName) {
+        const ownerId = Number(activity.owner_id ?? activity.owner_employee_id);
+        if (!Number.isInteger(ownerId) || ownerId <= 0) {
           return false; // Se não tem dono definido, excluir quando filtro está ativo
         }
-        return state.selectedProcessOwnerIds.includes(ownerName);
+        return (
+          state.selectedProcessOwnerIds.includes(ownerId) ||
+          state.selectedProcessOwnerIds.includes(String(ownerId))
+        );
       });
     }
     // Se todos os donos estão selecionados, não filtrar (mostrar todos os processos)
@@ -4090,7 +4094,11 @@ function buildReportFiltersPayload() {
 
   // Project IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
   const projectCtx = getSelectedFromAvailable(state.selectedProjectIds, getProjectOptions());
-  if (
+  if (projectCtx.availableCount > 0 && projectCtx.selectedIds.length === 0) {
+    // Diferente de responsáveis/executores, nenhum projeto selecionado é um
+    // filtro ativo na tela: somente processos devem permanecer visíveis.
+    filters.project_selection = SELECTION_MODE_NONE;
+  } else if (
     projectCtx.availableCount > 0 &&
     projectCtx.selectedIds.length > 0 &&
     projectCtx.selectedIds.length < projectCtx.availableCount
@@ -4100,7 +4108,11 @@ function buildReportFiltersPayload() {
 
   // Process IDs - incluir apenas se seleção parcial dentro do contexto atual (empresa)
   const processCtx = getSelectedFromAvailable(state.selectedProcessIds, getProcessOptions());
-  if (
+  if (processCtx.availableCount > 0 && processCtx.selectedIds.length === 0) {
+    // Mantém no relatório a mesma semântica da tela: sem processos selecionados
+    // significa exibir somente atividades de projetos.
+    filters.process_selection = SELECTION_MODE_NONE;
+  } else if (
     processCtx.availableCount > 0 &&
     processCtx.selectedIds.length > 0 &&
     processCtx.selectedIds.length < processCtx.availableCount
