@@ -416,7 +416,6 @@
     function openRoleEditor(roleId = null) {
         const role = roleId ? state.rolesById.get(Number(roleId)) : null;
         state.selectedRoleId = role?.id || null;
-        updateNewEmployeeTarget(role);
         byId('identityEditorEmpty').hidden = true;
         byId('identityEditorFields').hidden = false;
         byId('identityRoleId').value = role?.id || '';
@@ -444,7 +443,6 @@
     }
 
     function closeRoleEditor() {
-        updateNewEmployeeTarget(null);
         state.selectedRoleId = null;
         byId('identityEditorFields').hidden = true;
         byId('identityEditorEmpty').hidden = false;
@@ -600,6 +598,7 @@
             state.tree = treeResponse.data || [];
             state.rolesById = new Map(summary.roles.map((role) => [Number(role.id), role]));
             state.treeNodesById = new Map(flattenTree(state.tree).map((role) => [Number(role.id), role]));
+            renderEmployeeRoleOptions();
             state.selectedRoleId = options.preserveRoleId || state.selectedRoleId;
             renderSummary(summary);
             populateDepartmentFilter();
@@ -615,38 +614,19 @@
         }
     }
 
-    function updateNewEmployeeTarget(role) {
-        const button = byId('identityNewEmployeeSave');
-        if (!button) return;
-        button.disabled = !canEdit || !role;
-        byId('identityLinkEmployeeSave').disabled = !canEdit || !role;
-        byId('identityNewEmployeeRole').textContent = role ? `Cargo: ${role.title}` : 'Selecione e salve um cargo no editor.';
-        byId('identityNewEmployeeStatus').textContent = '';
-    }
-
-    async function createEmployeeWithoutLogin(event) {
-        event.preventDefault();
-        const roleId = Number(byId('identityRoleId').value);
-        if (!canEdit || !roleId || !state.rolesById.has(roleId)) return;
-        const button = byId('identityNewEmployeeSave');
-        if (button.disabled) return;
-        const status = byId('identityNewEmployeeStatus');
-        const name = byId('identityNewEmployeeName').value.trim();
-        if (!name) { status.textContent = 'Informe o nome do colaborador.'; return; }
-        if (!window.confirm(`Cadastrar ${name} sem login no cargo ${state.rolesById.get(roleId).title}?`)) return;
-        button.disabled = true;
-        try {
-            await fetchJson(`/api/companies/${companyId}/roles/${roleId}/employees`, {
-                method: 'POST', body: JSON.stringify({ name }),
-            });
-            byId('identityNewEmployeeName').value = '';
-            await loadPage({ preserveRoleId: roleId });
-            status.textContent = 'Colaborador cadastrado sem login. Confira a lotação no organograma.';
-        } catch (error) {
-            status.textContent = error.message;
-        } finally {
-            button.disabled = !canEdit || !Number(byId('identityRoleId').value);
-        }
+    function renderEmployeeRoleOptions() {
+        const select = byId('identityEmployeeRole');
+        if (!select) return;
+        const current = select.value;
+        const roles = [...state.rolesById.values()].sort((a, b) => String(a.title).localeCompare(String(b.title), 'pt-BR'));
+        select.innerHTML = '<option value="">Selecione o cargo inicial</option>' + roles.map((role) =>
+            `<option value="${Number(role.id)}">${escapeHtml(role.title)}${role.department ? ` · ${escapeHtml(role.department)}` : ''}</option>`
+        ).join('');
+        select.value = state.rolesById.has(Number(current)) ? current : '';
+        const help = byId('identityEmployeeRoleHelp');
+        if (help) help.textContent = roles.length
+            ? 'A ocupação inicial não cria acesso ao sistema.'
+            : 'Ainda não há cargos. Crie um cargo para registrar a ocupação inicial.';
     }
 
     function renderLinkCandidates() {
@@ -658,24 +638,77 @@
             `<option value="${Number(employee.id)}">${escapeHtml(employee.name)}</option>`).join('');
     }
 
-    async function linkExistingEmployee(event) {
+    function setEmployeeMode(mode) {
+        const isExisting = mode === 'existing';
+        document.querySelectorAll('[data-employee-mode]').forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.employeeMode === mode);
+        });
+        document.querySelectorAll('[data-employee-mode-panel]').forEach((panel) => {
+            panel.hidden = panel.dataset.employeeModePanel !== mode;
+        });
+        byId('identityNewEmployeeStatus').textContent = '';
+        byId('identityNewEmployeeSave').textContent = isExisting ? 'Vincular ao cargo' : 'Cadastrar sem login';
+    }
+
+    function openEmployeeDrawer() {
+        const drawer = byId('identityEmployeeDrawer');
+        if (!drawer) return;
+        renderEmployeeRoleOptions();
+        renderLinkCandidates();
+        setEmployeeMode('new');
+        if (typeof drawer.showModal === 'function') drawer.showModal();
+        else drawer.setAttribute('open', '');
+        byId('identityNewEmployeeName').focus();
+    }
+
+    function closeEmployeeDrawer() {
+        const drawer = byId('identityEmployeeDrawer');
+        if (!drawer) return;
+        byId('identityEmployeeDrawerForm').reset();
+        byId('identityNewEmployeeStatus').textContent = '';
+        if (typeof drawer.close === 'function') drawer.close();
+        else drawer.removeAttribute('open');
+    }
+
+    async function saveEmployeeFromDrawer(event) {
         event.preventDefault();
-        const roleId = Number(byId('identityRoleId').value);
+        const activeMode = document.querySelector('[data-employee-mode].is-active')?.dataset.employeeMode || 'new';
+        const roleId = Number(byId('identityEmployeeRole').value);
+        const button = byId('identityNewEmployeeSave');
+        const status = byId('identityNewEmployeeStatus');
+        if (!canEdit || !roleId || !state.rolesById.has(roleId)) {
+            status.textContent = 'Selecione um cargo inicial válido.';
+            return;
+        }
+        const name = byId('identityNewEmployeeName').value.trim();
         const employeeId = Number(byId('identityExistingEmployee').value);
-        const button = byId('identityLinkEmployeeSave');
-        if (!canEdit || button.disabled || !employeeId || !state.rolesById.has(roleId)) return;
-        const name = byId('identityExistingEmployee').selectedOptions[0].textContent;
-        if (!window.confirm(`Vincular ${name} ao cargo ${state.rolesById.get(roleId).title}?`)) return;
+        if (activeMode === 'new' && !name) {
+            status.textContent = 'Informe o nome do colaborador.';
+            byId('identityNewEmployeeName').focus();
+            return;
+        }
+        if (activeMode === 'existing' && !employeeId) {
+            status.textContent = 'Selecione o colaborador existente.';
+            byId('identityExistingEmployee').focus();
+            return;
+        }
+        const roleTitle = state.rolesById.get(roleId).title;
+        const subject = activeMode === 'new' ? name : byId('identityExistingEmployee').selectedOptions[0].textContent;
+        if (!window.confirm(`${activeMode === 'new' ? 'Cadastrar' : 'Vincular'} ${subject} no cargo ${roleTitle}? Nenhum login será criado.`)) return;
         button.disabled = true;
-        const status = byId('identityLinkEmployeeStatus');
+        status.textContent = 'Salvando cadastro…';
         try {
             await fetchJson(`/api/companies/${companyId}/roles/${roleId}/employees`, {
-                method: 'PUT', body: JSON.stringify({ employee_id: employeeId }),
+                method: activeMode === 'new' ? 'POST' : 'PUT',
+                body: JSON.stringify(activeMode === 'new' ? { name } : { employee_id: employeeId }),
             });
-            await loadPage({ preserveRoleId: roleId });
-            status.textContent = 'Colaborador vinculado. Nenhum login foi criado.';
-        } catch (error) { status.textContent = error.message; }
-        finally { button.disabled = !canEdit || !Number(byId('identityRoleId').value); }
+            await loadPage();
+            closeEmployeeDrawer();
+        } catch (error) {
+            status.textContent = error.message || 'Não foi possível concluir o cadastro.';
+        } finally {
+            button.disabled = false;
+        }
     }
 
     async function queryOccupancies(event) {
@@ -708,8 +741,18 @@
         byId('identityOccupancyQuery').addEventListener('submit', queryOccupancies);
         const today = new Date();
         byId('identityOccupancyDate').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        byId('identityLinkEmployeeForm')?.addEventListener('submit', linkExistingEmployee);
-        byId('identityNewEmployeeForm')?.addEventListener('submit', createEmployeeWithoutLogin);
+        byId('identityNewEmployee')?.addEventListener('click', openEmployeeDrawer);
+        byId('identityEmployeeDrawerClose')?.addEventListener('click', closeEmployeeDrawer);
+        byId('identityEmployeeDrawerCancel')?.addEventListener('click', closeEmployeeDrawer);
+        byId('identityEmployeeDrawerForm')?.addEventListener('submit', saveEmployeeFromDrawer);
+        byId('identityEmployeeCreateRole')?.addEventListener('click', () => {
+            closeEmployeeDrawer();
+            activateTab('editor');
+            openRoleEditor();
+        });
+        document.querySelectorAll('[data-employee-mode]').forEach((button) => {
+            button.addEventListener('click', () => setEmployeeMode(button.dataset.employeeMode));
+        });
         document.querySelectorAll('.identity-tab-btn').forEach((button) => button.addEventListener('click', () => activateTab(button.dataset.identityTab)));
         byId('identityEditorNewRole')?.addEventListener('click', () => openRoleEditor());
         byId('identityEditorCancel').addEventListener('click', closeRoleEditor);

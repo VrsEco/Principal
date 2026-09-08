@@ -173,8 +173,9 @@
                 <h2 class="text-h2">Colaboradores</h2>
             </div>
             <div class="identity-inline-actions">
-                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=cargos">Cadastrar cargo</a>
-                <a class="btn btn-secondary" href="/companies/{{ company.id }}/edit?tab=colaboradores">Cadastrar colaborador</a>
+                {% if has_permission('companies', 'edit') %}
+                <button type="button" class="btn btn-special" id="identityNewEmployee">+ Cadastrar colaborador</button>
+                {% endif %}
                 <button type="button" class="btn btn-secondary" data-identity-tab="ocupacoes">Ocupação por data</button>
                 {% if has_permission('financial', 'view') %}<button type="button" class="btn btn-secondary" data-identity-tab="custos">Custos planejados por cargo</button>{% endif %}
             </div>
@@ -243,30 +244,61 @@
             </form>
         </details>
         {% endif %}
+    </section>
+
     {% if has_permission('companies', 'edit') %}
-    <section class="card identity-section" aria-labelledby="identityNewEmployeeHeading">
-        <span class="identity-section__eyebrow">Perfil e ocupação inicial</span>
-        <h2 id="identityNewEmployeeHeading" class="text-h2">Cadastrar colaborador</h2>
-        <p>Selecione e salve um cargo na aba Cargos para definir a ocupação inicial. O colaborador será cadastrado sem login; nenhum acesso será criado.</p>
-        <form id="identityNewEmployeeForm">
-            <label for="identityNewEmployeeName">Nome do colaborador</label>
-            <input id="identityNewEmployeeName" class="form-control" maxlength="200" required autocomplete="off">
-            <p id="identityNewEmployeeRole">Selecione um cargo existente no editor.</p>
-            <button id="identityNewEmployeeSave" class="btn btn-secondary" type="submit" disabled>Cadastrar sem login</button>
-            <p id="identityNewEmployeeStatus" role="status" aria-live="polite"></p>
+    <dialog id="identityEmployeeDrawer" class="identity-drawer" aria-labelledby="identityEmployeeDrawerTitle">
+        <form id="identityEmployeeDrawerForm" class="identity-drawer__panel" novalidate>
+            <header class="identity-drawer__header">
+                <div>
+                    <span class="identity-section__eyebrow">Colaboradores</span>
+                    <h2 id="identityEmployeeDrawerTitle" class="text-h2">Cadastrar colaborador</h2>
+                    <p class="text-secondary">Registre a pessoa e defina a ocupação inicial sem sair desta tela.</p>
+                </div>
+                <button type="button" class="identity-drawer__close" id="identityEmployeeDrawerClose" aria-label="Fechar cadastro">×</button>
+            </header>
+
+            <div class="identity-drawer__steps" aria-label="Etapas do cadastro">
+                <span><b>1</b> Colaborador</span><span><b>2</b> Cargo inicial</span><span><b>3</b> Acesso opcional</span>
+            </div>
+
+            <div class="identity-choice-group" role="group" aria-label="Tipo de cadastro">
+                <button class="is-active" type="button" data-employee-mode="new">Novo colaborador</button>
+                <button type="button" data-employee-mode="existing">Vincular existente</button>
+            </div>
+
+            <div class="identity-drawer__body">
+                <div data-employee-mode-panel="new">
+                    <label for="identityNewEmployeeName">Nome do colaborador *</label>
+                    <input id="identityNewEmployeeName" class="form-control" maxlength="200" autocomplete="name" placeholder="Nome completo">
+                </div>
+                <div data-employee-mode-panel="existing" hidden>
+                    <label for="identityExistingEmployee">Colaborador sem cargo e sem login *</label>
+                    <select id="identityExistingEmployee" class="form-control"><option value="">Selecione um colaborador</option></select>
+                    <small class="identity-field-help">Nenhuma ocupação ou permissão existente será substituída.</small>
+                </div>
+                <div>
+                    <label for="identityEmployeeRole">Cargo inicial *</label>
+                    <select id="identityEmployeeRole" class="form-control"><option value="">Carregando cargos…</option></select>
+                    <small id="identityEmployeeRoleHelp" class="identity-field-help">A ocupação inicial não cria acesso ao sistema.</small>
+                </div>
+                <aside class="identity-drawer__access-note">
+                    <strong>Acesso ao sistema é opcional</strong>
+                    <p>Este cadastro não cria login. Depois de salvar, use <em>Usuários e acessos</em> para convidar ou vincular uma conta.</p>
+                </aside>
+            </div>
+
+            <footer class="identity-drawer__footer">
+                <button type="button" class="btn btn-secondary" id="identityEmployeeCreateRole">Criar cargo</button>
+                <span class="identity-drawer__footer-actions">
+                    <button type="button" class="btn btn-secondary" id="identityEmployeeDrawerCancel">Cancelar</button>
+                    <button id="identityNewEmployeeSave" class="btn btn-special" type="submit">Cadastrar sem login</button>
+                </span>
+            </footer>
+            <p id="identityNewEmployeeStatus" class="identity-drawer__status" role="status" aria-live="polite"></p>
         </form>
-        <form id="identityLinkEmployeeForm">
-            <label for="identityExistingEmployee">Ou vincule um colaborador existente</label>
-            <p>Somente ativos sem cargo e sem login. Nenhuma ocupação ou permissão existente será substituída.</p>
-            <select id="identityExistingEmployee" class="form-control" required>
-                <option value="">Selecione um colaborador</option>
-            </select>
-            <button id="identityLinkEmployeeSave" class="btn btn-secondary" type="submit" disabled>Vincular ao cargo selecionado</button>
-            <p id="identityLinkEmployeeStatus" role="status" aria-live="polite"></p>
-        </form>
-    </section>
+    </dialog>
     {% endif %}
-    </section>
 
     <section id="editor" class="card identity-section identity-tab-panel" data-identity-panel="editor">
         <div class="identity-section__header">
