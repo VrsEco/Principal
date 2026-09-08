@@ -255,6 +255,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   initializeSearch();
   initializeFilterCollapse();
   initializeActivitiesCollapse();
+  initializeWorkListCollapse();
   initializeSorting();
   initializeScopeSelector();
   initializeActivityActions();
@@ -1103,6 +1104,26 @@ function initializeActivitiesCollapse() {
   updateUI();
 }
 
+function initializeWorkListCollapse() {
+  document.querySelectorAll('[data-work-list-toggle]').forEach(toggleButton => {
+    const panelId = toggleButton.getAttribute('aria-controls');
+    const panelBody = panelId ? document.getElementById(panelId) : null;
+    if (!panelBody) return;
+
+    const setCollapsed = collapsed => {
+      panelBody.classList.toggle('is-collapsed', collapsed);
+      toggleButton.classList.toggle('is-collapsed', collapsed);
+      toggleButton.setAttribute('aria-expanded', (!collapsed).toString());
+    };
+
+    toggleButton.addEventListener('click', () => {
+      setCollapsed(!panelBody.classList.contains('is-collapsed'));
+    });
+
+    setCollapsed(false);
+  });
+}
+
 function updateSidebarCompactMode() {
   const panel = document.querySelector('.time-tracker-panel');
   if (!panel) return;
@@ -1817,23 +1838,32 @@ function buildIncidentSummary(positive, negative) {
 }
 
 function renderActivities() {
-  const activitiesList = document.getElementById('activitiesList');
-  const emptyState = document.getElementById('emptyState');
-  if (!activitiesList || !emptyState) return;
-
-  const loader = activitiesList.querySelector('.activity-placeholder');
-  if (loader) {
-    loader.style.display = 'none';
-  }
+  const projectList = document.getElementById('projectActivitiesList');
+  const processList = document.getElementById('processActivitiesList');
+  const projectEmptyState = document.getElementById('projectActivitiesEmpty');
+  const processEmptyState = document.getElementById('processActivitiesEmpty');
+  if (!projectList || !processList || !projectEmptyState || !processEmptyState) return;
 
   const filteredActivities = getFilteredActivities();
   updateInsightCards(filteredActivities);
   updateStatsFromActivities(filteredActivities);
   updateTimeTracking(calculateTimeFromActivities(filteredActivities));
 
+  const projectActivities = filteredActivities.filter(activity => activity.type !== 'process');
+  const processActivities = filteredActivities.filter(activity => activity.type === 'process');
+  renderActivityList(projectList, projectEmptyState, projectActivities);
+  renderActivityList(processList, processEmptyState, processActivities);
+  updateWorkListCount('projectActivitiesCount', projectActivities.length);
+  updateWorkListCount('processActivitiesCount', processActivities.length);
+  animateOnScroll();
+}
+
+function renderActivityList(activitiesList, emptyState, activities) {
+  const loader = activitiesList.querySelector('.activity-placeholder');
+  if (loader) loader.style.display = 'none';
   activitiesList.querySelectorAll('.activity-item').forEach(item => item.remove());
 
-  if (!filteredActivities.length) {
+  if (!activities.length) {
     activitiesList.style.display = 'none';
     emptyState.style.display = 'flex';
     return;
@@ -1841,28 +1871,27 @@ function renderActivities() {
 
   activitiesList.style.display = 'flex';
   emptyState.style.display = 'none';
-
   const fragment = document.createDocumentFragment();
-  filteredActivities.forEach(activity => {
-    fragment.appendChild(createActivityElement(activity));
-  });
-
+  activities.forEach(activity => fragment.appendChild(createActivityElement(activity)));
   activitiesList.appendChild(fragment);
-  animateOnScroll();
+}
+
+function updateWorkListCount(elementId, count) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  element.textContent = count;
+  element.setAttribute('aria-label', `${count} ${count === 1 ? 'item' : 'itens'}`);
 }
 
 function setActivitiesLoading(isLoading) {
-  const activitiesList = document.getElementById('activitiesList');
-  const loader = activitiesList?.querySelector('.activity-placeholder');
-  if (!activitiesList || !loader) return;
-
-  if (isLoading) {
-    activitiesList.dataset.state = 'loading';
-    loader.style.display = 'flex';
-  } else {
-    activitiesList.dataset.state = 'loaded';
-    loader.style.display = 'none';
-  }
+  ['projectActivitiesList', 'processActivitiesList'].forEach(listId => {
+    const activitiesList = document.getElementById(listId);
+    const loader = activitiesList?.querySelector('.activity-placeholder');
+    if (!activitiesList || !loader) return;
+    activitiesList.dataset.state = isLoading ? 'loading' : 'loaded';
+    loader.style.display = isLoading ? 'flex' : 'none';
+    if (isLoading) activitiesList.style.display = 'flex';
+  });
 }
 
 function getFilteredActivities() {

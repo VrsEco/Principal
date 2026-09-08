@@ -4,7 +4,7 @@
 
 {% block head %}
 <!-- Reusing existing CSS -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/my-work.css', v='20260908-mywork-dual-lists') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/my-work-multiselect.css') }}" />
 <script>
     window.companyId = {{ active_company.id if active_company else 'null' }};
@@ -615,27 +615,74 @@
         </div>
     </div>
 
-    <!-- Activities List -->
-    <section class="activities-panel">
-        <div class="activities-panel__header" style="display: none;">
-            <!-- Hidden header, using workspace style -->
-            <button id="activitiesPanelToggle" aria-expanded="true"></button>
-        </div>
-        <div class="activities-panel__body">
-            <div class="activities-list" id="activitiesList" data-state="loading">
-                <div class="activity-placeholder">
-                    <div class="placeholder-spinner"></div>
-                    <p>Carregando atividades...</p>
+    <!-- Atividades segregadas por origem, com listas independentes e colapsáveis. -->
+    <section class="activities-panel activities-panel--segmented" aria-label="Atividades da jornada">
+        <div class="activities-board">
+            <article class="work-list-panel work-list-panel--project">
+                <button type="button" class="work-list-panel__header" data-work-list-toggle
+                    aria-controls="projectActivitiesPanel" aria-expanded="true">
+                    <span class="work-list-panel__heading">
+                        <span class="work-list-panel__icon" aria-hidden="true">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </span>
+                        <span>
+                            <span class="work-list-panel__title">Atividades de Projetos</span>
+                            <span class="work-list-panel__subtitle">Entregas planejadas e em execução</span>
+                        </span>
+                    </span>
+                    <span class="work-list-panel__actions">
+                        <span class="work-list-panel__count" id="projectActivitiesCount">0</span>
+                        <svg class="work-list-panel__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </span>
+                </button>
+                <div class="work-list-panel__body" id="projectActivitiesPanel">
+                    <div class="activities-list" id="projectActivitiesList" data-state="loading">
+                        <div class="activity-placeholder">
+                            <div class="placeholder-spinner"></div>
+                            <p>Carregando atividades de projetos...</p>
+                        </div>
+                    </div>
+                    <div class="empty-state work-list-panel__empty" id="projectActivitiesEmpty" style="display: none;">
+                        <h3>Nenhuma atividade de projeto</h3>
+                        <p>Ajuste os filtros para ver mais.</p>
+                    </div>
                 </div>
-            </div>
+            </article>
 
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                </svg>
-                <h3>Nenhuma atividade</h3>
-                <p>Ajuste os filtros para ver mais.</p>
-            </div>
+            <article class="work-list-panel work-list-panel--process">
+                <button type="button" class="work-list-panel__header" data-work-list-toggle
+                    aria-controls="processActivitiesPanel" aria-expanded="true">
+                    <span class="work-list-panel__heading">
+                        <span class="work-list-panel__icon" aria-hidden="true">
+                            <i class="fa-solid fa-gears"></i>
+                        </span>
+                        <span>
+                            <span class="work-list-panel__title">Instâncias de Processos</span>
+                            <span class="work-list-panel__subtitle">Etapas operacionais que aguardam ação</span>
+                        </span>
+                    </span>
+                    <span class="work-list-panel__actions">
+                        <span class="work-list-panel__count" id="processActivitiesCount">0</span>
+                        <svg class="work-list-panel__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </span>
+                </button>
+                <div class="work-list-panel__body" id="processActivitiesPanel">
+                    <div class="activities-list" id="processActivitiesList" data-state="loading">
+                        <div class="activity-placeholder">
+                            <div class="placeholder-spinner"></div>
+                            <p>Carregando instâncias de processos...</p>
+                        </div>
+                    </div>
+                    <div class="empty-state work-list-panel__empty" id="processActivitiesEmpty" style="display: none;">
+                        <h3>Nenhuma instância de processo</h3>
+                        <p>Ajuste os filtros para ver mais.</p>
+                    </div>
+                </div>
+            </article>
         </div>
     </section>
 </div>
@@ -928,5 +975,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/my-work.js', v='20260822-mywork-identity-grouping') }}"></script>
+<script src="{{ url_for('static', filename='js/my-work.js', v='20260908-mywork-dual-lists') }}"></script>
 {% endblock %}

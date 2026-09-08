@@ -3667,6 +3667,118 @@ body {
 }
 
 /* ========================================
+   Jornada segmentada: Projetos e Processos
+   ======================================== */
+
+.activities-panel--segmented {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.activities-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.work-list-panel {
+  --work-list-accent: var(--color-primary);
+  --work-list-accent-soft: #eff6ff;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.work-list-panel--process {
+  --work-list-accent: #7c3aed;
+  --work-list-accent-soft: #f5f3ff;
+}
+
+.work-list-panel__header {
+  width: 100%;
+  border: 0;
+  border-left: 4px solid var(--work-list-accent);
+  background: linear-gradient(90deg, var(--work-list-accent-soft), var(--color-bg-primary) 68%);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.125rem 1rem 1rem;
+  text-align: left;
+  transition: background-color 0.2s ease;
+}
+
+.work-list-panel__header:hover { background: var(--work-list-accent-soft); }
+.work-list-panel__header:focus-visible { outline: 3px solid var(--work-list-accent); outline-offset: -3px; }
+.work-list-panel__heading, .work-list-panel__actions { display: inline-flex; align-items: center; }
+.work-list-panel__heading { gap: 0.75rem; min-width: 0; }
+.work-list-panel__heading > span:last-child { min-width: 0; }
+
+.work-list-panel__icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--work-list-accent);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.work-list-panel__icon i { font-size: 1.15rem; line-height: 1; }
+.work-list-panel__title, .work-list-panel__subtitle { display: block; }
+.work-list-panel__title { color: var(--color-text-primary); font-size: 0.95rem; font-weight: 700; line-height: 1.25; }
+.work-list-panel__subtitle { overflow: hidden; color: var(--color-text-secondary); font-size: 0.75rem; line-height: 1.35; margin-top: 0.22rem; text-overflow: ellipsis; white-space: nowrap; }
+.work-list-panel__actions { gap: 0.6rem; color: var(--work-list-accent); flex: 0 0 auto; }
+
+.work-list-panel__count {
+  min-width: 1.75rem;
+  padding: 0.22rem 0.48rem;
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--work-list-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.work-list-panel__chevron { transition: transform 0.2s ease; }
+.work-list-panel__header.is-collapsed .work-list-panel__chevron { transform: rotate(-90deg); }
+
+.work-list-panel__body {
+  max-height: 20000px;
+  overflow: hidden;
+  padding: 1rem;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+}
+
+.work-list-panel__body.is-collapsed { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; pointer-events: none; }
+.work-list-panel .activities-list { gap: 0.8rem; margin-bottom: 0; }
+.work-list-panel .activity-item { box-shadow: none; }
+.work-list-panel .activity-item:hover { box-shadow: var(--shadow-md); }
+.work-list-panel__empty { min-height: 12rem; margin: 0; padding: 2rem 1rem; text-align: center; }
+.work-list-panel__empty h3 { font-size: 0.95rem; }
+
+@media (max-width: 1100px) { .activities-board { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .work-list-panel__header { padding: 0.875rem 0.9rem 0.875rem 0.75rem; }
+  .work-list-panel__subtitle { display: none; }
+  .work-list-panel__body { padding: 0.75rem; }
+}
+
+/* ========================================
    Print Styles
    ======================================== */
 
