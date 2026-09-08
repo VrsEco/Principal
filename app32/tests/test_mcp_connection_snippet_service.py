@@ -125,35 +125,24 @@ def test_build_prompt_rejects_invalid_url():
         )
 
 
-def test_build_prompt_supports_engineering_profile():
-    content = MCPConnectionSnippetService.build_prompt(
+def test_build_prompt_rejects_engineering_profile_as_local_only():
+    with pytest.raises(ValueError, match="somente no ambiente local"):
+        MCPConnectionSnippetService.build_prompt(
         {
             "profile": "engineering",
             "default_company": "App32",
             "auth_type": "bearer",
             "token": "token-eng",
         }
-    )
-
-    assert "ative o Sapiens Engenharia" in content
-    assert "Família canônica: Squad de Engenharia" in content
-    assert "sapiens engenharia on" in content
-    assert "Surface alvo: ops" in content
-    assert "Harness inicial: Harness Coordenador do Squad de Engenharia" in content
-    assert "list_ops_app32_capabilities" in content
-    assert "describe_app32_operational_readiness_tool" in content
-    assert "https://app.gestaoversus.com.br/mcp/ops" in content
+        )
 
 
-def test_build_raw_config_includes_harness_metadata_for_engineering():
-    content = MCPConnectionSnippetService.build_raw_config(
+def test_build_raw_config_rejects_engineering_profile_as_local_only():
+    with pytest.raises(ValueError, match="somente no ambiente local"):
+        MCPConnectionSnippetService.build_raw_config(
         {
             "profile": "engineering",
             "auth_type": "bearer",
             "token": "token-123",
         }
-    )
-
-    assert '"profile": "engineering"' in content
-    assert '"surface": "ops"' in content
-    assert '"harness_key": "harness_coordenador_engenharia_v1"' in content
+        )

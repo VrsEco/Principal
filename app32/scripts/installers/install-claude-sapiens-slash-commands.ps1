@@ -79,6 +79,15 @@ $normalizedSquads = @(
         Where-Object { $_ }
 )
 
+if ($normalizedSquads -contains "engineering") {
+    Write-Warning "Sapiens Engenharia é local-only e não será instalado como comando MCP remoto."
+    $normalizedSquads = @($normalizedSquads | Where-Object { $_ -ne "engineering" })
+}
+
+if ($normalizedSquads.Count -eq 0) {
+    throw "Nenhum Squad elegível para instalação MCP remota. Sapiens Engenharia deve ser usado somente no ambiente local."
+}
+
 if ($normalizedSquads -contains "squad_cliente") {
     $clienteBody = @'
 Ative o **Sapiens Cliente** nesta conversa.
@@ -166,6 +175,13 @@ Regras obrigatórias desta ativação:
    - qual é a surface ativa
 10. Se o runtime suportar renomear a sessão/conversa, use o título `Sapiens Engenharia On`.
 11. Depois disso, permaneça operando como Sapiens Engenharia até nova instrução ou até `Sapiens Off`.
+12. Mantenha estado efêmero **Sapiens Engenharia ativo somente nesta conversa**. Para cada novo pedido técnico do usuário, antes de orientar ou executar qualquer ação:
+   - construa `engineering_task` com `task_id` local efêmero, `objective` e somente referências técnicas mínimas conhecidas;
+   - rode `resolve_app32_sapiens_activation_tool` com `squad=engineering` e o `engineering_task`;
+   - use `guided_triage` para informar complexidade e carregar apenas o contexto indicado;
+   - nunca envie `company_id`, `context_scope`, surface, usuário ou papel dentro de `engineering_task`;
+   - não selecione modelo nem execute especialista automaticamente.
+13. Descarte esse estado quando o usuário disser `Squad Engenharia Off`, `Sapiens Off`, trocar de squad, abrir nova conversa ou houver mudança de identidade autenticada.
 '@
     Publish-ClaudeActivation `
         -CommandName "sapiens-engenharia-on" `

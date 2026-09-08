@@ -157,9 +157,11 @@ class UserMcpTokenService:
     @classmethod
     def _resolve_allowed_squads_for_user(cls, user: User | None) -> tuple[str, ...]:
         if user and is_platform_admin(user=user):
-            return ROLE_ALLOWED_SQUADS["admin"]
-        role = str(getattr(user, "role", "") or "client").strip().lower()
-        return ROLE_ALLOWED_SQUADS.get(role, ("squad_cliente",))
+            allowed = ROLE_ALLOWED_SQUADS["admin"]
+        else:
+            role = str(getattr(user, "role", "") or "client").strip().lower()
+            allowed = ROLE_ALLOWED_SQUADS.get(role, ("squad_cliente",))
+        return tuple(item for item in allowed if item != "engineering")
 
     @classmethod
     def _resolve_authorized_squad_for_user(cls, user: User | None, squad: str | None) -> str:

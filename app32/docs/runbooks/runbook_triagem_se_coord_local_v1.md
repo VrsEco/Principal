@@ -67,9 +67,9 @@ Enviar ao entrypoint local `scripts/assess_engineering_task.py` um JSON com `tas
 
 `token_economy` não recomenda modelo, provider, esforço, preço ou percentual de economia. Escolha manual de modelo fica fora deste contrato. `estimated_token_savings: null` não é falha: evita converter hipótese em métrica. Em escopo empresarial, o retorno pode exigir MCP autenticado, mas não faz a leitura nem autoriza acesso.
 
-Na ativação canônica, `SapiensActivationService.resolve_activation(role='admin', squad='engineering')` expõe `engineering_guidance`; o bootstrap MCP `describe_app32_squad_runtime_tool` expõe o mesmo contrato em `task_assessment`. Ambos são somente orientação e não substituem a execução local do entrypoint. Não interpretar a presença do manifesto como publicação remota, permissão, execução de harness ou acesso aos dados empresariais.
+Na ativação local, `SapiensActivationService.resolve_activation(role='admin', squad='engineering', include_local_only=True)` expõe `engineering_guidance` sem startup MCP. O bootstrap MCP remoto rejeita Engenharia com `squad_runtime_local_only`; não interpretar o manifesto local como publicação, permissão, execução de harness ou acesso a dados empresariais.
 
-Para a interação guiada, chamar o tool canônico de ativação com `squad='engineering'` e `engineering_task={task_id, objective, task_intent?, files?, domain_hints?}`. O retorno é `guided_triage`; sucesso significa apenas classificação local. O tool rejeita `company_id`, `context_scope`, `surface`, `user_id`, `role` e qualquer squad diferente de Engenharia. Não usar esse caminho para evidência empresarial ou execução.
+Para a interação guiada local, usar o entrypoint `assess_engineering_task.py` com `task_id`, `objective`, `task_intent?`, `files?` e `domain_hints?`. Sucesso significa apenas classificação local. Não usar MCP, `company_id`, `context_scope`, `surface`, `user_id` ou `role` nesse caminho.
 
 ## Fase 3 — consultas e handoffs locais
 

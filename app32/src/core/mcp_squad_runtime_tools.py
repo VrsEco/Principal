@@ -64,6 +64,15 @@ def register_squad_runtime_tools(mcp: Any) -> None:
         ).strip().lower()
         surface = str(http_context.get("surface") or "user").strip().lower()
 
+        if normalized_runtime == "engineering":
+            return _error(
+                "squad_runtime.describe",
+                "squad_runtime_local_only",
+                "Sapiens Engenharia é disponível somente no ambiente local.",
+                runtime_profile="engineering",
+                surface=surface,
+            )
+
         if normalized_runtime == "squad_cliente":
             startup_tools = list(
                 dict.fromkeys(

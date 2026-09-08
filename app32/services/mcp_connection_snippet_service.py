@@ -10,6 +10,8 @@ from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 class MCPConnectionSnippetService:
     """Gera saídas prontas para copiar de uma conexão MCP remota."""
 
+    LOCAL_ONLY_PROFILES = frozenset(("engineering",))
+
     RUNTIME_PROFILES = {
         "sapiens_default": {
             "label": "Sapiens",
@@ -97,6 +99,7 @@ class MCPConnectionSnippetService:
     @classmethod
     def build_prompt(cls, payload: dict[str, Any]) -> str:
         normalized = cls._normalize(payload)
+        cls._reject_local_only_profile(normalized["profile"])
         source_json = cls._build_source_json(normalized)
         profile = cls.RUNTIME_PROFILES[normalized["profile"]]
         runtime_spec = get_runtime_profile_spec(normalized["profile"])
@@ -178,6 +181,7 @@ class MCPConnectionSnippetService:
     @classmethod
     def build_raw_config(cls, payload: dict[str, Any]) -> str:
         normalized = cls._normalize(payload)
+        cls._reject_local_only_profile(normalized["profile"])
         profile = cls.RUNTIME_PROFILES[normalized["profile"]]
         config = OrderedDict(
             [
@@ -208,6 +212,11 @@ class MCPConnectionSnippetService:
             ]
         )
         return json.dumps(config, ensure_ascii=False, indent=2)
+
+    @classmethod
+    def _reject_local_only_profile(cls, profile: str) -> None:
+        if profile in cls.LOCAL_ONLY_PROFILES:
+            raise ValueError("Sapiens Engenharia é disponível somente no ambiente local.")
 
     @classmethod
     def build_source_json(cls, payload: dict[str, Any]) -> str:

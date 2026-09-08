@@ -123,7 +123,7 @@ def test_explicit_task_type_cannot_hide_incident_risk():
     assert result.risk == 'high'
 
 
-def test_bootstrap_publishes_local_advisory_contract():
+def test_remote_bootstrap_rejects_engineering_as_local_only():
     from src.core.mcp_squad_runtime_tools import register_squad_runtime_tools
     class FakeMCP:
         def tool(self):
@@ -133,14 +133,9 @@ def test_bootstrap_publishes_local_advisory_contract():
             return register
     mcp = FakeMCP()
     register_squad_runtime_tools(mcp)
-    result = mcp.fn(runtime_profile='engineering')['data']
-    assert result['entry_agent']['key'] == 'SE-COORD'
-    assert result['task_assessment']['execution_mode'] == 'local_advisory'
-    assert result['task_assessment']['grants_permissions'] is False
-    assert result['task_assessment']['executes_specialists'] is False
-    assert result['task_assessment']['model_selection'] == 'manual_outside_assessment'
-    assert result['task_assessment']['reads_operational_data'] is False
-    assert len({h['agent_key'] for h in result['harnesses']}) == 8
+    result = mcp.fn(runtime_profile='engineering')
+    assert result['success'] is False
+    assert result['error']['code'] == 'squad_runtime_local_only'
 
 
 @pytest.mark.parametrize('harness', get_runtime_profile_spec('engineering').harnesses)

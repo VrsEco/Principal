@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from services.sapiens_activation_service import SapiensActivationService
-from services.sapiens_engineering_guidance_service import SapiensEngineeringGuidanceService
 from src.core.mcp_http_auth import get_http_request_context
 from src.intelligence.mcp_contracts import MCPErrorDetail, MCPErrorEnvelope, MCPResponseMeta, MCPSuccessEnvelope
 
@@ -61,7 +60,6 @@ def register_sapiens_activation_tools(mcp: Any) -> None:
     def resolve_app32_sapiens_activation_tool(
         squad: Optional[str] = None,
         installed_squads: Optional[list[str]] = None,
-        engineering_task: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         """
         Resolve o comportamento do comando genérico Sapiens On: pedir escolha quando houver mais de um squad ou devolver o payload de ativação do squad escolhido.
@@ -79,18 +77,6 @@ def register_sapiens_activation_tools(mcp: Any) -> None:
             )
         except ValueError as exc:
             return _error("sapiens_activation.resolve", str(exc), company_id=company_id, user_id=user_id)
-        if engineering_task is not None:
-            if payload.get("selection_required") or payload.get("selected_squad", {}).get("key") != "engineering":
-                return _error(
-                    "sapiens_activation.resolve",
-                    "Triagem guiada disponível somente após selecionar Sapiens Engenharia.",
-                    company_id=company_id,
-                    user_id=user_id,
-                )
-            try:
-                payload["guided_triage"] = SapiensEngineeringGuidanceService.assess_guided_task(engineering_task)
-            except ValueError as exc:
-                return _error("sapiens_activation.resolve", str(exc), company_id=company_id, user_id=user_id)
         return _success("sapiens_activation.resolve", payload, company_id=company_id, user_id=user_id)
 
 

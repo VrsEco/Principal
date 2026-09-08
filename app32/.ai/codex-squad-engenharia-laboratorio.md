@@ -112,8 +112,9 @@ Escalar ou registrar ocorrência quando houver:
 - Dados empresariais exigem MCP autenticado e `company_id`; a orientação nunca é uma concessão de acesso.
 
 - SE-COORD continua como entrada. Para triagem controlada, usar `scripts/assess_engineering_task.py` com objetivo e referências mínimas em JSON via stdin.
-- A ativação canônica de `Sapiens Engenharia` e seu bootstrap MCP publicam apenas esse manifesto de orientação; não criam tool paralela, não executam especialistas e não escolhem modelo.
-- A interação guiada usa o próprio `resolve_app32_sapiens_activation_tool` com `engineering_task` após selecionar Engenharia; devolve somente complexidade, risco, pendências e plano de contexto. Rejeitar campos de autoridade/contexto fornecidos pelo chamador.
+- Sapiens Engenharia é local-only: MCP remoto não oferece ativação, bootstrap, profile ou instalação para Engenharia. A triagem usa services/CLI locais; não cria tool paralela, não executa especialistas e não escolhe modelo.
+- A interação guiada local devolve somente complexidade, risco, pendências e plano de contexto. Rejeitar campos de autoridade/contexto fornecidos pelo chamador.
+- `Squad Engenharia On` mantém somente nesta conversa o protocolo de triagem para pedidos técnicos seguintes; `Off`, troca de squad, nova conversa ou mudança de identidade descartam o estado. Não persistir ou transferir contexto entre identidades.
 - Aplicar `docs/playbooks/playbook_triagem_se_coord_v1.md`; execução detalhada em `docs/runbooks/runbook_triagem_se_coord_local_v1.md`.
 - O resultado é recomendação auditável, não autorização ou execução. Pedidos ambíguos permanecem com o coordenador; segurança/tenant exige Arquiteto e migração exige DBA.
 - Não iniciar especialistas/modelos automaticamente, não trocar surface e não reutilizar seleção de sessão do Squad Cliente para Engenharia.

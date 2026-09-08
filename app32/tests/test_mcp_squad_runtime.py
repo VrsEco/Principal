@@ -42,21 +42,15 @@ def test_squad_runtime_tool_returns_official_squad_cliente_bootstrap():
     ]
 
 
-def test_squad_runtime_tool_supports_generic_runtime_fallback():
+def test_squad_runtime_tool_rejects_engineering_as_local_only():
     mcp = _FakeMCP()
     register_squad_runtime_tools(mcp)
     tool = mcp.registered["describe_app32_squad_runtime_tool"]
 
     payload = tool(runtime_profile="engineering")
 
-    assert payload["success"] is True
-    assert payload["data"]["runtime_profile"] == "engineering"
-    assert payload["data"]["default_harness_key"] == "harness_coordenador_engenharia_v1"
-    assessment = payload["data"]["task_assessment"]
-    assert assessment["interaction_mode"] == "orientation_only"
-    assert assessment["input"]["task_intent_values"] == ["execution", "correction", "planning"]
-    assert assessment["model_selection"] == "manual_outside_assessment"
-    assert assessment["reads_operational_data"] is False
+    assert payload["success"] is False
+    assert payload["error"]["code"] == "squad_runtime_local_only"
 
 
 def test_squad_runtime_tool_rejects_unknown_runtime():
