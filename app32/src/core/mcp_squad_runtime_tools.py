@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
+from services.sapiens_engineering_guidance_service import SapiensEngineeringGuidanceService
 from services.squad_runtime_bootstrap_service import SquadRuntimeBootstrapService
 from src.core.mcp_http_auth import get_http_actor_role, get_http_request_context
 from src.intelligence.mcp_contracts import (
@@ -107,6 +108,16 @@ def register_squad_runtime_tools(mcp: Any) -> None:
                 for harness in runtime_spec.harnesses
             ],
         }
+        if runtime_spec.key == "engineering":
+            data["entry_agent"] = {"key": "SE-COORD"}
+            data["task_assessment"] = {
+                "schema_version": "engineering.assessment.v1",
+                "rule_version": "se-coord.rules.v1",
+                "execution_mode": "local_advisory",
+                **SapiensEngineeringGuidanceService.build_manifest(),
+            }
+            for item, harness in zip(data["harnesses"], runtime_spec.harnesses):
+                item["agent_key"] = harness.agent_key
         return _success(
             "squad_runtime.describe",
             data,

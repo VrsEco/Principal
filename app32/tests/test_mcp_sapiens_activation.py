@@ -61,3 +61,46 @@ def test_resolve_sapiens_activation_returns_cliente_payload():
     assert payload["data"]["activation_welcome_short"].startswith("Sessão Sapiens iniciada com sucesso!")
     assert "Quer ver instruções mais completas?" in payload["data"]["activation_welcome_short"]
     assert payload["data"]["activation_welcome_full"].startswith("Sessão Sapiens iniciada com sucesso!")
+
+
+def test_engineering_activation_returns_guided_triage_without_execution():
+    mcp = _FakeMCP()
+    register_sapiens_activation_tools(mcp)
+
+    with patch(
+        "src.core.mcp_sapiens_activation_tools.get_http_request_context",
+        return_value={"fallback_role": "administrador", "company_id": 31},
+    ):
+        payload = mcp.registered["resolve_app32_sapiens_activation_tool"](
+            squad="engineering",
+            engineering_task={
+                "task_id": "guided-1",
+                "objective": "Corrigir cálculo acumulado",
+                "task_intent": "correction",
+                "files": ["services/indicator_service.py"],
+            },
+        )
+
+    assert payload["success"] is True
+    triage = payload["data"]["guided_triage"]
+    assert triage["complexity"] == "medium"
+    assert triage["token_economy"]["strategy"] == "symbol_and_delta"
+    assert triage["model_selection"] == "manual_outside_assessment"
+    assert triage["executes_specialists"] is False
+    assert "specialists" not in triage
+
+
+def test_guided_triage_rejects_non_engineering_or_authority_input():
+    mcp = _FakeMCP()
+    register_sapiens_activation_tools(mcp)
+    with patch("src.core.mcp_sapiens_activation_tools.get_http_request_context", return_value={"fallback_role": "administrador"}):
+        wrong_squad = mcp.registered["resolve_app32_sapiens_activation_tool"](
+            squad="cliente", engineering_task={"task_id": "guided-1", "objective": "Corrigir cálculo"}
+        )
+        authority = mcp.registered["resolve_app32_sapiens_activation_tool"](
+            squad="engineering",
+            engineering_task={"task_id": "guided-1", "objective": "Corrigir cálculo", "company_id": 31},
+        )
+
+    assert wrong_squad["success"] is False
+    assert authority["success"] is False

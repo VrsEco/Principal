@@ -3,9 +3,49 @@ from __future__ import annotations
 from dataclasses import dataclass
 import asyncio
 from types import SimpleNamespace
+import sys
+
+import pytest
+from flask import Flask
 
 import src.core.mcp_surface_registry as registry
 from src.core.mcp_runtime import MCPExecutionContext
+
+
+@pytest.fixture(autouse=True)
+def isolated_app_factory(monkeypatch):
+    """Exercise the context loader without bootstrapping APP32 or its jobs."""
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    monkeypatch.setitem(sys.modules, "app", SimpleNamespace(create_app=lambda: app))
+    return app
+
+
+def test_manifest_loader_reuses_existing_context(monkeypatch, isolated_app_factory):
+    from flask import current_app
+
+    def forbidden_factory():
+        raise AssertionError("Existing context must not create another application")
+
+    monkeypatch.setattr(sys.modules["app"], "create_app", forbidden_factory)
+    monkeypatch.setattr(
+        registry, "get_surface_manifest",
+        lambda *args, **kwargs: {"testing": current_app.testing},
+    )
+    with isolated_app_factory.app_context():
+        assert registry._get_surface_manifest_in_app_context("user") == {"testing": True}
+
+
+def test_manifest_loader_uses_isolated_factory_and_releases_context(monkeypatch):
+    from flask import current_app, has_app_context
+
+    assert not has_app_context()
+    monkeypatch.setattr(
+        registry, "get_surface_manifest",
+        lambda *args, **kwargs: {"testing": current_app.testing},
+    )
+    assert registry._get_surface_manifest_in_app_context("ops") == {"testing": True}
+    assert not has_app_context()
 
 
 @dataclass

@@ -1,0 +1,28 @@
+{
+  "baseline": {
+    "workload_fingerprint": "646a2b12517053379b12dd6bc7576d71cb5d453c6b6d49814df7b1025bf961e5",
+    "identity_fingerprint": null,
+    "evaluation_fingerprint": "3d93652a7cbadab4354c69360ecc5f051c6bae250750d2806565e279d5a831b8",
+    "runtime_fingerprint": null,
+    "variant": "baseline",
+    "quality": "unknown",
+    "estimated_context_tokens": null,
+    "usage_source": "unknown",
+    "input_tokens": null,
+    "output_tokens": null,
+    "duration_ms": null
+  },
+  "candidate": {
+    "workload_fingerprint": "646a2b12517053379b12dd6bc7576d71cb5d453c6b6d49814df7b1025bf961e5",
+    "identity_fingerprint": null,
+    "evaluation_fingerprint": "3d93652a7cbadab4354c69360ecc5f051c6bae250750d2806565e279d5a831b8",
+    "runtime_fingerprint": null,
+    "variant": "candidate",
+    "quality": "unknown",
+    "estimated_context_tokens": null,
+    "usage_source": "unknown",
+    "input_tokens": null,
+    "output_tokens": null,
+    "duration_ms": null
+  }
+}
