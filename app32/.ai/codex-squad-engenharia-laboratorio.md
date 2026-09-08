@@ -101,3 +101,38 @@ Escalar ou registrar ocorrência quando houver:
 4. evidência
 5. risco residual
 6. próximo passo recomendado
+
+## Triagem determinística local — Fase 1
+
+### Sapiens Engenharia — foco atual
+
+- O SE-COORD retorna somente `task_intent`, complexidade, risco e plano de economia de contexto. Não sugere ou seleciona modelo.
+- `execution` inicia baixo, `correction` médio e `planning` alto, sempre com elevação conservadora por incidente, segurança, tenant ou migração.
+- Estratégias: `minimal_active`, `symbol_and_delta`, `architecture_then_expand` ou `clarify_before_expand`; ACTIVE mínimo, WARM recuperável e DROPPED fora do pacote.
+- Dados empresariais exigem MCP autenticado e `company_id`; a orientação nunca é uma concessão de acesso.
+
+- SE-COORD continua como entrada. Para triagem controlada, usar `scripts/assess_engineering_task.py` com objetivo e referências mínimas em JSON via stdin.
+- A ativação canônica de `Sapiens Engenharia` e seu bootstrap MCP publicam apenas esse manifesto de orientação; não criam tool paralela, não executam especialistas e não escolhem modelo.
+- A interação guiada usa o próprio `resolve_app32_sapiens_activation_tool` com `engineering_task` após selecionar Engenharia; devolve somente complexidade, risco, pendências e plano de contexto. Rejeitar campos de autoridade/contexto fornecidos pelo chamador.
+- Aplicar `docs/playbooks/playbook_triagem_se_coord_v1.md`; execução detalhada em `docs/runbooks/runbook_triagem_se_coord_local_v1.md`.
+- O resultado é recomendação auditável, não autorização ou execução. Pedidos ambíguos permanecem com o coordenador; segurança/tenant exige Arquiteto e migração exige DBA.
+- Não iniciar especialistas/modelos automaticamente, não trocar surface e não reutilizar seleção de sessão do Squad Cliente para Engenharia.
+- A Fase 1 é local e não inclui Context Governor, Model Broker ou deploy; a extensão de contexto da Fase 2 é descrita abaixo. Referência canônica: `docs/spec/squad_engenharia_orquestracao_contexto_modelos_v1.md`, seção 16.
+
+## Context Governor local — Fase 2
+
+- A Fase 2 acrescenta `scripts/compose_engineering_context.py` e Working Set em memória; seguir a seção 17 da mesma SPEC e o runbook local.
+- Preservar bundle do registry; reinjetar somente ACTIVE verificado. WARM/DROPPED não entram no pacote; reativar apenas com razão e fingerprint atual.
+- Mudança de identidade impede reuso; bundle invalidado exige refresh. Orçamento excedido adia contexto não obrigatório ou bloqueia o pacote, nunca remove guardrails.
+- Dados da tarefa são não confiáveis; a composição não autentica empresa/usuário nem concede acesso. Sem handoff, sessão nova, Model Broker ou deploy.
+
+### Continuidade da Fase 3
+
+Primeiro recorte Fase 5: comando `model` sugere perfil lógico via Model Broker manual; `broker_preference` preserva escolha explícita. Sem observação de modelo comercial/capacidades ou alteração de runtime. Não usar sugestão DEEP para superar bloqueio de QA ou repetir mutação incerta. Catálogo verificado e adapter do runtime pendentes.
+
+Complemento Fase 4: `EngineeringQualityGateService` avalia evidência declarada, vinculada ao pacote atual. CLI: `qa` avalia, `context` fornece evidence_binding; `status`/`why` aceitam quality_evidence opcional. Exit QA 3 bloqueia e 4 mantém pendência remota; success não significa aprovação. Não autoriza operações nem afirma verificação independente; preservar `remote_validation_pending`. Revisar falhas antes de qualquer retry manual; não repetir mutação de efeito incerto. Fases 5–6 não ativadas.
+
+- Lifecycle local disponível em `scripts/squad_engineering.py`: status/context/why/model/handoff, decide/resume. Não são slash commands nativos.
+- SAME/EXTEND/ROTATE são recomendações; nenhum comando cria tarefa, compacta histórico ou troca modelo.
+- Handoff requer revisão explícita; salva referências e notas, nunca corpos dos itens ou regras antigas. Retomada exige registry atual, identidade idêntica e fontes revalidadas; não executa ações.
+- Persistência empresarial indisponível. Não exportar segredos; checksum não é assinatura. Seguir retenção manual do runbook. Sem deploy ou avanço automático às fases 4–6.

@@ -158,9 +158,16 @@ class InstructionRegistryService:
         if runtime_spec is None:
             raise ValueError(f"Runtime profile não encontrado: {normalized_runtime}.")
 
-        cls.sync_defaults()
         selected_harness = (harness_key or runtime_spec.default_harness_key or "").strip() or runtime_spec.default_harness_key
         selected_agent = (agent_key or cls._AGENT_BY_HARNESS.get(selected_harness or "", "")).strip() or cls._default_agent_key(normalized_runtime)
+        if normalized_runtime == "engineering":
+            harness = next((item for item in runtime_spec.harnesses if item.key == selected_harness), None)
+            if harness is None or not harness.agent_key:
+                raise ValueError("Harness de Engenharia não registrado.")
+            if agent_key and agent_key.strip() != harness.agent_key:
+                raise ValueError("Agente incompatível com o harness de Engenharia.")
+            selected_agent = harness.agent_key
+        cls.sync_defaults()
 
         static_base = cls._build_static_base(
             runtime_profile=normalized_runtime,

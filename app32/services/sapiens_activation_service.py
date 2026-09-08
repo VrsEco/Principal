@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from services.mcp_connection_snippet_service import MCPConnectionSnippetService
+from services.sapiens_engineering_guidance_service import SapiensEngineeringGuidanceService
 from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 
 
@@ -240,7 +241,7 @@ class SapiensActivationService:
             role_label=role,
             company_id=company_id,
         )
-        return {
+        result = {
             "selection_required": False,
             "available_squads": available,
             "selected_squad": selected,
@@ -259,6 +260,10 @@ class SapiensActivationService:
             "runtime_family_label": runtime_spec.family_label if runtime_spec else None,
             "free_text_aliases": ["Sapiens On", "sapiens on", "/sapiens-on"],
         }
+        if selected["key"] == "engineering":
+            result["engineering_guidance"] = SapiensEngineeringGuidanceService.build_manifest()
+            result["activation_guidance"] = SapiensEngineeringGuidanceService.build_activation_guidance()
+        return result
 
     @classmethod
     def _serialize_squad(cls, key: str) -> dict[str, Any]:

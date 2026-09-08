@@ -8,6 +8,7 @@ class RuntimeHarnessSpec:
     key: str
     label: str
     business_role: str
+    agent_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -125,41 +126,49 @@ _SQUAD_VERSUS_HARNESSES = (
 _SQUAD_ENGENHARIA_HARNESSES = (
     RuntimeHarnessSpec(
         key="harness_coordenador_engenharia_v1",
+        agent_key="SE-COORD",
         label="Harness Coordenador do Squad de Engenharia",
         business_role="triagem técnica, roteamento e coordenação disciplinada da execução",
     ),
     RuntimeHarnessSpec(
         key="harness_arquiteto_engenharia_v1",
+        agent_key="SE-ARCH",
         label="Harness Arquiteto de Engenharia",
         business_role="arquitetura, boundary, segurança e coerência estrutural",
     ),
     RuntimeHarnessSpec(
         key="harness_frontend_engenharia_v1",
+        agent_key="SE-FRONTEND",
         label="Harness Frontend de Engenharia",
         business_role="UX, templates, interface e experiência server-rendered",
     ),
     RuntimeHarnessSpec(
         key="harness_backend_api_engenharia_v1",
+        agent_key="SE-BACKEND-API",
         label="Harness Backend API de Engenharia",
         business_role="contratos REST/MCP, schemas e superfícies de entrada",
     ),
     RuntimeHarnessSpec(
         key="harness_backend_service_engenharia_v1",
+        agent_key="SE-BACKEND-SERVICE",
         label="Harness Backend Service de Engenharia",
         business_role="regra de negócio determinística e services reutilizáveis",
     ),
     RuntimeHarnessSpec(
         key="harness_ai_engineer_engenharia_v1",
+        agent_key="SE-AI",
         label="Harness AI Engineer de Engenharia",
         business_role="LangGraph, MCP, agentes, RAG e integrações inteligentes",
     ),
     RuntimeHarnessSpec(
         key="harness_dba_engenharia_v1",
+        agent_key="SE-DBA",
         label="Harness DBA de Engenharia",
         business_role="PostgreSQL, modelos, migrações, queries e performance",
     ),
     RuntimeHarnessSpec(
         key="harness_qa_automation_engenharia_v1",
+        agent_key="SE-QA",
         label="Harness QA Automation de Engenharia",
         business_role="smoke, regressão, evidência e validação disciplinada",
     ),

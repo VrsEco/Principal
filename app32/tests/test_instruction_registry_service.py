@@ -24,7 +24,8 @@ def test_instruction_bundle_publishes_safe_discovery_and_retry_rules():
     payload = InstructionRegistryService.resolve_bundle(runtime_profile="squad_cliente", channel="stable")
     rules = " ".join(item["rule"] for item in payload["mandatory_rules"])
 
-    assert payload["bundle_version"] == "2026-08-28.5"
+    # Verify published behavior below, without pinning an obsolete rollout date.
+    assert payload["bundle_version"] == InstructionRegistryService.CURRENT_BUNDLE_VERSION
     assert "capability_not_available" in rules
     assert "502, 503 ou 504" in rules
     assert "Nunca repetir mutação automaticamente" in rules

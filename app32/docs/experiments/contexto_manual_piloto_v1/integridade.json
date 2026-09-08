@@ -1,0 +1,18 @@
+{
+  "baseline.md": {
+    "sha256": "4a2a8be449546e98f688b5e359c5233ddd5838098a076a8d6576392ca03dce15",
+    "bytes": 27644
+  },
+  "candidate.md": {
+    "sha256": "62e1a5d867f07bc336f8e04f6941fcd7a52685211438d51e2d7db16aec0dc706",
+    "bytes": 20021
+  },
+  "criterios_qa.md": {
+    "sha256": "3d93652a7cbadab4354c69360ecc5f051c6bae250750d2806565e279d5a831b8",
+    "bytes": 908
+  },
+  "workload_manifest.json": {
+    "sha256": "646a2b12517053379b12dd6bc7576d71cb5d453c6b6d49814df7b1025bf961e5",
+    "bytes": 2001
+  }
+}
