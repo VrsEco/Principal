@@ -10,6 +10,8 @@ from src.intelligence.security.runtime_profiles import get_runtime_profile_spec
 class SapiensActivationService:
     """Resolve ativação genérica do Sapiens com seleção de squad quando aplicável."""
 
+    LOCAL_ONLY_SQUADS = frozenset(("engineering",))
+
     ROLE_ALLOWED_SQUADS = {
         "admin": ("squad_cliente", "squad_versus", "engineering"),
         "administrator": ("squad_cliente", "squad_versus", "engineering"),
@@ -178,8 +180,11 @@ class SapiensActivationService:
         *,
         role: str | None = None,
         installed_squads: list[str] | tuple[str, ...] | None = None,
+        include_local_only: bool = False,
     ) -> list[dict[str, Any]]:
         allowed = list(cls.allowed_squads_for_role(role))
+        if not include_local_only:
+            allowed = [item for item in allowed if item not in cls.LOCAL_ONLY_SQUADS]
         installed_normalized = {
             item for item in (cls.normalize_squad(raw) for raw in (installed_squads or ())) if item
         }
@@ -206,8 +211,13 @@ class SapiensActivationService:
         squad: str | None = None,
         installed_squads: list[str] | tuple[str, ...] | None = None,
         company_id: int | None = None,
+        include_local_only: bool = False,
     ) -> dict[str, Any]:
-        available = cls.list_available_squads(role=role, installed_squads=installed_squads)
+        available = cls.list_available_squads(
+            role=role,
+            installed_squads=installed_squads,
+            include_local_only=include_local_only,
+        )
         normalized_squad = cls.normalize_squad(squad)
         selection_prompt = cls.selection_prompt_for_squads(available)
 
@@ -227,7 +237,7 @@ class SapiensActivationService:
             raise ValueError("Squad solicitado não está disponível para este usuário/contexto.")
 
         runtime_spec = get_runtime_profile_spec(selected["runtime_profile"])
-        startup_tools = list(
+        startup_tools = [] if selected["key"] in cls.LOCAL_ONLY_SQUADS else list(
             MCPConnectionSnippetService.RUNTIME_PROFILES.get(selected["runtime_profile"], {}).get("startup_tools", [])
         )
         activation_welcome_opening = cls.build_session_welcome_opening()

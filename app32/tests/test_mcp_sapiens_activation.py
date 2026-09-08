@@ -25,8 +25,8 @@ def test_available_sapiens_squads_returns_selection_prompt_for_admin():
         payload = mcp.registered["describe_app32_available_sapiens_squads_tool"]()
 
     assert payload["success"] is True
-    assert [item["choice_label"] for item in payload["data"]["available_squads"]] == ["Cliente", "Consultor", "Engenharia"]
-    assert payload["data"]["selection_prompt"] == "Com qual squad você vai trabalhar? Cliente / Consultor / Engenharia"
+    assert [item["choice_label"] for item in payload["data"]["available_squads"]] == ["Cliente", "Consultor"]
+    assert payload["data"]["selection_prompt"] == "Com qual squad você vai trabalhar? Cliente / Consultor"
 
 
 def test_resolve_sapiens_activation_requires_selection_when_multiple_squads():
@@ -38,7 +38,7 @@ def test_resolve_sapiens_activation_requires_selection_when_multiple_squads():
 
     assert payload["success"] is True
     assert payload["data"]["selection_required"] is True
-    assert payload["data"]["selection_prompt"] == "Com qual squad você vai trabalhar? Cliente / Consultor / Engenharia"
+    assert payload["data"]["selection_prompt"] == "Com qual squad você vai trabalhar? Cliente / Consultor"
 
 
 def test_resolve_sapiens_activation_returns_cliente_payload():
@@ -63,7 +63,7 @@ def test_resolve_sapiens_activation_returns_cliente_payload():
     assert payload["data"]["activation_welcome_full"].startswith("Sessão Sapiens iniciada com sucesso!")
 
 
-def test_engineering_activation_returns_guided_triage_without_execution():
+def test_remote_activation_rejects_engineering_local_only():
     mcp = _FakeMCP()
     register_sapiens_activation_tools(mcp)
 
@@ -71,36 +71,7 @@ def test_engineering_activation_returns_guided_triage_without_execution():
         "src.core.mcp_sapiens_activation_tools.get_http_request_context",
         return_value={"fallback_role": "administrador", "company_id": 31},
     ):
-        payload = mcp.registered["resolve_app32_sapiens_activation_tool"](
-            squad="engineering",
-            engineering_task={
-                "task_id": "guided-1",
-                "objective": "Corrigir cálculo acumulado",
-                "task_intent": "correction",
-                "files": ["services/indicator_service.py"],
-            },
-        )
+        payload = mcp.registered["resolve_app32_sapiens_activation_tool"](squad="engineering")
 
-    assert payload["success"] is True
-    triage = payload["data"]["guided_triage"]
-    assert triage["complexity"] == "medium"
-    assert triage["token_economy"]["strategy"] == "symbol_and_delta"
-    assert triage["model_selection"] == "manual_outside_assessment"
-    assert triage["executes_specialists"] is False
-    assert "specialists" not in triage
-
-
-def test_guided_triage_rejects_non_engineering_or_authority_input():
-    mcp = _FakeMCP()
-    register_sapiens_activation_tools(mcp)
-    with patch("src.core.mcp_sapiens_activation_tools.get_http_request_context", return_value={"fallback_role": "administrador"}):
-        wrong_squad = mcp.registered["resolve_app32_sapiens_activation_tool"](
-            squad="cliente", engineering_task={"task_id": "guided-1", "objective": "Corrigir cálculo"}
-        )
-        authority = mcp.registered["resolve_app32_sapiens_activation_tool"](
-            squad="engineering",
-            engineering_task={"task_id": "guided-1", "objective": "Corrigir cálculo", "company_id": 31},
-        )
-
-    assert wrong_squad["success"] is False
-    assert authority["success"] is False
+    assert payload["success"] is False
+    assert payload["error"]["code"] == "sapiens_activation_invalid_request"

@@ -13,7 +13,9 @@ Fonte: `docs/spec/squad_engenharia_orquestracao_contexto_modelos_v1.md`, seção
 
 Na ativação de `Sapiens Engenharia`, consumir o manifesto do bootstrap canônico ou de `SapiensActivationService`, sem criar catálogo/tool paralelo. Ele é orientação local: encaminha para o entrypoint já existente, mantém a escolha do modelo manual e não executa especialista nem lê dados operacionais.
 
-Para interação guiada pelo MCP, após selecionar `engineering`, enviar `engineering_task` ao `resolve_app32_sapiens_activation_tool`. Informar somente `task_id`, `objective` e os opcionais técnicos permitidos. O retorno `guided_triage` orienta o próximo contexto; não contém especialista selecionado e rejeita campos de autoridade ou contexto empresarial declarados pelo chamador.
+Para interação guiada local, enviar a tarefa ao `EngineeringTaskRouterService`/`EngineeringTokenEconomyService` ou ao entrypoint `assess_engineering_task.py`. Informar somente `task_id`, `objective` e os opcionais técnicos permitidos. O retorno orienta o próximo contexto; não contém especialista selecionado e rejeita campos de autoridade ou contexto empresarial declarados pelo chamador. MCP remoto não é um canal permitido para Engenharia.
+
+Após `Squad Engenharia On`, o runtime cliente conserva esse modo apenas na conversa atual e repete a triagem em cada novo pedido técnico. Encerrar com `Squad Engenharia Off`; nova conversa, troca de squad ou mudança de identidade sempre começa sem contexto transferido.
 
 ## Sapiens Engenharia — complexidade e economia de contexto
 
