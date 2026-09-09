@@ -699,11 +699,14 @@ function bankRowStateClass(row){
 function isSystemEntryDisabled(item, activeRow=getActiveRow()){
     if(!state.selectedBankRowIds.length && !activeRow) return true;
     if(item?.is_reconciled) return true;
-    const linkedIds = new Set((activeRow?.matches?.linked_entry_ids || []).map(Number));
+    // Uma sugestão ainda precisa de revisão humana. Ela não pode bloquear a
+    // seleção manual da baixa correspondente, pois essa seleção é justamente
+    // o que permite ao usuário conferir o total e confirmar a conciliação.
+    const confirmedIds = new Set((activeRow?.matches?.confirmed_matches || []).map(item => Number(item.financial_entry_id)));
     if(item?.is_bordero){
-        return (item.financial_entry_ids || []).some((entryId) => linkedIds.has(Number(entryId)));
+        return (item.financial_entry_ids || []).some((entryId) => confirmedIds.has(Number(entryId)));
     }
-    return linkedIds.has(Number(item?.financial_entry_id || item?.id));
+    return confirmedIds.has(Number(item?.financial_entry_id || item?.id));
 }
 
 function canUseOpenTitleFlow(activeRow=getActiveRow()){
