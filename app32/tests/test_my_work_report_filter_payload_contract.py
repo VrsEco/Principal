@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -70,7 +71,46 @@ def test_normalized_process_activity_exposes_canonical_owner_id():
     assert _activity_matches_process_owner(row, [105]) is False
 
 
-def test_my_work_template_busts_report_filter_asset_cache():
+def test_my_work_template_busts_calendar_date_asset_cache():
     template = APP_ROOT / "templates" / "modules" / "my_work" / "my_work_v2.html"
 
-    assert "20260908-mywork-report-filter-parity" in template.read_text(encoding="utf-8")
+    assert "20260909-mywork-calendar-dates" in template.read_text(encoding="utf-8")
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node.js não disponível")
+def test_my_work_calendar_dates_do_not_shift_in_bahia_timezone():
+    script_path = APP_ROOT / "static" / "js" / "my-work.js"
+    node_script = f"""
+const fs = require('fs');
+const vm = require('vm');
+const source = fs.readFileSync({json.dumps(str(script_path))}, 'utf8');
+const sandbox = {{
+  window: {{}},
+  document: {{ addEventListener() {{}}, getElementById() {{ return null; }} }},
+  console: {{ log() {{}}, warn() {{}}, error() {{}} }},
+  setTimeout() {{}}, clearTimeout() {{}}, setInterval() {{}}, clearInterval() {{}},
+  URLSearchParams,
+}};
+vm.createContext(sandbox);
+vm.runInContext(source, sandbox);
+const result = vm.runInContext(`JSON.stringify({{
+  project: formatDeadline({{ deadline: '2026-04-22' }}),
+  process: formatDateLabel('2026-08-30'),
+  parsedDay: parseCalendarDate('2026-04-22').getDate(),
+}})`, sandbox);
+process.stdout.write(result);
+"""
+
+    completed = subprocess.run(
+        ["node", "-e", node_script],
+        check=True,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "TZ": "America/Bahia"},
+    )
+
+    assert json.loads(completed.stdout) == {
+        "project": "22/04/2026",
+        "process": "30/08/2026",
+        "parsedDay": 22,
+    }
