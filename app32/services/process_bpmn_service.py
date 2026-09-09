@@ -6,10 +6,11 @@ from typing import Any
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
-from models import Company, db, Process, ProcessBpmnDiagram
+from models import Company, Role, db, Process, ProcessBpmnDiagram
 
 
 VALID_BPMN_STATUSES = {"draft", "published", "archived"}
+LANE_ROLE_BINDING_KEY = "lane_role_bindings"
 SVG_NS = "http://www.w3.org/2000/svg"
 ARTIFACT_VISUALS = {
     "pop": {"markers": ("[POP]",), "stroke": "#2563eb", "fill": "#eff6ff"},
@@ -244,6 +245,37 @@ def build_empty_bpmn_xml(process: Process) -> str:
 """
 
 
+def normalize_lane_role_bindings(metadata: dict[str, Any], *, company_id: int) -> dict[str, int]:
+    """Validate lane-to-role metadata before it is persisted with a BPMN diagram."""
+    raw_bindings = metadata.get(LANE_ROLE_BINDING_KEY)
+    if raw_bindings is None:
+        return {}
+    if not isinstance(raw_bindings, dict) or len(raw_bindings) > 200:
+        raise ValueError("Vínculos de cargos das raias inválidos.")
+
+    normalized: dict[str, int] = {}
+    for lane_id, raw_role_id in raw_bindings.items():
+        if not isinstance(lane_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}", lane_id):
+            raise ValueError("Identificador de raia inválido.")
+        if type(raw_role_id) is not int or raw_role_id <= 0:
+            raise ValueError("Cargo executor inválido.")
+        normalized[lane_id] = raw_role_id
+
+    if not normalized:
+        return {}
+    valid_role_ids = {
+        role_id
+        for (role_id,) in (
+            db.session.query(Role.id)
+            .filter(Role.company_id == company_id, Role.id.in_(set(normalized.values())))
+            .all()
+        )
+    }
+    if valid_role_ids != set(normalized.values()):
+        raise ValueError("Um ou mais cargos não pertencem à empresa deste processo.")
+    return normalized
+
+
 def serialize_diagram(diagram: ProcessBpmnDiagram | None, process: Process | None = None) -> dict[str, Any]:
     if not diagram:
         if not process:
@@ -362,7 +394,13 @@ def upsert_process_bpmn_diagram(
     diagram.bpmn_xml = bpmn_xml
     diagram.svg_snapshot = payload.get("svg_snapshot")
     diagram.png_snapshot = payload.get("png_snapshot")
-    diagram.metadata_json = payload.get("metadata_json") if isinstance(payload.get("metadata_json"), dict) else {}
+    metadata = payload.get("metadata_json") if isinstance(payload.get("metadata_json"), dict) else {}
+    metadata = dict(metadata)
+    metadata[LANE_ROLE_BINDING_KEY] = normalize_lane_role_bindings(
+        metadata,
+        company_id=process.company_id,
+    )
+    diagram.metadata_json = metadata
     diagram.updated_by_user_id = user_id
     diagram.updated_at = datetime.utcnow()
 

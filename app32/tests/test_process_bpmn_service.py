@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -176,3 +178,51 @@ def test_upsert_new_published_diagram_flushes_before_archiving_previous_versions
     assert saved.id == 321
     assert saved.status == "published"
     assert fake_session.committed is True
+
+
+def test_lane_role_bindings_reject_invalid_shape_without_querying_database():
+    with pytest.raises(ValueError, match="Vínculos de cargos"):
+        process_bpmn_service.normalize_lane_role_bindings(
+            {"lane_role_bindings": [1, 2]},
+            company_id=9,
+        )
+
+    with pytest.raises(ValueError, match="Cargo executor"):
+        process_bpmn_service.normalize_lane_role_bindings(
+            {"lane_role_bindings": {"Lane_1": "7"}},
+            company_id=9,
+        )
+
+
+def test_lane_role_bindings_are_scoped_to_company_roles(monkeypatch):
+    class _Field:
+        def __eq__(self, _other):
+            return self
+
+        def in_(self, _values):
+            return self
+
+    class _RoleQuery:
+        def filter(self, *_args):
+            return self
+
+        def all(self):
+            return [(31,)]
+
+    class _RoleSession:
+        def query(self, _field):
+            return _RoleQuery()
+
+    monkeypatch.setattr(process_bpmn_service, "Role", SimpleNamespace(id=_Field(), company_id=_Field()))
+    monkeypatch.setattr(process_bpmn_service, "db", SimpleNamespace(session=_RoleSession()))
+
+    assert process_bpmn_service.normalize_lane_role_bindings(
+        {"lane_role_bindings": {"Lane_1": 31}},
+        company_id=9,
+    ) == {"Lane_1": 31}
+
+    with pytest.raises(ValueError, match="não pertencem"):
+        process_bpmn_service.normalize_lane_role_bindings(
+            {"lane_role_bindings": {"Lane_1": 32}},
+            company_id=9,
+        )
