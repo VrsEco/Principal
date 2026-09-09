@@ -177,6 +177,30 @@
                         </div>
                         {% endif %}
 
+                        {% if commercial_contract %}
+                        <div class="cw-offer-overview" aria-label="Resumo operacional da oferta">
+                            <article class="cw-offer-overview-card">
+                                <span class="cw-offer-overview-eyebrow">Promessa e público</span>
+                                <h3>{{ commercial_contract.get('promised_outcome') or 'Promessa em consolidação' }}</h3>
+                                <p><strong>ICP:</strong> {{ commercial_contract.get('icp_summary') or 'Não informado' }}</p>
+                                <p><strong>Dor tratada:</strong> {{ commercial_contract.get('problem_statement') or 'Não informada' }}</p>
+                            </article>
+                            <article class="cw-offer-overview-card">
+                                <span class="cw-offer-overview-eyebrow">Execução e evidência</span>
+                                <p><strong>Modelo:</strong> {{ commercial_contract.get('execution_model') or 'Não informado' }}</p>
+                                <p><strong>Entregáveis:</strong> {{ commercial_contract.get('deliverables', [])|length }}</p>
+                                <p><strong>Processos vinculados:</strong> {{ commercial_contract.get('process_links', [])|length }}</p>
+                                <p><strong>Indicadores:</strong> {{ commercial_contract.get('indicator_contract', [])|length }}</p>
+                            </article>
+                            <article class="cw-offer-overview-card">
+                                <span class="cw-offer-overview-eyebrow">Gates de fechamento</span>
+                                <p><strong>Business Review:</strong> {{ commercial_contract.get('business_review_policy') or 'Não informado' }}</p>
+                                <p><strong>Critérios:</strong> {{ commercial_contract.get('closure_criteria', [])|length }} definido(s)</p>
+                                <p><strong>Aprovação:</strong> {{ 'Registrada' if commercial_contract.get('approved_by_user_id') else 'Pendente' }}</p>
+                            </article>
+                        </div>
+                        {% endif %}
+
                         <label class="checkbox-card full-width">
                             <strong>Exigir contrato operacional ativo</strong>
                             <span class="field-hint">Quando marcado, a oferta não poderá ser ativada nem contratada sem cumprir os gates definidos.</span>
@@ -435,12 +459,17 @@
     .cw-readiness-status.pending { color:#b45309; }
     .cw-readiness-reasons { margin-bottom:1rem; }
     .cw-readiness-reasons ul { margin:.6rem 0 0; padding-left:1.2rem; }
+    .cw-offer-overview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.75rem; margin:1rem 0; }
+    .cw-offer-overview-card { padding:1rem; border:1px solid rgba(16,185,129,.22); border-radius:16px; background:linear-gradient(145deg,rgba(236,253,245,.76),var(--surface-secondary)); }
+    .cw-offer-overview-card h3 { margin:.35rem 0 .65rem; font-size:1rem; line-height:1.35; }
+    .cw-offer-overview-card p { margin:.42rem 0; color:var(--text-secondary); font-size:.86rem; line-height:1.4; }
+    .cw-offer-overview-eyebrow { color:#047857; font-size:.74rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
     .cw-advanced-editor { margin-top:1rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
     .cw-advanced-editor summary { cursor:pointer; font-weight:700; }
     .cw-advanced-editor label { display:flex; flex-direction:column; gap:.45rem; margin-top:1rem; }
     .cw-advanced-editor textarea { min-height:360px; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.82rem; }
     @media (max-width: 1200px) { .cw-shell { grid-template-columns:1fr; } .cw-list-rail,.cw-tabs-rail { position:static; } }
-    @media (max-width: 760px) { .cw-page { padding:0 1rem 1rem; } .cw-form-grid,.cw-readiness-grid { grid-template-columns:1fr; } }
+    @media (max-width: 760px) { .cw-page { padding:0 1rem 1rem; } .cw-form-grid,.cw-readiness-grid,.cw-offer-overview { grid-template-columns:1fr; } }
 </style>
 
 <script>
