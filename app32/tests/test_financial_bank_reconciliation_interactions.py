@@ -122,6 +122,64 @@ def test_system_rows_allow_multiple_selection_via_checkbox_and_card(tmp_path):
     assert payload["selectedBankRowIds"] == [1, 2]
 
 
+def test_suggested_system_settlement_can_be_selected_and_enters_group_total(tmp_path):
+    html_path = tmp_path / "bank_reconciliation_probe.html"
+    html_path.write_text(_build_probe_html(), encoding="utf-8")
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(html_path.as_uri())
+        page.evaluate(
+            """
+            state.workspace = {
+              bank_account: { id: 10, name: 'Conta Teste' },
+              selected_batch: { id: 20, batch_code: 'B1', source_type: 'ofx' },
+              available_batches: [{ id: 20, batch_code: 'B1', source_type: 'ofx' }],
+              bank_rows: [{
+                id: 1, row_number: 5, description: 'Pagamento sugerido', amount: 9930,
+                movement_nature: 'debit', needs_manual_action: true,
+                matches: {
+                  linked_entry_ids: [101], confirmed_count: 0, suggested_count: 1,
+                  confirmed_matches: [], suggested_matches: [{ id: 77, financial_entry_id: 101, match_status: 'suggested' }
+                  ]
+                }
+              }],
+              system_rows: [{
+                id: -201, financial_entry_id: 101, financial_settlement_id: 201,
+                entry_code: 'TRF-101', description: 'Baixa sugerida', original_amount: 9930,
+                remaining_amount: 9930, settlement_amount: 9930, movement_nature: 'debit',
+                linked_rows_count: 1, is_reconciled: false, match_mode: '1:1'
+              }],
+              open_title_rows: [], summary: {},
+            };
+            state.activeRowId = 1;
+            state.selectedBankRowIds = [1];
+            renderBankRows();
+            renderSystemRows();
+            renderWorkbench();
+            """
+        )
+
+        checkbox = page.locator('#system-rows-list input[type="checkbox"]')
+        assert checkbox.is_enabled()
+        checkbox.click()
+        payload = page.evaluate(
+            """
+            ({
+              selectedEntryIds: state.selectedEntryIds.slice(),
+              summary: getGroupSummary(),
+            })
+            """
+        )
+        browser.close()
+
+    assert payload["selectedEntryIds"] == [-201]
+    assert payload["summary"]["bankTotal"] == 9930
+    assert payload["summary"]["systemTotal"] == 9930
+    assert payload["summary"]["difference"] == 0
+
+
 def test_bank_rows_render_all_items_by_default(tmp_path):
     html_path = tmp_path / "bank_reconciliation_probe.html"
     html_path.write_text(_build_probe_html(), encoding="utf-8")
