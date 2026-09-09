@@ -746,7 +746,7 @@ def register_api_resources(api):
         ProcessSipocSnapshotResource, ProcessSipocItemListResource, ProcessSipocItemResource,
         ProcessSipocRegulatoryItemListResource, ProcessSipocRegulatoryItemResource,
         ProcessSipocPublishResource, ProcessSipocArchiveResource,
-        ProcessBpmnDiagramResource, ProcessBpmnDiagramExportResource, ProcessBpmnPopBindingResource,
+        ProcessBpmnDiagramResource, ProcessBpmnDiagramExportResource, ProcessBpmnLaneRoleCatalogResource, ProcessBpmnPopBindingResource,
         ProcessActivityArtifactListResource, ProcessActivityArtifactResource, ProcessActivityArtifactPublishResource,
         ProcessActivityExecutionContractListResource, ProcessActivityExecutionContractResource,
         ProcessBpmnAiAssistantResource,
@@ -949,6 +949,7 @@ def register_api_resources(api):
     api.add_resource(ProcessSipocArchiveResource, '/api/processes/<int:process_id>/sipoc/<int:sipoc_id>/archive')
     api.add_resource(ProcessBpmnDiagramResource, '/api/processes/<int:process_id>/bpmn-diagram')
     api.add_resource(ProcessBpmnDiagramExportResource, '/api/processes/<int:process_id>/bpmn-diagram/export')
+    api.add_resource(ProcessBpmnLaneRoleCatalogResource, '/api/processes/<int:process_id>/bpmn-lane-roles')
     api.add_resource(ProcessBpmnPopBindingResource, '/api/processes/<int:process_id>/bpmn-pop-bindings')
     api.add_resource(ProcessActivityArtifactListResource, '/api/processes/<int:process_id>/activity-artifacts')
     api.add_resource(ProcessActivityArtifactResource, '/api/process-activity-artifacts/<int:artifact_id>')

@@ -47,6 +47,7 @@ from models import (
     ProcessActivityExecutionContract,
     Company,
     Employee,
+    Role,
     Indicator,
     IndicatorData,
     ActivityWorkLog,
@@ -2039,6 +2040,33 @@ class ProcessBpmnDiagramResource(Resource):
     @permission_required('processes', 'view')
     def post(self, process_id):
         return self.put(process_id)
+
+
+class ProcessBpmnLaneRoleCatalogResource(Resource):
+    """Read-only, process-scoped catalog used to bind BPMN lanes to org roles."""
+
+    @permission_required('processes', 'view')
+    def get(self, process_id):
+        process = _get_process_with_access(process_id, action='view', sync_session=True)
+        if not process:
+            return {"error": "Permission denied: view on processes"}, 403
+
+        roles = (
+            Role.query
+            .filter_by(company_id=process.company_id)
+            .order_by(Role.department.asc().nulls_last(), Role.title.asc(), Role.id.asc())
+            .all()
+        )
+        return {
+            "roles": [
+                {
+                    "id": role.id,
+                    "title": role.title,
+                    "department": role.department,
+                }
+                for role in roles
+            ]
+        }, 200
 
 
 class ProcessBpmnDiagramExportResource(Resource):

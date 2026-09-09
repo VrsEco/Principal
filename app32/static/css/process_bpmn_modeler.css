@@ -839,6 +839,40 @@ body.bpmn-modal-open {
 .bpmn-ai-dialog__header p { margin: 0; color: #64748b; font-size: 0.84rem; }
 .bpmn-ai-dialog .bpmn-ai-inspector { padding: 1.25rem; }
 
+.bpmn-lane-role-dialog[hidden] { display: none !important; }
+.bpmn-lane-role-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 25000;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(5px);
+}
+.bpmn-lane-role-dialog__surface {
+  width: min(560px, 100%);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.3);
+}
+.bpmn-lane-role-dialog__header,
+.bpmn-lane-role-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+}
+.bpmn-lane-role-dialog__header { align-items: flex-start; border-bottom: 1px solid #e2e8f0; }
+.bpmn-lane-role-dialog__header h2 { margin: .25rem 0; color: #0f172a; }
+.bpmn-lane-role-dialog__header p { margin: 0; color: #64748b; font-size: .84rem; }
+.bpmn-lane-role-dialog__close { display:grid; place-items:center; width:34px; height:34px; border:0; border-radius:10px; background:#e2e8f0; color:#334155; cursor:pointer; font-size:1.25rem; }
+.bpmn-lane-role-dialog__body { display: grid; gap: .65rem; padding: 1.25rem; }
+.bpmn-lane-role-dialog__body label { color: #334155; font-size: .82rem; font-weight: 800; }
+.bpmn-lane-role-dialog__footer { border-top: 1px solid #e2e8f0; }
+.bpmn-lane-role-dialog__footer > span { display: flex; gap: .65rem; }
+
 .djs-element.app32-artifact-pop .djs-visual > path { fill: #eff6ff !important; stroke: #2563eb !important; }
 .djs-element.app32-artifact-form .djs-visual > path { fill: #f5f3ff !important; stroke: #7c3aed !important; }
 .djs-element.app32-artifact-check .djs-visual > path { fill: #ecfdf5 !important; stroke: #059669 !important; }

@@ -35,6 +35,9 @@
   let manualResizeState = null;
   let artifactMenuTarget = null;
   let colorMenuTarget = null;
+  let laneRoleCatalog = [];
+  let laneRoleBindings = new Map();
+  let laneRoleTarget = null;
 
   const ARTIFACT_CATALOG = {
     pop: { label: 'POP', short: 'P', color: '#2563eb', fill: '#eff6ff', hint: 'Procedimento operacional', marker: '[POP]' },
@@ -144,6 +147,18 @@
           }
         };
       }
+      if (type === 'bpmn:Lane') {
+        entries['app32-lane-role'] = {
+          group: 'edit',
+          className: 'app32-lane-role-entry',
+          title: 'Definir cargo executor da raia',
+          action: {
+            click: function (event, target) {
+              openLaneRoleDialog(target || element);
+            }
+          }
+        };
+      }
       if (!artifactType && isColorableBpmnElement(element)) {
         entries['app32-color-element'] = {
           group: 'edit',
@@ -199,6 +214,15 @@
     return result;
   }
 
+  async function fetchLaneRoles() {
+    const res = await fetch(`/api/processes/${processId}/bpmn-lane-roles`, {
+      headers: { Accept: 'application/json' }
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.error || 'Não foi possível carregar os cargos da empresa.');
+    return payload.roles || [];
+  }
+
   async function init() {
     setLoading(true);
     try {
@@ -228,9 +252,13 @@
       installArtifactMarkerNavigation();
 
       currentDiagram = await fetchDiagram();
-      const [contracts, catalogPayload] = await Promise.all([
+      const [contracts, catalogPayload, roles] = await Promise.all([
         fetchExecutionContracts(),
-        fetchAiAssistantCatalog()
+        fetchAiAssistantCatalog(),
+        fetchLaneRoles().catch((error) => {
+          console.warn('[APP32 BPMN] lane role catalog unavailable', error);
+          return [];
+        })
       ]);
       executionContractsByElementId = new Map((contracts || [])
         .filter((item) => item && item.is_active !== false && item.bpmn_element_id)
@@ -240,6 +268,8 @@
         ...(((catalogPayload || {}).catalog || {}))
       };
       toolCatalog = (aiAssistantCatalog.tool_items || []);
+      laneRoleCatalog = roles;
+      hydrateLaneRoleBindings();
       await importXml(currentDiagram.bpmn_xml);
       installAiInspector();
       updateMeta();
@@ -285,7 +315,8 @@
           activity_code_prefix: processCode || null,
           activity_code_normalized_count: codeResult.changed,
           pop_binding_rule: 'activity_with_data_object_reference',
-          pop_candidates: extractPopBindingCandidates()
+          pop_candidates: extractPopBindingCandidates(),
+          lane_role_bindings: Object.fromEntries(laneRoleBindings)
         }
       };
 
@@ -669,6 +700,73 @@
     const menu = document.getElementById('bpmnColorMenu');
     if (menu) menu.hidden = true;
     colorMenuTarget = null;
+  }
+
+  function hydrateLaneRoleBindings() {
+    const bindings = currentDiagram?.metadata_json?.lane_role_bindings;
+    laneRoleBindings = new Map(
+      Object.entries(bindings && typeof bindings === 'object' ? bindings : {})
+        .filter(([laneId, roleId]) => /^[A-Za-z0-9_.:-]{1,200}$/.test(laneId) && Number.isInteger(roleId) && roleId > 0)
+        .map(([laneId, roleId]) => [laneId, roleId])
+    );
+  }
+
+  function closeLaneRoleDialog() {
+    const dialog = document.getElementById('bpmnLaneRoleDialog');
+    if (dialog) dialog.hidden = true;
+    document.body.classList.remove('bpmn-modal-open');
+    laneRoleTarget = null;
+  }
+
+  function showLaneRoleStatus(message, isError) {
+    const status = document.getElementById('bpmnLaneRoleStatus');
+    if (!status) return;
+    status.hidden = false;
+    status.classList.toggle('is-error', Boolean(isError));
+    status.textContent = message;
+  }
+
+  function openLaneRoleDialog(lane) {
+    if (!lane || lane.businessObject?.$type !== 'bpmn:Lane') return;
+    const dialog = document.getElementById('bpmnLaneRoleDialog');
+    const select = document.getElementById('bpmnLaneRoleSelect');
+    const description = document.getElementById('bpmnLaneRoleDialogDescription');
+    if (!dialog || !select) return;
+
+    laneRoleTarget = lane;
+    const currentRoleId = laneRoleBindings.get(lane.id);
+    const options = laneRoleCatalog.map((role) => (
+      `<option value="${Number(role.id)}">${escapeHtml(role.title)}${role.department ? ` · ${escapeHtml(role.department)}` : ''}</option>`
+    )).join('');
+    select.innerHTML = '<option value="">Selecione o cargo executor</option>' + options;
+    select.value = laneRoleCatalog.some((role) => Number(role.id) === Number(currentRoleId)) ? String(currentRoleId) : '';
+    description.textContent = `Raia atual: ${lane.businessObject?.name || lane.id}. Selecione o cargo do organograma que executa esta etapa.`;
+    const status = document.getElementById('bpmnLaneRoleStatus');
+    if (status) status.hidden = true;
+    dialog.hidden = false;
+    document.body.classList.add('bpmn-modal-open');
+    select.focus();
+  }
+
+  function saveLaneRoleBinding() {
+    const select = document.getElementById('bpmnLaneRoleSelect');
+    const roleId = Number(select?.value);
+    const role = laneRoleCatalog.find((item) => Number(item.id) === roleId);
+    if (!laneRoleTarget || !role) {
+      showLaneRoleStatus('Selecione um cargo executor válido.', true);
+      return;
+    }
+    modeler.get('modeling').updateProperties(laneRoleTarget, { name: role.title });
+    laneRoleBindings.set(laneRoleTarget.id, roleId);
+    closeLaneRoleDialog();
+    setStatus('Cargo executor definido', `${role.title} passou a identificar a raia. Clique em Salvar para gravar o vínculo no diagrama.`);
+  }
+
+  function clearLaneRoleBinding() {
+    if (!laneRoleTarget) return;
+    laneRoleBindings.delete(laneRoleTarget.id);
+    closeLaneRoleDialog();
+    setStatus('Cargo executor desvinculado', 'O texto atual da raia foi mantido. Clique em Salvar para gravar a alteração.');
   }
 
   function openAiDialog(element) {
@@ -2110,6 +2208,21 @@
   }
 
   root.addEventListener('click', async (event) => {
+    if (event.target.closest('[data-lane-role-close]') || event.target.id === 'bpmnLaneRoleDialog') {
+      closeLaneRoleDialog();
+      return;
+    }
+
+    if (event.target.closest('[data-lane-role-save]')) {
+      saveLaneRoleBinding();
+      return;
+    }
+
+    if (event.target.closest('[data-lane-role-clear]')) {
+      clearLaneRoleBinding();
+      return;
+    }
+
     if (event.target.closest('[data-bpmn-color-close]')) {
       closeBpmnColorMenu();
       return;
@@ -2246,6 +2359,13 @@
     if (action === 'save') saveDiagram('draft');
     if (action === 'publish') saveDiagram('published');
     if (action === 'normalize-codes') normalizeActivityCodes();
+    if (action === 'lane-role') {
+      if (currentSelection?.businessObject?.$type !== 'bpmn:Lane') {
+        setStatus('Selecione uma raia', 'Clique na raia que representa o cargo executor e tente novamente.', true);
+      } else {
+        openLaneRoleDialog(currentSelection);
+      }
+    }
     if (action === 'export') exportBpmn();
     if (action === 'svg') exportSvg();
     if (action === 'zoom-in') zoom(0.2);
@@ -2274,6 +2394,7 @@
     if (event.key !== 'Escape') return;
     closeArtifactQuickMenu();
     closeBpmnColorMenu();
+    closeLaneRoleDialog();
     closeAiDialog();
   });
 

@@ -73,6 +73,7 @@
     <div class="bpmn-ribbon-group">
       <span class="bpmn-ribbon-title">Modelagem</span>
       <button type="button" class="bpmn-tool-btn" data-action="normalize-codes"><i class="fas fa-list-ol" aria-hidden="true"></i> Codificar</button>
+      <button type="button" class="bpmn-tool-btn" data-action="lane-role"><i class="fas fa-user-tag" aria-hidden="true"></i> Cargo da raia</button>
     </div>
     <div class="bpmn-ribbon-hint">
       <i class="fas fa-lightbulb" aria-hidden="true"></i><span>Selecione uma atividade ou gateway, use <strong>+ Artefato</strong> e abra a configuração com <strong>dois cliques</strong>.</span>
@@ -110,6 +111,34 @@
       <div class="bpmn-color-swatches" id="bpmnColorSwatches" aria-label="Paleta de cores"></div>
       <button type="button" class="bpmn-color-menu__action bpmn-color-menu__action--muted" data-bpmn-color-reset>Restaurar sem cor</button>
     </div>
+  </div>
+
+  <div class="bpmn-lane-role-dialog" id="bpmnLaneRoleDialog" hidden>
+    <section class="bpmn-lane-role-dialog__surface" role="dialog" aria-modal="true" aria-labelledby="bpmnLaneRoleDialogTitle">
+      <header class="bpmn-lane-role-dialog__header">
+        <div>
+          <span class="bpmn-eyebrow">Raia BPMN</span>
+          <h2 id="bpmnLaneRoleDialogTitle">Definir cargo executor</h2>
+          <p id="bpmnLaneRoleDialogDescription">Selecione o cargo do organograma que executa as atividades desta raia.</p>
+        </div>
+        <button type="button" class="bpmn-lane-role-dialog__close" data-lane-role-close aria-label="Fechar seleção de cargo">×</button>
+      </header>
+      <div class="bpmn-lane-role-dialog__body">
+        <label for="bpmnLaneRoleSelect">Cargo executor</label>
+        <select id="bpmnLaneRoleSelect" class="bpmn-ai-select">
+          <option value="">Carregando cargos…</option>
+        </select>
+        <p class="bpmn-ai-help">Ao confirmar, o nome da raia será atualizado com o cargo selecionado. O vínculo é salvo no diagrama e não cria ou altera acessos de usuários.</p>
+        <p id="bpmnLaneRoleStatus" class="bpmn-ai-status" hidden></p>
+      </div>
+      <footer class="bpmn-lane-role-dialog__footer">
+        <button type="button" class="bpmn-ai-btn" data-lane-role-clear>Desvincular</button>
+        <span>
+          <button type="button" class="bpmn-ai-btn" data-lane-role-close>Cancelar</button>
+          <button type="button" class="bpmn-ai-btn bpmn-ai-btn--primary" data-lane-role-save>Usar cargo na raia</button>
+        </span>
+      </footer>
+    </section>
   </div>
 
   <div class="bpmn-ai-dialog" id="bpmnAiDialog" hidden>
