@@ -300,7 +300,7 @@
 
             const metaParts = [
                 citation.version ? `Versão ${citation.version}` : '',
-                citation.valid_from ? `Vigente desde ${new Date(citation.valid_from).toLocaleDateString('pt-BR')}` : '',
+                citation.valid_from ? `Vigente desde ${window.App32DateUtils.formatCalendarDatePtBr(citation.valid_from)}` : '',
                 citation.source_ref || '',
             ].filter(Boolean);
             if (metaParts.length) {

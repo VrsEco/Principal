@@ -373,7 +373,7 @@ async function simularCalculo(ruleSetId) {
         alert('Crie ou selecione um plano primeiro.');
         return;
     }
-    const today = new Date().toISOString().split('T')[0];
+    const today = window.App32DateUtils.todayIso();
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     try {

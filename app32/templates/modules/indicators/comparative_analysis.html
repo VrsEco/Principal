@@ -317,7 +317,7 @@ function buildDatasets(selectedGoals, periodStart, periodEnd, viewMode) {
             .filter(item => item.goal_id === goal.id && item.measured_date)
             .filter(item => !periodStart || item.measured_date >= periodStart)
             .filter(item => !periodEnd || item.measured_date <= periodEnd)
-            .sort((a, b) => new Date(a.measured_date) - new Date(b.measured_date));
+            .sort((a, b) => String(a.measured_date || '').localeCompare(String(b.measured_date || '')));
 
         if (viewMode !== 'all') {
             records = aggregateRecords(records, viewMode);
@@ -341,7 +341,7 @@ function aggregateRecords(records, mode) {
     const buckets = new Map();
 
     records.forEach(record => {
-        const date = new Date(record.measured_date);
+        const date = window.App32DateUtils.parseCalendarDate(record.measured_date);
         const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
         const quarterMonth = Math.floor(date.getMonth() / 3) * 3 + 1;
         const quarter = `${date.getFullYear()}-${String(quarterMonth).padStart(2, '0')}-01`;
@@ -353,7 +353,7 @@ function aggregateRecords(records, mode) {
     });
 
     return Array.from(buckets.values())
-        .sort((a, b) => new Date(a.measured_date) - new Date(b.measured_date))
+        .sort((a, b) => String(a.measured_date || '').localeCompare(String(b.measured_date || '')))
         .map(item => ({
             measured_date: item.measured_date,
             measured_value: Number((item.measured_value / item.count).toFixed(2))
@@ -370,7 +370,7 @@ function buildStats(selectedGoals, periodStart, periodEnd) {
             .filter(item => item.goal_id === goal.id && item.measured_date)
             .filter(item => !periodStart || item.measured_date >= periodStart)
             .filter(item => !periodEnd || item.measured_date <= periodEnd)
-            .sort((a, b) => new Date(a.measured_date) - new Date(b.measured_date));
+            .sort((a, b) => String(a.measured_date || '').localeCompare(String(b.measured_date || '')));
 
         const count = records.length;
         const lastValue = count ? Number(records[count - 1].measured_value || 0) : null;

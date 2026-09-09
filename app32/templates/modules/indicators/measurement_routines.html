@@ -187,7 +187,7 @@ function openMeasurementModal(indicatorId, indicatorName, routineId, routineName
     document.getElementById('modal_indicator_id').value = indicatorId;
     document.getElementById('modal_routine_id').value = routineId;
     document.getElementById('modal_routine_name').innerText = routineName;
-    document.getElementById('modal_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modal_date').value = window.App32DateUtils.todayIso();
     document.getElementById('measurementModal').style.display = 'block';
 }
 

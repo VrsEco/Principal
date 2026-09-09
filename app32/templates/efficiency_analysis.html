@@ -701,8 +701,7 @@
     }
     function formatDate(value) {
         if (!value) return '—';
-        const d = new Date(value);
-        return isNaN(d) ? value : d.toLocaleDateString('pt-BR');
+        return window.App32DateUtils.formatCalendarDatePtBr(value, value);
     }
     function formatDateTime(value) {
         if (!value) return '—';

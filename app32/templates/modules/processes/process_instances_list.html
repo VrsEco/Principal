@@ -476,7 +476,7 @@
             document.getElementById('modalInstanceDueDate').textContent = dueDateLabel;
 
             // Set default date to today for completion
-            const today = new Date().toISOString().split('T')[0];
+            const today = window.App32DateUtils.todayIso();
             document.getElementById('completionDate').value = today;
         }
         document.getElementById('completeModal').classList.add('active');

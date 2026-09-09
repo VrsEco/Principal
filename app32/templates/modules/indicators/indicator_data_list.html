@@ -339,7 +339,7 @@ function handleRecordValueInput(input) {
 
 function openRecordModal() {
     document.getElementById('recordForm').reset();
-    document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalRecordDate').value = window.App32DateUtils.todayIso();
     document.getElementById('modalIndicatorId').value = '';
     document.getElementById('modalIndicatorName').value = '';
     document.getElementById('record_unit_label').innerText = '';

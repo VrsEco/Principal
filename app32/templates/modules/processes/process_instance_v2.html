@@ -293,7 +293,7 @@
             logs = [];
         }
 
-        document.getElementById('actualEndDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('actualEndDate').value = window.App32DateUtils.todayIso();
         renderLogs();
         renderCollaboratorInputs();
         fetchWorkLogs();
@@ -326,7 +326,7 @@
     function renderCollaboratorInputs() {
         const container = document.getElementById('collaboratorsInputList');
         if (!container) return;
-        const today = new Date().toISOString().split('T')[0];
+        const today = window.App32DateUtils.todayIso();
 
         if (!collaborators.length) {
             container.innerHTML = '<div class="text-tertiary p-3 text-center" style="background: var(--surface-secondary); border-radius: 12px;">Nenhum colaborador definido nesta instância.</div>';

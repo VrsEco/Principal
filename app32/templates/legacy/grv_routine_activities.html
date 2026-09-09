@@ -877,12 +877,7 @@ function getStatusBadge(activity) {
 function formatDate(dateString) {
   if (!dateString) return '';
   try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return window.App32DateUtils.formatCalendarDatePtBr(dateString, '');
   } catch {
     return dateString;
   }
@@ -896,10 +891,10 @@ function updateStats() {
     a.status === 'in_progress' || a.stage === 'executing'
   ).length;
   
-  const today = new Date().toISOString().split('T')[0];
+  const today = window.App32DateUtils.todayIso();
   const dueToday = filteredActivities.filter(a => {
     if (!a.due_date) return false;
-    const dueDate = new Date(a.due_date).toISOString().split('T')[0];
+    const dueDate = a.due_date;
     return dueDate === today;
   }).length;
   

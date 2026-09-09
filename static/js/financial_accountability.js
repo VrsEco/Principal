@@ -36,7 +36,7 @@
   };
 
   function setTodayIfEmpty() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = window.App32DateUtils.todayIso();
     if (!els.competenceDate.value) els.competenceDate.value = today;
     if (!els.dueDate.value) els.dueDate.value = today;
   }
@@ -106,7 +106,7 @@
     return {
       company_id: companyId,
       origin_type: 'sapiens_document',
-      origin_reference: reference || documentNumber || `Prestação de contas ${new Date().toISOString().slice(0, 10)}`,
+      origin_reference: reference || documentNumber || `Prestação de contas ${window.App32DateUtils.todayIso()}`,
       external_system: 'operations_hub',
       source_file_name: fileMeta.file_name || null,
       source_mime_type: fileMeta.mime_type || null,

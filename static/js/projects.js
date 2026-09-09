@@ -141,10 +141,11 @@ async function loadProjects() {
 
 function updateStats() {
     const active = allProjects.filter(p => p.status === 'in_progress').length;
-    const now = new Date();
+    const today = window.App32DateUtils.startOfLocalDay();
     const delayed = allProjects.filter(p => {
         if (!p.deadline || p.status === 'completed') return false;
-        return new Date(p.deadline) < now;
+        const deadline = window.App32DateUtils.parseCalendarDate(p.deadline);
+        return deadline && deadline < today;
     }).length;
 
     const totalEl = document.getElementById('project-count-total');
@@ -356,7 +357,8 @@ function getStatusConfig(status) {
 
 function isDelayed(deadline) {
     if (!deadline) return false;
-    return new Date(deadline) < new Date();
+    const parsedDeadline = window.App32DateUtils.parseCalendarDate(deadline);
+    return parsedDeadline && parsedDeadline < window.App32DateUtils.startOfLocalDay();
 }
 
 function formatDate(dateString) {

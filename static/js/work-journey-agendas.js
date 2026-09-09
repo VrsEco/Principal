@@ -298,7 +298,7 @@
   }
 
   function todayIsoDate() {
-    return normalizeIsoDate(bootstrap.today) || new Date().toISOString().slice(0, 10);
+    return normalizeIsoDate(bootstrap.today) || window.App32DateUtils.todayIso();
   }
 
   function defaultCollapsedDayKeys(agenda) {

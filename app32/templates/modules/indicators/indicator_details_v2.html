@@ -319,8 +319,7 @@ const fmt = {
     },
     dateBr: (d) => {
         if (!d) return '--';
-        const date = new Date(d);
-        return isNaN(date.getTime()) ? d : date.toLocaleDateString('pt-BR');
+        return window.App32DateUtils.formatCalendarDatePtBr(d, d);
     },
     value: (v, unit) => window.App32InputFormatters?.formatIndicatorValue(v, unit) ?? '--'
 };
@@ -411,7 +410,7 @@ async function init() {
     ]);
     state.indicator = await iR.json();
     state.goals = await gR.json();
-    state.records = (await dR.json()).sort((a,b) => new Date(b.measured_date||b.record_date) - new Date(a.measured_date||a.record_date));
+    state.records = (await dR.json()).sort((a, b) => String(b.measured_date || b.record_date || '').localeCompare(String(a.measured_date || a.record_date || '')));
 
     renderUI();
 }
@@ -441,7 +440,7 @@ function renderUI() {
     document.getElementById('modalGoalCompanyId').value = ind.company_id;
 
     // Meta vigente e campanhas adicionais da competência atual
-    const referenceIso = new Date().toISOString().slice(0, 10);
+    const referenceIso = window.App32DateUtils.todayIso();
     const goalContext = currentGoalContext(state.goals, referenceIso);
     const activeGoal = goalContext.base;
     let gValue = 0;
@@ -539,7 +538,7 @@ function renderChart(activeGoal) {
     const ctx = document.getElementById('indicatorChart').getContext('2d');
     if (state.chart) state.chart.destroy();
 
-    const sorted = [...state.records].sort((a,b) => new Date(a.measured_date||a.record_date) - new Date(b.measured_date||b.record_date));
+    const sorted = [...state.records].sort((a, b) => String(a.measured_date || a.record_date || '').localeCompare(String(b.measured_date || b.record_date || '')));
     const labels = sorted.map(r => fmt.dateBr(r.measured_date || r.record_date));
     const values = sorted.map(r => parseFloat(r.value || r.measured_value || 0));
     const goalLine = activeGoal ? sorted.map(() => parseFloat(activeGoal.goal_value)) : [];
@@ -589,8 +588,8 @@ function renderChartByGoal(goalId) {
 }
 
 // Modals
-function openRecordModal() { document.getElementById('modalRecordDate').value = new Date().toISOString().split('T')[0]; document.getElementById('recordModal').style.display='block'; }
-function openGoalModal() { document.getElementById('goalStartDate').value = new Date().toISOString().split('T')[0]; document.getElementById('goalModal').style.display='block'; }
+function openRecordModal() { document.getElementById('modalRecordDate').value = window.App32DateUtils.todayIso(); document.getElementById('recordModal').style.display='block'; }
+function openGoalModal() { document.getElementById('goalStartDate').value = window.App32DateUtils.todayIso(); document.getElementById('goalModal').style.display='block'; }
 function closeModal(id) { document.getElementById(id).style.display='none'; }
 
 async function handleRecordSubmit(e) {
@@ -641,12 +640,11 @@ function applyDetailFilters() {
         
         let show = true;
         if (start) {
-            const startDate = new Date(start);
-            startDate.setHours(0,0,0,0);
+            const startDate = window.App32DateUtils.startOfLocalDay(start);
             if (rowDate < startDate) show = false;
         }
         if (end) {
-            const endDate = new Date(end);
+            const endDate = window.App32DateUtils.startOfLocalDay(end);
             endDate.setHours(23,59,59,999);
             if (rowDate > endDate) show = false;
         }

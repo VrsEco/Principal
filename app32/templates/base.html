@@ -752,6 +752,7 @@
       {% endif %}
       {% endwith %}
 
+      <script src="{{ url_for('static', filename='js/date_utils.js', v=static_asset_version('js/date_utils.js')) }}"></script>
       {% block content %}{% endblock %}
     </main>
   </div>

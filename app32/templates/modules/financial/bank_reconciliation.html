@@ -1917,7 +1917,7 @@ function isoToInputDate(value){
 }
 
 function rowLockedDate(row){
-    return isoToInputDate(row?.occurred_on || row?.due_date || new Date().toISOString().slice(0, 10));
+    return isoToInputDate(row?.occurred_on || row?.due_date || window.App32DateUtils.todayIso());
 }
 
 function rowDocumentNumber(row){

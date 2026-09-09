@@ -130,7 +130,7 @@
                 return;
             }
             form.reset();
-            setDateDisplayValue(dateInput, new Date().toISOString().slice(0, 10));
+            setDateDisplayValue(dateInput, window.App32DateUtils.todayIso());
             statusInput.value = 'planned';
             priorityInput.value = 'normal';
             showToastSafe('Evento criado com sucesso.');
@@ -138,7 +138,7 @@
         });
 
         if (dateInput && !dateInput.value) {
-            setDateDisplayValue(dateInput, new Date().toISOString().slice(0, 10));
+            setDateDisplayValue(dateInput, window.App32DateUtils.todayIso());
         }
         await loadEvents();
     }

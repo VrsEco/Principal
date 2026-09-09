@@ -769,9 +769,8 @@
 
         let matchesDeadline = true;
         if (filters.deadline !== 'all') {
-          const deadlineDate = deadlineValue ? new Date(deadlineValue) : null;
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+          const deadlineDate = window.App32DateUtils.parseCalendarDate(deadlineValue);
+          const today = window.App32DateUtils.startOfLocalDay();
           if (!deadlineDate || Number.isNaN(deadlineDate.getTime())) {
             matchesDeadline = false;
           } else {
