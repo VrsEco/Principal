@@ -72,7 +72,7 @@
       $('bordero-created-date').value = normalized.slice(0, 10);
       return;
     }
-    $('bordero-created-date').value = new Date().toISOString().slice(0, 10);
+    $('bordero-created-date').value = window.App32DateUtils.todayIso();
   }
 
   function applyType(type) {
@@ -184,7 +184,7 @@
     settlementButton.textContent = 'Registrar baixa';
     settlementCancelWrap?.classList.add('hidden');
     const openAmount = Number(bordero?.open_amount || 0);
-    $('settlement-date').value = new Date().toISOString().slice(0, 10);
+    $('settlement-date').value = window.App32DateUtils.todayIso();
     $('settlement-amount').value = formatCurrencyFromDigits(Math.round(openAmount * 100));
     $('settlement-bank-account').value = bordero?.bank_account_id || '';
     $('settlement-notes').value = '';
@@ -194,7 +194,7 @@
   function startSettlementEdit(settlement) {
     if (!settlement) return;
     state.editingSettlementId = Number(settlement.id || 0) || null;
-    $('settlement-date').value = settlement.settlement_date || new Date().toISOString().slice(0, 10);
+    $('settlement-date').value = settlement.settlement_date || window.App32DateUtils.todayIso();
     $('settlement-amount').value = formatCurrencyFromDigits(Math.round(Number(settlement.gross_amount || 0) * 100));
     $('settlement-bank-account').value = settlement.bank_account_id || state.bordero?.bank_account_id || '';
     $('settlement-notes').value = settlement.notes || '';
@@ -270,7 +270,7 @@
     detailSection.classList.remove('hidden');
     saveButton?.classList.remove('hidden');
     const openAmount = Number(bordero.open_amount || 0);
-    $('settlement-date').value = new Date().toISOString().slice(0, 10);
+    $('settlement-date').value = window.App32DateUtils.todayIso();
     deleteButton?.classList.toggle('hidden', !bordero.can_delete);
     deleteButton && (deleteButton.disabled = !bordero.can_delete);
     resetSettlementForm(bordero);

@@ -251,7 +251,7 @@
 
   function normalizeAgenda(raw, options = {}) {
     const agenda = raw?.agenda || raw?.data || raw || {};
-    const selectedDate = options.selectedDate || agenda.date || agenda.agenda_date || new Date().toISOString().slice(0, 10);
+    const selectedDate = options.selectedDate || agenda.date || agenda.agenda_date || window.App32DateUtils.todayIso();
     const scope = options.scope || agenda.scope || 'week';
     const employeeId = options.employeeId || agenda.employee_id || null;
     const companyId = options.companyId || agenda.company_id || null;

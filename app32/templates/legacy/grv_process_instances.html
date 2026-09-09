@@ -909,7 +909,7 @@ function populateInstanceInfo(containerId, instance) {
     details.push(`<li><strong>Codigo:</strong> ${instance.instance_code}</li>`);
   }
   if (instance.due_date) {
-    details.push(`<li><strong>Vencimento:</strong> ${new Date(instance.due_date).toLocaleString('pt-BR')}</li>`);
+    details.push(`<li><strong>Vencimento:</strong> ${window.App32DateUtils.formatCalendarDatePtBr(instance.due_date)}</li>`);
   }
   const hoursDisplay = getHoursDisplay(instance.estimated_hours, instance.actual_hours);
   if (hoursDisplay) {

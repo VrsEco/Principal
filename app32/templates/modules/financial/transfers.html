@@ -314,11 +314,11 @@
         const deleteButton = document.getElementById('transfer-delete');
         let bankAccounts = [];
 
-        occurredOn.value = new Date().toISOString().slice(0, 10);
+        occurredOn.value = window.App32DateUtils.todayIso();
 
         function resetFormState() {
             form.reset();
-            occurredOn.value = new Date().toISOString().slice(0, 10);
+            occurredOn.value = window.App32DateUtils.todayIso();
             renderSelectedFiles();
             resultPanel.hidden = true;
             resultNode.innerHTML = '';
@@ -556,7 +556,7 @@
                     </div>
                 `;
                 form.reset();
-                occurredOn.value = new Date().toISOString().slice(0, 10);
+                occurredOn.value = window.App32DateUtils.todayIso();
                 renderSelectedFiles();
                 loadTransfers().catch((error) => { transfersListStatus.textContent = error.message; });
             } catch (error) {

@@ -840,7 +840,7 @@
                         title: processLabel,
                         status: 'in_progress',
                         company_id: companyId,
-                        due_date: new Date().toISOString().split('T')[0],
+                        due_date: window.App32DateUtils.todayIso(),
                         trigger_type: 'manual'
                     })
                 });

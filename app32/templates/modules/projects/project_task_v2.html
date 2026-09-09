@@ -774,7 +774,7 @@
 
     async function init() {
         // Set today's date as default
-        const today = new Date().toISOString().split('T')[0];
+        const today = window.App32DateUtils.todayIso();
         document.querySelectorAll('.compact-date-text-field').forEach(bindCompactDateInput);
         setDateFieldDisplayValue(document.getElementById('newLogDate'), today);
 
@@ -1601,7 +1601,7 @@
         document.getElementById('finalizarModal').style.display = 'flex';
         const dateField = document.getElementById('actualEndDate');
         if (dateField && !dateField.value) {
-            dateField.value = new Date().toISOString().split('T')[0];
+            dateField.value = window.App32DateUtils.todayIso();
         }
     }
 

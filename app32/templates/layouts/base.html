@@ -45,6 +45,7 @@
     window.portfolioId = {{ portfolio_id }};
     {% endif %}
   </script>
+  <script src="{{ url_for('static', filename='js/date_utils.js', v=static_asset_version('js/date_utils.js')) }}"></script>
   {% block layout %}{% endblock %}
 
   <script>

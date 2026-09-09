@@ -638,7 +638,7 @@ function openGoalModal() {
     document.getElementById('goalModalTitle').innerText = "Nova Meta";
     document.getElementById('btnGoalText').innerText = "Ativar Meta";
     document.getElementById('goal_id_hidden').value = "";
-    document.getElementById('new_goal_start_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('new_goal_start_date').value = window.App32DateUtils.todayIso();
     document.getElementById('goal_kind_select').value = 'base';
     document.getElementById('goal_scope_select').value = 'team';
     document.getElementById('goal_type_select').value = 'monthly';
@@ -720,7 +720,7 @@ function openNewVersionModal(goal) {
 function openInactivateModal(id, name) {
     document.getElementById('inactivate_goal_id').value = id;
     document.getElementById('inactivate_goal_name').innerText = name;
-    document.getElementById('inactivate_deadline').value = new Date().toISOString().split('T')[0];
+    document.getElementById('inactivate_deadline').value = window.App32DateUtils.todayIso();
     document.getElementById('inactivateModal').style.display = 'block';
 }
 

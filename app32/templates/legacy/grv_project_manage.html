@@ -1643,7 +1643,7 @@
   }
 
   function openCompletionPopup(activityId, targetStage, dropzone, previousColumn) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = window.App32DateUtils.todayIso();
     completionDate.value = today;
     completionNote.value = '';
 
@@ -1695,7 +1695,7 @@
 
         activity.logs.push({
           timestamp: new Date().toISOString(),
-          text: note || `Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}`,
+          text: note || `Atividade concluída em ${window.App32DateUtils.formatCalendarDatePtBr(date)}`,
           type: 'completion',
           date: date
         });
@@ -1724,7 +1724,7 @@
       }
 
       const stageName = stages.find(s => s.slug === targetStage)?.title || targetStage;
-      notify(`Atividade concluída em ${new Date(date).toLocaleDateString('pt-BR')}.`, 'info');
+      notify(`Atividade concluída em ${window.App32DateUtils.formatCalendarDatePtBr(date)}.`, 'info');
 
       if (dropzone && previousColumn) {
         updateColumnState(dropzone.closest('[data-kanban-column]'));
@@ -1739,7 +1739,7 @@
   }
 
   function openCancellationPopup(activityId, targetStage, dropzone, previousColumn) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = window.App32DateUtils.todayIso();
     cancellationDate.value = today;
     cancellationNote.value = '';
 
@@ -1791,7 +1791,7 @@
 
         activity.logs.push({
           timestamp: new Date().toISOString(),
-          text: note || `Conclusão cancelada em ${new Date(date).toLocaleDateString('pt-BR')}`,
+          text: note || `Conclusão cancelada em ${window.App32DateUtils.formatCalendarDatePtBr(date)}`,
           type: 'cancellation',
           date: date
         });
@@ -2040,7 +2040,7 @@
     card.dataset.activityId = activity.id;
     card.dataset.stage = activity.stage;
 
-    const deadline = activity.when ? new Date(activity.when).toLocaleDateString('pt-BR') : '-';
+    const deadline = activity.when ? window.App32DateUtils.formatCalendarDatePtBr(activity.when) : '-';
     const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-';
     const weightLabel = formatScoreWeight(activity.score_weight);
 

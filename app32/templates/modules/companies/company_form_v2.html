@@ -1700,7 +1700,7 @@
 
     function removeUserAccess(empId) {
         document.getElementById('remove-emp-id').value = empId;
-        document.getElementById('remove-end-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('remove-end-date').value = window.App32DateUtils.todayIso();
         document.getElementById('remove-access-modal').style.display = 'flex';
     }
 

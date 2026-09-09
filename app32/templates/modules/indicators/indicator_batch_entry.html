@@ -165,7 +165,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Set default date to today for all inputs
-    const today = new Date().toISOString().split('T')[0];
+    const today = window.App32DateUtils.todayIso();
     document.querySelectorAll('.date-input').forEach(input => {
         if (!input.value) input.value = today;
     });

@@ -695,8 +695,7 @@
   
   function formatDate(dateStr) {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR');
+    return window.App32DateUtils.formatCalendarDatePtBr(dateStr, '-');
   }
 
   function parseNumeric(value) {
@@ -817,7 +816,7 @@
     const primeiraReferencia =
       normalizeMonthKey(primeiroMes) ||
       normalizeMonthKey(rampDataset?.startMonth) ||
-      normalizeMonthKey((new Date()).toISOString().slice(0, 7));
+      normalizeMonthKey(window.App32DateUtils.todayIso().slice(0, 7));
 
     if (primeiraReferencia) {
       mesesSet.add(primeiraReferencia);

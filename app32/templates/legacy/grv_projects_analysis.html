@@ -783,7 +783,7 @@
     card.dataset.activityId = activity.id;
     card.dataset.stage = activity.stage;
 
-    const deadline = activity.when ? new Date(activity.when).toLocaleDateString('pt-BR') : '-';
+    const deadline = activity.when ? window.App32DateUtils.formatCalendarDatePtBr(activity.when) : '-';
     const budget = activity.amount ? `R$ ${parseFloat(activity.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : '-';
 
     card.innerHTML = `
@@ -860,7 +860,7 @@
 
       // Filtro de prazo
       if (filters.deadline) {
-        const deadline = activity.when ? new Date(activity.when) : null;
+        const deadline = window.App32DateUtils.parseCalendarDate(activity.when);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 

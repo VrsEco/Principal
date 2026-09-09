@@ -152,7 +152,7 @@
       if (dataRecord) {
         populateForm();
       } else {
-        recordDateInput.value = new Date().toISOString().split('T')[0];
+        recordDateInput.value = window.App32DateUtils.todayIso();
       }
     });
 

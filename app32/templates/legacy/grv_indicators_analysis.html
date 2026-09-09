@@ -748,7 +748,7 @@ function prepareChartData(selectedGoals, periodStart, periodEnd, viewMode) {
     }
     
     // Sort by date
-    goalData.sort((a, b) => new Date(a.record_date) - new Date(b.record_date));
+    goalData.sort((a, b) => String(a.record_date || '').localeCompare(String(b.record_date || '')));
     
     // Aggregate if needed
     if (viewMode === 'monthly' || viewMode === 'quarterly') {
@@ -810,7 +810,7 @@ function aggregateData(data, mode, evaluationBasis) {
   const basis = evaluationBasis || 'sum';
   
   data.forEach(record => {
-    const date = new Date(record.record_date);
+    const date = window.App32DateUtils.parseCalendarDate(record.record_date);
     let key;
     
     if (mode === 'monthly') {

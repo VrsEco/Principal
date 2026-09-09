@@ -3550,7 +3550,7 @@ function openModal(modalId, activity) {
 
   // Configurar data padrão como hoje
   if (modalId === 'modalAddHours') {
-    const today = new Date().toISOString().split('T')[0];
+    const today = window.App32DateUtils.todayIso();
     document.getElementById('workDate').value = today;
 
     // Atualizar resumo de horas
@@ -3854,7 +3854,7 @@ document.getElementById('formComplete')?.addEventListener('submit', async functi
 
   const formData = new FormData(this);
   const completionComment = formData.get('completion_comment') || '';
-  const today = new Date().toISOString().split('T')[0];
+  const today = window.App32DateUtils.todayIso();
 
   if (!currentActivity || !currentActivity.company_id) {
     window.showMessage('❌ Dados iniciais incompletos', 'error');

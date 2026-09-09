@@ -1232,7 +1232,7 @@
 
     function openCompletionPopup(taskId, targetStage) {
         pendingDrop = { taskId, targetStage };
-        document.getElementById('completionDateInput').value = new Date().toISOString().split('T')[0];
+        document.getElementById('completionDateInput').value = window.App32DateUtils.todayIso();
         document.getElementById('completionPopup').classList.add('open');
     }
 
@@ -1297,7 +1297,7 @@
 
     function openCancellationPopup(taskId, targetStage) {
         pendingDrop = { taskId, targetStage };
-        document.getElementById('cancellationDateInput').value = new Date().toISOString().split('T')[0];
+        document.getElementById('cancellationDateInput').value = window.App32DateUtils.todayIso();
         document.getElementById('cancellationPopup').classList.add('open');
     }
 

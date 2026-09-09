@@ -1262,11 +1262,11 @@
       const responsible = employees.find(e => e.id === project.responsible_id);
       const responsibleDisplay = responsible ? responsible.name : (project.owner || 'Responsável não informado');
 
-      const start = project.start_date ? new Date(project.start_date).toLocaleDateString('pt-BR') : '-';
-      const end = project.end_date ? new Date(project.end_date).toLocaleDateString('pt-BR') : '-';
+      const start = project.start_date ? window.App32DateUtils.formatCalendarDatePtBr(project.start_date) : '-';
+      const end = project.end_date ? window.App32DateUtils.formatCalendarDatePtBr(project.end_date) : '-';
       
       // Prazo previsto (maior prazo das atividades)
-      const predictedDeadline = project.predicted_deadline ? new Date(project.predicted_deadline).toLocaleDateString('pt-BR') : '-';
+      const predictedDeadline = project.predicted_deadline ? window.App32DateUtils.formatCalendarDatePtBr(project.predicted_deadline) : '-';
 
       // Calcular orçamento total das atividades
       const totalBudget = project.budget_total || 0;
