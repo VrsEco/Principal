@@ -55,6 +55,7 @@ from services.contract_fiscal_invoice_spreadsheet import (
     NFSE_XLSX_MIMETYPE,
     build_nfse_integration_workbook,
 )
+from schemas.contracts import CommercialOfferContractV1
 
 
 class ContractService:
@@ -2239,6 +2240,36 @@ class ContractService:
         return item
 
     @staticmethod
+    def _build_commercial_offer_snapshot(*, catalog_item: ContractCatalogItem, contract: Contract) -> Optional[dict]:
+        catalog_metadata = dict(catalog_item.metadata_json or {})
+        commercial_payload = catalog_metadata.get("commercial_contract_v1")
+        if not commercial_payload:
+            return None
+        commercial_contract = CommercialOfferContractV1.model_validate(commercial_payload)
+        return {
+            "snapshot_version": "1.0",
+            "catalog_item_id": catalog_item.id,
+            "catalog_item_code": catalog_item.code,
+            "catalog_item_name": catalog_item.name,
+            "commercial_contract_version": commercial_contract.version,
+            "offer_role": commercial_contract.offer_role,
+            "method_track": commercial_contract.method_track,
+            "problem_statement": commercial_contract.problem_statement,
+            "promised_outcome": commercial_contract.promised_outcome,
+            "scope_in": list(commercial_contract.scope_in),
+            "scope_out": list(commercial_contract.scope_out),
+            "deliverables": [
+                deliverable.model_dump(mode="json")
+                for deliverable in commercial_contract.deliverables
+            ],
+            "client_dependencies": list(commercial_contract.client_dependencies),
+            "business_review_policy": commercial_contract.business_review_policy,
+            "closure_criteria": list(commercial_contract.closure_criteria),
+            "materialized_at": datetime.utcnow().isoformat(),
+            "materialized_by_user_id": contract.updated_by_user_id or contract.created_by_user_id,
+        }
+
+    @staticmethod
     def _build_contract_item_data(*, contract: Contract, payload: dict) -> dict:
         catalog_item_id = ContractService._normalize_int(payload.get("contract_catalog_item_id"))
         catalog_item = None
@@ -2252,6 +2283,9 @@ class ContractService:
                 raise ValueError("Item mestre não encontrado para este contrato.")
             if not ContractsCatalogService._is_selectable_level(catalog_item):
                 raise ValueError("Somente itens do catálogo podem ser utilizados no contrato.")
+            if not catalog_item.is_active:
+                raise ValueError("O produto/serviço selecionado está inativo.")
+            ContractsCatalogService._ensure_commercial_activation_ready(catalog_item)
 
         if not catalog_item and not ContractService._normalize_text(payload.get("description")):
             raise ValueError("Selecione um produto/serviço do catálogo para adicionar ao contrato.")
@@ -2295,6 +2329,12 @@ class ContractService:
                 "item_kind": catalog_item.item_kind,
                 "unit_code": catalog_item.unit_code,
             }
+            commercial_snapshot = ContractService._build_commercial_offer_snapshot(
+                catalog_item=catalog_item,
+                contract=contract,
+            )
+            if commercial_snapshot:
+                metadata["commercial_offer_snapshot"] = commercial_snapshot
         metadata["allocation"] = {
             "chart_account_id": chart_account.id if chart_account else None,
             "chart_account_code": chart_account.code if chart_account else None,

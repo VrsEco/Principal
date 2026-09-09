@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
@@ -896,11 +898,35 @@ def contracts_items_catalog():
                     item = ContractsCatalogService.get_item(company.id, item_id)
                     if not item:
                         abort(404)
-                    ContractsCatalogService.update_item(item=item, payload=payload)
+                    existing_metadata = dict(item.metadata_json or {})
+                    for metadata_key in (
+                        "commercial_contract_v1",
+                        "commercial_contract_enforced",
+                        "commercial_contract_legacy",
+                    ):
+                        if metadata_key in existing_metadata:
+                            payload["metadata_json"][metadata_key] = existing_metadata[metadata_key]
+                    if "commercial_contract_editor" in request.form:
+                        raw_contract = (request.form.get("commercial_contract_json") or "").strip()
+                        if raw_contract:
+                            payload["metadata_json"]["commercial_contract_v1"] = json.loads(raw_contract)
+                        else:
+                            payload["metadata_json"].pop("commercial_contract_v1", None)
+                        payload["metadata_json"]["commercial_contract_enforced"] = bool(
+                            request.form.get("commercial_contract_enforced")
+                        )
+                    ContractsCatalogService.update_item(
+                        item=item,
+                        payload=payload,
+                        actor_user_id=_current_user_id(),
+                    )
                     flash("Item mestre atualizado com sucesso.", "success")
                     selected_item_id = item.id
                 else:
-                    item = ContractsCatalogService.create_item(payload=payload)
+                    item = ContractsCatalogService.create_item(
+                        payload=payload,
+                        actor_user_id=_current_user_id(),
+                    )
                     flash("Item mestre criado com sucesso.", "success")
                     selected_item_id = item.id
                 return redirect(url_for("contracts.contracts_items_catalog", company_id=company.id, item_id=selected_item_id, catalog_view=catalog_view))
@@ -972,6 +998,10 @@ def contracts_items_catalog():
             selected_parent = None
 
         leaf_items = ContractsCatalogService.list_leaf_items(company.id)
+        commercial_readiness_by_item = {
+            item.id: ContractsCatalogService.get_commercial_contract_readiness(item)
+            for item in leaf_items
+        }
         leaf_parent_candidates = ContractsCatalogService.list_leaf_parent_candidates(
             company.id,
             selected_item.id if selected_item else None,
@@ -994,6 +1024,7 @@ def contracts_items_catalog():
             selected_parent=selected_parent,
             level_label=ContractsCatalogService.get_level_label,
             level_label_by_parent=ContractsCatalogService.get_level_label_by_parent,
+            commercial_readiness_by_item=commercial_readiness_by_item,
             catalog_view=catalog_view,
         )
 

@@ -26,11 +26,30 @@ def test_commercial_mcp_registrar_exposes_new_billing_and_dashboard_tools():
 
     assert {
         "get_commercial_dashboard",
+        "get_commercial_product_service_readiness",
+        "update_commercial_offer_contract",
         "build_commercial_billing_review",
         "generate_commercial_billing_batch",
         "generate_commercial_financial_titles_for_billing",
         "export_commercial_fiscal_integration_spreadsheet",
     }.issubset(mcp.registered)
+
+
+def test_commercial_offer_contract_write_requires_explicit_human_gate():
+    mcp = _FakeMCP()
+    register_commercial_mcp_tools(mcp)
+
+    result = mcp.registered["update_commercial_offer_contract"](
+        company_id=9,
+        item_id=3,
+        commercial_contract={},
+        human_gate_confirmed=False,
+    )
+
+    assert result == {
+        "success": False,
+        "error": "Confirmação humana explícita é obrigatória para alterar o contrato operacional da oferta.",
+    }
 
 
 def test_tool_first_catalog_maps_commercial_finance_work_journey_and_mcp_governance():
@@ -45,6 +64,8 @@ def test_tool_first_catalog_maps_commercial_finance_work_journey_and_mcp_governa
     }.issubset(domains)
     commercial_tools = {tool["name"] for tool in domains["commercial_contracts"]["published_tools"]}
     assert "get_commercial_dashboard" in commercial_tools
+    assert "get_commercial_product_service_readiness" in commercial_tools
+    assert "update_commercial_offer_contract" in commercial_tools
     assert "generate_commercial_financial_titles_for_billing" in commercial_tools
     assert domains["commercial_contracts"]["summary"]["published_mcp_tools"] >= 40
 
@@ -66,6 +87,7 @@ def test_previously_unmapped_shared_mcp_tools_now_have_capability_metadata():
 
     assert catalog.get_tool_capability("approve_work_journey_absence_request_tool").human_gate is True
     assert catalog.get_tool_capability("delete_work_journey_rule_tool").human_gate is True
+    assert catalog.get_tool_capability("update_commercial_offer_contract").human_gate is True
 
 
 def test_crud_contracts_include_governance_for_commercial_contracts():

@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
+from pydantic import ValidationError
+
 from models import db
 from models.contracts import ContractCatalogItem
-from schemas.contracts import ContractCatalogItemInput, ContractCatalogItemUpdateInput
+from models.process import Process
+from schemas.contracts import (
+    CommercialOfferContractV1,
+    ContractCatalogItemInput,
+    ContractCatalogItemUpdateInput,
+)
 
 
 class ContractsCatalogService:
@@ -34,6 +41,10 @@ class ContractsCatalogService:
         "cst_is",
         "cclasstrib_is",
         "fiscal_notes",
+    }
+    COMMERCIAL_METADATA_FIELDS = {
+        "commercial_contract_v1",
+        "commercial_contract_enforced",
     }
 
     @staticmethod
@@ -154,6 +165,9 @@ class ContractsCatalogService:
     def _clean_metadata_dict(metadata: dict) -> dict:
         cleaned = {}
         for key, value in (metadata or {}).items():
+            if key == "commercial_contract_v1" and value is not None:
+                cleaned[key] = CommercialOfferContractV1.model_validate(value).model_dump(mode="json")
+                continue
             if isinstance(value, bool):
                 cleaned[key] = value
                 continue
@@ -171,6 +185,7 @@ class ContractsCatalogService:
 
         metadata = ContractsCatalogService._clean_metadata_dict(metadata_json or {})
         allowed_fields = set(ContractsCatalogService.RTC_COMMON_METADATA_FIELDS)
+        allowed_fields.update(ContractsCatalogService.COMMERCIAL_METADATA_FIELDS)
         if normalized_kind == "service":
             allowed_fields.update(ContractsCatalogService.SERVICE_METADATA_FIELDS)
             metadata["stock_control"] = False
@@ -187,6 +202,150 @@ class ContractsCatalogService:
             ContractsCatalogService._normalize_text(unit_code) or None,
             sanitized_metadata,
         )
+
+    @staticmethod
+    def get_commercial_contract_readiness(item: Optional[ContractCatalogItem]) -> dict:
+        if not item:
+            return {
+                "applicable": False,
+                "ready_for_activation": False,
+                "enforced": False,
+                "status": "not_found",
+                "reasons": ["Item do catálogo não localizado."],
+            }
+        metadata = dict(item.metadata_json or {})
+        enforced = ContractsCatalogService._normalize_bool(metadata.get("commercial_contract_enforced"))
+        payload = metadata.get("commercial_contract_v1")
+        if not payload:
+            return {
+                "applicable": ContractsCatalogService._is_selectable_level(item),
+                "ready_for_activation": False,
+                "enforced": enforced,
+                "status": "missing",
+                "reasons": ["Contrato operacional da oferta ainda não foi informado."],
+            }
+        try:
+            contract = CommercialOfferContractV1.model_validate(payload)
+        except ValidationError as exc:
+            return {
+                "applicable": True,
+                "ready_for_activation": False,
+                "enforced": enforced,
+                "status": "invalid",
+                "reasons": [error.get("msg", "Contrato operacional inválido.") for error in exc.errors()],
+            }
+        reasons = []
+        if contract.status != "active":
+            reasons.append("Contrato operacional ainda não está ativo.")
+        reasons.extend(
+            ContractsCatalogService._get_commercial_process_link_reasons(
+                company_id=item.company_id,
+                contract=contract,
+            )
+        )
+        return {
+            "applicable": True,
+            "ready_for_activation": not reasons,
+            "enforced": enforced,
+            "status": contract.status,
+            "version": contract.version,
+            "offer_role": contract.offer_role,
+            "method_track": contract.method_track,
+            "reasons": reasons,
+        }
+
+    @staticmethod
+    def _get_commercial_process_link_reasons(
+        *,
+        company_id: int,
+        contract: CommercialOfferContractV1,
+    ) -> list[str]:
+        """Confirma que processos referenciados pertencem ao tenant da oferta.
+
+        O contrato comercial guarda ids de processos para dar rastreabilidade à
+        execução. Esses ids nunca podem ser aceitos apenas pelo schema: um id
+        válido de outra empresa seria um tenant crossing silencioso.
+        """
+        linked_ids = sorted({link.process_id for link in contract.process_links})
+        if not linked_ids:
+            return []
+
+        linked_processes = (
+            Process.query.filter(
+                Process.company_id == company_id,
+                Process.id.in_(linked_ids),
+            ).all()
+        )
+        by_id = {process.id: process for process in linked_processes}
+        missing_ids = [process_id for process_id in linked_ids if process_id not in by_id]
+        inactive_ids = [
+            process_id
+            for process_id, process in by_id.items()
+            if not bool(getattr(process, "is_active", True))
+        ]
+
+        reasons = []
+        if missing_ids:
+            reasons.append(
+                "Processos vinculados não existem nesta empresa: "
+                + ", ".join(str(process_id) for process_id in missing_ids)
+                + "."
+            )
+        if inactive_ids:
+            reasons.append(
+                "Processos vinculados inativos: "
+                + ", ".join(str(process_id) for process_id in sorted(inactive_ids))
+                + "."
+            )
+        return reasons
+
+    @staticmethod
+    def _validate_commercial_process_links(
+        *,
+        company_id: int,
+        metadata_json: dict,
+    ) -> None:
+        payload = (metadata_json or {}).get("commercial_contract_v1")
+        if not payload:
+            return
+        contract = CommercialOfferContractV1.model_validate(payload)
+        reasons = ContractsCatalogService._get_commercial_process_link_reasons(
+            company_id=company_id,
+            contract=contract,
+        )
+        if reasons:
+            raise ValueError(" ".join(reasons))
+
+    @staticmethod
+    def _validate_commercial_approval(
+        *,
+        metadata_json: dict,
+        actor_user_id: Optional[int],
+    ) -> None:
+        """Evita que uma escrita atribua aprovação a outro usuário.
+
+        `approved_by_user_id` integra o snapshot da oferta, mas não pode ser
+        aceito como uma identidade declarada pelo payload. Para estados que
+        exigem aprovação, o ator autenticado precisa ser o próprio aprovador.
+        """
+        payload = (metadata_json or {}).get("commercial_contract_v1")
+        if not payload:
+            return
+        contract = CommercialOfferContractV1.model_validate(payload)
+        if contract.status not in {"validated", "active", "retired"}:
+            return
+        if not actor_user_id:
+            raise ValueError("Oferta aprovada exige usuário autenticado para registrar a aprovação.")
+        if contract.approved_by_user_id != actor_user_id:
+            raise ValueError("Aprovação da oferta deve ser registrada pelo próprio usuário autenticado.")
+
+    @staticmethod
+    def _ensure_commercial_activation_ready(item: ContractCatalogItem) -> None:
+        readiness = ContractsCatalogService.get_commercial_contract_readiness(item)
+        contract_present = readiness.get("status") not in {"missing", "not_found"}
+        if (readiness["enforced"] or contract_present) and not readiness["ready_for_activation"]:
+            reasons = "; ".join(readiness.get("reasons") or [])
+            raise ValueError(f"Oferta sem prontidão para ativação: {reasons}")
 
     @staticmethod
     def list_parent_candidates(company_id: int, selected_item_id: Optional[int] = None):
@@ -296,7 +455,12 @@ class ContractsCatalogService:
         return [build_node(item) for item in sorted(roots, key=lambda entry: (entry.code or "", entry.name or ""))]
 
     @staticmethod
-    def create_item(*, payload: dict, allowed_company_ids: Optional[Sequence[int]] = None):
+    def create_item(
+        *,
+        payload: dict,
+        allowed_company_ids: Optional[Sequence[int]] = None,
+        actor_user_id: Optional[int] = None,
+    ):
         data = ContractCatalogItemInput(**payload).model_dump()
         scope_error = ContractsCatalogService._ensure_company_scope(data["company_id"], allowed_company_ids)
         if scope_error:
@@ -327,6 +491,14 @@ class ContractsCatalogService:
             unit_code=data.get("unit_code"),
             metadata_json=data.get("metadata_json") or {},
         )
+        ContractsCatalogService._validate_commercial_process_links(
+            company_id=data["company_id"],
+            metadata_json=metadata_json,
+        )
+        ContractsCatalogService._validate_commercial_approval(
+            metadata_json=metadata_json,
+            actor_user_id=actor_user_id,
+        )
 
         record = ContractCatalogItem(
             company_id=data["company_id"],
@@ -341,12 +513,19 @@ class ContractsCatalogService:
             metadata_json=metadata_json,
         )
         record.accepts_contracting = ContractsCatalogService._is_selectable_level(record)
+        if record.is_active and record.accepts_contracting:
+            ContractsCatalogService._ensure_commercial_activation_ready(record)
         db.session.add(record)
         db.session.commit()
         return record
 
     @staticmethod
-    def update_item(*, item: ContractCatalogItem, payload: dict):
+    def update_item(
+        *,
+        item: ContractCatalogItem,
+        payload: dict,
+        actor_user_id: Optional[int] = None,
+    ):
         sanitized_payload = dict(payload or {})
         sanitized_payload.pop("company_id", None)
         data = ContractCatalogItemUpdateInput(**sanitized_payload).model_dump(exclude_unset=True)
@@ -386,6 +565,15 @@ class ContractsCatalogService:
             unit_code=data.get("unit_code", item.unit_code),
             metadata_json=data.get("metadata_json", item.metadata_json) or {},
         )
+        ContractsCatalogService._validate_commercial_process_links(
+            company_id=item.company_id,
+            metadata_json=metadata_json,
+        )
+        if metadata_json.get("commercial_contract_v1") != (item.metadata_json or {}).get("commercial_contract_v1"):
+            ContractsCatalogService._validate_commercial_approval(
+                metadata_json=metadata_json,
+                actor_user_id=actor_user_id,
+            )
         item.item_kind = item_kind
         item.description = description
         item.unit_code = unit_code
@@ -393,11 +581,15 @@ class ContractsCatalogService:
             item.is_active = data["is_active"]
         item.metadata_json = metadata_json
         item.accepts_contracting = ContractsCatalogService._is_selectable_level(item)
+        if item.is_active and item.accepts_contracting:
+            ContractsCatalogService._ensure_commercial_activation_ready(item)
         db.session.commit()
         return item
 
     @staticmethod
     def toggle_item(*, item: ContractCatalogItem, is_active: bool):
+        if is_active and ContractsCatalogService._is_selectable_level(item):
+            ContractsCatalogService._ensure_commercial_activation_ready(item)
         item.is_active = bool(is_active)
         db.session.commit()
         return item

@@ -17,6 +17,8 @@
 {% set form_level = 'Item' %}
 {% set current_kind = selected_item.item_kind if selected_item else 'service' %}
 {% set metadata = (selected_item.metadata_json or {}) if selected_item else {} %}
+{% set commercial_contract = metadata.get('commercial_contract_v1') if metadata else none %}
+{% set commercial_readiness = commercial_readiness_by_item.get(selected_item.id, {}) if selected_item else {} %}
 <div class="cw-page fade-in">
     <header class="cw-header">
         <div>
@@ -57,7 +59,11 @@
                                     {% endif %}
                                 </span>
                             </span>
-                            <span class="cw-list-item-status">{{ 'Ativo' if item.is_active else 'Inativo' }}</span>
+                            {% set item_readiness = commercial_readiness_by_item.get(item.id, {}) %}
+                            <span class="cw-list-item-status">
+                                {{ 'Ativo' if item.is_active else 'Inativo' }}
+                                · {{ item_readiness.get('status', 'missing') }}
+                            </span>
                         </a>
                     </div>
                         {% endfor %}
@@ -134,6 +140,63 @@
                                 <input type="checkbox" name="is_active" {% if not selected_item or selected_item.is_active %}checked{% endif %}>
                             </label>
                         </div>
+                    </div>
+
+                    <div class="cw-form-section" data-section="oferta">
+                        {% if selected_item %}
+                        <input type="hidden" name="commercial_contract_editor" value="1">
+                        <div class="cw-readiness-grid">
+                            <div class="cw-readiness-card">
+                                <span>Prontidão</span>
+                                <strong class="cw-readiness-status {{ 'ready' if commercial_readiness.get('ready_for_activation') else 'pending' }}">
+                                    {{ 'Pronta para ativação' if commercial_readiness.get('ready_for_activation') else 'Pendente' }}
+                                </strong>
+                            </div>
+                            <div class="cw-readiness-card">
+                                <span>Contrato operacional</span>
+                                <strong>{{ commercial_readiness.get('status', 'missing') }}</strong>
+                            </div>
+                            <div class="cw-readiness-card">
+                                <span>Versão</span>
+                                <strong>{{ commercial_readiness.get('version', '--') }}</strong>
+                            </div>
+                            <div class="cw-readiness-card">
+                                <span>Trilho</span>
+                                <strong>{{ commercial_readiness.get('method_track') or 'Componente de apoio' }}</strong>
+                            </div>
+                        </div>
+
+                        {% if commercial_readiness.get('reasons') %}
+                        <div class="cw-info-card cw-readiness-reasons">
+                            <strong>O que falta</strong>
+                            <ul>
+                                {% for reason in commercial_readiness.get('reasons', []) %}
+                                <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        <label class="checkbox-card full-width">
+                            <strong>Exigir contrato operacional ativo</strong>
+                            <span class="field-hint">Quando marcado, a oferta não poderá ser ativada nem contratada sem cumprir os gates definidos.</span>
+                            <input type="checkbox" name="commercial_contract_enforced" {% if metadata.get('commercial_contract_enforced') %}checked{% endif %}>
+                        </label>
+
+                        <details class="cw-advanced-editor">
+                            <summary>Editor técnico do contrato operacional</summary>
+                            <p class="field-hint">Uso controlado. Prefira a atualização assistida via MCP; qualquer alteração exige validação humana e será validada pelo schema oficial.</p>
+                            <label>
+                                <span>commercial_contract_v1 (JSON)</span>
+                                <textarea name="commercial_contract_json" rows="22" spellcheck="false">{% if commercial_contract %}{{ commercial_contract|tojson(indent=2) }}{% endif %}</textarea>
+                            </label>
+                        </details>
+                        {% else %}
+                        <div class="cw-info-card">
+                            <strong>Cadastre primeiro os dados gerais</strong>
+                            <p class="field-hint">Depois de criar o item, o contrato operacional e sua prontidão ficarão disponíveis nesta aba.</p>
+                        </div>
+                        {% endif %}
                     </div>
 
                     <div class="cw-form-section" data-section="fiscal">
@@ -318,6 +381,7 @@
                 <h3>Abas do cadastro</h3>
                 <nav class="cw-section-nav" id="cw-section-nav">
                     <button type="button" class="cw-section-btn active" data-section="geral">Geral</button>
+                    <button type="button" class="cw-section-btn" data-section="oferta">Contrato operacional</button>
                     <button type="button" class="cw-section-btn" data-section="fiscal">Fiscal</button>
                     <button type="button" class="cw-section-btn" data-section="financeiro">Financeiro</button>
                 </nav>
@@ -364,7 +428,19 @@
     .cw-section-btn { text-align:left; border:1px solid var(--border); background:var(--surface-secondary); border-radius:12px; padding:.75rem .9rem; cursor:pointer; color:var(--text-primary); font-weight:600; }
     .cw-section-btn.active { border-color:var(--primary); background:rgba(37,99,235,.08); color:var(--primary); }
     .cw-kind-panel[hidden] { display:none !important; }
+    .cw-readiness-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin-bottom:1rem; }
+    .cw-readiness-card { display:flex; flex-direction:column; gap:.35rem; padding:.9rem; border:1px solid var(--border); border-radius:14px; background:var(--surface-secondary); }
+    .cw-readiness-card span { color:var(--text-secondary); font-size:.78rem; }
+    .cw-readiness-status.ready { color:#047857; }
+    .cw-readiness-status.pending { color:#b45309; }
+    .cw-readiness-reasons { margin-bottom:1rem; }
+    .cw-readiness-reasons ul { margin:.6rem 0 0; padding-left:1.2rem; }
+    .cw-advanced-editor { margin-top:1rem; padding:1rem; border:1px solid var(--border); border-radius:16px; background:var(--surface-secondary); }
+    .cw-advanced-editor summary { cursor:pointer; font-weight:700; }
+    .cw-advanced-editor label { display:flex; flex-direction:column; gap:.45rem; margin-top:1rem; }
+    .cw-advanced-editor textarea { min-height:360px; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:.82rem; }
     @media (max-width: 1200px) { .cw-shell { grid-template-columns:1fr; } .cw-list-rail,.cw-tabs-rail { position:static; } }
+    @media (max-width: 760px) { .cw-page { padding:0 1rem 1rem; } .cw-form-grid,.cw-readiness-grid { grid-template-columns:1fr; } }
 </style>
 
 <script>
