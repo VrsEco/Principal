@@ -831,6 +831,26 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/backlog-human-gate.js') }}"></script>
 <script>
+    // Datas sem horário vindas da API são datas de calendário. O construtor
+    // `new Date('YYYY-MM-DD')` as interpreta em UTC e pode deslocá-las um dia
+    // para trás no fuso local; por isso montamos a data explicitamente local.
+    function parseLocalDate(dateString) {
+        if (!dateString) return null;
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            const [year, month, day] = dateString.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        const parsedDate = new Date(dateString);
+        return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+    }
+
+    function getTodayStart() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    }
+
     const COMPANY_ID = parseInt("{{ company.id if company else '0' }}");
     const IS_COLLABORATOR = {{ 'true' if is_collaborator else 'false' }};
     const CAN_EDIT_TASKS = {{ 'true' if can_edit_tasks else 'false' }};
@@ -1081,8 +1101,8 @@
             draggedTaskId = null;
         };
 
-        const deadlineDate = task.due_date ? new Date(task.due_date) : null;
-        const isOverdue = deadlineDate && deadlineDate < new Date() && task.stage !== 'completed';
+        const deadlineDate = parseLocalDate(task.due_date);
+        const isOverdue = deadlineDate && deadlineDate < getTodayStart() && task.stage !== 'completed';
         const deadlineLabel = deadlineDate ? deadlineDate.toLocaleDateString('pt-BR') : '-';
 
         let ownerName = task.employee_name;
@@ -1137,7 +1157,8 @@
         const executing = tasks.filter(t => t.stage === 'executing').length;
         const overdue = tasks.filter(t => {
             if (t.stage === 'completed' || !t.due_date) return false;
-            return new Date(t.due_date) < new Date();
+            const dueDate = parseLocalDate(t.due_date);
+            return dueDate && dueDate < getTodayStart();
         }).length;
 
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;

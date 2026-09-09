@@ -134,6 +134,21 @@ def test_project_analysis_reports_completion_api_failure():
     assert "errorPayload.error || errorPayload.message || 'Falha ao concluir atividade'" in template
 
 
+def test_project_analysis_parses_date_only_due_dates_in_local_timezone():
+    template = (
+        Path(__file__).resolve().parents[1]
+        / "templates"
+        / "modules"
+        / "projects"
+        / "project_analysis.html"
+    ).read_text(encoding="utf-8")
+
+    assert "function parseLocalDate(dateString)" in template
+    assert "new Date(year, month - 1, day)" in template
+    assert "const deadlineDate = parseLocalDate(task.due_date);" in template
+    assert "const dueDate = parseLocalDate(t.due_date);" in template
+
+
 def test_project_board_capacity_guardrail_thresholds():
     healthy = ProjectBoardCapacityService.build({"inbox": 499, "completed": 100})
     attention = ProjectBoardCapacityService.build({"inbox": 501, "completed": 100})
