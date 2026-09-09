@@ -1516,15 +1516,42 @@ function mergeProcessActivityDetails(activity, instanceDetails, processDetails) 
   }
 }
 
-function formatDateLabel(value) {
+function parseCalendarDate(value) {
   if (!value) {
-    return '';
+    return null;
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
+
+  if (value instanceof Date) {
+    return new Date(value.getTime());
   }
-  return date.toLocaleDateString('pt-BR');
+
+  const rawValue = String(value).trim();
+  // Prazo e data de conclusão são datas de calendário, não instantes UTC.
+  // `new Date('YYYY-MM-DD')` interpreta meia-noite UTC e exibe o dia anterior
+  // para fusos negativos, como America/Bahia.
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(rawValue);
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const month = Number(dateOnlyMatch[2]);
+    const day = Number(dateOnlyMatch[3]);
+    const localDate = new Date(year, month - 1, day);
+    if (
+      localDate.getFullYear() === year &&
+      localDate.getMonth() === month - 1 &&
+      localDate.getDate() === day
+    ) {
+      return localDate;
+    }
+    return null;
+  }
+
+  const parsed = new Date(rawValue);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateLabel(value) {
+  const date = parseCalendarDate(value);
+  return date ? date.toLocaleDateString('pt-BR') : '';
 }
 
 function buildExecutorNames(record) {
@@ -2013,14 +2040,17 @@ function getFilteredActivities() {
   }
 
   if (state.dueDateStart || state.dueDateEnd) {
-    const startDate = state.dueDateStart ? new Date(state.dueDateStart) : null;
-    const endDate = state.dueDateEnd ? new Date(state.dueDateEnd) : null;
+    const startDate = parseCalendarDate(state.dueDateStart);
+    const endDate = parseCalendarDate(state.dueDateEnd);
 
     activities = activities.filter(activity => {
       if (!activity.deadline) {
         return false;
       }
-      const deadlineDate = new Date(activity.deadline);
+      const deadlineDate = parseCalendarDate(activity.deadline);
+      if (!deadlineDate) {
+        return false;
+      }
       if (startDate && deadlineDate < startDate) {
         return false;
       }
@@ -2113,11 +2143,13 @@ function createActivityElement(activity) {
   if (isClosed) {
     let isLate = activity.is_overdue;
     if (activity.completed_date && activity.deadline) {
-      const completedDate = new Date(activity.completed_date);
-      const deadlineDate = new Date(activity.deadline);
-      completedDate.setHours(0, 0, 0, 0);
-      deadlineDate.setHours(0, 0, 0, 0);
-      isLate = completedDate > deadlineDate;
+      const completedDate = parseCalendarDate(activity.completed_date);
+      const deadlineDate = parseCalendarDate(activity.deadline);
+      if (completedDate && deadlineDate) {
+        completedDate.setHours(0, 0, 0, 0);
+        deadlineDate.setHours(0, 0, 0, 0);
+        isLate = completedDate > deadlineDate;
+      }
     }
     if (isLate) {
       stateBadgeHtml = '<span class="status-badge" style="background-color: var(--color-danger, #ef4444); color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.70rem; font-weight: 600;">Concluída com Atraso</span>';
@@ -2350,7 +2382,7 @@ function formatDeadline(activity) {
     return 'Sem prazo definido';
   }
   try {
-    return new Date(activity.deadline).toLocaleDateString('pt-BR');
+    return formatDateLabel(activity.deadline) || 'Sem prazo definido';
   } catch (e) {
     return 'Sem prazo definido';
   }
@@ -3102,9 +3134,7 @@ function isStatus(activity, targetStatus) {
 }
 
 function parseISODate(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return parseCalendarDate(value);
 }
 
 function startOfWeek(referenceDate) {
@@ -3362,8 +3392,7 @@ function parseActivityDate(activity) {
     return null;
   }
 
-  const parsed = new Date(dateValue);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return parseCalendarDate(dateValue);
 }
 
 function updateWeekChartBars() {
@@ -3582,7 +3611,7 @@ function populateActivityInfo(modalId, activity) {
     details.push(`<li>Empresa: ${activity.company_name}</li>`);
   }
   if (activity.deadline_label || activity.deadline) {
-    const deadlineText = activity.deadline_label || new Date(activity.deadline).toLocaleDateString('pt-BR');
+    const deadlineText = activity.deadline_label || formatDateLabel(activity.deadline) || 'Sem prazo definido';
     details.push(`<li>Prazo: ${deadlineText}</li>`);
   }
   if (activity.description) {
@@ -3733,7 +3762,7 @@ document.getElementById('formAddHours')?.addEventListener('submit', async functi
     const logs = normalizeTaskLogs(activity.logs);
     logs.push({
       timestamp: new Date().toISOString(),
-      text: description || `Adicionado ${hoursToAdd}h em ${new Date(date).toLocaleDateString('pt-BR')}`,
+      text: description || `Adicionado ${hoursToAdd}h em ${formatDateLabel(date) || date}`,
       type: 'hours',
       hours: hoursToAdd,
       date: date
@@ -3901,7 +3930,7 @@ document.getElementById('formComplete')?.addEventListener('submit', async functi
 
       logs.push({
         timestamp: new Date().toISOString(),
-        text: completionComment || `Atividade concluída em ${new Date(today).toLocaleDateString('pt-BR')}`,
+        text: completionComment || `Atividade concluída em ${formatDateLabel(today) || today}`,
         type: 'completion',
         date: today
       });

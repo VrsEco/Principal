@@ -249,7 +249,7 @@
             <button type="button" class="btn-icon-small" onclick="closeFinalizarModal()">&times;</button>
         </div>
         <div class="bpms-modal__body">
-            <div class="bpms-summary-row"><span>Prazo previsto</span><strong id="modalDeadline">{{ instance.due_date if instance.due_date else 'Não definido' }}</strong></div>
+            <div class="bpms-summary-row"><span>Prazo previsto</span><strong id="modalDeadline">{{ instance.due_date.strftime('%d/%m/%Y') if instance.due_date else 'Não definido' }}</strong></div>
             <div class="form-group mt-3 mb-3">
                 <label class="form-label">Data de conclusão efetiva</label>
                 <input type="date" id="actualEndDate" class="form-control">
@@ -430,7 +430,11 @@
 
     function formatDateBR(value, fallback = '—') {
         if (!value) return fallback;
-        const date = new Date(value);
+        const raw = String(value).trim();
+        const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+        const date = match
+            ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+            : new Date(raw);
         if (Number.isNaN(date.getTime())) return String(value || fallback);
         return date.toLocaleDateString('pt-BR');
     }
