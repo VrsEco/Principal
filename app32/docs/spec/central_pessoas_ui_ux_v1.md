@@ -15,26 +15,26 @@ global; seus vínculos, colaboradores, cargos, ocupações e custos são
 
 ## Ordem das abas
 
-1. Visão geral
-2. Usuários e acessos
-3. Cargos
+1. Usuários e acessos
+2. Cargos
    - Perfil
    - Quantidade
-4. Organograma
-5. Colaboradores
+3. Organograma
+4. Colaboradores
    - Perfil
    - Ocupação por data
    - Custos planejados por cargo
-6. Relatórios
+5. Relatórios
 
 ## UX
 
 - cada aba possui um CTA primário inequívoco;
-- Visão geral orienta o fluxo: usuário/acesso → cargo → colaborador → ocupação;
+- o cabeçalho orienta o fluxo: usuário/acesso → cargo → colaborador → ocupação;
 - Usuários e acessos diferencia visualmente conta global e vínculo na empresa;
 - custos exibidos em Colaboradores conservam a legenda "por cargo";
 - perfis técnicos não ocupam área da tela; RBAC controla ações e visibilidade;
-- URLs legadas passam a redirecionar para a aba equivalente após migração.
+- `/companies/<company_id>/people` é a página canônica; as ações ocorrem na própria
+  página, por tabela, drawer e diálogo, sem atalhos para cadastros legados.
 
 ## Perfis oficiais
 

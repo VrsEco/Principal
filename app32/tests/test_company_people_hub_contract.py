@@ -4,24 +4,27 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_people_hub_is_company_scoped_and_uses_existing_permission_guard():
+def test_people_hub_is_company_scoped_and_renders_the_canonical_workspace():
     source = (ROOT / 'api' / 'routes' / 'companies.py').read_text(encoding='utf-8')
     assert "@companies_bp.route('/companies/<int:company_id>/people')" in source
     assert "@permission_required('companies', 'view')" in source
     assert 'def company_people_hub(company_id):' in source
     assert '_ensure_company_access(company_id)' in source
-    assert "return redirect(f'/companies/{company_id}/identity')" in source
+    assert "PeopleWorkspaceService.build_workspace(company_id)" in source
+    assert "'modules/companies/company_people_v3.html'" in source
 
 
-def test_people_hub_does_not_expose_mcp_token_management():
-    template = (ROOT / 'templates' / 'modules' / 'companies' / 'company_people_hub.html').read_text(encoding='utf-8').lower()
+def test_people_workspace_has_real_sections_and_no_technical_credentials():
+    template = (ROOT / 'templates' / 'modules' / 'companies' / 'company_people_v3.html').read_text(encoding='utf-8').lower()
     assert 'mcp' not in template
     assert 'token' not in template
     assert 'data-company-id="{{ company.id }}"' in template
-    script = (ROOT / 'static' / 'js' / 'company_people_hub.js').read_text(encoding='utf-8')
-    assert '/api/companies/${companyId}/users' in script
-    assert '/api/companies/${companyId}/usage-telemetry' in script
-    assert 'uso da empresa' in template
+    for label in ('usuários e acessos', 'cargos', 'organograma', 'colaboradores', 'relatórios'):
+        assert label in template
+    script = (ROOT / 'static' / 'js' / 'company_people_v3.js').read_text(encoding='utf-8')
+    assert '/api/companies/${companyId}/people/workspace' in script
+    assert '/api/companies/${companyId}/people/users' in script
+    assert '/api/companies/${companyId}/people/employees' in script
 
 
 def test_sidebar_uses_active_company_for_people_navigation():

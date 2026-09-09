@@ -1,0 +1,69 @@
+{% extends "layouts/app.html" %}
+{% block title %}Pessoas - {{ company.name }}{% endblock %}
+{% block page_title %}Sistema / Pessoas{% endblock %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/company_people_v3.css') }}">
+{% endblock %}
+{% block content %}
+<main class="people-page" data-company-id="{{ company.id }}" data-can-manage="{{ 'true' if can_manage_people else 'false' }}" data-can-view-costs="{{ 'true' if can_view_costs else 'false' }}">
+  <header class="people-page__header">
+    <div><span class="people-kicker">Empresa ativa · {{ company.name }}</span><h1 class="text-h1">Pessoas</h1><p>Contas, estrutura organizacional e quadro de colaboradores em uma única jornada.</p></div>
+    {% if can_manage_people %}<button class="btn btn-special" type="button" data-people-open="user">+ Novo usuário</button>{% endif %}
+  </header>
+
+  <section class="people-summary" aria-label="Resumo da estrutura">
+    <article><span>Usuários vinculados</span><strong id="peopleMetricUsers">{{ metrics.users_total or 0 }}</strong><small id="peopleMetricUsersActive">— ativos</small></article>
+    <article><span>Colaboradores ativos</span><strong id="peopleMetricEmployees">{{ metrics.active_employees_total or 0 }}</strong><small>quadro em operação</small></article>
+    <article><span>Cargos cadastrados</span><strong id="peopleMetricRoles">{{ metrics.roles_total or 0 }}</strong><small>estrutura formal</small></article>
+    <article><span>Posições em aberto</span><strong id="peopleMetricVacancies">—</strong><small>quadro planejado</small></article>
+  </section>
+
+  <nav class="people-tabs" aria-label="Seções de Pessoas">
+    <button class="is-active" type="button" data-people-tab="users">Usuários e acessos</button>
+    <button type="button" data-people-tab="roles">Cargos</button>
+    <button type="button" data-people-tab="org">Organograma</button>
+    <button type="button" data-people-tab="employees">Colaboradores</button>
+    <button type="button" data-people-tab="reports">Relatórios</button>
+  </nav>
+
+  <section class="people-panel is-active" data-people-panel="users">
+    <div class="people-grid people-grid--users">
+      <article class="people-card"><header class="people-card__header"><div><h2>Usuários e acessos</h2><p>Conta global vinculada à empresa. O vínculo com colaborador é opcional.</p></div>{% if can_manage_people %}<button class="btn btn-special btn-sm" type="button" data-people-open="user">+ Novo usuário</button>{% endif %}</header>
+        <div class="people-toolbar"><input id="peopleUserSearch" class="form-control" placeholder="Buscar por nome ou e-mail" autocomplete="off"><select id="peopleUserProfile" class="form-control"><option value="">Todos os perfis</option><option value="administrator">Administrador</option><option value="client">Cliente</option><option value="collaborator">Colaborador</option></select></div>
+        <div class="people-table-wrap"><table class="table-v2"><thead><tr><th>Usuário</th><th>Perfil</th><th>Vínculo com colaborador</th><th>Situação</th><th class="people-actions-col"></th></tr></thead><tbody id="peopleUsersRows"><tr><td colspan="5">Carregando usuários…</td></tr></tbody></table></div>
+      </article>
+      <aside class="people-card people-journey"><h2>Jornada recomendada</h2><p>O acesso é independente da estrutura organizacional.</p><ol><li><b>Crie a conta</b><span>Defina nome, e-mail e perfil.</span></li><li><b>Vincule à empresa</b><span>Controle o escopo de atuação.</span></li><li><b>Vincule à pessoa, se houver</b><span>Não altera cargo ou ocupação.</span></li></ol></aside>
+    </div>
+  </section>
+
+  <section class="people-panel" data-people-panel="roles">
+    <article class="people-card"><header class="people-card__header"><div><h2>Cargos</h2><p>Defina perfil, hierarquia e quantidade planejada da organização.</p></div>{% if can_manage_people %}<button class="btn btn-special btn-sm" type="button" data-people-open="role">+ Novo cargo</button>{% endif %}</header>
+      <div class="people-subtabs"><button class="is-active" type="button" data-people-role-view="profile">Perfil</button><button type="button" data-people-role-view="quantity">Quantidade</button></div>
+      <div class="people-table-wrap"><table class="table-v2"><thead><tr><th>Cargo</th><th>Área</th><th>Superior</th><th>Planejado</th><th>Ocupado</th><th>Vagas</th><th class="people-actions-col"></th></tr></thead><tbody id="peopleRolesRows"><tr><td colspan="7">Carregando cargos…</td></tr></tbody></table></div>
+    </article>
+  </section>
+
+  <section class="people-panel" data-people-panel="org">
+    <article class="people-card"><header class="people-card__header"><div><h2>Organograma</h2><p>A hierarquia é composta pelos cargos cadastrados e mostra capacidade e ocupação atuais.</p></div>{% if can_manage_people %}<button class="btn btn-special btn-sm" type="button" data-people-open="role">+ Novo cargo</button>{% endif %}</header><div id="peopleOrgChart" class="people-org-chart" aria-live="polite">Carregando organograma…</div></article>
+  </section>
+
+  <section class="people-panel" data-people-panel="employees">
+    <article class="people-card"><header class="people-card__header"><div><h2>Colaboradores</h2><p>Cadastre a pessoa e registre a ocupação no cargo, sem criar login automaticamente.</p></div>{% if can_manage_people %}<button class="btn btn-special btn-sm" type="button" data-people-open="employee">+ Novo colaborador</button>{% endif %}</header>
+      <div class="people-subtabs"><button class="is-active" type="button" data-people-employee-view="profile">Perfil</button><button type="button" data-people-employee-view="occupancy">Ocupação por data</button>{% if can_view_costs %}<button type="button" data-people-employee-view="costs">Custos planejados por cargo</button>{% endif %}</div>
+      <div data-people-employee-panel="profile"><div class="people-toolbar"><input id="peopleEmployeeSearch" class="form-control" placeholder="Buscar colaborador" autocomplete="off"></div><div class="people-table-wrap"><table class="table-v2"><thead><tr><th>Colaborador</th><th>Cargo atual</th><th>Área</th><th>Situação</th><th class="people-actions-col"></th></tr></thead><tbody id="peopleEmployeesRows"><tr><td colspan="5">Carregando colaboradores…</td></tr></tbody></table></div></div>
+      <div data-people-employee-panel="occupancy" hidden><form id="peopleOccupancyForm" class="people-query"><label>Data de referência <input id="peopleOccupancyDate" class="form-control" type="date" required></label><button class="btn btn-secondary" type="submit">Consultar ocupações</button></form><p id="peopleOccupancyStatus" class="people-status">Selecione uma data para consultar.</p><div class="people-table-wrap"><table class="table-v2"><thead><tr><th>Colaborador</th><th>Cargo</th><th>Horas semanais</th><th>Origem</th></tr></thead><tbody id="peopleOccupancyRows"><tr><td colspan="4">Nenhuma consulta realizada.</td></tr></tbody></table></div></div>
+      {% if can_view_costs %}<div data-people-employee-panel="costs" hidden><form id="peopleCostsForm" class="people-query"><label>Data de vigência <input id="peopleCostsDate" class="form-control" type="date" required></label><button class="btn btn-secondary" type="submit">Consultar custos</button></form><p id="peopleCostsStatus" class="people-status">Selecione uma data para consultar.</p><p id="peopleCostsTotal" class="people-cost-total"></p><div class="people-table-wrap"><table class="table-v2"><thead><tr><th>Cargo</th><th>Custo mensal planejado</th></tr></thead><tbody id="peopleCostsRows"><tr><td colspan="2">Nenhuma consulta realizada.</td></tr></tbody></table></div></div>{% endif %}
+    </article>
+  </section>
+
+  <section class="people-panel" data-people-panel="reports"><div class="people-report-grid"><article class="people-card"><span>▥</span><h2>Quadro planejado × ocupado</h2><p>Capacidade, ocupação e vagas por área e cargo.</p><button class="people-link" type="button" data-people-report="capacity">Visualizar dados</button></article><article class="people-card"><span>◷</span><h2>Histórico de ocupações</h2><p>Consulta das vigências registradas por período.</p><button class="people-link" type="button" data-people-report="occupancy">Consultar ocupações</button></article>{% if can_view_costs %}<article class="people-card"><span>R$</span><h2>Custos planejados</h2><p>Projeção por cargo e data de vigência.</p><button class="people-link" type="button" data-people-report="costs">Consultar custos</button></article>{% endif %}</div></section>
+
+  {% if can_manage_people %}
+  <dialog id="peopleUserDialog" class="people-dialog"><form id="peopleUserForm" class="people-dialog__panel" novalidate><header><div><span class="people-kicker">Usuários e acessos</span><h2 id="peopleUserDialogTitle">Novo usuário</h2><p>Crie a conta global e vincule-a à empresa ativa.</p></div><button class="people-dialog__close" type="button" data-people-close="peopleUserDialog" aria-label="Fechar">×</button></header><input id="peopleUserId" type="hidden"><div class="people-form-grid"><label>Nome *<input id="peopleUserName" class="form-control" maxlength="100" required></label><label>E-mail *<input id="peopleUserEmail" class="form-control" type="email" maxlength="120" required></label><label id="peoplePasswordField">Senha temporária *<input id="peopleUserPassword" class="form-control" type="password" minlength="8"></label><label>Perfil de acesso *<select id="peopleUserProfileInput" class="form-control"><option value="administrator">Administrador</option><option value="client">Cliente</option><option value="collaborator">Colaborador</option></select></label><label>Vincular a colaborador <select id="peopleUserEmployee" class="form-control"><option value="">Sem vínculo</option></select></label><label class="people-check"><input id="peopleUserActive" type="checkbox" checked> Vínculo ativo nesta empresa</label></div><p class="people-status" id="peopleUserFormStatus"></p><footer><button class="btn btn-secondary" type="button" data-people-close="peopleUserDialog">Cancelar</button><button class="btn btn-special" type="submit">Salvar usuário</button></footer></form></dialog>
+  <dialog id="peopleRoleDialog" class="people-dialog"><form id="peopleRoleForm" class="people-dialog__panel" novalidate><header><div><span class="people-kicker">Cargos</span><h2 id="peopleRoleDialogTitle">Novo cargo</h2><p>O cargo define posição no organograma e capacidade planejada.</p></div><button class="people-dialog__close" type="button" data-people-close="peopleRoleDialog" aria-label="Fechar">×</button></header><input id="peopleRoleId" type="hidden"><div class="people-form-grid"><label>Título *<input id="peopleRoleTitle" class="form-control" maxlength="100" required></label><label>Área<input id="peopleRoleDepartment" class="form-control" maxlength="100"></label><label>Cargo superior<select id="peopleRoleParent" class="form-control"><option value="">Sem superior</option></select></label><label>Pessoas previstas *<input id="peopleRoleHeadcount" class="form-control" type="number" min="0" step="1" value="1" required></label><label>Jornada semanal<input id="peopleRoleWeeklyHours" class="form-control" type="number" min="0" max="168" step="0.01"></label><label class="people-span-2">Qualificações requeridas<textarea id="peopleRoleQualifications" class="form-control" rows="2"></textarea></label></div><p class="people-status" id="peopleRoleFormStatus"></p><footer><button class="btn btn-secondary" type="button" data-people-close="peopleRoleDialog">Cancelar</button><button class="btn btn-special" type="submit">Salvar cargo</button></footer></form></dialog>
+  <dialog id="peopleEmployeeDialog" class="people-dialog"><form id="peopleEmployeeForm" class="people-dialog__panel" novalidate><header><div><span class="people-kicker">Colaboradores</span><h2 id="peopleEmployeeDialogTitle">Novo colaborador</h2><p>O cadastro não cria login; a ocupação inicial é registrada no cargo escolhido.</p></div><button class="people-dialog__close" type="button" data-people-close="peopleEmployeeDialog" aria-label="Fechar">×</button></header><input id="peopleEmployeeId" type="hidden"><div class="people-form-grid"><label>Nome *<input id="peopleEmployeeName" class="form-control" maxlength="200" required></label><label>Cargo inicial *<select id="peopleEmployeeRole" class="form-control" required><option value="">Selecione um cargo</option></select></label><label>Área<input id="peopleEmployeeDepartment" class="form-control" maxlength="100"></label><label>Jornada semanal<input id="peopleEmployeeWeeklyHours" class="form-control" type="number" min="0" max="168" step="0.01"></label><label>Situação<select id="peopleEmployeeStatus" class="form-control"><option value="active">Ativo</option><option value="vacation">Férias</option><option value="inactive">Inativo</option></select></label></div><p class="people-status" id="peopleEmployeeFormStatus"></p><footer><button class="btn btn-secondary" type="button" data-people-close="peopleEmployeeDialog">Cancelar</button><button class="btn btn-special" type="submit">Salvar colaborador</button></footer></form></dialog>
+  {% endif %}
+</main>
+<script src="{{ url_for('static', filename='js/company_people_v3.js') }}"></script>
+{% endblock %}
