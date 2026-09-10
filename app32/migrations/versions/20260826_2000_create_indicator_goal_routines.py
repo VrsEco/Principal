@@ -33,8 +33,11 @@ def upgrade():
         CREATE INDEX IF NOT EXISTS ix_indicator_goal_routines_routine_id
             ON indicator_goal_routines(routine_id);
 
-        INSERT INTO indicator_goal_routines (company_id, goal_id, routine_id)
-        SELECT g.company_id, g.id, g.routine_id
+        ALTER TABLE indicator_goal_routines
+            ALTER COLUMN created_at SET DEFAULT NOW();
+
+        INSERT INTO indicator_goal_routines (company_id, goal_id, routine_id, created_at)
+        SELECT g.company_id, g.id, g.routine_id, NOW()
         FROM indicator_goals g
         JOIN routines r
           ON r.id = g.routine_id
