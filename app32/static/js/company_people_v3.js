@@ -114,24 +114,42 @@
     const status = byId('peopleOrgExportStatus'); if (!status) return;
     status.hidden = !message; status.textContent = message; status.classList.toggle('is-error', isError);
   }
-  function getOrgExportStyles() {
-    return [...document.styleSheets]
-      .filter(sheet => sheet.href?.includes('company_people_v3.css'))
-      .flatMap(sheet => { try { return [...sheet.cssRules].map(rule => rule.cssText); } catch (_) { return []; } })
-      .join('\n');
+  function svgTextLines(value, maxLength = 24) {
+    const words = String(value || '').trim().split(/\s+/).filter(Boolean); const lines = []; let line = '';
+    words.forEach(word => { const next = line ? `${line} ${word}` : word; if (line && next.length > maxLength) { lines.push(line); line = word; } else line = next; });
+    if (line) lines.push(line); return lines.slice(0, 2);
+  }
+  function visibleOrgEntries(nodes, parentId = null, output = []) {
+    (nodes || []).forEach(node => {
+      output.push({ node, parentId });
+      if (node.children?.length && !state.org.collapsedIds.has(Number(node.id))) visibleOrgEntries(node.children, Number(node.id), output);
+    });
+    return output;
+  }
+  function orgExportNodeSvg(item, originX, originY) {
+    const { node, x, y, width, height } = item; const color = safeOrgColor(node.color); const splitX = Math.max(130, Math.round(width * .64));
+    const titleLines = svgTextLines(node.title); const department = String(node.department || 'Departamento não informado');
+    const titleMarkup = titleLines.map((line, index) => `<text x="16" y="${42 + index * 16}" fill="#0f172a" font-size="${width < 260 ? 12 : 14}" font-weight="700">${esc(line)}</text>`).join('');
+    const departmentY = 48 + titleLines.length * 16;
+    const metricY = Math.max(58, height - 37);
+    return `<g transform="translate(${Math.round(originX + x)},${Math.round(originY + y)})"><rect width="${Math.round(width)}" height="${Math.round(height)}" rx="16" fill="#ffffff" stroke="${color}" stroke-width="1.5"/><rect width="${splitX}" height="${Math.round(height)}" rx="16" fill="${color}" fill-opacity=".16"/><path d="M${splitX} 0V${Math.round(height)}" stroke="${color}" stroke-opacity=".65"/><text x="16" y="20" fill="#2563eb" font-size="9" font-weight="800" letter-spacing="1">CARGO</text>${titleMarkup}<text x="16" y="${departmentY}" fill="#475569" font-size="10">${esc(department.length > 34 ? `${department.slice(0, 31)}…` : department)}</text><text x="${splitX + 15}" y="${metricY}" fill="#64748b" font-size="9" font-weight="700">PREVISTOS</text><text x="${splitX + 15}" y="${metricY + 17}" fill="#0f172a" font-size="15" font-weight="800">${Number(node.headcount_planned || 0)}</text><text x="${splitX + 15}" y="${metricY + 37}" fill="#64748b" font-size="9" font-weight="700">EFETIVOS</text><text x="${splitX + 15}" y="${metricY + 54}" fill="#0f172a" font-size="15" font-weight="800">${Number(node.active_employee_count || 0)}</text></g>`;
   }
   function buildOrgChartSvg() {
-    const treeShell = byId('peopleOrgTreeShell'); const header = document.querySelector('.people-chart-document-header'); const footer = document.querySelector('.people-chart-document-footer');
-    if (!treeShell || !header || !footer) throw new Error('Organograma não encontrado para exportação.');
-    const treeClone = treeShell.cloneNode(true); const headerClone = header.cloneNode(true); const footerClone = footer.cloneNode(true);
-    treeClone.querySelectorAll('button').forEach(button => button.remove());
-    treeClone.style.position = 'static'; treeClone.style.inset = 'auto'; treeClone.style.transform = 'none'; treeClone.style.transformOrigin = 'initial';
-    const padding = 56; const contentWidth = Math.max(760, Math.ceil(treeShell.scrollWidth));
-    const headerHeight = Math.max(100, header.scrollHeight); const footerHeight = Math.max(44, footer.scrollHeight);
-    const width = contentWidth + padding * 2; const height = Math.ceil(treeShell.scrollHeight) + headerHeight + footerHeight + padding * 2 + 32;
-    const styles = getOrgExportStyles();
-    const headerHtml = new XMLSerializer().serializeToString(headerClone); const treeHtml = new XMLSerializer().serializeToString(treeClone); const footerHtml = new XMLSerializer().serializeToString(footerClone);
-    const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;background:#fff;box-sizing:border-box;padding:${padding}px;font-family:Arial,sans-serif"><style>${styles}</style><div style="width:${contentWidth}px">${headerHtml}<div style="display:flex;justify-content:center;padding:16px 0">${treeHtml}</div>${footerHtml}</div></div></foreignObject></svg>`;
+    const treeShell = byId('peopleOrgTreeShell'); if (!treeShell) throw new Error('Organograma não encontrado para exportação.');
+    const entries = visibleOrgEntries(filterOrgTree(state.workspace?.roles_tree || [])); const shellRect = treeShell.getBoundingClientRect(); const scale = Math.max(.01, state.org.scale);
+    const rendered = entries.map(entry => {
+      const element = document.querySelector(`[data-people-org-node="${entry.node.id}"]`); if (!element) return null;
+      const rect = element.getBoundingClientRect(); return { ...entry, x: (rect.left - shellRect.left) / scale, y: (rect.top - shellRect.top) / scale, width: rect.width / scale, height: rect.height / scale };
+    }).filter(Boolean);
+    if (!rendered.length) throw new Error('Nenhum cargo disponível para exportação.');
+    const minX = Math.min(...rendered.map(item => item.x)); const minY = Math.min(...rendered.map(item => item.y)); const maxX = Math.max(...rendered.map(item => item.x + item.width)); const maxY = Math.max(...rendered.map(item => item.y + item.height));
+    const padding = 56; const contentWidth = Math.max(760, Math.ceil(maxX - minX)); const headerHeight = 132; const footerHeight = 48; const treeOriginX = padding - minX; const treeOriginY = padding + headerHeight + 28 - minY;
+    const width = contentWidth + padding * 2; const height = Math.ceil(maxY - minY) + treeOriginY + footerHeight + padding;
+    const byRoleId = new Map(rendered.map(item => [Number(item.node.id), item]));
+    const connectors = rendered.filter(item => item.parentId != null && byRoleId.has(Number(item.parentId))).map(item => { const parent = byRoleId.get(Number(item.parentId)); const fromX = treeOriginX + parent.x + parent.width / 2; const fromY = treeOriginY + parent.y + parent.height; const toX = treeOriginX + item.x + item.width / 2; const toY = treeOriginY + item.y; const middleY = Math.round((fromY + toY) / 2); return `<path d="M${Math.round(fromX)} ${Math.round(fromY)}V${middleY}H${Math.round(toX)}V${Math.round(toY)}" fill="none" stroke="#94a3b8" stroke-width="2"/>`; }).join('');
+    const planned = byId('peopleOrgTotalPlanned')?.textContent?.trim() || '0'; const effective = byId('peopleOrgTotalEffective')?.textContent?.trim() || '0'; const companyName = root.dataset.companyName || 'Empresa';
+    const cards = rendered.map(item => orgExportNodeSvg(item, treeOriginX, treeOriginY)).join('');
+    const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="#ffffff"/><g font-family="Arial, sans-serif"><rect x="${padding}" y="${padding}" width="${contentWidth}" height="${headerHeight}" rx="18" fill="#f8fbff" stroke="#dbe5f1"/><text x="${padding + 24}" y="${padding + 31}" fill="#2563eb" font-size="10" font-weight="800" letter-spacing="1.2">ESTRUTURA ORGANIZACIONAL</text><text x="${padding + 24}" y="${padding + 62}" fill="#0f172a" font-size="23" font-weight="800">Organograma organizacional</text><text x="${padding + 24}" y="${padding + 87}" fill="#475569" font-size="14">${esc(companyName)}</text><rect x="${width - padding - 224}" y="${padding + 24}" width="96" height="70" rx="13" fill="#ffffff" stroke="#dbeafe"/><text x="${width - padding - 209}" y="${padding + 49}" fill="#64748b" font-size="9" font-weight="800">PREVISTOS</text><text x="${width - padding - 209}" y="${padding + 76}" fill="#0f172a" font-size="22" font-weight="800">${esc(planned)}</text><rect x="${width - padding - 116}" y="${padding + 24}" width="96" height="70" rx="13" fill="#ffffff" stroke="#dbeafe"/><text x="${width - padding - 101}" y="${padding + 49}" fill="#64748b" font-size="9" font-weight="800">EFETIVOS</text><text x="${width - padding - 101}" y="${padding + 76}" fill="#0f172a" font-size="22" font-weight="800">${esc(effective)}</text>${connectors}${cards}<path d="M${padding} ${height - padding - 25}H${width - padding}" stroke="#dbe5f1"/><text x="${width / 2}" y="${height - padding}" fill="#64748b" font-size="11" text-anchor="middle">Gestão Versus · Estrutura organizacional da empresa.</text></g></svg>`;
     return { svg, width, height };
   }
   async function exportOrgPng() {
