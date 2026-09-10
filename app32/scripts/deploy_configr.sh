@@ -58,13 +58,26 @@ validate_runtime_layout() {
     fi
 }
 
-# Um reset hard é permitido apenas em worktree limpo. Alterações operacionais
-# devem ser reconciliadas conscientemente; apagá-las tornaria o rollback
-# impossível de auditar.
-if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
-    echo "❌ Worktree remoto possui alterações. Deploy interrompido antes do reset."
-    echo "   Reconcilie ou preserve o drift em uma janela controlada antes de publicar."
-    exit 1
+# Um reset hard exige worktree limpo. A única exceção é uma janela controlada
+# com snapshot já criado fora do checkout, declarada explicitamente pelo operador.
+# Isso permite recuperar de processos legados que ainda escrevem assets no root,
+# sem transformar alterações não auditadas em reset silencioso.
+WORKTREE_DRIFT="$(git -C "$REPO" status --porcelain)"
+if [ -n "$WORKTREE_DRIFT" ]; then
+    DIRTY_SNAPSHOT="${DEPLOY_DIRTY_SNAPSHOT:-}"
+    SNAPSHOT_REAL="$(realpath -m "$DIRTY_SNAPSHOT" 2>/dev/null || true)"
+    case "$SNAPSHOT_REAL" in
+        "$BASE"/backups/*) ;;
+        *) SNAPSHOT_REAL="" ;;
+    esac
+
+    if [ "${DEPLOY_ALLOW_DIRTY:-false}" != "true" ] || [ -z "$SNAPSHOT_REAL" ] || [ ! -s "$SNAPSHOT_REAL" ]; then
+        echo "❌ Worktree remoto possui alterações. Deploy interrompido antes do reset."
+        echo "   Preserve o drift em $BASE/backups e use a exceção controlada somente na janela aprovada."
+        exit 1
+    fi
+
+    echo "⚠️  Drift remoto preservado em snapshot externo aprovado: $SNAPSHOT_REAL"
 fi
 
 if [ "${DEPLOY_VALIDATE_ONLY:-0}" = "1" ]; then
