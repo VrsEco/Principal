@@ -106,6 +106,7 @@ def _normalize_permissions(raw_permissions: Any) -> tuple[str, ...]:
 @dataclass(frozen=True)
 class MCPExecutionContext:
     user_id: int | None
+    principal_id: int | None
     company_id: int | None
     employee_id: int | None
     role: str
@@ -125,6 +126,7 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         or os.environ.get("APP32_MCP_USER_ID")
         or os.environ.get("ACTIVE_USER_ID")
     )
+    principal_id = _coerce_optional_int(http_request_context.get("principal_id"))
     requested_company_id, requested_company_source = _resolve_requested_company_id(raw_payload, http_request_context)
     channel = (
         str(
@@ -168,8 +170,28 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         or os.environ.get("APP32_MCP_FALLBACK_ROLE")
         or "colaborador"
     ).strip().lower()
-    role = str(runtime_identity.get("role") or fallback_role).strip().lower() or "colaborador"
-    permissions = _normalize_permissions(runtime_identity.get("permissions"))
+    oauth_grant_enforced = principal_id is not None and http_request_context.get("auth_method") == "oauth_oidc_bearer"
+    if oauth_grant_enforced:
+        # OAuth não herda papel, permissões ou empresa de runtime legado. O grant
+        # persistido é a única autoridade para o tenant solicitado nesta chamada.
+        if requested_company_id is None:
+            raise PermissionError("company_id obrigatório para principal OAuth")
+        from services.principal_authorization_service import principal_authorization_service
+
+        decision = principal_authorization_service.resolve_for_company(
+            principal_id=principal_id,
+            company_id=requested_company_id,
+        )
+        if not decision.allowed or decision.company_id is None or decision.role is None:
+            raise PermissionError(decision.reason if not decision.allowed else "grant OAuth inválido")
+        resolved_company_id = decision.company_id
+        accessible_company_ids = (decision.company_id,)
+        company_resolution_source = "principal_company_grant"
+        role = decision.role
+        permissions = ()
+    else:
+        role = str(runtime_identity.get("role") or fallback_role).strip().lower() or "colaborador"
+        permissions = _normalize_permissions(runtime_identity.get("permissions"))
 
     metadata = {
         "surface": str(
@@ -194,10 +216,12 @@ def resolve_mcp_execution_context(payload: Mapping[str, Any] | None = None) -> M
         "multi_company": len(accessible_company_ids) > 1,
         "selection_required_for_mutations": len(accessible_company_ids) > 1 and resolved_company_id is None,
         "disable_company_fallback": disable_company_fallback or len(accessible_company_ids) > 1,
+        "principal_grant_enforced": oauth_grant_enforced,
     }
 
     return MCPExecutionContext(
         user_id=user_id,
+        principal_id=principal_id,
         company_id=resolved_company_id,
         employee_id=_coerce_optional_int(runtime_identity.get("employee_id")),
         role=role,

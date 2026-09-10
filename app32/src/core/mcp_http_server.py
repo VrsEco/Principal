@@ -115,7 +115,11 @@ def _surface_mount_path(surface: str) -> str:
     return f"/mcp/{surface}"
 
 
-def build_surface_http_app(surface: str):
+def _pilot_user_mount_enabled() -> bool:
+    return _env_flag("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", False)
+
+
+def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, mount_path: str | None = None):
     """
     Constrói uma app Starlette montável em `/mcp/<surface>`.
 
@@ -141,14 +145,16 @@ def build_surface_http_app(surface: str):
     mcp.settings.streamable_http_path = "/"
     mcp.settings.mount_path = "/"
     mcp.settings.stateless_http = DEFAULT_STATELESS_HTTP
+    public_path = mount_path or _surface_mount_path(surface)
     mcp.settings.auth = build_auth_settings(
-        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{_surface_mount_path(surface)}",
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{public_path}",
         surface=surface,
+        oauth_enabled=oauth_enabled,
     )
-    mcp._token_verifier = App32MCPTokenVerifier(surface=surface)  # noqa: SLF001
+    mcp._token_verifier = App32MCPTokenVerifier(surface=surface, oauth_enabled=oauth_enabled)  # noqa: SLF001
 
     app = mcp.streamable_http_app()
-    app.add_middleware(App32MCPRequestContextMiddleware, surface=surface)
+    app.add_middleware(App32MCPRequestContextMiddleware, surface=surface, oauth_enabled=oauth_enabled)
     return app
 
 
@@ -165,6 +171,7 @@ async def _healthz(_: Request) -> JSONResponse:
                 "admin": _surface_mount_path("admin"),
                 "analytics": _surface_mount_path("analytics"),
                 "ops": _surface_mount_path("ops"),
+                **({"pilot_user": "/mcp/pilot/user"} if _pilot_user_mount_enabled() else {}),
             },
             "auth_mode": {
                 "mvp_token_registry_loaded": len(load_http_token_registry()),
@@ -196,6 +203,7 @@ async def _index(_: Request) -> JSONResponse:
                 "admin": f"{base}{_surface_mount_path('admin')}",
                 "analytics": f"{base}{_surface_mount_path('analytics')}",
                 "ops": f"{base}{_surface_mount_path('ops')}",
+                **({"pilot_user": f"{base}/mcp/pilot/user"} if _pilot_user_mount_enabled() else {}),
             },
             "requirements": {
                 "authorization": "Bearer token (MVP interno) / OAuth (preparação de arquitetura).",
@@ -211,6 +219,7 @@ def create_http_app() -> Starlette:
     admin_app = build_surface_http_app("admin")
     analytics_app = build_surface_http_app("analytics")
     ops_app = build_surface_http_app("ops")
+    pilot_user_app = build_surface_http_app("user", oauth_enabled=True, mount_path="/mcp/pilot/user") if _pilot_user_mount_enabled() else None
 
     @asynccontextmanager
     async def lifespan(app: Starlette):
@@ -226,6 +235,7 @@ def create_http_app() -> Starlette:
         Mount(_surface_mount_path("admin"), app=admin_app),
         Mount(_surface_mount_path("analytics"), app=analytics_app),
         Mount(_surface_mount_path("ops"), app=ops_app),
+        *([Mount("/mcp/pilot/user", app=pilot_user_app)] if pilot_user_app is not None else []),
     ]
     return Starlette(debug=False, routes=routes, lifespan=lifespan)
 

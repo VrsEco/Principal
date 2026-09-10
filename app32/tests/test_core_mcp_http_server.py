@@ -56,3 +56,20 @@ def test_healthz_publishes_safe_transient_recovery_contract():
     assert recovery["backoff_seconds"] == [1, 2, 4]
     assert recovery["restore_company_and_harness"] is True
     assert recovery["auto_retry_mutations"] is False
+
+
+def test_pilot_oauth_route_is_opt_in_and_does_not_replace_user_surface(monkeypatch):
+    monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", "1")
+
+    def fake_surface_app(surface: str, **kwargs):
+        app = Starlette()
+        app.state.surface = surface
+        app.state.kwargs = kwargs
+        return app
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    app = http_server.create_http_app()
+    paths = {getattr(route, "path", None) for route in app.routes}
+
+    assert "/mcp/user" in paths
+    assert "/mcp/pilot/user" in paths
