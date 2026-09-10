@@ -694,6 +694,25 @@ def test_oauth_cohort_never_falls_back_to_legacy_registry_after_rejection(monkey
     ]
 
 
+def test_forced_oauth_pilot_advertises_its_own_resource_metadata(monkeypatch):
+    module = _reload_auth(monkeypatch, APP32_MCP_PUBLIC_BASE_URL="https://mcp.local.test")
+
+    app = Starlette(routes=[])
+    app.add_middleware(
+        module.App32MCPRequestContextMiddleware,
+        surface="user",
+        oauth_enabled=True,
+        resource_path="/mcp/pilot/user",
+    )
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 401
+    assert (
+        "resource_metadata=\"https://mcp.local.test/.well-known/oauth-protected-resource/mcp/pilot/user\""
+        in response.headers["WWW-Authenticate"]
+    )
+
+
 def test_oauth_cohort_returns_403_for_missing_surface_scope(monkeypatch):
     module = _enable_local_oauth_cohort(monkeypatch)
     _stub_oauth_resolution(monkeypatch, module, scopes=("mcp:access",))

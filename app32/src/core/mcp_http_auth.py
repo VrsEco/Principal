@@ -427,11 +427,20 @@ def load_oauth_access_token_verifier() -> OAuthAccessTokenVerifier:
     return OAuthAccessTokenVerifier(settings)
 
 
-def _oauth_resource_metadata_url(surface: McpSurface | str) -> str:
+def _oauth_resource_metadata_url(
+    surface: McpSurface | str,
+    *,
+    resource_path: str | None = None,
+) -> str:
     base_url = _coerce_str(os.environ.get("APP32_MCP_PUBLIC_BASE_URL")) or "https://app.gestaoversus.com.br"
+    normalized_resource_path = _coerce_str(resource_path)
+    if normalized_resource_path:
+        protected_resource_path = normalized_resource_path.strip("/")
+    else:
+        protected_resource_path = f"mcp/{normalize_surface(surface)}"
     return (
         f"{base_url.rstrip('/')}/.well-known/oauth-protected-resource/"
-        f"mcp/{normalize_surface(surface)}"
+        f"{protected_resource_path}"
     )
 
 
@@ -440,6 +449,7 @@ def _oauth_www_authenticate(
     surface: McpSurface | str,
     error: str,
     detail: str,
+    resource_path: str | None = None,
 ) -> str:
     # O valor é construído exclusivamente da configuração do servidor; nem
     # token nem header do cliente participam da URL do resource metadata.
@@ -448,7 +458,7 @@ def _oauth_www_authenticate(
     header_detail = detail.encode("ascii", "ignore").decode("ascii").replace('"', "'")
     return (
         f'Bearer error="{error}", error_description="{header_detail}", '
-        f'resource_metadata="{_oauth_resource_metadata_url(surface)}"'
+        f'resource_metadata="{_oauth_resource_metadata_url(surface, resource_path=resource_path)}"'
     )
 
 
@@ -782,10 +792,18 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
 
 
 class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, surface: McpSurface | str, oauth_enabled: bool | None = None):
+    def __init__(
+        self,
+        app,
+        *,
+        surface: McpSurface | str,
+        oauth_enabled: bool | None = None,
+        resource_path: str | None = None,
+    ):
         super().__init__(app)
         self.surface = normalize_surface(surface)
         self.oauth_enabled = oauth_enabled
+        self.resource_path = _coerce_str(resource_path)
 
     async def dispatch(self, request: Request, call_next):
         oauth_resolution: OAuthHttpIdentityResolution | None = None
@@ -816,6 +834,7 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
                             surface=self.surface,
                             error=error,
                             detail=detail,
+                            resource_path=self.resource_path,
                         )
                     },
                 )

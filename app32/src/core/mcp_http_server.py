@@ -154,7 +154,12 @@ def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, m
     mcp._token_verifier = App32MCPTokenVerifier(surface=surface, oauth_enabled=oauth_enabled)  # noqa: SLF001
 
     app = mcp.streamable_http_app()
-    app.add_middleware(App32MCPRequestContextMiddleware, surface=surface, oauth_enabled=oauth_enabled)
+    app.add_middleware(
+        App32MCPRequestContextMiddleware,
+        surface=surface,
+        oauth_enabled=oauth_enabled,
+        resource_path=public_path,
+    )
     return app
 
 
