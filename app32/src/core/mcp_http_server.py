@@ -49,6 +49,7 @@ from src.core.mcp_surface_registry import (  # noqa: E402
     build_admin_mcp_server,
     build_analytics_mcp_server,
     build_ops_mcp_server,
+    build_pilot_user_mcp_server,
     build_user_mcp_server,
 )
 try:  # compatibilidade com o pacote MCP usado por testes legados locais
@@ -127,7 +128,11 @@ def build_surface_http_app(surface: str, *, oauth_enabled: bool | None = None, m
     runtime stdio existente.
     """
     if surface == "user":
-        mcp = build_user_mcp_server(name="GestaoVersus User Remote MCP")
+        mcp = (
+            build_pilot_user_mcp_server(name="GestaoVersus Pilot User Remote MCP")
+            if oauth_enabled is True and mount_path == "/mcp/pilot/user"
+            else build_user_mcp_server(name="GestaoVersus User Remote MCP")
+        )
     elif surface == "admin":
         mcp = build_admin_mcp_server(name="GestaoVersus Admin Remote MCP")
     elif surface == "analytics":

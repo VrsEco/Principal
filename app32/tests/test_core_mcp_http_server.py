@@ -104,6 +104,22 @@ def test_pilot_oauth_route_initializes_its_own_lifespan(monkeypatch):
     assert {surface for surface, _ in entered} == {"user", "admin", "analytics", "ops"}
 
 
+def test_pilot_oauth_route_uses_limited_user_catalog(monkeypatch):
+    monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", "1")
+    calls: list[tuple[str, str, bool | None, str | None]] = []
+
+    def fake_surface_app(surface: str, **kwargs):
+        calls.append((surface, kwargs.get("name", ""), kwargs.get("oauth_enabled"), kwargs.get("mount_path")))
+        return Starlette()
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    http_server.create_http_app()
+
+    # O contrato da montagem mantém o piloto separado; a seleção do catálogo
+    # é verificada diretamente no registry para não depender do FastMCP.
+    assert ("user", "", True, "/mcp/pilot/user") in calls
+
+
 def test_pilot_oauth_route_publishes_protected_resource_metadata(monkeypatch):
     from types import SimpleNamespace
 

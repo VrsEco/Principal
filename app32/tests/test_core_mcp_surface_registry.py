@@ -48,6 +48,16 @@ def test_manifest_loader_uses_isolated_factory_and_releases_context(monkeypatch)
     assert not has_app_context()
 
 
+def test_pilot_user_server_exposes_only_the_reviewed_tenant_safe_catalog():
+    server = registry.build_pilot_user_mcp_server()
+    tools = asyncio.run(server.list_tools())
+
+    assert {tool.name for tool in tools} == {
+        *registry.PILOT_USER_TOOL_NAMES,
+        "list_user_app32_capabilities",
+    }
+
+
 @dataclass
 class _FakeTool:
     name: str

@@ -22,6 +22,17 @@ _SURFACE_SCOPE_FILTERS: dict[McpSurface, tuple[str, ...]] = {
     "admin": (ToolScope.MCP_ADMIN.value,),
 }
 
+# A coorte OAuth começa com um catálogo pequeno e explicitamente revisado.
+# A descoberta de tools é anterior à chamada que informa ``company_id``; por
+# isso, esta lista só contém leituras cujo contrato recebe o tenant de forma
+# explícita. A autorização final continua no wrapper por principal/grant.
+PILOT_USER_TOOL_NAMES: tuple[str, ...] = (
+    "get_company_profile",
+    "list_meetings",
+    "list_project_tasks_secure",
+    "list_projects",
+)
+
 
 def normalize_surface(surface: McpSurface | str) -> McpSurface:
     normalized = str(surface).strip().lower()
@@ -188,22 +199,34 @@ def _get_surface_manifest_in_app_context(
         return get_surface_manifest(surface, domain=domain, include_tools=include_tools)
 
 
-def _build_policy_fast_mcp(name: str, surface: McpSurface | str) -> Any:
+def _build_policy_fast_mcp(
+    name: str,
+    surface: McpSurface | str,
+    *,
+    exposed_tool_names: Sequence[str] | None = None,
+) -> Any:
     """Cria servidor cujo tools/list reflete a policy efetiva da requisição."""
     if FastMCP is None:  # pragma: no cover
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
     normalized_surface = normalize_surface(surface)
+    static_tool_names = frozenset(exposed_tool_names or ())
     if not hasattr(FastMCP, "list_tools"):
         return FastMCP(name)
 
     class _PolicyFastMCP(FastMCP):
         async def list_tools(self):
             tools = await super().list_tools()
-            manifest = _get_surface_manifest_in_app_context(
-                normalized_surface,
-                include_tools=True,
-            )
-            allowed_names = {tool["name"] for tool in manifest.get("tools", [])}
+            if static_tool_names:
+                # A lista é deliberadamente estática na coorte: em tools/list
+                # ainda não existe ``company_id`` para avaliar o grant. Cada
+                # execução é protegida novamente pelo wrapper tenant-safe.
+                allowed_names = set(static_tool_names)
+            else:
+                manifest = _get_surface_manifest_in_app_context(
+                    normalized_surface,
+                    include_tools=True,
+                )
+                allowed_names = {tool["name"] for tool in manifest.get("tools", [])}
             allowed_names.add(f"list_{normalized_surface}_app32_capabilities")
             return [tool for tool in tools if tool.name in allowed_names]
 
@@ -296,9 +319,10 @@ def register_mcp_surface_tools(
     *,
     include_shared_registrars: bool = True,
     include_admin_diagnostics: bool = False,
+    tool_names: Sequence[str] | None = None,
 ) -> None:
     normalized_surface = normalize_surface(surface)
-    allowed_names = set(iter_surface_tool_names(normalized_surface))
+    allowed_names = set(tool_names or iter_surface_tool_names(normalized_surface))
     tools_by_name = _tool_map()
 
     for tool_name in sorted(allowed_names):
@@ -396,6 +420,29 @@ def build_user_mcp_server(name: str = "GestaoVersus User MCP") -> Any:
         raise RuntimeError("Biblioteca 'mcp' não encontrada.")
     mcp = _build_policy_fast_mcp(name, "user")
     register_user_mcp_tools(mcp)
+    return mcp
+
+
+def build_pilot_user_mcp_server(name: str = "GestaoVersus Pilot User MCP") -> Any:
+    """Monta a coorte OAuth com leitura tenant-safe e catálogo limitado.
+
+    Não reutiliza o catálogo integral da surface ``user`` para evitar que um
+    cliente remoto receba centenas de schemas antes de informar a empresa.
+    """
+    if FastMCP is None:  # pragma: no cover - ambiente sem dependência MCP
+        raise RuntimeError("Biblioteca 'mcp' não encontrada.")
+    mcp = _build_policy_fast_mcp(
+        name,
+        "user",
+        exposed_tool_names=PILOT_USER_TOOL_NAMES,
+    )
+    register_mcp_surface_tools(
+        mcp,
+        "user",
+        include_shared_registrars=False,
+        include_admin_diagnostics=False,
+        tool_names=PILOT_USER_TOOL_NAMES,
+    )
     return mcp
 
 
