@@ -93,6 +93,10 @@ def company_people_hub(company_id):
         metrics=workspace['metrics'],
         can_manage_people=has_permission(company_id, 'companies', 'edit'),
         can_view_costs=has_permission(company_id, 'financial', 'view'),
+        can_manage_costs=(
+            has_permission(company_id, 'companies', 'edit')
+            and has_permission(company_id, 'financial', 'edit')
+        ),
     )
 
 
@@ -383,6 +387,38 @@ def get_occupancy_snapshot(company_id):
     except Exception:
         db.session.rollback()
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
+
+
+@companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/occupancies', methods=['POST'])
+@permission_required('companies', 'edit')
+def create_company_employee_occupancy(company_id, employee_id):
+    """Registra uma vigência formal de ocupação, sempre dentro da empresa da URL."""
+    from werkzeug.exceptions import HTTPException
+    from services.employee_role_occupancy_service import create_occupancy
+
+    denied = _ensure_company_access(company_id)
+    if denied:
+        return denied
+    payload = request.get_json(silent=True) or {}
+    role_id = payload.pop('role_id', None)
+    try:
+        if type(role_id) is not int or role_id <= 0:
+            raise ValueError('Selecione um cargo válido.')
+        occupancy = create_occupancy(
+            company_id, employee_id, role_id, payload,
+            actor_user_id=getattr(current_user, 'id', None),
+        )
+        db.session.commit()
+        return jsonify(occupancy.to_dict()), 201
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({'error': str(exc)}), 400
+    except HTTPException:
+        db.session.rollback()
+        raise
+    except Exception:
+        db.session.rollback()
+        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
 
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/tree', methods=['GET'])

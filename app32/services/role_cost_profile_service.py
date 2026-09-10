@@ -1,6 +1,6 @@
 """Service interna; adaptador deve autorizar custos e controlar a transação."""
 import re
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from models import db, Role, RoleCostProfile
 from models.role_cost_profile import COST_COMPONENTS
 from services.employee_role_occupancy_service import _date, _actor
@@ -58,7 +58,6 @@ def build_planned_cost_snapshot(company_id, as_of):
 
 
 def planned_cost_snapshot(company_id, reference, roles, profiles):
-    from services.org_capacity_cost_service import project_organogram
     roles, profiles = list(roles), list(profiles)
     if any(item.company_id != company_id for item in roles + profiles):
         raise ValueError("Dados fora da empresa solicitada.")
@@ -72,23 +71,39 @@ def planned_cost_snapshot(company_id, reference, roles, profiles):
         if profile.role_id in selected:
             raise ValueError("Perfis de custo sobrepostos; corrija antes de consolidar.")
         selected[profile.role_id] = profile
-    inputs = []
+    output = []
+    currencies = set()
+    known_costs = []
     for role in roles:
         profile = selected.get(role.id)
-        inputs.append({"id": role.id, "company_id": company_id,
-                       "headcount_planned": role.headcount_planned,
-                       "weekly_hours": role.weekly_hours,
-                       "currency": profile.currency if profile else None,
-                       "monthly_cost_per_fte": profile.amounts()["monthly_cost_per_fte"] if profile else None})
-    calculated = project_organogram(company_id, inputs, [], [])
+        try:
+            planned = Decimal(str(role.headcount_planned if role.headcount_planned is not None else 0))
+            if not planned.is_finite() or planned < 0 or planned != planned.to_integral_value():
+                raise ValueError
+        except (ValueError, InvalidOperation, TypeError) as exc:
+            raise ValueError(f"Quantidade planejada inválida no cargo {role.title}.") from exc
+        monthly_cost_per_fte = profile.amounts()["monthly_cost_per_fte"] if profile else None
+        if monthly_cost_per_fte is not None:
+            currencies.add(profile.currency)
+            planned_cost = (planned * monthly_cost_per_fte).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            known_costs.append(planned_cost)
+        else:
+            planned_cost = None
+        output.append({
+            "role_id": role.id,
+            "role_title": role.title,
+            "planned_monthly_cost": str(planned_cost) if planned_cost is not None else None,
+        })
+    if len(currencies) > 1:
+        raise ValueError("Não é permitido consolidar moedas diferentes.")
+    subtotal = sum(known_costs, Decimal("0.00"))
     return {
         "company_id": company_id, "as_of": reference.isoformat(),
         "basis": "Quantidade planejada atual dos cargos × custo por FTE vigente na data. Não é folha realizada nem reconstrução histórica do quadro.",
-        "currency": calculated["currency"],
-        "costed_roles_count": calculated["costed_roles_count"],
-        "total_roles_count": calculated["total_roles_count"],
-        "known_planned_monthly_subtotal": str(calculated["known_planned_monthly_subtotal"]),
-        "planned_monthly_total": str(calculated["planned_monthly_total"]) if calculated["planned_monthly_total"] is not None else None,
-        "roles": [{"role_id": item["role_id"], "role_title": next(role.title for role in roles if role.id == item["role_id"]), "planned_monthly_cost": str(item["planned_monthly_cost"]) if item["planned_monthly_cost"] is not None else None}
-                  for item in calculated["roles"]],
+        "currency": next(iter(currencies), None),
+        "costed_roles_count": len(known_costs),
+        "total_roles_count": len(output),
+        "known_planned_monthly_subtotal": str(subtotal),
+        "planned_monthly_total": str(subtotal) if len(known_costs) == len(output) else None,
+        "roles": output,
     }

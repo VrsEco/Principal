@@ -5,7 +5,7 @@
   const companyId = Number(root.dataset.companyId);
   const canManage = root.dataset.canManage === 'true';
   const canViewCosts = root.dataset.canViewCosts === 'true';
-  const state = { workspace: null, activeTab: 'users', roleView: 'profile', employeeView: 'profile', org: { collapsedIds: new Set(), layout: 'auto', scale: 1, search: '', department: '' } };
+  const state = { workspace: null, activeTab: 'users', roleView: 'profile', employeeView: 'profile', reportView: 'capacity', org: { collapsedIds: new Set(), layout: 'auto', scale: 1, search: '', department: '' } };
   const byId = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const profileLabel = (profile) => ({administrator: 'Administrador', client: 'Cliente', collaborator: 'Colaborador'}[profile] || 'Colaborador');
@@ -32,7 +32,7 @@
     state.workspace = await request(`/api/companies/${companyId}/people/workspace`);
     renderAll();
   }
-  function renderAll() { renderMetrics(); renderUsers(); renderRoles(); renderOrg(); renderEmployees(); }
+  function renderAll() { renderMetrics(); renderUsers(); renderRoles(); renderOrg(); renderEmployees(); renderCapacityReport(); }
   function renderMetrics() {
     const metrics = state.workspace.metrics || {};
     byId('peopleMetricUsers').textContent = metrics.users_total ?? 0;
@@ -51,11 +51,14 @@
     const users = filteredUsers();
     body.innerHTML = users.length ? users.map(user => `<tr><td><span class="people-user-name">${esc(user.name)}</span><span class="people-user-email">${esc(user.email)}</span></td><td><span class="people-profile-pill">${profileLabel(user.access_profile)}</span></td><td>${user.employee ? `<b>${esc(user.employee.name)}</b><span class="people-cell-note">${esc(user.employee.role_title || 'Sem cargo')}</span>` : '<span class="people-cell-note">Sem vínculo</span>'}</td><td><span class="people-status-pill ${(!user.is_active || !user.user_is_active) ? 'is-inactive' : ''}">${(!user.is_active || !user.user_is_active) ? 'Inativo' : 'Ativo'}</span></td><td class="people-actions-col">${canManage ? `<button class="people-action" type="button" data-edit-user="${user.user_id}">Editar</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="5">Nenhum usuário vinculado a esta empresa.</td></tr>';
   }
+  function coverage(role) { const planned = Number(role.headcount_planned || 0); const occupied = Number(role.active_employee_count || 0); return planned ? `${Math.min(100, Math.round((occupied / planned) * 100))}%` : (occupied ? 'Sem previsão' : '—'); }
+  function roleEditAction(role) { return canManage ? `<button class="people-action" type="button" data-edit-role="${role.id}">Editar</button>` : ''; }
   function renderRoles() {
-    const body = byId('peopleRolesRows'); if (!body) return;
+    const profileBody = byId('peopleRoleProfileRows'); const quantityBody = byId('peopleRoleQuantityRows'); if (!profileBody || !quantityBody) return;
     const roles = state.workspace.roles || [];
     const byIdRole = new Map(roles.map(role => [Number(role.id), role]));
-    body.innerHTML = roles.length ? roles.map(role => `<tr><td><b>${esc(role.title)}</b>${state.roleView === 'profile' && role.qualification_requirements ? `<span class="people-cell-note">${esc(role.qualification_requirements)}</span>` : ''}</td><td>${esc(role.department || '—')}</td><td>${esc(byIdRole.get(Number(role.parent_role_id))?.title || '—')}</td><td>${role.headcount_planned ?? 0}</td><td>${role.active_employee_count ?? 0}</td><td>${role.vacancy_count ?? 0}</td><td class="people-actions-col">${canManage ? `<button class="people-action" type="button" data-edit-role="${role.id}">Editar</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7">Nenhum cargo cadastrado.</td></tr>';
+    profileBody.innerHTML = roles.length ? roles.map(role => `<tr><td><b>${esc(role.title)}</b></td><td>${esc(role.department || '—')}</td><td>${esc(byIdRole.get(Number(role.parent_role_id))?.title || '—')}</td><td>${role.weekly_hours == null ? 'Não informada' : `${esc(role.weekly_hours)} h`}</td><td>${esc(role.qualification_requirements || 'Não informadas')}</td><td class="people-actions-col">${roleEditAction(role)}</td></tr>`).join('') : '<tr><td colspan="6">Nenhum cargo cadastrado.</td></tr>';
+    quantityBody.innerHTML = roles.length ? roles.map(role => `<tr><td><b>${esc(role.title)}</b></td><td>${esc(role.department || '—')}</td><td>${role.headcount_planned ?? 0}</td><td>${role.active_employee_count ?? 0}</td><td>${role.vacancy_count ?? 0}</td><td><span class="people-status-pill ${Number(role.vacancy_count || 0) ? 'is-inactive' : ''}">${coverage(role)}</span></td><td class="people-actions-col">${roleEditAction(role)}</td></tr>`).join('') : '<tr><td colspan="7">Nenhum cargo cadastrado.</td></tr>';
   }
   function safeOrgColor(value) { return /^#[0-9a-f]{6}$/i.test(String(value || '').trim()) ? String(value).trim() : '#D9ECFF'; }
   function flattenOrgTree(nodes, output = []) { (nodes || []).forEach(node => { output.push(node); flattenOrgTree(node.children, output); }); return output; }
@@ -185,6 +188,26 @@
     const employees = filteredEmployees();
     body.innerHTML = employees.length ? employees.map(employee => `<tr><td><span class="people-user-name">${esc(employee.name)}</span>${employee.user_id ? '<span class="people-cell-note">Conta vinculada</span>' : ''}</td><td>${esc(employee.role_title || 'Sem cargo')}</td><td>${esc(employee.role_department || employee.department || '—')}</td><td><span class="people-status-pill ${['inactive','inativo'].includes(String(employee.status).toLowerCase()) ? 'is-inactive' : ''}">${statusLabel(employee.status)}</span></td><td class="people-actions-col">${canManage ? `<button class="people-action" type="button" data-edit-employee="${employee.id}">Editar</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="5">Nenhum colaborador cadastrado.</td></tr>';
   }
+  function occupancySource(item) { return item.source === 'temporal' ? 'Vigência registrada' : 'Cadastro atual'; }
+  function occupancyReliability(item) { return item.source === 'temporal' ? '<span class="people-status-pill">Formal</span>' : '<span class="people-status-pill is-inactive">Pendente de vigência</span>'; }
+  function renderOccupancyRows(targetId, assignments, withReliability = false) {
+    const target = byId(targetId); if (!target) return;
+    const colspan = withReliability ? 5 : 4;
+    target.innerHTML = assignments?.length ? assignments.map(item => `<tr><td>${esc(item.employee_name)}</td><td>${esc(item.role_title)}</td><td>${item.weekly_hours == null ? 'Não informada' : `${esc(item.weekly_hours)} h`}</td><td>${occupancySource(item)}</td>${withReliability ? `<td>${occupancyReliability(item)}</td>` : ''}</tr>`).join('') : `<tr><td colspan="${colspan}">Nenhuma ocupação encontrada na data.</td></tr>`;
+  }
+  function costAmount(item, currency) { return item.planned_monthly_cost == null ? 'Não informado' : `${esc(currency || 'BRL')} ${esc(item.planned_monthly_cost)}`; }
+  function renderCostSnapshot(data, ids) {
+    const rows = byId(ids.rows); const total = byId(ids.total); const status = byId(ids.status); if (!rows || !total || !status) return;
+    rows.innerHTML = data.roles?.length ? data.roles.map(item => `<tr><td>${esc(item.role_title)}</td><td>${costAmount(item, data.currency)}</td><td>${item.planned_monthly_cost == null ? '<span class="people-status-pill is-inactive">Custo pendente</span>' : '<span class="people-status-pill">Completo</span>'}</td></tr>`).join('') : '<tr><td colspan="3">Nenhum cargo encontrado.</td></tr>';
+    total.textContent = data.planned_monthly_total == null ? `Total incompleto. Subtotal conhecido: ${data.currency || '—'} ${data.known_planned_monthly_subtotal || '0.00'}.` : `Total mensal planejado: ${data.currency || '—'} ${data.planned_monthly_total}.`;
+    status.textContent = `${data.as_of}: ${data.costed_roles_count || 0} de ${data.total_roles_count || 0} cargos com custo completo.`;
+  }
+  function renderCapacityReport() {
+    const rows = byId('peopleCapacityReportRows'); const summary = byId('peopleCapacitySummary'); if (!rows || !summary) return;
+    const roles = state.workspace?.roles || []; const planned = roles.reduce((sum, role) => sum + Number(role.headcount_planned || 0), 0); const occupied = roles.reduce((sum, role) => sum + Number(role.active_employee_count || 0), 0); const vacancies = roles.reduce((sum, role) => sum + Number(role.vacancy_count || 0), 0);
+    summary.innerHTML = `<span><strong>${planned}</strong> previstos</span><span><strong>${occupied}</strong> ocupados</span><span><strong>${vacancies}</strong> vagas</span>`;
+    rows.innerHTML = roles.length ? roles.map(role => `<tr><td>${esc(role.department || 'Sem área')}</td><td><b>${esc(role.title)}</b></td><td>${role.headcount_planned ?? 0}</td><td>${role.active_employee_count ?? 0}</td><td>${role.vacancy_count ?? 0}</td><td>${coverage(role)}</td></tr>`).join('') : '<tr><td colspan="6">Nenhum cargo cadastrado.</td></tr>';
+  }
   function showTab(tab) {
     state.activeTab = tab;
     document.querySelectorAll('[data-people-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.peopleTab === tab));
@@ -195,6 +218,17 @@
     state.employeeView = view;
     document.querySelectorAll('[data-people-employee-view]').forEach(button => button.classList.toggle('is-active', button.dataset.peopleEmployeeView === view));
     document.querySelectorAll('[data-people-employee-panel]').forEach(panel => panel.hidden = panel.dataset.peopleEmployeePanel !== view);
+  }
+  function showRoleView(view) {
+    state.roleView = view;
+    document.querySelectorAll('[data-people-role-view]').forEach(button => button.classList.toggle('is-active', button.dataset.peopleRoleView === view));
+    document.querySelectorAll('[data-people-role-panel]').forEach(panel => panel.hidden = panel.dataset.peopleRolePanel !== view);
+  }
+  function showReportView(view) {
+    state.reportView = view;
+    document.querySelectorAll('[data-people-report-view]').forEach(button => button.classList.toggle('is-active', button.dataset.peopleReportView === view));
+    document.querySelectorAll('[data-people-report-panel]').forEach(panel => panel.hidden = panel.dataset.peopleReportPanel !== view);
+    if (view === 'capacity') renderCapacityReport();
   }
   function openUser(userId = null) {
     const form = byId('peopleUserForm'); if (!form) return;
@@ -230,6 +264,21 @@
     byId('peopleEmployeeDepartment').value = employee?.department || employee?.role_department || ''; byId('peopleEmployeeWeeklyHours').value = employee?.weekly_hours ?? '';
     byId('peopleEmployeeStatus').value = employee?.status || 'active'; openDialog('peopleEmployeeDialog');
   }
+  function openOccupancy() {
+    const form = byId('peopleOccupancyCreateForm'); if (!form) return;
+    form.reset(); byId('peopleOccupancyCreateStatus').textContent = '';
+    const activeEmployees = (state.workspace?.employees || []).filter(item => ['active', 'ativo'].includes(String(item.status || '').toLowerCase()));
+    byId('peopleOccupancyEmployee').innerHTML = `<option value="">Selecione um colaborador</option>${activeEmployees.map(item => `<option value="${item.id}">${esc(item.name)}${item.role_title ? ` · ${esc(item.role_title)}` : ''}</option>`).join('')}`;
+    byId('peopleOccupancyRole').innerHTML = roleOptions('', false);
+    byId('peopleOccupancyStart').value = byId('peopleOccupancyDate')?.value || today();
+    openDialog('peopleOccupancyDialog');
+  }
+  function openCost() {
+    const form = byId('peopleCostForm'); if (!form) return;
+    form.reset(); byId('peopleCostFormStatus').textContent = '';
+    byId('peopleCostRole').innerHTML = roleOptions('', false); byId('peopleCostCurrency').value = 'BRL'; byId('peopleCostStart').value = byId('peopleCostsDate')?.value || today();
+    openDialog('peopleCostDialog');
+  }
   async function saveUser(event) {
     event.preventDefault(); const id = Number(byId('peopleUserId').value || 0); const status = byId('peopleUserFormStatus'); status.textContent = 'Salvando…';
     const body = {access_profile: byId('peopleUserProfileInput').value, is_active: byId('peopleUserActive').checked, employee_id: byId('peopleUserEmployee').value ? Number(byId('peopleUserEmployee').value) : null};
@@ -246,13 +295,31 @@
     const body = {name: byId('peopleEmployeeName').value.trim(), role_id: Number(byId('peopleEmployeeRole').value), department: byId('peopleEmployeeDepartment').value.trim(), weekly_hours: byId('peopleEmployeeWeeklyHours').value || null, status: byId('peopleEmployeeStatus').value};
     try { await request(`/api/companies/${companyId}/people/employees${id ? `/${id}` : ''}`, {method: id ? 'PUT' : 'POST', body: JSON.stringify(body)}); closeDialog('peopleEmployeeDialog'); await loadWorkspace(); } catch (error) { status.textContent = error.message; }
   }
-  async function loadOccupancy(event) { event.preventDefault(); const status = byId('peopleOccupancyStatus'); const date = byId('peopleOccupancyDate').value; status.textContent = 'Consultando…'; try { const data = await request(`/api/companies/${companyId}/occupancy-snapshot?as_of=${encodeURIComponent(date)}`); byId('peopleOccupancyRows').innerHTML = data.assignments?.length ? data.assignments.map(item => `<tr><td>${esc(item.employee_name)}</td><td>${esc(item.role_title)}</td><td>${esc(item.weekly_hours || '—')}</td><td>${item.source === 'temporal' ? 'Vigência registrada' : 'Cadastro atual'}</td></tr>`).join('') : '<tr><td colspan="4">Nenhuma ocupação encontrada na data.</td></tr>'; status.textContent = `Referência: ${esc(data.as_of)}.`; } catch (error) { status.textContent = error.message; } }
-  async function loadCosts(event) { event.preventDefault(); const status = byId('peopleCostsStatus'); const date = byId('peopleCostsDate').value; status.textContent = 'Consultando…'; try { const data = await request(`/api/companies/${companyId}/planned-role-costs?as_of=${encodeURIComponent(date)}`); byId('peopleCostsRows').innerHTML = data.roles?.length ? data.roles.map(item => `<tr><td>${esc(item.role_title)}</td><td>${item.planned_monthly_cost == null ? 'Não informado' : `${esc(data.currency || 'BRL')} ${esc(item.planned_monthly_cost)}`}</td></tr>`).join('') : '<tr><td colspan="2">Nenhum cargo encontrado.</td></tr>'; byId('peopleCostsTotal').textContent = data.planned_monthly_total == null ? 'Total planejado: não informado.' : `Total mensal planejado: ${data.currency || 'BRL'} ${data.planned_monthly_total}`; status.textContent = `Referência: ${esc(data.as_of)}.`; } catch (error) { status.textContent = error.message; } }
+  async function saveOccupancy(event) {
+    event.preventDefault(); const status = byId('peopleOccupancyCreateStatus'); const employeeId = Number(byId('peopleOccupancyEmployee').value); status.textContent = 'Salvando…';
+    const body = { role_id: Number(byId('peopleOccupancyRole').value), starts_on: byId('peopleOccupancyStart').value, ends_on: byId('peopleOccupancyEnd').value || null, weekly_hours: byId('peopleOccupancyWeeklyHours').value };
+    try { await request(`/api/companies/${companyId}/employees/${employeeId}/occupancies`, {method: 'POST', body: JSON.stringify(body)}); closeDialog('peopleOccupancyDialog'); byId('peopleOccupancyDate').value = body.starts_on; await loadOccupancy(); }
+    catch (error) { status.textContent = error.message; }
+  }
+  async function saveCost(event) {
+    event.preventDefault(); const status = byId('peopleCostFormStatus'); const roleId = Number(byId('peopleCostRole').value); status.textContent = 'Salvando…';
+    const body = { starts_on: byId('peopleCostStart').value, ends_on: byId('peopleCostEnd').value || null, currency: byId('peopleCostCurrency').value.trim().toUpperCase() };
+    [['base_salary', 'peopleCostBaseSalary'], ['charges', 'peopleCostCharges'], ['benefits', 'peopleCostBenefits'], ['other_costs', 'peopleCostOtherCosts']].forEach(([key, id]) => { body[key] = byId(id).value || null; });
+    try { await request(`/api/companies/${companyId}/roles/${roleId}/cost-profiles`, {method: 'POST', body: JSON.stringify(body)}); closeDialog('peopleCostDialog'); byId('peopleCostsDate').value = body.starts_on; await loadCosts(); }
+    catch (error) { status.textContent = error.message; }
+  }
+  async function fetchOccupancy(date) { return request(`/api/companies/${companyId}/occupancy-snapshot?as_of=${encodeURIComponent(date)}`); }
+  async function loadOccupancy(event) { if (event) event.preventDefault(); const status = byId('peopleOccupancyStatus'); const date = byId('peopleOccupancyDate').value; status.textContent = 'Consultando…'; try { const data = await fetchOccupancy(date); renderOccupancyRows('peopleOccupancyRows', data.assignments, true); status.textContent = `${data.as_of}: ${data.distinct_people_count || 0} pessoas. ${data.legacy_reconciliation_complete ? 'Histórico reconciliado.' : 'Há cadastros atuais pendentes de vigência formal.'}`; } catch (error) { status.textContent = error.message; } }
+  async function fetchCosts(date) { return request(`/api/companies/${companyId}/planned-role-costs?as_of=${encodeURIComponent(date)}`); }
+  async function loadCosts() { const status = byId('peopleCostsStatus'); const date = byId('peopleCostsDate').value; status.textContent = 'Consultando…'; try { renderCostSnapshot(await fetchCosts(date), { rows: 'peopleCostsRows', total: 'peopleCostsTotal', status: 'peopleCostsStatus' }); } catch (error) { status.textContent = error.message; } }
+  async function loadReportOccupancy(event) { event.preventDefault(); const status = byId('peopleReportOccupancyStatus'); status.textContent = 'Gerando relatório…'; try { const data = await fetchOccupancy(byId('peopleReportOccupancyDate').value); renderOccupancyRows('peopleReportOccupancyRows', data.assignments); status.textContent = `${data.as_of}: ${data.distinct_people_count || 0} pessoas em ocupações.`; } catch (error) { status.textContent = error.message; } }
+  async function loadReportCosts(event) { event.preventDefault(); const status = byId('peopleReportCostsStatus'); status.textContent = 'Gerando relatório…'; try { renderCostSnapshot(await fetchCosts(byId('peopleReportCostsDate').value), { rows: 'peopleReportCostsRows', total: 'peopleReportCostsTotal', status: 'peopleReportCostsStatus' }); } catch (error) { status.textContent = error.message; } }
   document.querySelectorAll('[data-people-tab]').forEach(button => button.addEventListener('click', () => showTab(button.dataset.peopleTab)));
-  document.querySelectorAll('[data-people-open]').forEach(button => button.addEventListener('click', () => ({user:openUser, role:openRole, employee:openEmployee}[button.dataset.peopleOpen]())));
+  document.querySelectorAll('[data-people-open]').forEach(button => button.addEventListener('click', () => ({user:openUser, role:openRole, employee:openEmployee, occupancy:openOccupancy, cost:openCost}[button.dataset.peopleOpen]())));
   document.querySelectorAll('[data-people-close]').forEach(button => button.addEventListener('click', () => closeDialog(button.dataset.peopleClose)));
-  document.querySelectorAll('[data-people-role-view]').forEach(button => button.addEventListener('click', () => { state.roleView = button.dataset.peopleRoleView; document.querySelectorAll('[data-people-role-view]').forEach(item => item.classList.toggle('is-active', item === button)); renderRoles(); }));
+  document.querySelectorAll('[data-people-role-view]').forEach(button => button.addEventListener('click', () => showRoleView(button.dataset.peopleRoleView)));
   document.querySelectorAll('[data-people-employee-view]').forEach(button => button.addEventListener('click', () => showEmployeeView(button.dataset.peopleEmployeeView)));
+  document.querySelectorAll('[data-people-report-view]').forEach(button => button.addEventListener('click', () => showReportView(button.dataset.peopleReportView)));
   byId('peopleUserSearch')?.addEventListener('input', renderUsers); byId('peopleUserProfile')?.addEventListener('change', renderUsers); byId('peopleEmployeeSearch')?.addEventListener('input', renderEmployees);
   byId('peopleOrgSearch')?.addEventListener('input', event => { state.org.search = event.target.value; renderOrg(); });
   byId('peopleOrgDepartment')?.addEventListener('change', event => { state.org.department = event.target.value; renderOrg(); });
@@ -274,9 +341,9 @@
     if (action === 'zoom-reset') state.org.scale = 1;
     updateOrgScale();
   }));
-  byId('peopleUserForm')?.addEventListener('submit', saveUser); byId('peopleRoleForm')?.addEventListener('submit', saveRole); byId('peopleEmployeeForm')?.addEventListener('submit', saveEmployee);
-  byId('peopleOccupancyForm')?.addEventListener('submit', loadOccupancy); byId('peopleCostsForm')?.addEventListener('submit', loadCosts);
-  document.addEventListener('click', event => { const user = event.target.closest('[data-edit-user]'); const role = event.target.closest('[data-edit-role]'); const employee = event.target.closest('[data-edit-employee]'); if (user) openUser(user.dataset.editUser); if (role) openRole(role.dataset.editRole); if (employee) openEmployee(employee.dataset.editEmployee); const report = event.target.closest('[data-people-report]'); if (report) { showTab('employees'); showEmployeeView(report.dataset.peopleReport === 'capacity' ? 'profile' : report.dataset.peopleReport); } });
-  if (byId('peopleOccupancyDate')) byId('peopleOccupancyDate').value = today(); if (byId('peopleCostsDate')) byId('peopleCostsDate').value = today();
+  byId('peopleUserForm')?.addEventListener('submit', saveUser); byId('peopleRoleForm')?.addEventListener('submit', saveRole); byId('peopleEmployeeForm')?.addEventListener('submit', saveEmployee); byId('peopleOccupancyCreateForm')?.addEventListener('submit', saveOccupancy); byId('peopleCostForm')?.addEventListener('submit', saveCost);
+  byId('peopleOccupancyForm')?.addEventListener('submit', loadOccupancy); byId('peopleCostsSearch')?.addEventListener('click', loadCosts); byId('peopleReportOccupancyForm')?.addEventListener('submit', loadReportOccupancy); byId('peopleReportCostsForm')?.addEventListener('submit', loadReportCosts);
+  document.addEventListener('click', event => { const user = event.target.closest('[data-edit-user]'); const role = event.target.closest('[data-edit-role]'); const employee = event.target.closest('[data-edit-employee]'); if (user) openUser(user.dataset.editUser); if (role) openRole(role.dataset.editRole); if (employee) openEmployee(employee.dataset.editEmployee); });
+  ['peopleOccupancyDate', 'peopleCostsDate', 'peopleReportOccupancyDate', 'peopleReportCostsDate'].forEach(id => { if (byId(id)) byId(id).value = today(); });
   loadWorkspace().catch(error => { const target = byId('peopleUsersRows'); if (target) target.innerHTML = `<tr><td colspan="5">${esc(error.message)}</td></tr>`; });
 })();

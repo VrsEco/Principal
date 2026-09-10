@@ -99,6 +99,38 @@ def test_snapshot_errors_are_not_empty_results(client_context, monkeypatch, erro
     assert 'private' not in response.get_data(as_text=True)
 
 
+def test_create_occupancy_uses_url_tenant_and_authenticated_actor(client_context, monkeypatch):
+    from services import employee_role_occupancy_service
+
+    monkeypatch.setattr(routes, 'current_user', Mock(id=33))
+    record = Mock()
+    record.to_dict.return_value = {'id': 88, 'company_id': 7, 'employee_id': 23, 'role_id': 12}
+    create = Mock(return_value=record)
+    monkeypatch.setattr(employee_role_occupancy_service, 'create_occupancy', create)
+
+    response = client_context[0].post(
+        '/api/companies/7/employees/23/occupancies',
+        json={'role_id': 12, 'starts_on': '2026-09-10', 'weekly_hours': '40'},
+    )
+
+    assert response.status_code == 201
+    create.assert_called_once_with(
+        7, 23, 12, {'starts_on': '2026-09-10', 'weekly_hours': '40'}, actor_user_id=33,
+    )
+    client_context[5].session.commit.assert_called_once()
+
+
+def test_create_occupancy_rejects_missing_role_before_service(client_context, monkeypatch):
+    from services import employee_role_occupancy_service
+
+    create = Mock()
+    monkeypatch.setattr(employee_role_occupancy_service, 'create_occupancy', create)
+    response = client_context[0].post('/api/companies/7/employees/23/occupancies', json={'starts_on': '2026-09-10'})
+
+    assert response.status_code == 400
+    create.assert_not_called()
+
+
 @pytest.mark.parametrize('denied_resource', ['companies', 'financial'])
 def test_cost_read_requires_both_permissions(client_context, monkeypatch, denied_resource):
     from services import role_cost_profile_service

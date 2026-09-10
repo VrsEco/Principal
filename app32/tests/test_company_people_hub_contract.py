@@ -39,11 +39,19 @@ def test_people_workspace_uses_the_app32_visual_composition():
     assert 'people-journey' not in template
     assert 'data-people-org-action="fit"' in template
     assert 'data-people-org-action="export-png"' in template
+    assert 'data-people-role-panel="profile"' in template
+    assert 'data-people-role-panel="quantity"' in template
+    assert 'data-people-report-panel="capacity"' in template
+    assert 'data-people-open="occupancy"' in template
+    assert 'data-people-open="cost"' in template
     assert 'people-org-tree-shell' in script
     assert 'buildOrgChartSvg' in script
     assert 'exportOrgPng' in script
+    assert 'renderCapacityReport' in script
+    assert 'saveOccupancy' in script
+    assert 'saveCost' in script
     assert "image/png" in script
-    assert "v='20260910_orgchart_export_png'" in template
+    assert "v='20260910_people_modules'" in template
     assert '.people-tabs' in stylesheet
     assert 'border-radius: 999px' in stylesheet
     assert '.people-table-wrap .table-v2 td' in stylesheet

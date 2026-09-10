@@ -126,8 +126,13 @@
 .people-chart-document-footer { margin: .8rem 1.5rem 1rem; padding: .8rem 1rem; border-top: 1px solid #dbe5f1; color: var(--text-tertiary); font-size: .75rem; text-align: center; }
 .people-query label { display: grid; gap: .35rem; color: var(--text-secondary); font-size: .8rem; font-weight: 700; }
 .people-query .form-control { min-width: 185px; min-height: 42px; padding: .6rem .85rem; }
+.people-query--actions { flex-wrap: wrap; }
 .people-status, .people-cost-total { margin: 1rem 1.5rem; color: var(--text-secondary); font-size: .85rem; }
 .people-cost-total { font-weight: 750; color: var(--text-primary); }
+.people-panel-note { margin: 0 1.5rem 1.2rem; color: var(--text-tertiary); font-size: .78rem; line-height: 1.45; }
+.people-report-summary { display: flex; flex-wrap: wrap; gap: .65rem; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: #fbfdff; }
+.people-report-summary span { min-width: 130px; padding: .65rem .8rem; border: 1px solid #dbeafe; border-radius: 12px; background: #fff; color: var(--text-secondary); font-size: .78rem; }
+.people-report-summary strong { display: block; color: var(--text-primary); font-size: 1.15rem; }
 .people-report-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
 .people-report-grid .people-card { padding: 1.5rem; }
 .people-report-grid .people-card > span { display: grid; width: 38px; height: 38px; place-items: center; margin-bottom: 1rem; border-radius: 12px; background: var(--primary-light); color: var(--primary); font-size: 1rem; font-weight: 800; }
