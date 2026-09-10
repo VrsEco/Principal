@@ -47,19 +47,6 @@ def _employee_query(company_id=None, user=None):
     return query
 
 
-def _membership_query(company_id=None, user=None):
-    """Vínculos explícitos de conta x empresa, sem exigir colaborador."""
-    from models.user_company_membership import UserCompanyMembership
-
-    actor = _resolve_authenticated_user(user)
-    if actor is None:
-        return UserCompanyMembership.query.filter(False)
-    query = UserCompanyMembership.query.filter_by(user_id=actor.id, is_active=True)
-    if company_id is not None:
-        query = query.filter_by(company_id=company_id)
-    return query
-
-
 def _has_admin_employee_role(company_id=None, user=None):
     actor = _resolve_authenticated_user(user)
     if actor is None:
@@ -120,11 +107,6 @@ def get_default_company_id(user=None):
 
     from models.company import Company
     from models.employee import Employee
-    from models.user_company_membership import UserCompanyMembership
-
-    membership = _membership_query(user=actor).order_by(UserCompanyMembership.company_id.asc()).first()
-    if membership and membership.company_id:
-        return membership.company_id
 
     employee = _employee_query(user=actor).order_by(Employee.company_id.asc()).first()
     if employee and employee.company_id:
@@ -150,10 +132,7 @@ def can_access_company(company_id, user=None):
         return False
     if is_platform_admin(user=actor):
         return True
-    return (
-        _membership_query(company_id, user=actor).first() is not None
-        or _employee_query(company_id, user=actor).first() is not None
-    )
+    return _employee_query(company_id, user=actor).first() is not None
 
 
 def get_access_profile(company_id=None, user=None):
@@ -171,10 +150,6 @@ def get_access_profile(company_id=None, user=None):
 
     if is_platform_admin(user=actor):
         return PROFILE_ADMINISTRATOR
-
-    membership = _membership_query(company_id, user=actor).first() if company_id is not None else None
-    if membership:
-        return membership.access_profile
 
     if company_id is not None and not can_access_company(company_id, user=actor):
         return None
@@ -206,11 +181,7 @@ def is_company_admin(company_id):
         return False
     if is_platform_admin():
         return False
-    membership = _membership_query(company_id).first()
-    return bool(
-        (membership and membership.access_profile == PROFILE_ADMINISTRATOR)
-        or _has_admin_employee_role(company_id)
-    )
+    return _has_admin_employee_role(company_id)
 
 
 def has_company_full_access(company_id=None):
@@ -275,17 +246,6 @@ def permission_required(resource, action):
                     return f(*args, **kwargs)
 
                 user_employees = _employee_query().all()
-                user_memberships = _membership_query().all()
-                if resource == "companies" and action == "view" and user_memberships:
-                    return f(*args, **kwargs)
-
-                has_membership_permission = any(
-                    has_permission(membership.company_id, resource, action)
-                    for membership in user_memberships
-                )
-                if has_membership_permission:
-                    return f(*args, **kwargs)
-
                 if not user_employees:
                     if request.path.startswith("/api/"):
                         return {"error": "Access denied: User is not associated with any company."}, 403

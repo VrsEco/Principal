@@ -80,9 +80,7 @@ class CompanyRoleHierarchyService:
                     raise ValueError()
             except (InvalidOperation, TypeError, ValueError) as exc:
                 raise RoleHierarchyValidationError("Pessoas previstas deve ser um número inteiro.") from exc
-            if headcount < 0:
-                raise RoleHierarchyValidationError("Pessoas previstas não pode ser negativo.")
-            if headcount > 2147483647:
+            if not 0 <= headcount <= 2147483647:
                 raise RoleHierarchyValidationError("Pessoas previstas deve estar entre 0 e 2147483647.")
             values["headcount_planned"] = int(headcount)
 

@@ -1178,6 +1178,8 @@ for _tool_name, _action in (
     ("update_commercial_catalog_structure_item", "update"),
     ("toggle_commercial_catalog_structure_item", "update"),
     ("list_commercial_products_services", "read"),
+    ("get_commercial_product_service_readiness", "read"),
+    ("update_commercial_offer_contract", "update"),
     ("create_commercial_product_service", "create"),
     ("update_commercial_product_service", "update"),
     ("toggle_commercial_product_service", "update"),
@@ -1196,10 +1198,20 @@ for _tool_name, _action in (
         _tool_name,
         domain="strategy" if _tool_name == "get_commercial_dashboard" else "governance",
         action=_action,
-        human_gate=_tool_name in {"suspend_commercial_contract", "close_commercial_contract", "delete_commercial_contract"},
+        human_gate=_tool_name in {
+            "update_commercial_offer_contract",
+            "suspend_commercial_contract",
+            "close_commercial_contract",
+            "delete_commercial_contract",
+        },
         human_gate_reason=(
-            "Mudança de lifecycle contratual exige confirmação explícita e trilha auditável."
-            if _tool_name in {"suspend_commercial_contract", "close_commercial_contract", "delete_commercial_contract"}
+            "Mudança do contrato operacional ou lifecycle contratual exige confirmação explícita e trilha auditável."
+            if _tool_name in {
+                "update_commercial_offer_contract",
+                "suspend_commercial_contract",
+                "close_commercial_contract",
+                "delete_commercial_contract",
+            }
             else None
         ),
     )

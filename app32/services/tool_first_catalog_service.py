@@ -232,6 +232,8 @@ class ToolFirstCatalogService:
                 "update_commercial_catalog_structure_item",
                 "toggle_commercial_catalog_structure_item",
                 "list_commercial_products_services",
+                "get_commercial_product_service_readiness",
+                "update_commercial_offer_contract",
                 "create_commercial_product_service",
                 "update_commercial_product_service",
                 "toggle_commercial_product_service",

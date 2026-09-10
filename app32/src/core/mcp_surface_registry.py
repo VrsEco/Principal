@@ -64,7 +64,7 @@ def get_surface_capability_status(
     if context is None:
         try:
             context = resolve_mcp_execution_context({})
-        except RuntimeError:
+        except (RuntimeError, PermissionError):
             context = None
     if context is None or getattr(context, "user_id", None) is None:
         if require_principal:
@@ -140,7 +140,7 @@ def get_surface_manifest(
     )
     try:
         execution_context = resolve_mcp_execution_context({})
-    except RuntimeError:
+    except (RuntimeError, PermissionError):
         execution_context = None
 
     if execution_context is not None and execution_context.user_id is not None:

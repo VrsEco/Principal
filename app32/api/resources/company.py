@@ -8,7 +8,7 @@ from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import ValidationError
 from utils.permissions import is_platform_admin, permission_required
-from models import db, Company, Employee, UserCompanyMembership
+from models import db, Company, Employee
 from schemas.company import company_schema, companies_schema
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class CompanyListResource(Resource):
             query = query.filter_by(is_active=True)
 
         if current_user.is_authenticated and not is_platform_admin():
-            employee_company_ids = [
+            linked_company_ids = [
                 row.company_id
                 for row in Employee.query.with_entities(Employee.company_id)
                 .filter(Employee.user_id == current_user.id)
@@ -50,15 +50,6 @@ class CompanyListResource(Resource):
                 .all()
                 if row.company_id is not None
             ]
-            membership_company_ids = [
-                row.company_id
-                for row in UserCompanyMembership.query.with_entities(UserCompanyMembership.company_id)
-                .filter(UserCompanyMembership.user_id == current_user.id)
-                .filter(UserCompanyMembership.is_active.is_(True))
-                .all()
-                if row.company_id is not None
-            ]
-            linked_company_ids = sorted(set(employee_company_ids) | set(membership_company_ids))
 
             if not linked_company_ids:
                 return [], 200

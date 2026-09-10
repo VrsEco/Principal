@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from src.core.mcp_http_auth import get_http_request_context
+
 
 def register_commercial_mcp_tools(mcp: Any) -> None:
     """Registra tools MCP da frente comercial/contratos."""
@@ -18,6 +20,15 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
 
     def _fail(message: str):
         return {"success": False, "error": message}
+
+    def _authenticated_actor_user_id() -> Optional[int]:
+        """Obtém o ator autenticado da requisição MCP, sem confiar no payload."""
+        context = dict(get_http_request_context() or {})
+        raw_user_id = context.get("user_id")
+        try:
+            return int(raw_user_id) if raw_user_id is not None else None
+        except (TypeError, ValueError):
+            return None
 
     def _normalize_counterparty_update_payload(payload: dict | None) -> dict:
         normalized = dict(payload or {})
@@ -235,6 +246,57 @@ def register_commercial_mcp_tools(mcp: Any) -> None:
             parent_candidates=[item.to_dict() for item in parents],
             count=len(items),
         )
+
+    @mcp.tool()
+    def get_commercial_product_service_readiness(company_id: int, item_id: int) -> dict:
+        """Lê a prontidão do contrato operacional de um produto/serviço no tenant."""
+        from services.contracts_catalog_service import ContractsCatalogService
+
+        def _callback():
+            item = ContractsCatalogService.get_item(company_id, item_id)
+            if not item or not ContractsCatalogService._is_selectable_level(item):
+                raise ValueError("Produto/serviço não localizado para a empresa ativa.")
+            return item, ContractsCatalogService.get_commercial_contract_readiness(item)
+
+        try:
+            item, readiness = _run_action(_callback)
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(item=item.to_dict(), readiness=readiness)
+
+    @mcp.tool()
+    def update_commercial_offer_contract(
+        company_id: int,
+        item_id: int,
+        commercial_contract: dict,
+        human_gate_confirmed: bool,
+        enforce_on_activation: bool = True,
+    ) -> dict:
+        """Atualiza o contrato operacional versionado da oferta com gate humano explícito."""
+        from services.contracts_catalog_service import ContractsCatalogService
+
+        if not human_gate_confirmed:
+            return _fail("Confirmação humana explícita é obrigatória para alterar o contrato operacional da oferta.")
+
+        def _callback():
+            item = ContractsCatalogService.get_item(company_id, item_id)
+            if not item or not ContractsCatalogService._is_selectable_level(item):
+                raise ValueError("Produto/serviço não localizado para a empresa ativa.")
+            metadata = dict(item.metadata_json or {})
+            metadata["commercial_contract_v1"] = commercial_contract
+            metadata["commercial_contract_enforced"] = bool(enforce_on_activation)
+            updated = ContractsCatalogService.update_item(
+                item=item,
+                payload={"metadata_json": metadata},
+                actor_user_id=_authenticated_actor_user_id(),
+            )
+            return updated, ContractsCatalogService.get_commercial_contract_readiness(updated)
+
+        try:
+            item, readiness = _run_action(_callback)
+        except Exception as exc:  # noqa: BLE001
+            return _fail(str(exc))
+        return _ok(item=item.to_dict(), readiness=readiness)
 
     @mcp.tool()
     def create_commercial_product_service(payload: dict) -> dict:

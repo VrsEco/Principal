@@ -1,0 +1,149 @@
+{
+  "realm": "app32-local",
+  "enabled": true,
+  "displayName": "Gestão Versus — APP32 local",
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "bruteForceProtected": true,
+  "clients": [
+    {
+      "clientId": "app32-mcp-local",
+      "name": "APP32 MCP local — USER PKCE",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:*",
+        "http://localhost:*"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:*",
+        "http://localhost:*"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "roles",
+        "web-origins",
+        "acr",
+        "mcp:access",
+        "mcp:user",
+        "mcp-resource"
+      ],
+      "optionalClientScopes": [
+        "mcp:admin",
+        "mcp:analytics",
+        "mcp:ops"
+      ]
+    },
+    {
+      "clientId": "app32-mcp-service-smoke",
+      "name": "APP32 MCP local — SERVICE smoke",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": true,
+      "defaultClientScopes": [
+        "roles",
+        "mcp:access",
+        "mcp:ops",
+        "mcp-resource"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "mcp:access",
+      "description": "Baseline obrigatório do resource server MCP; não concede surface.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "mcp:user",
+      "description": "Concede somente a surface MCP user.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "mcp:admin",
+      "description": "Surface administrativa; manter opcional e sob grant APP32.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "mcp:analytics",
+      "description": "Surface somente leitura para análises tenant-safe.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "mcp:ops",
+      "description": "Surface operacional enxuta; não é atalho de admin.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "true",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "mcp-resource",
+      "description": "Inclui a audience estável app32-mcp-resource no access token.",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-app32-mcp-resource",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "included.custom.audience": "app32-mcp-resource"
+          }
+        },
+        {
+          "name": "subject-app32-mcp-resource",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "lightweight.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

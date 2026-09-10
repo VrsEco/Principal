@@ -142,7 +142,8 @@ def build_surface_http_app(surface: str):
     mcp.settings.mount_path = "/"
     mcp.settings.stateless_http = DEFAULT_STATELESS_HTTP
     mcp.settings.auth = build_auth_settings(
-        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{_surface_mount_path(surface)}"
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{_surface_mount_path(surface)}",
+        surface=surface,
     )
     mcp._token_verifier = App32MCPTokenVerifier(surface=surface)  # noqa: SLF001
 

@@ -13,7 +13,6 @@ from services.identity.user_employee_orchestrator_service import (
 )
 from services.company_onboarding_service import CompanyOnboardingService
 from services.company_identity_service import CompanyIdentityService
-from services.people_workspace_service import PeopleWorkspaceService, PeopleWorkspaceValidationError
 from services.company_role_hierarchy_service import (
     CompanyRoleHierarchyService,
     RoleHierarchyValidationError,
@@ -22,7 +21,7 @@ from services.company_role_permission_preset_service import (
     CompanyRolePermissionPresetService,
 )
 from services.rbac_permission_catalog_service import RbacPermissionCatalogService
-from utils.permissions import can_access_company, has_permission, is_platform_admin, permission_required
+from utils.permissions import can_access_company, is_platform_admin, permission_required
 from flask_login import login_required, current_user
 from utils.logo_processor import resize_and_save_logo, get_logo_url
 
@@ -82,95 +81,11 @@ def company_identity(company_id):
 @companies_bp.route('/companies/<int:company_id>/people')
 @permission_required('companies', 'view')
 def company_people_hub(company_id):
-    """Central canônica de Pessoas da empresa ativa."""
+    """Compatibilidade: a Central Pessoas agora é a tela única de identidade."""
     denied = _ensure_company_access(company_id)
     if denied:
         return denied
-    workspace = PeopleWorkspaceService.build_workspace(company_id)
-    return render_template(
-        'modules/companies/company_people_v3.html',
-        company=workspace['company'],
-        metrics=workspace['metrics'],
-        can_manage_people=has_permission(company_id, 'companies', 'edit'),
-        can_view_costs=has_permission(company_id, 'financial', 'view'),
-        can_manage_costs=(
-            has_permission(company_id, 'companies', 'edit')
-            and has_permission(company_id, 'financial', 'edit')
-        ),
-    )
-
-
-@companies_bp.route('/api/companies/<int:company_id>/people/workspace', methods=['GET'])
-@permission_required('companies', 'view')
-def get_company_people_workspace(company_id):
-    denied = _ensure_company_access(company_id)
-    if denied:
-        return denied
-    return jsonify(PeopleWorkspaceService.build_workspace(company_id))
-
-
-@companies_bp.route('/api/companies/<int:company_id>/people/users', methods=['POST'])
-@permission_required('companies', 'edit')
-def create_company_people_user(company_id):
-    denied = _ensure_company_access(company_id)
-    if denied:
-        return denied
-    try:
-        return jsonify(PeopleWorkspaceService.create_or_link_user(company_id, request.get_json(silent=True))), 201
-    except PeopleWorkspaceValidationError as exc:
-        db.session.rollback()
-        return jsonify({'error': str(exc)}), 400
-    except Exception:
-        db.session.rollback()
-        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
-
-
-@companies_bp.route('/api/companies/<int:company_id>/people/users/<int:user_id>', methods=['PUT'])
-@permission_required('companies', 'edit')
-def update_company_people_user(company_id, user_id):
-    denied = _ensure_company_access(company_id)
-    if denied:
-        return denied
-    try:
-        return jsonify(PeopleWorkspaceService.update_user_membership(company_id, user_id, request.get_json(silent=True)))
-    except PeopleWorkspaceValidationError as exc:
-        db.session.rollback()
-        return jsonify({'error': str(exc)}), 400
-    except Exception:
-        db.session.rollback()
-        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
-
-
-@companies_bp.route('/api/companies/<int:company_id>/people/employees', methods=['POST'])
-@permission_required('companies', 'edit')
-def create_company_people_employee(company_id):
-    denied = _ensure_company_access(company_id)
-    if denied:
-        return denied
-    try:
-        return jsonify(PeopleWorkspaceService.create_employee(company_id, request.get_json(silent=True))), 201
-    except PeopleWorkspaceValidationError as exc:
-        db.session.rollback()
-        return jsonify({'error': str(exc)}), 400
-    except Exception:
-        db.session.rollback()
-        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
-
-
-@companies_bp.route('/api/companies/<int:company_id>/people/employees/<int:employee_id>', methods=['PUT'])
-@permission_required('companies', 'edit')
-def update_company_people_employee(company_id, employee_id):
-    denied = _ensure_company_access(company_id)
-    if denied:
-        return denied
-    try:
-        return jsonify(PeopleWorkspaceService.update_employee(company_id, employee_id, request.get_json(silent=True)))
-    except PeopleWorkspaceValidationError as exc:
-        db.session.rollback()
-        return jsonify({'error': str(exc)}), 400
-    except Exception:
-        db.session.rollback()
-        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
+    return redirect(f'/companies/{company_id}/identity')
 
 
 @companies_bp.route('/api/companies/<int:company_id>/usage-telemetry', methods=['GET'])
@@ -387,38 +302,6 @@ def get_occupancy_snapshot(company_id):
     except Exception:
         db.session.rollback()
         return jsonify({"error": PUBLIC_ERROR_MESSAGE}), 500
-
-
-@companies_bp.route('/api/companies/<int:company_id>/employees/<int:employee_id>/occupancies', methods=['POST'])
-@permission_required('companies', 'edit')
-def create_company_employee_occupancy(company_id, employee_id):
-    """Registra uma vigência formal de ocupação, sempre dentro da empresa da URL."""
-    from werkzeug.exceptions import HTTPException
-    from services.employee_role_occupancy_service import create_occupancy
-
-    denied = _ensure_company_access(company_id)
-    if denied:
-        return denied
-    payload = request.get_json(silent=True) or {}
-    role_id = payload.pop('role_id', None)
-    try:
-        if type(role_id) is not int or role_id <= 0:
-            raise ValueError('Selecione um cargo válido.')
-        occupancy = create_occupancy(
-            company_id, employee_id, role_id, payload,
-            actor_user_id=getattr(current_user, 'id', None),
-        )
-        db.session.commit()
-        return jsonify(occupancy.to_dict()), 201
-    except ValueError as exc:
-        db.session.rollback()
-        return jsonify({'error': str(exc)}), 400
-    except HTTPException:
-        db.session.rollback()
-        raise
-    except Exception:
-        db.session.rollback()
-        return jsonify({'error': PUBLIC_ERROR_MESSAGE}), 500
 
 
 @companies_bp.route('/api/companies/<int:company_id>/roles/tree', methods=['GET'])
