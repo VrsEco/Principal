@@ -404,9 +404,11 @@ def _oauth_enabled_surfaces() -> frozenset[str]:
     return frozenset(surfaces)
 
 
-def oauth_transport_enabled_for_surface(surface: McpSurface | str) -> bool:
+def oauth_transport_enabled_for_surface(surface: McpSurface | str, *, forced: bool | None = None) -> bool:
     """Indica se uma surface está em coorte OAuth; default é sempre legado."""
 
+    if forced is not None:
+        return forced
     return bool(
         _env_flag("APP32_MCP_HTTP_ENABLE_OAUTH", default=False)
         and normalize_surface(surface) in _oauth_enabled_surfaces()
@@ -602,11 +604,12 @@ def _resolve_db_backed_identity(
 
 
 class App32MCPTokenVerifier(TokenVerifier):
-    def __init__(self, *, surface: McpSurface | str):
+    def __init__(self, *, surface: McpSurface | str, oauth_enabled: bool | None = None):
         self.surface = normalize_surface(surface)
+        self.oauth_enabled = oauth_enabled
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        if oauth_transport_enabled_for_surface(self.surface):
+        if oauth_transport_enabled_for_surface(self.surface, forced=self.oauth_enabled):
             resolution = _resolve_oauth_identity(token=token, surface=self.surface)
             identity = resolution.identity
         else:
@@ -652,7 +655,7 @@ def _resolve_override_value(
     return _coerce_str(request.headers.get(header_name) or request.query_params.get(query_param))
 
 
-def resolve_request_identity(request: Request, *, surface: McpSurface | str) -> App32McpHttpIdentity | None:
+def resolve_request_identity(request: Request, *, surface: McpSurface | str, oauth_enabled: bool | None = None) -> App32McpHttpIdentity | None:
     token = extract_bearer_token(request)
     if not token:
         return None
@@ -755,8 +758,8 @@ def _build_identity_context_payload(
     }
 
 
-def resolve_request_context_payload(request: Request, *, surface: McpSurface | str) -> dict[str, Any]:
-    identity = resolve_request_identity(request, surface=surface)
+def resolve_request_context_payload(request: Request, *, surface: McpSurface | str, oauth_enabled: bool | None = None) -> dict[str, Any]:
+    identity = resolve_request_identity(request, surface=surface, oauth_enabled=oauth_enabled)
     if identity is None:
         return {}
 
@@ -779,13 +782,14 @@ def resolve_request_context_payload(request: Request, *, surface: McpSurface | s
 
 
 class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, *, surface: McpSurface | str):
+    def __init__(self, app, *, surface: McpSurface | str, oauth_enabled: bool | None = None):
         super().__init__(app)
         self.surface = normalize_surface(surface)
+        self.oauth_enabled = oauth_enabled
 
     async def dispatch(self, request: Request, call_next):
         oauth_resolution: OAuthHttpIdentityResolution | None = None
-        if oauth_transport_enabled_for_surface(self.surface):
+        if oauth_transport_enabled_for_surface(self.surface, forced=self.oauth_enabled):
             token = extract_bearer_token(request)
             oauth_resolution = (
                 _resolve_oauth_identity(token=token, surface=self.surface)
@@ -799,7 +803,7 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
             )
             identity = oauth_resolution.identity
         else:
-            identity = resolve_request_identity(request, surface=self.surface)
+            identity = resolve_request_identity(request, surface=self.surface, oauth_enabled=self.oauth_enabled)
         if identity is None:
             if oauth_resolution is not None:
                 error = oauth_resolution.error or "invalid_token"
@@ -857,7 +861,7 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
                 status_code=403,
             )
 
-        payload = resolve_request_context_payload(request, surface=self.surface)
+        payload = resolve_request_context_payload(request, surface=self.surface, oauth_enabled=self.oauth_enabled)
         channel_gate = evaluate_mcp_channel_gate(
             McpChannelGateRequest(
                 surface=self.surface,
@@ -932,8 +936,9 @@ def build_auth_settings(
     base_url: str | None = None,
     *,
     surface: McpSurface | str | None = None,
+    oauth_enabled: bool | None = None,
 ) -> AuthSettings | None:
-    if surface is not None and oauth_transport_enabled_for_surface(surface):
+    if surface is not None and oauth_transport_enabled_for_surface(surface, forced=oauth_enabled):
         if not _principal_grant_gate_enabled():
             raise ValueError(
                 "OAuth MCP requer APP32_MCP_USE_PRINCIPAL_GRANTS=1 para a coorte configurada."

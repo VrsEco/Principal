@@ -984,3 +984,37 @@ def test_request_context_middleware_returns_retryable_503_during_runtime_restart
     assert response.headers["Retry-After"] == "2"
     assert response.json()["error"] == "mcp_runtime_temporarily_unavailable"
     assert response.json()["retryable"] is True
+
+
+def test_forced_oauth_verifier_isolated_from_legacy_user_surface(monkeypatch):
+    from types import SimpleNamespace
+
+    module = _reload_auth(monkeypatch)
+
+    class _Verifier:
+        def verify(self, token):
+            assert token == "pilot-jwt"
+            return SimpleNamespace(
+                issuer="https://id.example/realms/app32",
+                subject="pilot-subject",
+                scopes=("mcp:access", "mcp:user"),
+                client_id="pilot-client",
+                expires_at=4_102_444_800,
+            )
+
+    class _PrincipalService:
+        def resolve_external_principal(self, **kwargs):
+            assert kwargs == {"issuer": "https://id.example/realms/app32", "subject": "pilot-subject"}
+            return SimpleNamespace(allowed=True, principal=SimpleNamespace(id=91, user_id=49, subject_type="USER"))
+
+    monkeypatch.setenv("APP32_MCP_USE_PRINCIPAL_GRANTS", "1")
+    monkeypatch.setattr(module, "load_oauth_access_token_verifier", lambda: _Verifier())
+    monkeypatch.setattr("services.principal_authorization_service.principal_authorization_service", _PrincipalService())
+
+    verifier = module.App32MCPTokenVerifier(surface="user", oauth_enabled=True)
+    token = __import__("asyncio").run(verifier.verify_token("pilot-jwt"))
+
+    assert token is not None
+    assert token.client_id == "pilot-client"
+    assert token.subject == "pilot-subject"
+    assert module.oauth_transport_enabled_for_surface("user") is False
