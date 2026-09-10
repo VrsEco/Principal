@@ -7,13 +7,20 @@
 set -e
 
 # Configurações de Caminho (Padrão Configr)
-BASE="/srv/appgestaoversuscombr.45a4cd4b.configr.cloud"
+# APP32_DEPLOY_BASE é aceito somente para o modo de validação local. Em
+# produção, a ausência da flag preserva o caminho canônico do Configr.
+BASE="${APP32_DEPLOY_BASE:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud}"
 WWW="$BASE/www"
-APP="$WWW/app32"
+# O repositório é sincronizado em $REPO e o aplicativo Flask versionado vive
+# explicitamente em $APP. Nunca assumir que a raiz do checkout é o runtime:
+# isso evita publicar uma cópia histórica/duplicada do código.
+REPO="$WWW/app32"
+APP="$REPO/app32"
 PYTHON="$BASE/.virtualenv/3.12/bin/python"
 PIP="$BASE/.virtualenv/3.12/bin/pip"
-DEPLOY_STDOUT_LOG="$APP/deploy_stdout.txt"
-DEPLOY_STDERR_LOG="$APP/deploy_stderr.txt"
+DEPLOY_LOG_DIR="${APP32_DEPLOY_LOG_DIR:-$BASE/logs/app32}"
+DEPLOY_STDOUT_LOG="$DEPLOY_LOG_DIR/deploy_stdout.txt"
+DEPLOY_STDERR_LOG="$DEPLOY_LOG_DIR/deploy_stderr.txt"
 WEB_HEALTH_URL="http://127.0.0.1/healthz"
 WEB_HEALTH_HOST="app.gestaoversus.com.br"
 DEPLOY_MODE="${DEPLOY_MODE:-quick}"
@@ -27,7 +34,7 @@ case "$DEPLOY_MODE" in
         ;;
 esac
 
-mkdir -p "$APP"
+mkdir -p "$DEPLOY_LOG_DIR"
 : > "$DEPLOY_STDOUT_LOG"
 : > "$DEPLOY_STDERR_LOG"
 exec > >(tee "$DEPLOY_STDOUT_LOG") 2> >(tee "$DEPLOY_STDERR_LOG" >&2)
@@ -39,9 +46,40 @@ echo "----------------------------------------------------"
 
 # 1. Sincronia Git
 echo "📂 Sincronizando código com repositório central..."
-cd $APP
-git fetch origin +refs/heads/main:refs/remotes/origin/main
-git reset --hard origin/main
+if [ ! -d "$REPO/.git" ]; then
+    echo "❌ Repositório de produção não encontrado em $REPO."
+    exit 1
+fi
+
+validate_runtime_layout() {
+    if [ ! -f "$APP/app.py" ] || [ ! -f "$APP/requirements.txt" ]; then
+        echo "❌ Contrato de release inválido: app.py/requirements.txt ausentes em $APP."
+        exit 1
+    fi
+}
+
+# Um reset hard é permitido apenas em worktree limpo. Alterações operacionais
+# devem ser reconciliadas conscientemente; apagá-las tornaria o rollback
+# impossível de auditar.
+if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
+    echo "❌ Worktree remoto possui alterações. Deploy interrompido antes do reset."
+    echo "   Reconcilie ou preserve o drift em uma janela controlada antes de publicar."
+    exit 1
+fi
+
+if [ "${DEPLOY_VALIDATE_ONLY:-0}" = "1" ]; then
+    validate_runtime_layout
+    echo "✅ Validação local do contrato concluída | REPO: $REPO | APP: $APP"
+    exit 0
+fi
+
+git -C "$REPO" fetch origin +refs/heads/main:refs/remotes/origin/main
+git -C "$REPO" reset --hard origin/main
+
+validate_runtime_layout
+
+cd "$APP"
+echo "✅ Release alvo: $(git -C "$REPO" rev-parse --short HEAD) | Runtime: $APP"
 echo "✅ Código atualizado com sucesso."
 
 # 2. Dependências (standard/full)
@@ -117,6 +155,12 @@ max-worker-lifetime = 3600
 reload-on-rss = 768
 thunder-lock = true
 env = APP_BOOTSTRAP_RUNTIME_SERVICES=0
+EOF
+# A aplicação versionada não pode depender do diretório raiz do checkout.
+# Fragmentos em conf.d são carregados após o ini base no Configr.
+cat > "$BASE/etc/uwsgi/conf.d/app32_runtime_root.ini" <<EOF
+chdir = $APP
+module = passenger_wsgi:application
 EOF
 UWSGI_INI="$BASE/etc/uwsgi/uwsgi.ini"
 if [ -f "$UWSGI_INI" ] && ! grep -qE '^[[:space:]]*post-buffering[[:space:]]*=' "$UWSGI_INI"; then
