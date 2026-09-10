@@ -10,7 +10,9 @@ uWSGI + MCP com `APP` apontando para esse diretório.
 
 ## Invariantes
 
-1. `REPO` é o checkout Git; `APP=$REPO/app32` contém `app.py` e `requirements.txt`.
+1. `REPO=$WWW` é o checkout Git real do Configr; `APP=$WWW/app32` contém
+   `app.py` e `requirements.txt`. O diretório da aplicação não é, por si, a
+   raiz Git.
 2. Deploy falha antes de `reset --hard` quando o worktree remoto não estiver limpo.
 3. Após o reset, a ausência de `APP/app.py` ou `APP/requirements.txt` falha o release.
 4. uWSGI e MCP usam o mesmo `APP`; não há cópia raiz alternativa como runtime.
