@@ -219,6 +219,35 @@ async def _index(_: Request) -> JSONResponse:
     )
 
 
+async def _pilot_oauth_protected_resource(_: Request) -> JSONResponse:
+    """Publica RFC 9728 apenas para a rota OAuth isolada do piloto.
+
+    A resposta é deliberadamente montada da configuração server-side que já
+    criou o resource server. Não aceita issuer, audience ou escopos da URL,
+    evitando que a descoberta OAuth se torne uma fonte de redirecionamento.
+    """
+    if not _pilot_user_mount_enabled():
+        return JSONResponse({"error": "not_found"}, status_code=404)
+
+    pilot_path = "/mcp/pilot/user"
+    auth_settings = build_auth_settings(
+        base_url=f"{DEFAULT_PUBLIC_BASE_URL.rstrip('/')}{pilot_path}",
+        surface="user",
+        oauth_enabled=True,
+    )
+    if auth_settings is None:  # pragma: no cover - defesa para contratos futuros
+        return JSONResponse({"error": "oauth_configuration_error"}, status_code=503)
+
+    return JSONResponse(
+        {
+            "resource": auth_settings.resource_server_url,
+            "authorization_servers": [auth_settings.issuer_url],
+            "scopes_supported": ["mcp:access", "mcp:user"],
+            "bearer_methods_supported": ["header"],
+        }
+    )
+
+
 def create_http_app() -> Starlette:
     user_app = build_surface_http_app("user")
     admin_app = build_surface_http_app("admin")
@@ -236,6 +265,16 @@ def create_http_app() -> Starlette:
     routes = [
         Route("/", endpoint=_index),
         Route("/healthz", endpoint=_healthz),
+        *(
+            [
+                Route(
+                    "/.well-known/oauth-protected-resource/mcp/pilot/user",
+                    endpoint=_pilot_oauth_protected_resource,
+                )
+            ]
+            if pilot_user_app is not None
+            else []
+        ),
         Mount(_surface_mount_path("user"), app=user_app),
         Mount(_surface_mount_path("admin"), app=admin_app),
         Mount(_surface_mount_path("analytics"), app=analytics_app),

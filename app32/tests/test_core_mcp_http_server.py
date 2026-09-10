@@ -6,6 +6,7 @@ import json
 import pytest
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
+from starlette.testclient import TestClient
 
 import src.core.mcp_http_server as http_server
 
@@ -73,3 +74,33 @@ def test_pilot_oauth_route_is_opt_in_and_does_not_replace_user_surface(monkeypat
 
     assert "/mcp/user" in paths
     assert "/mcp/pilot/user" in paths
+
+
+def test_pilot_oauth_route_publishes_protected_resource_metadata(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", "1")
+
+    def fake_surface_app(surface: str, **kwargs):
+        return Starlette()
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    monkeypatch.setattr(
+        http_server,
+        "build_auth_settings",
+        lambda **_: SimpleNamespace(
+            resource_server_url="https://app.gestaoversus.com.br/mcp/pilot/user",
+            issuer_url="https://id.gestaoversus.com.br/realms/app32",
+        ),
+    )
+
+    app = http_server.create_http_app()
+    response = TestClient(app).get("/.well-known/oauth-protected-resource/mcp/pilot/user")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource": "https://app.gestaoversus.com.br/mcp/pilot/user",
+        "authorization_servers": ["https://id.gestaoversus.com.br/realms/app32"],
+        "scopes_supported": ["mcp:access", "mcp:user"],
+        "bearer_methods_supported": ["header"],
+    }
