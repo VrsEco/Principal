@@ -240,8 +240,11 @@ async def _pilot_oauth_protected_resource(_: Request) -> JSONResponse:
 
     return JSONResponse(
         {
-            "resource": auth_settings.resource_server_url,
-            "authorization_servers": [auth_settings.issuer_url],
+            # O SDK MCP modela URLs como ``AnyHttpUrl``. A resposta Starlette
+            # deve serializar tipos JSON primitivos para não transformar a
+            # descoberta OAuth em 500 no runtime real.
+            "resource": str(auth_settings.resource_server_url),
+            "authorization_servers": [str(auth_settings.issuer_url)],
             "scopes_supported": ["mcp:access", "mcp:user"],
             "bearer_methods_supported": ["header"],
         }
