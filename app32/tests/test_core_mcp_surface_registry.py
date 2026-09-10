@@ -405,6 +405,56 @@ def test_user_surface_manifest_exposes_strategy_maturation_tools_to_cliente_harn
     assert "review_strategy_maturation_item_tool" in tool_names
 
 
+def test_user_surface_manifest_exposes_sapiens_cliente_bootstrap_tools_from_initial_connection(monkeypatch):
+    """Evita regressão tools/list antes do primeiro bootstrap do cliente."""
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: MCPExecutionContext(
+            user_id=22,
+            company_id=1,
+            employee_id=None,
+            role="cliente",
+            channel="claude_remote",
+            thread_id=None,
+            accessible_company_ids=(1,),
+            permissions=(),
+            metadata={
+                "surface": "user",
+                "transport": "streamable_http",
+                "client": "codex",
+                "runtime_profile": "squad_cliente",
+                "actor_type": "client_agent",
+                "harness_key": "harness_coordenador_cliente_v1",
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+    )
+
+    manifest = registry.get_surface_manifest("user", include_tools=True)
+    tool_names = {tool["name"] for tool in manifest["tools"]}
+    required_startup_tools = {
+        "bootstrap_session_context",
+        "describe_app32_available_sapiens_squads_tool",
+        "resolve_app32_sapiens_activation_tool",
+        "resolve_app32_instruction_bundle_tool",
+        "describe_app32_squad_runtime_tool",
+        "describe_app32_profile_contracts_tool",
+        "describe_app32_surface_playbooks_tool",
+        "describe_app32_domain_playbooks_tool",
+        "describe_app32_release_checklist_tool",
+        "describe_app32_tool_freeze_procedure_tool",
+        "describe_app32_external_ai_onboarding_tool",
+    }
+
+    assert required_startup_tools <= tool_names
+    # É tool sintética da surface, registrada fora do capability manifest.
+    mcp = _FakeMCP()
+    registry.register_user_mcp_tools(mcp, include_shared_registrars=False)
+    assert "list_user_app32_capabilities" in mcp.registered
+    assert "describe_app32_operational_readiness_tool" not in tool_names
+
 
 def test_user_surface_manifest_exposes_consultive_read_tools_to_cliente_harness(monkeypatch):
     monkeypatch.setattr(

@@ -68,3 +68,9 @@ Quando o operador estiver no APP32, a entrada visual oficial passa a ser a aba `
 5. Informar em toda entrega: estado do handoff, evidências, pendências e próximo responsável.
 6. Não registrar validação por outro squad, não converter hipótese em dado canônico e não declarar ação indisponível como executada.
 7. Se houver bloqueio técnico, escalar à Engenharia; se houver método, maturidade ou redesenho, escalar ao Squad Versus.
+
+---
+
+## 6. Revisão 2026-09-10 — preflight verificável
+
+Antes da resposta de boas-vindas, confirmar que o `tools/list` contém as tools de bootstrap declaradas pela conexão. Se qualquer uma estiver ausente, não declarar o Sapiens ativo; registrar `capability_not_available` e escalar à Engenharia. Reabrir a conexão somente após publicação corrigida no servidor.

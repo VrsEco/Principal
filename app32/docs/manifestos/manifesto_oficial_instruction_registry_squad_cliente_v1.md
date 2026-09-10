@@ -32,3 +32,9 @@ O Instruction Registry do `Squad Cliente` existe para entregar **governança ins
 ## Princípio da condução sem usurpação
 
 O Squad Cliente conduz perguntas, contexto, pesquisa e preparação. Ele não usurpa a validação do Squad Versus, a decisão do Consultor ou a execução da Engenharia. Toda passagem de responsabilidade deve ser explícita, tenant-safe e verificável.
+
+---
+
+## Revisão 2026-09-10 — catálogo antes do prompt
+
+Nenhuma instrução pode depender de uma tool que a conexão inicial não publique. O bootstrap do `Sapiens Cliente` é leitura da própria sessão autenticada, disponível já no primeiro `tools/list`, sem ampliar a surface `user`.

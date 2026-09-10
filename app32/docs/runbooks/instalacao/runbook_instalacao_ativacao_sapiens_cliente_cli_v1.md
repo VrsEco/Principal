@@ -453,3 +453,9 @@ Este runbook foi consolidado a partir de:
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\harnesses_oficiais_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\spec\squad_cliente\matriz_autonomia_agentes_squad_cliente_v1.md`
 - `C:\GestaoVersus\app32\app32\docs\playbooks\squad_cliente\playbook_handoff_escalonamento_squad_cliente_v1.md`
+
+---
+
+## 9. Revisão 2026-09-10 — smoke de catálogo inicial
+
+Antes de ativar, confirmar no primeiro `tools/list`: `bootstrap_session_context`, `describe_app32_available_sapiens_squads_tool`, `resolve_app32_sapiens_activation_tool`, `resolve_app32_instruction_bundle_tool`, `describe_app32_squad_runtime_tool`, `list_user_app32_capabilities`, contratos e playbooks. Ausência de qualquer item bloqueia a ativação; desconectar e reconectar depois da correção publicada.

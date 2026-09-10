@@ -219,3 +219,9 @@ A instalação está aprovada quando:
 3. o Claude Desktop reabre com `Sapiens Cliente` ativo;
 4. `Sapiens On` executa o bootstrap real;
 5. a sessão expõe `Squad Cliente`, `surface=user` e `harness_coordenador_cliente_v1`.
+
+---
+
+## Revisão 2026-09-10 — catálogo completo antes da ativação
+
+Na conversa nova, valide no primeiro `tools/list` também `describe_app32_profile_contracts_tool`, `describe_app32_surface_playbooks_tool`, `describe_app32_domain_playbooks_tool`, `describe_app32_release_checklist_tool`, `describe_app32_tool_freeze_procedure_tool` e `describe_app32_external_ai_onboarding_tool`. Só apresente `Sapiens Cliente Ativado` após todas as leituras obrigatórias concluírem.
