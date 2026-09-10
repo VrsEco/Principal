@@ -89,3 +89,10 @@ app31/
 **/request_debug.log
 **/uwsgi_app.log
 app32/tests/e2e/outputs/
+
+# Runtime persistente do Configr: preservar estado operacional fora do Git,
+# mesmo com a regra histórica `!*/` acima.
+/app32/instance/
+/app32/uploads/uploads/
+/app32/instance/**
+/app32/uploads/uploads/**
