@@ -261,6 +261,39 @@ def create_app(config_name=None):
             }
         ), 200
 
+    @app.get("/.well-known/oauth-protected-resource/mcp/pilot/user")
+    def oauth_pilot_protected_resource_metadata():
+        """Espelha a descoberta RFC 9728 quando o proxy entrega well-known ao Flask.
+
+        O Configr encaminha apenas ``/mcp/`` ao processo MCP; por isso a
+        descoberta pública não pode depender de uma alteração manual no nginx.
+        O contrato continua sendo montado pela mesma configuração OAuth usada
+        pelo resource server e só existe para a coorte piloto explicitamente
+        habilitada.
+        """
+        if not _env_flag("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", default=False):
+            return jsonify({"error": "not_found"}), 404
+
+        from src.core.mcp_http_auth import build_auth_settings
+
+        public_base_url = os.environ.get("APP32_MCP_PUBLIC_BASE_URL", "https://app.gestaoversus.com.br")
+        auth_settings = build_auth_settings(
+            base_url=f"{public_base_url.rstrip('/')}/mcp/pilot/user",
+            surface="user",
+            oauth_enabled=True,
+        )
+        if auth_settings is None:  # pragma: no cover - defesa para contratos futuros
+            return jsonify({"error": "oauth_configuration_error"}), 503
+
+        return jsonify(
+            {
+                "resource": str(auth_settings.resource_server_url),
+                "authorization_servers": [str(auth_settings.issuer_url)],
+                "scopes_supported": ["mcp:access", "mcp:user"],
+                "bearer_methods_supported": ["header"],
+            }
+        ), 200
+
     @app.context_processor
     def inject_static_asset_version():
         def static_asset_version(filename: str) -> str:
@@ -591,7 +624,7 @@ def create_app(config_name=None):
         
         # Public endpoints that don't require authentication
         public_endpoints = ['auth.login', 'static', 'telegram.telegram_webhook']
-        public_endpoints.append('healthz')
+        public_endpoints.extend(['healthz', 'oauth_pilot_protected_resource_metadata'])
         if app.config.get("DEV_ROUTES_ENABLED"):
             public_endpoints.extend(['dev.seed_demo', 'dev.debug_routes', 'dev.ping_dependencies', 'dev.trigger_proactive'])
         
