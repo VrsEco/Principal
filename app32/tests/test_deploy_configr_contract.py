@@ -14,6 +14,9 @@ def test_configr_deploy_targets_versioned_app_directory_and_fails_on_drift():
     assert 'APP="$WWW/app32"' in content
     assert 'git -C "$REPO" status --porcelain' in content
     assert 'git -C "$REPO" reset --hard origin/main' in content
+    assert 'DEPLOY_ALLOW_DIRTY' in content
+    assert 'DEPLOY_DIRTY_SNAPSHOT' in content
+    assert '"$BASE"/backups/*' in content
     assert content.index('git -C "$REPO" status --porcelain') < content.index(
         'git -C "$REPO" reset --hard origin/main'
     )
