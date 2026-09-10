@@ -8,7 +8,9 @@ Classe documental: `Runbook`
 2. Gerar backup de produção conforme `backup_producao_configr.md` e registrar o artefato.
 3. Confirmar que o worktree remoto está limpo. Se não estiver, parar: preservar e
    reconciliar o drift em tarefa própria; nunca executar `reset --hard` sobre ele.
-4. Confirmar que o checkout contém `app32/app.py` e `app32/requirements.txt`.
+4. Confirmar que `$WWW` é a raiz Git e que contém `app32/app.py` e
+   `app32/requirements.txt`; não executar Git a partir do subdiretório da
+   aplicação como se ele fosse checkout independente.
 
 ## Decisão de reconciliação vigente
 

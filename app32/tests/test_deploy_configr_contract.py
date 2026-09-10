@@ -10,8 +10,8 @@ DEPLOY_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "deploy_config
 def test_configr_deploy_targets_versioned_app_directory_and_fails_on_drift():
     content = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
-    assert 'REPO="$WWW/app32"' in content
-    assert 'APP="$REPO/app32"' in content
+    assert 'REPO="$WWW"' in content
+    assert 'APP="$WWW/app32"' in content
     assert 'git -C "$REPO" status --porcelain' in content
     assert 'git -C "$REPO" reset --hard origin/main' in content
     assert content.index('git -C "$REPO" status --porcelain') < content.index(
@@ -27,7 +27,7 @@ def test_configr_deploy_validates_isolated_versioned_runtime(tmp_path):
     if not bash.exists() or shutil.which("git") is None:
         return
 
-    repo = tmp_path / "www" / "app32"
+    repo = tmp_path / "www"
     app = repo / "app32"
     app.mkdir(parents=True)
     (app / "app.py").write_text("application = object()\n", encoding="utf-8")

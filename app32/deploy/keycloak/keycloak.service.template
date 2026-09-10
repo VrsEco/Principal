@@ -1,0 +1,22 @@
+[Unit]
+Description=Keycloak identity provider for Gestão Versus
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=keycloak
+Group=keycloak
+WorkingDirectory=/opt/keycloak
+EnvironmentFile=/etc/gestao-versus/keycloak.env
+ExecStart=/opt/keycloak/bin/kc.sh start --optimized
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/keycloak/data
+
+[Install]
+WantedBy=multi-user.target

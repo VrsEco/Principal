@@ -11,11 +11,11 @@ set -e
 # produção, a ausência da flag preserva o caminho canônico do Configr.
 BASE="${APP32_DEPLOY_BASE:-/srv/appgestaoversuscombr.45a4cd4b.configr.cloud}"
 WWW="$BASE/www"
-# O repositório é sincronizado em $REPO e o aplicativo Flask versionado vive
-# explicitamente em $APP. Nunca assumir que a raiz do checkout é o runtime:
-# isso evita publicar uma cópia histórica/duplicada do código.
-REPO="$WWW/app32"
-APP="$REPO/app32"
+# O checkout Git do Configr fica em $WWW; o runtime Flask versionado é seu
+# subdiretório $APP. Nunca tratar $APP como raiz Git: o host mantém assets
+# irmãos em $WWW e o reset precisa operar sobre a árvore realmente versionada.
+REPO="$WWW"
+APP="$WWW/app32"
 PYTHON="$BASE/.virtualenv/3.12/bin/python"
 PIP="$BASE/.virtualenv/3.12/bin/pip"
 DEPLOY_LOG_DIR="${APP32_DEPLOY_LOG_DIR:-$BASE/logs/app32}"
