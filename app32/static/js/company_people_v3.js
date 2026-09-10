@@ -122,52 +122,34 @@
     words.forEach(word => { const next = line ? `${line} ${word}` : word; if (line && next.length > maxLength) { lines.push(line); line = word; } else line = next; });
     if (line) lines.push(line); return lines.slice(0, 2);
   }
-  function exportCardSize(depth) {
-    if (depth === 0) return { width: 336, height: 122 };
-    if (depth === 1) return { width: 306, height: 116 };
-    if (depth === 2) return { width: 276, height: 110 };
-    return { width: 248, height: 106 };
-  }
-  function buildExportTree(nodes, depth = 0) {
-    return (nodes || []).map(node => {
-      const expandedChildren = state.org.collapsedIds.has(Number(node.id)) ? [] : (node.children || []);
-      return { node, depth, card: exportCardSize(depth), children: buildExportTree(expandedChildren, depth + 1) };
+  function visibleOrgEntries(nodes, parentId = null, output = []) {
+    (nodes || []).forEach(node => {
+      output.push({ node, parentId });
+      if (node.children?.length && !state.org.collapsedIds.has(Number(node.id))) visibleOrgEntries(node.children, Number(node.id), output);
     });
+    return output;
   }
-  function layoutExportTree(roots) {
-    const horizontalGap = 44; const rootGap = 68; const verticalGap = 76; const levels = [];
-    const measure = entry => {
-      levels[entry.depth] = Math.max(levels[entry.depth] || 0, entry.card.height);
-      const childrenWidth = entry.children.reduce((sum, child, index) => sum + measure(child) + (index ? horizontalGap : 0), 0);
-      entry.subtreeWidth = Math.max(entry.card.width, childrenWidth || 0);
-      return entry.subtreeWidth;
-    };
-    const totalWidth = roots.reduce((sum, root, index) => sum + measure(root) + (index ? rootGap : 0), 0);
-    const levelY = []; let nextY = 0;
-    levels.forEach(height => { levelY.push(nextY); nextY += height + verticalGap; });
-    const entries = [];
-    const place = (entry, left) => {
-      entry.x = left + (entry.subtreeWidth - entry.card.width) / 2; entry.y = levelY[entry.depth]; entries.push(entry);
-      let childLeft = left;
-      entry.children.forEach(child => { place(child, childLeft); childLeft += child.subtreeWidth + horizontalGap; });
-    };
-    let rootLeft = 0; roots.forEach(root => { place(root, rootLeft); rootLeft += root.subtreeWidth + rootGap; });
-    return { entries, width: totalWidth, height: Math.max(0, nextY - verticalGap) };
-  }
-  function orgExportNodeSvg(entry, originX, originY) {
-    const { node, card, x, y } = entry; const { width, height } = card; const accent = safeOrgColor(node.color); const metricWidth = Math.max(78, Math.round(width * .3)); const metricX = width - metricWidth - 14;
-    const titleLines = svgTextLines(node.title, width < 270 ? 19 : 24); const titleMarkup = titleLines.map((line, index) => `<text x="18" y="${43 + index * 16}" fill="#10233f" font-size="${width < 270 ? 12 : 13}" font-weight="750">${esc(line)}</text>`).join('');
-    const department = String(node.department || 'Departamento não informado'); const departmentY = 54 + titleLines.length * 16;
-    const metric = (top, label, value) => `<rect x="${metricX}" y="${top}" width="${metricWidth}" height="36" rx="9" fill="#f8fbff" stroke="#dbe5f1"/><text x="${metricX + 9}" y="${top + 12}" fill="#64748b" font-size="7.5" font-weight="800" letter-spacing=".55">${label}</text><text x="${metricX + 9}" y="${top + 29}" fill="#10233f" font-size="14" font-weight="800">${Number(value || 0)}</text>`;
-    return `<g transform="translate(${Math.round(originX + x)},${Math.round(originY + y)})" filter="url(#app32NodeShadow)"><rect width="${width}" height="${height}" rx="15" fill="#ffffff" stroke="#d8e4f1"/><rect width="6" height="${height}" rx="3" fill="${accent}"/><text x="18" y="21" fill="#2563eb" font-size="8" font-weight="800" letter-spacing="1">CARGO</text>${titleMarkup}<text x="18" y="${departmentY}" fill="#52657d" font-size="10.5">${esc(department.length > 34 ? `${department.slice(0, 31)}…` : department)}</text>${metric(18, 'PREVISTOS', node.headcount_planned)}${metric(64, 'EFETIVOS', node.active_employee_count)}</g>`;
+  function orgExportNodeSvg(item, originX, originY) {
+    const { node, x, y, width, height } = item; const accent = safeOrgColor(node.color); const metricWidth = Math.max(58, Math.min(90, Math.round(width * .3))); const metricX = width - metricWidth - 10;
+    const titleLines = svgTextLines(node.title, width < 260 ? 16 : 22); const titleMarkup = titleLines.map((line, index) => `<text x="16" y="${42 + index * 15}" fill="#10233f" font-size="${width < 260 ? 10.5 : 12.5}" font-weight="750">${esc(line)}</text>`).join('');
+    const department = String(node.department || 'Departamento não informado'); const departmentY = Math.min(height - 10, 48 + titleLines.length * 15); const metricHeight = Math.max(26, Math.floor((height - 30) / 2)); const secondMetricY = 12 + metricHeight + 6;
+    const metric = (top, label, value) => `<rect x="${metricX}" y="${top}" width="${metricWidth}" height="${metricHeight}" rx="8" fill="#f8fbff" stroke="#dbe5f1"/><text x="${metricX + 7}" y="${top + 9}" fill="#64748b" font-size="6.8" font-weight="800" letter-spacing=".4">${label}</text><text x="${metricX + 7}" y="${top + metricHeight - 6}" fill="#10233f" font-size="${height < 98 ? 11.5 : 13.5}" font-weight="800">${Number(value || 0)}</text>`;
+    return `<g transform="translate(${Math.round(originX + x)},${Math.round(originY + y)})" filter="url(#app32NodeShadow)"><rect width="${Math.round(width)}" height="${Math.round(height)}" rx="14" fill="#ffffff" stroke="#d8e4f1"/><rect width="5" height="${Math.round(height)}" rx="2.5" fill="${accent}"/><text x="16" y="20" fill="#2563eb" font-size="7.5" font-weight="800" letter-spacing=".9">CARGO</text>${titleMarkup}<text x="16" y="${departmentY}" fill="#52657d" font-size="9.5">${esc(department.length > 30 ? `${department.slice(0, 27)}…` : department)}</text>${metric(12, 'PREVISTOS', node.headcount_planned)}${metric(secondMetricY, 'EFETIVOS', node.active_employee_count)}</g>`;
   }
   function buildOrgChartSvg() {
-    const roots = buildExportTree(filterOrgTree(state.workspace?.roles_tree || [])); if (!roots.length) throw new Error('Nenhum cargo disponível para exportação.');
-    const layout = layoutExportTree(roots); const padding = 56; const headerHeight = 150; const footerHeight = 54; const contentWidth = Math.max(860, Math.ceil(layout.width)); const treeOriginX = padding + Math.max(0, (contentWidth - layout.width) / 2); const treeOriginY = padding + headerHeight + 50;
-    const width = contentWidth + padding * 2; const height = Math.ceil(treeOriginY + layout.height + footerHeight + padding); const planned = byId('peopleOrgTotalPlanned')?.textContent?.trim() || '0'; const effective = byId('peopleOrgTotalEffective')?.textContent?.trim() || '0'; const companyName = root.dataset.companyName || 'Empresa';
-    const byRoleId = new Map(layout.entries.map(entry => [Number(entry.node.id), entry]));
-    const connectors = layout.entries.filter(entry => entry.node.parent_role_id != null && byRoleId.has(Number(entry.node.parent_role_id))).map(entry => { const parent = byRoleId.get(Number(entry.node.parent_role_id)); const fromX = treeOriginX + parent.x + parent.card.width / 2; const fromY = treeOriginY + parent.y + parent.card.height; const toX = treeOriginX + entry.x + entry.card.width / 2; const toY = treeOriginY + entry.y; const middleY = Math.round((fromY + toY) / 2); return `<path d="M${Math.round(fromX)} ${Math.round(fromY)}V${middleY}H${Math.round(toX)}V${Math.round(toY)}" fill="none" stroke="#9fb2c8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`; }).join('');
-    const cards = layout.entries.map(entry => orgExportNodeSvg(entry, treeOriginX, treeOriginY)).join(''); const generatedAt = new Intl.DateTimeFormat('pt-BR').format(new Date()); const metricsX = padding + contentWidth - 222;
+    const treeShell = byId('peopleOrgTreeShell'); if (!treeShell) throw new Error('Organograma não encontrado para exportação.');
+    const entries = visibleOrgEntries(filterOrgTree(state.workspace?.roles_tree || [])); const shellRect = treeShell.getBoundingClientRect(); const scale = Math.max(.01, state.org.scale);
+    const rendered = entries.map(entry => {
+      const element = document.querySelector(`[data-people-org-node="${entry.node.id}"]`); if (!element) return null;
+      const rect = element.getBoundingClientRect(); return { ...entry, x: (rect.left - shellRect.left) / scale, y: (rect.top - shellRect.top) / scale, width: rect.width / scale, height: rect.height / scale };
+    }).filter(Boolean);
+    if (!rendered.length) throw new Error('Nenhum cargo disponível para exportação.');
+    const minX = Math.min(...rendered.map(item => item.x)); const minY = Math.min(...rendered.map(item => item.y)); const maxX = Math.max(...rendered.map(item => item.x + item.width)); const maxY = Math.max(...rendered.map(item => item.y + item.height));
+    const padding = 56; const headerHeight = 150; const footerHeight = 54; const contentWidth = Math.max(860, Math.ceil(maxX - minX)); const treeOriginX = padding - minX; const treeOriginY = padding + headerHeight + 46 - minY;
+    const width = contentWidth + padding * 2; const height = Math.ceil(treeOriginY + maxY + footerHeight + padding); const planned = byId('peopleOrgTotalPlanned')?.textContent?.trim() || '0'; const effective = byId('peopleOrgTotalEffective')?.textContent?.trim() || '0'; const companyName = root.dataset.companyName || 'Empresa';
+    const byRoleId = new Map(rendered.map(entry => [Number(entry.node.id), entry]));
+    const connectors = rendered.filter(entry => entry.parentId != null && byRoleId.has(Number(entry.parentId))).map(entry => { const parent = byRoleId.get(Number(entry.parentId)); const fromX = treeOriginX + parent.x + parent.width / 2; const fromY = treeOriginY + parent.y + parent.height; const toX = treeOriginX + entry.x + entry.width / 2; const toY = treeOriginY + entry.y; const middleY = Math.round((fromY + toY) / 2); return `<path d="M${Math.round(fromX)} ${Math.round(fromY)}V${middleY}H${Math.round(toX)}V${Math.round(toY)}" fill="none" stroke="#8fa6bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`; }).join('');
+    const cards = rendered.map(entry => orgExportNodeSvg(entry, treeOriginX, treeOriginY)).join(''); const generatedAt = new Intl.DateTimeFormat('pt-BR').format(new Date()); const metricsX = padding + contentWidth - 222;
     const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><defs><linearGradient id="app32ExportHeader" x1="0" x2="1"><stop stop-color="#f7faff"/><stop offset="1" stop-color="#edf5ff"/></linearGradient><filter id="app32NodeShadow" x="-10%" y="-15%" width="120%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#17365d" flood-opacity=".12"/></filter></defs><rect width="100%" height="100%" fill="#f5f8fc"/><rect x="${padding}" y="${padding}" width="${contentWidth}" height="${height - padding * 2}" rx="24" fill="#ffffff" stroke="#dbe5f1"/><g font-family="Inter, Arial, sans-serif"><rect x="${padding}" y="${padding}" width="${contentWidth}" height="${headerHeight}" rx="24" fill="url(#app32ExportHeader)"/><path d="M${padding + 24} ${padding + 24}H${padding + 74}" stroke="#2563eb" stroke-width="4" stroke-linecap="round"/><text x="${padding + 24}" y="${padding + 54}" fill="#2563eb" font-size="10" font-weight="800" letter-spacing="1.3">GESTÃO VERSUS · ESTRUTURA ORGANIZACIONAL</text><text x="${padding + 24}" y="${padding + 88}" fill="#10233f" font-size="26" font-weight="800">Organograma organizacional</text><text x="${padding + 24}" y="${padding + 113}" fill="#52657d" font-size="14">${esc(companyName)}</text><text x="${padding + 24}" y="${padding + 133}" fill="#7a8ba1" font-size="10.5">Atualizado em ${generatedAt}</text><rect x="${metricsX}" y="${padding + 34}" width="96" height="78" rx="14" fill="#ffffff" stroke="#dbe5f1"/><text x="${metricsX + 14}" y="${padding + 59}" fill="#64748b" font-size="9" font-weight="800" letter-spacing=".8">PREVISTOS</text><text x="${metricsX + 14}" y="${padding + 91}" fill="#10233f" font-size="24" font-weight="800">${esc(planned)}</text><rect x="${metricsX + 108}" y="${padding + 34}" width="96" height="78" rx="14" fill="#ffffff" stroke="#dbe5f1"/><text x="${metricsX + 122}" y="${padding + 59}" fill="#64748b" font-size="9" font-weight="800" letter-spacing=".8">EFETIVOS</text><text x="${metricsX + 122}" y="${padding + 91}" fill="#10233f" font-size="24" font-weight="800">${esc(effective)}</text>${connectors}${cards}<path d="M${padding + 28} ${height - padding - 34}H${width - padding - 28}" stroke="#e3ebf4"/><text x="${width / 2}" y="${height - padding - 14}" fill="#71839a" font-size="10.5" text-anchor="middle">Gestão Versus · Estrutura organizacional da empresa</text></g></svg>`;
     return { svg, width, height };
   }

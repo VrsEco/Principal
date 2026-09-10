@@ -3,7 +3,7 @@
 {% block page_title %}Sistema / Pessoas{% endblock %}
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/company_people_v3.css', v='20260910_people_org_export_v2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/company_people_v3.css', v='20260910_people_org_hierarchy_v3') }}">
 {% endblock %}
 {% block content %}
 <main class="people-page" data-company-id="{{ company.id }}" data-company-name="{{ company.name }}" data-can-manage="{{ 'true' if can_manage_people else 'false' }}" data-can-view-costs="{{ 'true' if can_view_costs else 'false' }}">
@@ -100,5 +100,5 @@
   {% if can_manage_costs %}<dialog id="peopleCostDialog" class="people-dialog"><form id="peopleCostForm" class="people-dialog__panel" novalidate><header><div><span class="people-kicker">Custos planejados</span><h2>Cadastrar custo por cargo</h2><p>Estimativa mensal por profissional equivalente, válida no período informado.</p></div><button class="people-dialog__close" type="button" data-people-close="peopleCostDialog" aria-label="Fechar">×</button></header><div class="people-form-grid"><label>Cargo *<select id="peopleCostRole" class="form-control" required><option value="">Selecione um cargo</option></select></label><label>Moeda *<input id="peopleCostCurrency" class="form-control" value="BRL" pattern="[A-Z]{3}" maxlength="3" required></label><label>Início *<input id="peopleCostStart" class="form-control" type="date" required></label><label>Fim exclusivo<input id="peopleCostEnd" class="form-control" type="date"></label><label>Salário-base estimado<input id="peopleCostBaseSalary" class="form-control" type="number" min="0" step="0.01"></label><label>Encargos estimados<input id="peopleCostCharges" class="form-control" type="number" min="0" step="0.01"></label><label>Benefícios estimados<input id="peopleCostBenefits" class="form-control" type="number" min="0" step="0.01"></label><label>Outros custos<input id="peopleCostOtherCosts" class="form-control" type="number" min="0" step="0.01"></label></div><p class="people-status" id="peopleCostFormStatus"></p><footer><button class="btn btn-secondary" type="button" data-people-close="peopleCostDialog">Cancelar</button><button class="btn btn-special" type="submit">Salvar custo planejado</button></footer></form></dialog>{% endif %}
   {% endif %}
 </main>
-<script src="{{ url_for('static', filename='js/company_people_v3.js', v='20260910_people_org_export_v2') }}"></script>
+<script src="{{ url_for('static', filename='js/company_people_v3.js', v='20260910_people_org_hierarchy_v3') }}"></script>
 {% endblock %}
