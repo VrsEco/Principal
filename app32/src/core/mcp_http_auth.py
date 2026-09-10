@@ -659,7 +659,7 @@ def resolve_request_identity(request: Request, *, surface: McpSurface | str, oau
     token = extract_bearer_token(request)
     if not token:
         return None
-    if oauth_transport_enabled_for_surface(surface):
+    if oauth_transport_enabled_for_surface(surface, forced=oauth_enabled):
         # Coorte OAuth é exclusiva por surface. Um JWT rejeitado, uma
         # identidade não vinculada ou um scope insuficiente nunca passa para
         # APP32_MCP_HTTP_TOKEN nem para user_mcp_tokens.

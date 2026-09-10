@@ -1018,3 +1018,43 @@ def test_forced_oauth_verifier_isolated_from_legacy_user_surface(monkeypatch):
     assert token.client_id == "pilot-client"
     assert token.subject == "pilot-subject"
     assert module.oauth_transport_enabled_for_surface("user") is False
+
+
+def test_forced_oauth_middleware_keeps_oauth_identity_for_context_payload(monkeypatch):
+    """A rota piloto não pode reavaliar seu JWT pelo caminho legado."""
+    from types import SimpleNamespace
+
+    module = _reload_auth(monkeypatch)
+
+    oauth_identity = module.App32McpHttpIdentity(
+        token="pilot-jwt",
+        user_id=49,
+        principal_id=91,
+        company_id=None,
+        fallback_role="colaborador",
+        allowed_surfaces=("user",),
+        subject_type="USER",
+        issuer="https://id.example/realms/app32",
+        subject="pilot-subject",
+        auth_method="oauth_oidc_bearer",
+        scopes=("mcp:access", "mcp:user"),
+        client_id="pilot-client",
+    )
+
+    monkeypatch.setattr(
+        module,
+        "_resolve_oauth_identity",
+        lambda **_: SimpleNamespace(identity=oauth_identity, error=None, detail=None, status_code=200),
+    )
+
+    async def endpoint(request: Request):
+        return JSONResponse(request.scope["app32_mcp_context"])
+
+    app = Starlette(routes=[])
+    app.add_route("/", endpoint)
+    app.add_middleware(module.App32MCPRequestContextMiddleware, surface="user", oauth_enabled=True)
+    response = TestClient(app).get("/", headers={"Authorization": "Bearer pilot-jwt"})
+
+    assert response.status_code == 200
+    assert response.json()["principal_id"] == 91
+    assert response.json()["auth_method"] == "oauth_oidc_bearer"
