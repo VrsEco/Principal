@@ -261,7 +261,14 @@ def create_http_app() -> Starlette:
     @asynccontextmanager
     async def lifespan(app: Starlette):
         async with AsyncExitStack() as stack:
-            for surface_app in (user_app, admin_app, analytics_app, ops_app):
+            # A coorte piloto é uma aplicação FastMCP independente, portanto
+            # também precisa inicializar seu StreamableHTTP session manager.
+            # Sem isso o bearer OAuth é aceito, mas o primeiro initialize
+            # falha em runtime com "Task group is not initialized".
+            surface_apps = (user_app, admin_app, analytics_app, ops_app)
+            if pilot_user_app is not None:
+                surface_apps += (pilot_user_app,)
+            for surface_app in surface_apps:
                 await stack.enter_async_context(surface_app.router.lifespan_context(surface_app))
             yield
 

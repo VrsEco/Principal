@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import json
 
 import pytest
@@ -74,6 +75,33 @@ def test_pilot_oauth_route_is_opt_in_and_does_not_replace_user_surface(monkeypat
 
     assert "/mcp/user" in paths
     assert "/mcp/pilot/user" in paths
+
+
+def test_pilot_oauth_route_initializes_its_own_lifespan(monkeypatch):
+    """Evita 500 no initialize por task group não inicializado no piloto."""
+    monkeypatch.setenv("APP32_MCP_OIDC_PILOT_ROUTE_ENABLED", "1")
+    entered: list[tuple[str, bool | None]] = []
+
+    def fake_surface_app(surface: str, **kwargs):
+        app = Starlette()
+
+        @asynccontextmanager
+        async def lifespan(_):
+            entered.append((surface, kwargs.get("oauth_enabled")))
+            yield
+
+        app.router.lifespan_context = lifespan
+        return app
+
+    monkeypatch.setattr(http_server, "build_surface_http_app", fake_surface_app)
+    app = http_server.create_http_app()
+
+    with TestClient(app):
+        pass
+
+    assert entered.count(("user", None)) == 1
+    assert ("user", True) in entered
+    assert {surface for surface, _ in entered} == {"user", "admin", "analytics", "ops"}
 
 
 def test_pilot_oauth_route_publishes_protected_resource_metadata(monkeypatch):
