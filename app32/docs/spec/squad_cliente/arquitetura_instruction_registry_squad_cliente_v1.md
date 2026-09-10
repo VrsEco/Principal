@@ -222,3 +222,11 @@ Para cada nova solicitação operacional, o bundle do Squad Cliente deve instrui
 7. fazer uma única pergunta objetiva se `route_status=needs_input` ou `unsupported_fast_fallback`.
 
 Essa regra pertence à camada runtime/global e não pode ser relaxada por override tenant.
+
+---
+
+## 14. Revisão 2026-09-10 — contrato de catálogo inicial
+
+As tools de bootstrap do `Sapiens Cliente` são capabilities de leitura da sessão (`identity_self_service.read`) e precisam estar disponíveis no primeiro `tools/list` para `cliente` + `surface=user` + `harness_coordenador_cliente_v1`. Incluem `bootstrap_session_context`, descoberta/resolução de ativação, bundle, runtime, capabilities, contratos e playbooks. Elas não elevam privilégios nem autorizam operação administrativa.
+
+`describe_app32_release_checklist_tool`, `describe_app32_tool_freeze_procedure_tool` e `describe_app32_external_ai_onboarding_tool` permanecem somente leitura; sua presença no bootstrap serve à instrução governada e não concede administração.

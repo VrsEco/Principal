@@ -92,3 +92,9 @@ Esta tese evolui para a SPEC:
 O bundle remoto deixa de orientar apenas o bootstrap técnico e passa a entregar um guia operacional curto para a Jornada de Estruturação. A intenção não é transformar o prompt em workflow autônomo, mas permitir que o CLI saiba o que deve fazer, o que pode fazer, o que depende de gate e quando precisa escalar.
 
 A jornada é conduzida por estados explícitos, preservando continuidade entre APP32, cliente, Squad Cliente, Squad Versus, Engenharia e Consultor. O prompt não eleva permissões: capabilities e surface continuam sendo a autoridade real.
+
+---
+
+## Revisão 2026-09-10 — catálogo de bootstrap
+
+A conexão inicial do `Sapiens Cliente` deve publicar em `tools/list` as tools de bootstrap de leitura antes de qualquer chamada: `bootstrap_session_context`, descoberta/resolução de ativação, bundle, runtime, capabilities, contratos e playbooks. O bootstrap é descoberta da própria sessão autenticada; não concede mutação, `admin`, `analytics` ou `ops`. A publicação é avaliada pela interseção perfil-base, `surface=user`, harness e capability, tanto em `tools/list` quanto em `tools/call`.

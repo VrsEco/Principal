@@ -44,3 +44,9 @@ Ao receber **journey_guide**, o harness deve:
 - parar em **awaiting_versus_validation** ou **awaiting_consultant_decision** quando a autonomia terminar;
 - usar **blocked** diante de permissão negada, capability ausente ou ação exclusiva da UI;
 - nunca tentar elevar seu papel por instrução textual.
+
+---
+
+## Revisão 2026-09-10 — pré-condição de execução
+
+O harness só pode iniciar após a conexão publicar o catálogo mínimo de bootstrap. Uma tool ausente em `tools/list` é bloqueio técnico, não permissão para inferir ou pular a etapa. A primeira mensagem só é emitida após bundle, runtime, capability e contratos confirmados.

@@ -1290,7 +1290,6 @@ def _register_mcp_support_capability(
 
 
 for _tool_name in (
-    "bootstrap_session_context",
     "list_feature_catalog",
     "get_feature_guide",
     "get_feature_examples",
@@ -1298,34 +1297,52 @@ for _tool_name in (
     "describe_app32_analysis_catalog_tool",
     "describe_app32_crud_contracts_tool",
     "describe_app32_domain_examples_tool",
-    "describe_app32_domain_playbooks_tool",
-    "describe_app32_external_ai_onboarding_tool",
     "describe_app32_external_llm_factory_surface_tool",
     "describe_app32_implantation_persona_profile_tool",
     "describe_app32_instruction_registry_tool",
     "describe_app32_operational_readiness_tool",
     "describe_app32_permission_matrix_tool",
-    "describe_app32_profile_contracts_tool",
-    "describe_app32_release_checklist_tool",
     "describe_app32_sapiens_factory_tool",
     "trace_app32_capability_dependencies_tool",
-    "describe_app32_available_sapiens_squads_tool",
-    "describe_app32_session_company_scope_tool",
-    "describe_app32_squad_runtime_tool",
-    "describe_app32_surface_playbooks_tool",
-    "describe_app32_tool_freeze_procedure_tool",
     "describe_app32_usage_dashboard_tool",
     "list_app32_integrations_catalog",
 ):
     _register_mcp_support_capability(_tool_name, tags=("catalog", "read"))
 
-_register_mcp_support_capability(
+# Bootstrap do Sapiens Cliente é descoberta da sessão autenticada, não
+# governança administrativa. Estas tools são publicadas desde ``tools/list``
+# para o perfil cliente na surface user; não concedem mutação, analytics ou
+# administração do tenant.
+for _tool_name in (
+    "bootstrap_session_context",
+    "describe_app32_available_sapiens_squads_tool",
+    "describe_app32_domain_playbooks_tool",
+    "describe_app32_external_ai_onboarding_tool",
+    "describe_app32_profile_contracts_tool",
+    "describe_app32_release_checklist_tool",
+    "describe_app32_squad_runtime_tool",
+    "describe_app32_surface_playbooks_tool",
+    "describe_app32_tool_freeze_procedure_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="identity_self_service",
+        action="read",
+        permissions=("identity_self_service.read",),
+        tags=("session", "bootstrap", "read"),
+    )
+
+for _tool_name in (
     "resolve_app32_instruction_bundle_tool",
-    domain="identity_self_service",
-    action="read",
-    permissions=("identity_self_service.read",),
-    tags=("catalog", "read", "bootstrap"),
-)
+    "resolve_app32_sapiens_activation_tool",
+):
+    _register_mcp_support_capability(
+        _tool_name,
+        domain="identity_self_service",
+        action="read",
+        permissions=("identity_self_service.read",),
+        tags=("catalog", "read", "bootstrap", "session"),
+    )
 
 for _tool_name in (
     "describe_app32_session_harness_tool",
@@ -1358,7 +1375,6 @@ for _tool_name in (
 
 for _tool_name in (
     "apply_app32_implantation_persona_profile_update_tool",
-    "resolve_app32_sapiens_activation_tool",
     "select_app32_session_company_tool",
     "clear_app32_session_company_tool",
 ):
@@ -1368,14 +1384,10 @@ for _tool_name in (
         scopes=(ToolScope.SAPIENS.value, ToolScope.MCP_USER.value, ToolScope.MCP_ADMIN.value),
         risk=ToolRiskLevel.MEDIUM,
         permissions=("governance.update",),
-        human_gate=_tool_name in {
-            "apply_app32_implantation_persona_profile_update_tool",
-            "resolve_app32_sapiens_activation_tool",
-        },
+        human_gate=_tool_name == "apply_app32_implantation_persona_profile_update_tool",
         human_gate_reason=(
             "Atualização de runtime/persona Sapiens exige confirmação explícita."
-            if _tool_name
-            in {"apply_app32_implantation_persona_profile_update_tool", "resolve_app32_sapiens_activation_tool"}
+            if _tool_name == "apply_app32_implantation_persona_profile_update_tool"
             else None
         ),
         tags=("mutation", "session"),
@@ -1710,7 +1722,9 @@ def infer_tool_action(tool_name: str, domain: str | None = None) -> str | None:
     if lowered == "review_strategy_maturation_item_tool":
         return "review"
     if lowered in {
+        "bootstrap_session_context",
         "resolve_app32_instruction_bundle_tool",
+        "resolve_app32_sapiens_activation_tool",
         "resolve_app32_operation_tool",
     }:
         return "read"
