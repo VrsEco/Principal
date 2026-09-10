@@ -55,7 +55,7 @@ def test_people_workspace_uses_the_app32_visual_composition():
     assert 'saveOccupancy' in script
     assert 'saveCost' in script
     assert "image/png" in script
-    assert "v='20260910_people_org_hierarchy_v3'" in template
+    assert "v='20260910_people_org_hierarchy_v4'" in template
     assert '.people-tabs' in stylesheet
     assert 'border-radius: 999px' in stylesheet
     assert '.people-table-wrap .table-v2 td' in stylesheet
