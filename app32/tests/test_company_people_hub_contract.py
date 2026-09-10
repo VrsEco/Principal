@@ -38,8 +38,12 @@ def test_people_workspace_uses_the_app32_visual_composition():
     assert 'people-guidance' in template
     assert 'people-journey' not in template
     assert 'data-people-org-action="fit"' in template
+    assert 'data-people-org-action="export-png"' in template
     assert 'people-org-tree-shell' in script
-    assert "v='20260910_orgchart'" in template
+    assert 'buildOrgChartSvg' in script
+    assert 'exportOrgPng' in script
+    assert "image/png" in script
+    assert "v='20260910_orgchart_export'" in template
     assert '.people-tabs' in stylesheet
     assert 'border-radius: 999px' in stylesheet
     assert '.people-table-wrap .table-v2 td' in stylesheet

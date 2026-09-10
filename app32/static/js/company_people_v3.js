@@ -101,6 +101,53 @@
     }));
     document.querySelectorAll('[data-people-org-toggle]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); const id = Number(button.dataset.peopleOrgToggle); state.org.collapsedIds.has(id) ? state.org.collapsedIds.delete(id) : state.org.collapsedIds.add(id); renderOrg(); }));
   }
+  function downloadBlob(filename, blob) {
+    const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
+    anchor.href = url; anchor.download = filename; document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1200);
+  }
+  function orgChartFilename() {
+    const name = (root.dataset.companyName || 'empresa').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+    return `${name || 'empresa'}-organograma`;
+  }
+  function setOrgExportStatus(message, isError = false) {
+    const status = byId('peopleOrgExportStatus'); if (!status) return;
+    status.hidden = !message; status.textContent = message; status.classList.toggle('is-error', isError);
+  }
+  function getOrgExportStyles() {
+    return [...document.styleSheets]
+      .filter(sheet => sheet.href?.includes('company_people_v3.css'))
+      .flatMap(sheet => { try { return [...sheet.cssRules].map(rule => rule.cssText); } catch (_) { return []; } })
+      .join('\n');
+  }
+  function buildOrgChartSvg() {
+    const treeShell = byId('peopleOrgTreeShell'); const header = document.querySelector('.people-chart-document-header'); const footer = document.querySelector('.people-chart-document-footer');
+    if (!treeShell || !header || !footer) throw new Error('Organograma não encontrado para exportação.');
+    const treeClone = treeShell.cloneNode(true); const headerClone = header.cloneNode(true); const footerClone = footer.cloneNode(true);
+    treeClone.querySelectorAll('button').forEach(button => button.remove());
+    treeClone.style.position = 'static'; treeClone.style.inset = 'auto'; treeClone.style.transform = 'none'; treeClone.style.transformOrigin = 'initial';
+    const padding = 56; const contentWidth = Math.max(760, Math.ceil(treeShell.scrollWidth));
+    const headerHeight = Math.max(100, header.scrollHeight); const footerHeight = Math.max(44, footer.scrollHeight);
+    const width = contentWidth + padding * 2; const height = Math.ceil(treeShell.scrollHeight) + headerHeight + footerHeight + padding * 2 + 32;
+    const styles = getOrgExportStyles();
+    const headerHtml = new XMLSerializer().serializeToString(headerClone); const treeHtml = new XMLSerializer().serializeToString(treeClone); const footerHtml = new XMLSerializer().serializeToString(footerClone);
+    const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;background:#fff;box-sizing:border-box;padding:${padding}px;font-family:Arial,sans-serif"><style>${styles}</style><div style="width:${contentWidth}px">${headerHtml}<div style="display:flex;justify-content:center;padding:16px 0">${treeHtml}</div>${footerHtml}</div></div></foreignObject></svg>`;
+    return { svg, width, height };
+  }
+  async function exportOrgPng() {
+    const { svg, width, height } = buildOrgChartSvg(); const maxDimension = 8192;
+    const scale = Math.min(2, maxDimension / Math.max(width, height));
+    const imageUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    try {
+      const image = await new Promise((resolve, reject) => { const source = new Image(); source.onload = () => resolve(source); source.onerror = () => reject(new Error('Não foi possível preparar a imagem do organograma.')); source.src = imageUrl; });
+      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.floor(width * scale)); canvas.height = Math.max(1, Math.floor(height * scale));
+      const context = canvas.getContext('2d'); if (!context) throw new Error('Navegador sem suporte para gerar a imagem.');
+      context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Não foi possível finalizar a imagem do organograma.');
+      downloadBlob(`${orgChartFilename()}.png`, blob);
+    } finally { URL.revokeObjectURL(imageUrl); }
+  }
   function renderOrg() {
     const target = byId('peopleOrgChart'); if (!target) return;
     const rawTree = state.workspace?.roles_tree || []; const tree = filterOrgTree(rawTree); const roles = flattenOrgTree(rawTree);
@@ -192,11 +239,18 @@
   byId('peopleOrgSearch')?.addEventListener('input', event => { state.org.search = event.target.value; renderOrg(); });
   byId('peopleOrgDepartment')?.addEventListener('change', event => { state.org.department = event.target.value; renderOrg(); });
   byId('peopleOrgLayout')?.addEventListener('change', event => { state.org.layout = event.target.value; renderOrg(); });
-  document.querySelectorAll('[data-people-org-action]').forEach(button => button.addEventListener('click', () => {
+  document.querySelectorAll('[data-people-org-action]').forEach(button => button.addEventListener('click', async () => {
     const action = button.dataset.peopleOrgAction;
     if (action === 'fit') return fitOrgTree();
     if (action === 'expand') { state.org.collapsedIds.clear(); return renderOrg(); }
     if (action === 'collapse') { flattenOrgTree(state.workspace?.roles_tree || []).filter(node => node.children?.length).forEach(node => state.org.collapsedIds.add(Number(node.id))); return renderOrg(); }
+    if (action === 'export-png') {
+      button.disabled = true; setOrgExportStatus('Gerando imagem do organograma…');
+      try { await exportOrgPng(); setOrgExportStatus('Imagem exportada com sucesso.'); }
+      catch (error) { setOrgExportStatus(error.message || 'Não foi possível exportar a imagem.', true); }
+      finally { button.disabled = false; }
+      return;
+    }
     if (action === 'zoom-in') state.org.scale = Math.min(1.5, state.org.scale + .1);
     if (action === 'zoom-out') state.org.scale = Math.max(.35, state.org.scale - .1);
     if (action === 'zoom-reset') state.org.scale = 1;

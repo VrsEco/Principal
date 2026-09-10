@@ -66,6 +66,8 @@
 .people-chart-context { display: flex; align-items: center; gap: .7rem; margin: .85rem 1.5rem 0; padding: .7rem .85rem; border: 1px solid #bfdbfe; border-radius: 12px; background: #f8fbff; }
 .people-chart-context strong { color: var(--text-primary); font-size: .86rem; }
 .people-chart-context span { color: var(--text-secondary); font-size: .8rem; }
+.people-chart-export-status { margin: .7rem 1.5rem 0; color: var(--text-secondary); font-size: .78rem; }
+.people-chart-export-status.is-error { color: #b42318; }
 .people-chart-document-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin: 1rem 1.5rem .8rem; padding: 1rem 1.15rem; border: 1px solid #dbe5f1; border-radius: 18px; background: linear-gradient(135deg, #fff, #f8fbff); }
 .people-chart-document-header__eyebrow { display: block; margin-bottom: .25rem; color: var(--primary); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .people-chart-document-header h3 { margin: 0; color: var(--text-primary); font-size: 1.2rem; line-height: 1.2; }

@@ -3,10 +3,10 @@
 {% block page_title %}Sistema / Pessoas{% endblock %}
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/company_people_v3.css', v='20260910_orgchart') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/company_people_v3.css', v='20260910_orgchart_export') }}">
 {% endblock %}
 {% block content %}
-<main class="people-page" data-company-id="{{ company.id }}" data-can-manage="{{ 'true' if can_manage_people else 'false' }}" data-can-view-costs="{{ 'true' if can_view_costs else 'false' }}">
+<main class="people-page" data-company-id="{{ company.id }}" data-company-name="{{ company.name }}" data-can-manage="{{ 'true' if can_manage_people else 'false' }}" data-can-view-costs="{{ 'true' if can_view_costs else 'false' }}">
   <section class="people-hero card" aria-label="Central de Pessoas">
     <div class="people-hero__copy">
       <span class="people-kicker">Empresa ativa</span>
@@ -65,9 +65,11 @@
           <button class="btn btn-secondary" type="button" data-people-org-action="fit">Ajustar</button>
           <button class="btn btn-secondary" type="button" data-people-org-action="expand">Expandir</button>
           <button class="btn btn-secondary" type="button" data-people-org-action="collapse">Recolher</button>
+          <button class="btn btn-secondary" type="button" data-people-org-action="export-png">Exportar imagem</button>
           <span class="people-chart-zoom"><button class="btn btn-secondary" type="button" data-people-org-action="zoom-out" aria-label="Reduzir zoom">−</button><button class="btn btn-secondary people-chart-zoom__value" id="peopleOrgZoomValue" type="button" data-people-org-action="zoom-reset">100%</button><button class="btn btn-secondary" type="button" data-people-org-action="zoom-in" aria-label="Aumentar zoom">+</button></span>
         </div>
       </div>
+      <p id="peopleOrgExportStatus" class="people-chart-export-status" role="status" aria-live="polite" hidden></p>
       <div id="peopleOrgContext" class="people-chart-context" hidden></div>
       <header class="people-chart-document-header">
         <div><span class="people-chart-document-header__eyebrow">Estrutura organizacional</span><h3>Organograma organizacional</h3><p>{{ company.name }}</p></div>
@@ -95,5 +97,5 @@
   <dialog id="peopleEmployeeDialog" class="people-dialog"><form id="peopleEmployeeForm" class="people-dialog__panel" novalidate><header><div><span class="people-kicker">Colaboradores</span><h2 id="peopleEmployeeDialogTitle">Novo colaborador</h2><p>O cadastro não cria login; a ocupação inicial é registrada no cargo escolhido.</p></div><button class="people-dialog__close" type="button" data-people-close="peopleEmployeeDialog" aria-label="Fechar">×</button></header><input id="peopleEmployeeId" type="hidden"><div class="people-form-grid"><label>Nome *<input id="peopleEmployeeName" class="form-control" maxlength="200" required></label><label>Cargo inicial *<select id="peopleEmployeeRole" class="form-control" required><option value="">Selecione um cargo</option></select></label><label>Área<input id="peopleEmployeeDepartment" class="form-control" maxlength="100"></label><label>Jornada semanal<input id="peopleEmployeeWeeklyHours" class="form-control" type="number" min="0" max="168" step="0.01"></label><label>Situação<select id="peopleEmployeeStatus" class="form-control"><option value="active">Ativo</option><option value="vacation">Férias</option><option value="inactive">Inativo</option></select></label></div><p class="people-status" id="peopleEmployeeFormStatus"></p><footer><button class="btn btn-secondary" type="button" data-people-close="peopleEmployeeDialog">Cancelar</button><button class="btn btn-special" type="submit">Salvar colaborador</button></footer></form></dialog>
   {% endif %}
 </main>
-<script src="{{ url_for('static', filename='js/company_people_v3.js', v='20260910_orgchart') }}"></script>
+<script src="{{ url_for('static', filename='js/company_people_v3.js', v='20260910_orgchart_export') }}"></script>
 {% endblock %}
