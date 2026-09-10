@@ -5,7 +5,7 @@
   const companyId = Number(root.dataset.companyId);
   const canManage = root.dataset.canManage === 'true';
   const canViewCosts = root.dataset.canViewCosts === 'true';
-  const state = { workspace: null, activeTab: 'users', roleView: 'profile', employeeView: 'profile' };
+  const state = { workspace: null, activeTab: 'users', roleView: 'profile', employeeView: 'profile', org: { collapsedIds: new Set(), layout: 'auto', scale: 1, search: '', department: '' } };
   const byId = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const profileLabel = (profile) => ({administrator: 'Administrador', client: 'Cliente', collaborator: 'Colaborador'}[profile] || 'Colaborador');
@@ -57,13 +57,59 @@
     const byIdRole = new Map(roles.map(role => [Number(role.id), role]));
     body.innerHTML = roles.length ? roles.map(role => `<tr><td><b>${esc(role.title)}</b>${state.roleView === 'profile' && role.qualification_requirements ? `<span class="people-cell-note">${esc(role.qualification_requirements)}</span>` : ''}</td><td>${esc(role.department || '—')}</td><td>${esc(byIdRole.get(Number(role.parent_role_id))?.title || '—')}</td><td>${role.headcount_planned ?? 0}</td><td>${role.active_employee_count ?? 0}</td><td>${role.vacancy_count ?? 0}</td><td class="people-actions-col">${canManage ? `<button class="people-action" type="button" data-edit-role="${role.id}">Editar</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="7">Nenhum cargo cadastrado.</td></tr>';
   }
-  function renderOrgNode(node) {
-    return `<div class="people-org-node"><div class="people-org-node__card" style="--node-color:${esc(node.color || '#2563eb')}"><strong>${esc(node.title)}</strong><span>${esc(node.department || 'Área não informada')}</span><small>${node.active_employee_count || 0} de ${node.headcount_planned || 0} ocupadas</small></div>${node.children?.length ? `<div class="people-org-children">${node.children.map(renderOrgNode).join('')}</div>` : ''}</div>`;
+  function safeOrgColor(value) { return /^#[0-9a-f]{6}$/i.test(String(value || '').trim()) ? String(value).trim() : '#D9ECFF'; }
+  function flattenOrgTree(nodes, output = []) { (nodes || []).forEach(node => { output.push(node); flattenOrgTree(node.children, output); }); return output; }
+  function hasOnlyTerminalChildren(node) { return Boolean(node?.children?.length) && node.children.every(child => !child.children?.length); }
+  function shouldStackOrgChildren(node) {
+    if (!hasOnlyTerminalChildren(node)) return false;
+    if (state.org.layout === 'horizontal') return false;
+    if (state.org.layout === 'terminal-stacked') return true;
+    return node.children.length >= 3;
+  }
+  function filterOrgTree(nodes) {
+    const search = state.org.search.trim().toLocaleLowerCase('pt-BR');
+    return (nodes || []).reduce((result, node) => {
+      const children = filterOrgTree(node.children || []);
+      const matchesSearch = !search || `${node.title || ''} ${node.department || ''}`.toLocaleLowerCase('pt-BR').includes(search);
+      const matchesDepartment = !state.org.department || node.department === state.org.department;
+      if ((matchesSearch && matchesDepartment) || children.length) result.push({...node, children, _matched: matchesSearch && matchesDepartment});
+      return result;
+    }, []);
+  }
+  function renderOrgNode(node, depth = 0) {
+    const hasChildren = Boolean(node.children?.length);
+    const collapsed = state.org.collapsedIds.has(Number(node.id));
+    return `<li><div class="people-org-node-wrap"><article class="people-org-node people-org-node--depth-${Math.min(depth, 3)}${node._matched === false ? ' is-filter-context' : ''}" data-people-org-node="${node.id}" style="--people-node-color:${safeOrgColor(node.color)}" tabindex="0" role="button"><div class="people-org-node__head"><span class="people-org-node__eyebrow">Cargo</span><strong>${esc(node.title)}</strong><span>${esc(node.department || 'Departamento não informado')}</span></div><div class="people-org-node__body"><div><small>Previstos</small><b>${node.headcount_planned || 0}</b></div><div><small>Efetivos</small><b>${node.active_employee_count || 0}</b></div></div></article>${hasChildren ? `<button class="people-org-node__toggle" type="button" data-people-org-toggle="${node.id}" aria-label="${collapsed ? 'Expandir' : 'Recolher'} subordinados de ${esc(node.title)}" aria-expanded="${!collapsed}">${collapsed ? '+' : '−'}</button>` : ''}</div>${hasChildren && !collapsed ? `<ul class="people-org-tree-children${shouldStackOrgChildren(node) ? ' is-stacked' : ''}">${node.children.map(child => renderOrgNode(child, depth + 1)).join('')}</ul>` : ''}</li>`;
+  }
+  function updateOrgScale() {
+    const scale = byId('peopleOrgChartScale'); const shell = byId('peopleOrgTreeShell'); const target = byId('peopleOrgChart');
+    if (!scale || !shell || !target) return;
+    const naturalWidth = shell.scrollWidth; const naturalHeight = shell.scrollHeight;
+    scale.style.width = `${Math.ceil(naturalWidth * state.org.scale)}px`; scale.style.height = `${Math.ceil(naturalHeight * state.org.scale)}px`;
+    shell.style.transform = `scale(${state.org.scale})`; byId('peopleOrgZoomValue').textContent = `${Math.round(state.org.scale * 100)}%`;
+  }
+  function fitOrgTree() {
+    const target = byId('peopleOrgChart'); const shell = byId('peopleOrgTreeShell');
+    if (!target || !shell || target.offsetParent === null) return;
+    state.org.scale = Math.max(.35, Math.min(1, (target.clientWidth - 48) / shell.scrollWidth)); updateOrgScale();
+  }
+  function bindOrgTreeInteractions() {
+    document.querySelectorAll('[data-people-org-node]').forEach(node => node.addEventListener('click', () => {
+      const role = flattenOrgTree(state.workspace?.roles_tree || []).find(item => Number(item.id) === Number(node.dataset.peopleOrgNode));
+      const context = byId('peopleOrgContext'); if (!role || !context) return;
+      context.hidden = false; context.innerHTML = `<strong>${esc(role.title)}</strong><span>${esc(role.department || 'Sem departamento')} · ${role.active_employee_count || 0} efetivos de ${role.headcount_planned || 0} previstos</span>`;
+    }));
+    document.querySelectorAll('[data-people-org-toggle]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); const id = Number(button.dataset.peopleOrgToggle); state.org.collapsedIds.has(id) ? state.org.collapsedIds.delete(id) : state.org.collapsedIds.add(id); renderOrg(); }));
   }
   function renderOrg() {
     const target = byId('peopleOrgChart'); if (!target) return;
-    const tree = state.workspace.roles_tree || [];
-    target.innerHTML = tree.length ? `<div class="people-org-root">${tree.map(renderOrgNode).join('')}</div>` : '<p class="people-status">Cadastre o primeiro cargo para formar o organograma.</p>';
+    const rawTree = state.workspace?.roles_tree || []; const tree = filterOrgTree(rawTree); const roles = flattenOrgTree(rawTree);
+    const department = byId('peopleOrgDepartment');
+    if (department) { const current = state.org.department; const departments = [...new Set(roles.map(role => role.department).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')); department.innerHTML = '<option value="">Todos os departamentos</option>' + departments.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join(''); department.value = departments.includes(current) ? current : ''; }
+    byId('peopleOrgTotalPlanned').textContent = roles.reduce((total, role) => total + Number(role.headcount_planned || 0), 0);
+    byId('peopleOrgTotalEffective').textContent = roles.reduce((total, role) => total + Number(role.active_employee_count || 0), 0);
+    target.innerHTML = tree.length ? `<div class="people-org-chart__viewport"><div class="people-org-chart__scale" id="peopleOrgChartScale"><div class="people-org-tree-shell" id="peopleOrgTreeShell"><ul>${tree.map(node => renderOrgNode(node)).join('')}</ul></div></div></div>` : '<div class="people-org-chart__empty">Nenhum cargo encontrado para compor o organograma.</div>';
+    bindOrgTreeInteractions(); if (state.activeTab === 'org') requestAnimationFrame(fitOrgTree);
   }
   function filteredEmployees() {
     const search = (byId('peopleEmployeeSearch')?.value || '').trim().toLocaleLowerCase('pt-BR');
@@ -78,6 +124,7 @@
     state.activeTab = tab;
     document.querySelectorAll('[data-people-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.peopleTab === tab));
     document.querySelectorAll('[data-people-panel]').forEach(panel => panel.classList.toggle('is-active', panel.dataset.peoplePanel === tab));
+    if (tab === 'org') requestAnimationFrame(() => requestAnimationFrame(fitOrgTree));
   }
   function showEmployeeView(view) {
     state.employeeView = view;
@@ -142,6 +189,19 @@
   document.querySelectorAll('[data-people-role-view]').forEach(button => button.addEventListener('click', () => { state.roleView = button.dataset.peopleRoleView; document.querySelectorAll('[data-people-role-view]').forEach(item => item.classList.toggle('is-active', item === button)); renderRoles(); }));
   document.querySelectorAll('[data-people-employee-view]').forEach(button => button.addEventListener('click', () => showEmployeeView(button.dataset.peopleEmployeeView)));
   byId('peopleUserSearch')?.addEventListener('input', renderUsers); byId('peopleUserProfile')?.addEventListener('change', renderUsers); byId('peopleEmployeeSearch')?.addEventListener('input', renderEmployees);
+  byId('peopleOrgSearch')?.addEventListener('input', event => { state.org.search = event.target.value; renderOrg(); });
+  byId('peopleOrgDepartment')?.addEventListener('change', event => { state.org.department = event.target.value; renderOrg(); });
+  byId('peopleOrgLayout')?.addEventListener('change', event => { state.org.layout = event.target.value; renderOrg(); });
+  document.querySelectorAll('[data-people-org-action]').forEach(button => button.addEventListener('click', () => {
+    const action = button.dataset.peopleOrgAction;
+    if (action === 'fit') return fitOrgTree();
+    if (action === 'expand') { state.org.collapsedIds.clear(); return renderOrg(); }
+    if (action === 'collapse') { flattenOrgTree(state.workspace?.roles_tree || []).filter(node => node.children?.length).forEach(node => state.org.collapsedIds.add(Number(node.id))); return renderOrg(); }
+    if (action === 'zoom-in') state.org.scale = Math.min(1.5, state.org.scale + .1);
+    if (action === 'zoom-out') state.org.scale = Math.max(.35, state.org.scale - .1);
+    if (action === 'zoom-reset') state.org.scale = 1;
+    updateOrgScale();
+  }));
   byId('peopleUserForm')?.addEventListener('submit', saveUser); byId('peopleRoleForm')?.addEventListener('submit', saveRole); byId('peopleEmployeeForm')?.addEventListener('submit', saveEmployee);
   byId('peopleOccupancyForm')?.addEventListener('submit', loadOccupancy); byId('peopleCostsForm')?.addEventListener('submit', loadCosts);
   document.addEventListener('click', event => { const user = event.target.closest('[data-edit-user]'); const role = event.target.closest('[data-edit-role]'); const employee = event.target.closest('[data-edit-employee]'); if (user) openUser(user.dataset.editUser); if (role) openRole(role.dataset.editRole); if (employee) openEmployee(employee.dataset.editEmployee); const report = event.target.closest('[data-people-report]'); if (report) { showTab('employees'); showEmployeeView(report.dataset.peopleReport === 'capacity' ? 'profile' : report.dataset.peopleReport); } });

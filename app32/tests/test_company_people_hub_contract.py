@@ -31,14 +31,18 @@ def test_people_workspace_uses_the_app32_visual_composition():
     root = Path(__file__).resolve().parents[1]
     template = (root / 'templates' / 'modules' / 'companies' / 'company_people_v3.html').read_text(encoding='utf-8')
     stylesheet = (root / 'static' / 'css' / 'company_people_v3.css').read_text(encoding='utf-8')
+    script = (root / 'static' / 'js' / 'company_people_v3.js').read_text(encoding='utf-8')
 
     assert 'people-hero card' in template
     assert 'people-hero__metrics' in template
     assert 'people-guidance' in template
     assert 'people-journey' not in template
+    assert 'data-people-org-action="fit"' in template
+    assert 'people-org-tree-shell' in script
     assert '.people-tabs' in stylesheet
     assert 'border-radius: 999px' in stylesheet
     assert '.people-table-wrap .table-v2 td' in stylesheet
+    assert '.people-org-tree-shell li::before' in stylesheet
 
 
 def test_sidebar_uses_active_company_for_people_navigation():

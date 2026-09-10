@@ -53,7 +53,29 @@
   </section>
 
   <section class="people-panel" data-people-panel="org">
-    <article class="people-card card"><header class="people-card__header"><div><span class="people-section-eyebrow">Estrutura da empresa</span><h2>Organograma</h2><p>A hierarquia é composta pelos cargos cadastrados e mostra capacidade e ocupação atuais.</p></div>{% if can_manage_people %}<button class="btn btn-special btn-sm" type="button" data-people-open="role">+ Novo cargo</button>{% endif %}</header><div id="peopleOrgChart" class="people-org-chart" aria-live="polite">Carregando organograma…</div></article>
+    <article class="people-card card">
+      <header class="people-card__header"><div><span class="people-section-eyebrow">Leitura visual da hierarquia</span><h2>Organograma</h2><p>Estrutura, capacidade planejada e ocupação atual em uma árvore navegável.</p></div>{% if can_manage_people %}<button class="btn btn-special btn-sm" type="button" data-people-open="role">+ Novo cargo</button>{% endif %}</header>
+      <div class="people-chart-toolbar">
+        <div class="people-chart-filters">
+          <input id="peopleOrgSearch" class="form-control" type="search" placeholder="Buscar cargo ou departamento" aria-label="Buscar no organograma">
+          <select id="peopleOrgDepartment" class="form-control" aria-label="Filtrar departamento"><option value="">Todos os departamentos</option></select>
+          <select id="peopleOrgLayout" class="form-control" aria-label="Disposição dos níveis do organograma"><option value="auto">Layout automático</option><option value="horizontal">Todos na horizontal</option><option value="terminal-stacked">Empilhar último nível</option></select>
+        </div>
+        <div class="people-chart-actions" aria-label="Controles do organograma">
+          <button class="btn btn-secondary" type="button" data-people-org-action="fit">Ajustar</button>
+          <button class="btn btn-secondary" type="button" data-people-org-action="expand">Expandir</button>
+          <button class="btn btn-secondary" type="button" data-people-org-action="collapse">Recolher</button>
+          <span class="people-chart-zoom"><button class="btn btn-secondary" type="button" data-people-org-action="zoom-out" aria-label="Reduzir zoom">−</button><button class="btn btn-secondary people-chart-zoom__value" id="peopleOrgZoomValue" type="button" data-people-org-action="zoom-reset">100%</button><button class="btn btn-secondary" type="button" data-people-org-action="zoom-in" aria-label="Aumentar zoom">+</button></span>
+        </div>
+      </div>
+      <div id="peopleOrgContext" class="people-chart-context" hidden></div>
+      <header class="people-chart-document-header">
+        <div><span class="people-chart-document-header__eyebrow">Estrutura organizacional</span><h3>Organograma organizacional</h3><p>{{ company.name }}</p></div>
+        <div class="people-chart-document-totals" aria-label="Totais do organograma"><div><span>Previstos</span><strong id="peopleOrgTotalPlanned">{{ metrics.planned_headcount_total or 0 }}</strong></div><div><span>Efetivos</span><strong id="peopleOrgTotalEffective">{{ metrics.active_employees_total or 0 }}</strong></div></div>
+      </header>
+      <div id="peopleOrgChart" class="people-org-chart" aria-live="polite"><div class="people-org-chart__empty">Carregando organograma…</div></div>
+      <footer class="people-chart-document-footer">Gestão Versus · Estrutura organizacional da empresa.</footer>
+    </article>
   </section>
 
   <section class="people-panel" data-people-panel="employees">
