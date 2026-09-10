@@ -96,3 +96,4 @@ app32/tests/e2e/outputs/
 /app32/uploads/uploads/
 /app32/instance/**
 /app32/uploads/uploads/**
+/app32/uploads/**
