@@ -6,6 +6,7 @@ db = SQLAlchemy()
 from .company import Company
 from .user import User
 from .user_mcp_token import UserMcpToken
+from .identity_principal import IdentityPrincipal, ExternalIdentity, PrincipalCompanyGrant
 from .instruction_registry import InstructionRegistryEntry, InstructionRegistryAuditLog
 from .knowledge import KnowledgeSource, KnowledgeSourceGrant, KnowledgeChunk, KnowledgeIndexRun, KnowledgeInteraction, KnowledgeFeedback, KnowledgeTrainingProposal
 from .strategic_tree import StrategicTree, StrategicTreeNode, StrategicTreeContribution, StrategicTreeAuditEvent

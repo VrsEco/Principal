@@ -251,6 +251,21 @@ def test_user_surface_exposes_only_user_scope_manifest_and_no_admin_diagnostics(
     assert all("mcp_user" in tool["scopes"] for tool in manifest["tools"])
 
 
+def test_surface_manifest_keeps_discovery_when_principal_has_no_selected_company(monkeypatch):
+    """`tools/list` pode descobrir catálogo, mas não autoriza tool call sem grant."""
+
+    monkeypatch.setattr(
+        registry,
+        "resolve_mcp_execution_context",
+        lambda payload=None: (_ for _ in ()).throw(PermissionError("company_id obrigatório")),
+    )
+    monkeypatch.setattr(registry, "catalog", _FakeCatalog())
+
+    manifest = registry.get_surface_manifest("ops", include_tools=True)
+
+    assert {tool["name"] for tool in manifest["tools"]} == {"ops_escalate"}
+
+
 def test_admin_surface_exposes_only_admin_scope_and_diagnostics(monkeypatch):
     fake_catalog = _FakeCatalog()
     monkeypatch.setattr(registry, "catalog", fake_catalog)

@@ -35,6 +35,11 @@ except ImportError:  # pragma: no cover
     TokenVerifier = object  # type: ignore[assignment]
 
 from src.intelligence.security.mcp_channel_gate import McpChannelGateRequest, evaluate_mcp_channel_gate
+from src.intelligence.security.oauth_token_verifier import (
+    OAuthAccessTokenVerifier,
+    OAuthTokenVerificationError,
+    OAuthTokenVerifierSettings,
+)
 from src.intelligence.security.runtime_profiles import get_runtime_profile_spec, normalize_runtime_profile
 
 
@@ -90,6 +95,13 @@ class App32McpHttpIdentity:
     company_id: int | None
     fallback_role: str
     allowed_surfaces: tuple[str, ...]
+    # Só pode ser preenchido por um resolvedor de identidade confiável ou por
+    # configuração server-side. Nunca é obtido de header, query ou payload MCP.
+    principal_id: int | None = None
+    subject_type: str = "USER"
+    issuer: str | None = None
+    subject: str | None = None
+    auth_method: str | None = None
     scopes: tuple[str, ...] = ("mcp:access",)
     client_id: str = "app32-mcp-internal"
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -106,6 +118,25 @@ class App32OAuthPreparation:
     issuer_url: str | None
     service_documentation_url: str | None
     resource_server_url: str | None
+
+
+@dataclass(frozen=True)
+class OAuthHttpIdentityResolution:
+    """Resultado do adaptador OIDC antes da autorização por tenant.
+
+    A resolução só transforma um JWT já verificado em um principal APP32
+    previamente vinculado. A escolha da empresa continua no runtime MCP e é
+    obrigatoriamente reavaliada pelo ``PrincipalCompanyGrant``.
+    """
+
+    identity: App32McpHttpIdentity | None
+    status_code: int
+    error: str | None = None
+    detail: str | None = None
+
+    @property
+    def allowed(self) -> bool:
+        return self.identity is not None
 
 
 _http_identity_ctx: ContextVar[App32McpHttpIdentity | None] = ContextVar("app32_mcp_http_identity", default=None)
@@ -280,6 +311,7 @@ def _single_token_config() -> dict[str, Any]:
         token: {
             "user_id": os.environ.get("APP32_MCP_USER_ID"),
             "company_id": os.environ.get("APP32_MCP_COMPANY_ID"),
+            "principal_id": os.environ.get("APP32_MCP_PRINCIPAL_ID"),
             "fallback_role": os.environ.get("APP32_MCP_FALLBACK_ROLE") or "colaborador",
             "allowed_surfaces": [value.strip() for value in (os.environ.get("APP32_MCP_HTTP_ALLOWED_SURFACES") or "*").split(",") if value.strip()],
             "scopes": ["mcp:access"],
@@ -335,18 +367,176 @@ def load_http_token_registry() -> dict[str, App32McpHttpIdentity]:
             token=str(token),
             user_id=_coerce_optional_int(config.get("user_id")),
             company_id=_coerce_optional_int(config.get("company_id")),
+            principal_id=_coerce_optional_int(config.get("principal_id")),
+            subject_type=_coerce_str(config.get("subject_type")) or "USER",
+            issuer=_coerce_str(config.get("issuer")),
+            subject=_coerce_str(config.get("subject")),
+            auth_method=_coerce_str(config.get("auth_method")) or "internal_bearer",
             fallback_role=_coerce_str(config.get("fallback_role")) or "colaborador",
             allowed_surfaces=allowed_surfaces,
             scopes=scopes,
             client_id=_coerce_str(config.get("client_id")) or "app32-mcp-internal",
-        metadata={
-            "subject": _coerce_str(config.get("subject")),
-            "description": _coerce_str(config.get("description")),
-            "mcp_enabled": True,
-            "training_completed": True,
-        },
-    )
+            metadata={
+                "description": _coerce_str(config.get("description")),
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        )
     return registry
+
+
+def _oauth_enabled_surfaces() -> frozenset[str]:
+    """Retorna a coorte OIDC explícita; ausência nunca muda o legado.
+
+    Não há inferência por token, header ou rota: uma surface só troca de
+    contrato quando o operador a inclui nesta allowlist server-side.
+    """
+
+    raw = _coerce_str(os.environ.get("APP32_MCP_OIDC_ENABLED_SURFACES"))
+    if not raw:
+        return frozenset()
+    surfaces: set[str] = set()
+    for value in raw.split(","):
+        candidate = value.strip().lower()
+        if not candidate:
+            continue
+        surfaces.add(normalize_surface(candidate))
+    return frozenset(surfaces)
+
+
+def oauth_transport_enabled_for_surface(surface: McpSurface | str) -> bool:
+    """Indica se uma surface está em coorte OAuth; default é sempre legado."""
+
+    return bool(
+        _env_flag("APP32_MCP_HTTP_ENABLE_OAUTH", default=False)
+        and normalize_surface(surface) in _oauth_enabled_surfaces()
+    )
+
+
+def _principal_grant_gate_enabled() -> bool:
+    return _env_flag("APP32_MCP_USE_PRINCIPAL_GRANTS", default=False)
+
+
+@lru_cache(maxsize=1)
+def load_oauth_access_token_verifier() -> OAuthAccessTokenVerifier:
+    """Monta o verifier somente para a coorte OIDC explicitamente ativada."""
+
+    settings = OAuthTokenVerifierSettings.from_prefixed_environ(os.environ)
+    return OAuthAccessTokenVerifier(settings)
+
+
+def _oauth_resource_metadata_url(surface: McpSurface | str) -> str:
+    base_url = _coerce_str(os.environ.get("APP32_MCP_PUBLIC_BASE_URL")) or "https://app.gestaoversus.com.br"
+    return (
+        f"{base_url.rstrip('/')}/.well-known/oauth-protected-resource/"
+        f"mcp/{normalize_surface(surface)}"
+    )
+
+
+def _oauth_www_authenticate(
+    *,
+    surface: McpSurface | str,
+    error: str,
+    detail: str,
+) -> str:
+    # O valor é construído exclusivamente da configuração do servidor; nem
+    # token nem header do cliente participam da URL do resource metadata.
+    # Headers HTTP devem ser ASCII. O detalhe completo (UTF-8) fica apenas no
+    # corpo JSON; isso evita erro de codificação no adaptador ASGI.
+    header_detail = detail.encode("ascii", "ignore").decode("ascii").replace('"', "'")
+    return (
+        f'Bearer error="{error}", error_description="{header_detail}", '
+        f'resource_metadata="{_oauth_resource_metadata_url(surface)}"'
+    )
+
+
+def _resolve_oauth_identity(
+    *,
+    token: str,
+    surface: McpSurface | str,
+) -> OAuthHttpIdentityResolution:
+    """Resolve OIDC sem fallback ao registry interno ou a token DB-backed."""
+
+    normalized_surface = normalize_surface(surface)
+    if not _principal_grant_gate_enabled():
+        # Um principal OIDC sem o gate de grant poderia alcançar o caminho
+        # legado de ``resolve_runtime_identity``. Falhar antes do callback é
+        # preferível a habilitar OAuth parcialmente.
+        return OAuthHttpIdentityResolution(
+            identity=None,
+            status_code=503,
+            error="oauth_configuration_error",
+            detail="OAuth requer APP32_MCP_USE_PRINCIPAL_GRANTS ativo para a coorte.",
+        )
+
+    try:
+        verified = load_oauth_access_token_verifier().verify(token)
+    except (OAuthTokenVerificationError, ValueError):
+        return OAuthHttpIdentityResolution(
+            identity=None,
+            status_code=401,
+            error="invalid_token",
+            detail="Access token OAuth inválido, expirado ou incompatível com este resource server.",
+        )
+
+    required_surface_scope = f"mcp:{normalized_surface}"
+    if required_surface_scope not in set(verified.scopes):
+        return OAuthHttpIdentityResolution(
+            identity=None,
+            status_code=403,
+            error="insufficient_scope",
+            detail=f"Scope obrigatório para a surface: {required_surface_scope}",
+        )
+
+    from services.principal_authorization_service import principal_authorization_service
+
+    try:
+        external_resolution = principal_authorization_service.resolve_external_principal(
+            issuer=verified.issuer,
+            subject=verified.subject,
+        )
+    except Exception:
+        # Indisponibilidade do banco/vínculo não pode converter um JWT válido
+        # em autorização implícita nem revelar detalhes internos ao conector.
+        return OAuthHttpIdentityResolution(
+            identity=None,
+            status_code=503,
+            error="oauth_identity_unavailable",
+            detail="Resolução de identidade OAuth indisponível temporariamente.",
+        )
+    principal = external_resolution.principal if external_resolution.allowed else None
+    if principal is None or principal.id is None:
+        return OAuthHttpIdentityResolution(
+            identity=None,
+            status_code=401,
+            error="invalid_token",
+            detail="Identidade OAuth não possui vínculo ativo no APP32.",
+        )
+
+    return OAuthHttpIdentityResolution(
+        identity=App32McpHttpIdentity(
+            # O JWT não é exposto fora da fronteira HTTP; o campo permanece
+            # apenas para compatibilidade com o contrato do SDK MCP.
+            token=token,
+            user_id=_coerce_optional_int(getattr(principal, "user_id", None)),
+            company_id=None,
+            principal_id=principal.id,
+            subject_type=_coerce_str(getattr(principal, "subject_type", None)) or "USER",
+            issuer=verified.issuer,
+            subject=verified.subject,
+            auth_method="oauth_oidc_bearer",
+            fallback_role="colaborador",
+            allowed_surfaces=(normalized_surface,),
+            scopes=verified.scopes,
+            client_id=verified.client_id or "oauth-client",
+            metadata={
+                "oauth_expires_at": verified.expires_at,
+                "mcp_enabled": True,
+                "training_completed": True,
+            },
+        ),
+        status_code=200,
+    )
 
 
 def _resolve_db_backed_identity(
@@ -356,14 +546,10 @@ def _resolve_db_backed_identity(
     surface: McpSurface | str,
 ) -> App32McpHttpIdentity | None:
     company_id = None
-    fallback_role_override = None
     client_name = None
     if request is not None:
         company_id = _coerce_optional_int(
             _coerce_str(request.headers.get(HTTP_CONTEXT_HEADER_MAP["company_id"]) or request.query_params.get("company_id"))
-        )
-        fallback_role_override = _coerce_str(
-            _coerce_str(request.headers.get(HTTP_CONTEXT_HEADER_MAP["fallback_role"]) or request.query_params.get("fallback_role"))
         )
         client_name = _coerce_str(
             request.headers.get("x-app32-client-name")
@@ -385,7 +571,16 @@ def _resolve_db_backed_identity(
         token=token,
         user_id=resolved.user_id,
         company_id=resolved.company_id,
-        fallback_role=fallback_role_override or resolved.fallback_role,
+        principal_id=None,
+        subject_type="USER",
+        issuer=None,
+        subject=resolved.subject,
+        auth_method="internal_bearer",
+        # Papel é uma decisão do APP32, derivada do vínculo persistido do
+        # principal com o tenant. Header/query nunca pode elevá-lo no fluxo
+        # DB-backed; o request só pode solicitar contexto que o service irá
+        # validar (por exemplo, company_id).
+        fallback_role=resolved.fallback_role,
         allowed_surfaces=resolved.allowed_surfaces,
         scopes=("mcp:access",),
         client_id="app32-mcp-user-token",
@@ -411,11 +606,15 @@ class App32MCPTokenVerifier(TokenVerifier):
         self.surface = normalize_surface(surface)
 
     async def verify_token(self, token: str) -> AccessToken | None:
-        identity = load_http_token_registry().get(token) or _resolve_db_backed_identity(
-            None,
-            token=token,
-            surface=self.surface,
-        )
+        if oauth_transport_enabled_for_surface(self.surface):
+            resolution = _resolve_oauth_identity(token=token, surface=self.surface)
+            identity = resolution.identity
+        else:
+            identity = load_http_token_registry().get(token) or _resolve_db_backed_identity(
+                None,
+                token=token,
+                surface=self.surface,
+            )
         if identity is None or not identity.allows_surface(self.surface):
             return None
         return AccessToken(
@@ -423,6 +622,9 @@ class App32MCPTokenVerifier(TokenVerifier):
             client_id=identity.client_id,
             scopes=list(identity.scopes),
             resource=f"app32:{self.surface}",
+            expires_at=_coerce_optional_int(identity.metadata.get("oauth_expires_at")),
+            subject=identity.subject,
+            claims={"iss": identity.issuer} if identity.issuer else None,
         )
 
 
@@ -454,6 +656,11 @@ def resolve_request_identity(request: Request, *, surface: McpSurface | str) -> 
     token = extract_bearer_token(request)
     if not token:
         return None
+    if oauth_transport_enabled_for_surface(surface):
+        # Coorte OAuth é exclusiva por surface. Um JWT rejeitado, uma
+        # identidade não vinculada ou um scope insuficiente nunca passa para
+        # APP32_MCP_HTTP_TOKEN nem para user_mcp_tokens.
+        return _resolve_oauth_identity(token=token, surface=surface).identity
     identity = load_http_token_registry().get(token)
     if identity is None:
         return _resolve_db_backed_identity(request, token=token, surface=surface)
@@ -478,6 +685,11 @@ def resolve_request_identity(request: Request, *, surface: McpSurface | str) -> 
         token=identity.token,
         user_id=user_id if user_id is not None else identity.user_id,
         company_id=company_id if company_id is not None else identity.company_id,
+        principal_id=identity.principal_id,
+        subject_type=identity.subject_type,
+        issuer=identity.issuer,
+        subject=identity.subject,
+        auth_method=identity.auth_method,
         fallback_role=fallback_role or identity.fallback_role,
         allowed_surfaces=identity.allowed_surfaces,
         scopes=identity.scopes,
@@ -511,6 +723,12 @@ def _build_identity_context_payload(
     )
     return {
         "user_id": identity.user_id,
+        "principal_id": identity.principal_id,
+        "subject_type": identity.subject_type,
+        "issuer": identity.issuer,
+        "subject": identity.subject,
+        "auth_method": identity.auth_method,
+        "token_scopes": list(identity.scopes),
         "company_id": identity.company_id,
         "fallback_role": identity.fallback_role,
         "surface": normalize_surface(surface),
@@ -524,7 +742,7 @@ def _build_identity_context_payload(
         "harness_key": harness_key,
         "harness_label": harness_label,
         "client_id": identity.client_id,
-        "token_subject": identity.metadata.get("subject"),
+        "correlation_id": _coerce_str(identity.metadata.get("correlation_id")),
         "company_resolution_source": _coerce_str(identity.metadata.get("company_resolution_source")),
         "accessible_company_ids": list(identity.metadata.get("accessible_company_ids") or []),
         "multi_company": bool(identity.metadata.get("multi_company", False)),
@@ -566,8 +784,37 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
         self.surface = normalize_surface(surface)
 
     async def dispatch(self, request: Request, call_next):
-        identity = resolve_request_identity(request, surface=self.surface)
+        oauth_resolution: OAuthHttpIdentityResolution | None = None
+        if oauth_transport_enabled_for_surface(self.surface):
+            token = extract_bearer_token(request)
+            oauth_resolution = (
+                _resolve_oauth_identity(token=token, surface=self.surface)
+                if token
+                else OAuthHttpIdentityResolution(
+                    identity=None,
+                    status_code=401,
+                    error="invalid_token",
+                    detail="Access token OAuth ausente.",
+                )
+            )
+            identity = oauth_resolution.identity
+        else:
+            identity = resolve_request_identity(request, surface=self.surface)
         if identity is None:
+            if oauth_resolution is not None:
+                error = oauth_resolution.error or "invalid_token"
+                detail = oauth_resolution.detail or "Access token OAuth rejeitado."
+                return JSONResponse(
+                    {"error": error, "detail": detail},
+                    status_code=oauth_resolution.status_code,
+                    headers={
+                        "WWW-Authenticate": _oauth_www_authenticate(
+                            surface=self.surface,
+                            error=error,
+                            detail=detail,
+                        )
+                    },
+                )
             return JSONResponse({"error": "unauthorized", "detail": "Bearer token inválido ou ausente."}, status_code=401)
 
         accept_header = request.headers.get("accept", "")
@@ -590,7 +837,18 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
                 status_code=400,
             )
 
-        if identity.user_id is None or (identity.company_id is None and self.surface != "user"):
+        if (
+            (identity.user_id is None and identity.principal_id is None)
+            # OAuth nunca fixa tenant no token/contexto HTTP. Para qualquer
+            # surface da coorte, permitir apenas o handshake/descoberta sem
+            # empresa e deixar cada tool exigir company_id via grant. Tokens
+            # legados continuam precisando de company_id fora de ``user``.
+            or (
+                identity.company_id is None
+                and self.surface != "user"
+                and identity.principal_id is None
+            )
+        ):
             return JSONResponse(
                 {
                     "error": "invalid_context",
@@ -641,7 +899,12 @@ class App32MCPRequestContextMiddleware(BaseHTTPMiddleware):
 
 
 def build_oauth_preparation(base_url: str | None = None) -> App32OAuthPreparation:
-    issuer_url = _coerce_str(os.environ.get("APP32_MCP_OAUTH_ISSUER_URL"))
+    # APP32_MCP_OAUTH_* é o placeholder histórico. Quando há uma coorte OIDC
+    # real, o issuer exposto pelo resource metadata é obrigatoriamente o IdP
+    # externo previamente configurado, nunca um authorization server APP32.
+    issuer_url = _coerce_str(os.environ.get("APP32_MCP_OIDC_ISSUER")) or _coerce_str(
+        os.environ.get("APP32_MCP_OAUTH_ISSUER_URL")
+    )
     resource_server_url = _coerce_str(os.environ.get("APP32_MCP_OAUTH_RESOURCE_SERVER_URL"))
     service_documentation_url = _coerce_str(os.environ.get("APP32_MCP_OAUTH_DOCS_URL"))
 
@@ -651,7 +914,12 @@ def build_oauth_preparation(base_url: str | None = None) -> App32OAuthPreparatio
     if resource_server_url is None and normalized_base:
         resource_server_url = normalized_base.rstrip("/")
 
-    enabled = bool(_env_flag("APP32_MCP_HTTP_ENABLE_OAUTH", default=False) and issuer_url and resource_server_url)
+    enabled = bool(
+        _env_flag("APP32_MCP_HTTP_ENABLE_OAUTH", default=False)
+        and _oauth_enabled_surfaces()
+        and issuer_url
+        and resource_server_url
+    )
     return App32OAuthPreparation(
         enabled=enabled,
         issuer_url=issuer_url,
@@ -660,16 +928,39 @@ def build_oauth_preparation(base_url: str | None = None) -> App32OAuthPreparatio
     )
 
 
-def build_auth_settings(base_url: str | None = None) -> AuthSettings | None:
-    preparation = build_oauth_preparation(base_url=base_url)
+def build_auth_settings(
+    base_url: str | None = None,
+    *,
+    surface: McpSurface | str | None = None,
+) -> AuthSettings | None:
+    if surface is not None and oauth_transport_enabled_for_surface(surface):
+        if not _principal_grant_gate_enabled():
+            raise ValueError(
+                "OAuth MCP requer APP32_MCP_USE_PRINCIPAL_GRANTS=1 para a coorte configurada."
+            )
+        oidc_settings = load_oauth_access_token_verifier().settings
+        resource_server_url = _coerce_str(base_url or os.environ.get("APP32_MCP_PUBLIC_BASE_URL"))
+        if not resource_server_url:
+            raise ValueError("APP32_MCP_PUBLIC_BASE_URL é obrigatório para OAuth MCP.")
+        return AuthSettings(
+            issuer_url=oidc_settings.issuer,
+            service_documentation_url=_coerce_str(os.environ.get("APP32_MCP_OAUTH_DOCS_URL")),
+            required_scopes=["mcp:access"],
+            resource_server_url=resource_server_url,
+        )
+
     normalized_base = _coerce_str(base_url or os.environ.get("APP32_MCP_PUBLIC_BASE_URL"))
-    issuer_url = preparation.issuer_url or normalized_base
-    resource_server_url = preparation.resource_server_url or normalized_base
+    # Surfaces fora da coorte OIDC mantêm exatamente o contrato legado. Elas
+    # não podem anunciar o issuer externo enquanto ainda aceitam token interno.
+    legacy_issuer_url = _coerce_str(os.environ.get("APP32_MCP_OAUTH_ISSUER_URL"))
+    legacy_resource_server_url = _coerce_str(os.environ.get("APP32_MCP_OAUTH_RESOURCE_SERVER_URL"))
+    issuer_url = legacy_issuer_url or normalized_base
+    resource_server_url = legacy_resource_server_url or normalized_base
     if not issuer_url or not resource_server_url:
         return None
     return AuthSettings(
         issuer_url=issuer_url,
-        service_documentation_url=preparation.service_documentation_url,
+        service_documentation_url=_coerce_str(os.environ.get("APP32_MCP_OAUTH_DOCS_URL")),
         required_scopes=["mcp:access"],
         resource_server_url=resource_server_url,
     )
