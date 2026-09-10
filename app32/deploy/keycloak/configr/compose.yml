@@ -1,0 +1,53 @@
+name: app32-keycloak
+services:
+  postgres:
+    image: postgres:16.10-alpine
+    restart: unless-stopped
+    env_file:
+      - ../secure/keycloak.env
+    environment:
+      POSTGRES_INITDB_ARGS: "--auth=scram-sha-256"
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    mem_limit: 384m
+    networks:
+      - keycloak_internal
+
+  keycloak:
+    image: app32-keycloak:26.7.3-r1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command:
+      - start
+      - --optimized
+      - --hostname=https://id.gestaoversus.com.br
+      - --http-enabled=true
+      - --proxy-headers=xforwarded
+      - --health-enabled=true
+      - --metrics-enabled=true
+    env_file:
+      - ../secure/keycloak.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    mem_limit: 1400m
+    networks:
+      - keycloak_internal
+
+networks:
+  keycloak_internal:
+    driver: bridge
+
+volumes:
+  keycloak_postgres_data:
+    name: app32_keycloak_postgres_data

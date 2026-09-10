@@ -10,6 +10,17 @@ Classe documental: `Runbook`
    reconciliar o drift em tarefa própria; nunca executar `reset --hard` sobre ele.
 4. Confirmar que o checkout contém `app32/app.py` e `app32/requirements.txt`.
 
+## Decisão de reconciliação vigente
+
+- A branch local versionada é a fonte canônica do APP32. A bifurcação de
+  produção da Central de Pessoas (`people_v3`) não deve ser promovida por
+  merge automático nem preservada por cópia manual no deploy.
+- O snapshot remoto permanece como evidência e rollback; mudanças de produção
+  só podem retornar em commits revisados, coesos e testados contra a fonte
+  canônica.
+- Enquanto houver drift, o deploy permanece bloqueado. O bloqueio não alcança
+  o website isolado do Keycloak, que possui runtime e banco independentes.
+
 ## Fluxo
 
 1. Publicar apenas uma revisão identificada em `main`.
