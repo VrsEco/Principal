@@ -15,7 +15,42 @@ branch_labels = None
 depends_on = None
 
 
+def _assert_existing_contract(inspector: sa.Inspector, table_name: str, columns: tuple[str, ...], constraints: tuple[str, ...]) -> None:
+    actual_columns = {column["name"] for column in inspector.get_columns(table_name)}
+    actual_constraints = {
+        constraint["name"]
+        for constraint in (*inspector.get_check_constraints(table_name), *inspector.get_unique_constraints(table_name))
+        if constraint.get("name")
+    }
+    missing_columns = sorted(set(columns) - actual_columns)
+    missing_constraints = sorted(set(constraints) - actual_constraints)
+    if missing_columns or missing_constraints:
+        raise RuntimeError(
+            f"{table_name} já existe, mas não atende ao contrato da revision 20260801_0900; "
+            f"colunas ausentes={missing_columns}, constraints ausentes={missing_constraints}."
+        )
+
+
+def _create_index_if_needed(name: str, table_name: str, columns: list[str], *, unique: bool = False) -> None:
+    """Preserva índice equivalente legado, mesmo sob nome anterior."""
+
+    indexes = sa.inspect(op.get_bind()).get_indexes(table_name)
+    if any(tuple(index.get("column_names") or ()) == tuple(columns) and bool(index.get("unique")) == unique for index in indexes):
+        return
+    op.create_index(name, table_name, columns, unique=unique, if_not_exists=True)
+
+
 def upgrade():
+    inspector = sa.inspect(op.get_bind())
+    contracts = (
+        ("knowledge_interactions", ("id", "interaction_uuid", "company_id", "user_id", "employee_id", "requested_scope", "knowledge_scope", "question", "normalized_question", "answer_preview", "understanding_json", "query_plan_json", "citations_json", "actions_json", "warnings_json", "engine_version", "rating_status", "created_at", "updated_at"), ("ck_knowledge_interactions_rating_status",)),
+        ("knowledge_feedback", ("id", "interaction_id", "company_id", "user_id", "rating", "reason", "comment", "expected_answer", "metadata_json", "created_at"), ("ck_knowledge_feedback_rating", "ck_knowledge_feedback_reason")),
+        ("knowledge_training_proposals", ("id", "proposal_uuid", "company_id", "proposal_scope", "pattern", "suggested_intent", "suggested_domain", "suggestion_type", "evidence_count", "evidence_json", "sources_json", "recommendation_json", "status", "created_by", "created_at", "updated_at"), ("ck_knowledge_training_proposals_status",)),
+    )
+    for table_name, columns, constraints in contracts:
+        if inspector.has_table(table_name):
+            _assert_existing_contract(inspector, table_name, columns, constraints)
+
     op.create_table(
         "knowledge_interactions",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -38,11 +73,12 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("rating_status IN ('unrated', 'correct', 'partial', 'wrong')", name="ck_knowledge_interactions_rating_status"),
+        if_not_exists=True,
     )
-    op.create_index("uq_knowledge_interactions_uuid", "knowledge_interactions", ["interaction_uuid"], unique=True)
-    op.create_index("ix_knowledge_interactions_company_created", "knowledge_interactions", ["company_id", "created_at"])
-    op.create_index("ix_knowledge_interactions_normalized_question", "knowledge_interactions", ["normalized_question"])
-    op.create_index("ix_knowledge_interactions_rating_status", "knowledge_interactions", ["rating_status"])
+    _create_index_if_needed("uq_knowledge_interactions_uuid", "knowledge_interactions", ["interaction_uuid"], unique=True)
+    _create_index_if_needed("ix_knowledge_interactions_company_created", "knowledge_interactions", ["company_id", "created_at"])
+    _create_index_if_needed("ix_knowledge_interactions_normalized_question", "knowledge_interactions", ["normalized_question"])
+    _create_index_if_needed("ix_knowledge_interactions_rating_status", "knowledge_interactions", ["rating_status"])
 
     op.create_table(
         "knowledge_feedback",
@@ -58,10 +94,11 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("rating IN ('correct', 'partial', 'wrong')", name="ck_knowledge_feedback_rating"),
         sa.CheckConstraint("reason IS NULL OR reason IN ('wrong_subject', 'too_technical', 'missing_path', 'wrong_source', 'incomplete', 'not_found', 'outdated')", name="ck_knowledge_feedback_reason"),
+        if_not_exists=True,
     )
-    op.create_index("ix_knowledge_feedback_interaction_id", "knowledge_feedback", ["interaction_id"])
-    op.create_index("ix_knowledge_feedback_company_rating", "knowledge_feedback", ["company_id", "rating"])
-    op.create_index("ix_knowledge_feedback_reason", "knowledge_feedback", ["reason"])
+    _create_index_if_needed("ix_knowledge_feedback_interaction_id", "knowledge_feedback", ["interaction_id"])
+    _create_index_if_needed("ix_knowledge_feedback_company_rating", "knowledge_feedback", ["company_id", "rating"])
+    _create_index_if_needed("ix_knowledge_feedback_reason", "knowledge_feedback", ["reason"])
 
     op.create_table(
         "knowledge_training_proposals",
@@ -82,10 +119,11 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.CheckConstraint("status IN ('pending_review', 'approved', 'rejected', 'applied')", name="ck_knowledge_training_proposals_status"),
+        if_not_exists=True,
     )
-    op.create_index("uq_knowledge_training_proposals_uuid", "knowledge_training_proposals", ["proposal_uuid"], unique=True)
-    op.create_index("ix_knowledge_training_company_status", "knowledge_training_proposals", ["company_id", "status"])
-    op.create_index("ix_knowledge_training_pattern", "knowledge_training_proposals", ["pattern"])
+    _create_index_if_needed("uq_knowledge_training_proposals_uuid", "knowledge_training_proposals", ["proposal_uuid"], unique=True)
+    _create_index_if_needed("ix_knowledge_training_company_status", "knowledge_training_proposals", ["company_id", "status"])
+    _create_index_if_needed("ix_knowledge_training_pattern", "knowledge_training_proposals", ["pattern"])
 
 
 def downgrade():

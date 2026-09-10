@@ -15,7 +15,20 @@ branch_labels = None
 depends_on = None
 
 
+def _assert_existing_contract(inspector: sa.Inspector) -> None:
+    columns = {column["name"] for column in inspector.get_columns("process_execution_assignments")}
+    constraints = {constraint["name"] for constraint in inspector.get_check_constraints("process_execution_assignments") if constraint.get("name")}
+    required_columns = {"id", "company_id", "activity_execution_id", "assignee_type", "employee_id", "team_id", "role_key", "status", "source", "assigned_by_user_id", "assigned_at", "claimed_at", "completed_at", "created_at", "updated_at"}
+    required_constraints = {"ck_process_execution_assignment_type", "ck_process_execution_assignment_status", "ck_process_execution_assignment_target"}
+    if required_columns - columns or required_constraints - constraints:
+        raise RuntimeError("process_execution_assignments existente não atende ao contrato 20260801_1530.")
+
+
 def upgrade():
+    inspector = sa.inspect(op.get_bind())
+    if inspector.has_table("process_execution_assignments"):
+        _assert_existing_contract(inspector)
+
     op.create_table(
         "process_execution_assignments",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -52,18 +65,21 @@ def upgrade():
             "(assignee_type = 'role' AND employee_id IS NULL AND team_id IS NULL AND role_key IS NOT NULL)",
             name="ck_process_execution_assignment_target",
         ),
+        if_not_exists=True,
     )
     for column in ("company_id", "activity_execution_id", "employee_id", "team_id", "role_key", "status"):
-        op.create_index(f"ix_process_execution_assignments_{column}", "process_execution_assignments", [column])
+        op.create_index(f"ix_process_execution_assignments_{column}", "process_execution_assignments", [column], if_not_exists=True)
     op.create_index(
         "ix_process_execution_assignment_company_activity_status",
         "process_execution_assignments",
         ["company_id", "activity_execution_id", "status"],
+        if_not_exists=True,
     )
     op.create_index(
         "ix_process_execution_assignment_company_employee_status",
         "process_execution_assignments",
         ["company_id", "employee_id", "status"],
+        if_not_exists=True,
     )
     op.create_index(
         "uq_process_execution_assignment_active",
@@ -71,6 +87,7 @@ def upgrade():
         ["company_id", "activity_execution_id"],
         unique=True,
         postgresql_where=sa.text("status IN ('assigned', 'claimed')"),
+        if_not_exists=True,
     )
 
 

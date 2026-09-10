@@ -10,9 +10,24 @@ import sqlalchemy as sa
 
 
 revision = "20260903_1200"
-down_revision = "20260901_1900"
+down_revision = "20260901_1910"
 branch_labels = None
 depends_on = None
+
+_CREATE_TABLE = op.create_table
+_CREATE_INDEX = op.create_index
+
+
+def _create_table_if_needed(name, *items, **kwargs):
+    if sa.inspect(op.get_bind()).has_table(name):
+        return None
+    return _CREATE_TABLE(name, *items, **kwargs)
+
+
+def _create_index_if_needed(name, table_name, columns, **kwargs):
+    if name in {index["name"] for index in sa.inspect(op.get_bind()).get_indexes(table_name)}:
+        return None
+    return _CREATE_INDEX(name, table_name, columns, if_not_exists=True, **kwargs)
 
 
 def upgrade():
@@ -25,7 +40,7 @@ def upgrade():
         "process_activity_artifact_definitions",
         "execution_scope IN ('activity', 'process_instance')",
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_activity_artifact_definitions_execution_scope",
         "process_activity_artifact_definitions",
         ["execution_scope"],
@@ -40,7 +55,7 @@ def upgrade():
         "SET scope_key = 'activity:' || activity_execution_id::text WHERE scope_key IS NULL"
     )
     op.alter_column("process_activity_artifact_executions", "scope_key", nullable=False)
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_activity_artifact_executions_scope_key",
         "process_activity_artifact_executions",
         ["scope_key"],
@@ -51,7 +66,7 @@ def upgrade():
         "process_activity_artifact_executions",
         ["company_id", "process_instance_id", "artifact_definition_id", "scope_key"],
     )
-    op.create_table(
+    _create_table_if_needed(
         "process_activity_artifact_interactions",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("company_id", sa.Integer(), nullable=False),
@@ -71,13 +86,13 @@ def upgrade():
         sa.ForeignKeyConstraint(["actor_user_id"], ["users.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_process_artifact_interaction_company_execution", "process_activity_artifact_interactions", ["company_id", "artifact_execution_id", "created_at"], unique=False)
-    op.create_index("ix_process_activity_artifact_interactions_company_id", "process_activity_artifact_interactions", ["company_id"], unique=False)
-    op.create_index("ix_process_activity_artifact_interactions_process_instance_id", "process_activity_artifact_interactions", ["process_instance_id"], unique=False)
-    op.create_index("ix_process_activity_artifact_interactions_activity_execution_id", "process_activity_artifact_interactions", ["activity_execution_id"], unique=False)
-    op.create_index("ix_process_activity_artifact_interactions_artifact_execution_id", "process_activity_artifact_interactions", ["artifact_execution_id"], unique=False)
-    op.create_index("ix_process_activity_artifact_interactions_phase_key", "process_activity_artifact_interactions", ["phase_key"], unique=False)
-    op.create_index("ix_process_activity_artifact_interactions_actor_user_id", "process_activity_artifact_interactions", ["actor_user_id"], unique=False)
+    _create_index_if_needed("ix_process_artifact_interaction_company_execution", "process_activity_artifact_interactions", ["company_id", "artifact_execution_id", "created_at"], unique=False)
+    _create_index_if_needed("ix_process_activity_artifact_interactions_company_id", "process_activity_artifact_interactions", ["company_id"], unique=False)
+    _create_index_if_needed("ix_process_activity_artifact_interactions_process_instance_id", "process_activity_artifact_interactions", ["process_instance_id"], unique=False)
+    _create_index_if_needed("ix_process_activity_artifact_interactions_activity_execution_id", "process_activity_artifact_interactions", ["activity_execution_id"], unique=False)
+    _create_index_if_needed("ix_process_activity_artifact_interactions_artifact_execution_id", "process_activity_artifact_interactions", ["artifact_execution_id"], unique=False)
+    _create_index_if_needed("ix_process_activity_artifact_interactions_phase_key", "process_activity_artifact_interactions", ["phase_key"], unique=False)
+    _create_index_if_needed("ix_process_activity_artifact_interactions_actor_user_id", "process_activity_artifact_interactions", ["actor_user_id"], unique=False)
 
 
 def downgrade():

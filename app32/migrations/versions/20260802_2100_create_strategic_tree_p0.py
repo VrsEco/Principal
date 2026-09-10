@@ -15,8 +15,41 @@ branch_labels = None
 depends_on = None
 
 
+def _existing_columns(table_name):
+    return {item["name"] for item in sa.inspect(op.get_bind()).get_columns(table_name)}
+
+
+def _create_table_if_needed(table_name, *items, **kwargs):
+    if sa.inspect(op.get_bind()).has_table(table_name):
+        return None
+    return op.create_table(table_name, *items, **kwargs)
+
+
+def _create_index_if_needed(name, table_name, columns, **kwargs):
+    names = {item["name"] for item in sa.inspect(op.get_bind()).get_indexes(table_name)}
+    if name not in names:
+        _create_index_if_needed(name, table_name, columns, if_not_exists=True, **kwargs)
+
+
+def _create_foreign_key_if_needed(name, source, referent, local_cols, remote_cols, **kwargs):
+    names = {item["name"] for item in sa.inspect(op.get_bind()).get_foreign_keys(source) if item.get("name")}
+    if name not in names:
+        op.create_foreign_key(name, source, referent, local_cols, remote_cols, **kwargs)
+
+
 def upgrade() -> None:
-    op.create_table(
+    # Tabelas materializadas antes do ledger são aceitas somente se contiverem
+    # as chaves tenant-safe mínimas; o restante é auditado pelo harness R04.
+    for table_name, required in {
+        "strategic_trees": {"id", "company_id", "root_node_id"},
+        "strategic_tree_nodes": {"id", "company_id", "tree_id"},
+        "strategic_tree_contributions": {"id", "company_id", "tree_id", "node_id"},
+        "strategic_tree_audit_events": {"id", "company_id", "tree_id"},
+    }.items():
+        if sa.inspect(op.get_bind()).has_table(table_name) and not required <= _existing_columns(table_name):
+            raise RuntimeError(f"{table_name} pré-existente não atende ao contrato tenant-safe 20260802_2100.")
+
+    _create_table_if_needed(
         "strategic_trees",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("company_id", sa.Integer(), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
@@ -31,12 +64,12 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("archived_at", sa.DateTime(), nullable=True),
     )
-    op.create_index("ix_strategic_trees_company_id", "strategic_trees", ["company_id"])
-    op.create_index("ix_strategic_trees_status", "strategic_trees", ["status"])
-    op.create_index("ix_strategic_trees_root_node_id", "strategic_trees", ["root_node_id"])
-    op.create_index("ix_strategic_trees_company_status", "strategic_trees", ["company_id", "status"])
+    _create_index_if_needed("ix_strategic_trees_company_id", "strategic_trees", ["company_id"])
+    _create_index_if_needed("ix_strategic_trees_status", "strategic_trees", ["status"])
+    _create_index_if_needed("ix_strategic_trees_root_node_id", "strategic_trees", ["root_node_id"])
+    _create_index_if_needed("ix_strategic_trees_company_status", "strategic_trees", ["company_id", "status"])
 
-    op.create_table(
+    _create_table_if_needed(
         "strategic_tree_nodes",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("company_id", sa.Integer(), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
@@ -63,10 +96,10 @@ def upgrade() -> None:
         ),
     )
     for column in ("company_id", "tree_id", "parent_node_id", "visible_status", "technical_status"):
-        op.create_index(f"ix_strategic_tree_nodes_{column}", "strategic_tree_nodes", [column])
-    op.create_index("ix_strategic_tree_nodes_company_tree", "strategic_tree_nodes", ["company_id", "tree_id"])
-    op.create_index("ix_strategic_tree_nodes_tree_parent", "strategic_tree_nodes", ["tree_id", "parent_node_id"])
-    op.create_foreign_key(
+        _create_index_if_needed(f"ix_strategic_tree_nodes_{column}", "strategic_tree_nodes", [column])
+    _create_index_if_needed("ix_strategic_tree_nodes_company_tree", "strategic_tree_nodes", ["company_id", "tree_id"])
+    _create_index_if_needed("ix_strategic_tree_nodes_tree_parent", "strategic_tree_nodes", ["tree_id", "parent_node_id"])
+    _create_foreign_key_if_needed(
         "fk_strategic_trees_root_node",
         "strategic_trees",
         "strategic_tree_nodes",
@@ -75,7 +108,7 @@ def upgrade() -> None:
         ondelete="SET NULL",
     )
 
-    op.create_table(
+    _create_table_if_needed(
         "strategic_tree_contributions",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("company_id", sa.Integer(), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
@@ -105,10 +138,10 @@ def upgrade() -> None:
         ),
     )
     for column in ("company_id", "tree_id", "node_id", "contribution_type", "source_type", "author_user_id", "status", "created_at", "deleted_at"):
-        op.create_index(f"ix_strategic_tree_contributions_{column}", "strategic_tree_contributions", [column])
-    op.create_index("ix_strategic_tree_contributions_company_node", "strategic_tree_contributions", ["company_id", "node_id"])
+        _create_index_if_needed(f"ix_strategic_tree_contributions_{column}", "strategic_tree_contributions", [column])
+    _create_index_if_needed("ix_strategic_tree_contributions_company_node", "strategic_tree_contributions", ["company_id", "node_id"])
 
-    op.create_table(
+    _create_table_if_needed(
         "strategic_tree_audit_events",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("company_id", sa.Integer(), sa.ForeignKey("companies.id", ondelete="CASCADE"), nullable=False),
@@ -122,8 +155,8 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )
     for column in ("company_id", "tree_id", "node_id", "contribution_id", "event_type", "actor_user_id", "created_at"):
-        op.create_index(f"ix_strategic_tree_audit_events_{column}", "strategic_tree_audit_events", [column])
-    op.create_index("ix_strategic_tree_audit_company_created", "strategic_tree_audit_events", ["company_id", "created_at"])
+        _create_index_if_needed(f"ix_strategic_tree_audit_events_{column}", "strategic_tree_audit_events", [column])
+    _create_index_if_needed("ix_strategic_tree_audit_company_created", "strategic_tree_audit_events", ["company_id", "created_at"])
 
     # Capability única e rollout inicial somente na Versus (company_id 9).
     op.execute(

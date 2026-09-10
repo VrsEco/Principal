@@ -15,7 +15,67 @@ branch_labels = None
 depends_on = None
 
 
+def _assert_existing_table_contract(
+    inspector: sa.Inspector,
+    table_name: str,
+    required_columns: tuple[str, ...],
+    required_constraints: tuple[str, ...] = (),
+) -> None:
+    """Recusa marcar como aplicada uma tabela homônima, porém incompleta."""
+
+    actual_columns = {column["name"] for column in inspector.get_columns(table_name)}
+    missing_columns = sorted(set(required_columns) - actual_columns)
+    actual_constraints = {
+        constraint["name"]
+        for constraint in (*inspector.get_check_constraints(table_name), *inspector.get_unique_constraints(table_name))
+        if constraint.get("name")
+    }
+    missing_constraints = sorted(set(required_constraints) - actual_constraints)
+    if missing_columns or missing_constraints:
+        raise RuntimeError(
+            f"{table_name} já existe, mas não atende ao contrato da revision "
+            f"20260730_1700; colunas ausentes={missing_columns}, "
+            f"constraints ausentes={missing_constraints}."
+        )
+
+
 def upgrade() -> None:
+    inspector = sa.inspect(op.get_bind())
+    existing_contracts = (
+        (
+            "knowledge_sources",
+            (
+                "id", "company_id", "knowledge_scope", "source_type", "source_ref", "knowledge_kind",
+                "title", "canonical_uri", "status", "authority_level", "version", "product_version",
+                "locale", "route_key", "module_key", "audience_json", "required_capabilities_json",
+                "help_kind", "navigation_target", "tour_definition_id", "metadata_json", "content_checksum",
+                "valid_from", "valid_to", "source_updated_at", "indexed_at", "deleted_at", "created_at", "updated_at",
+            ),
+            ("ck_knowledge_sources_scope_company",),
+        ),
+        (
+            "knowledge_chunks",
+            (
+                "id", "knowledge_source_id", "company_id", "knowledge_scope", "section_key", "content",
+                "metadata_json", "chunk_order", "token_count", "content_checksum", "parent_chunk_id",
+                "source_span", "adapter_version", "parser_version", "chunking_policy", "created_at", "updated_at",
+            ),
+            ("ck_knowledge_chunks_scope_company", "uq_knowledge_chunks_source_section"),
+        ),
+        (
+            "knowledge_index_runs",
+            (
+                "id", "company_id", "knowledge_scope", "source_type", "trigger_kind", "status",
+                "discovered_count", "created_count", "updated_count", "unchanged_count", "deactivated_count",
+                "failed_count", "error_message", "metadata_json", "started_at", "completed_at",
+            ),
+            (),
+        ),
+    )
+    for table_name, required_columns, required_constraints in existing_contracts:
+        if inspector.has_table(table_name):
+            _assert_existing_table_contract(inspector, table_name, required_columns, required_constraints)
+
     op.create_table(
         "knowledge_sources",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -62,6 +122,7 @@ def upgrade() -> None:
             "(knowledge_scope = 'product' AND company_id IS NULL)",
             name="ck_knowledge_sources_scope_company",
         ),
+        if_not_exists=True,
     )
     for column in (
         "company_id",
@@ -78,13 +139,14 @@ def upgrade() -> None:
         "indexed_at",
         "deleted_at",
     ):
-        op.create_index(f"ix_knowledge_sources_{column}", "knowledge_sources", [column])
+        op.create_index(f"ix_knowledge_sources_{column}", "knowledge_sources", [column], if_not_exists=True)
     op.create_index(
         "uq_knowledge_sources_product_ref",
         "knowledge_sources",
         ["source_type", "source_ref"],
         unique=True,
         postgresql_where=sa.text("company_id IS NULL AND deleted_at IS NULL"),
+        if_not_exists=True,
     )
     op.create_index(
         "uq_knowledge_sources_company_ref",
@@ -92,6 +154,7 @@ def upgrade() -> None:
         ["company_id", "source_type", "source_ref"],
         unique=True,
         postgresql_where=sa.text("company_id IS NOT NULL AND deleted_at IS NULL"),
+        if_not_exists=True,
     )
 
     op.create_table(
@@ -143,6 +206,7 @@ def upgrade() -> None:
             "section_key",
             name="uq_knowledge_chunks_source_section",
         ),
+        if_not_exists=True,
     )
     for column in (
         "knowledge_source_id",
@@ -151,9 +215,9 @@ def upgrade() -> None:
         "content_checksum",
         "parent_chunk_id",
     ):
-        op.create_index(f"ix_knowledge_chunks_{column}", "knowledge_chunks", [column])
+        op.create_index(f"ix_knowledge_chunks_{column}", "knowledge_chunks", [column], if_not_exists=True)
     op.execute(
-        "CREATE INDEX ix_knowledge_chunks_content_fts "
+        "CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_content_fts "
         "ON knowledge_chunks USING gin (to_tsvector('portuguese', content))"
     )
 
@@ -180,6 +244,7 @@ def upgrade() -> None:
         sa.Column("metadata_json", sa.JSON(), nullable=False, server_default=sa.text("'{}'")),
         sa.Column("started_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("completed_at", sa.DateTime(), nullable=True),
+        if_not_exists=True,
     )
     for column in (
         "company_id",
@@ -189,7 +254,7 @@ def upgrade() -> None:
         "status",
         "started_at",
     ):
-        op.create_index(f"ix_knowledge_index_runs_{column}", "knowledge_index_runs", [column])
+        op.create_index(f"ix_knowledge_index_runs_{column}", "knowledge_index_runs", [column], if_not_exists=True)
 
 
 def downgrade() -> None:

@@ -18,7 +18,32 @@ depends_on = None
 ARTIFACT_TYPE_CHECK = "artifact_type IN ('pop', 'form', 'check', 'ai', 'data_in', 'data_out')"
 
 
+def _assert_existing_contract(inspector: sa.Inspector, table_name: str, columns: tuple[str, ...], constraints: tuple[str, ...]) -> None:
+    actual_columns = {column["name"] for column in inspector.get_columns(table_name)}
+    actual_constraints = {constraint["name"] for constraint in (*inspector.get_check_constraints(table_name), *inspector.get_unique_constraints(table_name)) if constraint.get("name")}
+    missing_columns = sorted(set(columns) - actual_columns)
+    missing_constraints = sorted(set(constraints) - actual_constraints)
+    if missing_columns or missing_constraints:
+        raise RuntimeError(f"{table_name} não atende ao contrato 20260801_1500; colunas={missing_columns}, constraints={missing_constraints}.")
+
+
+def _create_index_if_needed(name: str, table_name: str, columns: list[str]) -> None:
+    if any(tuple(index.get("column_names") or ()) == tuple(columns) for index in sa.inspect(op.get_bind()).get_indexes(table_name)):
+        return
+    _create_index_if_needed(name, table_name, columns, if_not_exists=True)
+
+
 def upgrade():
+    inspector = sa.inspect(op.get_bind())
+    contracts = (
+        ("process_activity_artifact_definitions", ("id", "company_id", "process_id", "artifact_key", "artifact_type", "name", "description", "version", "status", "configuration_json", "legacy_process_routine_id", "created_by_user_id", "updated_by_user_id", "published_at", "created_at", "updated_at"), ("ck_process_artifact_definition_type", "ck_process_artifact_definition_status", "ck_process_artifact_definition_version_positive", "uq_process_artifact_definition_version", "uq_process_artifact_definition_legacy_pop_version")),
+        ("process_activity_artifact_links", ("id", "company_id", "process_id", "bpmn_element_id", "artifact_definition_id", "display_order", "is_required", "completion_policy_json", "is_active", "created_at", "updated_at"), ("ck_process_artifact_link_order_non_negative", "uq_process_artifact_link_activity_definition")),
+        ("process_activity_artifact_executions", ("id", "company_id", "process_instance_id", "activity_execution_id", "artifact_definition_id", "artifact_key", "artifact_type", "artifact_version", "definition_snapshot_json", "status", "input_json", "output_json", "evidence_json", "error_json", "started_at", "completed_at", "created_at", "updated_at"), ("ck_process_artifact_execution_type", "ck_process_artifact_execution_status", "ck_process_artifact_execution_version_positive", "uq_process_artifact_execution_activity_definition")),
+    )
+    for table_name, columns, constraints in contracts:
+        if inspector.has_table(table_name):
+            _assert_existing_contract(inspector, table_name, columns, constraints)
+
     op.create_table(
         "process_activity_artifact_definitions",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -61,33 +86,34 @@ def upgrade():
             "version",
             name="uq_process_artifact_definition_legacy_pop_version",
         ),
+        if_not_exists=True,
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_artifact_definition_company_process_type",
         "process_activity_artifact_definitions",
         ["company_id", "process_id", "artifact_type"],
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_activity_artifact_definitions_company_id",
         "process_activity_artifact_definitions",
         ["company_id"],
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_activity_artifact_definitions_process_id",
         "process_activity_artifact_definitions",
         ["process_id"],
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_activity_artifact_definitions_artifact_type",
         "process_activity_artifact_definitions",
         ["artifact_type"],
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_activity_artifact_definitions_status",
         "process_activity_artifact_definitions",
         ["status"],
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_artifact_definition_legacy_pop",
         "process_activity_artifact_definitions",
         ["legacy_process_routine_id"],
@@ -119,14 +145,15 @@ def upgrade():
             "artifact_definition_id",
             name="uq_process_artifact_link_activity_definition",
         ),
+        if_not_exists=True,
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_artifact_link_company_activity",
         "process_activity_artifact_links",
         ["company_id", "process_id", "bpmn_element_id"],
     )
     for column in ("company_id", "process_id", "bpmn_element_id", "artifact_definition_id"):
-        op.create_index(
+        _create_index_if_needed(
             f"ix_process_activity_artifact_links_{column}",
             "process_activity_artifact_links",
             [column],
@@ -179,8 +206,9 @@ def upgrade():
             "artifact_definition_id",
             name="uq_process_artifact_execution_activity_definition",
         ),
+        if_not_exists=True,
     )
-    op.create_index(
+    _create_index_if_needed(
         "ix_process_artifact_execution_company_instance_status",
         "process_activity_artifact_executions",
         ["company_id", "process_instance_id", "status"],
@@ -193,7 +221,7 @@ def upgrade():
         "artifact_type",
         "status",
     ):
-        op.create_index(
+        _create_index_if_needed(
             f"ix_process_activity_artifact_executions_{column}",
             "process_activity_artifact_executions",
             [column],
