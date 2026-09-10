@@ -27,6 +27,20 @@ def test_people_workspace_has_real_sections_and_no_technical_credentials():
     assert '/api/companies/${companyId}/people/employees' in script
 
 
+def test_people_workspace_uses_the_app32_visual_composition():
+    root = Path(__file__).resolve().parents[1]
+    template = (root / 'templates' / 'modules' / 'companies' / 'company_people_v3.html').read_text(encoding='utf-8')
+    stylesheet = (root / 'static' / 'css' / 'company_people_v3.css').read_text(encoding='utf-8')
+
+    assert 'people-hero card' in template
+    assert 'people-hero__metrics' in template
+    assert 'people-guidance' in template
+    assert 'people-journey' not in template
+    assert '.people-tabs' in stylesheet
+    assert 'border-radius: 999px' in stylesheet
+    assert '.people-table-wrap .table-v2 td' in stylesheet
+
+
 def test_sidebar_uses_active_company_for_people_navigation():
     sidebar = (ROOT / 'templates' / 'partials' / 'sidebar_standard.html').read_text(encoding='utf-8')
     assert "'/companies/%s/people' % active_company_id" in sidebar
