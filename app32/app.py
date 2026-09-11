@@ -677,6 +677,7 @@ def create_app(config_name=None):
             allowed_post_login = [
                 'auth.portal',
                 'auth.profile',
+                'auth.profile_mcp_oauth_codex_config',
                 'auth.change_password',
                 'auth.logout',
                 'static',
