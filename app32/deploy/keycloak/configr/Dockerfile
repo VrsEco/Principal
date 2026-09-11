@@ -8,3 +8,6 @@ RUN /opt/keycloak/bin/kc.sh build
 
 FROM quay.io/keycloak/keycloak:26.7.3
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
+# Tema de login proprietário. Não carrega segredos, usuários ou configuração
+# de realm; a ativação é feita pelo administrador do realm após o deploy.
+COPY themes/versus /opt/keycloak/themes/versus

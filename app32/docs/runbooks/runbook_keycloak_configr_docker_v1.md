@@ -48,6 +48,20 @@ fora de `www/`, em `../backups/keycloak`, com permissão `0750`.
 7. Validar `/health/ready` na porta de management `9000` apenas pela rede
    interna do container. Não publicar `/health` ou `/metrics` no proxy público.
 
+## Tema de login Versus
+
+O build inclui `deploy/keycloak/configr/themes/versus/login` em
+`/opt/keycloak/themes/versus`. O tema herda `keycloak.v2`: templates, ações de
+login, recuperação de senha, OTP e mensagens permanecem do Keycloak; apenas a
+apresentação ganha uma identidade compatível com a linguagem visual do APP32,
+sem copiar sua tela de login.
+
+Após confirmar que a imagem nova está ativa, no **realm `app32`** abra
+**Realm settings → Themes** e selecione `versus` como **Login theme**. Salve e
+teste uma autorização PKCE em janela anônima. Não mudar o tema do realm
+`master` nesta entrega; ele é a superfície administrativa do IdP e possui
+risco operacional distinto.
+
 ## Backup e recuperação
 
 1. Antes de alterar realm, client ou imagem, gerar dump custom PostgreSQL em

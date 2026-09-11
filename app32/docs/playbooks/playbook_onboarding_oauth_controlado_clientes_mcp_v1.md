@@ -69,6 +69,11 @@ flag é `APP32_MCP_OAUTH_CODEX_CONNECTOR_ENABLED`; o `client_id` é configurado
 externamente por `APP32_MCP_OAUTH_CODEX_CLIENT_ID`. Ambos precisam ser
 habilitados somente na publicação controlada da coorte.
 
+O nome exibido e usado pelo Codex é `mcp-versus`, configurável por
+`APP32_MCP_OAUTH_CODEX_SERVER_NAME`. Ele identifica apenas a conexão local do
+CLI; não substitui o client OAuth `app32-mcp-pilot` e não altera grants,
+`company_id`, scopes ou permissões.
+
 ## Regras de expansão
 
 - Um client OAuth representa o **software/canal**, não a fronteira de tenant.

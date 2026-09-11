@@ -36,9 +36,11 @@ class McpOAuthCodexConnectorService:
                 "message": "A coorte OAuth do Codex ainda não possui client configurado.",
             }
 
-        server_name = str(os.getenv("APP32_MCP_OAUTH_CODEX_SERVER_NAME") or "app32-pilot").strip()
+        # Nome da conexão local do Codex. Não é client_id OAuth, nem uma
+        # fronteira de autorização: renomeá-lo não altera grants ou tokens.
+        server_name = str(os.getenv("APP32_MCP_OAUTH_CODEX_SERVER_NAME") or "mcp-versus").strip()
         if not server_name:
-            server_name = "app32-pilot"
+            server_name = "mcp-versus"
         mcp_url = f"{base_url}/mcp/pilot/user/"
         return {
             "available": True,

@@ -65,3 +65,16 @@ def test_configr_compose_keeps_keycloak_isolated_and_loopback_only() -> None:
     assert "REPLACE_WITH_RANDOM_BOOTSTRAP_PASSWORD" in env_template
     assert "APP32_MCP_HTTP_ENABLE_OAUTH" not in compose
     assert "APP32_MCP_HTTP_ENABLE_OAUTH" not in env_template
+
+
+def test_configr_image_contains_the_versioned_versus_login_theme() -> None:
+    configr_dir = DEPLOY_DIR / "configr"
+    dockerfile = (configr_dir / "Dockerfile").read_text(encoding="utf-8")
+    theme_dir = configr_dir / "themes" / "versus" / "login"
+
+    assert "COPY themes/versus /opt/keycloak/themes/versus" in dockerfile
+    properties = (theme_dir / "theme.properties").read_text(encoding="utf-8")
+    stylesheet = (theme_dir / "resources" / "css" / "versus.css").read_text(encoding="utf-8")
+    assert "parent=keycloak.v2" in properties
+    assert "styles=css/versus.css" in properties
+    assert "#kc-header-wrapper" in stylesheet

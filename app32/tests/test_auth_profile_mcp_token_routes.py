@@ -70,7 +70,7 @@ class _FakeUserMcpTokenService:
 
 class _FakeOAuthCodexConnectorService:
     def build_config(self):
-        return {"available": True, "add_command": "codex mcp add app32-pilot"}
+        return {"available": True, "add_command": "codex mcp add mcp-versus"}
 
 
 def _build_app():
@@ -173,4 +173,4 @@ def test_profile_oauth_codex_config_route_does_not_accept_tenant_input(monkeypat
 
     assert response.status_code == 200
     payload = response.get_json()
-    assert payload == {"success": True, "data": {"available": True, "add_command": "codex mcp add app32-pilot"}}
+    assert payload == {"success": True, "data": {"available": True, "add_command": "codex mcp add mcp-versus"}}

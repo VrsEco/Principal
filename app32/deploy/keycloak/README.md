@@ -24,3 +24,12 @@ O procedimento canônico está em
 homologação local e em
 `app32/docs/runbooks/runbook_keycloak_configr_docker_v1.md` para produção
 controlada no Configr.
+
+## Tema de login Versus
+
+`configr/themes/versus/login` é um tema versionado de login. Ele herda
+`keycloak.v2`, preserva os templates e fluxos de segurança do Keycloak e muda
+somente a apresentação. A imagem Configr o copia para
+`/opt/keycloak/themes/versus`; depois do deploy, o administrador deve definir
+**Login theme = `versus`** exclusivamente no realm `app32`. Não aplicar o tema
+ao realm `master` sem revisão administrativa separada.
