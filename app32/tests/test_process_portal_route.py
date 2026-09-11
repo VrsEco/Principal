@@ -52,6 +52,32 @@ def test_process_portal_page_syncs_active_company(monkeypatch):
     assert response['context']['company'].id == 22
 
 
+def test_process_map_compact_passes_owner_display_mode_to_context_builder(monkeypatch):
+    app = _build_app()
+    captured = {}
+
+    monkeypatch.setattr(process_routes, 'render_template', lambda template, **ctx: {'template': template, 'context': ctx})
+    monkeypatch.setattr(
+        process_routes,
+        '_build_process_map_compact_context',
+        lambda company_id, **kwargs: captured.update({'company_id': company_id, **kwargs}) or {
+            'company_name': 'Empresa X',
+            'areas': [],
+        },
+    )
+
+    with app.test_request_context('/process-map/compact?company_id=22&owner_display=role'):
+        response = process_routes.process_map_compact.__wrapped__()
+
+    assert response['template'] == 'modules/processes/process_map_compact_view.html'
+    assert captured == {
+        'company_id': 22,
+        'area_id': None,
+        'macro_id': None,
+        'owner_display_mode': 'role',
+    }
+
+
 def test_process_portal_summary_route_uses_company_scope(monkeypatch):
     app = _build_app()
     captured = {}

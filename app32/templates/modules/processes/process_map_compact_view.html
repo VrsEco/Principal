@@ -284,6 +284,24 @@
             border-top: 1px solid var(--border);
         }
 
+        .owner-display-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .owner-display-control select {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text-primary);
+            padding: 0.42rem 0.5rem;
+            font: inherit;
+        }
+
         @media print {
             @page {
                 size: portrait;
@@ -414,6 +432,13 @@
         </div>
 
         <div class="toolbar-actions">
+            <label class="owner-display-control" for="ownerDisplayMode">
+                Donos como:
+                <select id="ownerDisplayMode" onchange="changeOwnerDisplayMode(this.value)">
+                    <option value="employee" {% if owner_display_mode == 'employee' %}selected{% endif %}>Colaboradores</option>
+                    <option value="role" {% if owner_display_mode == 'role' %}selected{% endif %}>Cargos</option>
+                </select>
+            </label>
             <div class="zoom-controls">
                 <button class="btn-zoom" onclick="zoomOut()" title="Diminuir Zoom">➖</button>
                 <span id="zoomLevel">100%</span>
@@ -573,7 +598,7 @@
                                 {% endfor %}
                                 {% endif %}
                             </div>
-                            <div class="macro-footer">Dono: {{ macro.owner or '-' }}</div>
+                            <div class="macro-footer">{{ owner_display_label }}: {{ macro.owner_display or '-' }}</div>
                         </div>
                         {% endfor %}
                         {% endif %}
@@ -636,6 +661,12 @@
         function resetZoom() {
             currentZoom = 100;
             updateZoom();
+        }
+
+        function changeOwnerDisplayMode(mode) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('owner_display', mode);
+            window.location.assign(url.toString());
         }
 
         // Handle mouse wheel zoom with Ctrl

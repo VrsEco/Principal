@@ -46,6 +46,11 @@
             <button class="btn btn-sm btn-view-type active" onclick="switchMapView('classic')">🏢 Clássico</button>
             <button class="btn btn-sm btn-view-type" onclick="switchMapView('mp2')">📊 MP-2 (Compacto)</button>
             <div style="width: 1px; background: var(--border); margin: 4px 6px;"></div>
+            <label for="ownerDisplayMode" class="text-secondary" style="font-size: 0.78rem; font-weight: 600;">Donos na emissão:</label>
+            <select id="ownerDisplayMode" class="form-control" style="width: auto; min-height: 32px; padding: 0.2rem 0.5rem; font-size: 0.78rem;">
+                <option value="employee">Colaboradores</option>
+                <option value="role">Cargos</option>
+            </select>
             <button class="btn btn-sm" onclick="openMP2()"
                 style="background: var(--surface); color: var(--primary); border: 1px solid var(--primary); font-weight: 600;">👁️
                 Visualizar MP-2 (Aba)</button>
@@ -1272,5 +1277,5 @@
     }
 </style>
 
-<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260608-1') }}"></script>
+<script src="{{ url_for('static', filename='js/process_architecture.js', v='20260911-1') }}"></script>
 {% endblock %}

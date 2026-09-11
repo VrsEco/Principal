@@ -13,7 +13,8 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
-from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
+from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, ProcessActivityExecutionContract, ProcessBpmnDiagram
+from services.process_map_owner_display_service import apply_owner_display_mode, normalize_owner_display_mode
 from services.process_artifact_service import build_definition_snapshot, get_artifact_definition
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
 from schemas.routine_execution_rule import RoutineEventDispatchInput, RoutineExecutionRuleInput
@@ -46,7 +47,13 @@ def _process_bpmn_modeler_asset_version() -> str:
     return str(latest_mtime)
 
 
-def _build_process_map_compact_context(company_id: int, *, area_id: int | None = None, macro_id: int | None = None):
+def _build_process_map_compact_context(
+    company_id: int,
+    *,
+    area_id: int | None = None,
+    macro_id: int | None = None,
+    owner_display_mode: str = "employee",
+):
     """
     Contexto único do MP-2 para evitar drift entre:
     - /process-map/compact
@@ -60,6 +67,7 @@ def _build_process_map_compact_context(company_id: int, *, area_id: int | None =
     if not company:
         raise LookupError(f"Empresa com ID {company_id} não encontrada.")
 
+    owner_display_mode = normalize_owner_display_mode(owner_display_mode)
     map_data = db_helper.get_process_map(company_id)
 
     process_ids = []
@@ -159,6 +167,12 @@ def _build_process_map_compact_context(company_id: int, *, area_id: int | None =
         for area in map_data.get('areas', []):
             area['macros'] = [m for m in area.get('macros', []) if m['id'] == macro_id]
 
+    apply_owner_display_mode(
+        map_data,
+        company_id=company_id,
+        owner_display_mode=owner_display_mode,
+    )
+
     def get_stage_color(stage):
         colors = {
             'inbox': '#cbd5e1', 'designing': '#93c5fd', 'deploying': '#3b82f6',
@@ -202,6 +216,8 @@ def _build_process_map_compact_context(company_id: int, *, area_id: int | None =
         'company': company,
         'company_name': company.name,
         'areas': map_data.get('areas', []),
+        'owner_display_mode': owner_display_mode,
+        'owner_display_label': 'Cargo responsável' if owner_display_mode == 'role' else 'Colaborador responsável',
         'now': datetime.now().strftime('%d/%m/%Y %H:%M'),
         'is_collaborator': is_collaborator_in_company(company_id),
         'my_active_activity_count': len(active_activities),
@@ -623,9 +639,15 @@ def process_map_compact():
         
     area_id = request.args.get('area_id', type=int)
     macro_id = request.args.get('macro_id', type=int)
+    owner_display_mode = request.args.get('owner_display', 'employee')
         
     try:
-        context = _build_process_map_compact_context(company_id, area_id=area_id, macro_id=macro_id)
+        context = _build_process_map_compact_context(
+            company_id,
+            area_id=area_id,
+            macro_id=macro_id,
+            owner_display_mode=owner_display_mode,
+        )
     except ValueError as exc:
         return str(exc), 400
     except LookupError as exc:
