@@ -71,6 +71,7 @@ jobs:
             if [ "${{ inputs.reconcile_drift }}" = "true" ]; then
               BASE="/srv/appgestaoversuscombr.45a4cd4b.configr.cloud"
               WWW="$BASE/www"
+              REPO="$WWW/app32"
               STAMP=$(date -u +%Y%m%dT%H%M%SZ)
               BACKUP_DIR="$BASE/backups"
               SNAPSHOT="$BACKUP_DIR/app32-controlled-drift-${STAMP}.tar.gz"
@@ -80,17 +81,32 @@ jobs:
 
               echo "🛡️  Iniciando reconciliação controlada do drift remoto..."
               test -d "$WWW/.git"
+              test -d "$REPO/.git"
               mkdir -p "$BACKUP_DIR"
-              git -C "$WWW" status --porcelain=v1 | tee "$STATUS_SNAPSHOT"
-              git -C "$WWW" diff > "$DIFF_SNAPSHOT"
-              tar -C "$WWW" -czf "$SNAPSHOT" static uploads app32/.env app32/instance app32/uploads
+              {
+                echo "### $WWW"
+                git -C "$WWW" status --porcelain=v1
+                echo "### $REPO"
+                git -C "$REPO" status --porcelain=v1
+              } | tee "$STATUS_SNAPSHOT"
+              {
+                echo "### $WWW"
+                git -C "$WWW" diff
+                echo "### $REPO"
+                git -C "$REPO" diff
+              } > "$DIFF_SNAPSHOT"
+              tar -C "$WWW" -czf "$SNAPSHOT" static uploads app32
               tar -tzf "$SNAPSHOT" >/dev/null
-              git -C "$WWW" fetch origin +refs/heads/main:refs/remotes/origin/main
-              ACTUAL_RELEASE=$(git -C "$WWW" rev-parse origin/main)
-              test "$ACTUAL_RELEASE" = "$EXPECTED_RELEASE"
-              git -C "$WWW" reset --hard origin/main
+              for CHECKOUT in "$WWW" "$REPO"; do
+                git -C "$CHECKOUT" fetch origin +refs/heads/main:refs/remotes/origin/main
+                ACTUAL_RELEASE=$(git -C "$CHECKOUT" rev-parse origin/main)
+                test "$ACTUAL_RELEASE" = "$EXPECTED_RELEASE"
+                git -C "$CHECKOUT" reset --hard origin/main
+                git -C "$CHECKOUT" clean -fd
+                test -z "$(git -C "$CHECKOUT" status --porcelain=v1)"
+              done
               test -s "$SNAPSHOT"
-              echo "✅ Drift preservado em $SNAPSHOT; release alvo: ${ACTUAL_RELEASE:0:8}"
+              echo "✅ Drift preservado em $SNAPSHOT; release alvo: ${EXPECTED_RELEASE:0:8}"
             fi
 
             echo "📂 Acessando diretório do projeto..."
