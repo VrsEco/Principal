@@ -626,6 +626,38 @@ def test_list_user_capabilities_uses_tenant_aware_manifest_loader(monkeypatch):
     assert calls == [("user", {"domain": "consultive", "include_tools": True})]
 
 
+def test_pilot_capabilities_manifest_is_limited_to_exposed_tools(monkeypatch):
+    expected = {"tools": [{"name": "get_company_profile"}], "total": 1}
+    calls = []
+
+    def load_manifest(surface, **kwargs):
+        calls.append((surface, kwargs))
+        return expected
+
+    monkeypatch.setattr(registry, "_get_surface_manifest_in_app_context", load_manifest)
+    mcp = _FakeMCP()
+    registry.register_mcp_surface_tools(
+        mcp,
+        "user",
+        include_shared_registrars=False,
+        tool_names=registry.PILOT_USER_TOOL_NAMES,
+    )
+
+    payload = mcp.registered["list_user_app32_capabilities"]["callable"]()
+
+    assert payload == expected
+    assert calls == [
+        (
+            "user",
+            {
+                "domain": None,
+                "include_tools": True,
+                "tool_names": tuple(sorted(registry.PILOT_USER_TOOL_NAMES)),
+            },
+        )
+    ]
+
+
 def test_squad_cliente_capabilities_publish_strategy_metrics_after_single_refresh(monkeypatch):
     context = MCPExecutionContext(
         user_id=44,

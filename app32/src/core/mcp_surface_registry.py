@@ -141,6 +141,7 @@ def get_surface_manifest(
     *,
     domain: str | Sequence[str] | None = None,
     include_tools: bool = True,
+    tool_names: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     normalized_surface = normalize_surface(surface)
     capabilities = list(
@@ -149,6 +150,9 @@ def get_surface_manifest(
             domain=domain,
         )
     )
+    if tool_names is not None:
+        allowed_names = {str(name).strip() for name in tool_names}
+        capabilities = [capability for capability in capabilities if capability.name in allowed_names]
     try:
         execution_context = resolve_mcp_execution_context({})
     except (RuntimeError, PermissionError):
@@ -185,18 +189,29 @@ def _get_surface_manifest_in_app_context(
     *,
     domain: str | Sequence[str] | None = None,
     include_tools: bool = True,
+    tool_names: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Avalia manifesto e policy com o mesmo contexto Flask/tenant do runtime."""
     from flask import has_app_context
 
     if has_app_context():
-        return get_surface_manifest(surface, domain=domain, include_tools=include_tools)
+        return get_surface_manifest(
+            surface,
+            domain=domain,
+            include_tools=include_tools,
+            tool_names=tool_names,
+        )
 
     from app import create_app
 
     app = create_app()
     with app.app_context():
-        return get_surface_manifest(surface, domain=domain, include_tools=include_tools)
+        return get_surface_manifest(
+            surface,
+            domain=domain,
+            include_tools=include_tools,
+            tool_names=tool_names,
+        )
 
 
 def _build_policy_fast_mcp(
@@ -352,11 +367,15 @@ def register_mcp_surface_tools(
             if normalized_surface == "user"
             else get_surface_manifest
         )
-        return manifest_loader(
-            normalized_surface,
-            domain=domain,
-            include_tools=include_tools,
-        )
+        manifest_kwargs: dict[str, Any] = {
+            "domain": domain,
+            "include_tools": include_tools,
+        }
+        # Só a coorte usa filtro estático: manter o contrato de descoberta da
+        # surface user normal inalterado.
+        if tool_names is not None:
+            manifest_kwargs["tool_names"] = tuple(sorted(allowed_names))
+        return manifest_loader(normalized_surface, **manifest_kwargs)
 
     if normalized_surface == "admin" and include_admin_diagnostics:
         _register_admin_diagnostics(mcp)
