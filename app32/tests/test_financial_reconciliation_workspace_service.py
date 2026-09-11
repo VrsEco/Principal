@@ -1,7 +1,7 @@
 import os
 import sys
 import io
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -96,6 +96,18 @@ def test_bank_workspace_filters_match_absolute_amount_movement_text_and_bank_dat
         bank_date_from=datetime(2026, 6, 1).date(),
         bank_date_to=datetime(2026, 6, 30).date(),
     )
+
+
+def test_settlement_date_window_includes_prior_bank_posting_days():
+    start_date, end_date = FinancialReconciliationWorkspaceService._settlement_date_window(
+        [
+            SimpleNamespace(occurred_on=date(2026, 9, 9), due_date=None),
+            SimpleNamespace(occurred_on=date(2026, 9, 10), due_date=None),
+        ]
+    )
+
+    assert start_date == date(2026, 9, 2)
+    assert end_date == date(2026, 9, 11)
 
 
 def test_system_workspace_filters_match_settlement_date_and_search():

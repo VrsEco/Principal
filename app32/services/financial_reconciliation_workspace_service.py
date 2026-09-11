@@ -27,6 +27,21 @@ from services.financial_title_balance_service import FinancialTitleBalanceServic
 
 
 class FinancialReconciliationWorkspaceService:
+    # O banco pode registrar o crédito em D+1 (fins de semana e feriados inclusive).
+    # A conciliação deve manter uma janela de busca para não ocultar baixas já feitas.
+    SETTLEMENT_DATE_LOOKBACK_DAYS = 7
+    SETTLEMENT_DATE_LOOKAHEAD_DAYS = 1
+
+    @staticmethod
+    def _settlement_date_window(rows: Sequence[FinancialImportRow]) -> Tuple[Optional[date], Optional[date]]:
+        reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
+        if not reference_dates:
+            return None, None
+        return (
+            min(reference_dates) - timedelta(days=FinancialReconciliationWorkspaceService.SETTLEMENT_DATE_LOOKBACK_DAYS),
+            max(reference_dates) + timedelta(days=FinancialReconciliationWorkspaceService.SETTLEMENT_DATE_LOOKAHEAD_DAYS),
+        )
+
     @staticmethod
     def _chart_account_label(company_id: int, chart_account_id: Optional[int]) -> Optional[str]:
         if not chart_account_id:
@@ -704,10 +719,8 @@ class FinancialReconciliationWorkspaceService:
         if movement_nature:
             query = query.filter(FinancialEntry.movement_nature == movement_nature)
 
-        reference_dates = [item.occurred_on or item.due_date for item in rows if item.occurred_on or item.due_date]
-        if reference_dates:
-            start_date = min(reference_dates)
-            end_date = max(reference_dates)
+        start_date, end_date = FinancialReconciliationWorkspaceService._settlement_date_window(rows)
+        if start_date and end_date:
             query = query.filter(FinancialSettlement.settlement_date.between(start_date, end_date))
 
         return (
