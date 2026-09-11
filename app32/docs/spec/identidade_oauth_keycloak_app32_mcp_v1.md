@@ -2,12 +2,29 @@
 
 **Classe:** SPEC
 **Data:** 2026-09-07
-**Status:** arquitetura-alvo definida; IdP de produção preparado, sem OAuth APP32 ativo
+**Status:** arquitetura-alvo implantada em coorte produtiva controlada; expansão de clientes permanece governada
 **Card:** AA.J.21.239 — Auditoria e SPEC OAuth Keycloak APP32 MCP
 **Liderança:** @ARQUITETO; governança gestao_versus_core
 **Origem:** [histórico aprovado](https://chatgpt.com/share/6a9f1148-baec-83e9-9ad4-0fce7f197e17?ogimg=plain).
 
 ## 1. Limites e conclusão
+
+### Atualização de produção — 2026-09-10
+
+As conclusões AS-IS abaixo permanecem como contexto histórico da auditoria. A
+implementação posterior materializou `IdentityPrincipal`, vínculo externo e
+`PrincipalCompanyGrant`, publicou o resource server OAuth em coorte isolada e
+preservou o transporte legado. A evidência produtiva vigente é a rota
+`/mcp/pilot/user`, com Authorization Code + PKCE S256, issuer
+`https://id.gestaoversus.com.br/realms/app32`, audience
+`app32-mcp-resource`, scopes `mcp:access`/`mcp:user` e catálogo reduzido.
+
+O acesso de cliente continua **deny-by-default**: JWT válido não basta sem
+vínculo externo, principal ativo e grant explícito para a empresa solicitada.
+O playbook de ingresso de clientes está em
+`docs/playbooks/playbook_onboarding_oauth_controlado_clientes_mcp_v1.md`.
+Ele não libera coortes, clients OAuth, redirects, grants ou surfaces novos por
+si só.
 
 Auditoria estática do checkout `codex/process-artifacts-runtime`, HEAD `e3acd8d642c88efc2595632f8a0cc749ee2c6933`. Não representa inspeção da branch principal remota nem certificação da produção. “Principal” foi interpretado como o contrato `PrincipalContext`, efetivamente encontrado no código. Alterações preexistentes do usuário foram preservadas.
 

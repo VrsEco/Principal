@@ -30,7 +30,7 @@ A SPEC define:
 2. responsabilidades de `/profile`, `/api-mcp`, `/channels` e console técnico;
 3. contrato mínimo do `Connection Profile`;
 4. sinais mínimos de saúde e diagnóstico;
-5. regras para Bearer Token MVP e OAuth futuro;
+5. regras de coexistência entre Bearer Token legado e OAuth remoto controlado;
 6. governança de squads e MCP;
 7. critérios de aceite para estabilização.
 
@@ -212,6 +212,18 @@ Campos mínimos:
 5. Executa teste assistido.
 6. Usa IA do cliente com tokens/capacidade próprios.
 7. Retorna análise, validação ou evidência ao APP32.
+
+### 7.2.1. Cliente MCP remoto com OAuth
+
+Quando a conexão usar OAuth remoto, a jornada substitui a geração de token por
+login no IdP: o APP32 fornece a URL MCP da coorte e o cliente inicia
+Authorization Code + PKCE no runtime. O usuário autentica no Keycloak e a
+conexão só recebe dados após a resolução de vínculo e grant no APP32.
+
+O client OAuth identifica o runtime/coorte; ele não concede tenant. A escolha
+de `company_id` por uma tool é apenas uma solicitação, revalidada contra
+`PrincipalCompanyGrant`. Para o piloto vigente, aplicar
+`docs/playbooks/playbook_onboarding_oauth_controlado_clientes_mcp_v1.md`.
 
 ### 7.3. Engenharia
 

@@ -1,7 +1,7 @@
 # Runbook — Keycloak APP32 no Configr com Docker
 
 **Classe documental:** Runbook
-**Status:** implantação controlada do IdP; não habilita OAuth no APP32
+**Status:** IdP produtivo e coorte OAuth MCP controlada ativos
 **Escopo:** `id.gestaoversus.com.br`, serviço independente e PostgreSQL dedicado
 
 ## Limites obrigatórios
@@ -14,8 +14,9 @@
   com credenciais ou dados de usuários.
 - O proxy Configr termina TLS. O container atende somente
   `127.0.0.1:8080`, com hostname público fixo e `proxy-headers=xforwarded`.
-- Não ativar `APP32_MCP_HTTP_ENABLE_OAUTH`, surfaces OAuth ou coorte antes da
-  reconciliação de migrations e do gate R07.
+- A rota legada e a coorte OAuth devem permanecer isoladas. Não alterar a
+  configuração global de OAuth para ampliar clientes; cada client/coorte é
+  liberado pelo fluxo de onboarding e deploy controlado.
 
 ## Artefatos versionados
 
@@ -70,5 +71,7 @@ fora de `www/`, em `../backups/keycloak`, com permissão `0750`.
 - principal e `PrincipalCompanyGrant` persistidos para a coorte; e
 - smoke de OAuth/tenant e plano de reversão aprovados.
 
-Enquanto um desses gates faltar, este IdP permanece preparado, mas nenhum
-cliente OAuth do APP32 é criado ou ativado.
+O piloto produtivo já atende esses gates para uma única coorte `user`. Para
+novo client, runtime, redirect URI ou empresa, repetir os gates aplicáveis,
+criar/validar grants mínimos e executar smoke positivo e cross-tenant negativo
+conforme `docs/playbooks/playbook_onboarding_oauth_controlado_clientes_mcp_v1.md`.

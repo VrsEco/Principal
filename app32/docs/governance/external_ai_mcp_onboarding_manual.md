@@ -7,6 +7,7 @@ Documento operacional da **AA.J.31.1325 — Organização IA/MCP - Grupo 08 - Cr
 - Manifesto: `src.intelligence.mcp_contracts.external_ai_onboarding.APP32_EXTERNAL_AI_ONBOARDING_MANIFEST`
 - Tool MCP: `describe_app32_external_ai_onboarding_tool`
 - Registrador: `src.core.mcp_external_ai_onboarding_tools.register_external_ai_onboarding_tools`
+- Onboarding OAuth remoto controlado: `docs/playbooks/playbook_onboarding_oauth_controlado_clientes_mcp_v1.md`
 
 ## Fases do onboarding
 
@@ -55,6 +56,15 @@ Toda IA externa deve consultar:
 - O comando final, especialmente `-EncodedCommand`, é emitido integralmente pelo backend no ato de criar/renovar: o frontend não pode substituir token em texto/Base64 nem reconstruir esse comando após a emissão.
 - O instalador Desktop deve rejeitar explicitamente `TOKEN_GERADO_APENAS_NA_RENOVACAO` para evitar falsa instalação e erro genérico no Claude.
 - Slash commands personalizados podem existir, mas são **opcionais**.
+
+## Delimitação OAuth remoto
+
+Este manual preserva caminhos históricos `stdio`/token e não os declara como
+OAuth remoto. Para clientes que se conectam por HTTPS com OAuth/OIDC, aplicar o
+playbook OAuth controlado: exige Authorization Code + PKCE, vínculo do
+`(issuer, subject)` ao principal APP32 e `PrincipalCompanyGrant` explícito por
+`company_id`. A URL isolada de piloto não é autorização para cadastrar clientes
+sem coorte, client OAuth e smoke de isolamento aprovados.
 
 ## Regra de permissão real do usuário
 
