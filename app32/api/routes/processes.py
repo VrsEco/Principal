@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from database import get_db
-from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, ProcessActivityExecutionContract, ProcessBpmnDiagram
+from models import db, Company, MacroProcess, Process, ProcessInstance, Employee, Indicator, ProcessRoutine, Routine, ProcessActivityExecutionContract, ProcessBpmnDiagram
 from services.process_map_owner_display_service import apply_owner_display_mode, normalize_owner_display_mode
 from services.process_artifact_service import build_definition_snapshot, get_artifact_definition
 from schemas.routine_journey import RoutineJourneyBindingUpsertSchema
