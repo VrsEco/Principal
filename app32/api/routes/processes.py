@@ -217,7 +217,7 @@ def _build_process_map_compact_context(
         'company_name': company.name,
         'areas': map_data.get('areas', []),
         'owner_display_mode': owner_display_mode,
-        'owner_display_label': 'Cargo responsável' if owner_display_mode == 'role' else 'Colaborador responsável',
+        'owner_display_label': 'Dono',
         'now': datetime.now().strftime('%d/%m/%Y %H:%M'),
         'is_collaborator': is_collaborator_in_company(company_id),
         'my_active_activity_count': len(active_activities),
