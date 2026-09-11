@@ -81,7 +81,12 @@ jobs:
 
               echo "🛡️  Iniciando reconciliação controlada do drift remoto..."
               test -d "$WWW/.git"
-              test -d "$REPO/.git"
+              if [ ! -d "$REPO/.git" ]; then
+                echo "❌ Checkout interno esperado não encontrado: $REPO"
+                echo "🔎 Checkouts Git detectados sob $BASE:"
+                find "$BASE" -maxdepth 5 -type d -name .git -printf '%h\n' | sort
+                exit 1
+              fi
               mkdir -p "$BACKUP_DIR"
               {
                 echo "### $WWW"
