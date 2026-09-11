@@ -68,6 +68,11 @@ class _FakeUserMcpTokenService:
         }
 
 
+class _FakeOAuthCodexConnectorService:
+    def build_config(self):
+        return {"available": True, "add_command": "codex mcp add app32-pilot"}
+
+
 def _build_app():
     app = Flask(__name__)
     app.config['TESTING'] = True
@@ -157,3 +162,15 @@ def test_profile_mcp_token_config_route(monkeypatch):
     assert config_call[1]['client_name'] == 'Claude Code'
     assert config_call[1]['runtime'] == 'claude'
     assert config_call[1]['squad'] == 'squad_cliente'
+
+
+def test_profile_oauth_codex_config_route_does_not_accept_tenant_input(monkeypatch):
+    app = _build_app()
+    monkeypatch.setattr(auth_route, 'current_user', _fake_user())
+    monkeypatch.setattr(auth_route, 'mcp_oauth_codex_connector_service', _FakeOAuthCodexConnectorService())
+
+    response = app.test_client().get('/profile/mcp-oauth/codex/config?company_id=999')
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload == {"success": True, "data": {"available": True, "add_command": "codex mcp add app32-pilot"}}

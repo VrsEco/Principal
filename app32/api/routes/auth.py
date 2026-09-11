@@ -9,6 +9,7 @@ from datetime import date, datetime, timedelta
 from services.auth_service import auth_service
 from services.user_presence_service import UserPresenceService
 from services.user_mcp_token_service import user_mcp_token_service
+from services.mcp_oauth_codex_connector_service import mcp_oauth_codex_connector_service
 from schemas.user_pydantic import (
     UserProfileUpdateSchema,
     UserPasswordChangeSchema,
@@ -502,6 +503,27 @@ def profile_mcp_token_config():
             logger,
             exc,
             context='Falha ao montar configuração MCP do usuário autenticado',
+            success=False,
+        )
+
+
+@auth_bp.route('/auth/profile/mcp-oauth/codex/config', methods=['GET'])
+@auth_bp.route('/profile/mcp-oauth/codex/config', methods=['GET'])
+@login_required
+def profile_mcp_oauth_codex_config():
+    """Entrega apenas a configuração pública da coorte OAuth Codex.
+
+    O endpoint deliberadamente não recebe ``company_id`` nem cria grants: a
+    autorização tenant-safe acontece no MCP após o login OAuth.
+    """
+    try:
+        config = mcp_oauth_codex_connector_service.build_config()
+        return jsonify({"success": True, "data": config})
+    except Exception as exc:
+        return log_and_build_public_error_response(
+            logger,
+            exc,
+            context='Falha ao montar configuração OAuth do Codex',
             success=False,
         )
 

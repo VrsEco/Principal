@@ -170,6 +170,22 @@
             <p class="mcp-microcopy" id="mcpTokenHelpText">O token aparece uma única vez ao criar ou renovar.</p>
         </section>
 
+        <section class="mcp-profile-card" aria-labelledby="oauth-codex-title">
+            <div class="mcp-section-head">
+                <span>OAuth</span>
+                <div>
+                    <h2 id="oauth-codex-title">Conectar Codex por OAuth</h2>
+                    <p>Coorte controlada: o Codex abre o navegador somente para o login inicial ou reconexão.</p>
+                </div>
+            </div>
+            <p class="mcp-microcopy" id="oauthCodexStatus">Verificando se sua coorte OAuth está liberada.</p>
+            <textarea id="oauthCodexCommand" class="form-control mcp-command-output" rows="5" readonly placeholder="A configuração OAuth aparecerá quando sua coorte estiver liberada."></textarea>
+            <div class="mcp-command-actions">
+                <button type="button" class="btn btn-secondary" id="loadOAuthCodexButton">Ver conexão OAuth</button>
+                <button type="button" class="btn btn-primary" id="copyOAuthCodexButton" disabled>Copiar comandos</button>
+            </div>
+        </section>
+
         <section class="mcp-profile-card" aria-labelledby="install-title">
             <div class="mcp-section-head">
                 <span>4</span>
@@ -338,6 +354,10 @@
     const renewMcpTokenButton = document.getElementById('renewMcpTokenButton');
     const revokeMcpTokenButton = document.getElementById('revokeMcpTokenButton');
     const copyMcpConfigButton = document.getElementById('copyMcpConfigButton');
+    const loadOAuthCodexButton = document.getElementById('loadOAuthCodexButton');
+    const copyOAuthCodexButton = document.getElementById('copyOAuthCodexButton');
+    const oauthCodexCommand = document.getElementById('oauthCodexCommand');
+    const oauthCodexStatus = document.getElementById('oauthCodexStatus');
     const buildMcpConfigButton = document.getElementById('buildMcpConfigButton');
     const mcpResolvedRuntime = document.getElementById('mcpResolvedRuntime');
     const mcpResolvedSquad = document.getElementById('mcpResolvedSquad');
@@ -579,6 +599,25 @@
         return data.data;
     }
 
+    async function loadOAuthCodexConfig(showSuccessAlert = false) {
+        const response = await fetch('{{ url_for('auth.profile_mcp_oauth_codex_config') }}');
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Falha ao carregar a conexão OAuth do Codex.');
+        const config = data.data || {};
+        if (!config.available) {
+            if (oauthCodexStatus) oauthCodexStatus.textContent = config.message || 'Conexão OAuth indisponível para esta coorte.';
+            if (oauthCodexCommand) oauthCodexCommand.value = '';
+            if (copyOAuthCodexButton) copyOAuthCodexButton.disabled = true;
+            return config;
+        }
+        const command = `${config.add_command}\n${config.login_command}\n${config.verify_command}`;
+        if (oauthCodexCommand) oauthCodexCommand.value = command;
+        if (oauthCodexStatus) oauthCodexStatus.textContent = config.security_note || 'Conexão OAuth pronta para copiar.';
+        if (copyOAuthCodexButton) copyOAuthCodexButton.disabled = false;
+        if (showSuccessAlert) renderAlert('mcp-token-alert-container', true, 'Comandos OAuth do Codex atualizados. O login abrirá o navegador quando você executar o segundo comando.');
+        return config;
+    }
+
     function openMcpTokenModal(token) {
         if (!mcpTokenModal || !mcpTokenModalValue) return;
         mcpTokenModalValue.value = token || '';
@@ -703,6 +742,22 @@
             } catch (error) {
                 renderAlert('mcp-token-alert-container', false, error.message);
             }
+        });
+    }
+
+    if (loadOAuthCodexButton) {
+        loadOAuthCodexButton.addEventListener('click', async () => {
+            try { await loadOAuthCodexConfig(true); } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
+        });
+    }
+
+    if (copyOAuthCodexButton) {
+        copyOAuthCodexButton.addEventListener('click', async () => {
+            try {
+                if (!oauthCodexCommand || !oauthCodexCommand.value.trim()) await loadOAuthCodexConfig(false);
+                await copyText(oauthCodexCommand.value);
+                renderAlert('mcp-token-alert-container', true, 'Comandos OAuth copiados. Execute primeiro a conexão e depois o login.');
+            } catch (error) { renderAlert('mcp-token-alert-container', false, error.message); }
         });
     }
 

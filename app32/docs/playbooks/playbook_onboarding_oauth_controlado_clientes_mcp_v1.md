@@ -1,9 +1,9 @@
 # Playbook — Onboarding OAuth controlado para clientes MCP
 
-**Classe documental:** Playbook  
-**Status:** vigente para coortes controladas  
-**Data:** 2026-09-11  
-**Card:** AA.J.21.280  
+**Classe documental:** Playbook
+**Status:** vigente para coortes controladas
+**Data:** 2026-09-11
+**Card:** AA.J.21.280
 **Escopo:** clientes externos que consumam o MCP remoto APP32 com login humano OAuth/OIDC.
 
 ## Decisão
@@ -54,6 +54,20 @@ client público desta jornada.
 
 Esses parâmetros não concedem acesso sozinhos. O `company_id` requerido pela
 tool é revalidado contra o grant do principal a cada chamada.
+
+## Conector Codex no APP32
+
+O APP32 expõe, para usuário autenticado, a configuração pública do conector em
+`GET /profile/mcp-oauth/codex/config`. A resposta não aceita `company_id`, não
+cria grant e não contém senha, token ou segredo. Quando a coorte estiver
+habilitada, ela entrega os comandos `codex mcp add`, `codex mcp login` e
+`codex mcp list`; o login abre o navegador somente na conexão inicial,
+expiração, revogação ou reconexão.
+
+A tela `/profile` apresenta o cartão **Conectar Codex por OAuth**. Sua feature
+flag é `APP32_MCP_OAUTH_CODEX_CONNECTOR_ENABLED`; o `client_id` é configurado
+externamente por `APP32_MCP_OAUTH_CODEX_CLIENT_ID`. Ambos precisam ser
+habilitados somente na publicação controlada da coorte.
 
 ## Regras de expansão
 

@@ -1,7 +1,7 @@
 # Harness — validação de onboarding OAuth MCP por coorte
 
-**Classe documental:** Harness  
-**Status:** operacional para coorte controlada  
+**Classe documental:** Harness
+**Status:** operacional para coorte controlada
 **Escopo:** validação repetível de uma conexão USER OAuth antes de liberar uso.
 
 ## Entradas mínimas
