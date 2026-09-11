@@ -76,7 +76,7 @@ jobs:
               SNAPSHOT="$BACKUP_DIR/app32-controlled-drift-${STAMP}.tar.gz"
               STATUS_SNAPSHOT="$BACKUP_DIR/app32-controlled-drift-${STAMP}.status.txt"
               DIFF_SNAPSHOT="$BACKUP_DIR/app32-controlled-drift-${STAMP}.diff"
-              EXPECTED_RELEASE="bb7b049ecf675b2ef79f20cc6e6cbe480b8173a6"
+              EXPECTED_RELEASE="f9b5b502add5c2e8ed1340f0155eeef5ef0d91ad"
 
               echo "🛡️  Iniciando reconciliação controlada do checkout Configr..."
               test -d "$WWW/.git"
