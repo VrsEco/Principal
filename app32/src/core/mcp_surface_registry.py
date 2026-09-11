@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from dataclasses import replace
 from typing import Any, Literal, Sequence
 
 from src.intelligence.tool_catalog import catalog
@@ -142,6 +143,7 @@ def get_surface_manifest(
     domain: str | Sequence[str] | None = None,
     include_tools: bool = True,
     tool_names: Sequence[str] | None = None,
+    public_scopes: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     normalized_surface = normalize_surface(surface)
     capabilities = list(
@@ -171,6 +173,16 @@ def get_surface_manifest(
                 filtered_capabilities.append(capability)
         capabilities = filtered_capabilities
 
+    if public_scopes is not None:
+        allowed_scopes = {str(scope).strip() for scope in public_scopes}
+        capabilities = [
+            replace(
+                capability,
+                scopes=tuple(scope for scope in capability.scopes if scope in allowed_scopes),
+            )
+            for capability in capabilities
+        ]
+
     return build_capability_manifest(
         capabilities,
         scope=None,
@@ -190,6 +202,7 @@ def _get_surface_manifest_in_app_context(
     domain: str | Sequence[str] | None = None,
     include_tools: bool = True,
     tool_names: Sequence[str] | None = None,
+    public_scopes: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Avalia manifesto e policy com o mesmo contexto Flask/tenant do runtime."""
     from flask import has_app_context
@@ -200,6 +213,7 @@ def _get_surface_manifest_in_app_context(
             domain=domain,
             include_tools=include_tools,
             tool_names=tool_names,
+            public_scopes=public_scopes,
         )
 
     from app import create_app
@@ -211,6 +225,7 @@ def _get_surface_manifest_in_app_context(
             domain=domain,
             include_tools=include_tools,
             tool_names=tool_names,
+            public_scopes=public_scopes,
         )
 
 
@@ -375,6 +390,7 @@ def register_mcp_surface_tools(
         # surface user normal inalterado.
         if tool_names is not None:
             manifest_kwargs["tool_names"] = tuple(sorted(allowed_names))
+            manifest_kwargs["public_scopes"] = get_surface_scope_filter(normalized_surface)
         return manifest_loader(normalized_surface, **manifest_kwargs)
 
     if normalized_surface == "admin" and include_admin_diagnostics:

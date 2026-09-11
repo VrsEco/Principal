@@ -653,9 +653,22 @@ def test_pilot_capabilities_manifest_is_limited_to_exposed_tools(monkeypatch):
                 "domain": None,
                 "include_tools": True,
                 "tool_names": tuple(sorted(registry.PILOT_USER_TOOL_NAMES)),
+                "public_scopes": registry.get_surface_scope_filter("user"),
             },
         )
     ]
+
+
+def test_pilot_manifest_hides_non_user_scope_metadata():
+    manifest = registry.get_surface_manifest(
+        "user",
+        tool_names=registry.PILOT_USER_TOOL_NAMES,
+        public_scopes=registry.get_surface_scope_filter("user"),
+    )
+
+    assert {tool["name"] for tool in manifest["tools"]} == set(registry.PILOT_USER_TOOL_NAMES)
+    assert manifest["summary"]["scopes"] == ["mcp_user"]
+    assert all(tool["scopes"] == ["mcp_user"] for tool in manifest["tools"])
 
 
 def test_squad_cliente_capabilities_publish_strategy_metrics_after_single_refresh(monkeypatch):
