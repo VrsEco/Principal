@@ -211,6 +211,7 @@ check_web_readiness() {
 # 4. Reinício da Aplicação
 echo "🔄 Reiniciando servidor uWSGI (Configr)..."
 UWSGI_APP_INI="appgestaoversuscombr.45a4cd4b.configr.cloud.ini"
+RESTART_OK=0
 set +e
 UWSGI_PIDS=$(pgrep -f "uwsgi --ini $UWSGI_APP_INI")
 set -e
@@ -242,18 +243,21 @@ else
     echo "⚠️  Aviso: PIDs do uWSGI não encontrados; aplicando fallback por toque de arquivos."
 fi
 
-# Fallback/pass-through para ambientes que ainda respeitam restart por arquivo.
-touch $WWW/restart.txt
-mkdir -p $WWW/tmp && touch $WWW/tmp/restart.txt
-mkdir -p $APP/tmp && touch $APP/tmp/restart.txt
-touch $APP/restart.txt
-if [ -f "passenger_wsgi.py" ]; then
-    touch passenger_wsgi.py
+# Fallback/pass-through somente se o Emperor não confirmou a recriação.
+# Em Configr, os arquivos restart.txt podem regenerar o ini do vassal e
+# sobrescrever os parâmetros de resiliência recém-aplicados.
+if [ "$RESTART_OK" -ne 1 ]; then
+    touch $WWW/restart.txt
+    mkdir -p $WWW/tmp && touch $WWW/tmp/restart.txt
+    mkdir -p $APP/tmp && touch $APP/tmp/restart.txt
+    touch $APP/restart.txt
+    if [ -f "passenger_wsgi.py" ]; then
+        touch passenger_wsgi.py
+    fi
+    if [ -f "$WWW/passenger_wsgi.py" ]; then
+        touch "$WWW/passenger_wsgi.py"
+    fi
 fi
-if [ -f "$WWW/passenger_wsgi.py" ]; then
-    touch "$WWW/passenger_wsgi.py"
-fi
-
 echo "🌐 Validando readiness HTTP do app web..."
 WEB_READY=0
 for i in {1..60}; do
