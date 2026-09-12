@@ -630,7 +630,8 @@
     function oauthConnectorOutput(config) {
         if (config.runtime === 'codex') return `${config.add_command}\n${config.login_command}\n${config.verify_command}`;
         if (config.runtime === 'antigravity') return config.config_text || '';
-        return [`Nome do conector: ${config.server_name || 'mcp-versus'}`, `URL MCP: ${config.mcp_url || ''}`, '', ...(config.instructions || [])].join('\n').trim();
+        const clientId = config.client_id ? [`Client ID OAuth: ${config.client_id}`, ''] : [];
+        return [`Nome do conector: ${config.server_name || 'mcp-versus'}`, `URL MCP: ${config.mcp_url || ''}`, '', ...clientId, ...(config.instructions || [])].join('\n').trim();
     }
 
     async function loadOAuthCodexConfig(showSuccessAlert = false) {
