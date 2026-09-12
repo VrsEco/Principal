@@ -26,6 +26,7 @@ def test_claude_configuration_uses_dcr_without_exposing_a_static_client_id(monke
     assert payload["redirect_uri"] == "https://claude.ai/api/mcp/auth_callback"
     assert not any("token" in str(key).lower() for key in payload)
     assert any("Não informe client ID nem token manualmente." in item for item in payload["instructions"])
+    assert any("homologação deste cliente é independente" in item for item in payload["instructions"])
 
 
 def test_antigravity_configuration_has_oauth_client_id(monkeypatch):

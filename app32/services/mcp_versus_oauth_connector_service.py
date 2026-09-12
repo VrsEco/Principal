@@ -105,7 +105,7 @@ class McpVersusOAuthConnectorService:
                 "registration_mode": "dynamic",
                 "instructions": [
                     "Claude Code: adicione um conector MCP remoto HTTP com o nome mcp-versus e a URL indicada.",
-                    "No Claude Desktop, use Settings > Connectors > Add custom connector e informe o mesmo nome e URL.",
+                    "Claude Desktop: a homologação deste cliente é independente; use-o somente após a liberação explícita pela Versus.",
                     "Clique em Connect/Authenticate e conclua o login OAuth no Keycloak. Não informe client ID nem token manualmente.",
                     "Ao concluir, peça ao Claude para listar suas capabilities para validar a conexão somente-leitura.",
                 ],
