@@ -13,7 +13,7 @@ def test_mcp_versus_is_the_fixed_public_connection_name(monkeypatch):
     assert "company_id" not in payload
 
 
-def test_claude_configuration_uses_public_mcp_versus_and_never_a_token(monkeypatch):
+def test_claude_configuration_uses_dcr_without_exposing_a_static_client_id(monkeypatch):
     monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_ENABLED", "1")
     monkeypatch.setenv("MCP_VERSUS_OAUTH_CLAUDE_CLIENT_ID", "mcp-versus-claude")
 
@@ -21,9 +21,11 @@ def test_claude_configuration_uses_public_mcp_versus_and_never_a_token(monkeypat
 
     assert payload["available"] is True
     assert payload["server_name"] == "mcp-versus"
-    assert payload["client_id"] == "mcp-versus-claude"
+    assert payload["registration_mode"] == "dynamic"
+    assert "client_id" not in payload
     assert payload["redirect_uri"] == "https://claude.ai/api/mcp/auth_callback"
-    assert "token" not in payload
+    assert not any("token" in str(key).lower() for key in payload)
+    assert any("Não informe client ID nem token manualmente." in item for item in payload["instructions"])
 
 
 def test_antigravity_configuration_has_oauth_client_id(monkeypatch):

@@ -47,19 +47,25 @@ class McpVersusOAuthConnectorService:
     def mcp_url(self) -> str:
         return f"{_public_base_url()}/mcp/pilot/user/"
 
-    def _base_payload(self, runtime: str, client_id: str) -> dict[str, object]:
-        return {
+    def _base_payload(self, runtime: str, client_id: str | None = None) -> dict[str, object]:
+        payload: dict[str, object] = {
             "available": True,
             "runtime": runtime,
             "server_name": self.server_name,
             "mcp_url": self.mcp_url,
-            "client_id": client_id,
             "authentication": "oauth",
             "security_note": (
                 "A conexão mcp-versus não seleciona empresa nem concede acesso. "
                 "Cada tool valida o grant do principal para o company_id solicitado."
             ),
         }
+        # Client IDs estáticos só pertencem aos runtimes que os configuram
+        # explicitamente. Clientes DCR, como Claude, registram seu próprio
+        # client público durante o fluxo OAuth; exibir um ID de coorte nesse
+        # caso induz o usuário a configurar o conector de forma incorreta.
+        if client_id:
+            payload["client_id"] = client_id
+        return payload
 
     def _configured_client(self, runtime: str) -> tuple[bool, str]:
         flag = f"MCP_VERSUS_OAUTH_{runtime.upper()}_ENABLED"
@@ -89,17 +95,19 @@ class McpVersusOAuthConnectorService:
         return payload
 
     def _build_claude(self) -> dict[str, object]:
-        enabled, client_id = self._configured_client("claude")
-        if not enabled or not client_id:
+        enabled, _client_id = self._configured_client("claude")
+        if not enabled:
             return {"available": False, "runtime": "claude", "message": "OAuth do Claude ainda não está liberado para esta coorte."}
-        payload = self._base_payload("claude", client_id)
+        payload = self._base_payload("claude")
         payload.update(
             {
                 "connector_name": self.server_name,
+                "registration_mode": "dynamic",
                 "instructions": [
-                    "No Claude ou Claude Desktop, abra Settings > Connectors > Add custom connector.",
-                    f"Informe o nome {self.server_name} e a URL {self.mcp_url}.",
-                    "Clique em Connect e conclua o login OAuth no Keycloak.",
+                    "Claude Code: adicione um conector MCP remoto HTTP com o nome mcp-versus e a URL indicada.",
+                    "No Claude Desktop, use Settings > Connectors > Add custom connector e informe o mesmo nome e URL.",
+                    "Clique em Connect/Authenticate e conclua o login OAuth no Keycloak. Não informe client ID nem token manualmente.",
+                    "Ao concluir, peça ao Claude para listar suas capabilities para validar a conexão somente-leitura.",
                 ],
                 "redirect_uri": "https://claude.ai/api/mcp/auth_callback",
             }
