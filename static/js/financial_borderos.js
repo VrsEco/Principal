@@ -170,7 +170,7 @@
   }
 
   async function loadSchedules() {
-    state.schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}&status=active`);
+    state.schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}&status=active&summary_mode=compact`);
     if (!borderoId) renderEligibleSchedules();
   }
 

@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -97,3 +98,61 @@ def test_api_and_ui_expose_due_date_filter_contract():
     assert "applyCurrentMonthDueDateRange()" in ui_source
     assert "scheduleParams.set('due_date_from', dueDateFrom)" in ui_source
     assert "scheduleParams.set('due_date_to', dueDateTo)" in ui_source
+    assert "scheduleParams.set('summary_mode', 'compact')" in ui_source
+
+
+def test_list_schedules_compact_mode_uses_batched_balance_and_light_contract(monkeypatch):
+    schedule = SimpleNamespace(
+        id=77,
+        company_id=9,
+        schedule_code="AG-000077",
+        name="Título teste",
+        entry_type="receivable",
+        movement_nature="credit",
+        status="active",
+        start_date=date(2026, 9, 1),
+        competence_date=date(2026, 9, 1),
+        first_due_date=date(2026, 9, 10),
+        next_due_date=date(2026, 9, 10),
+        description="Contrato teste",
+        template_amount=100,
+        counterparty_id=None,
+        metadata_json={},
+    )
+    query = _QueryStub([schedule])
+    _FinancialScheduleStub.query = query
+
+    monkeypatch.setattr(schedule_module, "FinancialSchedule", _FinancialScheduleStub)
+    monkeypatch.setattr(schedule_module.FinancialService, "_ensure_company_scope", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(FinancialScheduleService, "_build_counterparty_name_lookup", lambda **_kwargs: {})
+    monkeypatch.setattr(
+        schedule_module.FinancialTitleBalanceService,
+        "calculate_for_schedules",
+        lambda **_kwargs: {
+            77: {
+                "principal_amount": 100,
+                "principal_settled": 0,
+                "principal_open": 100,
+                "total_open": 100,
+                "signed_principal_amount": 100,
+                "signed_principal_settled": 0,
+                "signed_total_open": 100,
+                "settlement_state": "open",
+                "entry_count": 0,
+                "has_open_balance": True,
+            }
+        },
+    )
+    monkeypatch.setattr(FinancialScheduleService, "_build_active_borderos_by_schedule", lambda **_kwargs: {})
+
+    result, error = FinancialScheduleService.list_schedules(
+        company_id=9,
+        allowed_company_ids=[9],
+        summary_mode="compact",
+    )
+
+    assert error is None
+    assert result[0]["id"] == 77
+    assert result[0]["summary"]["open_total"] == 100.0
+    assert result[0]["is_bordero_locked"] is False
+    assert "notes" not in result[0]

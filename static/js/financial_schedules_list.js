@@ -354,6 +354,7 @@
       if (dueDateFrom) scheduleParams.set('due_date_from', dueDateFrom);
       if (dueDateTo) scheduleParams.set('due_date_to', dueDateTo);
 
+      scheduleParams.set('summary_mode', 'compact');
       schedules = await fetchJson(`/api/financial/schedules?${scheduleParams.toString()}`);
       borderos = await fetchJson(`/api/financial/borderos?company_id=${companyId}`);
       rebuildScheduleItems();

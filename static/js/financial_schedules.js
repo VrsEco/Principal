@@ -1488,7 +1488,7 @@
   }
 
   async function loadSchedules() {
-    schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}`);
+    schedules = await fetchJson(`/api/financial/schedules?company_id=${companyId}&summary_mode=compact`);
     renderList();
     if (initialScheduleId && !selectedSchedule) return selectSchedule(initialScheduleId);
     if (!selectedSchedule) window.startNewSchedule(initialEntryType);

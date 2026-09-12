@@ -336,6 +336,132 @@ class FinancialTitleBalanceService:
         )
 
     @staticmethod
+    def calculate_for_schedules(
+        *,
+        schedules: Sequence[FinancialSchedule],
+        reference_date: Optional[date] = None,
+    ) -> Dict[int, Dict[str, Any]]:
+        """Calcula saldos de uma lista de títulos sem consultas N+1.
+
+        A listagem financeira é uma superfície de leitura: consultar entradas,
+        baixas, componentes e ajustes por título fazia uma tela com centenas de
+        registros executar milhares de queries e monopolizar o worker web.
+        Esta versão preserva o cálculo canônico por meio de ``calculate_from_records``
+        e agrupa a coleta em queries tenant-scoped.
+        """
+        normalized_schedules = [item for item in schedules if getattr(item, "id", None) is not None]
+        if not normalized_schedules:
+            return {}
+
+        company_ids = {int(item.company_id) for item in normalized_schedules if getattr(item, "company_id", None) is not None}
+        if len(company_ids) != 1:
+            raise ValueError("O cálculo em lote exige títulos de uma única empresa.")
+
+        company_id = company_ids.pop()
+        schedule_ids = [int(item.id) for item in normalized_schedules]
+        reference_by_external_key = {
+            f"financial_schedule:{schedule_id}": schedule_id
+            for schedule_id in schedule_ids
+        }
+
+        entries = (
+            FinancialEntry.query.filter(
+                FinancialEntry.company_id == company_id,
+                db.or_(
+                    FinancialEntry.financial_schedule_id.in_(schedule_ids),
+                    FinancialEntry.external_reference.in_(tuple(reference_by_external_key)),
+                ),
+                FinancialEntry.deleted_at.is_(None),
+            )
+            .order_by(FinancialEntry.id.asc())
+            .all()
+        )
+        entries_by_schedule: Dict[int, List[FinancialEntry]] = defaultdict(list)
+        entry_schedule_ids: Dict[int, int] = {}
+        for entry in entries:
+            schedule_id = getattr(entry, "financial_schedule_id", None)
+            if schedule_id is None:
+                schedule_id = reference_by_external_key.get(getattr(entry, "external_reference", None))
+            if schedule_id is None:
+                continue
+            normalized_schedule_id = int(schedule_id)
+            entries_by_schedule[normalized_schedule_id].append(entry)
+            if getattr(entry, "id", None) is not None:
+                entry_schedule_ids[int(entry.id)] = normalized_schedule_id
+
+        entry_ids = list(entry_schedule_ids)
+        settlements = []
+        if entry_ids:
+            settlements = (
+                FinancialSettlement.query.filter(
+                    FinancialSettlement.company_id == company_id,
+                    FinancialSettlement.financial_entry_id.in_(entry_ids),
+                    FinancialSettlement.deleted_at.is_(None),
+                    FinancialSettlement.settlement_status != "cancelled",
+                )
+                .order_by(FinancialSettlement.settlement_date.asc(), FinancialSettlement.id.asc())
+                .all()
+            )
+
+        settlements_by_schedule: Dict[int, List[FinancialSettlement]] = defaultdict(list)
+        settlement_schedule_ids: Dict[int, int] = {}
+        for settlement in settlements:
+            schedule_id = entry_schedule_ids.get(getattr(settlement, "financial_entry_id", None))
+            if schedule_id is None:
+                continue
+            settlements_by_schedule[schedule_id].append(settlement)
+            if getattr(settlement, "id", None) is not None:
+                settlement_schedule_ids[int(settlement.id)] = schedule_id
+
+        component_filters = [FinancialSettlementComponent.financial_schedule_id.in_(schedule_ids)]
+        if settlement_schedule_ids:
+            component_filters.append(
+                FinancialSettlementComponent.financial_settlement_id.in_(list(settlement_schedule_ids))
+            )
+        components = (
+            FinancialSettlementComponent.query.filter(
+                FinancialSettlementComponent.company_id == company_id,
+                db.or_(*component_filters),
+            )
+            .order_by(FinancialSettlementComponent.id.asc())
+            .all()
+        )
+        components_by_schedule: Dict[int, List[FinancialSettlementComponent]] = defaultdict(list)
+        for component in components:
+            schedule_id = getattr(component, "financial_schedule_id", None)
+            if schedule_id is None:
+                schedule_id = settlement_schedule_ids.get(getattr(component, "financial_settlement_id", None))
+            if schedule_id is not None:
+                components_by_schedule[int(schedule_id)].append(component)
+
+        adjustments = (
+            FinancialTitleAdjustment.query.filter(
+                FinancialTitleAdjustment.company_id == company_id,
+                FinancialTitleAdjustment.financial_schedule_id.in_(schedule_ids),
+                FinancialTitleAdjustment.deleted_at.is_(None),
+                FinancialTitleAdjustment.status != "cancelled",
+            )
+            .order_by(FinancialTitleAdjustment.calculation_date.asc(), FinancialTitleAdjustment.id.asc())
+            .all()
+        )
+        adjustments_by_schedule: Dict[int, List[FinancialTitleAdjustment]] = defaultdict(list)
+        for adjustment in adjustments:
+            if getattr(adjustment, "financial_schedule_id", None) is not None:
+                adjustments_by_schedule[int(adjustment.financial_schedule_id)].append(adjustment)
+
+        return {
+            int(schedule.id): FinancialTitleBalanceService.calculate_from_records(
+                schedule=schedule,
+                entries=entries_by_schedule.get(int(schedule.id), []),
+                settlements=settlements_by_schedule.get(int(schedule.id), []),
+                components=components_by_schedule.get(int(schedule.id), []),
+                adjustments=adjustments_by_schedule.get(int(schedule.id), []),
+                reference_date=reference_date,
+            )
+            for schedule in normalized_schedules
+        }
+
+    @staticmethod
     def get_title_balance(
         *,
         company_id: int,

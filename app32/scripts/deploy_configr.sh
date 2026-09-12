@@ -153,45 +153,52 @@ else
     echo "⏭️  Migrations preservadas no modo $DEPLOY_MODE."
 fi
 
-# 3.1 Runtime uWSGI: buffering de POST + resiliência básica
-# - Evita que requisições POST pequenas (/login, /portal, APIs JSON) prendam o
-#   worker quando o upstream repassa corpo sem buffering.
-# - Sobe 2 workers para reduzir indisponibilidade total durante reciclagem.
-# - Aplica reciclagem preventiva de workers para reduzir degradação acumulada.
+# 3.1 Runtime uWSGI: buffering de POST + resiliência básica.
+# O Configr usa `for-readline` para carregar o arquivo .env, mas não expande
+# glob em `conf.d/*.ini`; portanto, fragmentos gravados nesse diretório não
+# alteram o vassal efetivo. Atualizamos o ini canônico que o Emperor carrega.
+# - Evita que POSTs pequenos prendam o worker sem buffering.
+# - Mantém dois workers para que uma rota lenta não paralise todos os usuários.
+# - Recicla workers sem exceder a memória do host de 4 GB.
 echo "🛡️  Garantindo parâmetros de resiliência do uWSGI..."
-mkdir -p "$BASE/etc/uwsgi/conf.d"
-cat > "$BASE/etc/uwsgi/conf.d/app32_post_buffering.ini" <<'EOF'
-post-buffering = 65536
-workers = 2
-max-requests = 1000
-max-worker-lifetime = 3600
-reload-on-rss = 768
-thunder-lock = true
-env = APP_BOOTSTRAP_RUNTIME_SERVICES=0
-EOF
-# A aplicação versionada não pode depender do diretório raiz do checkout.
-# Fragmentos em conf.d são carregados após o ini base no Configr.
-cat > "$BASE/etc/uwsgi/conf.d/app32_runtime_root.ini" <<EOF
-chdir = $APP
-module = passenger_wsgi:application
-EOF
 UWSGI_INI="$BASE/etc/uwsgi/uwsgi.ini"
-if [ -f "$UWSGI_INI" ] && ! grep -qE '^[[:space:]]*post-buffering[[:space:]]*=' "$UWSGI_INI"; then
-    "$PYTHON" - "$UWSGI_INI" <<'PY'
+if [ -f "$UWSGI_INI" ]; then
+    "$PYTHON" - "$UWSGI_INI" "$APP" <<'PY'
 from pathlib import Path
 import sys
 
 path = Path(sys.argv[1])
+app_dir = sys.argv[2]
 lines = path.read_text().splitlines()
-out = []
-inserted = False
+settings = {
+    "post-buffering": "65536",
+    "workers": "2",
+    "max-requests": "1000",
+    "max-worker-lifetime": "3600",
+    "reload-on-rss": "512",
+    "thunder-lock": "true",
+    "chdir": app_dir,
+    "module": "passenger_wsgi:application",
+}
+out, seen = [], set()
 for line in lines:
+    stripped = line.strip()
+    if "=" in stripped and not stripped.startswith(("#", ";")):
+        key = stripped.split("=", 1)[0].strip()
+        if key in settings:
+            if key not in seen:
+                out.append(f"{key} = {settings[key]}")
+                seen.add(key)
+            continue
     out.append(line)
-    if not inserted and line.strip().startswith("harakiri"):
-        out.append("post-buffering  = 65536")
-        inserted = True
-if not inserted:
-    out.append("post-buffering  = 65536")
+for key, value in settings.items():
+    if key not in seen:
+        out.append(f"{key} = {value}")
+
+# Mantém as variáveis existentes carregadas do .env e acrescenta apenas a
+# proteção contra scheduler duplicado nos workers web.
+if not any(line.strip() == "env = APP_BOOTSTRAP_RUNTIME_SERVICES=0" for line in out):
+    out.append("env = APP_BOOTSTRAP_RUNTIME_SERVICES=0")
 path.write_text("\n".join(out) + "\n")
 PY
 fi

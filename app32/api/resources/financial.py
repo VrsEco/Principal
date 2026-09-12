@@ -635,12 +635,16 @@ class FinancialScheduleListResource(Resource):
     @permission_required("financial", "view")
     def get(self):
         company_id = get_request_company_id()
+        summary_mode = str(request.args.get("summary_mode") or "full").strip().lower()
+        if summary_mode not in {"full", "compact"}:
+            return {"error": "summary_mode inválido. Use full ou compact."}, 400
         result, error = FinancialScheduleService.list_schedules(
             company_id=company_id,
             status=request.args.get("status"),
             due_date_from=_get_optional_iso_date_arg("due_date_from"),
             due_date_to=_get_optional_iso_date_arg("due_date_to"),
             allowed_company_ids=get_accessible_company_ids(),
+            summary_mode=summary_mode,
         )
         if error:
             return {"error": error}, 400

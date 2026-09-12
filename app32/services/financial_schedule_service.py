@@ -33,6 +33,8 @@ from models.financial import (
     FinancialSchedule,
     FinancialScheduleLink,
     FinancialSettlement,
+    FinancialBordero,
+    FinancialBorderoItem,
 )
 from models.financial_budget import FinancialBudgetContract, FinancialBudgetDocument, FinancialBudgetLine, FinancialBudgetVersion
 from schemas.financial import FinancialScheduleCreateInput, FinancialScheduleUpdateInput
@@ -273,6 +275,7 @@ class FinancialScheduleService:
         status: Optional[str] = None,
         due_date_from: Optional[date] = None,
         due_date_to: Optional[date] = None,
+        summary_mode: str = "full",
     ) -> Tuple[Optional[List[Dict[str, Any]]], Optional[str]]:
         scope_error = FinancialService._ensure_company_scope(company_id, allowed_company_ids)
         if scope_error:
@@ -294,6 +297,21 @@ class FinancialScheduleService:
             company_id=company_id,
             schedules=schedules,
         )
+        if summary_mode == "compact":
+            balances_by_schedule = FinancialTitleBalanceService.calculate_for_schedules(schedules=schedules)
+            active_borderos_by_schedule = FinancialScheduleService._build_active_borderos_by_schedule(
+                company_id=company_id,
+                schedule_ids=[schedule.id for schedule in schedules],
+            )
+            return [
+                FinancialScheduleService._serialize_schedule_list_item(
+                    schedule,
+                    balance=balances_by_schedule.get(schedule.id, {}),
+                    counterparty_names=counterparty_names,
+                    active_bordero=active_borderos_by_schedule.get(schedule.id),
+                )
+                for schedule in schedules
+            ], None
         return [
             FinancialScheduleService._serialize_schedule(
                 schedule,
@@ -302,6 +320,118 @@ class FinancialScheduleService:
             )
             for schedule in schedules
         ], None
+
+    @staticmethod
+    def _build_active_borderos_by_schedule(
+        *,
+        company_id: int,
+        schedule_ids: Sequence[int],
+    ) -> Dict[int, FinancialBordero]:
+        """Resolve bloqueios de borderô em uma query, preservando company_id."""
+        normalized_ids = [int(schedule_id) for schedule_id in schedule_ids if schedule_id is not None]
+        if not normalized_ids:
+            return {}
+
+        from services.financial_bordero_service import FinancialBorderoService
+
+        rows = (
+            db.session.query(FinancialBorderoItem.financial_schedule_id, FinancialBordero)
+            .join(FinancialBordero, FinancialBordero.id == FinancialBorderoItem.bordero_id)
+            .filter(
+                FinancialBorderoItem.company_id == company_id,
+                FinancialBorderoItem.financial_schedule_id.in_(normalized_ids),
+                FinancialBorderoItem.deleted_at.is_(None),
+                FinancialBordero.company_id == company_id,
+                FinancialBordero.deleted_at.is_(None),
+                FinancialBordero.status.in_(tuple(FinancialBorderoService.ACTIVE_STATUSES)),
+            )
+            .order_by(FinancialBordero.id.desc())
+            .all()
+        )
+        result: Dict[int, FinancialBordero] = {}
+        for schedule_id, bordero in rows:
+            result.setdefault(int(schedule_id), bordero)
+        return result
+
+    @staticmethod
+    def _serialize_schedule_list_item(
+        schedule: FinancialSchedule,
+        *,
+        balance: Dict[str, Any],
+        counterparty_names: Optional[Dict[int, str]],
+        active_bordero: Optional[FinancialBordero],
+    ) -> Dict[str, Any]:
+        """Contrato leve para coleções; o detalhe continua no endpoint por id."""
+        metadata = dict(schedule.metadata_json or {})
+        counterparty_name = FinancialScheduleService._resolve_schedule_counterparty_name(
+            schedule=schedule,
+            metadata_json=metadata,
+            counterparty_names=counterparty_names,
+        )
+        operational_state = build_title_operational_state_metadata(
+            schedule_status=schedule.status,
+            settlement_state=balance.get("settlement_state"),
+            entry_type=schedule.entry_type,
+            metadata_json=metadata,
+        )
+        original_total = Decimal(str(balance.get("principal_amount") or schedule.template_amount or 0))
+        settled_total = Decimal(str(balance.get("principal_settled") or 0))
+        open_total = Decimal(str(balance.get("total_open") or balance.get("principal_open") or 0))
+        operational_state_code = str(operational_state["code"] or "open")
+        bordero_payload = None
+        if active_bordero is not None:
+            bordero_payload = {
+                "id": active_bordero.id,
+                "code": active_bordero.bordero_code,
+                "status": active_bordero.status,
+                "type": active_bordero.bordero_type,
+                "locked": True,
+            }
+
+        return {
+            "id": schedule.id,
+            "company_id": schedule.company_id,
+            "schedule_code": schedule.schedule_code,
+            "name": schedule.name,
+            "entry_type": schedule.entry_type,
+            "movement_nature": schedule.movement_nature,
+            "status": schedule.status,
+            "start_date": schedule.start_date.isoformat() if schedule.start_date else None,
+            "competence_date": schedule.competence_date.isoformat() if schedule.competence_date else None,
+            "first_due_date": schedule.first_due_date.isoformat() if schedule.first_due_date else None,
+            "next_due_date": schedule.next_due_date.isoformat() if schedule.next_due_date else None,
+            "description": schedule.description,
+            "template_amount": float(schedule.template_amount or 0),
+            "signed_template_amount": FinancialService.get_signed_amount(schedule.template_amount, schedule.movement_nature),
+            "counterparty_name": counterparty_name,
+            "metadata_json": {"counterparty_name": counterparty_name} if counterparty_name else {},
+            "bordero": bordero_payload,
+            "is_bordero_locked": bool(active_bordero),
+            "summary": {
+                "entry_count": int(balance.get("entry_count") or 0),
+                "settled_entries": 1 if operational_state_code == "settled" and original_total > 0 else 0,
+                "partial_entries": 1 if operational_state_code == "partial" else 0,
+                "open_entries": 1 if operational_state_code == "open" and open_total > 0 else 0,
+                "original_total": float(original_total),
+                "settled_total": float(settled_total),
+                "open_total": float(open_total),
+                "signed_original_total": balance.get("signed_principal_amount"),
+                "signed_settled_total": balance.get("signed_principal_settled"),
+                "signed_open_total": balance.get("signed_total_open"),
+                "settlement_state": str(balance.get("settlement_state") or "open"),
+                "principal_amount": balance.get("principal_amount"),
+                "principal_settled": balance.get("principal_settled"),
+                "principal_open": balance.get("principal_open"),
+                "total_open": balance.get("total_open"),
+                "signed_total_open": balance.get("signed_total_open"),
+                "counterparty_name": counterparty_name,
+                "operational_state": operational_state_code,
+                "operational_state_label": operational_state["label"],
+                "has_open_balance": bool(balance.get("has_open_balance")) or title_state_has_open_balance(operational_state_code),
+                "bordero_code": active_bordero.bordero_code if active_bordero else None,
+                "is_bordero_locked": bool(active_bordero),
+            },
+        }
 
     @staticmethod
     def get_schedule_detail(
