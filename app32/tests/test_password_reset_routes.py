@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from flask import Flask
 
 from api.routes import auth as auth_route
@@ -60,3 +62,16 @@ def test_complete_requires_matching_strong_passwords(monkeypatch):
     assert mismatch.status_code == 400
     assert success.status_code == 200
     assert completed == [{'raw_token': 'token-opaco', 'new_password': 'NovaSenhaMuitoForte'}]
+
+
+def test_reset_request_template_gives_immediate_feedback_and_cooldown():
+    template = (Path(__file__).resolve().parents[1] / 'templates' / 'auth' / 'password_reset_request.html').read_text(encoding='utf-8')
+
+    assert "Processando sua solicitação. Aguarde." in template
+    assert "Confira sua caixa de e-mail antes de solicitar novamente." in template
+    assert "window.setTimeout" in template
+    assert "90000" in template
+    assert "credentials:'same-origin'" in template
+    assert "/static/img/versus-logo.png" in template
+    assert "button.classList.add('is-loading')" in template
+    assert "button.classList.add('is-complete')" in template

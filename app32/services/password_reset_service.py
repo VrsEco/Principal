@@ -28,6 +28,7 @@ class PasswordResetError(ValueError):
 class PasswordResetService:
     TOKEN_TTL_MINUTES = 30
     TOKEN_BYTES = 32
+    REQUEST_DEDUP_SECONDS = 90
 
     @staticmethod
     def _secret() -> bytes:
@@ -60,6 +61,18 @@ class PasswordResetService:
             return
 
         now = datetime.utcnow()
+        # Repetições acidentais não devem invalidar o link que acabou de ser
+        # enviado. Como o token em claro não é retido, preservamos o token
+        # ativo em uma janela curta e não reenviamos outro nesse intervalo.
+        recent_pending_token = PasswordResetToken.query.filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > now,
+            PasswordResetToken.created_at >= now - timedelta(seconds=cls.REQUEST_DEDUP_SECONDS),
+        ).first()
+        if recent_pending_token is not None:
+            return
+
         raw_token = secrets.token_urlsafe(cls.TOKEN_BYTES)
         token = PasswordResetToken(
             user_id=user.id,

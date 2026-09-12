@@ -1,5 +1,6 @@
 import re
 import logging
+from datetime import timedelta
 
 import pytest
 from flask import Flask
@@ -63,7 +64,7 @@ def test_request_stores_only_token_hash_and_latest_link_is_single_use(reset_app,
             password_reset_service.complete_reset(raw_token=token, new_password="OutraSenhaMuitoForte")
 
 
-def test_new_request_revokes_previous_link(reset_app, monkeypatch):
+def test_immediate_repeat_preserves_the_original_link(reset_app, monkeypatch):
     sent = []
     monkeypatch.setattr("services.password_reset_service.email_service.build_transactional_email_html", lambda **kwargs: "html")
     monkeypatch.setattr(
@@ -75,7 +76,28 @@ def test_new_request_revokes_previous_link(reset_app, monkeypatch):
         password_reset_service.request_reset(email="pessoa@empresa.test", request_ip="ip-a", reset_url_prefix="https://app.example.test/password-reset")
         first = re.search(r"password-reset/([^\s]+)", sent[-1]).group(1)
         password_reset_service.request_reset(email="pessoa@empresa.test", request_ip="ip-b", reset_url_prefix="https://app.example.test/password-reset")
+        assert len(sent) == 1
+        password_reset_service.complete_reset(raw_token=first, new_password="NovaSenhaMuitoForte")
+
+
+def test_new_request_after_dedup_window_revokes_previous_link(reset_app, monkeypatch):
+    sent = []
+    monkeypatch.setattr("services.password_reset_service.email_service.build_transactional_email_html", lambda **kwargs: "html")
+    monkeypatch.setattr(
+        "services.password_reset_service.email_service.send_email",
+        lambda recipients, subject, body, html_body=None: sent.append(body) or True,
+    )
+
+    with reset_app.app_context():
+        password_reset_service.request_reset(email="pessoa@empresa.test", request_ip="ip-a", reset_url_prefix="https://app.example.test/password-reset")
+        first = re.search(r"password-reset/([^\s]+)", sent[-1]).group(1)
+        stored = PasswordResetToken.query.one()
+        stored.created_at = stored.created_at - timedelta(seconds=password_reset_service.REQUEST_DEDUP_SECONDS + 1)
+        db.session.commit()
+
+        password_reset_service.request_reset(email="pessoa@empresa.test", request_ip="ip-b", reset_url_prefix="https://app.example.test/password-reset")
         second = re.search(r"password-reset/([^\s]+)", sent[-1]).group(1)
+        assert len(sent) == 2
 
         with pytest.raises(PasswordResetError):
             password_reset_service.complete_reset(raw_token=first, new_password="NovaSenhaMuitoForte")
